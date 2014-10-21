@@ -1,4 +1,4 @@
-from distutils.core import setup, find_packages
+from setuptools import setup, find_packages
 
 version = __import__('eemeter').get_version()
 
