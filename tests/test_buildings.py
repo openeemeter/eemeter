@@ -88,3 +88,15 @@ def test_building_most_recent_bill(building_that_meets_criteria,
 
 def test_building_most_recent_bill(building_that_meets_criteria):
     assert building_that_meets_criteria.total_usage() == 24
+
+# estimated read handling
+
+# Up to two bills may be dropped
+
+# strange bill lengths?
+
+# Span at least 330 days or
+# span at least 183 days and have enough total and range of cdd or hdd days
+
+# run a bill regression, if necessary, with CVRMSE <= 20%
+
