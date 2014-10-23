@@ -2,7 +2,7 @@ from eemeter.core import EnergyBill
 from datetime import date
 import pytest
 
-## Fixtures
+##### Fixtures #####
 
 # Helper fixture
 @pytest.fixture(scope="module",
@@ -26,7 +26,7 @@ def energy_bill_with_invalid_date(request,_energy_bill):
     _energy_bill.start_date, _energy_bill.end_date = request.param
     return _energy_bill
 
-## Test cases
+##### Test cases #####
 
 def test_energy_bill_has_valid_date(energy_bill_with_valid_date):
     energy_bill,days = energy_bill_with_valid_date

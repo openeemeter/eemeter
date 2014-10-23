@@ -9,3 +9,4 @@ class EnergyBill:
         assert self.start_date <= self.end_date
         return (self.end_date - self.start_date).days + 1
 
+
