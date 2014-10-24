@@ -1,0 +1,41 @@
+# Unit conversion
+
+def kwh_to_therm(kwh):
+    """
+    Return kwh value in therms
+    """
+    return kwh * 29.3001111
+
+def therm_to_kwh(therm):
+    """
+    Return therm value in kwhs
+    """
+    return therm * 0.0341295634
+
+def farenheight_to_celcius(f):
+    """
+    Return Farenheight value in Celcius
+    """
+    return (5./9) * (f-32)
+
+def celcius_to_farenheight(c):
+    """
+    Return Celcius value in Farenheight
+    """
+    return (9./5)*c + 32
+
+def temp_to_hdd(t,base):
+    """
+    Return temperature value (any units) in heating degree days (HDD_base)
+    """
+    if t >= base:
+        return 0
+    return base - t
+
+def temp_to_cdd(t,base):
+    """
+    Return temperature value (any units) in cooling degree days (CDD_base)
+    """
+    if t <= base:
+        return 0
+    return t - base
