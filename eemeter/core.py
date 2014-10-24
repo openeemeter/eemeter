@@ -13,9 +13,15 @@ class EnergyBill:
         return "Energy Bill {}: {}".format(self.end_date,self.usage)
 
     def days(self):
+        """
+        Return the number of days this bill covers.
+        """
         return (self.end_date - self.start_date).days + 1
 
     def is_valid(self):
+        """
+        Return true if the bill is has a reasonable date range
+        """
         if not isinstance(self.start_date,date):
             return False
         if not isinstance(self.end_date,date):
@@ -32,6 +38,11 @@ class Building:
         return "Building ({} bills)".format(len(self.energy_bills))
 
     def meets_calibration_criteria(self):
+        """
+        Return true if the energy bills associated with the building meet
+        detailed calibration criteria (as specified in the
+        ANSI/BPI-2400-S-2012 standard)
+        """
         most_recent_bill = self.most_recent_energy_bill()
         if most_recent_bill is None:
             return False
@@ -42,14 +53,24 @@ class Building:
         return True
 
     def most_recent_energy_bill(self):
+        """
+        Return the most recent energy bill, or None if none is available.
+        """
         if self.energy_bills == []:
             return None
         return max(self.energy_bills,key=lambda x: x.end_date)
 
     def total_usage(self):
+        """
+        Return total usage of all energy bills.
+        """
         return sum([bill.usage for bill in self.energy_bills])
 
     def consolidate_estimated_reads(self):
+        """
+        Consolidate estimated reads with actual reads using the procedure
+        outlined in the ANSI/BPI-2400-S-2012 standard.
+        """
         sorted_bills = sorted(self.energy_bills,key=lambda x: x.end_date)
         if sorted_bills is []:
             warnings.warn("No bills to consolidate")
@@ -66,6 +87,9 @@ class Building:
         self.energy_bills = new_bills
 
     def no_missing_days(self):
+        """
+        Return true if there are no missing days in the energy bills.
+        """
         sorted_bills = sorted(self.energy_bills,key=lambda x: x.end_date)
         for prev_bill,next_bill in zip(sorted_bills,sorted_bills[1:]):
             if not (next_bill.start_date - prev_bill.end_date).days == 1:
