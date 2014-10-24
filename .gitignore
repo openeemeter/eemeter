@@ -1,4 +1,7 @@
-__pycache__/
 *.py[cod]
+__pycache__/
 *.egg-info
+
+_build
+
 .DS_Store
