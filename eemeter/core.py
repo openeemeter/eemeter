@@ -20,7 +20,7 @@ class EnergyBill:
 
     def is_valid(self):
         """
-        Return true if the bill is has a reasonable date range
+        Return true if the bill is has a reasonable date range.
         """
         if not isinstance(self.start_date,date):
             return False
@@ -40,8 +40,8 @@ class Building:
     def meets_calibration_criteria(self):
         """
         Return true if the energy bills associated with the building meet
-        detailed calibration criteria (as specified in the
-        ANSI/BPI-2400-S-2012 standard)
+        detailed calibration criteria specified in the
+        ANSI/BPI-2400-S-2012 standard.
         """
         most_recent_bill = self.most_recent_energy_bill()
         if most_recent_bill is None:
