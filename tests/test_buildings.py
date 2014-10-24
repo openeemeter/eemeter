@@ -5,10 +5,11 @@ import pytest
 
 ##### Fixtures #####
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function",
+                params=[[0],[23],[12],[12,13]])
 def building_that_meets_criteria(request):
     energy_bills = [EnergyBill(1,date(2012,1,1),date(2012,1,31)),
-                    EnergyBill(1,date(2012,2,1),date(2012,2,28)),
+                    EnergyBill(1,date(2012,2,1),date(2012,2,29)),
                     EnergyBill(1,date(2012,3,1),date(2012,3,31)),
                     EnergyBill(1,date(2012,4,1),date(2012,4,30)),
                     EnergyBill(1,date(2012,5,1),date(2012,5,31)),
@@ -31,9 +32,12 @@ def building_that_meets_criteria(request):
                     EnergyBill(1,date(2013,10,1),date(2013,10,31)),
                     EnergyBill(1,date(2013,11,1),date(2013,11,30)),
                     EnergyBill(1,date(2013,12,1),date(2013,12,31))]
+    estimated_bill_indices = request.param
+    for i in estimated_bill_indices:
+        energy_bills[i].estimated = True
     return Building(energy_bills)
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def building_with_old_bills(request):
     energy_bills = [EnergyBill(0,date(2011,8,1),date(2011,8,31)),
                     EnergyBill(0,date(2011,9,1),date(2011,9,30)),
@@ -41,7 +45,7 @@ def building_with_old_bills(request):
                     EnergyBill(0,date(2011,11,1),date(2011,11,30)),
                     EnergyBill(0,date(2011,12,1),date(2011,12,31)),
                     EnergyBill(0,date(2012,1,1),date(2012,1,31)),
-                    EnergyBill(0,date(2012,2,1),date(2012,2,28)),
+                    EnergyBill(0,date(2012,2,1),date(2012,2,29)),
                     EnergyBill(0,date(2012,3,1),date(2012,3,31)),
                     EnergyBill(0,date(2012,4,1),date(2012,4,30)),
                     EnergyBill(0,date(2012,5,1),date(2012,5,31)),
@@ -54,11 +58,11 @@ def building_with_old_bills(request):
                     EnergyBill(0,date(2012,12,1),date(2012,12,31))]
     return Building(energy_bills)
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def building_with_too_few_bills(request):
     return Building([])
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def building_with_future_bill(request):
     return Building([EnergyBill(0,date(3000,1,1),date(3000,1,1))])
 
@@ -86,14 +90,20 @@ def test_building_most_recent_bill(building_that_meets_criteria,
     assert building_with_old_bills.most_recent_energy_bill().end_date == date(2012,12,31)
     assert building_with_too_few_bills.most_recent_energy_bill() == None
 
-def test_building_most_recent_bill(building_that_meets_criteria):
+def test_building_total_sum(building_that_meets_criteria):
     assert building_that_meets_criteria.total_usage() == 24
 
-# estimated read handling
+def test_building_consolidate_estimated_reads(building_that_meets_criteria):
+    not_estimated = [bill for bill in building_that_meets_criteria.energy_bills[1:]
+            if not bill.estimated]
+    building_that_meets_criteria.consolidate_estimated_reads()
+    assert len(building_that_meets_criteria.energy_bills) == len(not_estimated) + 1
+    assert building_that_meets_criteria.no_missing_days()
+
+def test_building_no_missing_days_function(building_that_meets_criteria):
+    assert building_that_meets_criteria.no_missing_days()
 
 # Up to two bills may be dropped
-
-# strange bill lengths?
 
 # Span at least 330 days or
 # span at least 183 days and have enough total and range of cdd or hdd days

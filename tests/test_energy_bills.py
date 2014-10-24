@@ -48,3 +48,7 @@ def test_energy_bill_string_is_correct(valid_energy_bill):
     assert "Energy Bill " in str(energy_bill)
     assert "{}".format(energy_bill.end_date) in str(energy_bill)
     assert "{}".format(energy_bill.usage) in str(energy_bill)
+
+def test_energy_bill_has_estimated_attribute(valid_energy_bill):
+    energy_bill,days = valid_energy_bill
+    assert hasattr(energy_bill,"estimated")
