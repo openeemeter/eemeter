@@ -12,15 +12,15 @@ def therm_to_kwh(therm):
     """
     return therm * 0.0341295634
 
-def farenheight_to_celcius(f):
+def farenheight_to_celsius(f):
     """
-    Return Farenheight value in Celcius
+    Return Farenheight value in Celsius
     """
     return (5./9) * (f-32)
 
-def celcius_to_farenheight(c):
+def celsius_to_farenheight(c):
     """
-    Return Celcius value in Farenheight
+    Return Celsius value in Farenheight
     """
     return (9./5)*c + 32
 
