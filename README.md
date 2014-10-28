@@ -25,8 +25,9 @@ Execute the following command to run tests:
 
     py.test
 
-Credit
-------
+Contributors
+------------
+
 Phil Ngo
 Sean Mannion
 Matt Gee
