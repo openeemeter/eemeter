@@ -28,8 +28,8 @@ Execute the following command to run tests:
 Contributors
 ------------
 
-+ Phil Ngo    
-+ Sean Mannion    
-+ Matt Gee    
++ Phil Ngo
++ Sean Mannion
++ Matt Gee
 
 
