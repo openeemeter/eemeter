@@ -1,5 +1,7 @@
 # Unit conversion
 
+KilowattHour = None
+
 def kwh_to_therm(kwh):
     """
     Return kwh value in therms
