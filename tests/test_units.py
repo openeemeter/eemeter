@@ -1,3 +1,4 @@
+from eemeter.units import EnergyUnit
 from eemeter.units import BTU
 from eemeter.units import kWh
 from eemeter.units import therm
@@ -5,6 +6,7 @@ from eemeter.units import therm
 import pytest
 
 EPSILON = 1e-6
+
 
 ##### Fixtures #####
 
@@ -15,22 +17,21 @@ def named_unit(request):
 ##### Tests #####
 
 def test_named_unit(named_unit):
-    assert named_unit.name == str(named_unit)
-    assert isinstance(named_unit.name,str)
-    assert isinstance(named_unit.abbr,str)
-    assert isinstance(named_unit.description,str)
+    assert named_unit.abbreviation == str(named_unit)
+    assert isinstance(named_unit.full_name,str)
+    assert isinstance(named_unit.abbreviation,str)
 
 def test_kilowatt_hour():
-    assert "KilowattHour" == kWh.name
-    assert "kWh" == kWh.abbr
-    assert "Unit of energy" == kWh.description
+    assert "KilowattHour" == kWh.full_name
+    assert "kWh" == kWh.abbreviation
+    assert isinstance(kWh,EnergyUnit)
 
 def test_british_thermal_unit():
-    assert "BritishThermalUnit" == BTU.name
-    assert "BTU" == BTU.abbr
-    assert "Unit of energy" == BTU.description
+    assert "BritishThermalUnit" == BTU.full_name
+    assert "BTU" == BTU.abbreviation
+    assert isinstance(BTU,EnergyUnit)
 
 def test_therm():
-    assert "Therm" == therm.name
-    assert "therm" == therm.abbr
-    assert "Unit of energy" == therm.description
+    assert "Therm" == therm.full_name
+    assert "therm" == therm.abbreviation
+    assert isinstance(therm,EnergyUnit)
