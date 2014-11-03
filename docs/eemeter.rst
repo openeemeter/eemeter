@@ -15,3 +15,9 @@ Units
 
 .. autoclass:: eemeter.units.EnergyUnit
    :members:
+
+Conversion functions
+--------------------
+
+.. automodule:: eemeter.conversions
+   :members:
