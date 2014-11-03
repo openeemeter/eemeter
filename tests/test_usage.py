@@ -68,3 +68,5 @@ def test_usage_invalid_fuel_type():
 def test_timedelta(usage_zero_one_month):
     delta = usage_zero_one_month.timedelta
     assert delta.days == 30
+
+

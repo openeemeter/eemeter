@@ -16,14 +16,14 @@ Installation
 
 Execute the following command to install:
 
-    pip install git+git://github.com/philngo/ee-meter.git#egg=ee-meter
+    $ pip install git+git://github.com/philngo/ee-meter.git#egg=ee-meter
 
 Testing
 -------
 
-Execute the following command to run tests:
+This library uses the py.test framework. To run tests, use the `py.test` command:
 
-    py.test
+    $ py.test
 
 Contributors
 ------------
@@ -31,5 +31,4 @@ Contributors
 + Phil Ngo
 + Sean Mannion
 + Matt Gee
-
 
