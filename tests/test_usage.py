@@ -8,7 +8,6 @@ import arrow
 
 import pytest
 
-
 ##### Fixtures #####
 
 @pytest.fixture(scope="module",
@@ -18,6 +17,10 @@ import pytest
                         (0,KilowattHour,electricity,arrow.get(2000,1,1).datetime,arrow.get(2000,1,31).datetime)])
 def usage_zero_one_month(request):
     return Usage(*request.param)
+
+@pytest.fixture(scope="session",params=[electricity,natural_gas,FuelType("NewType")])
+def fuel_type(request):
+    return request.param
 
 ##### Test cases #####
 
@@ -29,8 +32,6 @@ def test_usage_has_correct_attributes(usage_zero_one_month):
     assert usage_zero_one_month.end == arrow.get(2000,1,31).datetime
     assert usage_zero_one_month.estimated == False
 
-def test_electricity():
-    assert "Electricity" == str(electricity)
-
-def test_natural_gas():
-    assert "Natural gas" == str(natural_gas)
+def test_fuel_type(fuel_type):
+    assert fuel_type.name == str(fuel_type)
+    assert isinstance(fuel_type,FuelType)

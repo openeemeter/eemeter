@@ -1,6 +1,17 @@
 # Unit conversion
 
-KilowattHour = None
+class Unit:
+    def __init__(self,name,abbr,description):
+        self.name = name
+        self.abbr = abbr
+        self.description = description
+
+    def __str__(self):
+        return self.name
+
+KilowattHour = Unit("KilowattHour","kWh","Unit of energy")
+BritishThermalUnit = Unit("BritishThermalUnit","BTU","Unit of energy")
+Therm = Unit("Therm","therm","Unit of energy")
 
 def kwh_to_therm(kwh):
     """
