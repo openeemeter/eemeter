@@ -27,3 +27,4 @@ Flags
 
 .. automodule:: eemeter.flags
    :members:
+   :undoc-members:
