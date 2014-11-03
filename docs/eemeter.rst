@@ -21,3 +21,9 @@ Conversion functions
 
 .. automodule:: eemeter.conversions
    :members:
+
+Flags
+=====
+
+.. automodule:: eemeter.flags
+   :members:
