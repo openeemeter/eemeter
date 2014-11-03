@@ -2,6 +2,8 @@ from eemeter.usage import Usage
 from eemeter.usage import FuelType
 from eemeter.usage import electricity
 from eemeter.usage import natural_gas
+from eemeter.usage import DateRangeException
+from eemeter.usage import InvalidFuelTypeException
 
 from eemeter.units import EnergyUnit
 from eemeter.units import kWh
@@ -55,3 +57,14 @@ def test_automatic_unit_conversion():
     assert abs(0.0341295634 - kwh_usage.to(therm)) < EPSILON
     assert abs(9.9976129e4 - therm_usage.to(BTU)) < EPSILON
 
+def test_feasible_usage_start_end():
+    with pytest.raises(DateRangeException):
+        Usage(1,BTU,electricity,arrow.get(2000,1,2).datetime,arrow.get(2000,1,1).datetime)
+
+def test_usage_invalid_fuel_type():
+    with pytest.raises(InvalidFuelTypeException):
+        Usage(1,BTU,"Invalid",arrow.get(2000,1,1).datetime,arrow.get(2000,1,31).datetime)
+
+def test_timedelta(usage_zero_one_month):
+    delta = usage_zero_one_month.timedelta
+    assert delta.days == 30

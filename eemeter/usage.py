@@ -1,3 +1,9 @@
+class DateRangeException(Exception):
+    pass
+
+class InvalidFuelTypeException(Exception):
+    pass
+
 class FuelType:
     def __init__(self,name):
         self.name = name
@@ -17,5 +23,15 @@ class Usage:
 
         self.BTU = unit.toBTU(usage)
 
+        if self.end < self.start:
+            raise DateRangeException
+
+        if not isinstance(self.fuel_type,FuelType):
+            raise InvalidFuelTypeException
+
     def to(self,unit):
         return unit.fromBTU(self.BTU)
+
+    @property
+    def timedelta(self):
+        return self.end - self.start

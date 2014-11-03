@@ -1,11 +1,17 @@
-EnergyBill class
-================
+Usage class
+===========
 
-.. autoclass:: eemeter.core.EnergyBill
+.. autoclass:: eemeter.usage.Usage
    :members:
 
-Building class
+FuelType class
 ==============
 
-.. autoclass:: eemeter.core.Building
+.. autoclass:: eemeter.usage.FuelType
+   :members:
+
+Units
+=====
+
+.. autoclass:: eemeter.units.Unit
    :members:
