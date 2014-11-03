@@ -5,7 +5,7 @@ from eemeter.flags import MissingPeriodsFlag
 from eemeter.flags import TooManyEstimatedPeriodsFlag
 from eemeter.flags import ShortTimeSpanFlag
 from eemeter.flags import InsufficientTemperatureRangeFlag
-from eemeter.flags import MixedUnitFlag
+from eemeter.flags import MixedFuelTypeFlag
 
 import pytest
 
@@ -44,8 +44,8 @@ def insufficient_temperature_range_flag():
     return InsufficientTemperatureRangeFlag(False)
 
 @pytest.fixture("module")
-def mixed_unit_flag():
-    return MixedUnitFlag(False)
+def mixed_fuel_type_flag():
+    return MixedFuelTypeFlag(False)
 
 ##### Tests #####
 
@@ -84,6 +84,6 @@ def test_insufficient_temperature_range_flag(insufficient_temperature_range_flag
     assert not insufficient_temperature_range_flag.raised
     assert "Insufficient temperature range" == insufficient_temperature_range_flag.description()
 
-def test_mixed_unit_flag(mixed_unit_flag):
-    assert not mixed_unit_flag.raised
-    assert "Mixed units" == mixed_unit_flag.description()
+def test_mixed_fuel_type_flag(mixed_fuel_type_flag):
+    assert not mixed_fuel_type_flag.raised
+    assert "Mixed fuel types" == mixed_fuel_type_flag.description()

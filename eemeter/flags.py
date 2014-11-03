@@ -44,8 +44,8 @@ class InsufficientTemperatureRangeFlag(BaseFlag):
     def description(self):
         return "Insufficient temperature range"
 
-class MixedUnitFlag(BaseFlag):
+class MixedFuelTypeFlag(BaseFlag):
 
     def description(self):
-        return "Mixed units"
+        return "Mixed fuel types"
 
