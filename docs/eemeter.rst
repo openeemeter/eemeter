@@ -13,5 +13,5 @@ FuelType class
 Units
 =====
 
-.. autoclass:: eemeter.units.Unit
+.. autoclass:: eemeter.units.EnergyUnit
    :members:
