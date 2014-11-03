@@ -56,7 +56,8 @@ def test_base_flag_unraised(unraised_base_flag):
     assert not unraised_base_flag.raised
 
 def test_base_flag_has_none_description(raised_base_flag):
-    assert raised_base_flag.description() == None
+    with pytest.raises(NotImplementedError):
+        raised_base_flag.description()
 
 def test_none_in_time_range_flag(none_in_time_range_flag):
     assert not none_in_time_range_flag.raised

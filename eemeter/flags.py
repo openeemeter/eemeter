@@ -4,7 +4,7 @@ class BaseFlag:
         self.raised = raised
 
     def description(self):
-        return None
+        raise NotImplementedError
 
 class NoneInTimeRangeFlag(BaseFlag):
 
