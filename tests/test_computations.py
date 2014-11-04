@@ -36,20 +36,8 @@ def usage_one_summer_electricity():
             Usage(1800,kWh,electricity,arrow.get(2012,8,1).datetime,arrow.get(2012,9,1).datetime)]
 
 @pytest.fixture
-def usage_one_year_electricity_with_degrees_f():
-    return [(Usage(1100,kWh,electricity,arrow.get(2012,1,1).datetime,arrow.get(2012,2,1).datetime),15),
-            (Usage(1100,kWh,electricity,arrow.get(2012,2,1).datetime,arrow.get(2012,3,1).datetime),25),
-            (Usage(1200,kWh,electricity,arrow.get(2012,3,1).datetime,arrow.get(2012,4,1).datetime),35),
-            (Usage(1300,kWh,electricity,arrow.get(2012,4,1).datetime,arrow.get(2012,5,1).datetime),40),
-            (Usage(1400,kWh,electricity,arrow.get(2012,5,1).datetime,arrow.get(2012,6,1).datetime),45),
-            (Usage(1500,kWh,electricity,arrow.get(2012,6,1).datetime,arrow.get(2012,7,1).datetime),50),
-            (Usage(1600,kWh,electricity,arrow.get(2012,7,1).datetime,arrow.get(2012,8,1).datetime),55),
-            (Usage(1600,kWh,electricity,arrow.get(2012,8,1).datetime,arrow.get(2012,9,1).datetime),45),
-            (Usage(1500,kWh,electricity,arrow.get(2012,9,1).datetime,arrow.get(2012,10,1).datetime),40),
-            (Usage(1400,kWh,electricity,arrow.get(2012,10,1).datetime,arrow.get(2012,11,1).datetime),35),
-            (Usage(1300,kWh,electricity,arrow.get(2012,11,1).datetime,arrow.get(2012,12,1).datetime),30),
-            (Usage(1200,kWh,electricity,arrow.get(2012,12,1).datetime,arrow.get(2013,1,1).datetime),20)]
-
+def degrees_f_one_year():
+    return [20,15,20,35,55,65,80,80,60,45,40,30]
 
 ##### Tests #####
 
