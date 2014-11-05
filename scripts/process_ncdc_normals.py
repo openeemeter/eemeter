@@ -24,17 +24,19 @@ def get_monthly(lines,start_index,n):
 
     return {lines[start_index + i].split()[0]: get_line(lines[start_index + i]) for i in range(2,2 + n)}
 
-def get_daily(lines,start_index,n):
+def get_daily(lines,start_index,n,offset=2,verbose=False):
     months = [datetime.datetime(2000,month,1).strftime("%b") for month in range(1,13)]
     days = [datetime.datetime(2000,1,day).strftime("%d") for day in range(1,32)]
 
     def get_block(lines):
+        if verbose:
+            print lines
         lines[0] = " ".join(lines[0].split()[1:])
         return { month:{ day:datum for day,datum in zip(days,line.split()[1:])}
                 for month,line in zip(months,lines)}
 
-    return {lines[start_index + i].split()[0]: get_block(lines[start_index + i:start_index + i + 15])
-            for i in range(2, 15*n + 1,15)}
+    return {lines[start_index + i].split()[0]: get_block(lines[start_index + i:start_index + i + 12])
+            for i in range(offset, 15*n + 3,15)}
 
 def get_yearly(lines,start_index,n):
     def get_line(line):
@@ -65,8 +67,6 @@ if __name__ == "__main__":
         trn,trpn,prn,prpn = find_headings(lines)
         trn_data, trpn_data,prn_data,prpn_data = None,None,None,None
         if trn is not None:
-            print "Temperature-Related Normals: {}".format(trn)
-
             trn_data = {"monthly":get_monthly(lines,trn + 2,39),
                         "daily":get_daily(lines,trn + 45,22),
                         "ann":get_yearly(lines,trn + 392,35),
@@ -76,12 +76,18 @@ if __name__ == "__main__":
                         "son":get_yearly(lines,trn + 532,35)}
 
         if trpn is not None:
-            print "Temperature-Related Pseudonormals: {}".format(trpn)
-        if prn is not None:
-            print "Precipitation-Related Normals: {}".format(prn)
+            trpn_data = {"monthly":get_monthly(lines,trpn + 2,35),
+                         "daily":get_daily(lines,trpn + 40,18,offset=3),
+                         "ann":get_yearly(lines,trpn + 328,35),
+                         "djf":get_yearly(lines,trpn + 363,35),
+                         "mam":get_yearly(lines,trpn + 398,35),
+                         "jja":get_yearly(lines,trpn + 433,35),
+                         "son":get_yearly(lines,trpn + 468,35),
+                         }
 
+        if prn is not None:
             prn_data = {"monthly": get_monthly(lines,prn + 2,21),
-                        "daily": get_daily(lines,prn + 26,26),
+                        "daily": get_daily(lines,prn + 26,26,offset=3),
                         "ann": get_yearly(lines,prn + 419,15),
                         "djf": get_yearly(lines,prn + 434,15),
                         "mam": get_yearly(lines,prn + 449,15),
@@ -89,10 +95,16 @@ if __name__ == "__main__":
                         "son": get_yearly(lines,prn + 479,15)}
 
         if prpn is not None:
-            print "Precipitation-Related Pseudonormals: {}".format(prpn)
+            prpn_data = {"monthly": get_monthly(lines,prpn + 2,1),
+                         "daily": get_daily(lines,prpn + 6,2,offset=3),
+                         "ann": get_yearly(lines,prpn + 39,1),
+                         "djf": get_yearly(lines,prpn + 40,1),
+                         "mam": get_yearly(lines,prpn + 41,1),
+                         "jja": get_yearly(lines,prpn + 42,1),
+                         "son": get_yearly(lines,prpn + 43,1),
+                         }
 
         data.append({"Temperature-Related Normals":trn_data,
                      "Temperature-Related Pseudonormals":trpn_data,
                      "Precipitation-Related Normals":prn_data,
                      "Precipitation-Related Pseudonormals":prpn_data})
-        print
