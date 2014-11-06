@@ -51,6 +51,7 @@ def test_weather_normalize_usage(usage_one_year_electricity_with_degrees_f):
     normals = None
     F = None
     normalized_usage = weather_normalize(usage_one_year_electricity_with_degrees_f,F,normals)
+    assert False
     assert normalized_usage is not None
 
 def test_coefficient_of_variance_of_root_mean_square_error(usage_one_year_electricity_with_degrees_f):

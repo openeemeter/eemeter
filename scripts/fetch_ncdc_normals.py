@@ -1,3 +1,12 @@
+##################
+#
+#   Or just use:
+#
+#       wget -r ftp://ftp.ncdc.noaa.gov/pub/data/normals/1981-2010/products/station/
+#
+##################
+
+
 from ftplib import FTP
 import argparse
 import os
@@ -5,6 +14,7 @@ import os
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("data_dir")
+    parser.add_argument("start_at")
     args = parser.parse_args()
 
     ftp = FTP('ftp.ncdc.noaa.gov')
@@ -17,7 +27,11 @@ if __name__ == "__main__":
         filenames.append(filename)
     ftp.retrlines('LIST',callback)
 
+    started = False
     for filename in filenames:
-        print filename
-        ftp.retrbinary('RETR {}'.format(filename), open(os.path.join(args.data_dir,filename), 'wb').write)
+        if not started and filename == args.start_at:
+            started = True
+        if started:
+            print filename
+            ftp.retrbinary('RETR {}'.format(filename), open(os.path.join(args.data_dir,filename), 'wb').write)
     ftp.quit()
