@@ -1,11 +1,11 @@
-from eemeter.flags import BaseFlag
-from eemeter.flags import NoneInTimeRangeFlag
-from eemeter.flags import OverlappingPeriodsFlag
-from eemeter.flags import MissingPeriodsFlag
-from eemeter.flags import TooManyEstimatedPeriodsFlag
-from eemeter.flags import ShortTimeSpanFlag
-from eemeter.flags import InsufficientTemperatureRangeFlag
-from eemeter.flags import MixedFuelTypeFlag
+from eemeter.meter import BaseFlag
+from eemeter.meter import NoneInTimeRangeFlag
+from eemeter.meter import OverlappingPeriodsFlag
+from eemeter.meter import MissingPeriodsFlag
+from eemeter.meter import TooManyEstimatedPeriodsFlag
+from eemeter.meter import ShortTimeSpanFlag
+from eemeter.meter import InsufficientTemperatureRangeFlag
+from eemeter.meter import MixedFuelTypeFlag
 
 import pytest
 
