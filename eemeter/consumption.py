@@ -15,7 +15,7 @@ class FuelType:
 electricity = FuelType("Electricity")
 natural_gas = FuelType("Natural gas")
 
-class Usage:
+class Consumption:
     """
     Class for representing energy usage
     """
@@ -35,7 +35,7 @@ class Usage:
             raise InvalidFuelTypeException
 
     def __repr__(self):
-        return "Usage: {}".format(self.BTU)
+        return "Consumption: {}".format(self.BTU)
 
     def to(self,unit):
         """
