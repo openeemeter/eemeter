@@ -1,8 +1,5 @@
-class DateRangeException(Exception):
-    pass
-
-class InvalidFuelTypeException(Exception):
-    pass
+class DateRangeException(Exception): pass
+class InvalidFuelTypeException(Exception): pass
 
 class FuelType:
     """
@@ -36,6 +33,9 @@ class Usage:
 
         if not isinstance(self.fuel_type,FuelType):
             raise InvalidFuelTypeException
+
+    def __repr__(self):
+        return "Usage: {}".format(self.BTU)
 
     def to(self,unit):
         """

@@ -68,3 +68,6 @@ def test_usage_invalid_fuel_type():
 def test_timedelta(usage_zero_one_month):
     delta = usage_zero_one_month.timedelta
     assert delta.days == 30
+
+def test_usage_has_representation(usage_zero_one_month):
+    assert "Usage" in usage_zero_one_month.__repr__()
