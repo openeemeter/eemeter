@@ -1,4 +1,4 @@
-from eemeter.meter import BaseFlag
+from eemeter.meter import FlagBase
 from eemeter.meter import NoneInTimeRangeFlag
 from eemeter.meter import OverlappingPeriodsFlag
 from eemeter.meter import MissingPeriodsFlag
@@ -13,11 +13,11 @@ import pytest
 
 @pytest.fixture("module")
 def raised_base_flag():
-    return BaseFlag(True)
+    return FlagBase(True)
 
 @pytest.fixture("module")
 def unraised_base_flag():
-    return BaseFlag(False)
+    return FlagBase(False)
 
 @pytest.fixture("module")
 def none_in_time_range_flag():

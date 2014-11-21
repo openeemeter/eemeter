@@ -81,6 +81,7 @@ def test_automatic_unit_conversion():
     assert abs(1 - btu_consumption.btu) < EPSILON
     assert abs(1 - btu_consumption.BTU) < EPSILON
     assert abs(1 - btu_consumption.BTUs) < EPSILON
+    assert abs(1 - btu_consumption.to("btu")) < EPSILON
     assert abs(1 - kwh_consumption.kWh) < EPSILON
     assert abs(1 - kwh_consumption.kilowatthour) < EPSILON
     assert abs(1 - kwh_consumption.kilowatthours) < EPSILON
@@ -118,4 +119,5 @@ def test_consumption_history(consumption_list_one_year_electricity,
         assert consumption.kWh >= 0
     for consumption in ch_gas.natural_gas:
         assert consumption.therm >= 0
+    assert len(ch_elec.get(electricity)) == 12
 

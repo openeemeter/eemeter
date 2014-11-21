@@ -49,6 +49,12 @@ class Consumption:
         """
         return (self.joules * ureg.joules).to(ureg.parse_expression(unit)).magnitude
 
+    def to(self,unit):
+        """
+        Return interally stored joules value in the given unit
+        """
+        return (self.joules * ureg.joules).to(ureg.parse_expression(unit)).magnitude
+
     @property
     def timedelta(self):
         """
@@ -64,3 +70,9 @@ class ConsumptionHistory:
 
     def __getattr__(self, attr):
         return self._data[attr]
+
+    def __repr__(self):
+        return "ConsumptionHistory({})".format(self._data)
+
+    def get(self,fuel_type):
+        return self._data[fuel_type.name]
