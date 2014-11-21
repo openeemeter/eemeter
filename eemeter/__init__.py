@@ -1,3 +1,9 @@
+# Units
+from pint import UnitRegistry
+ureg = UnitRegistry()
+Q_ = ureg.Quantity
+
+# Version
 VERSION = (0, 0, 1)
 
 def get_version():
