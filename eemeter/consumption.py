@@ -1,4 +1,5 @@
 from . import ureg, Q_
+from collections import defaultdict
 
 class DateRangeException(Exception): pass
 class InvalidFuelTypeException(Exception): pass
@@ -14,8 +15,9 @@ class FuelType:
     def __str__(self):
         return self.name
 
-electricity = FuelType("Electricity")
-natural_gas = FuelType("Natural gas")
+electricity = FuelType("electricity")
+natural_gas = FuelType("natural_gas")
+propane = FuelType("propane")
 
 class Consumption:
     """
@@ -41,9 +43,9 @@ class Consumption:
     def __repr__(self):
         return "Consumption: {} J".format(self.joules)
 
-    def to(self,unit):
+    def __getattr__(self,unit):
         """
-        Return interally stored BTU value in the given unit
+        Return interally stored joules value in the given unit
         """
         return (self.joules * ureg.joules).to(ureg.parse_expression(unit)).magnitude
 
@@ -53,3 +55,12 @@ class Consumption:
         Return the timedelta between the start and end datetimes
         """
         return self.end - self.start
+
+class ConsumptionHistory:
+    def __init__(self,consumptions):
+        self._data = defaultdict(list)
+        for consumption in consumptions:
+            self._data[consumption.fuel_type.name].append(consumption)
+
+    def __getattr__(self, attr):
+        return self._data[attr]
