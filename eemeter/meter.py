@@ -78,7 +78,7 @@ class TimeRangePresenceFlag(FlagBase):
     def _in_time_range(self,dt):
         return self.start <= dt and self.end >= dt
 
-class OverlappingPeriodsFlag(FlagBase):
+class OverlappingTimePeriodsFlag(FlagBase):
     def evaluate(self,consumption_history):
         for fuel_type,consumptions in consumption_history.fuel_types():
             consumptions.sort()
@@ -96,17 +96,38 @@ class OverlappingPeriodsFlag(FlagBase):
                         return True
         return False
 
-class MissingPeriodsFlag(FlagBase):
-    pass
+class MissingTimePeriodsFlag(FlagBase):
+    def evaluate(self,consumption_history):
+        for fuel_type,consumptions in consumption_history.fuel_types():
+            consumptions.sort()
+            if len(consumptions) <= 1:
+                return False
+            for c1,c2 in zip(consumptions,consumptions[1:]):
+                if c1.end != c2.start:
+                    return True
+        return False
 
 class TooManyEstimatedPeriodsFlag(FlagBase):
-    pass
+    def __init__(self,maximum):
+        self.maximum = maximum
 
-class ShortTimeSpanFlag(FlagBase):
-    pass
+    def evaluate(self,consumption_history):
+        for fuel_type,consumptions in consumption_history.fuel_types():
+            num_estimated = len([c for c in consumptions if c.estimated])
+            if num_estimated > self.maximum:
+                return True
+        return False
+
+class InsufficientTimeRangeFlag(FlagBase):
+    def __init__(self,days):
+        self.days = days
+
+    def evaluate(self,consumption_history):
+        for fuel_type,consumptions in consumption_history.fuel_types():
+            consumptions.sort()
+            if (consumptions[-1].end - consumptions[0].start).days < self.days:
+                return True
+        return False
 
 class InsufficientTemperatureRangeFlag(FlagBase):
-    pass
-
-class MixedFuelTypeFlag(FlagBase):
     pass

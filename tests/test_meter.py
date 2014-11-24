@@ -8,7 +8,10 @@ from eemeter.meter import Meter
 from eemeter.meter import MeterRun
 from eemeter.meter import FuelTypePresenceFlag
 from eemeter.meter import TimeRangePresenceFlag
-from eemeter.meter import OverlappingPeriodsFlag
+from eemeter.meter import OverlappingTimePeriodsFlag
+from eemeter.meter import MissingTimePeriodsFlag
+from eemeter.meter import TooManyEstimatedPeriodsFlag
+from eemeter.meter import InsufficientTimeRangeFlag
 
 from datetime import datetime
 import numpy as np
@@ -130,6 +133,34 @@ def consumption_history_not_overlapping_5():
     return ConsumptionHistory(c_list)
 
 @pytest.fixture
+def consumption_history_missing_time_period_1():
+    c_list = [Consumption(0,"thm",natural_gas,datetime(2011,1,1),datetime(2011,1,2)),
+            Consumption(0,"thm",natural_gas,datetime(2011,1,3),datetime(2011,1,4))]
+    return ConsumptionHistory(c_list)
+
+@pytest.fixture
+def consumption_history_missing_time_period_2():
+    c_list = [Consumption(0,"thm",natural_gas,datetime(2011,1,3),datetime(2011,1,4)),
+            Consumption(0,"thm",natural_gas,datetime(2011,1,1),datetime(2011,1,2))]
+    return ConsumptionHistory(c_list)
+
+@pytest.fixture
+def consumption_history_three_estimated():
+    c_list = [Consumption(900,"thm",natural_gas,datetime(2012,1,1),datetime(2012,2,1)),
+            Consumption(940,"thm",natural_gas,datetime(2012,2,1),datetime(2012,3,1)),
+            Consumption(800,"thm",natural_gas,datetime(2012,3,1),datetime(2012,4,1),estimated=True),
+            Consumption(700,"thm",natural_gas,datetime(2012,4,1),datetime(2012,5,1)),
+            Consumption(500,"thm",natural_gas,datetime(2012,5,1),datetime(2012,6,1),estimated=True),
+            Consumption(125,"thm",natural_gas,datetime(2012,6,1),datetime(2012,7,1)),
+            Consumption(75,"thm",natural_gas,datetime(2012,7,1),datetime(2012,8,1)),
+            Consumption(100,"thm",natural_gas,datetime(2012,8,1),datetime(2012,9,1),estimated=True),
+            Consumption(200,"thm",natural_gas,datetime(2012,9,1),datetime(2012,10,1)),
+            Consumption(400,"thm",natural_gas,datetime(2012,10,1),datetime(2012,11,1)),
+            Consumption(700,"thm",natural_gas,datetime(2012,11,1),datetime(2012,12,1)),
+            Consumption(800,"thm",natural_gas,datetime(2012,12,1),datetime(2013,1,1))]
+    return ConsumptionHistory(c_list)
+
+@pytest.fixture
 def metric_list():
     elec_avg_metric = RawAverageUsageMetric(electricity,"kWh")
     gas_avg_metric = RawAverageUsageMetric(natural_gas,"therms")
@@ -211,7 +242,7 @@ def test_overlapping_periods_flag(consumption_history_one_year_electricity,
                                   consumption_history_not_overlapping_3,
                                   consumption_history_not_overlapping_4,
                                   consumption_history_not_overlapping_5):
-    overlap_flag = OverlappingPeriodsFlag()
+    overlap_flag = OverlappingTimePeriodsFlag()
     assert not overlap_flag.evaluate(consumption_history_one_year_electricity)
     assert overlap_flag.evaluate(consumption_history_overlapping_1)
     assert overlap_flag.evaluate(consumption_history_overlapping_2)
@@ -223,6 +254,28 @@ def test_overlapping_periods_flag(consumption_history_one_year_electricity,
     assert not overlap_flag.evaluate(consumption_history_not_overlapping_3)
     assert not overlap_flag.evaluate(consumption_history_not_overlapping_4)
     assert not overlap_flag.evaluate(consumption_history_not_overlapping_5)
+
+def test_missing_time_periods_flag(consumption_history_one_summer_electricity,
+                                   consumption_history_missing_time_period_1,
+                                   consumption_history_missing_time_period_2):
+    missing_flag = MissingTimePeriodsFlag()
+    assert not missing_flag.evaluate(consumption_history_one_summer_electricity)
+    assert missing_flag.evaluate(consumption_history_missing_time_period_1)
+    assert missing_flag.evaluate(consumption_history_missing_time_period_2)
+
+def test_too_many_estimated_time_periods_flag(consumption_history_three_estimated):
+    more_than_two_estimated_flag = TooManyEstimatedPeriodsFlag(2)
+    more_than_three_estimated_flag = TooManyEstimatedPeriodsFlag(3)
+    assert more_than_two_estimated_flag.evaluate(consumption_history_three_estimated)
+    assert not more_than_three_estimated_flag.evaluate(consumption_history_three_estimated)
+
+def test_insufficient_time_range_flag(consumption_history_one_year_electricity):
+    short_time_range_flag = InsufficientTimeRangeFlag(100)
+    exact_time_range_flag = InsufficientTimeRangeFlag(365)
+    long_time_range_flag = InsufficientTimeRangeFlag(1000)
+    assert not short_time_range_flag.evaluate(consumption_history_one_year_electricity)
+    assert not exact_time_range_flag.evaluate(consumption_history_one_year_electricity)
+    assert long_time_range_flag.evaluate(consumption_history_one_year_electricity)
 
 def test_meter_run(meter_run_simple):
     assert meter_run_simple.elec_avg_usage == 100
