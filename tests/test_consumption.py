@@ -104,8 +104,9 @@ def test_timedelta(consumption_zero_one_month):
     delta = consumption_zero_one_month.timedelta
     assert delta.days == 30
 
-def test_consumption_has_representation(consumption_zero_one_month):
+def test_consumption_has_string_representation(consumption_zero_one_month):
     assert "Consumption" in consumption_zero_one_month.__repr__()
+    assert "Consumption" in str(consumption_zero_one_month)
 
 def test_consumption_history(consumption_list_one_year_electricity,
                              consumption_list_one_year_gas):
@@ -119,8 +120,9 @@ def test_consumption_history(consumption_list_one_year_electricity,
     assert len(ch_elec.get(electricity)) == 12
 
     # other cases
-    assert len(ch_elec.natural_gas) == 0
-    assert len(ch_gas.electricity) == 0
+    with pytest.raises(KeyError):
+        assert len(ch_elec.natural_gas) == 0
+        assert len(ch_gas.electricity) == 0
     assert len(ch_gas.natural_gas) == 12
 
     for consumption in ch_elec.electricity:
@@ -128,3 +130,5 @@ def test_consumption_history(consumption_list_one_year_electricity,
     for consumption in ch_gas.natural_gas:
         assert consumption.therm >= 0
 
+    for fuel_type,consumptions in ch_elec.fuel_types():
+        consumptions.sort()

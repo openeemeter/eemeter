@@ -14,9 +14,10 @@ class RawAverageUsageMetric(MetricBase):
 
     def evaluate(self,consumption_history):
         kWhs = []
-        for consumption in consumption_history.get(self.fuel_type):
-            kWhs.append(consumption.to(self.unit_name))
-
+        consumptions = consumption_history.get(self.fuel_type)
+        if consumptions:
+            for consumption in consumptions:
+                kWhs.append(consumption.to(self.unit_name))
         return np.mean(kWhs)
 
 class MeterRun:
@@ -58,13 +59,42 @@ class FuelTypePresenceFlag(FlagBase):
         self.fuel_type = fuel_type
 
     def evaluate(self,consumption_history):
-        return len(consumption_history[self.fuel_type.name]) > 0
+        return consumption_history.get(self.fuel_type.name) is not None
 
-class NoneInTimeRangeFlag(FlagBase):
-    pass
+class TimeRangePresenceFlag(FlagBase):
+    def __init__(self,start,end):
+        assert start <= end
+        self.start = start
+        self.end = end
+
+    def evaluate(self,consumption_history):
+        for consumption in consumption_history.iteritems():
+            print consumption
+            if self._in_time_range(consumption.start) or \
+                self._in_time_range(consumption.end):
+                return True
+        return False
+
+    def _in_time_range(self,dt):
+        return self.start <= dt and self.end >= dt
 
 class OverlappingPeriodsFlag(FlagBase):
-    pass
+    def evaluate(self,consumption_history):
+        for fuel_type,consumptions in consumption_history.fuel_types():
+            consumptions.sort()
+            if len(consumptions) <= 1:
+                return False
+            for c1,c2 in zip(consumptions,consumptions[1:]):
+                if c1.end == c2.end:
+                    if not (c1.start == c1.end or c2.start == c2.end):
+                        return True
+                elif c1.start == c2.start:
+                    if not (c1.start == c1.end or c2.start == c2.end):
+                        return True
+                else:
+                    if c2.start < c1.end:
+                        return True
+        return False
 
 class MissingPeriodsFlag(FlagBase):
     pass

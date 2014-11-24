@@ -7,6 +7,8 @@ from eemeter.meter import RawAverageUsageMetric
 from eemeter.meter import Meter
 from eemeter.meter import MeterRun
 from eemeter.meter import FuelTypePresenceFlag
+from eemeter.meter import TimeRangePresenceFlag
+from eemeter.meter import OverlappingPeriodsFlag
 
 from datetime import datetime
 import numpy as np
@@ -68,6 +70,66 @@ def consumption_history_one_year_natural_gas():
     return ConsumptionHistory(c_list)
 
 @pytest.fixture
+def consumption_history_overlapping_1():
+    c_list = [Consumption(0,"thm",natural_gas,datetime(2011,1,1),datetime(2011,3,1)),
+            Consumption(0,"thm",natural_gas,datetime(2011,2,28),datetime(2011,3,1))]
+    return ConsumptionHistory(c_list)
+
+@pytest.fixture
+def consumption_history_overlapping_2():
+    c_list = [Consumption(0,"thm",natural_gas,datetime(2011,2,28),datetime(2011,3,1)),
+            Consumption(0,"thm",natural_gas,datetime(2011,1,1),datetime(2011,3,1))]
+    return ConsumptionHistory(c_list)
+
+@pytest.fixture
+def consumption_history_overlapping_3():
+    c_list = [Consumption(0,"thm",natural_gas,datetime(2011,2,27),datetime(2011,3,1)),
+            Consumption(0,"thm",natural_gas,datetime(2011,2,28),datetime(2011,3,2))]
+    return ConsumptionHistory(c_list)
+
+@pytest.fixture
+def consumption_history_overlapping_4():
+    c_list = [Consumption(0,"thm",natural_gas,datetime(2011,2,28),datetime(2011,3,2)),
+            Consumption(0,"thm",natural_gas,datetime(2011,2,27),datetime(2011,3,1))]
+    return ConsumptionHistory(c_list)
+
+@pytest.fixture
+def consumption_history_overlapping_5():
+    c_list = [Consumption(0,"thm",natural_gas,datetime(2011,2,28),datetime(2011,3,2)),
+            Consumption(0,"thm",natural_gas,datetime(2011,2,27),datetime(2011,3,3))]
+    return ConsumptionHistory(c_list)
+
+@pytest.fixture
+def consumption_history_not_overlapping_1():
+    c_list = [Consumption(0,"thm",natural_gas,datetime(2011,1,1),datetime(2011,3,1)),
+            Consumption(0,"thm",natural_gas,datetime(2011,3,1),datetime(2011,3,2))]
+    return ConsumptionHistory(c_list)
+
+@pytest.fixture
+def consumption_history_not_overlapping_2():
+    c_list = [Consumption(0,"thm",natural_gas,datetime(2011,2,28),datetime(2011,3,1)),
+            Consumption(0,"thm",natural_gas,datetime(2011,3,1),datetime(2011,3,1))]
+    return ConsumptionHistory(c_list)
+
+@pytest.fixture
+def consumption_history_not_overlapping_3():
+    c_list = [Consumption(0,"thm",natural_gas,datetime(2011,3,1),datetime(2011,3,1)),
+            Consumption(0,"thm",natural_gas,datetime(2011,2,28),datetime(2011,3,1))]
+    return ConsumptionHistory(c_list)
+
+@pytest.fixture
+def consumption_history_not_overlapping_4():
+    c_list = [Consumption(0,"thm",natural_gas,datetime(2011,2,28),datetime(2011,2,28)),
+            Consumption(0,"thm",natural_gas,datetime(2011,2,28),datetime(2011,3,1))]
+    return ConsumptionHistory(c_list)
+
+@pytest.fixture
+def consumption_history_not_overlapping_5():
+    c_list = [Consumption(0,"thm",natural_gas,datetime(2011,2,28),datetime(2011,3,1)),
+            Consumption(0,"thm",natural_gas,datetime(2011,2,28),datetime(2011,2,28))]
+    return ConsumptionHistory(c_list)
+
+@pytest.fixture
 def metric_list():
     elec_avg_metric = RawAverageUsageMetric(electricity,"kWh")
     gas_avg_metric = RawAverageUsageMetric(natural_gas,"therms")
@@ -119,7 +181,7 @@ def test_raw_average_usage_metric(consumption_history_one_year_electricity,
     avg_elec_summer_usage_none = elec_avg_metric.evaluate(consumption_history_one_summer_natural_gas)
     assert np.isnan(avg_elec_summer_usage_none)
 
-def test_fueltype_presence_metric(consumption_history_one_year_electricity,
+def test_fueltype_presence_flag(consumption_history_one_year_electricity,
                                   consumption_history_one_year_natural_gas):
     elec_data_present = FuelTypePresenceFlag(electricity)
     gas_data_present = FuelTypePresenceFlag(natural_gas)
@@ -128,6 +190,39 @@ def test_fueltype_presence_metric(consumption_history_one_year_electricity,
     assert not elec_data_present.evaluate(consumption_history_one_year_natural_gas)
     assert not gas_data_present.evaluate(consumption_history_one_year_electricity)
     assert gas_data_present.evaluate(consumption_history_one_year_natural_gas)
+
+def test_none_in_time_range_presence_flag(consumption_history_one_year_electricity):
+    past_time_range_flag = TimeRangePresenceFlag(datetime(1900,1,1),datetime(1950,1,1))
+    future_time_range_flag = TimeRangePresenceFlag(datetime(2050,1,1),datetime(2100,1,1))
+    recent_time_range_flag = TimeRangePresenceFlag(datetime(2012,1,1),datetime(2013,1,1))
+
+    assert not past_time_range_flag.evaluate(consumption_history_one_year_electricity)
+    assert not future_time_range_flag.evaluate(consumption_history_one_year_electricity)
+    assert recent_time_range_flag.evaluate(consumption_history_one_year_electricity)
+
+def test_overlapping_periods_flag(consumption_history_one_year_electricity,
+                                  consumption_history_overlapping_1,
+                                  consumption_history_overlapping_2,
+                                  consumption_history_overlapping_3,
+                                  consumption_history_overlapping_4,
+                                  consumption_history_overlapping_5,
+                                  consumption_history_not_overlapping_1,
+                                  consumption_history_not_overlapping_2,
+                                  consumption_history_not_overlapping_3,
+                                  consumption_history_not_overlapping_4,
+                                  consumption_history_not_overlapping_5):
+    overlap_flag = OverlappingPeriodsFlag()
+    assert not overlap_flag.evaluate(consumption_history_one_year_electricity)
+    assert overlap_flag.evaluate(consumption_history_overlapping_1)
+    assert overlap_flag.evaluate(consumption_history_overlapping_2)
+    assert overlap_flag.evaluate(consumption_history_overlapping_3)
+    assert overlap_flag.evaluate(consumption_history_overlapping_4)
+    assert overlap_flag.evaluate(consumption_history_overlapping_5)
+    assert not overlap_flag.evaluate(consumption_history_not_overlapping_1)
+    assert not overlap_flag.evaluate(consumption_history_not_overlapping_2)
+    assert not overlap_flag.evaluate(consumption_history_not_overlapping_3)
+    assert not overlap_flag.evaluate(consumption_history_not_overlapping_4)
+    assert not overlap_flag.evaluate(consumption_history_not_overlapping_5)
 
 def test_meter_run(meter_run_simple):
     assert meter_run_simple.elec_avg_usage == 100
