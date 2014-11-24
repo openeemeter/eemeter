@@ -74,6 +74,11 @@ def metric_list():
     metrics = [elec_avg_metric,gas_avg_metric]
     return metrics
 
+@pytest.fixture
+def meter_run_simple():
+    data = {"elec_avg_usage": 100}
+    return MeterRun(data)
+
 ##### Tests #####
 
 def test_base_metric():
@@ -102,7 +107,32 @@ def test_raw_average_usage_metric(consumption_history_one_year_electricity,
     avg_gas_summer_usage = gas_avg_metric.evaluate(consumption_history_one_summer_natural_gas)
     assert abs(avg_gas_summer_usage - 100) < EPSILON
 
-def test_meter_class_creation(metric_list,consumption_history_one_year_electricity):
+    avg_gas_year_usage_none = gas_avg_metric.evaluate(consumption_history_one_year_electricity)
+    assert np.isnan(avg_gas_year_usage_none)
+
+    avg_elec_year_usage_none = elec_avg_metric.evaluate(consumption_history_one_year_natural_gas)
+    assert np.isnan(avg_elec_year_usage_none)
+
+    avg_gas_summer_usage_none = gas_avg_metric.evaluate(consumption_history_one_summer_electricity)
+    assert np.isnan(avg_gas_summer_usage_none)
+
+    avg_elec_summer_usage_none = elec_avg_metric.evaluate(consumption_history_one_summer_natural_gas)
+    assert np.isnan(avg_elec_summer_usage_none)
+
+def test_fueltype_presence_metric(consumption_history_one_year_electricity,
+                                  consumption_history_one_year_natural_gas):
+    elec_data_present = FuelTypePresenceFlag(electricity)
+    gas_data_present = FuelTypePresenceFlag(natural_gas)
+
+    assert elec_data_present.evaluate(consumption_history_one_year_electricity)
+    assert not elec_data_present.evaluate(consumption_history_one_year_natural_gas)
+    assert not gas_data_present.evaluate(consumption_history_one_year_electricity)
+    assert gas_data_present.evaluate(consumption_history_one_year_natural_gas)
+
+def test_meter_run(meter_run_simple):
+    assert meter_run_simple.elec_avg_usage == 100
+
+def test_meter_class_integration(metric_list,consumption_history_one_year_electricity):
     class MyMeter(Meter):
         elec_avg_usage = RawAverageUsageMetric(electricity,"kWh")
         gas_avg_usage = RawAverageUsageMetric(natural_gas,"therms")
@@ -112,11 +142,16 @@ def test_meter_class_creation(metric_list,consumption_history_one_year_electrici
     assert isinstance(MyMeter.metrics["elec_avg_usage"],RawAverageUsageMetric)
     assert isinstance(MyMeter.metrics["gas_avg_usage"],RawAverageUsageMetric)
 
+    # Meter instantiation
     meter = MyMeter()
     assert "elec_avg_usage" in meter.metrics.keys()
     assert "gas_avg_usage" in meter.metrics.keys()
+
+    # Meter evaluation
     result = meter.run(consumption_history_one_year_electricity)
     assert isinstance(result,MeterRun)
+
+    # Meter checking
     assert abs(result.elec_avg_usage - 1200) < EPSILON
     assert np.isnan(result.gas_avg_usage)
     assert result.elec_data_present
