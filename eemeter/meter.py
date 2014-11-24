@@ -16,8 +16,34 @@ class RawAverageUsageMetric(MetricBase):
 
         return np.mean(kWhs)
 
-class Meter:
-    pass
+class MeterRun:
+    def __init__(self,data):
+        self._data = data
+
+    def __getattr__(self,attr):
+        return self._data[attr]
+
+class MeterMeta(type):
+    def __new__(cls, name, parents, dct):
+        metrics = {}
+        for key,value in dct.items():
+            if issubclass(value.__class__,MetricBase):
+                metrics[key] = value
+
+        dct["metrics"] = metrics
+
+        return super(MeterMeta, cls).__new__(cls, name, parents, dct)
+
+class Meter(object):
+
+    __metaclass__ = MeterMeta
+
+    def run(self,consumption_history):
+        data = {}
+        for metric_name,metric in self.metrics.iteritems():
+            evaluation = metric.evaluate(consumption_history)
+            data[metric_name] = evaluation
+        return MeterRun(data)
 
 class FlagBase:
 

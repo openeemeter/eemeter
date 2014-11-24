@@ -5,8 +5,10 @@ from eemeter.consumption import natural_gas
 from eemeter.meter import MetricBase
 from eemeter.meter import RawAverageUsageMetric
 from eemeter.meter import Meter
+from eemeter.meter import MeterRun
 
 from datetime import datetime
+import numpy as np
 
 import pytest
 
@@ -64,6 +66,13 @@ def consumption_history_one_year_natural_gas():
             Consumption(800,"thm",natural_gas,datetime(2012,12,1),datetime(2013,1,1))]
     return ConsumptionHistory(c_list)
 
+@pytest.fixture
+def metric_list():
+    elec_avg_metric = RawAverageUsageMetric(electricity,"kWh")
+    gas_avg_metric = RawAverageUsageMetric(natural_gas,"therms")
+    metrics = [elec_avg_metric,gas_avg_metric]
+    return metrics
+
 ##### Tests #####
 
 def test_base_metric():
@@ -90,3 +99,13 @@ def test_raw_average_usage_metric(consumption_history_one_year_electricity,
 
     avg_gas_summer_usage = gas_avg_metric.evaluate(consumption_history_one_summer_natural_gas)
     assert abs(avg_gas_summer_usage - 100) < EPSILON
+
+def test_meter_class_creation(metric_list,consumption_history_one_year_electricity):
+    class MyMeter(Meter):
+        elec_avg_usage = RawAverageUsageMetric(electricity,"kWh")
+        gas_avg_usage = RawAverageUsageMetric(natural_gas,"therms")
+    meter = MyMeter()
+    result = meter.run(consumption_history_one_year_electricity)
+    assert isinstance(result,MeterRun)
+    assert abs(result.elec_avg_usage - 1200) < EPSILON
+    assert np.isnan(result.gas_avg_usage)
