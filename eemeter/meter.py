@@ -8,20 +8,23 @@ class MetricBase:
         return False
 
 class RawAverageUsageMetric(MetricBase):
-    def __init__(self,fuel_type,unit_name):
-        self.fuel_type = fuel_type
+    def __init__(self,unit_name,fuel_type="all"):
         self.unit_name = unit_name
+        self.fuel_type = fuel_type
 
     def evaluate(self,consumption_history):
-        kWhs = []
-        consumptions = consumption_history.get(self.fuel_type)
-        if consumptions:
-            for consumption in consumptions:
-                kWhs.append(consumption.to(self.unit_name))
-        return np.mean(kWhs)
+        usages = {}
+        for fuel_type,consumptions in consumption_history.fuel_types():
+            if self.fuel_type == "all" or self.fuel_type == fuel_type:
+                usage = []
+                consumptions = consumption_history.get(self.fuel_type)
+                if consumptions:
+                    for consumption in consumptions:
+                        usage.append(consumption.to(self.unit_name))
+                usages[fuel_type] = np.mean(usage)
+        return usages
 
 class FlagBase(MetricBase):
-
     def is_flag(self):
         return True
 
