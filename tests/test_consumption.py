@@ -108,16 +108,23 @@ def test_consumption_has_representation(consumption_zero_one_month):
     assert "Consumption" in consumption_zero_one_month.__repr__()
 
 def test_consumption_history(consumption_list_one_year_electricity,
-        consumption_list_one_year_gas):
+                             consumption_list_one_year_gas):
     ch_elec = ConsumptionHistory(consumption_list_one_year_electricity)
     ch_gas = ConsumptionHistory(consumption_list_one_year_gas)
+
+    # different ways to get the same data
     assert len(ch_elec.electricity) == 12
+    assert len(ch_elec[electricity.name]) == 12
+    assert len(ch_elec[electricity]) == 12
+    assert len(ch_elec.get(electricity)) == 12
+
+    # other cases
     assert len(ch_elec.natural_gas) == 0
     assert len(ch_gas.electricity) == 0
     assert len(ch_gas.natural_gas) == 12
+
     for consumption in ch_elec.electricity:
         assert consumption.kWh >= 0
     for consumption in ch_gas.natural_gas:
         assert consumption.therm >= 0
-    assert len(ch_elec.get(electricity)) == 12
 

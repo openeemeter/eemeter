@@ -71,6 +71,11 @@ class ConsumptionHistory:
     def __getattr__(self, attr):
         return self._data[attr]
 
+    def __getitem__(self,item):
+        if isinstance(item,FuelType):
+            return self._data[item.name]
+        return self._data[item]
+
     def __repr__(self):
         return "ConsumptionHistory({})".format(self._data)
 

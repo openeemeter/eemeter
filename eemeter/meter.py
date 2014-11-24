@@ -4,6 +4,9 @@ class MetricBase:
     def evaluate(self,consumption_history):
         raise NotImplementedError
 
+    def is_flag(self):
+        return False
+
 class RawAverageUsageMetric(MetricBase):
     def __init__(self,fuel_type,unit_name):
         self.fuel_type = fuel_type
@@ -45,54 +48,35 @@ class Meter(object):
             data[metric_name] = evaluation
         return MeterRun(data)
 
-class FlagBase:
+class FlagBase(MetricBase):
 
-    def __init__(self,raised):
-        self.raised = raised
+    def is_flag(self):
+        return True
 
-    def description(self):
-        raise NotImplementedError
+class FuelTypePresenceFlag(FlagBase):
+    def __init__(self,fuel_type):
+        self.fuel_type = fuel_type
+
+    def evaluate(self,consumption_history):
+        return len(consumption_history[self.fuel_type.name]) > 0
 
 class NoneInTimeRangeFlag(FlagBase):
-
-    def description(self):
-        return "None in time range"
+    pass
 
 class OverlappingPeriodsFlag(FlagBase):
-
-    def description(self):
-        return "Overlapping time periods"
+    pass
 
 class MissingPeriodsFlag(FlagBase):
-
-    def description(self):
-        return "Missing time periods"
+    pass
 
 class TooManyEstimatedPeriodsFlag(FlagBase):
-
-    def __init__(self,raised,limit):
-        self.raised = raised
-        self.limit = limit
-
-    def description(self):
-        return "More than {} estimated periods".format(self.limit)
+    pass
 
 class ShortTimeSpanFlag(FlagBase):
-
-    def __init__(self,raised,limit):
-        self.raised = raised
-        self.limit = limit
-
-    def description(self):
-        return "Fewer than {} days in sample".format(self.limit)
+    pass
 
 class InsufficientTemperatureRangeFlag(FlagBase):
-
-    def description(self):
-        return "Insufficient temperature range"
+    pass
 
 class MixedFuelTypeFlag(FlagBase):
-
-    def description(self):
-        return "Mixed fuel types"
-
+    pass

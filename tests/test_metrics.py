@@ -6,6 +6,7 @@ from eemeter.meter import MetricBase
 from eemeter.meter import RawAverageUsageMetric
 from eemeter.meter import Meter
 from eemeter.meter import MeterRun
+from eemeter.meter import FuelTypePresenceFlag
 
 from datetime import datetime
 import numpy as np
@@ -76,9 +77,10 @@ def metric_list():
 ##### Tests #####
 
 def test_base_metric():
+    metric = MetricBase()
     with pytest.raises(NotImplementedError):
-        metric = MetricBase()
         metric.evaluate(None)
+    assert not metric.is_flag()
 
 def test_raw_average_usage_metric(consumption_history_one_year_electricity,
                                   consumption_history_one_year_natural_gas,
@@ -104,8 +106,18 @@ def test_meter_class_creation(metric_list,consumption_history_one_year_electrici
     class MyMeter(Meter):
         elec_avg_usage = RawAverageUsageMetric(electricity,"kWh")
         gas_avg_usage = RawAverageUsageMetric(natural_gas,"therms")
+        elec_data_present = FuelTypePresenceFlag(electricity)
+        gas_data_present = FuelTypePresenceFlag(natural_gas)
+
+    assert isinstance(MyMeter.metrics["elec_avg_usage"],RawAverageUsageMetric)
+    assert isinstance(MyMeter.metrics["gas_avg_usage"],RawAverageUsageMetric)
+
     meter = MyMeter()
+    assert "elec_avg_usage" in meter.metrics.keys()
+    assert "gas_avg_usage" in meter.metrics.keys()
     result = meter.run(consumption_history_one_year_electricity)
     assert isinstance(result,MeterRun)
     assert abs(result.elec_avg_usage - 1200) < EPSILON
     assert np.isnan(result.gas_avg_usage)
+    assert result.elec_data_present
+    assert not result.gas_data_present
