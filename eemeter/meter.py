@@ -20,35 +20,6 @@ class RawAverageUsageMetric(MetricBase):
                 kWhs.append(consumption.to(self.unit_name))
         return np.mean(kWhs)
 
-class MeterRun:
-    def __init__(self,data):
-        self._data = data
-
-    def __getattr__(self,attr):
-        return self._data[attr]
-
-class MeterMeta(type):
-    def __new__(cls, name, parents, dct):
-        metrics = {}
-        for key,value in dct.items():
-            if issubclass(value.__class__,MetricBase):
-                metrics[key] = value
-
-        dct["metrics"] = metrics
-
-        return super(MeterMeta, cls).__new__(cls, name, parents, dct)
-
-class Meter(object):
-
-    __metaclass__ = MeterMeta
-
-    def run(self,consumption_history):
-        data = {}
-        for metric_name,metric in self.metrics.iteritems():
-            evaluation = metric.evaluate(consumption_history)
-            data[metric_name] = evaluation
-        return MeterRun(data)
-
 class FlagBase(MetricBase):
 
     def is_flag(self):
@@ -131,3 +102,33 @@ class InsufficientTimeRangeFlag(FlagBase):
 
 class InsufficientTemperatureRangeFlag(FlagBase):
     pass
+
+class MeterRun:
+    def __init__(self,data):
+        self._data = data
+
+    def __getattr__(self,attr):
+        return self._data[attr]
+
+class MeterMeta(type):
+    def __new__(cls, name, parents, dct):
+        metrics = {}
+        for key,value in dct.items():
+            if issubclass(value.__class__,MetricBase):
+                metrics[key] = value
+
+        dct["metrics"] = metrics
+
+        return super(MeterMeta, cls).__new__(cls, name, parents, dct)
+
+class Meter(object):
+
+    __metaclass__ = MeterMeta
+
+    def run(self,consumption_history):
+        data = {}
+        for metric_name,metric in self.metrics.iteritems():
+            evaluation = metric.evaluate(consumption_history)
+            data[metric_name] = evaluation
+        return MeterRun(data)
+
