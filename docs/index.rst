@@ -6,12 +6,11 @@
 Open Energy Efficiency Meter
 ============================
 
-Contents:
-
 .. toctree::
    :maxdepth: 2
 
    eemeter
+   tutorial
 
 Description
 -----------
