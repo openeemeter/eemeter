@@ -9,8 +9,8 @@ Open Energy Efficiency Meter
 .. toctree::
    :maxdepth: 2
 
-   eemeter
    tutorial
+   eemeter
 
 Description
 -----------
