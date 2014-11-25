@@ -192,35 +192,31 @@ def test_raw_average_usage_metric(consumption_history_one_year_electricity,
     assert not gas_avg_metric.is_flag()
 
     avg_elec_year_usage = elec_avg_metric.evaluate(consumption_history_one_year_electricity)
-    assert abs(avg_elec_year_usage[electricity.name] - 1200) < EPSILON
+    assert abs(avg_elec_year_usage - 1200) < EPSILON
 
     avg_gas_year_usage = gas_avg_metric.evaluate(consumption_history_one_year_natural_gas)
-    assert abs(avg_gas_year_usage[natural_gas.name] - 520) < EPSILON
+    assert abs(avg_gas_year_usage - 520) < EPSILON
 
     avg_elec_summer_usage = elec_avg_metric.evaluate(consumption_history_one_summer_electricity)
-    assert abs(avg_elec_summer_usage[electricity.name] - 1700) < EPSILON
+    assert abs(avg_elec_summer_usage - 1700) < EPSILON
 
     avg_gas_summer_usage = gas_avg_metric.evaluate(consumption_history_one_summer_natural_gas)
-    assert abs(avg_gas_summer_usage[natural_gas.name] - 100) < EPSILON
+    assert abs(avg_gas_summer_usage - 100) < EPSILON
 
     avg_gas_year_usage_none = gas_avg_metric.evaluate(consumption_history_one_year_electricity)
-    with pytest.raises(KeyError):
-        avg_gas_year_usage_none[natural_gas.name]
+    assert np.isnan(avg_gas_year_usage_none)
 
     avg_elec_year_usage_none = elec_avg_metric.evaluate(consumption_history_one_year_natural_gas)
-    with pytest.raises(KeyError):
-        avg_elec_year_usage_none[electricity.name]
+    assert np.isnan(avg_elec_year_usage_none)
 
     avg_gas_summer_usage_none = gas_avg_metric.evaluate(consumption_history_one_summer_electricity)
-    with pytest.raises(KeyError):
-        avg_gas_summer_usage_none[natural_gas.name]
+    assert np.isnan(avg_gas_summer_usage_none)
 
     avg_elec_summer_usage_none = elec_avg_metric.evaluate(consumption_history_one_summer_natural_gas)
-    with pytest.raises(KeyError):
-        avg_elec_summer_usage_none[electricity.name]
+    assert np.isnan(avg_elec_summer_usage_none)
 
 def test_fueltype_presence_flag(consumption_history_one_year_electricity,
-                                  consumption_history_one_year_natural_gas):
+                                consumption_history_one_year_natural_gas):
     elec_data_present = FuelTypePresenceFlag(electricity)
     gas_data_present = FuelTypePresenceFlag(natural_gas)
 
@@ -234,9 +230,30 @@ def test_none_in_time_range_presence_flag(consumption_history_one_year_electrici
     future_time_range_flag = TimeRangePresenceFlag(datetime(2050,1,1),datetime(2100,1,1))
     recent_time_range_flag = TimeRangePresenceFlag(datetime(2012,1,1),datetime(2013,1,1))
 
-    assert not past_time_range_flag.evaluate(consumption_history_one_year_electricity)
-    assert not future_time_range_flag.evaluate(consumption_history_one_year_electricity)
-    assert recent_time_range_flag.evaluate(consumption_history_one_year_electricity)
+    elec_past_time_range_flag = TimeRangePresenceFlag(datetime(1900,1,1),datetime(1950,1,1),fuel_type=electricity)
+    elec_future_time_range_flag = TimeRangePresenceFlag(datetime(2050,1,1),datetime(2100,1,1),fuel_type=electricity)
+    elec_recent_time_range_flag = TimeRangePresenceFlag(datetime(2012,1,1),datetime(2013,1,1),fuel_type=electricity)
+
+    gas_past_time_range_flag = TimeRangePresenceFlag(datetime(1900,1,1),datetime(1950,1,1),fuel_type=natural_gas)
+    gas_future_time_range_flag = TimeRangePresenceFlag(datetime(2050,1,1),datetime(2100,1,1),fuel_type=natural_gas)
+    gas_recent_time_range_flag = TimeRangePresenceFlag(datetime(2012,1,1),datetime(2013,1,1),fuel_type=natural_gas)
+
+    assert not past_time_range_flag.evaluate(consumption_history_one_year_electricity)["electricity"]
+    assert not future_time_range_flag.evaluate(consumption_history_one_year_electricity)["electricity"]
+    assert recent_time_range_flag.evaluate(consumption_history_one_year_electricity)["electricity"]
+
+    with pytest.raises(KeyError):
+        assert not past_time_range_flag.evaluate(consumption_history_one_year_electricity)["natural_gas"]
+        assert not future_time_range_flag.evaluate(consumption_history_one_year_electricity)["natural_gas"]
+        assert recent_time_range_flag.evaluate(consumption_history_one_year_electricity)["natural_gas"]
+
+    assert not elec_past_time_range_flag.evaluate(consumption_history_one_year_electricity)
+    assert not elec_future_time_range_flag.evaluate(consumption_history_one_year_electricity)
+    assert elec_recent_time_range_flag.evaluate(consumption_history_one_year_electricity)
+
+    assert not gas_past_time_range_flag.evaluate(consumption_history_one_year_electricity)
+    assert not gas_future_time_range_flag.evaluate(consumption_history_one_year_electricity)
+    assert not gas_recent_time_range_flag.evaluate(consumption_history_one_year_electricity)
 
 def test_overlapping_periods_flag(consumption_history_one_year_electricity,
                                   consumption_history_overlapping_1,
@@ -249,18 +266,35 @@ def test_overlapping_periods_flag(consumption_history_one_year_electricity,
                                   consumption_history_not_overlapping_3,
                                   consumption_history_not_overlapping_4,
                                   consumption_history_not_overlapping_5):
+
     overlap_flag = OverlappingTimePeriodsFlag()
-    assert not overlap_flag.evaluate(consumption_history_one_year_electricity)
-    assert overlap_flag.evaluate(consumption_history_overlapping_1)
-    assert overlap_flag.evaluate(consumption_history_overlapping_2)
-    assert overlap_flag.evaluate(consumption_history_overlapping_3)
-    assert overlap_flag.evaluate(consumption_history_overlapping_4)
-    assert overlap_flag.evaluate(consumption_history_overlapping_5)
-    assert not overlap_flag.evaluate(consumption_history_not_overlapping_1)
-    assert not overlap_flag.evaluate(consumption_history_not_overlapping_2)
-    assert not overlap_flag.evaluate(consumption_history_not_overlapping_3)
-    assert not overlap_flag.evaluate(consumption_history_not_overlapping_4)
-    assert not overlap_flag.evaluate(consumption_history_not_overlapping_5)
+    elec_overlap_flag = OverlappingTimePeriodsFlag(fuel_type=electricity)
+    gas_overlap_flag = OverlappingTimePeriodsFlag(fuel_type=natural_gas)
+
+    assert not overlap_flag.evaluate(consumption_history_one_year_electricity)["electricity"]
+    assert overlap_flag.evaluate(consumption_history_overlapping_1)["natural_gas"]
+    assert overlap_flag.evaluate(consumption_history_overlapping_2)["natural_gas"]
+    assert overlap_flag.evaluate(consumption_history_overlapping_3)["natural_gas"]
+    assert overlap_flag.evaluate(consumption_history_overlapping_4)["natural_gas"]
+    assert overlap_flag.evaluate(consumption_history_overlapping_5)["natural_gas"]
+    assert not overlap_flag.evaluate(consumption_history_not_overlapping_1)["natural_gas"]
+    assert not overlap_flag.evaluate(consumption_history_not_overlapping_2)["natural_gas"]
+    assert not overlap_flag.evaluate(consumption_history_not_overlapping_3)["natural_gas"]
+    assert not overlap_flag.evaluate(consumption_history_not_overlapping_4)["natural_gas"]
+    assert not overlap_flag.evaluate(consumption_history_not_overlapping_5)["natural_gas"]
+
+    assert not elec_overlap_flag.evaluate(consumption_history_one_year_electricity)
+
+    assert gas_overlap_flag.evaluate(consumption_history_overlapping_1)
+    assert gas_overlap_flag.evaluate(consumption_history_overlapping_2)
+    assert gas_overlap_flag.evaluate(consumption_history_overlapping_3)
+    assert gas_overlap_flag.evaluate(consumption_history_overlapping_4)
+    assert gas_overlap_flag.evaluate(consumption_history_overlapping_5)
+    assert not gas_overlap_flag.evaluate(consumption_history_not_overlapping_1)
+    assert not gas_overlap_flag.evaluate(consumption_history_not_overlapping_2)
+    assert not gas_overlap_flag.evaluate(consumption_history_not_overlapping_3)
+    assert not gas_overlap_flag.evaluate(consumption_history_not_overlapping_4)
+    assert not gas_overlap_flag.evaluate(consumption_history_not_overlapping_5)
 
 def test_missing_time_periods_flag(consumption_history_one_summer_electricity,
                                    consumption_history_missing_time_period_1,
@@ -307,8 +341,7 @@ def test_meter_class_integration(metric_list,consumption_history_one_year_electr
     assert isinstance(result,MeterRun)
 
     # Meter checking
-    assert abs(result.elec_avg_usage["electricity"] - 1200) < EPSILON
-    with pytest.raises(KeyError):
-        assert np.isnan(result.gas_avg_usage["natural_gas"])
+    assert abs(result.elec_avg_usage - 1200) < EPSILON
+    assert np.isnan(result.gas_avg_usage)
     assert result.elec_data_present
     assert not result.gas_data_present

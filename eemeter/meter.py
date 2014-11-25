@@ -1,7 +1,7 @@
 import numpy as np
 from .consumption import FuelType
 
-class MetricBase:
+class MetricBase(object):
     def evaluate(self,consumption_history):
         raise NotImplementedError
 
@@ -13,21 +13,29 @@ class RawAverageUsageMetric(MetricBase):
         self.unit_name = unit_name
         if fuel_type:
             assert isinstance(fuel_type,FuelType)
-            self.fuel_type = fuel_type
+        self.fuel_type = fuel_type
 
     def evaluate(self,consumption_history):
-        usages = {}
-        for fuel_type,consumptions in consumption_history.fuel_types():
-            if self.fuel_type is None or self.fuel_type.name == fuel_type:
-                usage = []
-                consumptions = consumption_history.get(self.fuel_type)
-                if consumptions:
-                    for consumption in consumptions:
-                        usage.append(consumption.to(self.unit_name))
-                usages[fuel_type] = np.mean(usage)
-        return usages
+        if self.fuel_type is None:
+            usages = {}
+            for fuel_type,consumptions in consumption_history.fuel_types():
+                usages[fuel_type] = self._get_fuel_type_average(consumptions)
+            return usages
+        else:
+            consumptions = consumption_history.get(self.fuel_type)
+            if consumptions:
+                return self._get_fuel_type_average(consumptions)
+            return np.nan
+
+    def _get_fuel_type_average(self,consumptions):
+        return np.mean([consumption.to(self.unit_name) for consumption in consumptions])
 
 class FlagBase(MetricBase):
+    def __init__(self,fuel_type=None):
+        if fuel_type:
+            assert isinstance(fuel_type,FuelType)
+        self.fuel_type = fuel_type
+
     def is_flag(self):
         return True
 
@@ -39,14 +47,26 @@ class FuelTypePresenceFlag(FlagBase):
         return consumption_history.get(self.fuel_type) is not None
 
 class TimeRangePresenceFlag(FlagBase):
-    def __init__(self,start,end):
+    def __init__(self,start,end,fuel_type=None):
         assert start <= end
         self.start = start
         self.end = end
+        super(TimeRangePresenceFlag,self).__init__(fuel_type)
 
     def evaluate(self,consumption_history):
-        for consumption in consumption_history.iteritems():
-            print consumption
+        if self.fuel_type is None:
+            presences = {}
+            for fuel_type,consumptions in consumption_history.fuel_types():
+                presences[fuel_type] = self._get_fuel_type_time_range_presence(consumptions)
+            return presences
+        else:
+            consumptions = consumption_history.get(self.fuel_type)
+            if consumptions:
+                return self._get_fuel_type_time_range_presence(consumptions)
+            return False
+
+    def _get_fuel_type_time_range_presence(self,consumptions):
+        for consumption in consumptions:
             if self._in_time_range(consumption.start) or \
                 self._in_time_range(consumption.end):
                 return True
@@ -57,21 +77,33 @@ class TimeRangePresenceFlag(FlagBase):
 
 class OverlappingTimePeriodsFlag(FlagBase):
     def evaluate(self,consumption_history):
-        for fuel_type,consumptions in consumption_history.fuel_types():
-            consumptions.sort()
-            if len(consumptions) <= 1:
-                return False
-            for c1,c2 in zip(consumptions,consumptions[1:]):
-                if c1.end == c2.end:
-                    if not (c1.start == c1.end or c2.start == c2.end):
-                        return True
-                elif c1.start == c2.start:
-                    if not (c1.start == c1.end or c2.start == c2.end):
-                        return True
-                else:
-                    if c2.start < c1.end:
-                        return True
+        if self.fuel_type is None:
+            overlaps = {}
+            for fuel_type,consumptions in consumption_history.fuel_types():
+                overlaps[fuel_type] = self._get_fuel_type_overlapping(consumptions)
+            return overlaps
+        else:
+            consumptions = consumption_history.get(self.fuel_type)
+            if consumptions:
+                return self._get_fuel_type_overlapping(consumptions)
+            return False
+
+    def _get_fuel_type_overlapping(self,consumptions):
+        consumptions.sort()
+        if len(consumptions) <= 1:
+            return False
+        for c1,c2 in zip(consumptions,consumptions[1:]):
+            if c1.end == c2.end:
+                if not (c1.start == c1.end or c2.start == c2.end):
+                    return True
+            elif c1.start == c2.start:
+                if not (c1.start == c1.end or c2.start == c2.end):
+                    return True
+            else:
+                if c2.start < c1.end:
+                    return True
         return False
+
 
 class MissingTimePeriodsFlag(FlagBase):
     def evaluate(self,consumption_history):
