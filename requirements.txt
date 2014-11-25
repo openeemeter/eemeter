@@ -1,4 +1,3 @@
--e git+git@github.com:philngo/ee-meter.git@daa7588aac2cb658c90d00ea6d472c8578c395d6#egg=EEMeter-master
 Jinja2==2.7.3
 MarkupSafe==0.23
 Pint==0.6
