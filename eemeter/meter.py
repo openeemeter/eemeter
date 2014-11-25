@@ -8,6 +8,11 @@ class MetricBase(object):
         self.fuel_type = fuel_type
 
     def evaluate(self,consumption_history):
+        """Evaluates the metric on the specified fuel_type or on every
+        available fuel type, if none is specified, returning a dictionary of
+        the evaluations keyed on fuel_type name. Requires specification of the
+        `evaluate_fuel_type` method.
+        """
         if self.fuel_type is None:
             usages = {}
             for fuel_type,consumptions in consumption_history.fuel_types():
@@ -18,17 +23,26 @@ class MetricBase(object):
             return self.evaluate_fuel_type(consumptions)
 
     def evaluate_fuel_type(self,consumptions):
+        """Must be overridden by subclasses. Should return a value representing
+        the metric as applied to consumption history of a particular fuel type.
+        """
         raise NotImplementedError
 
     def is_flag(self):
+        """Returns `True` if the metric is a flag, and `False` otherwise.
+        """
         return False
 
 class RawAverageUsageMetric(MetricBase):
     def __init__(self,unit_name,fuel_type=None):
+        # TODO - allow different units for different fuel types.
         self.unit_name = unit_name
         super(RawAverageUsageMetric,self).__init__(fuel_type)
 
     def evaluate_fuel_type(self,consumptions):
+        """Returns the average usage with the specified unit and the specified
+        fuel type.
+        """
         if consumptions is None:
             return np.nan
         return np.mean([consumption.to(self.unit_name) for consumption in consumptions])
@@ -40,6 +54,7 @@ class FlagBase(MetricBase):
         self.fuel_type = fuel_type
 
     def is_flag(self):
+        """Returns `True` if the metric is a flag, and `False` otherwise."""
         return True
 
 class FuelTypePresenceFlag(FlagBase):
@@ -47,6 +62,9 @@ class FuelTypePresenceFlag(FlagBase):
         self.fuel_type = fuel_type
 
     def evaluate(self,consumption_history):
+        """Returns True if the specified fuel_type is present in the
+        specified consumption history.
+        """
         return consumption_history.get(self.fuel_type) is not None
 
 class TimeRangePresenceFlag(FlagBase):
@@ -57,6 +75,9 @@ class TimeRangePresenceFlag(FlagBase):
         super(TimeRangePresenceFlag,self).__init__(fuel_type)
 
     def evaluate_fuel_type(self,consumptions):
+        """Returns `True` if any consumption of a particular fuel type is
+        present in the specified time range.
+        """
         if consumptions is None:
             return False
         for consumption in consumptions:
@@ -66,10 +87,15 @@ class TimeRangePresenceFlag(FlagBase):
         return False
 
     def _in_time_range(self,dt):
+        """Returns `True` if `dt` is in the specified time range.
+        """
         return self.start <= dt and self.end >= dt
 
 class OverlappingTimePeriodsFlag(FlagBase):
     def evaluate_fuel_type(self,consumptions):
+        """Returns `True` if any consumptions of the specified fuel types
+        have overlapping time periods.
+        """
         if consumptions is None:
             return False
         consumptions.sort()
@@ -90,6 +116,9 @@ class OverlappingTimePeriodsFlag(FlagBase):
 
 class MissingTimePeriodsFlag(FlagBase):
     def evaluate_fuel_type(self,consumptions):
+        """Returns `True` if, taken in total, the consumption history of a
+        particular fuel type, is missing any time periods.
+        """
         if consumptions is None:
             return False
         consumptions.sort()
@@ -106,6 +135,9 @@ class TooManyEstimatedPeriodsFlag(FlagBase):
         super(TooManyEstimatedPeriodsFlag,self).__init__(fuel_type)
 
     def evaluate_fuel_type(self,consumptions):
+        """Returns `True` if the consumption history of a particular fuel type
+        has more than the maximum allowable number of estimated readings.
+        """
         if consumptions is None:
             return False
         return len([c for c in consumptions if c.estimated]) > self.maximum
@@ -116,6 +148,10 @@ class InsufficientTimeRangeFlag(FlagBase):
         super(InsufficientTimeRangeFlag,self).__init__(fuel_type)
 
     def evaluate_fuel_type(self,consumptions):
+        """Returns `True` if the consumption history of a particular fuel type,
+        fails to have a range at least as large as the number of days
+        specified.
+        """
         if consumptions is None:
             return True
         consumptions.sort()
@@ -143,10 +179,17 @@ class MeterMeta(type):
         return super(MeterMeta, cls).__new__(cls, name, parents, dct)
 
 class Meter(object):
+    """All new meters should subclass the Meter class in order to have all of
+    the expected functionality.
+    """
 
     __metaclass__ = MeterMeta
 
     def run(self,consumption_history):
+        """Returns a dictionary of the evaluations of all of the metrics and
+        flags in this Meter, keyed by the names of the metric attributes
+        supplied.
+        """
         data = {}
         for metric_name,metric in self.metrics.iteritems():
             evaluation = metric.evaluate(consumption_history)
