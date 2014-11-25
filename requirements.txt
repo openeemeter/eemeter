@@ -1,0 +1,26 @@
+-e git+git@github.com:philngo/ee-meter.git@00fc25c2c2bbfe3174b73abafc3b4f49f4bf499c#egg=EEMeter-master
+Jinja2==2.7.3
+MarkupSafe==0.23
+Pint==0.6
+PyYAML==3.11
+Pygments==1.6
+Sphinx==1.2.3
+argh==0.25.0
+arrow==0.4.4
+backports.ssl-match-hostname==3.4.0.2
+certifi==14.05.14
+docutils==0.12
+gnureadline==6.3.3
+ipython==2.3.0
+livereload==2.2.2
+numpy==1.9.1
+pathtools==0.1.2
+py==1.4.25
+pytest==2.6.3
+python-dateutil==2.2
+pyzmq==14.4.0
+six==1.8.0
+sphinx-autobuild==0.3.0
+tornado==4.0.2
+watchdog==0.8.1
+wsgiref==0.1.2
