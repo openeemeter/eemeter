@@ -162,8 +162,8 @@ def consumption_history_three_estimated():
 
 @pytest.fixture
 def metric_list():
-    elec_avg_metric = RawAverageUsageMetric(electricity,"kWh")
-    gas_avg_metric = RawAverageUsageMetric(natural_gas,"therms")
+    elec_avg_metric = RawAverageUsageMetric("kWh","electricity")
+    gas_avg_metric = RawAverageUsageMetric("therms","natural_gas")
     metrics = [elec_avg_metric,gas_avg_metric]
     return metrics
 
