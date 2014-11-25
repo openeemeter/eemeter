@@ -16,7 +16,13 @@ Contents:
 Description
 -----------
 
-This module is an implementation of the `ANSI/BPI-2400-S-2012 <http://www.bpi.org/Web%20Download/BPI%20Standards/BPI-2400-S-2012_Standard_Practice_for_Standardized_Qualification_of_Whole-House%20Energy%20Savings_9-28-12_sg.pdf>`_ standard.
+This module makes it simple to build and maintain residential and commercial
+energy efficieny monitoring systems that operate at scale.
+
+It implements a number of building energy efficiency monitoring standards,
+including the following standards:
+
+- `ANSI/BPI-2400-S-2012 <http://www.bpi.org/Web%20Download/BPI%20Standards/BPI-2400-S-2012_Standard_Practice_for_Standardized_Qualification_of_Whole-House%20Energy%20Savings_9-28-12_sg.pdf>`_
 
 Installation
 ------------

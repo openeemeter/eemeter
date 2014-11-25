@@ -1,30 +1,15 @@
-Usage class
-===========
+Consumption data structures
+===========================
 
-.. autoclass:: eemeter.usage.Usage
+.. autoclass:: eemeter.consumption.Consumption
    :members:
 
-FuelType class
-==============
-
-.. autoclass:: eemeter.usage.FuelType
+.. autoclass:: eemeter.consumption.Consumption
    :members:
 
-Units
-=====
+Meters and Metrics
+==================
 
-.. autoclass:: eemeter.units.EnergyUnit
-   :members:
-
-Conversion functions
---------------------
-
-.. automodule:: eemeter.conversions
-   :members:
-
-Flags
-=====
-
-.. automodule:: eemeter.flags
+.. automodule:: eemeter.meter
    :members:
    :undoc-members:
