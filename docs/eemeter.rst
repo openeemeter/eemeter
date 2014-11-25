@@ -28,5 +28,5 @@ Meters and Metrics
 Consumption is metered using meter classes which are containers for flags and
 metrics.
 
-.. automodule:: eemeter.meter
+.. autoclass:: eemeter.meter.Meter
    :members:

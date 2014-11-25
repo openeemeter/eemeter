@@ -5,8 +5,7 @@ class DateRangeException(Exception): pass
 class InvalidFuelTypeException(Exception): pass
 
 class FuelType:
-    """
-    Class for representing fuel types
+    """Simple representation of fuel types. Stores the name of the fuel type.
     """
 
     def __init__(self,name):
@@ -15,13 +14,15 @@ class FuelType:
     def __str__(self):
         return self.name
 
+# weird psuedo-global singletons; should probably reconsider this implementation.
 electricity = FuelType("electricity")
 natural_gas = FuelType("natural_gas")
 propane = FuelType("propane")
 
 class Consumption:
-    """
-    Class for representing energy usage
+    """Represents energy usage. Each instance has start and end datetimes, a
+    particular unit (although it is stored internally as joules), a fuel type,
+    and whether or not it is estimated.
     """
 
     def __init__(self,usage,unit_name,fuel_type,start,end,estimated=False):
@@ -49,24 +50,27 @@ class Consumption:
                                                      self.joules)
 
     def __getattr__(self,unit):
-        """
-        Return interally stored joules value in the given unit
-        """
         return (self.joules * ureg.joules).to(ureg.parse_expression(unit)).magnitude
 
     def __lt__(self,other):
+        """Comparison is based on end time.
+        """
         return self.end < other.end
 
     def to(self,unit):
-        """
-        Return interally stored joules value in the given unit
+        """Returns internally stored energy value in the given unit. The `unit`
+        should be a representative string in abbreviation or otherwise, in
+        singular or plural form (e.g. "kWh", "kWhs", "kilowatthour", or
+        "kilowatthours"). Units must have the same dimensionality as
+        the joule. Unit handling uses the `pint` package, which has additional
+        documentation.
         """
         return (self.joules * ureg.joules).to(ureg.parse_expression(unit)).magnitude
 
     @property
     def timedelta(self):
-        """
-        Return the timedelta between the start and end datetimes
+        """Property representing the timedelta between the start and end
+        datetimes.
         """
         return self.end - self.start
 
@@ -94,14 +98,26 @@ class ConsumptionHistory:
         return "ConsumptionHistory({})".format(self._data)
 
     def get(self,fuel_type):
+        """Returns an array (not necessarily sorted) of Consumption instances
+        given a particular fuel_type. Fuel type may be specified as a string
+        matching the name of a particular fuel type, or by a fuel type
+        instance.
+        """
         if isinstance(fuel_type,FuelType):
             return self._data.get(fuel_type.name)
         return self._data.get(fuel_type)
 
     def iteritems(self):
-        for key,item in self._data.items():
-            for consumption in item:
+        """Iterator that returns all internally stored consumption instances in
+        no particular order.
+        """
+        for fuel_type,consumptions in self._data.items():
+            for consumption in consumptions:
                 yield consumption
 
     def fuel_types(self):
+        """Iterates over (fuel_type,consumptions) pairs, in which fuel_type is
+        the string name of a fuel_type and consumptions is a list of all
+        consumption with that particular fuel type.
+        """
         return self._data.iteritems()
