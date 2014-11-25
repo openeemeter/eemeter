@@ -177,7 +177,7 @@ def meter_run_simple():
 def test_base_metric():
     metric = MetricBase()
     with pytest.raises(NotImplementedError):
-        metric.evaluate(None)
+        metric.evaluate_fuel_type([])
     assert not metric.is_flag()
 
 def test_raw_average_usage_metric(consumption_history_one_year_electricity,

@@ -2,15 +2,7 @@ import numpy as np
 from .consumption import FuelType
 
 class MetricBase(object):
-    def evaluate(self,consumption_history):
-        raise NotImplementedError
-
-    def is_flag(self):
-        return False
-
-class RawAverageUsageMetric(MetricBase):
-    def __init__(self,unit_name,fuel_type=None):
-        self.unit_name = unit_name
+    def __init__(self,fuel_type=None):
         if fuel_type:
             assert isinstance(fuel_type,FuelType)
         self.fuel_type = fuel_type
@@ -19,15 +11,26 @@ class RawAverageUsageMetric(MetricBase):
         if self.fuel_type is None:
             usages = {}
             for fuel_type,consumptions in consumption_history.fuel_types():
-                usages[fuel_type] = self._get_fuel_type_average(consumptions)
+                usages[fuel_type] = self.evaluate_fuel_type(consumptions)
             return usages
         else:
             consumptions = consumption_history.get(self.fuel_type)
-            if consumptions:
-                return self._get_fuel_type_average(consumptions)
-            return np.nan
+            return self.evaluate_fuel_type(consumptions)
 
-    def _get_fuel_type_average(self,consumptions):
+    def evaluate_fuel_type(self,consumptions):
+        raise NotImplementedError
+
+    def is_flag(self):
+        return False
+
+class RawAverageUsageMetric(MetricBase):
+    def __init__(self,unit_name,fuel_type=None):
+        self.unit_name = unit_name
+        super(RawAverageUsageMetric,self).__init__(fuel_type)
+
+    def evaluate_fuel_type(self,consumptions):
+        if consumptions is None:
+            return np.nan
         return np.mean([consumption.to(self.unit_name) for consumption in consumptions])
 
 class FlagBase(MetricBase):
@@ -53,19 +56,9 @@ class TimeRangePresenceFlag(FlagBase):
         self.end = end
         super(TimeRangePresenceFlag,self).__init__(fuel_type)
 
-    def evaluate(self,consumption_history):
-        if self.fuel_type is None:
-            presences = {}
-            for fuel_type,consumptions in consumption_history.fuel_types():
-                presences[fuel_type] = self._get_fuel_type_time_range_presence(consumptions)
-            return presences
-        else:
-            consumptions = consumption_history.get(self.fuel_type)
-            if consumptions:
-                return self._get_fuel_type_time_range_presence(consumptions)
+    def evaluate_fuel_type(self,consumptions):
+        if consumptions is None:
             return False
-
-    def _get_fuel_type_time_range_presence(self,consumptions):
         for consumption in consumptions:
             if self._in_time_range(consumption.start) or \
                 self._in_time_range(consumption.end):
@@ -76,19 +69,9 @@ class TimeRangePresenceFlag(FlagBase):
         return self.start <= dt and self.end >= dt
 
 class OverlappingTimePeriodsFlag(FlagBase):
-    def evaluate(self,consumption_history):
-        if self.fuel_type is None:
-            overlaps = {}
-            for fuel_type,consumptions in consumption_history.fuel_types():
-                overlaps[fuel_type] = self._get_fuel_type_overlapping(consumptions)
-            return overlaps
-        else:
-            consumptions = consumption_history.get(self.fuel_type)
-            if consumptions:
-                return self._get_fuel_type_overlapping(consumptions)
+    def evaluate_fuel_type(self,consumptions):
+        if consumptions is None:
             return False
-
-    def _get_fuel_type_overlapping(self,consumptions):
         consumptions.sort()
         if len(consumptions) <= 1:
             return False
@@ -106,19 +89,9 @@ class OverlappingTimePeriodsFlag(FlagBase):
 
 
 class MissingTimePeriodsFlag(FlagBase):
-    def evaluate(self,consumption_history):
-        if self.fuel_type is None:
-            missing_periods = {}
-            for fuel_type,consumptions in consumption_history.fuel_types():
-                missing_periods[fuel_type] = self._get_fuel_type_missing_periods(consumptions)
-            return missing_periods
-        else:
-            consumptions = consumption_history.get(self.fuel_type)
-            if consumptions:
-                return self._get_fuel_type_missing_periods(consumptions)
+    def evaluate_fuel_type(self,consumptions):
+        if consumptions is None:
             return False
-
-    def _get_fuel_type_missing_periods(self,consumptions):
         consumptions.sort()
         if len(consumptions) <= 1:
             return False
@@ -132,19 +105,9 @@ class TooManyEstimatedPeriodsFlag(FlagBase):
         self.maximum = maximum
         super(TooManyEstimatedPeriodsFlag,self).__init__(fuel_type)
 
-    def evaluate(self,consumption_history):
-        if self.fuel_type is None:
-            results = {}
-            for fuel_type,consumptions in consumption_history.fuel_types():
-                results[fuel_type] = self._get_fuel_type_too_many_estimated(consumptions)
-            return results
-        else:
-            consumptions = consumption_history.get(self.fuel_type)
-            if consumptions:
-                return self._get_fuel_type_too_many_estimated(consumptions)
+    def evaluate_fuel_type(self,consumptions):
+        if consumptions is None:
             return False
-
-    def _get_fuel_type_too_many_estimated(self,consumptions):
         return len([c for c in consumptions if c.estimated]) > self.maximum
 
 class InsufficientTimeRangeFlag(FlagBase):
@@ -152,19 +115,9 @@ class InsufficientTimeRangeFlag(FlagBase):
         self.days = days
         super(InsufficientTimeRangeFlag,self).__init__(fuel_type)
 
-    def evaluate(self,consumption_history):
-        if self.fuel_type is None:
-            results = {}
-            for fuel_type,consumptions in consumption_history.fuel_types():
-                results[fuel_type] = self._get_fuel_type_insufficient_time_range(consumptions)
-            return results
-        else:
-            consumptions = consumption_history.get(self.fuel_type)
-            if consumptions:
-                return self._get_fuel_type_insufficient_time_range(consumptions)
+    def evaluate_fuel_type(self,consumptions):
+        if consumptions is None:
             return True
-
-    def _get_fuel_type_insufficient_time_range(self,consumptions):
         consumptions.sort()
         return (consumptions[-1].end - consumptions[0].start).days < self.days
 
