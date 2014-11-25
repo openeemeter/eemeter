@@ -300,23 +300,45 @@ def test_missing_time_periods_flag(consumption_history_one_summer_electricity,
                                    consumption_history_missing_time_period_1,
                                    consumption_history_missing_time_period_2):
     missing_flag = MissingTimePeriodsFlag()
-    assert not missing_flag.evaluate(consumption_history_one_summer_electricity)
-    assert missing_flag.evaluate(consumption_history_missing_time_period_1)
-    assert missing_flag.evaluate(consumption_history_missing_time_period_2)
+    elec_missing_flag = MissingTimePeriodsFlag(fuel_type=electricity)
+    gas_missing_flag = MissingTimePeriodsFlag(fuel_type=natural_gas)
+
+    assert not missing_flag.evaluate(consumption_history_one_summer_electricity)["electricity"]
+    assert missing_flag.evaluate(consumption_history_missing_time_period_1)["natural_gas"]
+    assert missing_flag.evaluate(consumption_history_missing_time_period_2)["natural_gas"]
+
+    assert not elec_missing_flag.evaluate(consumption_history_one_summer_electricity)
+
+    assert gas_missing_flag.evaluate(consumption_history_missing_time_period_1)
+    assert gas_missing_flag.evaluate(consumption_history_missing_time_period_2)
 
 def test_too_many_estimated_time_periods_flag(consumption_history_three_estimated):
     more_than_two_estimated_flag = TooManyEstimatedPeriodsFlag(2)
     more_than_three_estimated_flag = TooManyEstimatedPeriodsFlag(3)
-    assert more_than_two_estimated_flag.evaluate(consumption_history_three_estimated)
-    assert not more_than_three_estimated_flag.evaluate(consumption_history_three_estimated)
+    assert more_than_two_estimated_flag.evaluate(consumption_history_three_estimated)["natural_gas"]
+    assert more_than_two_estimated_flag.evaluate(consumption_history_three_estimated)["natural_gas"]
+    assert not more_than_three_estimated_flag.evaluate(consumption_history_three_estimated)["natural_gas"]
+
+    gas_more_than_two_estimated_flag = TooManyEstimatedPeriodsFlag(2,fuel_type=natural_gas)
+    gas_more_than_three_estimated_flag = TooManyEstimatedPeriodsFlag(3,fuel_type=natural_gas)
+    assert gas_more_than_two_estimated_flag.evaluate(consumption_history_three_estimated)
+    assert not gas_more_than_three_estimated_flag.evaluate(consumption_history_three_estimated)
+
 
 def test_insufficient_time_range_flag(consumption_history_one_year_electricity):
     short_time_range_flag = InsufficientTimeRangeFlag(100)
     exact_time_range_flag = InsufficientTimeRangeFlag(365)
     long_time_range_flag = InsufficientTimeRangeFlag(1000)
-    assert not short_time_range_flag.evaluate(consumption_history_one_year_electricity)
-    assert not exact_time_range_flag.evaluate(consumption_history_one_year_electricity)
-    assert long_time_range_flag.evaluate(consumption_history_one_year_electricity)
+    assert not short_time_range_flag.evaluate(consumption_history_one_year_electricity)["electricity"]
+    assert not exact_time_range_flag.evaluate(consumption_history_one_year_electricity)["electricity"]
+    assert long_time_range_flag.evaluate(consumption_history_one_year_electricity)["electricity"]
+
+    elec_short_time_range_flag = InsufficientTimeRangeFlag(100,fuel_type=electricity)
+    elec_exact_time_range_flag = InsufficientTimeRangeFlag(365,fuel_type=electricity)
+    elec_long_time_range_flag = InsufficientTimeRangeFlag(1000,fuel_type=electricity)
+    assert not elec_short_time_range_flag.evaluate(consumption_history_one_year_electricity)
+    assert not elec_exact_time_range_flag.evaluate(consumption_history_one_year_electricity)
+    assert elec_long_time_range_flag.evaluate(consumption_history_one_year_electricity)
 
 def test_meter_run(meter_run_simple):
     assert meter_run_simple.elec_avg_usage == 100

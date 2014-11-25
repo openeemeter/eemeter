@@ -107,36 +107,66 @@ class OverlappingTimePeriodsFlag(FlagBase):
 
 class MissingTimePeriodsFlag(FlagBase):
     def evaluate(self,consumption_history):
-        for fuel_type,consumptions in consumption_history.fuel_types():
-            consumptions.sort()
-            if len(consumptions) <= 1:
-                return False
-            for c1,c2 in zip(consumptions,consumptions[1:]):
-                if c1.end != c2.start:
-                    return True
+        if self.fuel_type is None:
+            missing_periods = {}
+            for fuel_type,consumptions in consumption_history.fuel_types():
+                missing_periods[fuel_type] = self._get_fuel_type_missing_periods(consumptions)
+            return missing_periods
+        else:
+            consumptions = consumption_history.get(self.fuel_type)
+            if consumptions:
+                return self._get_fuel_type_missing_periods(consumptions)
+            return False
+
+    def _get_fuel_type_missing_periods(self,consumptions):
+        consumptions.sort()
+        if len(consumptions) <= 1:
+            return False
+        for c1,c2 in zip(consumptions,consumptions[1:]):
+            if c1.end != c2.start:
+                return True
         return False
 
 class TooManyEstimatedPeriodsFlag(FlagBase):
-    def __init__(self,maximum):
+    def __init__(self,maximum,fuel_type=None):
         self.maximum = maximum
+        super(TooManyEstimatedPeriodsFlag,self).__init__(fuel_type)
 
     def evaluate(self,consumption_history):
-        for fuel_type,consumptions in consumption_history.fuel_types():
-            num_estimated = len([c for c in consumptions if c.estimated])
-            if num_estimated > self.maximum:
-                return True
-        return False
+        if self.fuel_type is None:
+            results = {}
+            for fuel_type,consumptions in consumption_history.fuel_types():
+                results[fuel_type] = self._get_fuel_type_too_many_estimated(consumptions)
+            return results
+        else:
+            consumptions = consumption_history.get(self.fuel_type)
+            if consumptions:
+                return self._get_fuel_type_too_many_estimated(consumptions)
+            return False
+
+    def _get_fuel_type_too_many_estimated(self,consumptions):
+        return len([c for c in consumptions if c.estimated]) > self.maximum
 
 class InsufficientTimeRangeFlag(FlagBase):
-    def __init__(self,days):
+    def __init__(self,days,fuel_type=None):
         self.days = days
+        super(InsufficientTimeRangeFlag,self).__init__(fuel_type)
 
     def evaluate(self,consumption_history):
-        for fuel_type,consumptions in consumption_history.fuel_types():
-            consumptions.sort()
-            if (consumptions[-1].end - consumptions[0].start).days < self.days:
-                return True
-        return False
+        if self.fuel_type is None:
+            results = {}
+            for fuel_type,consumptions in consumption_history.fuel_types():
+                results[fuel_type] = self._get_fuel_type_insufficient_time_range(consumptions)
+            return results
+        else:
+            consumptions = consumption_history.get(self.fuel_type)
+            if consumptions:
+                return self._get_fuel_type_insufficient_time_range(consumptions)
+            return True
+
+    def _get_fuel_type_insufficient_time_range(self,consumptions):
+        consumptions.sort()
+        return (consumptions[-1].end - consumptions[0].start).days < self.days
 
 class InsufficientTemperatureRangeFlag(FlagBase):
     pass
