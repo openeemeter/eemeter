@@ -1,4 +1,5 @@
 import numpy as np
+from .consumption import FuelType
 
 class MetricBase:
     def evaluate(self,consumption_history):
@@ -8,14 +9,16 @@ class MetricBase:
         return False
 
 class RawAverageUsageMetric(MetricBase):
-    def __init__(self,unit_name,fuel_type="all"):
+    def __init__(self,unit_name,fuel_type=None):
         self.unit_name = unit_name
-        self.fuel_type = fuel_type
+        if fuel_type:
+            assert isinstance(fuel_type,FuelType)
+            self.fuel_type = fuel_type
 
     def evaluate(self,consumption_history):
         usages = {}
         for fuel_type,consumptions in consumption_history.fuel_types():
-            if self.fuel_type == "all" or self.fuel_type == fuel_type:
+            if self.fuel_type is None or self.fuel_type.name == fuel_type:
                 usage = []
                 consumptions = consumption_history.get(self.fuel_type)
                 if consumptions:
@@ -33,7 +36,7 @@ class FuelTypePresenceFlag(FlagBase):
         self.fuel_type = fuel_type
 
     def evaluate(self,consumption_history):
-        return consumption_history.get(self.fuel_type.name) is not None
+        return consumption_history.get(self.fuel_type) is not None
 
 class TimeRangePresenceFlag(FlagBase):
     def __init__(self,start,end):

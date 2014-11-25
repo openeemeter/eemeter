@@ -162,8 +162,8 @@ def consumption_history_three_estimated():
 
 @pytest.fixture
 def metric_list():
-    elec_avg_metric = RawAverageUsageMetric("kWh","electricity")
-    gas_avg_metric = RawAverageUsageMetric("therms","natural_gas")
+    elec_avg_metric = RawAverageUsageMetric("kWh",fuel_type = electricity)
+    gas_avg_metric = RawAverageUsageMetric("therms",fuel_type = natural_gas)
     metrics = [elec_avg_metric,gas_avg_metric]
     return metrics
 
@@ -185,39 +185,39 @@ def test_raw_average_usage_metric(consumption_history_one_year_electricity,
                                   consumption_history_one_summer_electricity,
                                   consumption_history_one_summer_natural_gas):
     raw_avg_usage_metric = RawAverageUsageMetric("Btu")
-    elec_avg_metric = RawAverageUsageMetric("kWh",fuel_type="electricity")
-    gas_avg_metric = RawAverageUsageMetric("therms",fuel_type="natural_gas")
+    elec_avg_metric = RawAverageUsageMetric("kWh",fuel_type=electricity)
+    gas_avg_metric = RawAverageUsageMetric("therms",fuel_type=natural_gas)
     assert issubclass(RawAverageUsageMetric,MetricBase)
     assert not elec_avg_metric.is_flag()
     assert not gas_avg_metric.is_flag()
 
     avg_elec_year_usage = elec_avg_metric.evaluate(consumption_history_one_year_electricity)
-    assert abs(avg_elec_year_usage["electricity"] - 1200) < EPSILON
+    assert abs(avg_elec_year_usage[electricity.name] - 1200) < EPSILON
 
     avg_gas_year_usage = gas_avg_metric.evaluate(consumption_history_one_year_natural_gas)
-    assert abs(avg_gas_year_usage["natural_gas"] - 520) < EPSILON
+    assert abs(avg_gas_year_usage[natural_gas.name] - 520) < EPSILON
 
     avg_elec_summer_usage = elec_avg_metric.evaluate(consumption_history_one_summer_electricity)
-    assert abs(avg_elec_summer_usage["electricity"] - 1700) < EPSILON
+    assert abs(avg_elec_summer_usage[electricity.name] - 1700) < EPSILON
 
     avg_gas_summer_usage = gas_avg_metric.evaluate(consumption_history_one_summer_natural_gas)
-    assert abs(avg_gas_summer_usage["natural_gas"] - 100) < EPSILON
+    assert abs(avg_gas_summer_usage[natural_gas.name] - 100) < EPSILON
 
     avg_gas_year_usage_none = gas_avg_metric.evaluate(consumption_history_one_year_electricity)
     with pytest.raises(KeyError):
-        avg_gas_year_usage_none["natural_gas"]
+        avg_gas_year_usage_none[natural_gas.name]
 
     avg_elec_year_usage_none = elec_avg_metric.evaluate(consumption_history_one_year_natural_gas)
     with pytest.raises(KeyError):
-        avg_elec_year_usage_none["electricity"]
+        avg_elec_year_usage_none[electricity.name]
 
     avg_gas_summer_usage_none = gas_avg_metric.evaluate(consumption_history_one_summer_electricity)
     with pytest.raises(KeyError):
-        avg_gas_summer_usage_none["natural_gas"]
+        avg_gas_summer_usage_none[natural_gas.name]
 
     avg_elec_summer_usage_none = elec_avg_metric.evaluate(consumption_history_one_summer_natural_gas)
     with pytest.raises(KeyError):
-        avg_elec_summer_usage_none["electricity"]
+        avg_elec_summer_usage_none[electricity.name]
 
 def test_fueltype_presence_flag(consumption_history_one_year_electricity,
                                   consumption_history_one_year_natural_gas):
@@ -289,8 +289,8 @@ def test_meter_run(meter_run_simple):
 
 def test_meter_class_integration(metric_list,consumption_history_one_year_electricity):
     class MyMeter(Meter):
-        elec_avg_usage = RawAverageUsageMetric("kWh","electricity")
-        gas_avg_usage = RawAverageUsageMetric("therms","natural_gas")
+        elec_avg_usage = RawAverageUsageMetric("kWh",fuel_type=electricity)
+        gas_avg_usage = RawAverageUsageMetric("therms",fuel_type=natural_gas)
         elec_data_present = FuelTypePresenceFlag(electricity)
         gas_data_present = FuelTypePresenceFlag(natural_gas)
 
