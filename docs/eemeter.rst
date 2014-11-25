@@ -26,7 +26,8 @@ Meters and Metrics
 ==================
 
 Consumption is metered using meter classes which are containers for flags and
-metrics. To create a new meter, use the following pattern:
+metrics. To create a new meter, use something similar to the following
+pattern, by subclassing the `eemeter.meter.Meter` class:
 
 .. code-block:: python
 
@@ -34,6 +35,8 @@ metrics. To create a new meter, use the following pattern:
     from eemeter.consumption import electricity
     from eemeter.consumption import Consumption
     from eemeter.consumption import ConsumptionHistory
+
+    from eemeter.meter import Meter
     from eemeter.meter import RawAverageUsageMetric
     from eemeter.meter import FuelTypePresenceFlag
 
