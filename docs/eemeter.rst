@@ -10,6 +10,7 @@ Some fuel types have been built in:
 
 - electricity
 - natural_gas
+- propane
 
 Instances of the Consumption class generally contain a single meter reading.
 
