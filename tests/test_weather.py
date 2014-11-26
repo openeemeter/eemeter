@@ -1,6 +1,6 @@
-from eemeter.weather import DailyWeatherGetter
+from eemeter.weather import DailyTemperature
 
 import pytest
 
-def test_daily_weather_getter():
-    assert DailyWeatherGetter
+def test_daily_temperature():
+    assert DailyTemperature

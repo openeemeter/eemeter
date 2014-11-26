@@ -1,2 +1,2 @@
-class DailyWeatherGetter:
+class DailyTemperature:
     pass

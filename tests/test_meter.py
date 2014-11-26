@@ -2,16 +2,22 @@ from eemeter.consumption import Consumption
 from eemeter.consumption import ConsumptionHistory
 from eemeter.consumption import electricity
 from eemeter.consumption import natural_gas
+
 from eemeter.meter import MetricBase
 from eemeter.meter import RawAverageUsageMetric
+from eemeter.meter import HDDRegressionParametersMetric
+
 from eemeter.meter import Meter
 from eemeter.meter import MeterRun
+
 from eemeter.meter import FuelTypePresenceFlag
 from eemeter.meter import TimeRangePresenceFlag
 from eemeter.meter import OverlappingTimePeriodsFlag
 from eemeter.meter import MissingTimePeriodsFlag
 from eemeter.meter import TooManyEstimatedPeriodsFlag
 from eemeter.meter import InsufficientTimeRangeFlag
+
+from eemeter.weather import DailyTemperature
 
 from datetime import datetime
 import numpy as np
@@ -191,29 +197,26 @@ def test_raw_average_usage_metric(consumption_history_one_year_electricity,
     assert not elec_avg_metric.is_flag()
     assert not gas_avg_metric.is_flag()
 
+    avg_elec_summer_usage = elec_avg_metric.evaluate(consumption_history_one_summer_electricity)
+    avg_gas_summer_usage = gas_avg_metric.evaluate(consumption_history_one_summer_natural_gas)
     avg_elec_year_usage = elec_avg_metric.evaluate(consumption_history_one_year_electricity)
-    assert abs(avg_elec_year_usage - 1200) < EPSILON
-
     avg_gas_year_usage = gas_avg_metric.evaluate(consumption_history_one_year_natural_gas)
+    assert abs(avg_elec_summer_usage - 1700) < EPSILON
+    assert abs(avg_gas_summer_usage - 100) < EPSILON
+    assert abs(avg_elec_year_usage - 1200) < EPSILON
     assert abs(avg_gas_year_usage - 520) < EPSILON
 
-    avg_elec_summer_usage = elec_avg_metric.evaluate(consumption_history_one_summer_electricity)
-    assert abs(avg_elec_summer_usage - 1700) < EPSILON
-
-    avg_gas_summer_usage = gas_avg_metric.evaluate(consumption_history_one_summer_natural_gas)
-    assert abs(avg_gas_summer_usage - 100) < EPSILON
-
     avg_gas_year_usage_none = gas_avg_metric.evaluate(consumption_history_one_year_electricity)
-    assert np.isnan(avg_gas_year_usage_none)
-
     avg_elec_year_usage_none = elec_avg_metric.evaluate(consumption_history_one_year_natural_gas)
-    assert np.isnan(avg_elec_year_usage_none)
-
     avg_gas_summer_usage_none = gas_avg_metric.evaluate(consumption_history_one_summer_electricity)
-    assert np.isnan(avg_gas_summer_usage_none)
-
     avg_elec_summer_usage_none = elec_avg_metric.evaluate(consumption_history_one_summer_natural_gas)
+    assert np.isnan(avg_gas_year_usage_none)
+    assert np.isnan(avg_elec_year_usage_none)
+    assert np.isnan(avg_gas_summer_usage_none)
     assert np.isnan(avg_elec_summer_usage_none)
+
+def test_hdd_regression_parameters_metric(consumption_history_one_year_electricity):
+    hdd_regression = HDDRegressionParametersMetric("kWh",electricity,DailyTemperature())
 
 def test_fueltype_presence_flag(consumption_history_one_year_electricity,
                                 consumption_history_one_year_natural_gas):
