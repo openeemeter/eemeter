@@ -47,6 +47,13 @@ class RawAverageUsageMetric(MetricBase):
             return np.nan
         return np.mean([consumption.to(self.unit_name) for consumption in consumptions])
 
+class HDDRegressionParametersMetric(MetricBase):
+    def __init__(self,unit_name,fuel_type,weather_getter):
+        self.fuel_type = fuel_type
+
+    def evaluate(self,consumption_history):
+        pass
+
 class FlagBase(MetricBase):
     def __init__(self,fuel_type=None):
         if fuel_type:
