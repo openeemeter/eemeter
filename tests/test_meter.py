@@ -17,8 +17,6 @@ from eemeter.meter import MissingTimePeriodsFlag
 from eemeter.meter import TooManyEstimatedPeriodsFlag
 from eemeter.meter import InsufficientTimeRangeFlag
 
-from eemeter.weather import DailyTemperature
-
 from datetime import datetime
 import numpy as np
 
@@ -216,7 +214,7 @@ def test_raw_average_usage_metric(consumption_history_one_year_electricity,
     assert np.isnan(avg_elec_summer_usage_none)
 
 def test_hdd_regression_parameters_metric(consumption_history_one_year_electricity):
-    hdd_regression = HDDRegressionParametersMetric("kWh",electricity,DailyTemperature())
+    pass
 
 def test_fueltype_presence_flag(consumption_history_one_year_electricity,
                                 consumption_history_one_year_natural_gas):
