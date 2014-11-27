@@ -5,7 +5,7 @@ from eemeter.consumption import natural_gas
 
 from eemeter.meter import MetricBase
 from eemeter.meter import RawAverageUsageMetric
-from eemeter.meter import HDDRegressionParametersMetric
+from eemeter.meter import TemperatureRegressionParametersMetric
 
 from eemeter.meter import Meter
 from eemeter.meter import MeterRun
@@ -16,6 +16,8 @@ from eemeter.meter import OverlappingTimePeriodsFlag
 from eemeter.meter import MissingTimePeriodsFlag
 from eemeter.meter import TooManyEstimatedPeriodsFlag
 from eemeter.meter import InsufficientTimeRangeFlag
+
+from eemeter.weather import GSODWeatherGetter
 
 from datetime import datetime
 import numpy as np
@@ -213,8 +215,10 @@ def test_raw_average_usage_metric(consumption_history_one_year_electricity,
     assert np.isnan(avg_gas_summer_usage_none)
     assert np.isnan(avg_elec_summer_usage_none)
 
-def test_hdd_regression_parameters_metric(consumption_history_one_year_electricity):
-    pass
+def test_temperature_regression_parameters_metric(consumption_history_one_year_electricity):
+    gsod_weather_getter = GSODWeatherGetter('722874-93134',start_year=2012,end_year=2012)
+    metric = TemperatureRegressionParametersMetric("kWh",electricity,gsod_weather_getter)
+    params = metric.evaluate(consumption_history_one_year_electricity)
 
 def test_fueltype_presence_flag(consumption_history_one_year_electricity,
                                 consumption_history_one_year_natural_gas):
