@@ -363,11 +363,6 @@ def test_meter_class_integration(metric_list,consumption_history_one_year_electr
     assert "elec_avg_usage" in meter.metrics.keys()
     assert "gas_avg_usage" in meter.metrics.keys()
 
-    # Meter inputs
-    for metric,args in meter.inputs.items():
-        assert "consumption_history" in args
-
-
     # Meter evaluation
     result = meter.run(consumption_history=consumption_history_one_year_electricity)
     assert isinstance(result,MeterRun)

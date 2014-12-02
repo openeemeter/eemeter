@@ -211,21 +211,7 @@ class MeterMeta(type):
                 inputs[key] = metric_args
 
         dct["metrics"] = metrics
-        dct["inputs"] = inputs
-
-        def run(self,**kwargs):
-            """Returns a dictionary of the evaluations of all of the metrics and
-            flags in this Meter, keyed by the names of the metric attributes
-            supplied.
-            """
-            data = {}
-            for metric_name,metric in self.metrics.iteritems():
-                inputs = self.inputs[metric_name]
-                evaluation = metric.evaluate(*[kwargs[inpt] for inpt in inputs])
-                data[metric_name] = evaluation
-            return MeterRun(data)
-
-        dct["run"] = run
+        dct["_inputs"] = inputs
 
         return super(MeterMeta, cls).__new__(cls, name, parents, dct)
 
@@ -235,3 +221,16 @@ class Meter(object):
     """
 
     __metaclass__ = MeterMeta
+
+    def run(self,**kwargs):
+        """Returns a dictionary of the evaluations of all of the metrics and
+        flags in this Meter, keyed by the names of the metric attributes
+        supplied.
+        """
+        data = {}
+        for metric_name,metric in self.metrics.iteritems():
+            inputs = self._inputs[metric_name]
+            evaluation = metric.evaluate(*[kwargs[inpt] for inpt in inputs])
+            data[metric_name] = evaluation
+        return MeterRun(data)
+
