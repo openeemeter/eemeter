@@ -7,7 +7,12 @@ import numpy as np
 
 class WeatherGetterBase:
     def get_average_temperature(self,consumption_history,fuel_type):
+        """Returns a list of floats containing the average temperature during
+        each consumption period.
+        """
         avg_temps = []
+        # TODO - WARNING - deal with the fact that consumption history.get will
+        # not return things in a predictable order.
         for consumption in consumption_history.get(fuel_type):
             avg_temps.append(self.get_consumption_average_temperature(consumption))
         return avg_temps
@@ -32,6 +37,9 @@ class GSODWeatherGetter(WeatherGetterBase):
         ftp.quit()
 
     def get_consumption_average_temperature(self,consumption):
+        """Gets the average temperature during a particular Consumption
+        instance. Resolution limit: daily.
+        """
         avg_temps = []
         for days in xrange(consumption.timedelta.days):
             avg_temps.append(self._data[(consumption.start + timedelta(days=days)).strftime("%Y%m%d")])
