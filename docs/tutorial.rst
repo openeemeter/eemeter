@@ -45,10 +45,12 @@ pattern, by subclassing the `eemeter.meter.Meter` class:
         gas_avg_usage = RawAverageUsageMetric("therms",fuel_type=natural_gas)
         elec_data_present = FuelTypePresenceFlag(electricity)
         gas_data_present = FuelTypePresenceFlag(natural_gas)
+        average_temperature = AverageTemperatureMetric(electricity)
 
     meter = MyMeter()
     consumption_history = ConsumptionHistory([Consumption(1000.0,"kWh",electricity,datetime(2014,1,1),datetime(2014,2,1))])
-    result = meter.run(consumption_history)
+    gsod_weather_getter = GSODWeatherGetter('722874-93134',start_year=2014,end_year=2014)
+    result = meter.run(consumption_history=consumption_history,weather_getter=gsod_weather_getter)
 
     # >>> print result.elec_data_present
     # True
@@ -70,3 +72,15 @@ A set of importing tools and examples simplify this process, as consumption
 data may originate from a variety of very different sources, including
 wirelessly connected smart meters, specially formatted databases,
 Home Performance XML, or CSV downloads from energy providers.
+
+Creating new metrics and flags
+------------------------------
+
+To create new metrics or flags, inherit from the `MetricBase` or `FlagBase`
+classes, and override either the `evaluate` or `evaluate_fuel_type` methods (the
+latter of which simply takes care of some boilerplate for methods which run the
+same evaluation for multiple (or specific) fuel types.
+
+The meter class will automatically collect the named arguments and the `run`
+method will take care of dispatching these arguments. Take care to avoid
+argument name overlaps.
