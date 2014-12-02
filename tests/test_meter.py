@@ -217,8 +217,17 @@ def test_raw_average_usage_metric(consumption_history_one_year_electricity,
 
 def test_temperature_regression_parameters_metric(consumption_history_one_year_electricity):
     gsod_weather_getter = GSODWeatherGetter('722874-93134',start_year=2012,end_year=2012)
-    metric = TemperatureRegressionParametersMetric("kWh",electricity,gsod_weather_getter)
-    params = metric.evaluate(consumption_history_one_year_electricity)
+    metric = TemperatureRegressionParametersMetric("kWh",electricity)
+    params = metric.evaluate(consumption_history_one_year_electricity,gsod_weather_getter)
+
+    class MyMeter(Meter):
+        temperature_regression_metric = TemperatureRegressionParametersMetric("kWh",electricity)
+
+    meter = MyMeter()
+    results = meter.run(consumption_history=consumption_history_one_year_electricity,
+                        weather_getter=gsod_weather_getter)
+
+    assert results.temperature_regression_metric is not None
 
 def test_fueltype_presence_flag(consumption_history_one_year_electricity,
                                 consumption_history_one_year_natural_gas):

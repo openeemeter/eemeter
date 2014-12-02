@@ -54,13 +54,12 @@ class TemperatureRegressionParametersMetric(MetricBase):
     # TODO - weight these by likelyhood.
     balance_points = range(55,70)
 
-    def __init__(self,unit_name,fuel_type,weather_getter):
+    def __init__(self,unit_name,fuel_type):
         self.fuel_type = fuel_type
-        self.weather_getter = weather_getter
 
-    def evaluate(self,consumption_history):
+    def evaluate(self,consumption_history,weather_getter):
         usages = [c.to("kWh") for c in consumption_history.get(self.fuel_type)]
-        avg_temps = self.weather_getter.get_average_temperature(consumption_history,self.fuel_type)
+        avg_temps = weather_getter.get_average_temperature(consumption_history,self.fuel_type)
         best_coeffs = None,None
         best_r_value = -np.inf
         for balance_point in self.balance_points:
