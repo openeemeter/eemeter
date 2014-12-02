@@ -1,6 +1,7 @@
 import numpy as np
 from scipy import stats
 from .consumption import FuelType
+import inspect
 
 class MetricBase(object):
     def __init__(self,fuel_type=None):
@@ -200,11 +201,31 @@ class MeterRun:
 class MeterMeta(type):
     def __new__(cls, name, parents, dct):
         metrics = {}
+        inputs = {}
         for key,value in dct.items():
             if issubclass(value.__class__,MetricBase):
-                metrics[key] = value
+                metric = value
+                metrics[key] = metric
+                metric_args = inspect.getargspec(metric.evaluate).args
+                metric_args.pop(0)
+                inputs[key] = metric_args
 
         dct["metrics"] = metrics
+        dct["inputs"] = inputs
+
+        def run(self,**kwargs):
+            """Returns a dictionary of the evaluations of all of the metrics and
+            flags in this Meter, keyed by the names of the metric attributes
+            supplied.
+            """
+            data = {}
+            for metric_name,metric in self.metrics.iteritems():
+                inputs = self.inputs[metric_name]
+                evaluation = metric.evaluate(*[kwargs[inpt] for inpt in inputs])
+                data[metric_name] = evaluation
+            return MeterRun(data)
+
+        dct["run"] = run
 
         return super(MeterMeta, cls).__new__(cls, name, parents, dct)
 
@@ -214,15 +235,3 @@ class Meter(object):
     """
 
     __metaclass__ = MeterMeta
-
-    def run(self,consumption_history):
-        """Returns a dictionary of the evaluations of all of the metrics and
-        flags in this Meter, keyed by the names of the metric attributes
-        supplied.
-        """
-        data = {}
-        for metric_name,metric in self.metrics.iteritems():
-            evaluation = metric.evaluate(consumption_history)
-            data[metric_name] = evaluation
-        return MeterRun(data)
-
