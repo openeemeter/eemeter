@@ -14,12 +14,10 @@ Performance XML, or CSV spreadsheets downloads from energy providers.
 API reference
 -------------
 
-Consumption is tracked by start and end date, units, usage, and fuel type.
-
-Some fuel types have been built in:
-
 .. autoclass:: eemeter.consumption.FuelType
    :members:
+
+Some fuel types have been built in:
 
 - electricity
 - natural_gas
