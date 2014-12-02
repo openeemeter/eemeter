@@ -8,8 +8,8 @@ To get started with the eemeter, install it with the following command::
 
     pip install eemeter
 
-Meters, Metrics, and Flags
---------------------------
+Creating new Meters
+-------------------
 
 Meters form the core of the eemeter functionality. Meters are effectively
 groupings of particular metrics, procedures, and flags into executable and
@@ -59,19 +59,6 @@ pattern, by subclassing the `eemeter.meter.Meter` class:
 
 To create new metrics, subclass the `MetricBase` class and write the
 `evaluate_fuel_type(consumptions)` method to suit your needs.
-
-Consumption and Consumption History
------------------------------------
-
-Meters are data-source agnostic, but require input data to be in a specific
-format. The `Consumption` and `ConsumptionHistory` classes take care of this
-formatting. Using a meter, as shown in the example above, requires that the
-consumption history be parsed and supplied from various data formats.
-
-A set of importing tools and examples simplify this process, as consumption
-data may originate from a variety of very different sources, including
-wirelessly connected smart meters, specially formatted databases,
-Home Performance XML, or CSV downloads from energy providers.
 
 Creating new metrics and flags
 ------------------------------
