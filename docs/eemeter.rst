@@ -39,7 +39,7 @@ mixed or single fuel type.
 TODO
 ----
 
-Add importers
-Add database connections (SEED)
-Add numpy array support
-Add pandas time series support
+- Add importers
+- Add database connections (SEED)
+- Add numpy array support
+- Add pandas time series support
