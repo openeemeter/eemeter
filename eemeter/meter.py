@@ -51,7 +51,7 @@ class RawAverageUsageMetric(MetricBase):
 
 class TemperatureRegressionParametersMetric(MetricBase):
 
-    # TODO - weight these by likelyhood.
+    # TODO - weight these by likelihood.
     balance_points = range(55,70)
 
     def __init__(self,unit_name,fuel_type):
@@ -76,6 +76,14 @@ class TemperatureRegressionParametersMetric(MetricBase):
             return zip(*data)
         else:
             return [],[]
+
+class AverageTemperatureMetric(MetricBase):
+    def __init__(self,fuel_type):
+        self.fuel_type = fuel_type
+
+    def evaluate(self,consumption_history,weather_getter):
+        avg_temps = weather_getter.get_average_temperature(consumption_history,self.fuel_type)
+        return np.mean(avg_temps)
 
 class FlagBase(MetricBase):
     def __init__(self,fuel_type=None):

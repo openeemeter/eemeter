@@ -6,6 +6,7 @@ from eemeter.consumption import natural_gas
 from eemeter.meter import MetricBase
 from eemeter.meter import RawAverageUsageMetric
 from eemeter.meter import TemperatureRegressionParametersMetric
+from eemeter.meter import AverageTemperatureMetric
 
 from eemeter.meter import Meter
 from eemeter.meter import MeterRun
@@ -178,6 +179,11 @@ def meter_run_simple():
     data = {"elec_avg_usage": 100}
     return MeterRun(data)
 
+@pytest.fixture(scope="module")
+def gsod_722874_2012_weather_getter():
+    return GSODWeatherGetter('722874-93134',start_year=2012,end_year=2012)
+
+
 ##### Tests #####
 
 def test_base_metric():
@@ -215,19 +221,23 @@ def test_raw_average_usage_metric(consumption_history_one_year_electricity,
     assert np.isnan(avg_gas_summer_usage_none)
     assert np.isnan(avg_elec_summer_usage_none)
 
-def test_temperature_regression_parameters_metric(consumption_history_one_year_electricity):
-    gsod_weather_getter = GSODWeatherGetter('722874-93134',start_year=2012,end_year=2012)
+def test_temperature_regression_parameters_metric(consumption_history_one_year_electricity,gsod_722874_2012_weather_getter):
     metric = TemperatureRegressionParametersMetric("kWh",electricity)
-    params = metric.evaluate(consumption_history_one_year_electricity,gsod_weather_getter)
+    params = metric.evaluate(consumption_history_one_year_electricity,gsod_722874_2012_weather_getter)
 
     class MyMeter(Meter):
         temperature_regression_metric = TemperatureRegressionParametersMetric("kWh",electricity)
 
     meter = MyMeter()
     results = meter.run(consumption_history=consumption_history_one_year_electricity,
-                        weather_getter=gsod_weather_getter)
+                        weather_getter=gsod_722874_2012_weather_getter)
 
     assert results.temperature_regression_metric is not None
+
+def test_average_temperature_metric(consumption_history_one_year_electricity,gsod_722874_2012_weather_getter):
+    metric = AverageTemperatureMetric(electricity)
+    avg_temp = metric.evaluate(consumption_history_one_year_electricity,gsod_722874_2012_weather_getter)
+    assert abs(avg_temp - 63.82780404) < EPSILON
 
 def test_fueltype_presence_flag(consumption_history_one_year_electricity,
                                 consumption_history_one_year_natural_gas):
@@ -258,7 +268,11 @@ def test_none_in_time_range_presence_flag(consumption_history_one_year_electrici
 
     with pytest.raises(KeyError):
         assert not past_time_range_flag.evaluate(consumption_history_one_year_electricity)["natural_gas"]
+
+    with pytest.raises(KeyError):
         assert not future_time_range_flag.evaluate(consumption_history_one_year_electricity)["natural_gas"]
+
+    with pytest.raises(KeyError):
         assert recent_time_range_flag.evaluate(consumption_history_one_year_electricity)["natural_gas"]
 
     assert not elec_past_time_range_flag.evaluate(consumption_history_one_year_electricity)
