@@ -25,7 +25,7 @@ import numpy as np
 
 import pytest
 
-EPSILON = 10e-6
+EPSILON = 1e-6
 
 ##### Fixtures #####
 
@@ -221,6 +221,7 @@ def test_raw_average_usage_metric(consumption_history_one_year_electricity,
     assert np.isnan(avg_gas_summer_usage_none)
     assert np.isnan(avg_elec_summer_usage_none)
 
+@pytest.mark.slow
 def test_temperature_regression_parameters_metric(consumption_history_one_year_electricity,gsod_722874_2012_weather_getter):
     metric = TemperatureRegressionParametersMetric("kWh",electricity)
     params = metric.evaluate(consumption_history_one_year_electricity,gsod_722874_2012_weather_getter)
@@ -234,6 +235,7 @@ def test_temperature_regression_parameters_metric(consumption_history_one_year_e
 
     assert results.temperature_regression_metric is not None
 
+@pytest.mark.slow
 def test_average_temperature_metric(consumption_history_one_year_electricity,gsod_722874_2012_weather_getter):
     metric = AverageTemperatureMetric(electricity)
     avg_temp = metric.evaluate(consumption_history_one_year_electricity,gsod_722874_2012_weather_getter)
