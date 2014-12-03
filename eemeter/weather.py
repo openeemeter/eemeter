@@ -4,6 +4,7 @@ import gzip
 from datetime import datetime
 from datetime import timedelta
 import numpy as np
+import requests
 
 class WeatherGetterBase:
     def get_average_temperature(self,consumption_history,fuel_type):
@@ -49,3 +50,32 @@ class GSODWeatherGetter(WeatherGetterBase):
         for line in f.readlines()[1:]:
             columns=line.split()
             self._data[columns[2]] = float(columns[3])
+
+class WeatherUndergroundWeatherGetter(WeatherGetterBase):
+    def __init__(self,zipcode,start,end,api_key):
+        self._data = {}
+        assert end >= start
+        date_format = "%Y%m%d"
+        date_range_limit = 32
+        end_date_str = datetime.strftime(end, date_format)
+        for days in range(0, (end - start).days, date_range_limit):
+            start_date = start + timedelta(days=days)
+            start_date_str = datetime.strftime(start_date, date_format)
+            query = 'http://api.wunderground.com/api/{}/history_{}{}/q/{}.json'\
+                    .format(api_key,start_date_str,end_date_str,zipcode)
+            self._get_query_data(query)
+
+    def get_consumption_average_temperature(self,consumption):
+        """Gets the average temperature during a particular Consumption
+        instance. Resolution limit: daily.
+        """
+        avg_temps = []
+        for days in xrange(consumption.timedelta.days):
+            avg_temps.append(self._data[(consumption.start + timedelta(days=days)).strftime("%Y%m%d")]["meantempi"])
+        return np.mean(avg_temps)
+
+    def _get_query_data(self,query):
+        for day in requests.get(query).json()["history"]["dailysummary"]:
+            date_string = day["date"]["year"] + day["date"]["mon"] + day["date"]["mday"]
+            data = {"meantempi":int(day["meantempi"])}
+            self._data[date_string] = data
