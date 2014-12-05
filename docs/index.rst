@@ -11,6 +11,7 @@ Open Energy Efficiency Meter
 
    tutorial
    eemeter
+   metrics
 
 Description
 -----------
