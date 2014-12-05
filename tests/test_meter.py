@@ -391,6 +391,7 @@ def test_meter_class_integration(metric_list,consumption_history_one_year_electr
     # Meter evaluation
     result = meter.run(consumption_history=consumption_history_one_year_electricity)
     assert isinstance(result,MeterRun)
+    assert "MeterRun" in str(result)
 
     # Meter.run function only takes keyword args
     with pytest.raises(TypeError):

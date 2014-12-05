@@ -51,6 +51,9 @@ class MeterRun:
     def __getattr__(self,attr):
         return self._data[attr]
 
+    def __str__(self):
+        return "MeterRun({})".format(self._data)
+
 class MeterMeta(type):
     def __new__(cls, name, parents, dct):
         metrics = {}
