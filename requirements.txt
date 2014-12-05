@@ -1,3 +1,4 @@
+-e git+git@github.com:philngo/ee-meter.git@50b02a15a222444dd7c55665811bc2159124a081#egg=EEMeter-origin/master
 Jinja2==2.7.3
 MarkupSafe==0.23
 Pint==0.6
@@ -12,12 +13,15 @@ docutils==0.12
 gnureadline==6.3.3
 ipython==2.3.0
 livereload==2.2.2
+mock==1.0.1
 numpy==1.9.1
 pathtools==0.1.2
 py==1.4.25
 pytest==2.6.3
 python-dateutil==2.2
 pyzmq==14.4.0
+requests==2.5.0
+scipy==0.14.0
 six==1.8.0
 sphinx-autobuild==0.3.0
 tornado==4.0.2
