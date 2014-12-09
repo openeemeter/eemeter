@@ -25,9 +25,9 @@ class TemperatureRegressionParametersMetric(MetricBase):
     def __init__(self,unit_name,fuel_type):
         self.fuel_type = fuel_type
 
-    def evaluate(self,consumption_history,weather_getter):
+    def evaluate(self,consumption_history,weather_source):
         usages = [c.to("kWh") for c in consumption_history.get(self.fuel_type)]
-        avg_temps = weather_getter.get_average_temperature(consumption_history,self.fuel_type)
+        avg_temps = weather_source.get_average_temperature(consumption_history,self.fuel_type)
         best_coeffs = None,None
         best_r_value = -np.inf
         for balance_point in self.balance_points:
@@ -49,7 +49,7 @@ class AverageTemperatureMetric(MetricBase):
     def __init__(self,fuel_type):
         self.fuel_type = fuel_type
 
-    def evaluate(self,consumption_history,weather_getter):
-        avg_temps = weather_getter.get_average_temperature(consumption_history,self.fuel_type)
+    def evaluate(self,consumption_history,weather_source):
+        avg_temps = weather_source.get_average_temperature(consumption_history,self.fuel_type)
         return np.mean(avg_temps)
 

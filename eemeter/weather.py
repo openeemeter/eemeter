@@ -6,7 +6,7 @@ from datetime import timedelta
 import numpy as np
 import requests
 
-class WeatherGetterBase:
+class WeatherSourceBase:
     def get_average_temperature(self,consumption_history,fuel_type):
         """Returns a list of floats containing the average temperature during
         each consumption period.
@@ -21,7 +21,7 @@ class WeatherGetterBase:
     def get_consumption_average_temperature(self,consumption):
         raise NotImplementedError
 
-class GSODWeatherGetter(WeatherGetterBase):
+class GSODWeatherSource(WeatherSourceBase):
     def __init__(self,station_id,start_year,end_year):
         self._data = {}
         ftp = ftplib.FTP("ftp.ncdc.noaa.gov")
@@ -51,7 +51,7 @@ class GSODWeatherGetter(WeatherGetterBase):
             columns=line.split()
             self._data[columns[2]] = float(columns[3])
 
-class WeatherUndergroundWeatherGetter(WeatherGetterBase):
+class WeatherUndergroundWeatherSource(WeatherSourceBase):
     def __init__(self,zipcode,start,end,api_key):
         self._data = {}
         assert end >= start
@@ -79,3 +79,12 @@ class WeatherUndergroundWeatherGetter(WeatherGetterBase):
             date_string = day["date"]["year"] + day["date"]["mon"] + day["date"]["mday"]
             data = {"meantempi":int(day["meantempi"])}
             self._data[date_string] = data
+
+def nrel_tmy3_station_from_lat_long(lat,lng,api_key):
+    result = requests.get('http://developer.nrel.gov/api/solar/data_query/v1.json?api_key={}&lat={}&lon={}'.format(api_key,lat,lng))
+    return result.json()['outputs']['tmy3']['id'][2:]
+
+def ziplocate_us(zipcode):
+    result = requests.get('http://ziplocate.us/api/v1/{}'.format(zipcode))
+    data = result.json()
+    return data.get('lat'), data.get('lng')

@@ -18,7 +18,7 @@ from eemeter.meter import MissingTimePeriodsFlag
 from eemeter.meter import TooManyEstimatedPeriodsFlag
 from eemeter.meter import InsufficientTimeRangeFlag
 
-from eemeter.weather import GSODWeatherGetter
+from eemeter.weather import GSODWeatherSource
 
 from datetime import datetime
 import numpy as np
@@ -180,8 +180,8 @@ def meter_run_simple():
     return MeterRun(data)
 
 @pytest.fixture(scope="module")
-def gsod_722874_2012_weather_getter():
-    return GSODWeatherGetter('722874-93134',start_year=2012,end_year=2012)
+def gsod_722874_2012_weather_source():
+    return GSODWeatherSource('722874-93134',start_year=2012,end_year=2012)
 
 
 ##### Tests #####
@@ -222,23 +222,23 @@ def test_raw_average_usage_metric(consumption_history_one_year_electricity,
     assert np.isnan(avg_elec_summer_usage_none)
 
 @pytest.mark.slow
-def test_temperature_regression_parameters_metric(consumption_history_one_year_electricity,gsod_722874_2012_weather_getter):
+def test_temperature_regression_parameters_metric(consumption_history_one_year_electricity,gsod_722874_2012_weather_source):
     metric = TemperatureRegressionParametersMetric("kWh",electricity)
-    params = metric.evaluate(consumption_history_one_year_electricity,gsod_722874_2012_weather_getter)
+    params = metric.evaluate(consumption_history_one_year_electricity,gsod_722874_2012_weather_source)
 
     class MyMeter(Meter):
         temperature_regression_metric = TemperatureRegressionParametersMetric("kWh",electricity)
 
     meter = MyMeter()
     results = meter.run(consumption_history=consumption_history_one_year_electricity,
-                        weather_getter=gsod_722874_2012_weather_getter)
+                        weather_source=gsod_722874_2012_weather_source)
 
     assert results.temperature_regression_metric is not None
 
 @pytest.mark.slow
-def test_average_temperature_metric(consumption_history_one_year_electricity,gsod_722874_2012_weather_getter):
+def test_average_temperature_metric(consumption_history_one_year_electricity,gsod_722874_2012_weather_source):
     metric = AverageTemperatureMetric(electricity)
-    avg_temp = metric.evaluate(consumption_history_one_year_electricity,gsod_722874_2012_weather_getter)
+    avg_temp = metric.evaluate(consumption_history_one_year_electricity,gsod_722874_2012_weather_source)
     assert abs(avg_temp - 63.82780404) < EPSILON
 
 def test_fueltype_presence_flag(consumption_history_one_year_electricity,
