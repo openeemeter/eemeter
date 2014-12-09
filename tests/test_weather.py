@@ -31,7 +31,8 @@ def lat_long_station(request):
 
 @pytest.fixture(params=[(41.8955360374983,-87.6217660821178,"60611"),
                         (34.1678563835543,-118.126220490392,"91104"),
-                        (42.3769095103979,-71.1247640734676,"02138")])
+                        (42.3769095103979,-71.1247640734676,"02138"),
+                        (None,None,"00000")])
 def lat_long_zipcode(request):
     return request.param
 
@@ -80,6 +81,10 @@ def test_nrel_tmy3_station_from_lat_long(lat_long_station):
 @pytest.mark.slow
 def test_ziplocate_us(lat_long_zipcode):
     lat,lng,zipcode = lat_long_zipcode
-    zip_lat, zip_lng = ziplocate_us(zipcode)
-    assert abs(lat - zip_lat) < EPSILON
-    assert abs(lng - zip_lng) < EPSILON
+    if not lat or not lng:
+        with pytest.raises(ValueError):
+            ziplocate_us(zipcode)
+    else:
+        zip_lat, zip_lng = ziplocate_us(zipcode)
+        assert abs(lat - zip_lat) < EPSILON
+        assert abs(lng - zip_lng) < EPSILON
