@@ -1,10 +1,13 @@
 import ftplib
 import StringIO
 import gzip
+import os
+import json
 from datetime import datetime
 from datetime import timedelta
 import numpy as np
 import requests
+import eemeter
 
 class WeatherSourceBase:
     def get_average_temperature(self,consumption_history,fuel_type):
@@ -23,13 +26,33 @@ class WeatherSourceBase:
 
 class GSODWeatherSource(WeatherSourceBase):
     def __init__(self,station_id,start_year,end_year):
+        if len(station_id) == 6:
+            # given station id is the six digit code, so need to get full name
+            gsod_station_index_filename = os.path.join(
+                    os.path.dirname(os.path.dirname(eemeter.__file__)),
+                    'resources',
+                    'GSOD_station_index.json')
+            with open(gsod_station_index_filename,'r') as f:
+                station_index = json.load(f)
+            # take first station in list
+            potential_station_ids = station_index[station_id]
+        else:
+            # otherwise, just use the given id
+            potential_station_ids = [station_id]
         self._data = {}
         ftp = ftplib.FTP("ftp.ncdc.noaa.gov")
         ftp.login()
         data = []
         for year in xrange(start_year,end_year + 1):
             string = StringIO.StringIO()
-            ftp.retrbinary('RETR /pub/data/gsod/{year}/{station_id}-{year}.op.gz'.format(station_id=station_id,year=year),string.write)
+            # not every station will be available in every year, so use the
+            # first one that works
+            for station_id in potential_station_ids:
+                try:
+                    ftp.retrbinary('RETR /pub/data/gsod/{year}/{station_id}-{year}.op.gz'.format(station_id=station_id,year=year),string.write)
+                    break
+                except IOError:
+                    pass
             string.seek(0)
             f = gzip.GzipFile(fileobj=string)
             self._add_file(f)

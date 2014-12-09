@@ -36,19 +36,24 @@ def lat_long_station(request):
 def lat_long_zipcode(request):
     return request.param
 
+@pytest.fixture(params=[GSODWeatherSource('722874-93134',start_year=2012,end_year=2012),
+                        GSODWeatherSource('722874',start_year=2012,end_year=2012)])
+def gsod_weather_source(request):
+    return request.param
 
 def test_weather_source_base(consumption_history_one_summer_electricity):
     weather_source = WeatherSourceBase()
     with pytest.raises(NotImplementedError):
         hdd = weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity)
 
+
 @pytest.mark.slow
-def test_gsod_weather_source(consumption_history_one_summer_electricity):
-    gsod_weather_source = GSODWeatherSource('722874-93134',start_year=2012,end_year=2012)
+def test_gsod_weather_source(consumption_history_one_summer_electricity,gsod_weather_source):
     avg_temps = gsod_weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity)
     assert abs(avg_temps[0] - 66.3833333333) < EPSILON
     assert abs(avg_temps[1] - 67.8032258065) < EPSILON
     assert abs(avg_temps[2] - 74.4451612903) < EPSILON
+
 
 @pytest.mark.slow
 def test_weather_underground_weather_source(consumption_history_one_summer_electricity):
