@@ -31,7 +31,7 @@ class GSODWeatherSource(WeatherSourceBase):
             gsod_station_index_filename = os.path.join(
                     os.path.dirname(os.path.dirname(eemeter.__file__)),
                     'resources',
-                    'GSOD_station_index.json')
+                    'GSOD-ISD_station_index.json')
             with open(gsod_station_index_filename,'r') as f:
                 station_index = json.load(f)
             # take first station in list
@@ -73,6 +73,76 @@ class GSODWeatherSource(WeatherSourceBase):
         for line in f.readlines()[1:]:
             columns=line.split()
             self._data[columns[2]] = float(columns[3])
+
+class ISDWeatherSource(WeatherSourceBase):
+    def __init__(self,station_id,start_year,end_year):
+        if len(station_id) == 6:
+            # given station id is the six digit code, so need to get full name
+            gsod_station_index_filename = os.path.join(
+                    os.path.dirname(os.path.dirname(eemeter.__file__)),
+                    'resources',
+                    'GSOD-ISD_station_index.json')
+            with open(gsod_station_index_filename,'r') as f:
+                station_index = json.load(f)
+            # take first station in list
+            potential_station_ids = station_index[station_id]
+        else:
+            # otherwise, just use the given id
+            potential_station_ids = [station_id]
+        self._data = {}
+        ftp = ftplib.FTP("ftp.ncdc.noaa.gov")
+        ftp.login()
+        data = []
+        for year in xrange(start_year,end_year + 1):
+            string = StringIO.StringIO()
+            # not every station will be available in every year, so use the
+            # first one that works
+            for station_id in potential_station_ids:
+                try:
+                    ftp.retrbinary('RETR /pub/data/noaa/{year}/{station_id}-{year}.gz'.format(station_id=station_id,year=year),string.write)
+                    break
+                except (IOError,ftplib.error_perm):
+                    pass
+            string.seek(0)
+            f = gzip.GzipFile(fileobj=string)
+            self._add_file(f)
+            string.close()
+            f.close()
+        ftp.quit()
+        pass
+
+    def get_consumption_average_temperature(self,consumption):
+        """Gets the average temperature during a particular Consumption
+        instance. Resolution limit: hourly.
+        """
+        avg_temps = []
+        n_hours = consumption.timedelta.days * 24 + consumption.timedelta.seconds // 3600
+        for hours in xrange(n_hours):
+            hour = consumption.start + timedelta(seconds=hours*3600)
+            hourly = self._data.get(hour.strftime("%Y%m%d%H"),float("nan"))
+            avg_temps.append(hourly)
+        # mask nans
+        data = np.array(avg_temps)
+        masked_data = np.ma.masked_array(data,np.isnan(data))
+        return np.mean(masked_data)
+
+    def _add_file(self,f):
+        for line in f.readlines():
+            # line[4:10] # USAF
+            # line[10:15] # WBAN
+            # line[28:34] # latitude
+            # line[34:41] # longitude
+            # line[46:51] # elevation
+            # line[92:93] # temperature reading quality
+            # year = line[15:19]
+            # month = line[19:21]
+            # day = line[21:23]
+            # hour = line[23:25]
+            # minute = line[25:27]
+            air_temperature = (float(line[87:92]) / 10) * 1.8 + 32
+            if line[87:92] == "+9999":
+                air_temperature = float("nan")
+            self._data[line[15:25]] = air_temperature
 
 class WeatherUndergroundWeatherSource(WeatherSourceBase):
     def __init__(self,zipcode,start,end,api_key):

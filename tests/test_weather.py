@@ -1,5 +1,6 @@
 from eemeter.weather import WeatherSourceBase
 from eemeter.weather import GSODWeatherSource
+from eemeter.weather import ISDWeatherSource
 from eemeter.weather import WeatherUndergroundWeatherSource
 from eemeter.weather import nrel_tmy3_station_from_lat_long
 from eemeter.weather import ziplocate_us
@@ -15,6 +16,8 @@ import os
 import warnings
 
 EPSILON = 10e-6
+
+##### Fixtures #####
 
 @pytest.fixture
 def consumption_history_one_summer_electricity():
@@ -43,11 +46,17 @@ def lat_long_zipcode(request):
 def gsod_weather_source(request):
     return request.param
 
+@pytest.fixture(params=[ISDWeatherSource('722874-93134',start_year=2012,end_year=2012),
+                        ISDWeatherSource('722874',start_year=2012,end_year=2012)])
+def isd_weather_source(request):
+    return request.param
+
+##### Tests #####
+
 def test_weather_source_base(consumption_history_one_summer_electricity):
     weather_source = WeatherSourceBase()
     with pytest.raises(NotImplementedError):
         hdd = weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity)
-
 
 @pytest.mark.slow
 def test_gsod_weather_source(consumption_history_one_summer_electricity,gsod_weather_source):
@@ -55,7 +64,6 @@ def test_gsod_weather_source(consumption_history_one_summer_electricity,gsod_wea
     assert abs(avg_temps[0] - 66.3833333333) < EPSILON
     assert abs(avg_temps[1] - 67.8032258065) < EPSILON
     assert abs(avg_temps[2] - 74.4451612903) < EPSILON
-
 
 @pytest.mark.slow
 def test_weather_underground_weather_source(consumption_history_one_summer_electricity):
@@ -95,3 +103,9 @@ def test_ziplocate_us(lat_long_zipcode):
         zip_lat, zip_lng = ziplocate_us(zipcode)
         assert abs(lat - zip_lat) < EPSILON
         assert abs(lng - zip_lng) < EPSILON
+
+def test_isd_weather_source(consumption_history_one_summer_electricity,isd_weather_source):
+    avg_temps = isd_weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity)
+    assert abs(avg_temps[0] - 66.576956521739135) < EPSILON
+    assert abs(avg_temps[1] - 68.047780898876411) < EPSILON
+    assert abs(avg_temps[2] - 74.697162921348323) < EPSILON
