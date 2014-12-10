@@ -4,6 +4,7 @@ from eemeter.weather import ISDWeatherSource
 from eemeter.weather import WeatherUndergroundWeatherSource
 from eemeter.weather import nrel_tmy3_station_from_lat_long
 from eemeter.weather import ziplocate_us
+from eemeter.weather import usaf_station_from_zipcode
 
 from eemeter.consumption import ConsumptionHistory
 from eemeter.consumption import Consumption
@@ -50,6 +51,14 @@ def gsod_weather_source(request):
                         ISDWeatherSource('722874',start_year=2012,end_year=2012)])
 def isd_weather_source(request):
     return request.param
+
+@pytest.fixture(params=[("60611","725340"),
+                        ("91104","722880"),
+                        ("02138","725090"),
+                        ("60085","725347")])
+def zipcode_to_station(request):
+    return request.param
+
 
 ##### Tests #####
 
@@ -109,3 +118,13 @@ def test_isd_weather_source(consumption_history_one_summer_electricity,isd_weath
     assert abs(avg_temps[0] - 66.576956521739135) < EPSILON
     assert abs(avg_temps[1] - 68.047780898876411) < EPSILON
     assert abs(avg_temps[2] - 74.697162921348323) < EPSILON
+
+def test_usaf_station_from_zipcode(zipcode_to_station):
+    zipcode,station = zipcode_to_station
+    nrel_api_key = os.environ.get('NREL_API_KEY')
+    if nrel_api_key:
+        assert usaf_station_from_zipcode(zipcode,nrel_api_key) == station
+    else:
+        warnings.warn("Skipping NREL tests. "
+                "Please set the environment variable "
+                "NREL_API_KEY to run the tests.")

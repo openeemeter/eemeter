@@ -192,3 +192,9 @@ def ziplocate_us(zipcode):
         raise ValueError("No known lat/long centroid for this ZIP code.")
     else:
         return None
+
+def usaf_station_from_zipcode(zipcode,nrel_api_key):
+    lat,lng = ziplocate_us(zipcode)
+    station = nrel_tmy3_station_from_lat_long(lat,lng,nrel_api_key)
+    return station
+
