@@ -34,6 +34,11 @@ class MetricBase(object):
         """
         return False
 
+class PrePostMetricBase(MetricBase):
+    def __init__(self,retrofit_start,retrofit_end):
+        self.retrofit_start = retrofit_start
+        self.retrofit_end = retrofit_end
+
 class FlagBase(MetricBase):
     def __init__(self,fuel_type=None):
         if fuel_type:

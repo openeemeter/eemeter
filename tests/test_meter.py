@@ -4,6 +4,7 @@ from eemeter.consumption import electricity
 from eemeter.consumption import natural_gas
 
 from eemeter.meter import MetricBase
+from eemeter.meter import PrePostMetricBase
 from eemeter.meter import RawAverageUsageMetric
 from eemeter.meter import TemperatureRegressionParametersMetric
 from eemeter.meter import AverageTemperatureMetric
@@ -402,3 +403,11 @@ def test_meter_class_integration(metric_list,consumption_history_one_year_electr
     assert np.isnan(result.gas_avg_usage)
     assert result.elec_data_present
     assert not result.gas_data_present
+
+def test_pre_post_metric_base():
+    metric = PrePostMetricBase(retrofit_start=datetime(2012,1,1),retrofit_end=datetime(2012,2,1))
+    assert metric.retrofit_start == datetime(2012,1,1)
+    assert metric.retrofit_end == datetime(2012,2,1)
+    with pytest.raises(NotImplementedError):
+        metric.evaluate_fuel_type([])
+    assert not metric.is_flag()
