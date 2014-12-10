@@ -51,7 +51,7 @@ class GSODWeatherSource(WeatherSourceBase):
                 try:
                     ftp.retrbinary('RETR /pub/data/gsod/{year}/{station_id}-{year}.op.gz'.format(station_id=station_id,year=year),string.write)
                     break
-                except IOError:
+                except (IOError,ftplib.error_perm):
                     pass
             string.seek(0)
             f = gzip.GzipFile(fileobj=string)

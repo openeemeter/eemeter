@@ -97,6 +97,9 @@ class ConsumptionHistory:
     def __str__(self):
         return "ConsumptionHistory({})".format(self._data)
 
+    def __nonzero__(self):
+        return len(self._data.keys()) > 0
+
     def get(self,fuel_type):
         """Returns an array (not necessarily sorted) of Consumption instances
         given a particular fuel_type. Fuel type may be specified as a string

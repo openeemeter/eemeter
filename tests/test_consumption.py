@@ -130,5 +130,8 @@ def test_consumption_history(consumption_list_one_year_electricity,
     for consumption in ch_gas.natural_gas:
         assert consumption.therm >= 0
 
+    assert ch_elec
+    assert ch_gas
+
     for fuel_type,consumptions in ch_elec.fuel_types():
         consumptions.sort()
