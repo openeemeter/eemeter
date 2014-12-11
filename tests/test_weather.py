@@ -1,6 +1,7 @@
 from eemeter.weather import WeatherSourceBase
 from eemeter.weather import GSODWeatherSource
 from eemeter.weather import ISDWeatherSource
+from eemeter.weather import TMY3WeatherSource
 from eemeter.weather import WeatherUndergroundWeatherSource
 from eemeter.weather import nrel_tmy3_station_from_lat_long
 from eemeter.weather import ziplocate_us
@@ -50,6 +51,10 @@ def gsod_weather_source(request):
 @pytest.fixture(params=[ISDWeatherSource('722874-93134',start_year=2012,end_year=2012),
                         ISDWeatherSource('722874',start_year=2012,end_year=2012)])
 def isd_weather_source(request):
+    return request.param
+
+@pytest.fixture(params=[TMY3WeatherSource('722880',os.environ.get("TMY3_DIRECTORY"))])
+def tmy3_weather_source(request):
     return request.param
 
 @pytest.fixture(params=[("60611","725340"),
@@ -128,3 +133,9 @@ def test_usaf_station_from_zipcode(zipcode_to_station):
         warnings.warn("Skipping NREL tests. "
                 "Please set the environment variable "
                 "NREL_API_KEY to run the tests.")
+
+def test_tmy3_weather_source(consumption_history_one_summer_electricity,tmy3_weather_source):
+    normal_avg_temps = tmy3_weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity)
+    assert abs(normal_avg_temps[0] - 68.411913043478265) < EPSILON
+    assert abs(normal_avg_temps[1] - 73.327545582047691) < EPSILON
+    assert abs(normal_avg_temps[2] - 74.593604488078540) < EPSILON

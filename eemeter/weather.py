@@ -144,6 +144,32 @@ class ISDWeatherSource(WeatherSourceBase):
                 air_temperature = float("nan")
             self._data[line[15:25]] = air_temperature
 
+class TMY3WeatherSource(WeatherSourceBase):
+    def __init__(self,station_id,directory):
+        self.station_id = station_id
+        self._data = {}
+        with open(os.path.join(directory,"{}TY.csv".format(station_id)),'r') as f:
+            lines = f.readlines()[2:]
+            for line in lines[1:]:
+                row = line.split(",")
+                date_string = row[0][0:2] + row[0][3:5] + row[1][0:2] # MMDDHH
+                self._data[date_string] = float(row[31]) * 1.8 + 32
+
+    def get_consumption_average_temperature(self,consumption):
+        """Gets the normal average temperature during a particular Consumption
+        instance. Resolution limit: daily.
+        """
+        avg_temps = []
+        n_hours = consumption.timedelta.days * 24 + consumption.timedelta.seconds // 3600
+        for hours in xrange(n_hours):
+            hour = consumption.start + timedelta(seconds=hours*3600)
+            hourly = self._data.get(hour.strftime("%m%d%H"),float("nan"))
+            avg_temps.append(hourly)
+        # mask nans
+        data = np.array(avg_temps)
+        masked_data = np.ma.masked_array(data,np.isnan(data))
+        return np.mean(masked_data)
+
 class WeatherUndergroundWeatherSource(WeatherSourceBase):
     def __init__(self,zipcode,start,end,api_key):
         self._data = {}
