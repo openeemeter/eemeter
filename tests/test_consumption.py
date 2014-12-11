@@ -135,3 +135,10 @@ def test_consumption_history(consumption_list_one_year_electricity,
 
     for fuel_type,consumptions in ch_elec.fuel_types():
         consumptions.sort()
+
+    assert len(ch_gas.before(datetime(2012,7,1)).natural_gas) == 6
+    assert len(ch_gas.after(datetime(2012,6,30)).natural_gas) == 6
+    assert len(ch_gas.before(datetime(2013,6,30)).natural_gas) == 12
+    with pytest.raises(KeyError):
+        assert ch_gas.before(datetime(2011,7,1)).natural_gas
+        assert ch_gas.after(datetime(2013,6,30)).natural_gas

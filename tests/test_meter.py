@@ -4,10 +4,12 @@ from eemeter.consumption import electricity
 from eemeter.consumption import natural_gas
 
 from eemeter.meter import MetricBase
-from eemeter.meter import PrePostMetricBase
 from eemeter.meter import RawAverageUsageMetric
 from eemeter.meter import TemperatureRegressionParametersMetric
 from eemeter.meter import AverageTemperatureMetric
+
+from eemeter.meter import PrePostMetricBase
+from eemeter.meter import PrePostRawAverageUsageMetric
 
 from eemeter.meter import Meter
 from eemeter.meter import MeterRun
@@ -184,11 +186,24 @@ def meter_run_simple():
 def gsod_722874_2012_weather_source():
     return GSODWeatherSource('722874-93134',start_year=2012,end_year=2012)
 
+@pytest.fixture(params=[(datetime(2011,1,1),datetime(2014,1,1),float("nan"),float("nan")),
+                        (datetime(2011,1,1),datetime(2012,7,15),float("nan"),1100),
+                        (datetime(2012,7,1),datetime(2012,7,15),1250,1100),
+                        (datetime(2012,7,15),datetime(2012,7,15),1250,1100),
+                        (datetime(2012,7,15),datetime(2014,1,1),1250,float("nan")),])
+def retrofits(request):
+    return request.param
 
 ##### Tests #####
 
-def test_base_metric():
+def test_metric_base():
     metric = MetricBase()
+    with pytest.raises(NotImplementedError):
+        metric.evaluate_fuel_type([])
+    assert not metric.is_flag()
+
+def test_pre_post_metric_base():
+    metric = PrePostMetricBase()
     with pytest.raises(NotImplementedError):
         metric.evaluate_fuel_type([])
     assert not metric.is_flag()
@@ -355,7 +370,6 @@ def test_too_many_estimated_time_periods_flag(consumption_history_three_estimate
     assert gas_more_than_two_estimated_flag.evaluate(consumption_history_three_estimated)
     assert not gas_more_than_three_estimated_flag.evaluate(consumption_history_three_estimated)
 
-
 def test_insufficient_time_range_flag(consumption_history_one_year_electricity):
     short_time_range_flag = InsufficientTimeRangeFlag(100)
     exact_time_range_flag = InsufficientTimeRangeFlag(365)
@@ -404,10 +418,15 @@ def test_meter_class_integration(metric_list,consumption_history_one_year_electr
     assert result.elec_data_present
     assert not result.gas_data_present
 
-def test_pre_post_metric_base():
-    metric = PrePostMetricBase(retrofit_start=datetime(2012,1,1),retrofit_end=datetime(2012,2,1))
-    assert metric.retrofit_start == datetime(2012,1,1)
-    assert metric.retrofit_end == datetime(2012,2,1)
-    with pytest.raises(NotImplementedError):
-        metric.evaluate_fuel_type([])
-    assert not metric.is_flag()
+def test_pre_post_raw_average_usage_metric(consumption_history_one_year_electricity,retrofits):
+    retrofit_start, retrofit_end, average_pre, average_post = retrofits
+    metric = PrePostRawAverageUsageMetric("kWh",fuel_type=electricity)
+    result = metric.evaluate(consumption_history_one_year_electricity,retrofit_start,retrofit_end)
+    if np.isnan(average_pre):
+        assert np.isnan(result["pre"])
+    else:
+        assert abs(result["pre"] - average_pre) < EPSILON
+    if np.isnan(average_post):
+        assert np.isnan(result["post"])
+    else:
+        assert abs(result["post"] - average_post) < EPSILON

@@ -35,9 +35,18 @@ class MetricBase(object):
         return False
 
 class PrePostMetricBase(MetricBase):
-    def __init__(self,retrofit_start,retrofit_end):
-        self.retrofit_start = retrofit_start
-        self.retrofit_end = retrofit_end
+    def evaluate(self,consumption_history,retrofit_start,retrofit_end):
+        """Evaluates the metric on the specified fuel_type or on every
+        available fuel type, if none is specified, returning a dictionary of
+        the evaluations keyed on fuel_type name for the pre-retrofit and post-
+        retrofit scenarios. Requires specification of the `evaluate_fuel_type`
+        method.
+        """
+        consumption_history_pre = consumption_history.before(retrofit_start)
+        consumption_history_post = consumption_history.after(retrofit_end)
+        pre = super(PrePostMetricBase,self).evaluate(consumption_history_pre)
+        post = super(PrePostMetricBase,self).evaluate(consumption_history_post)
+        return {"pre": pre,"post": post}
 
 class FlagBase(MetricBase):
     def __init__(self,fuel_type=None):
