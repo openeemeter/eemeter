@@ -100,6 +100,20 @@ class ConsumptionHistory:
     def __nonzero__(self):
         return len(self._data.keys()) > 0
 
+    def after(self,dt):
+        consumptions = []
+        for item in self.iteritems():
+            if item.start >= dt:
+                consumptions.append(item)
+        return ConsumptionHistory(consumptions)
+
+    def before(self,dt):
+        consumptions = []
+        for item in self.iteritems():
+            if item.end <= dt:
+                consumptions.append(item)
+        return ConsumptionHistory(consumptions)
+
     def get(self,fuel_type):
         """Returns an array (not necessarily sorted) of Consumption instances
         given a particular fuel_type. Fuel type may be specified as a string
