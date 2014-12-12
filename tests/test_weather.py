@@ -70,11 +70,11 @@ def zipcode_to_station(request):
 def test_weather_source_base(consumption_history_one_summer_electricity):
     weather_source = WeatherSourceBase()
     with pytest.raises(NotImplementedError):
-        hdd = weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity)
+        hdd = weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity,"degF")
 
 @pytest.mark.slow
 def test_gsod_weather_source(consumption_history_one_summer_electricity,gsod_weather_source):
-    avg_temps = gsod_weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity)
+    avg_temps = gsod_weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity,"degF")
     assert abs(avg_temps[0] - 66.3833333333) < EPSILON
     assert abs(avg_temps[1] - 67.8032258065) < EPSILON
     assert abs(avg_temps[2] - 74.4451612903) < EPSILON
@@ -87,7 +87,7 @@ def test_weather_underground_weather_source(consumption_history_one_summer_elect
                                                             datetime(2012,6,1),
                                                             datetime(2012,10,1),
                                                             wunderground_api_key)
-        avg_temps = wu_weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity)
+        avg_temps = wu_weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity,"degF")
         assert abs(avg_temps[0] - 74.4333333333) < EPSILON
         assert abs(avg_temps[1] - 82.6774193548) < EPSILON
         assert abs(avg_temps[2] - 75.4516129032) < EPSILON
@@ -119,7 +119,7 @@ def test_ziplocate_us(lat_long_zipcode):
         assert abs(lng - zip_lng) < EPSILON
 
 def test_isd_weather_source(consumption_history_one_summer_electricity,isd_weather_source):
-    avg_temps = isd_weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity)
+    avg_temps = isd_weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity,"degF")
     assert abs(avg_temps[0] - 66.576956521739135) < EPSILON
     assert abs(avg_temps[1] - 68.047780898876411) < EPSILON
     assert abs(avg_temps[2] - 74.697162921348323) < EPSILON
@@ -135,7 +135,7 @@ def test_usaf_station_from_zipcode(zipcode_to_station):
                 "NREL_API_KEY to run the tests.")
 
 def test_tmy3_weather_source(consumption_history_one_summer_electricity,tmy3_weather_source):
-    normal_avg_temps = tmy3_weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity)
+    normal_avg_temps = tmy3_weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity,"degF")
     assert abs(normal_avg_temps[0] - 68.411913043478265) < EPSILON
     assert abs(normal_avg_temps[1] - 73.327545582047691) < EPSILON
     assert abs(normal_avg_temps[2] - 74.593604488078540) < EPSILON

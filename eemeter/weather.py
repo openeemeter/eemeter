@@ -8,20 +8,22 @@ from datetime import timedelta
 import numpy as np
 import requests
 import eemeter
+from . import ureg, Q_
 
 class WeatherSourceBase:
-    def get_average_temperature(self,consumption_history,fuel_type):
+    def get_average_temperature(self,consumption_history,fuel_type,unit_name):
         """Returns a list of floats containing the average temperature during
         each consumption period.
         """
+        unit = ureg.parse_expression(unit_name)
         avg_temps = []
-        # TODO - WARNING - deal with the fact that consumption history.get will
+        # TODO - WARNING - deal with the fact that consumption_history.get will
         # not return things in a predictable order.
         for consumption in consumption_history.get(fuel_type):
-            avg_temps.append(self.get_consumption_average_temperature(consumption))
+            avg_temps.append(self.get_consumption_average_temperature(consumption,unit))
         return avg_temps
 
-    def get_consumption_average_temperature(self,consumption):
+    def get_consumption_average_temperature(self,consumption,unit):
         raise NotImplementedError
 
 class GSODWeatherSource(WeatherSourceBase):
@@ -40,6 +42,7 @@ class GSODWeatherSource(WeatherSourceBase):
             # otherwise, just use the given id
             potential_station_ids = [station_id]
         self._data = {}
+        self._source_unit = ureg.degF
         ftp = ftplib.FTP("ftp.ncdc.noaa.gov")
         ftp.login()
         data = []
@@ -60,19 +63,20 @@ class GSODWeatherSource(WeatherSourceBase):
             f.close()
         ftp.quit()
 
-    def get_consumption_average_temperature(self,consumption):
+    def get_consumption_average_temperature(self,consumption,unit):
         """Gets the average temperature during a particular Consumption
         instance. Resolution limit: daily.
         """
         avg_temps = []
         for days in xrange(consumption.timedelta.days):
-            avg_temps.append(self._data[(consumption.start + timedelta(days=days)).strftime("%Y%m%d")])
+            temp = self._data[(consumption.start + timedelta(days=days)).strftime("%Y%m%d")]
+            avg_temps.append(temp.to(unit).magnitude)
         return np.mean(avg_temps)
 
     def _add_file(self,f):
         for line in f.readlines()[1:]:
             columns=line.split()
-            self._data[columns[2]] = float(columns[3])
+            self._data[columns[2]] = Q_(float(columns[3]),self._source_unit)
 
 class ISDWeatherSource(WeatherSourceBase):
     def __init__(self,station_id,start_year,end_year):
@@ -90,6 +94,7 @@ class ISDWeatherSource(WeatherSourceBase):
             # otherwise, just use the given id
             potential_station_ids = [station_id]
         self._data = {}
+        self._source_unit = ureg.degC
         ftp = ftplib.FTP("ftp.ncdc.noaa.gov")
         ftp.login()
         data = []
@@ -111,15 +116,16 @@ class ISDWeatherSource(WeatherSourceBase):
         ftp.quit()
         pass
 
-    def get_consumption_average_temperature(self,consumption):
+    def get_consumption_average_temperature(self,consumption,unit):
         """Gets the average temperature during a particular Consumption
         instance. Resolution limit: hourly.
         """
         avg_temps = []
+        null = Q_(float("nan"),self._source_unit)
         n_hours = consumption.timedelta.days * 24 + consumption.timedelta.seconds // 3600
         for hours in xrange(n_hours):
             hour = consumption.start + timedelta(seconds=hours*3600)
-            hourly = self._data.get(hour.strftime("%Y%m%d%H"),float("nan"))
+            hourly = self._data.get(hour.strftime("%Y%m%d%H"),null).to(unit).magnitude
             avg_temps.append(hourly)
         # mask nans
         data = np.array(avg_temps)
@@ -139,31 +145,33 @@ class ISDWeatherSource(WeatherSourceBase):
             # day = line[21:23]
             # hour = line[23:25]
             # minute = line[25:27]
-            air_temperature = (float(line[87:92]) / 10) * 1.8 + 32
+            air_temperature = Q_(float(line[87:92]) / 10, self._source_unit)
             if line[87:92] == "+9999":
-                air_temperature = float("nan")
+                air_temperature = Q_(float("nan"),self._source_unit)
             self._data[line[15:25]] = air_temperature
 
 class TMY3WeatherSource(WeatherSourceBase):
     def __init__(self,station_id,directory):
         self.station_id = station_id
         self._data = {}
+        self._source_unit = ureg.degC
         with open(os.path.join(directory,"{}TY.csv".format(station_id)),'r') as f:
             lines = f.readlines()[2:]
             for line in lines[1:]:
                 row = line.split(",")
                 date_string = row[0][0:2] + row[0][3:5] + row[1][0:2] # MMDDHH
-                self._data[date_string] = float(row[31]) * 1.8 + 32
+                self._data[date_string] = Q_(float(row[31]),self._source_unit)
 
-    def get_consumption_average_temperature(self,consumption):
+    def get_consumption_average_temperature(self,consumption,unit):
         """Gets the normal average temperature during a particular Consumption
         instance. Resolution limit: daily.
         """
         avg_temps = []
+        null = Q_(float("nan"),self._source_unit)
         n_hours = consumption.timedelta.days * 24 + consumption.timedelta.seconds // 3600
         for hours in xrange(n_hours):
             hour = consumption.start + timedelta(seconds=hours*3600)
-            hourly = self._data.get(hour.strftime("%m%d%H"),float("nan"))
+            hourly = self._data.get(hour.strftime("%m%d%H"),null).to(unit).magnitude
             avg_temps.append(hourly)
         # mask nans
         data = np.array(avg_temps)
@@ -184,19 +192,22 @@ class WeatherUndergroundWeatherSource(WeatherSourceBase):
                     .format(api_key,start_date_str,end_date_str,zipcode)
             self._get_query_data(query)
 
-    def get_consumption_average_temperature(self,consumption):
+    def get_consumption_average_temperature(self,consumption,unit):
         """Gets the average temperature during a particular Consumption
         instance. Resolution limit: daily.
         """
         avg_temps = []
         for days in xrange(consumption.timedelta.days):
-            avg_temps.append(self._data[(consumption.start + timedelta(days=days)).strftime("%Y%m%d")]["meantempi"])
+            date_string = (consumption.start + timedelta(days=days)).strftime("%Y%m%d")
+            temp = self._data[date_string]["meantempi"].to(unit).magnitude
+            avg_temps.append(temp)
         return np.mean(avg_temps)
 
     def _get_query_data(self,query):
+        unit = ureg.degF
         for day in requests.get(query).json()["history"]["dailysummary"]:
             date_string = day["date"]["year"] + day["date"]["mon"] + day["date"]["mday"]
-            data = {"meantempi":int(day["meantempi"])}
+            data = {"meantempi":Q_(int(day["meantempi"]),unit)}
             self._data[date_string] = data
 
 def nrel_tmy3_station_from_lat_long(lat,lng,api_key):
