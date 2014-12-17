@@ -118,12 +118,14 @@ def test_ziplocate_us(lat_long_zipcode):
         assert abs(lat - zip_lat) < EPSILON
         assert abs(lng - zip_lng) < EPSILON
 
+@pytest.mark.slow
 def test_isd_weather_source(consumption_history_one_summer_electricity,isd_weather_source):
     avg_temps = isd_weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity,"degF")
     assert abs(avg_temps[0] - 66.576956521739135) < EPSILON
     assert abs(avg_temps[1] - 68.047780898876411) < EPSILON
     assert abs(avg_temps[2] - 74.697162921348323) < EPSILON
 
+@pytest.mark.slow
 def test_usaf_station_from_zipcode(zipcode_to_station):
     zipcode,station = zipcode_to_station
     nrel_api_key = os.environ.get('NREL_API_KEY')
@@ -134,6 +136,7 @@ def test_usaf_station_from_zipcode(zipcode_to_station):
                 "Please set the environment variable "
                 "NREL_API_KEY to run the tests.")
 
+@pytest.mark.slow
 def test_tmy3_weather_source(consumption_history_one_summer_electricity,tmy3_weather_source):
     normal_avg_temps = tmy3_weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity,"degF")
     assert abs(normal_avg_temps[0] - 68.411913043478265) < EPSILON

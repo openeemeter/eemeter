@@ -34,19 +34,46 @@ class MetricBase(object):
         """
         return False
 
-class PrePostMetricBase(MetricBase):
-    def evaluate(self,consumption_history,retrofit_start,retrofit_end):
-        """Evaluates the metric on the specified fuel_type or on every
-        available fuel type, if none is specified, returning a dictionary of
-        the evaluations keyed on fuel_type name for the pre-retrofit and post-
-        retrofit scenarios. Requires specification of the `evaluate_fuel_type`
-        method.
+class PrePost(MetricBase):
+    def __init__(self,metric):
+        self.metric = metric
+
+    def evaluate(self,*args,**kwargs):
+        """Returns a dictionary with keys "pre" and "post", with values
+        corresponding to metric evaluation on pre or post data. For metric
+        arguments to  be split pre/post, they must respond to "before" or
+        "after" methods.
         """
-        consumption_history_pre = consumption_history.before(retrofit_start)
-        consumption_history_post = consumption_history.after(retrofit_end)
-        pre = super(PrePostMetricBase,self).evaluate(consumption_history_pre)
-        post = super(PrePostMetricBase,self).evaluate(consumption_history_post)
+        args_pre,args_post = self._split_args(args,kwargs)
+        kwargs_pre,kwargs_post = self._split_kwargs(kwargs)
+        pre = self.metric.evaluate(*args_pre,**kwargs_pre)
+        post = self.metric.evaluate(*args_post,**kwargs_post)
         return {"pre": pre,"post": post}
+
+    def _split_args(self,args,kwargs):
+        args_pre = []
+        args_post = []
+        for arg in args:
+            try:
+                args_pre.append(arg.before(kwargs["retrofit_start"]))
+                args_post.append(arg.after(kwargs["retrofit_end"]))
+            except KeyError:
+                args_pre.append(arg)
+                args_post.append(arg)
+        return args_pre, args_post
+
+    def _split_kwargs(self,kwargs):
+        kwargs_pre = {}
+        kwargs_post = {}
+        for key,arg in kwargs.iteritems():
+            if not (key == "retrofit_start" or key == "retrofit_end"):
+                try:
+                    kwargs_pre[key] = arg.before(kwargs["retrofit_start"])
+                    kwargs_post[key] = arg.after(kwargs["retrofit_end"])
+                except KeyError:
+                    kwargs_pre[key] = arg
+                    kwargs_post[key] = arg
+        return kwargs_pre, kwargs_post
 
 class FlagBase(MetricBase):
     def __init__(self,fuel_type=None):

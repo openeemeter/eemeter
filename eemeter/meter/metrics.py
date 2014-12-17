@@ -1,5 +1,4 @@
 from .base import MetricBase
-from .base import PrePostMetricBase
 
 import numpy as np
 from scipy import stats
@@ -53,17 +52,3 @@ class AverageTemperatureMetric(MetricBase):
     def evaluate(self,consumption_history,weather_source):
         avg_temps = weather_source.get_average_temperature(consumption_history,self.fuel_type,"degF")
         return np.mean(avg_temps)
-
-class PrePostRawAverageUsageMetric(PrePostMetricBase):
-    def __init__(self,unit_name,fuel_type=None):
-        # TODO - allow different units for different fuel types.
-        self.unit_name = unit_name
-        super(PrePostRawAverageUsageMetric,self).__init__(fuel_type)
-
-    def evaluate_fuel_type(self,consumptions):
-        """Returns the average usage with the specified unit and the specified
-        fuel type.
-        """
-        if consumptions is None:
-            return np.nan
-        return np.mean([consumption.to(self.unit_name) for consumption in consumptions])

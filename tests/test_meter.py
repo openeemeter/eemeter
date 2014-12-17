@@ -8,8 +8,7 @@ from eemeter.meter import RawAverageUsageMetric
 from eemeter.meter import TemperatureRegressionParametersMetric
 from eemeter.meter import AverageTemperatureMetric
 
-from eemeter.meter import PrePostMetricBase
-from eemeter.meter import PrePostRawAverageUsageMetric
+from eemeter.meter import PrePost
 
 from eemeter.meter import Meter
 from eemeter.meter import MeterRun
@@ -198,12 +197,6 @@ def retrofits(request):
 
 def test_metric_base():
     metric = MetricBase()
-    with pytest.raises(NotImplementedError):
-        metric.evaluate_fuel_type([])
-    assert not metric.is_flag()
-
-def test_pre_post_metric_base():
-    metric = PrePostMetricBase()
     with pytest.raises(NotImplementedError):
         metric.evaluate_fuel_type([])
     assert not metric.is_flag()
@@ -420,8 +413,8 @@ def test_meter_class_integration(metric_list,consumption_history_one_year_electr
 
 def test_pre_post_raw_average_usage_metric(consumption_history_one_year_electricity,retrofits):
     retrofit_start, retrofit_end, average_pre, average_post = retrofits
-    metric = PrePostRawAverageUsageMetric("kWh",fuel_type=electricity)
-    result = metric.evaluate(consumption_history_one_year_electricity,retrofit_start,retrofit_end)
+    metric = PrePost(RawAverageUsageMetric("kWh",fuel_type=electricity))
+    result = metric.evaluate(consumption_history_one_year_electricity,retrofit_start=retrofit_start,retrofit_end=retrofit_end)
     if np.isnan(average_pre):
         assert np.isnan(result["pre"])
     else:
