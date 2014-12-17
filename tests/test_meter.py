@@ -411,6 +411,9 @@ def test_meter_class_integration(metric_list,consumption_history_one_year_electr
     assert result.elec_data_present
     assert not result.gas_data_present
 
+def test_pre_post_metric():
+    assert issubclass(PrePost,MetricBase)
+
 def test_pre_post_raw_average_usage_metric(consumption_history_one_year_electricity,retrofits):
     retrofit_start, retrofit_end, average_pre, average_post = retrofits
     metric = PrePost(RawAverageUsageMetric("kWh",fuel_type=electricity))

@@ -24,7 +24,47 @@ class WeatherSourceBase:
         return avg_temps
 
     def get_consumption_average_temperature(self,consumption,unit):
+        avg_temps = []
+        for days in xrange(consumption.timedelta.days):
+            day = consumption.start + timedelta(days=days)
+            temp = self.get_daily_average_temperature(day,unit)
+            avg_temps.append(temp)
+        return np.mean(avg_temps)
+
+    def get_daily_average_temperature(self,consumption,unit):
         raise NotImplementedError
+
+    def get_hdd(self,consumption_history,fuel_type,unit_name,base):
+        unit = ureg.parse_expression(unit_name)
+        hdds = []
+        for consumption in consumption_history.get(fuel_type):
+            hdds.append(self.get_consumption_hdd(consumption,unit,base))
+        return hdds
+
+    def get_consumption_hdd(self,consumption,unit,base):
+        total_hdd = 0.
+        for days in xrange(consumption.timedelta.days):
+            day = consumption.start + timedelta(days=days)
+            temp = self.get_daily_average_temperature(day,unit)
+            if temp > base:
+                total_hdd += temp - base
+        return total_hdd
+
+    def get_cdd(self,consumption_history,fuel_type,unit_name,base):
+        unit = ureg.parse_expression(unit_name)
+        cdds = []
+        for consumption in consumption_history.get(fuel_type):
+            cdds.append(self.get_consumption_cdd(consumption,unit,base))
+        return cdds
+
+    def get_consumption_cdd(self,consumption,unit,base):
+        total_cdd = 0.
+        for days in xrange(consumption.timedelta.days):
+            day = consumption.start + timedelta(days=days)
+            temp = self.get_daily_average_temperature(day,unit)
+            if temp < base:
+                total_cdd += base - temp
+        return total_cdd
 
 class GSODWeatherSource(WeatherSourceBase):
     def __init__(self,station_id,start_year,end_year):
@@ -63,15 +103,10 @@ class GSODWeatherSource(WeatherSourceBase):
             f.close()
         ftp.quit()
 
-    def get_consumption_average_temperature(self,consumption,unit):
-        """Gets the average temperature during a particular Consumption
-        instance. Resolution limit: daily.
+    def get_daily_average_temperature(self,day,unit):
+        """Gets the average temperature during a particular day.
         """
-        avg_temps = []
-        for days in xrange(consumption.timedelta.days):
-            temp = self._data[(consumption.start + timedelta(days=days)).strftime("%Y%m%d")]
-            avg_temps.append(temp.to(unit).magnitude)
-        return np.mean(avg_temps)
+        return self._data[day.strftime("%Y%m%d")].to(unit).magnitude
 
     def _add_file(self,f):
         for line in f.readlines()[1:]:
@@ -132,6 +167,19 @@ class ISDWeatherSource(WeatherSourceBase):
         masked_data = np.ma.masked_array(data,np.isnan(data))
         return np.mean(masked_data)
 
+    def get_daily_average_temperature(self,day,unit):
+        """Returns hourly average temperature.
+        """
+        null = Q_(float("nan"),self._source_unit)
+        day_str = day.strftime("%Y%m%d%H")
+        avg_temps = []
+        for i in range(24):
+            hourly = self._data.get("{}{:02d}".format(day_str,i),null).to(unit).magnitude
+            avg_temps.append(hourly)
+        data = np.array(avg_temps)
+        masked_data = np.ma.masked_array(data,np.isnan(data))
+        return np.mean(masked_data)
+
     def _add_file(self,f):
         for line in f.readlines():
             # line[4:10] # USAF
@@ -178,6 +226,19 @@ class TMY3WeatherSource(WeatherSourceBase):
         masked_data = np.ma.masked_array(data,np.isnan(data))
         return np.mean(masked_data)
 
+    def get_daily_average_temperature(self,day,unit):
+        """Returns hourly average temperature.
+        """
+        null = Q_(float("nan"),self._source_unit)
+        day_str = day.strftime("%Y%m%d%H")
+        avg_temps = []
+        for i in range(24):
+            hourly = self._data.get("{}{:02d}".format(day_str,i),null).to(unit).magnitude
+            avg_temps.append(hourly)
+        data = np.array(avg_temps)
+        masked_data = np.ma.masked_array(data,np.isnan(data))
+        return np.mean(masked_data)
+
 class WeatherUndergroundWeatherSource(WeatherSourceBase):
     def __init__(self,zipcode,start,end,api_key):
         self._data = {}
@@ -192,16 +253,11 @@ class WeatherUndergroundWeatherSource(WeatherSourceBase):
                     .format(api_key,start_date_str,end_date_str,zipcode)
             self._get_query_data(query)
 
-    def get_consumption_average_temperature(self,consumption,unit):
+    def get_daily_average_temperature(self,day,unit):
         """Gets the average temperature during a particular Consumption
         instance. Resolution limit: daily.
         """
-        avg_temps = []
-        for days in xrange(consumption.timedelta.days):
-            date_string = (consumption.start + timedelta(days=days)).strftime("%Y%m%d")
-            temp = self._data[date_string]["meantempi"].to(unit).magnitude
-            avg_temps.append(temp)
-        return np.mean(avg_temps)
+        return self._data[day.strftime("%Y%m%d")]["meantempi"].to(unit).magnitude
 
     def _get_query_data(self,query):
         unit = ureg.degF
@@ -234,4 +290,3 @@ def usaf_station_from_zipcode(zipcode,nrel_api_key):
     lat,lng = ziplocate_us(zipcode)
     station = nrel_tmy3_station_from_lat_long(lat,lng,nrel_api_key)
     return station
-

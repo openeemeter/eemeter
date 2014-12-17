@@ -24,8 +24,8 @@ EPSILON = 10e-6
 @pytest.fixture
 def consumption_history_one_summer_electricity():
     c_list = [Consumption(1600,"kWh",electricity,datetime(2012,6,1),datetime(2012,7,1)),
-            Consumption(1700,"kWh",electricity,datetime(2012,7,1),datetime(2012,8,1)),
-            Consumption(1800,"kWh",electricity,datetime(2012,8,1),datetime(2012,9,1))]
+              Consumption(1700,"kWh",electricity,datetime(2012,7,1),datetime(2012,8,1)),
+              Consumption(1800,"kWh",electricity,datetime(2012,8,1),datetime(2012,9,1))]
     return ConsumptionHistory(c_list)
 
 @pytest.fixture(params=[(41.8955360374983,-87.6217660821178,"725340"),
@@ -43,13 +43,13 @@ def lat_long_station(request):
 def lat_long_zipcode(request):
     return request.param
 
-@pytest.fixture(params=[GSODWeatherSource('722874-93134',start_year=2012,end_year=2012),
-                        GSODWeatherSource('722874',start_year=2012,end_year=2012)])
+@pytest.fixture(params=[('722874-93134',2012,2012),
+                        ('722874',2012,2012)])
 def gsod_weather_source(request):
     return request.param
 
-@pytest.fixture(params=[ISDWeatherSource('722874-93134',start_year=2012,end_year=2012),
-                        ISDWeatherSource('722874',start_year=2012,end_year=2012)])
+@pytest.fixture(params=[('722874-93134',2012,2012),
+                        ('722874',2012,2012)])
 def isd_weather_source(request):
     return request.param
 
@@ -70,14 +70,25 @@ def zipcode_to_station(request):
 def test_weather_source_base(consumption_history_one_summer_electricity):
     weather_source = WeatherSourceBase()
     with pytest.raises(NotImplementedError):
-        hdd = weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity,"degF")
+        avg_temps = weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity,"degF")
+    with pytest.raises(NotImplementedError):
+        hdds = weather_source.get_hdd(consumption_history_one_summer_electricity,electricity,"degF",base=65)
 
 @pytest.mark.slow
 def test_gsod_weather_source(consumption_history_one_summer_electricity,gsod_weather_source):
+    gsod_weather_source = GSODWeatherSource(*gsod_weather_source)
     avg_temps = gsod_weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity,"degF")
     assert abs(avg_temps[0] - 66.3833333333) < EPSILON
     assert abs(avg_temps[1] - 67.8032258065) < EPSILON
     assert abs(avg_temps[2] - 74.4451612903) < EPSILON
+    hdds = gsod_weather_source.get_hdd(consumption_history_one_summer_electricity,electricity,"degF",65)
+    assert abs(hdds[0] - 6.3833333333) < EPSILON
+    assert abs(hdds[1] - 7.8032258065) < EPSILON
+    assert abs(hdds[2] - 14.4451612903) < EPSILON
+    cdds = gsod_weather_source.get_cdd(consumption_history_one_summer_electricity,electricity,"degF",65)
+    assert abs(cdds[0] - 0.0) < EPSILON
+    assert abs(cdds[1] - 0.0) < EPSILON
+    assert abs(cdds[2] - 0.0) < EPSILON
 
 @pytest.mark.slow
 def test_weather_underground_weather_source(consumption_history_one_summer_electricity):
@@ -91,6 +102,14 @@ def test_weather_underground_weather_source(consumption_history_one_summer_elect
         assert abs(avg_temps[0] - 74.4333333333) < EPSILON
         assert abs(avg_temps[1] - 82.6774193548) < EPSILON
         assert abs(avg_temps[2] - 75.4516129032) < EPSILON
+        hdds = wu_weather_source.get_hdd(consumption_history_one_summer_electricity,electricity,"degF",65)
+        assert abs(hdds[0] - 6.3833333333) < EPSILON
+        assert abs(hdds[1] - 7.8032258065) < EPSILON
+        assert abs(hdds[2] - 14.4451612903) < EPSILON
+        cdds = wu_weather_source.get_cdd(consumption_history_one_summer_electricity,electricity,"degF",65)
+        assert abs(cdds[0] - 0.0) < EPSILON
+        assert abs(cdds[1] - 0.0) < EPSILON
+        assert abs(cdds[2] - 0.0) < EPSILON
     else:
         warnings.warn("Skipping WeatherUndergroundWeatherSource tests. "
             "Please set the environment variable "
@@ -120,10 +139,19 @@ def test_ziplocate_us(lat_long_zipcode):
 
 @pytest.mark.slow
 def test_isd_weather_source(consumption_history_one_summer_electricity,isd_weather_source):
+    isd_weather_source = ISDWeatherSource(*isd_weather_source)
     avg_temps = isd_weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity,"degF")
     assert abs(avg_temps[0] - 66.576956521739135) < EPSILON
     assert abs(avg_temps[1] - 68.047780898876411) < EPSILON
     assert abs(avg_temps[2] - 74.697162921348323) < EPSILON
+    hdds = isd_weather_source.get_hdd(consumption_history_one_summer_electricity,electricity,"degF")
+    assert abs(hdds[0] - 1.576956521739135) < EPSILON
+    assert abs(hdds[1] - 3.047780898876411) < EPSILON
+    assert abs(hdds[2] - 11.697162921348323) < EPSILON
+    cdds = isd_weather_source.get_cdd(consumption_history_one_summer_electricity,electricity,"degF")
+    assert abs(cdds[0] - 0.0) < EPSILON
+    assert abs(cdds[1] - 0.0) < EPSILON
+    assert abs(cdds[2] - 0.0) < EPSILON
 
 @pytest.mark.slow
 def test_usaf_station_from_zipcode(zipcode_to_station):
