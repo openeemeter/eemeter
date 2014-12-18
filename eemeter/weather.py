@@ -149,7 +149,6 @@ class ISDWeatherSource(WeatherSourceBase):
             string.close()
             f.close()
         ftp.quit()
-        pass
 
     def get_consumption_average_temperature(self,consumption,unit):
         """Gets the average temperature during a particular Consumption
@@ -171,7 +170,7 @@ class ISDWeatherSource(WeatherSourceBase):
         """Returns hourly average temperature.
         """
         null = Q_(float("nan"),self._source_unit)
-        day_str = day.strftime("%Y%m%d%H")
+        day_str = day.strftime("%Y%m%d")
         avg_temps = []
         for i in range(24):
             hourly = self._data.get("{}{:02d}".format(day_str,i),null).to(unit).magnitude
@@ -230,7 +229,7 @@ class TMY3WeatherSource(WeatherSourceBase):
         """Returns hourly average temperature.
         """
         null = Q_(float("nan"),self._source_unit)
-        day_str = day.strftime("%Y%m%d%H")
+        day_str = day.strftime("%m%d")
         avg_temps = []
         for i in range(24):
             hourly = self._data.get("{}{:02d}".format(day_str,i),null).to(unit).magnitude

@@ -82,12 +82,12 @@ def test_gsod_weather_source(consumption_history_one_summer_electricity,gsod_wea
     assert abs(avg_temps[1] - 67.8032258065) < EPSILON
     assert abs(avg_temps[2] - 74.4451612903) < EPSILON
     hdds = gsod_weather_source.get_hdd(consumption_history_one_summer_electricity,electricity,"degF",65)
-    assert abs(hdds[0] - 6.3833333333) < EPSILON
-    assert abs(hdds[1] - 7.8032258065) < EPSILON
-    assert abs(hdds[2] - 14.4451612903) < EPSILON
+    assert abs(hdds[0] - 42.2) < EPSILON
+    assert abs(hdds[1] - 107.3) < EPSILON
+    assert abs(hdds[2] - 292.8) < EPSILON
     cdds = gsod_weather_source.get_cdd(consumption_history_one_summer_electricity,electricity,"degF",65)
-    assert abs(cdds[0] - 0.0) < EPSILON
-    assert abs(cdds[1] - 0.0) < EPSILON
+    assert abs(cdds[0] - 0.7) < EPSILON
+    assert abs(cdds[1] - 20.4) < EPSILON
     assert abs(cdds[2] - 0.0) < EPSILON
 
 @pytest.mark.slow
@@ -103,11 +103,11 @@ def test_weather_underground_weather_source(consumption_history_one_summer_elect
         assert abs(avg_temps[1] - 82.6774193548) < EPSILON
         assert abs(avg_temps[2] - 75.4516129032) < EPSILON
         hdds = wu_weather_source.get_hdd(consumption_history_one_summer_electricity,electricity,"degF",65)
-        assert abs(hdds[0] - 6.3833333333) < EPSILON
-        assert abs(hdds[1] - 7.8032258065) < EPSILON
-        assert abs(hdds[2] - 14.4451612903) < EPSILON
+        assert abs(hdds[0] - 297.0) < EPSILON
+        assert abs(hdds[1] - 548.0) < EPSILON
+        assert abs(hdds[2] - 324.0) < EPSILON
         cdds = wu_weather_source.get_cdd(consumption_history_one_summer_electricity,electricity,"degF",65)
-        assert abs(cdds[0] - 0.0) < EPSILON
+        assert abs(cdds[0] - 14.0) < EPSILON
         assert abs(cdds[1] - 0.0) < EPSILON
         assert abs(cdds[2] - 0.0) < EPSILON
     else:
@@ -144,13 +144,13 @@ def test_isd_weather_source(consumption_history_one_summer_electricity,isd_weath
     assert abs(avg_temps[0] - 66.576956521739135) < EPSILON
     assert abs(avg_temps[1] - 68.047780898876411) < EPSILON
     assert abs(avg_temps[2] - 74.697162921348323) < EPSILON
-    hdds = isd_weather_source.get_hdd(consumption_history_one_summer_electricity,electricity,"degF")
-    assert abs(hdds[0] - 1.576956521739135) < EPSILON
-    assert abs(hdds[1] - 3.047780898876411) < EPSILON
-    assert abs(hdds[2] - 11.697162921348323) < EPSILON
-    cdds = isd_weather_source.get_cdd(consumption_history_one_summer_electricity,electricity,"degF")
-    assert abs(cdds[0] - 0.0) < EPSILON
-    assert abs(cdds[1] - 0.0) < EPSILON
+    hdds = isd_weather_source.get_hdd(consumption_history_one_summer_electricity,electricity,"degF",65)
+    assert abs(hdds[0] - 47.603489860868635) < EPSILON
+    assert abs(hdds[1] - 113.77566417391201) < EPSILON
+    assert abs(hdds[2] - 300.72214678735065) < EPSILON
+    cdds = isd_weather_source.get_cdd(consumption_history_one_summer_electricity,electricity,"degF",65)
+    assert abs(cdds[0] - 0.29478220869567906) < EPSILON
+    assert abs(cdds[1] - 20.309999600000033) < EPSILON
     assert abs(cdds[2] - 0.0) < EPSILON
 
 @pytest.mark.slow
@@ -170,3 +170,12 @@ def test_tmy3_weather_source(consumption_history_one_summer_electricity,tmy3_wea
     assert abs(normal_avg_temps[0] - 68.411913043478265) < EPSILON
     assert abs(normal_avg_temps[1] - 73.327545582047691) < EPSILON
     assert abs(normal_avg_temps[2] - 74.593604488078540) < EPSILON
+    normal_hdds = tmy3_weather_source.get_hdd(consumption_history_one_summer_electricity,electricity,"degF",65)
+    assert abs(normal_hdds[0] - 111.01566097391235) < EPSILON
+    assert abs(normal_hdds[1] - 258.15392544347725) < EPSILON
+    assert abs(normal_hdds[2] - 297.40175153043384) < EPSILON
+    normal_cdds = tmy3_weather_source.get_cdd(consumption_history_one_summer_electricity,electricity,"degF",65)
+    assert abs(normal_cdds[0] - 8.6582576695655149) < EPSILON
+    assert abs(normal_cdds[1] - 0.0) < EPSILON
+    assert abs(normal_cdds[2] - 0.0) < EPSILON
+
