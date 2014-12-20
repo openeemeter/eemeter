@@ -2,6 +2,7 @@ from .base import MetricBase
 
 import numpy as np
 from scipy import stats
+import scipy.optimize as opt
 
 class RawAverageUsageMetric(MetricBase):
     def __init__(self,unit_name,fuel_type=None):
@@ -24,10 +25,12 @@ class TemperatureRegressionParametersMetric(MetricBase):
 
     def __init__(self,unit_name,fuel_type):
         self.fuel_type = fuel_type
+        self.unit_name = unit_name
 
     def evaluate(self,consumption_history,weather_source):
-        usages = [c.to("kWh") for c in consumption_history.get(self.fuel_type)]
-        avg_temps = weather_source.get_average_temperature(consumption_history,self.fuel_type,"degF")
+        consumptions = consumption_history.get(self.fuel_type)
+        usages = [c.to(self.unit_name) for c in consumptions]
+        avg_temps = weather_source.get_average_temperature(consumptions,"degF")
         best_coeffs = None,None
         best_r_value = -np.inf
         for balance_point in self.balance_points:
@@ -50,5 +53,27 @@ class AverageTemperatureMetric(MetricBase):
         self.fuel_type = fuel_type
 
     def evaluate(self,consumption_history,weather_source):
-        avg_temps = weather_source.get_average_temperature(consumption_history,self.fuel_type,"degF")
+        consumptions = consumption_history.get(self.fuel_type)
+        avg_temps = weather_source.get_average_temperature(consumptions,"degF")
         return np.mean(avg_temps)
+
+class WeatherNormalizedAverageUsageMetric(MetricBase):
+    def __init__(self,unit_name,fuel_type):
+        self.fuel_type = fuel_type
+        self.unit_name = unit_name
+        self.temperature_unit_name = "degF" # TODO - unhardcode this
+
+    def evaluate(self,consumption_history,weather_source,weather_normal_source):
+        consumptions = consumption_history.get(self.fuel_type)
+        usages = [c.to(self.unit_name) for c in consumptions]
+        observed_temps = weather_source.get_average_temperature(consumptions,self.temperature_unit_name)
+        normal_temps = weather_normal_source.get_average_temperature(consumptions,self.temperature_unit_name)
+        params = self._parameter_optimization(usages,observed_temps,normal_temps)
+
+    @staticmethod
+    def _parameter_optimization(usage,observed_temps,normal_temps):
+        def _objective_function(params):
+            pass
+        params = None
+        return params
+

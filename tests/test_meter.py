@@ -7,6 +7,7 @@ from eemeter.meter import MetricBase
 from eemeter.meter import RawAverageUsageMetric
 from eemeter.meter import TemperatureRegressionParametersMetric
 from eemeter.meter import AverageTemperatureMetric
+from eemeter.meter import WeatherNormalizedAverageUsageMetric
 
 from eemeter.meter import PrePost
 
@@ -21,8 +22,11 @@ from eemeter.meter import TooManyEstimatedPeriodsFlag
 from eemeter.meter import InsufficientTimeRangeFlag
 
 from eemeter.weather import GSODWeatherSource
+from eemeter.weather import TMY3WeatherSource
 
 from datetime import datetime
+import os
+
 import numpy as np
 
 import pytest
@@ -182,8 +186,12 @@ def meter_run_simple():
     return MeterRun(data)
 
 @pytest.fixture(scope="module")
-def gsod_722874_2012_weather_source():
-    return GSODWeatherSource('722874-93134',start_year=2012,end_year=2012)
+def gsod_722880_2012_weather_source():
+    return GSODWeatherSource('722880',start_year=2012,end_year=2012)
+
+@pytest.fixture
+def tmy3_722880_2012_weather_source():
+    return TMY3WeatherSource('722880',os.environ.get("TMY3_DIRECTORY"))
 
 @pytest.fixture(params=[(datetime(2011,1,1),datetime(2014,1,1),float("nan"),float("nan")),
                         (datetime(2011,1,1),datetime(2012,7,15),float("nan"),1100),
@@ -231,24 +239,34 @@ def test_raw_average_usage_metric(consumption_history_one_year_electricity,
     assert np.isnan(avg_elec_summer_usage_none)
 
 @pytest.mark.slow
-def test_temperature_regression_parameters_metric(consumption_history_one_year_electricity,gsod_722874_2012_weather_source):
+def test_temperature_regression_parameters_metric(consumption_history_one_year_electricity,gsod_722880_2012_weather_source):
     metric = TemperatureRegressionParametersMetric("kWh",electricity)
-    params = metric.evaluate(consumption_history_one_year_electricity,gsod_722874_2012_weather_source)
+    params = metric.evaluate(consumption_history_one_year_electricity,gsod_722880_2012_weather_source)
 
     class MyMeter(Meter):
         temperature_regression_metric = TemperatureRegressionParametersMetric("kWh",electricity)
 
     meter = MyMeter()
     results = meter.run(consumption_history=consumption_history_one_year_electricity,
-                        weather_source=gsod_722874_2012_weather_source)
+                        weather_source=gsod_722880_2012_weather_source)
 
     assert results.temperature_regression_metric is not None
 
 @pytest.mark.slow
-def test_average_temperature_metric(consumption_history_one_year_electricity,gsod_722874_2012_weather_source):
+def test_average_temperature_metric(consumption_history_one_year_electricity,
+                                    gsod_722880_2012_weather_source):
     metric = AverageTemperatureMetric(electricity)
-    avg_temp = metric.evaluate(consumption_history_one_year_electricity,gsod_722874_2012_weather_source)
-    assert abs(avg_temp - 63.82780404) < EPSILON
+    avg_temp = metric.evaluate(consumption_history_one_year_electricity,
+                               gsod_722880_2012_weather_source)
+    assert abs(avg_temp - 64.522521937955744) < EPSILON
+
+def test_weather_normalize(consumption_history_one_summer_electricity,
+                           gsod_722880_2012_weather_source,
+                           tmy3_722880_2012_weather_source):
+    metric = WeatherNormalizedAverageUsageMetric("kWh",fuel_type=electricity)
+    result = metric.evaluate(consumption_history_one_summer_electricity,
+                             gsod_722880_2012_weather_source,
+                             tmy3_722880_2012_weather_source)
 
 def test_fueltype_presence_flag(consumption_history_one_year_electricity,
                                 consumption_history_one_year_natural_gas):

@@ -69,23 +69,25 @@ def zipcode_to_station(request):
 
 def test_weather_source_base(consumption_history_one_summer_electricity):
     weather_source = WeatherSourceBase()
+    consumptions = consumption_history_one_summer_electricity.get(electricity)
     with pytest.raises(NotImplementedError):
-        avg_temps = weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity,"degF")
+        avg_temps = weather_source.get_average_temperature(consumptions,"degF")
     with pytest.raises(NotImplementedError):
-        hdds = weather_source.get_hdd(consumption_history_one_summer_electricity,electricity,"degF",base=65)
+        hdds = weather_source.get_hdd(consumptions,"degF",base=65)
 
 @pytest.mark.slow
 def test_gsod_weather_source(consumption_history_one_summer_electricity,gsod_weather_source):
     gsod_weather_source = GSODWeatherSource(*gsod_weather_source)
-    avg_temps = gsod_weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity,"degF")
+    consumptions = consumption_history_one_summer_electricity.get(electricity)
+    avg_temps = gsod_weather_source.get_average_temperature(consumptions,"degF")
     assert abs(avg_temps[0] - 66.3833333333) < EPSILON
     assert abs(avg_temps[1] - 67.8032258065) < EPSILON
     assert abs(avg_temps[2] - 74.4451612903) < EPSILON
-    hdds = gsod_weather_source.get_hdd(consumption_history_one_summer_electricity,electricity,"degF",65)
+    hdds = gsod_weather_source.get_hdd(consumptions,"degF",65)
     assert abs(hdds[0] - 42.2) < EPSILON
     assert abs(hdds[1] - 107.3) < EPSILON
     assert abs(hdds[2] - 292.8) < EPSILON
-    cdds = gsod_weather_source.get_cdd(consumption_history_one_summer_electricity,electricity,"degF",65)
+    cdds = gsod_weather_source.get_cdd(consumptions,"degF",65)
     assert abs(cdds[0] - 0.7) < EPSILON
     assert abs(cdds[1] - 20.4) < EPSILON
     assert abs(cdds[2] - 0.0) < EPSILON
@@ -98,15 +100,16 @@ def test_weather_underground_weather_source(consumption_history_one_summer_elect
                                                             datetime(2012,6,1),
                                                             datetime(2012,10,1),
                                                             wunderground_api_key)
-        avg_temps = wu_weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity,"degF")
+        consumptions = consumption_history_one_summer_electricity.get(electricity)
+        avg_temps = wu_weather_source.get_average_temperature(consumptions,"degF")
         assert abs(avg_temps[0] - 74.4333333333) < EPSILON
         assert abs(avg_temps[1] - 82.6774193548) < EPSILON
         assert abs(avg_temps[2] - 75.4516129032) < EPSILON
-        hdds = wu_weather_source.get_hdd(consumption_history_one_summer_electricity,electricity,"degF",65)
+        hdds = wu_weather_source.get_hdd(consumptions,"degF",65)
         assert abs(hdds[0] - 297.0) < EPSILON
         assert abs(hdds[1] - 548.0) < EPSILON
         assert abs(hdds[2] - 324.0) < EPSILON
-        cdds = wu_weather_source.get_cdd(consumption_history_one_summer_electricity,electricity,"degF",65)
+        cdds = wu_weather_source.get_cdd(consumptions,"degF",65)
         assert abs(cdds[0] - 14.0) < EPSILON
         assert abs(cdds[1] - 0.0) < EPSILON
         assert abs(cdds[2] - 0.0) < EPSILON
@@ -140,15 +143,16 @@ def test_ziplocate_us(lat_long_zipcode):
 @pytest.mark.slow
 def test_isd_weather_source(consumption_history_one_summer_electricity,isd_weather_source):
     isd_weather_source = ISDWeatherSource(*isd_weather_source)
-    avg_temps = isd_weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity,"degF")
+    consumptions = consumption_history_one_summer_electricity.get(electricity)
+    avg_temps = isd_weather_source.get_average_temperature(consumptions,"degF")
     assert abs(avg_temps[0] - 66.576956521739135) < EPSILON
     assert abs(avg_temps[1] - 68.047780898876411) < EPSILON
     assert abs(avg_temps[2] - 74.697162921348323) < EPSILON
-    hdds = isd_weather_source.get_hdd(consumption_history_one_summer_electricity,electricity,"degF",65)
+    hdds = isd_weather_source.get_hdd(consumptions,"degF",65)
     assert abs(hdds[0] - 47.603489860868635) < EPSILON
     assert abs(hdds[1] - 113.77566417391201) < EPSILON
     assert abs(hdds[2] - 300.72214678735065) < EPSILON
-    cdds = isd_weather_source.get_cdd(consumption_history_one_summer_electricity,electricity,"degF",65)
+    cdds = isd_weather_source.get_cdd(consumptions,"degF",65)
     assert abs(cdds[0] - 0.29478220869567906) < EPSILON
     assert abs(cdds[1] - 20.309999600000033) < EPSILON
     assert abs(cdds[2] - 0.0) < EPSILON
@@ -166,15 +170,16 @@ def test_usaf_station_from_zipcode(zipcode_to_station):
 
 @pytest.mark.slow
 def test_tmy3_weather_source(consumption_history_one_summer_electricity,tmy3_weather_source):
-    normal_avg_temps = tmy3_weather_source.get_average_temperature(consumption_history_one_summer_electricity,electricity,"degF")
+    consumptions = consumption_history_one_summer_electricity.get(electricity)
+    normal_avg_temps = tmy3_weather_source.get_average_temperature(consumptions,"degF")
     assert abs(normal_avg_temps[0] - 68.411913043478265) < EPSILON
     assert abs(normal_avg_temps[1] - 73.327545582047691) < EPSILON
     assert abs(normal_avg_temps[2] - 74.593604488078540) < EPSILON
-    normal_hdds = tmy3_weather_source.get_hdd(consumption_history_one_summer_electricity,electricity,"degF",65)
+    normal_hdds = tmy3_weather_source.get_hdd(consumptions,"degF",65)
     assert abs(normal_hdds[0] - 111.01566097391235) < EPSILON
     assert abs(normal_hdds[1] - 258.15392544347725) < EPSILON
     assert abs(normal_hdds[2] - 297.40175153043384) < EPSILON
-    normal_cdds = tmy3_weather_source.get_cdd(consumption_history_one_summer_electricity,electricity,"degF",65)
+    normal_cdds = tmy3_weather_source.get_cdd(consumptions,"degF",65)
     assert abs(normal_cdds[0] - 8.6582576695655149) < EPSILON
     assert abs(normal_cdds[1] - 0.0) < EPSILON
     assert abs(normal_cdds[2] - 0.0) < EPSILON

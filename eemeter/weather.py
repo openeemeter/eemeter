@@ -11,7 +11,7 @@ import eemeter
 from . import ureg, Q_
 
 class WeatherSourceBase:
-    def get_average_temperature(self,consumption_history,fuel_type,unit_name):
+    def get_average_temperature(self,consumptions,unit_name):
         """Returns a list of floats containing the average temperature during
         each consumption period.
         """
@@ -19,7 +19,7 @@ class WeatherSourceBase:
         avg_temps = []
         # TODO - WARNING - deal with the fact that consumption_history.get will
         # not return things in a predictable order.
-        for consumption in consumption_history.get(fuel_type):
+        for consumption in consumptions:
             avg_temps.append(self.get_consumption_average_temperature(consumption,unit))
         return avg_temps
 
@@ -34,10 +34,10 @@ class WeatherSourceBase:
     def get_daily_average_temperature(self,consumption,unit):
         raise NotImplementedError
 
-    def get_hdd(self,consumption_history,fuel_type,unit_name,base):
+    def get_hdd(self,consumptions,unit_name,base):
         unit = ureg.parse_expression(unit_name)
         hdds = []
-        for consumption in consumption_history.get(fuel_type):
+        for consumption in consumptions:
             hdds.append(self.get_consumption_hdd(consumption,unit,base))
         return hdds
 
@@ -50,10 +50,10 @@ class WeatherSourceBase:
                 total_hdd += temp - base
         return total_hdd
 
-    def get_cdd(self,consumption_history,fuel_type,unit_name,base):
+    def get_cdd(self,consumptions,unit_name,base):
         unit = ureg.parse_expression(unit_name)
         cdds = []
-        for consumption in consumption_history.get(fuel_type):
+        for consumption in consumptions:
             cdds.append(self.get_consumption_cdd(consumption,unit,base))
         return cdds
 
