@@ -267,6 +267,7 @@ def test_weather_normalize(consumption_history_one_summer_electricity,
     result = metric.evaluate(consumption_history_one_summer_electricity,
                              gsod_722880_2012_weather_source,
                              tmy3_722880_2012_weather_source)
+    assert False
 
 def test_fueltype_presence_flag(consumption_history_one_year_electricity,
                                 consumption_history_one_year_natural_gas):

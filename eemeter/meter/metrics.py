@@ -68,12 +68,51 @@ class WeatherNormalizedAverageUsageMetric(MetricBase):
         usages = [c.to(self.unit_name) for c in consumptions]
         observed_temps = weather_source.get_average_temperature(consumptions,self.temperature_unit_name)
         normal_temps = weather_normal_source.get_average_temperature(consumptions,self.temperature_unit_name)
-        params = self._parameter_optimization(usages,observed_temps,normal_temps)
-
-    @staticmethod
-    def _parameter_optimization(usage,observed_temps,normal_temps):
-        def _objective_function(params):
-            pass
-        params = None
+        params = self._parameter_optimization(usages,observed_temps)
         return params
 
+    @staticmethod
+    def _parameter_optimization(usages,observed_temps):
+        def _objective_function(params):
+            # get parameters
+            ts_low,ts_high,base_load,bp_low,bp_diff = params
+            bp_high = bp_low + bp_diff
+
+            # split by balance point
+            usage_low_temp,usage_mid_temp,usage_high_temp = [],[],[]
+            temp_low,temp_mid,temp_high = [],[],[]
+            for usage,temp in zip(usages,observed_temps):
+                if temp <= bp_low:
+                    usage_low_temp.append(usage)
+                    temp_low.append(temp)
+                elif temp >= bp_high:
+                    usage_high_temp.append(usage)
+                    temp_high.append(temp)
+                else:
+                    usage_mid_temp.append(usage)
+                    temp_mid.append(temp)
+
+            usage_low_temp = np.array(usage_low_temp)
+            usage_mid_temp = np.array(usage_mid_temp)
+            usage_high_temp = np.array(usage_high_temp)
+            temp_low = np.array(temp_low)
+            temp_mid = np.array(temp_mid)
+            temp_high = np.array(temp_high)
+
+            usage_est_low_temp = ts_low * (temp_low - bp_low) + base_load
+            usage_est_mid_temp = (0 * temp_mid) + base_load
+            usage_est_high_temp = ts_high * (temp_high - bp_high) + base_load
+
+            low = usage_est_low_temp - usage_low_temp
+            mid = usage_est_mid_temp - usage_mid_temp
+            high = usage_est_high_temp - usage_high_temp
+
+            squares = np.concatenate((low,mid,high))**2
+            return np.sum(squares)
+
+        x0 = [-10,1.,1.,60,8]
+        bounds = [(-200,0),(0,200),(0,2000),(55,65),(5,12)]
+
+        result = opt.minimize(_objective_function,x0,bounds=bounds)
+        params = result.x
+        return params
