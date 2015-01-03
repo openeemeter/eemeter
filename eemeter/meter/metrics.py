@@ -57,17 +57,16 @@ class AverageTemperatureMetric(MetricBase):
         avg_temps = weather_source.get_average_temperature(consumptions,"degF")
         return np.mean(avg_temps)
 
-class WeatherNormalizedAverageUsageMetric(MetricBase):
+class HDDCDDTemperatureSensitivityParametersMetric(MetricBase):
     def __init__(self,unit_name,fuel_type):
         self.fuel_type = fuel_type
         self.unit_name = unit_name
         self.temperature_unit_name = "degF" # TODO - unhardcode this
 
-    def evaluate(self,consumption_history,weather_source,weather_normal_source):
+    def evaluate(self,consumption_history,weather_source):
         consumptions = consumption_history.get(self.fuel_type)
         usages = [c.to(self.unit_name) for c in consumptions]
         observed_temps = weather_source.get_average_temperature(consumptions,self.temperature_unit_name)
-        normal_temps = weather_normal_source.get_average_temperature(consumptions,self.temperature_unit_name)
         params = self._parameter_optimization(usages,observed_temps)
         return params
 
@@ -116,3 +115,16 @@ class WeatherNormalizedAverageUsageMetric(MetricBase):
         result = opt.minimize(_objective_function,x0,bounds=bounds)
         params = result.x
         return params
+
+class WeatherNormalizedAverageUsageMetric(MetricBase):
+    def __init__(self,unit_name,fuel_type):
+        self.fuel_type = fuel_type
+        self.unit_name = unit_name
+        self.temperature_unit_name = "degF" # TODO - unhardcode this
+
+    def evaluate(self,consumption_history,temperature_sensitivity_parameters,weather_normal_source):
+        consumptions = consumption_history.get(self.fuel_type)
+        usages = [c.to(self.unit_name) for c in consumptions]
+        normal_temps = weather_normal_source.get_average_temperature(consumptions,self.temperature_unit_name)
+        return None
+

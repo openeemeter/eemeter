@@ -99,13 +99,22 @@ class MeterMeta(type):
     def __new__(cls, name, parents, dct):
         metrics = {}
         inputs = {}
-        for key,value in dct.items():
-            if issubclass(value.__class__,MetricBase):
-                metric = value
-                metrics[key] = metric
-                metric_args = inspect.getargspec(metric.evaluate).args
-                metric_args.pop(0)
-                inputs[key] = metric_args
+
+        def _extract_arguments(metric):
+            metric_args = inspect.getargspec(metric.evaluate).args
+            metric_args.pop(0)
+            return metric_args
+
+        # gather metrics and metric arguments
+        for attr_name,attr in dct.items():
+            if issubclass(attr.__class__,MetricBase):
+                metrics[attr_name] = attr
+                inputs[attr_name] = _extract_arguments(attr)
+
+        if "stages" in dct:
+            for stage in dct["stages"]:
+                for attr_name,attr in stage.iteritems():
+                    inputs[attr_name] = _extract_arguments(attr)
 
         dct["metrics"] = metrics
         dct["_inputs"] = inputs
@@ -124,10 +133,31 @@ class Meter(object):
         flags in this Meter, keyed by the names of the metric attributes
         supplied.
         """
+        # first compute metrics not part of a particular stage
         data = {}
         for metric_name,metric in self.metrics.iteritems():
             inputs = self._inputs[metric_name]
             evaluation = metric.evaluate(*[kwargs[inpt] for inpt in inputs])
             data[metric_name] = evaluation
+
+        # next, compute metrics stage by stage, if any
+        if hasattr(self,"stages"):
+            for stage in self.stages:
+                for metric_name,metric in stage.iteritems():
+                    args = self._get_arguments(data,kwargs,metric_name)
+                    evaluation = metric.evaluate(*args)
+                    data[metric_name] = evaluation
+
         return MeterRun(data)
 
+    def _get_arguments(self,data,kwargs,metric_name):
+        inputs = self._inputs[metric_name]
+        args = []
+        for inpt in inputs:
+            if inpt in kwargs:
+                args.append(kwargs[inpt])
+            elif inpt in data:
+                args.append(data[inpt])
+            else:
+                raise ValueError("Could not find matching input for {}".format(metric_name))
+        return args

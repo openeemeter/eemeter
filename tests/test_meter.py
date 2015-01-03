@@ -8,6 +8,7 @@ from eemeter.meter import RawAverageUsageMetric
 from eemeter.meter import TemperatureRegressionParametersMetric
 from eemeter.meter import AverageTemperatureMetric
 from eemeter.meter import WeatherNormalizedAverageUsageMetric
+from eemeter.meter import HDDCDDTemperatureSensitivityParametersMetric
 
 from eemeter.meter import PrePost
 
@@ -239,6 +240,7 @@ def test_raw_average_usage_metric(consumption_history_one_year_electricity,
     assert np.isnan(avg_elec_summer_usage_none)
 
 @pytest.mark.slow
+@pytest.mark.internet
 def test_temperature_regression_parameters_metric(consumption_history_one_year_electricity,gsod_722880_2012_weather_source):
     metric = TemperatureRegressionParametersMetric("kWh",electricity)
     params = metric.evaluate(consumption_history_one_year_electricity,gsod_722880_2012_weather_source)
@@ -253,6 +255,7 @@ def test_temperature_regression_parameters_metric(consumption_history_one_year_e
     assert results.temperature_regression_metric is not None
 
 @pytest.mark.slow
+@pytest.mark.internet
 def test_average_temperature_metric(consumption_history_one_year_electricity,
                                     gsod_722880_2012_weather_source):
     metric = AverageTemperatureMetric(electricity)
@@ -260,6 +263,8 @@ def test_average_temperature_metric(consumption_history_one_year_electricity,
                                gsod_722880_2012_weather_source)
     assert abs(avg_temp - 64.522521937955744) < EPSILON
 
+@pytest.mark.slow
+@pytest.mark.internet
 def test_weather_normalize(consumption_history_one_summer_electricity,
                            gsod_722880_2012_weather_source,
                            tmy3_722880_2012_weather_source):
@@ -429,6 +434,22 @@ def test_meter_class_integration(metric_list,consumption_history_one_year_electr
     assert np.isnan(result.gas_avg_usage)
     assert result.elec_data_present
     assert not result.gas_data_present
+
+def test_meter_stages(consumption_history_one_year_electricity,
+        gsod_722880_2012_weather_source,
+        tmy3_722880_2012_weather_source):
+    class MyMeter(Meter):
+        stages = [
+                {"raw_usage": RawAverageUsageMetric("kWh"),
+                 "temperature_sensitivity_parameters": HDDCDDTemperatureSensitivityParametersMetric("kWh",fuel_type=electricity),
+                 "annualized_usage": RawAverageUsageMetric("kWh")},
+                {"normalized_usage": WeatherNormalizedAverageUsageMetric("kWh",fuel_type=electricity)}
+                ]
+    meter = MyMeter()
+    result = meter.run(consumption_history=consumption_history_one_year_electricity,
+            weather_source=gsod_722880_2012_weather_source,
+            weather_normal_source=tmy3_722880_2012_weather_source)
+    assert result.raw_usage is not None
 
 def test_pre_post_metric():
     assert issubclass(PrePost,MetricBase)

@@ -76,6 +76,7 @@ def test_weather_source_base(consumption_history_one_summer_electricity):
         hdds = weather_source.get_hdd(consumptions,"degF",base=65)
 
 @pytest.mark.slow
+@pytest.mark.internet
 def test_gsod_weather_source(consumption_history_one_summer_electricity,gsod_weather_source):
     gsod_weather_source = GSODWeatherSource(*gsod_weather_source)
     consumptions = consumption_history_one_summer_electricity.get(electricity)
@@ -93,6 +94,7 @@ def test_gsod_weather_source(consumption_history_one_summer_electricity,gsod_wea
     assert abs(cdds[2] - 0.0) < EPSILON
 
 @pytest.mark.slow
+@pytest.mark.internet
 def test_weather_underground_weather_source(consumption_history_one_summer_electricity):
     wunderground_api_key = os.environ.get('WEATHERUNDERGROUND_API_KEY')
     if wunderground_api_key:
@@ -119,6 +121,7 @@ def test_weather_underground_weather_source(consumption_history_one_summer_elect
             "WEATHERUNDERGOUND_API_KEY to run the tests.")
 
 @pytest.mark.slow
+@pytest.mark.internet
 def test_nrel_tmy3_station_from_lat_long(lat_long_station):
     lat,lng,station = lat_long_station
     nrel_api_key = os.environ.get('NREL_API_KEY')
@@ -130,7 +133,9 @@ def test_nrel_tmy3_station_from_lat_long(lat_long_station):
                 "NREL_API_KEY to run the tests.")
 
 @pytest.mark.slow
+@pytest.mark.internet
 def test_ziplocate_us(lat_long_zipcode):
+    # TODO - use cached,scraped version
     lat,lng,zipcode = lat_long_zipcode
     if not lat or not lng:
         with pytest.raises(ValueError):
@@ -141,6 +146,7 @@ def test_ziplocate_us(lat_long_zipcode):
         assert abs(lng - zip_lng) < EPSILON
 
 @pytest.mark.slow
+@pytest.mark.internet
 def test_isd_weather_source(consumption_history_one_summer_electricity,isd_weather_source):
     isd_weather_source = ISDWeatherSource(*isd_weather_source)
     consumptions = consumption_history_one_summer_electricity.get(electricity)
@@ -158,6 +164,7 @@ def test_isd_weather_source(consumption_history_one_summer_electricity,isd_weath
     assert abs(cdds[2] - 0.0) < EPSILON
 
 @pytest.mark.slow
+@pytest.mark.internet
 def test_usaf_station_from_zipcode(zipcode_to_station):
     zipcode,station = zipcode_to_station
     nrel_api_key = os.environ.get('NREL_API_KEY')
@@ -169,6 +176,7 @@ def test_usaf_station_from_zipcode(zipcode_to_station):
                 "NREL_API_KEY to run the tests.")
 
 @pytest.mark.slow
+@pytest.mark.internet
 def test_tmy3_weather_source(consumption_history_one_summer_electricity,tmy3_weather_source):
     consumptions = consumption_history_one_summer_electricity.get(electricity)
     normal_avg_temps = tmy3_weather_source.get_average_temperature(consumptions,"degF")
