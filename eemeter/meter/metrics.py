@@ -128,3 +128,24 @@ class WeatherNormalizedAverageUsageMetric(MetricBase):
         normal_temps = weather_normal_source.get_average_temperature(consumptions,self.temperature_unit_name)
         return None
 
+class TotalHDDMetric(MetricBase):
+    def __init__(self,fuel_type):
+        self.fuel_type = fuel_type
+        self.temperature_unit_name = "degF" # TODO - unhardcode this
+
+    def evaluate(self,consumption_history,temperature_sensitivity_parameters,weather_source):
+        consumptions = consumption_history.get(self.fuel_type)
+        base = temperature_sensitivity_parameters[3]
+        hdd_per_month = weather_source.get_hdd(consumptions,self.temperature_unit_name,base)
+        return np.sum(hdd_per_month)
+
+class TotalCDDMetric(MetricBase):
+    def __init__(self,fuel_type):
+        self.fuel_type = fuel_type
+        self.temperature_unit_name = "degF" # TODO - unhardcode this
+
+    def evaluate(self,consumption_history,temperature_sensitivity_parameters,weather_source):
+        consumptions = consumption_history.get(self.fuel_type)
+        base = temperature_sensitivity_parameters[3] + temperature_sensitivity_parameters[4]
+        cdd_per_month = weather_source.get_cdd(consumptions,self.temperature_unit_name,base)
+        return np.sum(cdd_per_month)

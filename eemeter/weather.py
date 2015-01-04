@@ -46,8 +46,8 @@ class WeatherSourceBase:
         for days in xrange(consumption.timedelta.days):
             day = consumption.start + timedelta(days=days)
             temp = self.get_daily_average_temperature(day,unit)
-            if temp > base:
-                total_hdd += temp - base
+            if temp < base:
+                total_hdd += base - temp
         return total_hdd
 
     def get_cdd(self,consumptions,unit_name,base):
@@ -62,8 +62,8 @@ class WeatherSourceBase:
         for days in xrange(consumption.timedelta.days):
             day = consumption.start + timedelta(days=days)
             temp = self.get_daily_average_temperature(day,unit)
-            if temp < base:
-                total_cdd += base - temp
+            if temp > base:
+                total_cdd += temp - base
         return total_cdd
 
 class GSODWeatherSource(WeatherSourceBase):

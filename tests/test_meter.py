@@ -9,6 +9,8 @@ from eemeter.meter import TemperatureRegressionParametersMetric
 from eemeter.meter import AverageTemperatureMetric
 from eemeter.meter import WeatherNormalizedAverageUsageMetric
 from eemeter.meter import HDDCDDTemperatureSensitivityParametersMetric
+from eemeter.meter import TotalHDDMetric
+from eemeter.meter import TotalCDDMetric
 
 from eemeter.meter import PrePost
 
@@ -436,20 +438,23 @@ def test_meter_class_integration(metric_list,consumption_history_one_year_electr
     assert not result.gas_data_present
 
 def test_meter_stages(consumption_history_one_year_electricity,
-        gsod_722880_2012_weather_source,
-        tmy3_722880_2012_weather_source):
+                      gsod_722880_2012_weather_source,
+                      tmy3_722880_2012_weather_source):
+
+    # create a staged meter
     class MyMeter(Meter):
         stages = [
-                {"raw_usage": RawAverageUsageMetric("kWh"),
-                 "temperature_sensitivity_parameters": HDDCDDTemperatureSensitivityParametersMetric("kWh",fuel_type=electricity),
-                 "annualized_usage": RawAverageUsageMetric("kWh")},
+                {"temperature_sensitivity_parameters": HDDCDDTemperatureSensitivityParametersMetric("kWh",fuel_type=electricity)},
+                {"total_heating_degree_days":TotalHDDMetric(fuel_type=electricity),
+                 "total_cooling_degree_days":TotalCDDMetric(fuel_type=electricity)},
                 {"normalized_usage": WeatherNormalizedAverageUsageMetric("kWh",fuel_type=electricity)}
                 ]
     meter = MyMeter()
     result = meter.run(consumption_history=consumption_history_one_year_electricity,
             weather_source=gsod_722880_2012_weather_source,
             weather_normal_source=tmy3_722880_2012_weather_source)
-    assert result.raw_usage is not None
+    assert abs(result.total_heating_degree_days - 231.1) < EPSILON
+    assert abs(result.total_cooling_degree_days - 2380.6) < EPSILON
 
 def test_pre_post_metric():
     assert issubclass(PrePost,MetricBase)
