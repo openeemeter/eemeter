@@ -29,4 +29,8 @@ Contributors
 
 + Phil Ngo
 + Matt Gee
-+ Eric Potash
+
+Licence
+-------
+
+MIT
