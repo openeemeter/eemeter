@@ -145,19 +145,19 @@ class Meter(object):
             for stage in self.stages:
                 for metric_name,metric in stage.iteritems():
                     args = self._get_arguments(data,kwargs,metric_name)
-                    evaluation = metric.evaluate(*args)
+                    evaluation = metric.evaluate(**args)
                     data[metric_name] = evaluation
 
         return MeterRun(data)
 
     def _get_arguments(self,data,kwargs,metric_name):
         inputs = self._inputs[metric_name]
-        args = []
+        args = {}
         for inpt in inputs:
             if inpt in kwargs:
-                args.append(kwargs[inpt])
+                args[inpt] = kwargs[inpt]
             elif inpt in data:
-                args.append(data[inpt])
+                args[inpt] = data[inpt]
             else:
                 raise ValueError("Could not find matching input for {}".format(metric_name))
         return args

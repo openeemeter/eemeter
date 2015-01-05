@@ -238,6 +238,22 @@ class TMY3WeatherSource(WeatherSourceBase):
         masked_data = np.ma.masked_array(data,np.isnan(data))
         return np.mean(masked_data)
 
+    def get_daily_temperatures(self,unit):
+        null = Q_(float("nan"),self._source_unit)
+        start_day = datetime(2012,1,1)
+        temps = []
+        for days in range(365):
+            day = start_day + timedelta(days=days)
+            day_temps = []
+            for hour in range(24):
+                time = day + timedelta(seconds=hour*3600)
+                temp = self._data.get(time.strftime("%m%d%H"),null).to(unit).magnitude
+                day_temps.append(temp)
+            day_data = np.array(day_temps)
+            masked_data = np.ma.masked_array(day_data,np.isnan(day_data))
+            temps.append(np.mean(masked_data))
+        return temps
+
 class WeatherUndergroundWeatherSource(WeatherSourceBase):
     def __init__(self,zipcode,start,end,api_key):
         self._data = {}

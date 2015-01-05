@@ -18,36 +18,6 @@ class RawAverageUsageMetric(MetricBase):
             return np.nan
         return np.mean([consumption.to(self.unit_name) for consumption in consumptions])
 
-class TemperatureRegressionParametersMetric(MetricBase):
-
-    # TODO - weight these by likelihood.
-    balance_points = range(55,70)
-
-    def __init__(self,unit_name,fuel_type):
-        self.fuel_type = fuel_type
-        self.unit_name = unit_name
-
-    def evaluate(self,consumption_history,weather_source):
-        consumptions = consumption_history.get(self.fuel_type)
-        usages = [c.to(self.unit_name) for c in consumptions]
-        avg_temps = weather_source.get_average_temperature(consumptions,"degF")
-        best_coeffs = None,None
-        best_r_value = -np.inf
-        for balance_point in self.balance_points:
-            u,t = self._filter_by_balance_point(balance_point,usages,avg_temps)
-            slope, intercept, r_value, p_value, std_err = stats.linregress(u,t)
-            if r_value > best_r_value and not np.isnan(p_value):
-                best_coeffs = slope,intercept
-        return best_coeffs
-
-    @staticmethod
-    def _filter_by_balance_point(balance_point,usages,avg_temps):
-        data = [(usage,avg_temp) for usage,avg_temp in zip(usages,avg_temps) if avg_temp >= balance_point]
-        if data:
-            return zip(*data)
-        else:
-            return [],[]
-
 class AverageTemperatureMetric(MetricBase):
     def __init__(self,fuel_type):
         self.fuel_type = fuel_type
@@ -124,9 +94,22 @@ class WeatherNormalizedAverageUsageMetric(MetricBase):
 
     def evaluate(self,consumption_history,temperature_sensitivity_parameters,weather_normal_source):
         consumptions = consumption_history.get(self.fuel_type)
-        usages = [c.to(self.unit_name) for c in consumptions]
-        normal_temps = weather_normal_source.get_average_temperature(consumptions,self.temperature_unit_name)
-        return None
+        normal_temps = weather_normal_source.get_daily_temperatures(self.temperature_unit_name)
+        return np.sum(self._estimate_usages(normal_temps,temperature_sensitivity_parameters))
+
+    @staticmethod
+    def _estimate_usages(temps,params):
+        ts_low,ts_high,base_load,bp_low,bp_diff = params
+        bp_high = bp_low + bp_diff
+        estimates = []
+        for temp in temps:
+            usage = base_load
+            if temp >= bp_high:
+                usage += ts_high * (temp - bp_high)
+            elif temp <= bp_low:
+                usage += ts_low * (bp_low - temp)
+            estimates.append(usage)
+        return estimates
 
 class TotalHDDMetric(MetricBase):
     def __init__(self,fuel_type):
