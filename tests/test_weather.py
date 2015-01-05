@@ -108,13 +108,13 @@ def test_weather_underground_weather_source(consumption_history_one_summer_elect
         assert abs(avg_temps[1] - 82.6774193548) < EPSILON
         assert abs(avg_temps[2] - 75.4516129032) < EPSILON
         hdds = wu_weather_source.get_hdd(consumptions,"degF",65)
-        assert abs(hdds[0] - 297.0) < EPSILON
-        assert abs(hdds[1] - 548.0) < EPSILON
-        assert abs(hdds[2] - 324.0) < EPSILON
+        assert abs(hdds[0] - 14.0) < EPSILON
+        assert abs(hdds[1] - 0.0) < EPSILON
+        assert abs(hdds[2] - 0.0) < EPSILON
         cdds = wu_weather_source.get_cdd(consumptions,"degF",65)
-        assert abs(cdds[0] - 14.0) < EPSILON
-        assert abs(cdds[1] - 0.0) < EPSILON
-        assert abs(cdds[2] - 0.0) < EPSILON
+        assert abs(cdds[0] - 297.0) < EPSILON
+        assert abs(cdds[1] - 548.0) < EPSILON
+        assert abs(cdds[2] - 324.0) < EPSILON
     else:
         warnings.warn("Skipping WeatherUndergroundWeatherSource tests. "
             "Please set the environment variable "
