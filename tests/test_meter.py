@@ -400,6 +400,7 @@ def test_insufficient_time_range_flag(consumption_history_one_year_electricity):
 
 def test_meter_run(meter_run_simple):
     assert meter_run_simple.elec_avg_usage == 100
+    assert meter_run_simple #test __nonzero__
 
 def test_meter_class_integration(metric_list,consumption_history_one_year_electricity):
     class MyMeter(Meter):
