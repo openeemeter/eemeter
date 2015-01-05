@@ -98,6 +98,9 @@ class MeterRun:
     def __nonzero__(self):
         return True
 
+    def __repr__(self):
+        return str(self)
+
 class MeterMeta(type):
     def __new__(cls, name, parents, dct):
         metrics = {}

@@ -68,7 +68,7 @@ class HDDCDDTemperatureSensitivityParametersMetric(MetricBase):
             temp_mid = np.array(temp_mid)
             temp_high = np.array(temp_high)
 
-            usage_est_low_temp = ts_low * (temp_low - bp_low) + base_load
+            usage_est_low_temp = ts_low * (bp_low - temp_low) + base_load
             usage_est_mid_temp = (0 * temp_mid) + base_load
             usage_est_high_temp = ts_high * (temp_high - bp_high) + base_load
 
@@ -79,8 +79,8 @@ class HDDCDDTemperatureSensitivityParametersMetric(MetricBase):
             squares = np.concatenate((low,mid,high))**2
             return np.sum(squares)
 
-        x0 = [-10,1.,1.,60,8]
-        bounds = [(-200,0),(0,200),(0,2000),(55,65),(5,12)]
+        x0 = [1.,1.,1.,60.,7.]
+        bounds = [(0,200),(0,200),(0,2000),(55,65),(2,12)]
 
         result = opt.minimize(_objective_function,x0,bounds=bounds)
         params = result.x
@@ -107,7 +107,7 @@ class WeatherNormalizedAverageUsageMetric(MetricBase):
             if temp >= bp_high:
                 usage += ts_high * (temp - bp_high)
             elif temp <= bp_low:
-                usage += ts_low * (temp - bp_low)
+                usage += ts_low * (bp_low - bp_low)
             estimates.append(usage)
         return estimates
 

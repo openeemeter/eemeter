@@ -256,19 +256,19 @@ def test_weather_normalize(consumption_history_one_summer_electricity,
                            tmy3_722880_2012_weather_source):
     metric = WeatherNormalizedAverageUsageMetric("kWh",electricity)
     result = metric.evaluate(consumption_history_one_summer_electricity,
-                             np.array([1,1,100,60,65]),
+                             np.array([1,1,100,60,5]),
                              tmy3_722880_2012_weather_source)
-    assert abs(result - 35840.8871706) < EPSILON
+    assert abs(result - 37791.620062) < EPSILON
 
 def test_hdd_cdd_temperature_sensitivity_parameters_metric(consumption_history_one_year_electricity,gsod_722880_2012_weather_source):
     metric = HDDCDDTemperatureSensitivityParametersMetric("kWh",fuel_type=electricity)
     params = metric.evaluate(consumption_history_one_year_electricity,gsod_722880_2012_weather_source)
     ts_low,ts_high,base_load,bp_low,bp_diff = params
     assert abs(ts_low - 0) < EPSILON
-    assert abs(ts_high - 11.1939919 ) < EPSILON
-    assert abs(base_load - 1132.811176) < EPSILON
+    assert abs(ts_high - 11.0687567 ) < EPSILON
+    assert abs(base_load - 1111.103779) < EPSILON
     assert abs(bp_low - 55) < EPSILON
-    assert abs(bp_diff - 5) < EPSILON
+    assert abs(bp_diff - 2) < EPSILON
 
 def test_fueltype_presence_flag(consumption_history_one_year_electricity,
                                 consumption_history_one_year_natural_gas):
@@ -448,8 +448,8 @@ def test_meter_stages(consumption_history_one_year_electricity,
             weather_source=gsod_722880_2012_weather_source,
             weather_normal_source=tmy3_722880_2012_weather_source)
     assert abs(result.total_heating_degree_days - 231.1) < EPSILON
-    assert abs(result.total_cooling_degree_days - 2380.6) < EPSILON
-    assert abs(result.normalized_usage - 438588.6917814) < EPSILON
+    assert abs(result.total_cooling_degree_days - 3149.3) < EPSILON
+    assert abs(result.normalized_usage - 438695.048255) < EPSILON
 
 def test_pre_post_metric():
     assert issubclass(PrePost,MetricBase)
