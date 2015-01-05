@@ -107,7 +107,7 @@ class WeatherNormalizedAverageUsageMetric(MetricBase):
             if temp >= bp_high:
                 usage += ts_high * (temp - bp_high)
             elif temp <= bp_low:
-                usage += ts_low * (bp_low - temp)
+                usage += ts_low * (temp - bp_low)
             estimates.append(usage)
         return estimates
 

@@ -258,7 +258,7 @@ def test_weather_normalize(consumption_history_one_summer_electricity,
     result = metric.evaluate(consumption_history_one_summer_electricity,
                              np.array([1,1,100,60,65]),
                              tmy3_722880_2012_weather_source)
-    assert abs(result - 37159.112829) < EPSILON
+    assert abs(result - 35840.8871706) < EPSILON
 
 def test_hdd_cdd_temperature_sensitivity_parameters_metric(consumption_history_one_year_electricity,gsod_722880_2012_weather_source):
     metric = HDDCDDTemperatureSensitivityParametersMetric("kWh",fuel_type=electricity)
