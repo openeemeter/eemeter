@@ -1,9 +1,18 @@
+from eemeter.config.yaml_parser import load_path,load
+
 import yaml
 import tempfile
 import os
 from decimal import Decimal
 
-from eemeter.config.yaml_parser import load_path,load
+import pytest
+
+@pytest.fixture(params=["!obj:decimal.Decimal { value : '1.23' }",
+                        "!obj:decimal.Decimal {'value' : '1.23'}",
+                        """!obj:decimal.Decimal
+                              value: '1.23'"""])
+def simple_yaml(request):
+    return request.param
 
 def test_load_path():
     fd, fname = tempfile.mkstemp()
@@ -17,14 +26,6 @@ def test_obj():
     loaded1 = load("a: !obj:decimal.Decimal { value : '1.23' }")
     assert isinstance(loaded1['a'], Decimal)
 
-    loaded2 = load("!obj:decimal.Decimal { value : '1.23' }")
-    assert isinstance(loaded2, Decimal)
-
-    loaded3 = load("!obj:decimal.Decimal {'value' : '1.23'}")
-    assert isinstance(loaded3, Decimal)
-
-    loaded4 = load("""
-                   !obj:decimal.Decimal
-                     value: '1.23'
-                   """)
-    assert isinstance(loaded4, Decimal)
+def test_obj_formats(simple_yaml):
+    loaded = load(simple_yaml)
+    assert isinstance(loaded, Decimal)
