@@ -46,7 +46,7 @@ class SequentialMeter(MeterBase):
     def evaluate_mapped_inputs(self,**kwargs):
         result = {}
         for meter in self.sequence:
-            meter_result = meter.evaluate(**result)
+            meter_result = meter.evaluate(**kwargs)
             for k,v in meter_result.iteritems():
                 if k in result:
                     message = "unexpected repeated metric ({}). " \
@@ -58,5 +58,5 @@ class SequentialMeter(MeterBase):
 
 class DummyMeter(MeterBase):
     def evaluate_mapped_inputs(self,**kwargs):
-        result = {"value": None}
+        result = {"value": kwargs["value"]}
         return result
