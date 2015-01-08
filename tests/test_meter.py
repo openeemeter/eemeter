@@ -124,6 +124,7 @@ def test_meter_class_integration(metric_list,consumption_history_one_year_electr
     assert result.elec_data_present
     assert not result.gas_data_present
 
+@pytest.mark.slow
 def test_meter_stages(consumption_history_one_year_electricity,
                       gsod_722880_2012_weather_source,
                       tmy3_722880_2012_weather_source):

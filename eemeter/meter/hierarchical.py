@@ -1,3 +1,6 @@
+import scipy.optimize as opt
+import numpy as np
+
 class MeterBase(object):
     def __init__(self,**kwargs):
         if "input_mapping" in kwargs:
@@ -63,6 +66,22 @@ class SequentialMeter(MeterBase):
                     raise ValueError(message.format(k))
                 result[k] = v
         return result
+
+class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
+    def __init__(self,fuel_unit_str,fuel_type,temperature_unit_str,model,**kwargs):
+        super(self.__class__,self).__init__(**kwargs)
+        self.fuel_unit_str = fuel_unit_str
+        self.fuel_type = fuel_type
+        self.temperature_unit_str = temperature_unit_str
+        self.model = model
+
+    def evaluate_mapped_inputs(self,consumption_history,weather_source,**kwargs):
+        consumptions = consumption_history.get(self.fuel_type)
+        usages = [c.to(self.fuel_unit_str) for c in consumptions]
+        observed_temps = weather_source.get_average_temperature(consumptions,self.temperature_unit_str)
+        params = self.model.parameter_optimization(usages,observed_temps)
+        return {"temp_sensitivity_params": params}
+
 
 class DummyMeter(MeterBase):
     def evaluate_mapped_inputs(self,**kwargs):
