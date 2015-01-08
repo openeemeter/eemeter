@@ -100,7 +100,7 @@ class AnnualizedUsageMeter(MeterBase):
         daily_temps = weather_normal_source.annual_daily_temperatures(self.temperature_unit_str)
         usage_estimates = self.model.compute_usage_estimates(temp_sensitivity_params,daily_temps)
         annualized_usage = np.sum(usage_estimates)
-        return {"annualized_usage":annualized_usage}
+        return {"annualized_usage":annualized_usage }
 
 class PrePostMeter(MeterBase):
     def __init__(self,meter,splittable_args,**kwargs):
@@ -111,10 +111,13 @@ class PrePostMeter(MeterBase):
     def evaluate_mapped_inputs(self,retrofit_start_date,retrofit_end_date,**kwargs):
         pre_kwargs = {}
         post_kwargs = {}
+        split_kwargs = {}
         for k,v in kwargs.iteritems():
             if k in self.splittable_args:
                 pre_kwargs[k] = v.before(retrofit_start_date)
                 post_kwargs[k] = v.after(retrofit_end_date)
+                split_kwargs[k + "_pre"] = pre_kwargs[k]
+                split_kwargs[k + "_post"] = post_kwargs[k]
             else:
                 pre_kwargs[k] = kwargs[k]
                 post_kwargs[k] = kwargs[k]
@@ -122,8 +125,45 @@ class PrePostMeter(MeterBase):
         post_results = self.meter.evaluate(**post_kwargs)
         pre_results = {k + "_pre":v for k,v in pre_results.iteritems()}
         post_results = {k + "_post":v for k,v in post_results.iteritems()}
-        results = {k:v for k,v in chain(pre_results.iteritems(),post_results.iteritems())}
+        results = {k:v for k,v in chain(pre_results.iteritems(),
+                                        post_results.iteritems(),
+                                        split_kwargs.iteritems())}
         return results
+
+class GrossSavingsMeter(MeterBase):
+    def __init__(self,model,fuel_unit_str,fuel_type,temperature_unit_str,**kwargs):
+        super(self.__class__,self).__init__(**kwargs)
+        self.model = model
+        self.fuel_type = fuel_type
+        self.fuel_unit_str = fuel_unit_str
+        self.temperature_unit_str = temperature_unit_str
+
+    def evaluate_mapped_inputs(self,temp_sensitivity_params_pre,consumption_history_post,weather_source,**kwargs):
+        consumptions_post = consumption_history_post.get(self.fuel_type)
+        observed_temps = weather_source.get_average_temperature(consumptions_post,self.temperature_unit_str)
+        usages = np.array([c.to(self.fuel_unit_str) for c in consumptions_post])
+        usage_n_days = np.array([c.timedelta.days for c in consumptions_post])
+        usage_estimates_post = np.array(self.model.compute_usage_estimates(temp_sensitivity_params_pre,observed_temps)) * usage_n_days
+        return {"gross_savings": np.sum(usages - usage_estimates_post)}
+
+class AnnualizedGrossSavingsMeter(MeterBase):
+    def __init__(self,model,fuel_type,temperature_unit_str,**kwargs):
+        super(self.__class__,self).__init__(**kwargs)
+        self.model = model
+        self.fuel_type = fuel_type
+        self.temperature_unit_str = temperature_unit_str
+
+    def evaluate_mapped_inputs(self,temp_sensitivity_params_pre,temp_sensitivity_params_post,consumption_history_post,weather_normal_source,**kwargs):
+        meter = AnnualizedUsageMeter(self.temperature_unit_str,self.model)
+        annualized_usage_pre = meter.evaluate(temp_sensitivity_params=temp_sensitivity_params_pre,
+                                              weather_normal_source=weather_normal_source)["annualized_usage"]
+        annualized_usage_post = meter.evaluate(temp_sensitivity_params=temp_sensitivity_params_post,
+                                               weather_normal_source=weather_normal_source)["annualized_usage"]
+        annualized_usage_savings = annualized_usage_pre - annualized_usage_post
+        consumptions_post = consumption_history_post.get(self.fuel_type)
+        n_years = np.sum([c.timedelta.days for c in consumptions_post])/365.
+        annualized_gross_savings = n_years * annualized_usage_savings
+        return {"annualized_gross_savings": annualized_gross_savings}
 
 class DummyMeter(MeterBase):
     def evaluate_mapped_inputs(self,**kwargs):
