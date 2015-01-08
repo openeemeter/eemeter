@@ -4,4 +4,5 @@ __pycache__/
 
 _build
 
+.coverage
 .DS_Store
