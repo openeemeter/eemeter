@@ -22,11 +22,11 @@ def test_input_output_mappings():
             sequence: [
                 !obj:eemeter.meter.DummyMeter {
                     input_mapping: {"value_one":"value"},
-                    output_mapping: {"value":"value_one"}
+                    output_mapping: {"result":"result_one"}
                 },
                 !obj:eemeter.meter.DummyMeter {
                     input_mapping: {"value_two":"value"},
-                    output_mapping: {"value":"value_two"}
+                    output_mapping: {"result":"result_two"}
                 },
             ]
         }"""
@@ -35,19 +35,19 @@ def test_input_output_mappings():
 
     result = meter.evaluate(value_one=10,value_two=100)
 
-    assert result["value_one"] == 10
-    assert result["value_two"] == 100
+    assert result["result_one"] == 10
+    assert result["result_two"] == 100
 
 def test_incorrect_input_mappings():
     meter_yaml = """ !obj:eemeter.meter.SequentialMeter {
             sequence: [
                 !obj:eemeter.meter.DummyMeter {
                     input_mapping: {"value_one":"value"},
-                    output_mapping: {"value":"value"}
+                    output_mapping: {"result":"value"}
                 },
                 !obj:eemeter.meter.DummyMeter {
                     input_mapping: {"value_two":"value"},
-                    output_mapping: {"value":"value_one"}
+                    output_mapping: {"result":"value_one"}
                 },
             ]
         }"""
@@ -62,11 +62,11 @@ def test_incorrect_output_mappings():
             sequence: [
                 !obj:eemeter.meter.DummyMeter {
                     input_mapping: {"value_one":"value"},
-                    output_mapping: {"value":"value_one"}
+                    output_mapping: {"result":"value_one"}
                 },
                 !obj:eemeter.meter.DummyMeter {
                     input_mapping: {"value_two":"value"},
-                    output_mapping: {"value":"value_one"}
+                    output_mapping: {"result":"value_one"}
                 },
             ]
         }"""

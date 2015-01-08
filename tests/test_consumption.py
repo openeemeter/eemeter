@@ -13,7 +13,7 @@ from pint.unit import UndefinedUnitError
 import pytest
 
 EPSILON = 1e-6
-##### Fixtures #####
+
 
 @pytest.fixture(scope="module",
                 params=[(0,"kWh",electricity,datetime(2000,1,1),datetime(2000,1,31),False),
@@ -61,6 +61,10 @@ def consumption_list_one_year_gas():
             Consumption(700,"kWh",natural_gas,datetime(2012,11,1),datetime(2012,12,1)),
             Consumption(900,"kWh",natural_gas,datetime(2012,12,1),datetime(2013,1,1))]
 
+@pytest.fixture
+def single_electricity_consumption():
+    return Consumption(1000,"kWh",electricity,datetime(2012,1,1),datetime(2012,2,1))
+
 ##### Test cases #####
 
 def test_consumption_has_correct_attributes(consumption_zero_one_month):
@@ -107,6 +111,9 @@ def test_timedelta(consumption_zero_one_month):
 def test_consumption_has_string_representation(consumption_zero_one_month):
     assert "Consumption" in consumption_zero_one_month.__repr__()
     assert "Consumption" in str(consumption_zero_one_month)
+
+def test_consumption_usage_per_day(single_electricity_consumption):
+    assert abs(single_electricity_consumption.average_daily_usage("kWh") - 1000/31.) < EPSILON
 
 def test_consumption_history(consumption_list_one_year_electricity,
                              consumption_list_one_year_gas):

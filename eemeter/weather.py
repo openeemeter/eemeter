@@ -238,7 +238,7 @@ class TMY3WeatherSource(WeatherSourceBase):
         masked_data = np.ma.masked_array(data,np.isnan(data))
         return np.mean(masked_data)
 
-    def get_daily_temperatures(self,unit):
+    def annual_daily_temperatures(self,unit):
         null = Q_(float("nan"),self._source_unit)
         start_day = datetime(2012,1,1)
         temps = []

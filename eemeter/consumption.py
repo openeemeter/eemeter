@@ -67,6 +67,9 @@ class Consumption:
         """
         return (self.joules * ureg.joules).to(ureg.parse_expression(unit)).magnitude
 
+    def average_daily_usage(self,unit):
+        return (self.joules * ureg.joules / self.timedelta.days).to(ureg.parse_expression(unit)).magnitude
+
     @property
     def timedelta(self):
         """Property representing the timedelta between the start and end
