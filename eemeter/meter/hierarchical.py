@@ -19,7 +19,11 @@ class MeterBase(object):
         mapped_inputs = {}
         for k,v in inputs.iteritems():
             if k in self.input_mapping:
-                mapped_inputs[self.input_mapping[k]] = v
+                new_key = self.input_mapping[k]
+                if new_key in self.input_mapping:
+                    message = "input_mapping for '{}' would overwrite existing key."
+                    raise ValueError(message)
+                mapped_inputs[new_key] = v
             else:
                 mapped_inputs[k] = v
         return mapped_inputs
@@ -28,7 +32,11 @@ class MeterBase(object):
         mapped_outputs = {}
         for k,v in outputs.iteritems():
             if k in self.output_mapping:
-                mapped_outputs[self.output_mapping[k]] = v
+                new_key = self.output_mapping[k]
+                if new_key in self.output_mapping:
+                    message = "output_mapping for '{}' would overwrite existing key."
+                    raise ValueError(message)
+                mapped_outputs[new_key] = v
             else:
                 mapped_outputs[k] = v
         return mapped_outputs
