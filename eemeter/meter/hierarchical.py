@@ -1,6 +1,8 @@
 import scipy.optimize as opt
 import numpy as np
 
+from itertools import chain
+
 class MeterBase(object):
     def __init__(self,**kwargs):
         if "input_mapping" in kwargs:
@@ -89,7 +91,7 @@ class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
         return {"temp_sensitivity_params": params}
 
 class AnnualizedUsageMeter(MeterBase):
-    def __init__(self,fuel_unit_str,fuel_type,temperature_unit_str,model,**kwargs):
+    def __init__(self,temperature_unit_str,model,**kwargs):
         super(self.__class__,self).__init__(**kwargs)
         self.temperature_unit_str = temperature_unit_str
         self.model = model
@@ -99,6 +101,29 @@ class AnnualizedUsageMeter(MeterBase):
         usage_estimates = self.model.compute_usage_estimates(temp_sensitivity_params,daily_temps)
         annualized_usage = np.sum(usage_estimates)
         return {"annualized_usage":annualized_usage}
+
+class PrePostMeter(MeterBase):
+    def __init__(self,meter,splittable_args,**kwargs):
+        super(self.__class__,self).__init__(**kwargs)
+        self.meter = meter
+        self.splittable_args = splittable_args
+
+    def evaluate_mapped_inputs(self,retrofit_start_date,retrofit_end_date,**kwargs):
+        pre_kwargs = {}
+        post_kwargs = {}
+        for k,v in kwargs.iteritems():
+            if k in self.splittable_args:
+                pre_kwargs[k] = v.before(retrofit_start_date)
+                post_kwargs[k] = v.after(retrofit_end_date)
+            else:
+                pre_kwargs[k] = kwargs[k]
+                post_kwargs[k] = kwargs[k]
+        pre_results = self.meter.evaluate(**pre_kwargs)
+        post_results = self.meter.evaluate(**post_kwargs)
+        pre_results = {k + "_pre":v for k,v in pre_results.iteritems()}
+        post_results = {k + "_post":v for k,v in post_results.iteritems()}
+        results = {k:v for k,v in chain(pre_results.iteritems(),post_results.iteritems())}
+        return results
 
 class DummyMeter(MeterBase):
     def evaluate_mapped_inputs(self,**kwargs):
