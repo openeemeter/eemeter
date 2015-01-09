@@ -1,1 +1,1 @@
-from .hierarchical import *
+from .base import *
