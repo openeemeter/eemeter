@@ -17,19 +17,28 @@ class WeatherSourceBase:
         """
         unit = ureg.parse_expression(unit_name)
         avg_temps = []
-        # TODO - WARNING - deal with the fact that consumption_history.get will
-        # not return things in a predictable order.
         for consumption in consumptions:
             avg_temps.append(self.get_consumption_average_temperature(consumption,unit))
         return avg_temps
 
     def get_consumption_average_temperature(self,consumption,unit):
+        avg_temps = self.get_consumption_daily_temperatures(consumption,unit)
+        return np.mean(avg_temps)
+
+    def get_daily_temperatures(self,consumptions,unit_name):
+        unit = ureg.parse_expression(unit_name)
+        daily_temps = []
+        for consumption in consumptions:
+            daily_temps.append(self.get_consumption_daily_temperatures(consumption,unit))
+        return daily_temps
+
+    def get_consumption_daily_temperatures(self,consumption,unit):
         avg_temps = []
         for days in xrange(consumption.timedelta.days):
             day = consumption.start + timedelta(days=days)
             temp = self.get_daily_average_temperature(day,unit)
             avg_temps.append(temp)
-        return np.mean(avg_temps)
+        return avg_temps
 
     def get_daily_average_temperature(self,consumption,unit):
         raise NotImplementedError
@@ -251,7 +260,8 @@ class TMY3WeatherSource(WeatherSourceBase):
                 day_temps.append(temp)
             day_data = np.array(day_temps)
             masked_data = np.ma.masked_array(day_data,np.isnan(day_data))
-            temps.append(np.mean(masked_data))
+            # wrap in array for compatibility with model input format
+            temps.append([np.mean(masked_data)])
         return temps
 
 class WeatherUndergroundWeatherSource(WeatherSourceBase):

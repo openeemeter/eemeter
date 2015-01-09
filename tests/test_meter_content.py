@@ -32,7 +32,7 @@ def test_temperature_sensitivity_parameter_optimization(
                             weather_source=gsod_722880_2012_2014_weather_source)
 
     assert arrays_similar(result['temp_sensitivity_params'],
-                          [0.323828,1.316172,9.524184,65.,6.075])
+                          [0.013456,0.029507,8.341199,65,3.8])
 
 @pytest.mark.slow
 def test_weather_normalization(consumption_history_1,
@@ -65,9 +65,9 @@ def test_weather_normalization(consumption_history_1,
                             weather_normal_source=tmy3_722880_weather_source)
 
     assert arrays_similar(result['temp_sensitivity_params'],
-                          [0.323828,1.316172,9.524184,65.,6.075])
+                          [0.013456,0.029507,8.341199,65,3.8])
 
-    assert abs(result['annualized_usage'] - 4674.565226) < EPSILON
+    assert abs(result['annualized_usage'] - 3087.8412641) < EPSILON
 
 @pytest.mark.slow
 def test_pre_post_parameters(consumption_history_1,
@@ -94,8 +94,10 @@ def test_pre_post_parameters(consumption_history_1,
                             retrofit_start_date=datetime(2013,9,25),
                             retrofit_end_date=datetime(2013,9,25))
 
-    assert arrays_similar(result["temp_sensitivity_params_pre"],[0.32440489,1.70232533,8.81616552,62.32858038,8.74641962])
-    assert arrays_similar(result["temp_sensitivity_params_post"],[1.48388184,0.44307332,11.16436228,59.47276951,10.32410602])
+    assert arrays_similar(result["temp_sensitivity_params_pre"],
+            [0.016883,0.042749,6.013131,65,3.3])
+    assert arrays_similar(result["temp_sensitivity_params_post"],
+            [0.059923,0.001983,11.129708,55,2])
 
     assert isinstance(result["consumption_history_pre"],ConsumptionHistory)
     assert isinstance(result["consumption_history_post"],ConsumptionHistory)
@@ -135,12 +137,14 @@ def test_gross_savings_metric(consumption_history_1,
                             retrofit_start_date=datetime(2013,9,25),
                             retrofit_end_date=datetime(2013,9,25))
 
-    assert arrays_similar(result["temp_sensitivity_params_pre"],[0.32440489,1.70232533,8.81616552,62.32858038,8.74641962])
-    assert arrays_similar(result["temp_sensitivity_params_post"],[1.48388184,0.44307332,11.16436228,59.47276951,10.32410602])
+    assert arrays_similar(result["temp_sensitivity_params_pre"],
+            [0.016883,0.042749,6.013131,65,3.3])
+    assert arrays_similar(result["temp_sensitivity_params_post"],
+            [0.059923,0.001983,11.129708,55,2])
 
     assert isinstance(result["consumption_history_pre"],ConsumptionHistory)
     assert isinstance(result["consumption_history_post"],ConsumptionHistory)
-    assert abs(result["gross_savings"] - 405.345513) < EPSILON
+    assert abs(result["gross_savings"] - 494.442390) < EPSILON
 
 @pytest.mark.slow
 def test_annualized_gross_savings_metric(consumption_history_1,
@@ -178,7 +182,34 @@ def test_annualized_gross_savings_metric(consumption_history_1,
                             retrofit_start_date=datetime(2013,9,25),
                             retrofit_end_date=datetime(2013,9,25))
 
-    assert arrays_similar(result["temp_sensitivity_params_pre"],[0.32440489,1.70232533,8.81616552,62.32858038,8.74641962])
-    assert arrays_similar(result["temp_sensitivity_params_post"],[1.48388184,0.44307332,11.16436228,59.47276951,10.32410602])
+    assert arrays_similar(result["temp_sensitivity_params_pre"],
+            [0.016883,0.042749,6.013131,65,3.3])
+    assert arrays_similar(result["temp_sensitivity_params_post"],
+            [0.059923,0.001983,11.129708,55,2])
 
-    assert abs(result["annualized_gross_savings"] - -781.944405) < EPSILON
+    assert abs(result["annualized_gross_savings"] - -1822.821986) < EPSILON
+
+def test_fuel_type_presence_meter(consumption_history_1):
+
+    meter_yaml = """
+        !obj:eemeter.meter.FuelTypePresenceMeter {
+            fuel_types: [electricity,natural_gas]
+        }
+        """
+    meter = load(meter_yaml)
+    result = meter.evaluate(consumption_history=consumption_history_1)
+
+    assert result["electricity_presence"]
+    assert not result["natural_gas_presence"]
+
+@pytest.mark.slow
+def test_princeton_scorekeeping_method(consumption_history_1,
+                                       gsod_722880_2012_2014_weather_source,
+                                       tmy3_722880_weather_source):
+    meter = load("!obj:eemeter.meter.PRISMMeter {}")
+    result = meter.evaluate(consumption_history=consumption_history_1,
+                            weather_source=gsod_722880_2012_2014_weather_source,
+                            weather_normal_source=tmy3_722880_weather_source)
+
+    assert result["electricity_presence"]
+    assert not result["natural_gas_presence"]

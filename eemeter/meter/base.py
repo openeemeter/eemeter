@@ -57,23 +57,43 @@ class MeterBase(object):
 
 class SequentialMeter(MeterBase):
     def __init__(self,sequence,**kwargs):
-        super(SequentialMeter,self).__init__(**kwargs)
+        super(self.__class__,self).__init__(**kwargs)
         assert all([issubclass(meter.__class__,MeterBase)
                     for meter in sequence])
         self.sequence = sequence
 
     def evaluate_mapped_inputs(self,**kwargs):
-        result = kwargs
+        result = {}
         for meter in self.sequence:
-            meter_result = meter.evaluate(**kwargs)
+            args = {k:v for k,v in chain(kwargs.iteritems(),result.iteritems())}
+            meter_result = meter.evaluate(**args)
             for k,v in meter_result.iteritems():
                 if k in result:
-                    message = "unexpected repeated metric ({}). " \
+                    message = "unexpected repeated metric ({}) in {}. " \
                               "A different input_mapping or " \
-                              "output_mapping may fix this overlap."
-                    raise ValueError(message.format(k))
+                              "output_mapping may fix this overlap.".format(k,meter)
+                    raise ValueError(message)
                 result[k] = v
         return result
+
+class ConditionalMeter(MeterBase):
+    def __init__(self,condition_parameter,success=None,failure=None,**kwargs):
+        super(self.__class__,self).__init__(**kwargs)
+        self.condition_parameter = condition_parameter
+        self.success = success
+        self.failure = failure
+
+    def evaluate_mapped_inputs(self,**kwargs):
+        if kwargs[self.condition_parameter]:
+            if self.success is None:
+                return {}
+            else:
+                return self.success.evaluate(**kwargs)
+        else:
+            if self.failure is None:
+                return {}
+            else:
+                return self.failure.evaluate(**kwargs)
 
 class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
     def __init__(self,fuel_unit_str,fuel_type,temperature_unit_str,model,**kwargs):
@@ -85,9 +105,9 @@ class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
 
     def evaluate_mapped_inputs(self,consumption_history,weather_source,**kwargs):
         consumptions = consumption_history.get(self.fuel_type)
-        usages = [c.average_daily_usage(self.fuel_unit_str) for c in consumptions]
-        observed_temps = weather_source.get_average_temperature(consumptions,self.temperature_unit_str)
-        params = self.model.parameter_optimization(usages,observed_temps)
+        average_daily_usages = [c.average_daily_usage(self.fuel_unit_str) for c in consumptions]
+        observed_daily_temps = weather_source.get_daily_temperatures(consumptions,self.temperature_unit_str)
+        params = self.model.parameter_optimization(average_daily_usages,observed_daily_temps)
         return {"temp_sensitivity_params": params}
 
 class AnnualizedUsageMeter(MeterBase):
@@ -140,10 +160,10 @@ class GrossSavingsMeter(MeterBase):
 
     def evaluate_mapped_inputs(self,temp_sensitivity_params_pre,consumption_history_post,weather_source,**kwargs):
         consumptions_post = consumption_history_post.get(self.fuel_type)
-        observed_temps = weather_source.get_average_temperature(consumptions_post,self.temperature_unit_str)
+        observed_daily_temps = weather_source.get_daily_temperatures(consumptions_post,self.temperature_unit_str)
         usages = np.array([c.to(self.fuel_unit_str) for c in consumptions_post])
-        usage_n_days = np.array([c.timedelta.days for c in consumptions_post])
-        usage_estimates_post = np.array(self.model.compute_usage_estimates(temp_sensitivity_params_pre,observed_temps)) * usage_n_days
+        usage_n_days = np.array([len(ts) for ts in observed_daily_temps])
+        usage_estimates_post = np.array(self.model.compute_usage_estimates(temp_sensitivity_params_pre,observed_daily_temps)) * usage_n_days
         return {"gross_savings": np.sum(usages - usage_estimates_post)}
 
 class AnnualizedGrossSavingsMeter(MeterBase):
@@ -164,6 +184,23 @@ class AnnualizedGrossSavingsMeter(MeterBase):
         n_years = np.sum([c.timedelta.days for c in consumptions_post])/365.
         annualized_gross_savings = n_years * annualized_usage_savings
         return {"annualized_gross_savings": annualized_gross_savings}
+
+class FuelTypePresenceMeter(MeterBase):
+    def __init__(self,fuel_types,**kwargs):
+        super(self.__class__,self).__init__(**kwargs)
+        self.fuel_types = fuel_types
+
+    def evaluate_mapped_inputs(self,consumption_history,**kwargs):
+        results = {}
+        for fuel_type in self.fuel_types:
+            consumptions = consumption_history.get(fuel_type)
+            results[fuel_type + "_presence"] = consumptions is not None
+        return results
+
+class DebugMeter(MeterBase):
+    def evaluate_mapped_inputs(self,**kwargs):
+        print "DEBUG kwargs:", kwargs
+        return {}
 
 class DummyMeter(MeterBase):
     def evaluate_mapped_inputs(self,**kwargs):

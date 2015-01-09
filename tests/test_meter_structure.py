@@ -14,7 +14,7 @@ def test_sequential_meter():
 
     result = meter.evaluate(value=10)
 
-    assert result["value"] == 10
+    assert result["result"] == 10
 
 def test_input_output_mappings():
     meter_yaml = """
@@ -75,3 +75,38 @@ def test_incorrect_output_mappings():
 
     with pytest.raises(ValueError):
         result = meter.evaluate(value_one=10,value_two=100)
+
+def test_conditional_meter():
+    meter_yaml="""
+        !obj:eemeter.meter.ConditionalMeter {
+            condition_parameter: "electricity_present",
+            success: !obj:eemeter.meter.DummyMeter {
+                input_mapping: {"success":"value"},
+            },
+            failure: !obj:eemeter.meter.DummyMeter {
+                input_mapping: {"failure":"value"},
+            },
+        }
+        """
+    meter = load(meter_yaml)
+    assert meter.evaluate(electricity_present=True,success="success",failure="failure")["result"] == "success"
+    assert meter.evaluate(electricity_present=False,success="success",failure="failure")["result"] == "failure"
+
+def test_conditional_meter_without_params():
+    meter_yaml="""
+        !obj:eemeter.meter.ConditionalMeter {
+            condition_parameter: "electricity_present",
+        }
+        """
+    meter = load(meter_yaml)
+    assert isinstance(meter.evaluate(electricity_present=True),dict)
+    assert isinstance(meter.evaluate(electricity_present=False),dict)
+
+def test_debug_meter():
+
+    meter_yaml="""
+        !obj:eemeter.meter.DebugMeter {
+        }
+        """
+    meter = load(meter_yaml)
+
