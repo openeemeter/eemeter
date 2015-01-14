@@ -6,3 +6,4 @@ _build
 
 .coverage
 .DS_Store
+.project
