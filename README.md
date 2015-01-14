@@ -9,7 +9,7 @@ Docs on [RTD](http://eemeter.readthedocs.org/en/latest/).
 Installation
 ------------
 
-Execute the following command to install:
+With `pip` and `pint` installed, execute the following command to install:
 
     $ pip install git+git://github.com/philngo/ee-meter.git#egg=ee-meter
 
@@ -29,6 +29,7 @@ Contributors
 
 + Phil Ngo
 + Matt Gee
++ Eric Potash
 
 Licence
 -------
