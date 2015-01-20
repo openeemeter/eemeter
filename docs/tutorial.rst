@@ -17,4 +17,4 @@ or download it from github and install it using the setup.py::
 Meter specification
 -------------------
 
-
+The eemeter package is designed to 

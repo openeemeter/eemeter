@@ -29,7 +29,7 @@ Usage
 Installation
 ------------
 
-Execute the following command to install::
+Execute the following command to install the eemeter package and its dependencies::
 
    pip install git+git://github.com/philngo/ee-meter.git#egg=ee-meter
 
