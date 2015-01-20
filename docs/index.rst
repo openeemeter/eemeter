@@ -33,12 +33,25 @@ Execute the following command to install the eemeter package and its dependencie
 
    pip install git+git://github.com/philngo/ee-meter.git#egg=ee-meter
 
+
 Testing
 -------
 
-Execute the following command to run tests::
+This library uses the py.test framework. To develop locally, clone the repo,
+and in a virtual environment execute the following commands:
 
-   py.test
+    $ git clone https://github.com/philngo/ee-meter
+    $ cd eemeter
+    $ pip install numpy scipy pytest
+    $ python setup.py develop
+    $ py.test
+
+You should ensure that you are using the virtualenv py.test executable with
+`py.test --version`.
+
+Some tests are slow and are skipped by default; to run these, use the `--runslow` flag:
+
+    $ py.test --runslow
 
 Indices and tables
 ==================
@@ -46,3 +59,8 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+Licence
+-------
+
+MIT
