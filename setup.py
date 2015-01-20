@@ -7,5 +7,5 @@ setup(name='OpenEEMeter',
     description='Open Energy Efficiency Meter',
     author='Matt Gee, Phil Ngo, Eric Potash',
     packages=find_packages(),
-    install_requires=['pint']
-    )
+    install_requires=['pint >= 0.6']
+)
