@@ -2,9 +2,10 @@ from setuptools import setup, find_packages
 
 version = __import__('eemeter').get_version()
 
-setup(name='EEMeter',
+setup(name='OpenEEMeter',
     version=version,
-    description='Open energy efficiency meter',
-    author='Matt Gee, Phil Ngo',
+    description='Open Energy Efficiency Meter',
+    author='Matt Gee, Phil Ngo, Eric Potash',
     packages=find_packages(),
+    install_requires=['pint']
     )
