@@ -53,13 +53,6 @@ Some tests are slow and are skipped by default; to run these, use the `--runslow
 
     $ py.test --runslow
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
 Licence
 -------
 
