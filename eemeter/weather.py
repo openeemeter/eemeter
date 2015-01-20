@@ -7,8 +7,8 @@ from datetime import datetime
 from datetime import timedelta
 import numpy as np
 import requests
-import eemeter
 from . import ureg, Q_
+from pkg_resources import resource_stream
 
 class WeatherSourceBase:
     def get_average_temperature(self,consumptions,unit_name):
@@ -79,11 +79,7 @@ class GSODWeatherSource(WeatherSourceBase):
     def __init__(self,station_id,start_year,end_year):
         if len(station_id) == 6:
             # given station id is the six digit code, so need to get full name
-            gsod_station_index_filename = os.path.join(
-                    os.path.dirname(os.path.dirname(eemeter.__file__)),
-                    'resources',
-                    'GSOD-ISD_station_index.json')
-            with open(gsod_station_index_filename,'r') as f:
+            with resource_stream('eemeter.resources','GSOD-ISD_station_index.json') as f:
                 station_index = json.load(f)
             # take first station in list
             potential_station_ids = station_index[station_id]
@@ -126,11 +122,7 @@ class ISDWeatherSource(WeatherSourceBase):
     def __init__(self,station_id,start_year,end_year):
         if len(station_id) == 6:
             # given station id is the six digit code, so need to get full name
-            gsod_station_index_filename = os.path.join(
-                    os.path.dirname(os.path.dirname(eemeter.__file__)),
-                    'resources',
-                    'GSOD-ISD_station_index.json')
-            with open(gsod_station_index_filename,'r') as f:
+            with resource_stream('eemeter.resources','GSOD-ISD_station_index.json') as f:
                 station_index = json.load(f)
             # take first station in list
             potential_station_ids = station_index[station_id]
