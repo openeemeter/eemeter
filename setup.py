@@ -11,6 +11,6 @@ setup(name='OpenEEMeter',
                       'pyyaml >= 3.11',
                       'numpy >= 1.9',
                       'scipy >= 0.15',
-                      'requests >= 2.5',
+                      'requests >= 2.5'],
     package_data={'': ['*.json']},
 )
