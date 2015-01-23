@@ -19,16 +19,32 @@ electricity = FuelType("electricity")
 natural_gas = FuelType("natural_gas")
 propane = FuelType("propane")
 
-class Consumption:
+class DatetimePeriod:
+    def __init__(self, start, end):
+        self.start = start
+        self.end = end
+        
+    def __lt__(self,other):
+        """Comparison is based on end time.
+        """
+        return self.end < other.end
+    
+    @property
+    def timedelta(self):
+        """Property representing the timedelta between the start and end
+        datetimes.
+        """
+        return self.end - self.start
+
+class Consumption(DatetimePeriod):
     """Represents energy usage. Each instance has start and end datetimes, a
     particular unit (although it is stored internally as joules), a fuel type,
     and whether or not it is estimated.
     """
 
     def __init__(self,usage,unit_name,fuel_type,start,end,estimated=False):
+        DatetimePeriod.__init__(self,start,end)
         self.fuel_type = fuel_type
-        self.start = start
-        self.end = end
         self.estimated = estimated
 
         quantity = usage * ureg.parse_expression(unit_name)
@@ -52,11 +68,6 @@ class Consumption:
     def __getattr__(self,unit):
         return (self.joules * ureg.joules).to(ureg.parse_expression(unit)).magnitude
 
-    def __lt__(self,other):
-        """Comparison is based on end time.
-        """
-        return self.end < other.end
-
     def to(self,unit):
         """Returns internally stored energy value in the given unit. The `unit`
         should be a representative string in abbreviation or otherwise, in
@@ -69,13 +80,6 @@ class Consumption:
 
     def average_daily_usage(self,unit):
         return (self.joules * ureg.joules / self.timedelta.days).to(ureg.parse_expression(unit)).magnitude
-
-    @property
-    def timedelta(self):
-        """Property representing the timedelta between the start and end
-        datetimes.
-        """
-        return self.end - self.start
 
 class ConsumptionHistory:
     def __init__(self,consumptions):
