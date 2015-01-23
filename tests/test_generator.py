@@ -21,7 +21,7 @@ def periods_one_year():
             DatetimePeriod(datetime(2012,11,1),datetime(2012,12,1)),
             DatetimePeriod(datetime(2012,12,1),datetime(2013,1,1))]
 
-#@pytest.mark.slow
+@pytest.mark.slow
 def test_generator():
     gen = ConsumptionGenerator(electricity, "J", "degF", 65, 1, 75, 1, gsod_722880_2012_2014_weather_source())
     consumptions = gen.generate(periods_one_year())
