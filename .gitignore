@@ -3,8 +3,7 @@ __pycache__/
 *.egg-info
 
 _build
+build/
+dist/
 
-.coverage
-.DS_Store
-.project
-.pydevproject
+.*
