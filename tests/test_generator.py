@@ -1,7 +1,9 @@
 from eemeter.generator import ConsumptionGenerator
 from eemeter.consumption import DatetimePeriod
-from fixtures.weather import gsod_722880_2012_2014_weather_source
 from eemeter.consumption import electricity
+
+from fixtures.weather import gsod_722880_2012_2014_weather_source
+from helpers import arrays_similar
 
 import pytest
 from datetime import datetime
@@ -22,6 +24,9 @@ def periods_one_year():
             DatetimePeriod(datetime(2012,12,1),datetime(2013,1,1))]
 
 @pytest.mark.slow
-def test_generator():
+def test_generator(periods_one_year):
     gen = ConsumptionGenerator(electricity, "J", "degF", 65, 1, 75, 1)
-    consumptions = gen.generate(gsod_722880_2012_2014_weather_source(), periods_one_year())
+    consumptions = gen.generate(gsod_722880_2012_2014_weather_source(), periods_one_year)
+    consumption_joules = [c.to("J") for c in consumptions]
+    assert len(consumptions) == len(periods_one_year) == 12
+    assert arrays_similar(consumption_joules,[245.8, 279.2, 291.5, 153.8, 108.2, 71.7, 192.0, 438.3, 390.2, 181.9, 159.7, 351.1])

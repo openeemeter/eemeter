@@ -6,21 +6,21 @@ class ConsumptionGenerator:
         self.fuel_type = fuel_type
         self.consumption_unit_name = consumption_unit_name
         self.weather_unit_name = weather_unit_name
-        
+
         self.heat_base = heat_base
         self.heat_sensitivity = cool_sensitivity
-        
+
         self.cool_base = heat_base
         self.cool_sensitivity = cool_sensitivity
-    
+
     def generate(self, weather_source, periods):
         hdds = weather_source.get_hdd(periods, self.weather_unit_name, self.heat_base)
         cdds = weather_source.get_cdd(periods, self.weather_unit_name, self.cool_base)
-        
+
         consumptions = []
         for i in range(len(periods)):
             u = hdds[i]*self.heat_sensitivity + cdds[i]*self.cool_sensitivity
             c = Consumption(u, self.consumption_unit_name, self.fuel_type, periods[i].start, periods[i].end)
             consumptions.append(c)
-            
+
         return consumptions

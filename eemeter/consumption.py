@@ -23,12 +23,12 @@ class DatetimePeriod:
     def __init__(self, start, end):
         self.start = start
         self.end = end
-        
+
     def __lt__(self,other):
         """Comparison is based on end time.
         """
         return self.end < other.end
-    
+
     @property
     def timedelta(self):
         """Property representing the timedelta between the start and end
