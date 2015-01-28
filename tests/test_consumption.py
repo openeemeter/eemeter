@@ -1,4 +1,5 @@
 from eemeter.consumption import Consumption
+from eemeter.consumption import DatetimePeriod
 from eemeter.consumption import DateRangeException
 from eemeter.consumption import ConsumptionHistory
 
@@ -57,6 +58,14 @@ def single_electricity_consumption():
     return Consumption(1000,"kWh","electricity",datetime(2012,1,1),datetime(2012,2,1))
 
 ##### Test cases #####
+
+def test_datetime_period():
+    dtp = DatetimePeriod(datetime(2000,1,1),datetime(2000,2,1))
+    assert dtp.start == datetime(2000,1,1)
+    assert dtp.end == datetime(2000,2,1)
+    assert dtp.timedelta.days == 31
+    assert str(dtp) == "DatetimePeriod({},{})".format(dtp.start,dtp.end)
+
 
 def test_consumption_has_correct_attributes(consumption_zero_one_month):
     assert consumption_zero_one_month.joules == 0

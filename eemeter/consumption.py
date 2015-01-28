@@ -20,6 +20,12 @@ class DatetimePeriod:
         """
         return self.end - self.start
 
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        return "DatetimePeriod({},{})".format(self.start,self.end)
+
 class Consumption(DatetimePeriod):
     """Represents energy usage. Each instance has start and end datetimes, a
     particular unit (although it is stored internally as joules), a fuel type,
