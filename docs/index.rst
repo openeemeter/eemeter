@@ -26,6 +26,14 @@ Usage
 
    tutorial
 
+API
+---
+
+.. toctree::
+   :maxdepth: 2
+
+   modules
+
 Installation
 ------------
 
