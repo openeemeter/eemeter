@@ -38,7 +38,104 @@ or download it from github and install it using the setup.py::
 Using an existing meter
 -----------------------
 
-TODO
+This tutorial will walk through how to use an existing meter to evaluate the
+energy consumption of a building with realistically but stochastically
+generated building.
+
+A consumption generator uses a model that you specify to
+realistically generate consumption data given a particular weather pattern. In
+this case, we'll make one for electricity and one for natural gas, specifying
+parameters for the models and units for the calculations.
+
+.. code-block:: python
+
+    from eemeter.generator import ConsumptionGenerator
+
+    elec_generator = ConsumptionGenerator("electricity","kWh","degF",60,1,65,1,1)
+    gas_generator = ConsumptionGenerator("natural_gas","therms","degF",60,2,65,2,2)
+
+To make these generators work, we must provide them with weather data and usage
+periods. Here, we create weather sources with data from O'Hare INTL Airport
+near Chicago, IL, by providing a station identifier.
+
+.. code-block:: python
+
+    from eemeter.weather import GSODWeatherSource
+    from eemeter.weather import TMY3WeatherSource
+
+    ohare_weather_station_id = "725347"
+
+    # This directory must contain a file called "725347TY.csv"
+    path_to_tmy3_directory = "path/to/folder/"
+
+    # Collect data from 2012 to 2014, inclusive.
+    # (It may take a moment to collect this data - weather-data caching is soon to come!)
+    ohare_weather_source = GSODWeatherSource(ohare_weather_station_id, 2012, 2014)
+
+    # Collect TMY3 weather normals
+    ohare_weather_normals = TMY3WeatherSource(ohare_weather_station_id, path_to_tmy3_directory))
+
+This function to makes some datetime periods that can be used as the billing
+periods. Note that there will also be generators for data at higher sampling
+rates, but for this example we will stick with monthly billing data.
+(TODO - incorporate this into the code base)
+
+.. code-block:: python
+
+    from eemeter.consumption import DatetimePeriod
+
+    import numpy as np
+
+    from datetime import timedelta
+
+    def generate_monthly_periods(n_periods,start_datetime,base_time_interval):
+        last_datetime = start_datetime
+        periods = []
+        for i in np.random.randint(-2,3,size=n_periods):
+            new_datetime = last_datetime + timedelta(days=int(base_time_interval + i))
+            periods.append(DatetimePeriod(last_datetime,new_datetime))
+            last_datetime = new_datetime
+        return periods
+
+Let's grab 24 periods whose lengths all vary slightly and use these to generate
+fake consumption data.
+
+.. code-block:: python
+
+    from eemeter.consumption import ConsumptionHistory
+
+    from datetime import datetime
+
+    periods = generate_monthly_periods(24,datetime(2012,1,1),365/12.)
+    elec_consumptions = elec_generator.generate(ohare_weather_source,periods)
+    gas_consumptions = gas_generator.generate(ohare_weather_source,periods)
+    consumptions = elec_consumptions + gas_consumptions
+    consumption_history = ConsumptionHistory(consumptions)
+
+This is the core of the code for running the meter. First, a meter is
+instantitated. Here we're using a simple PRISM implementation. Second, a few
+parameters are passed to the meter for evaluation.
+
+.. code-block:: python
+
+    from eemeter.meter import PRISMMeter
+
+    meter = PRISMMeter()
+
+    result = meter.evaluate(consumption_history=consumption_history,
+                            weather_source=ohare_weather_source,
+                            weather_normal_source=ohare_weather_normals)
+
+The variable :code:`result` will contain something like the following:
+
+.. code-block:: python
+
+    {'annualized_usage_electricity': 6662.5901982011483,
+     'annualized_usage_natural_gas': 13325.180786132325,
+     'electricity_presence': True,
+     'natural_gas_presence': True,
+     'temp_sensitivity_params_electricity': array([  1.        ,  18.25367178,  60.        ]),
+     'temp_sensitivity_params_natural_gas': array([  1.        ,  36.50734462,  60.        ])}
 
 Running a meter
 ---------------
