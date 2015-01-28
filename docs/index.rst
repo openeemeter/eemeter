@@ -46,7 +46,7 @@ Testing
 -------
 
 This library uses the py.test framework. To develop locally, clone the repo,
-and in a virtual environment execute the following commands:
+and in a virtual environment execute the following commands::
 
     $ git clone https://github.com/philngo/ee-meter
     $ cd eemeter
@@ -57,7 +57,7 @@ and in a virtual environment execute the following commands:
 You should ensure that you are using the virtualenv py.test executable with
 `py.test --version`.
 
-Some tests are slow and are skipped by default; to run these, use the `--runslow` flag:
+Some tests are slow and are skipped by default; to run these, use the `--runslow` flag::
 
     $ py.test --runslow
 
