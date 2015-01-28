@@ -1,5 +1,4 @@
 from consumption import Consumption
-from eemeter.consumption import electricity
 
 class ConsumptionGenerator:
     def __init__(self, fuel_type, consumption_unit_name, weather_unit_name, heat_base, heat_sensitivity, cool_base, cool_sensitivity):

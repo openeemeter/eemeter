@@ -4,21 +4,6 @@ from collections import defaultdict
 class DateRangeException(Exception): pass
 class InvalidFuelTypeException(Exception): pass
 
-class FuelType:
-    """Simple representation of fuel types. Stores the name of the fuel type.
-    """
-
-    def __init__(self,name):
-        self.name = name
-
-    def __str__(self):
-        return self.name
-
-# weird psuedo-global singletons; should probably reconsider this implementation.
-electricity = FuelType("electricity")
-natural_gas = FuelType("natural_gas")
-propane = FuelType("propane")
-
 class DatetimePeriod:
     def __init__(self, start, end):
         self.start = start
@@ -54,9 +39,6 @@ class Consumption(DatetimePeriod):
         if self.end < self.start:
             raise DateRangeException
 
-        if not isinstance(self.fuel_type,FuelType):
-            raise InvalidFuelTypeException
-
     def __repr__(self):
         return str(self)
 
@@ -85,17 +67,15 @@ class ConsumptionHistory:
     def __init__(self,consumptions):
         self._data = {}
         for consumption in consumptions:
-            if consumption.fuel_type.name in self._data:
-                self._data[consumption.fuel_type.name].append(consumption)
+            if consumption.fuel_type in self._data:
+                self._data[consumption.fuel_type].append(consumption)
             else:
-                self._data[consumption.fuel_type.name] = [consumption]
+                self._data[consumption.fuel_type] = [consumption]
 
     def __getattr__(self, attr):
         return self._data[attr]
 
     def __getitem__(self,item):
-        if isinstance(item,FuelType):
-            return self._data[item.name]
         return self._data[item]
 
     def __repr__(self):
@@ -127,8 +107,6 @@ class ConsumptionHistory:
         matching the name of a particular fuel type, or by a fuel type
         instance.
         """
-        if isinstance(fuel_type,FuelType):
-            return self._data.get(fuel_type.name)
         return self._data.get(fuel_type)
 
     def iteritems(self):

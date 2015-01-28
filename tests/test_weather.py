@@ -9,8 +9,6 @@ from eemeter.weather import usaf_station_from_zipcode
 
 from eemeter.consumption import ConsumptionHistory
 from eemeter.consumption import Consumption
-from eemeter.consumption import electricity
-from eemeter.consumption import natural_gas
 
 from datetime import datetime
 import pytest
@@ -23,9 +21,9 @@ EPSILON = 10e-6
 
 @pytest.fixture
 def consumption_history_one_summer_electricity():
-    c_list = [Consumption(1600,"kWh",electricity,datetime(2012,6,1),datetime(2012,7,1)),
-              Consumption(1700,"kWh",electricity,datetime(2012,7,1),datetime(2012,8,1)),
-              Consumption(1800,"kWh",electricity,datetime(2012,8,1),datetime(2012,9,1))]
+    c_list = [Consumption(1600,"kWh","electricity",datetime(2012,6,1),datetime(2012,7,1)),
+              Consumption(1700,"kWh","electricity",datetime(2012,7,1),datetime(2012,8,1)),
+              Consumption(1800,"kWh","electricity",datetime(2012,8,1),datetime(2012,9,1))]
     return ConsumptionHistory(c_list)
 
 @pytest.fixture(params=[(41.8955360374983,-87.6217660821178,"725340"),
@@ -69,7 +67,7 @@ def zipcode_to_station(request):
 
 def test_weather_source_base(consumption_history_one_summer_electricity):
     weather_source = WeatherSourceBase()
-    consumptions = consumption_history_one_summer_electricity.get(electricity)
+    consumptions = consumption_history_one_summer_electricity.get("electricity")
     with pytest.raises(NotImplementedError):
         avg_temps = weather_source.get_average_temperature(consumptions,"degF")
     with pytest.raises(NotImplementedError):
@@ -79,7 +77,7 @@ def test_weather_source_base(consumption_history_one_summer_electricity):
 @pytest.mark.internet
 def test_gsod_weather_source(consumption_history_one_summer_electricity,gsod_weather_source):
     gsod_weather_source = GSODWeatherSource(*gsod_weather_source)
-    consumptions = consumption_history_one_summer_electricity.get(electricity)
+    consumptions = consumption_history_one_summer_electricity.get("electricity")
     avg_temps = gsod_weather_source.get_average_temperature(consumptions,"degF")
     assert abs(avg_temps[0] - 66.3833333333) < EPSILON
     assert abs(avg_temps[1] - 67.8032258065) < EPSILON
@@ -102,7 +100,7 @@ def test_weather_underground_weather_source(consumption_history_one_summer_elect
                                                             datetime(2012,6,1),
                                                             datetime(2012,10,1),
                                                             wunderground_api_key)
-        consumptions = consumption_history_one_summer_electricity.get(electricity)
+        consumptions = consumption_history_one_summer_electricity.get("electricity")
         avg_temps = wu_weather_source.get_average_temperature(consumptions,"degF")
         assert abs(avg_temps[0] - 74.4333333333) < EPSILON
         assert abs(avg_temps[1] - 82.6774193548) < EPSILON
@@ -149,7 +147,7 @@ def test_ziplocate_us(lat_long_zipcode):
 @pytest.mark.internet
 def test_isd_weather_source(consumption_history_one_summer_electricity,isd_weather_source):
     isd_weather_source = ISDWeatherSource(*isd_weather_source)
-    consumptions = consumption_history_one_summer_electricity.get(electricity)
+    consumptions = consumption_history_one_summer_electricity.get("electricity")
     avg_temps = isd_weather_source.get_average_temperature(consumptions,"degF")
     assert abs(avg_temps[0] - 66.576956521739135) < EPSILON
     assert abs(avg_temps[1] - 68.047780898876411) < EPSILON
@@ -178,7 +176,7 @@ def test_usaf_station_from_zipcode(zipcode_to_station):
 @pytest.mark.slow
 @pytest.mark.internet
 def test_tmy3_weather_source(consumption_history_one_summer_electricity,tmy3_weather_source):
-    consumptions = consumption_history_one_summer_electricity.get(electricity)
+    consumptions = consumption_history_one_summer_electricity.get("electricity")
     normal_avg_temps = tmy3_weather_source.get_average_temperature(consumptions,"degF")
     assert abs(normal_avg_temps[0] - 68.411913043478265) < EPSILON
     assert abs(normal_avg_temps[1] - 73.327545582047691) < EPSILON
