@@ -1,17 +1,37 @@
 eemeter package
 ===============
 
-Subpackages
------------
+eemeter.config.yaml_parser module
+---------------------------------
 
-.. toctree::
+.. automodule:: eemeter.config.yaml_parser
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
-    eemeter.config
-    eemeter.meter
-    eemeter.models
+eemeter.meter.base module
+-------------------------
 
-Submodules
-----------
+.. automodule:: eemeter.meter.base
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+eemeter.meter.prism module
+--------------------------
+
+.. automodule:: eemeter.meter.prism
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+eemeter.models.temperature_sensitivity module
+---------------------------------------------
+
+.. automodule:: eemeter.models.temperature_sensitivity
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 eemeter.consumption module
 --------------------------
