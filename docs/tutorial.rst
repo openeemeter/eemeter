@@ -51,8 +51,8 @@ parameters for the models and units for the calculations.
 
     from eemeter.generator import ConsumptionGenerator
 
-    elec_generator = ConsumptionGenerator("electricity","kWh","degF",60,1,65,1,1)
-    gas_generator = ConsumptionGenerator("natural_gas","therms","degF",60,2,65,2,2)
+    elec_generator = ConsumptionGenerator("electricity", "kWh", "degF", 60, 1, 65, 1, 1)
+    gas_generator = ConsumptionGenerator("natural_gas", "therms", "degF", 60, 2, 65, 2, 2)
 
 To make these generators work, we must provide them with weather data and usage
 periods. Here, we create weather sources with data from O'Hare INTL Airport
@@ -88,12 +88,12 @@ rates, but for this example we will stick with monthly billing data.
 
     from datetime import timedelta
 
-    def generate_monthly_periods(n_periods,start_datetime,base_time_interval):
+    def generate_monthly_periods(n_periods, start_datetime, base_time_interval):
         last_datetime = start_datetime
         periods = []
-        for i in np.random.randint(-2,3,size=n_periods):
+        for i in np.random.randint(-2, 3, size=n_periods):
             new_datetime = last_datetime + timedelta(days=int(base_time_interval + i))
-            periods.append(DatetimePeriod(last_datetime,new_datetime))
+            periods.append(DatetimePeriod(last_datetime, new_datetime))
             last_datetime = new_datetime
         return periods
 
@@ -106,14 +106,14 @@ fake consumption data.
 
     from datetime import datetime
 
-    periods = generate_monthly_periods(24,datetime(2012,1,1),365/12.)
+    periods = generate_monthly_periods(24, datetime(2012, 1, 1), 365/12.)
     elec_consumptions = elec_generator.generate(ohare_weather_source,periods)
     gas_consumptions = gas_generator.generate(ohare_weather_source,periods)
     consumptions = elec_consumptions + gas_consumptions
     consumption_history = ConsumptionHistory(consumptions)
 
 This is the core of the code for running the meter. First, a meter is
-instantitated. Here we're using a simple PRISM implementation. Second, a few
+instantitated; here we're using a simple PRISM implementation. Second, a few
 parameters are passed to the meter for evaluation.
 
 .. code-block:: python
@@ -137,13 +137,113 @@ The variable :code:`result` will contain something like the following:
      'temp_sensitivity_params_electricity': array([  1.        ,  18.25367178,  60.        ]),
      'temp_sensitivity_params_natural_gas': array([  1.        ,  36.50734462,  60.        ])}
 
-Running a meter
----------------
-
-TODO
 
 Creating a custom meter
 -----------------------
 
-TODO
+Meters can be defined from scratch or customized to meet specific needs. For
+instance, a particular user might want to incorporate unique data quality flags,
+and another user might want to optimize evaluation for a particular parallel
+computing environment.
 
+Meters are modular, hierarchical and swappable; often the most convenient
+and readable way to define them is to use YAML, as we will do here. Note that
+the particular YAML format we use here has been customized (ht: pylearn2_) with
+an :code:`!obj` tag to automate python object specification. Note that JSON is
+(usually? always?) valid YAML.
+
+.. _pylearn2: http://deeplearning.net/software/pylearn2/
+
+Consider the following equivalent examples, which both declare a "dummy" meter
+that simply spits out or renames the input values. The first loads the
+meter as usual; the second declares an equivalent meter using YAML, then loads
+the result.
+
+.. code-block:: python
+
+    from eemeter.meter import DummyMeter
+
+    meter = DummyMeter()
+    result = meter.evaluate(value=10)
+
+.. code-block:: python
+
+    from eemeter.config.yaml_parser import load
+
+    meter_yaml = "!obj:eemeter.meter.DummyMeter {}"
+    meter = load(meter_yaml)
+    result = meter.evaluate(value=10)
+
+In the example above, it's clearly more straightforward to directly declare the
+meter using python. However, since meters are so hierarchical, a specification
+like the following is usually more readable and straightforward. Note the usage
+of structural helper meters like :code:`SequentialMeter` and
+:code:`ConditionalMeter`, which allow for more flexible meter component
+definitions.
+
+.. code-block:: python
+
+    prism_meter_yaml = """
+        !obj:eemeter.meter.SequentialMeter {
+            sequence: [
+                !obj:eemeter.meter.FuelTypePresenceMeter {
+                    fuel_types: [electricity,natural_gas]
+                },
+                !obj:eemeter.meter.ConditionalMeter {
+                    condition_parameter: electricity_presence,
+                    success: !obj:eemeter.meter.SequentialMeter {
+                        sequence: [
+                            !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
+                                fuel_unit_str: "kWh",
+                                fuel_type: "electricity",
+                                temperature_unit_str: "degF",
+                                model: !obj:eemeter.models.PRISMModel &elec_model {
+                                    x0: [1.,1.,60],
+                                    bounds: [[0,100],[0,100],[55,65]],
+                                },
+                            },
+                            !obj:eemeter.meter.AnnualizedUsageMeter {
+                                fuel_type: "electricity",
+                                temperature_unit_str: "degF",
+                                model: *elec_model,
+                            },
+                        ],
+                        output_mapping: {
+                            temp_sensitivity_params: temp_sensitivity_params_electricity,
+                            annualized_usage: annualized_usage_electricity,
+                        },
+                    },
+                },
+                !obj:eemeter.meter.ConditionalMeter {
+                    condition_parameter: natural_gas_presence,
+                    success: !obj:eemeter.meter.SequentialMeter {
+                        sequence: [
+                            !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
+                                fuel_unit_str: "therms",
+                                fuel_type: "natural_gas",
+                                temperature_unit_str: "degF",
+                                model: !obj:eemeter.models.PRISMModel &gas_model {
+                                    x0: [1.,1.,60],
+                                    bounds: [[0,100],[0,100],[55,65]],
+                                },
+                            },
+                            !obj:eemeter.meter.AnnualizedUsageMeter {
+                                fuel_type: "natural_gas",
+                                temperature_unit_str: "degF",
+                                model: *gas_model,
+                            },
+                        ],
+                        output_mapping: {
+                            temp_sensitivity_params: temp_sensitivity_params_natural_gas,
+                            annualized_usage: annualized_usage_natural_gas,
+                        },
+                    },
+                },
+            ]
+        }
+    """
+    meter = load(prism_meter_yaml)
+    result = meter.evaluate(value=10)
+
+Another benefit to using structured YAML for meter specification is that the
+meter specifications can be stored externally as readable text files.
