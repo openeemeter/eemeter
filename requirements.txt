@@ -1,0 +1,9 @@
+-e git+https://github.com/philngo/ee-meter@969c489acec2409712abcd97d71cf9fdb20d473e#egg=OpenEEMeter-master
+Pint==0.6
+PyYAML==3.11
+numpy==1.9.1
+py==1.4.26
+pytest==2.6.4
+requests==2.5.1
+scipy==0.15.1
+wsgiref==0.1.2
