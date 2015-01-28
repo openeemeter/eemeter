@@ -2,7 +2,6 @@ from . import ureg, Q_
 from collections import defaultdict
 
 class DateRangeException(Exception): pass
-class InvalidFuelTypeException(Exception): pass
 
 class DatetimePeriod:
     def __init__(self, start, end):
