@@ -12,13 +12,19 @@ class ConsumptionGenerator:
         self.cool_base = heat_base
         self.cool_sensitivity = cool_sensitivity
 
-    def generate(self, weather_source, periods):
+    # noise is an instance of scipy.stats.rv_continuous, e.g. scipy.stats.normal()
+    # noise is additive and sampled independently for each period
+    def generate(self, weather_source, periods, noise = None):
         hdds = weather_source.get_hdd(periods, self.weather_unit_name, self.heat_base)
         cdds = weather_source.get_cdd(periods, self.weather_unit_name, self.cool_base)
 
         consumptions = []
         for i in range(len(periods)):
             u = hdds[i]*self.heat_sensitivity + cdds[i]*self.cool_sensitivity
+            
+            if noise != None:
+                u += noise.rvs()
+            
             c = Consumption(u, self.consumption_unit_name, self.fuel_type, periods[i].start, periods[i].end)
             consumptions.append(c)
 
