@@ -1,6 +1,5 @@
 from eemeter.consumption import Consumption
 from eemeter.consumption import DateRangeException
-from eemeter.consumption import InvalidFuelTypeException
 from eemeter.consumption import ConsumptionHistory
 
 from datetime import datetime
