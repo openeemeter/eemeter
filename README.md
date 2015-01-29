@@ -11,7 +11,7 @@ Installation
 
 Execute the following command to install:
 
-    $ pip install git+git://github.com/impactlab/ee-meter.git#egg=ee-meter
+    $ pip install git+git://github.com/impactlab/eemeter.git#egg=ee-meter
 
 Testing
 -------
@@ -19,7 +19,7 @@ Testing
 This library uses the py.test framework. To develop locally, clone the repo,
 and in a virtual environment execute the following commands:
 
-    $ git clone https://github.com/impactlab/ee-meter
+    $ git clone https://github.com/impactlab/eemeter
     $ cd eemeter
     $ pip install numpy scipy pytest
     $ python setup.py develop
