@@ -1,6 +1,7 @@
 import scipy.optimize as opt
 import numpy as np
 
+import inspect
 from itertools import chain
 
 class MeterBase(object):
@@ -55,6 +56,14 @@ class MeterBase(object):
     def evaluate_mapped_inputs(self,**kwargs):
         raise NotImplementedError
 
+    def get_inputs(self):
+        inputs = inspect.getargspec(self.evaluate_mapped_inputs).args[1:]
+        child_inputs = self._get_child_inputs()
+        return {self.__class__.__name__:{"inputs":inputs,"child_inputs":child_inputs}}
+
+    def _get_child_inputs(self):
+        return []
+
 class SequentialMeter(MeterBase):
     def __init__(self,sequence,**kwargs):
         super(self.__class__,self).__init__(**kwargs)
@@ -76,6 +85,12 @@ class SequentialMeter(MeterBase):
                 result[k] = v
         return result
 
+    def _get_child_inputs(self):
+        inputs = []
+        for meter in self.sequence:
+            inputs.append(meter.get_inputs())
+        return inputs
+
 class ConditionalMeter(MeterBase):
     def __init__(self,condition_parameter,success=None,failure=None,**kwargs):
         super(self.__class__,self).__init__(**kwargs)
@@ -94,6 +109,14 @@ class ConditionalMeter(MeterBase):
                 return {}
             else:
                 return self.failure.evaluate(**kwargs)
+
+    def _get_child_inputs(self):
+        inputs = {}
+        if self.success is not None:
+            inputs["success"] = self.success.get_inputs()
+        if self.failure is not None:
+            inputs["failure"] = self.success.get_inputs()
+        return inputs
 
 class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
     def __init__(self,fuel_unit_str,fuel_type,temperature_unit_str,model,**kwargs):
@@ -203,6 +226,6 @@ class DebugMeter(MeterBase):
         return {}
 
 class DummyMeter(MeterBase):
-    def evaluate_mapped_inputs(self,**kwargs):
-        result = {"result": kwargs["value"]}
+    def evaluate_mapped_inputs(self,value,**kwargs):
+        result = {"result": value}
         return result

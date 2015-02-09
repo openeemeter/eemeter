@@ -5,7 +5,11 @@ class PRISMMeter(MeterBase):
     """Implementation of Princeton Scorekeeping Method.
     """
 
-    def evaluate_mapped_inputs(self,**kwargs):
+    def __init__(self,**kwargs):
+        super(self.__class__, self).__init__(**kwargs)
+        self.meter = load(self._meter_yaml())
+
+    def _meter_yaml(self):
         meter_yaml = """
             !obj:eemeter.meter.SequentialMeter {
                 sequence: [
@@ -65,5 +69,10 @@ class PRISMMeter(MeterBase):
                 ]
             }
             """
-        meter = load(meter_yaml)
-        return meter.evaluate(**kwargs)
+        return meter_yaml
+
+    def evaluate_mapped_inputs(self,**kwargs):
+        return self.meter.evaluate(**kwargs)
+
+    def _get_child_inputs(self):
+        return self.meter.get_inputs()

@@ -1,4 +1,7 @@
 from eemeter.config.yaml_parser import load
+from eemeter.meter import DummyMeter
+from eemeter.meter import SequentialMeter
+from eemeter.meter import ConditionalMeter
 
 import pytest
 
@@ -110,3 +113,24 @@ def test_debug_meter():
         """
     meter = load(meter_yaml)
 
+def test_get_meter_input():
+    dummy_meter = DummyMeter()
+    assert dummy_meter.get_inputs() == {"DummyMeter":{"inputs":["value"],"child_inputs":[]}}
+
+    seq_meter = SequentialMeter(sequence=[DummyMeter(),DummyMeter()])
+    assert seq_meter.get_inputs() == {"SequentialMeter":
+            {"inputs": [],
+             "child_inputs": [
+                 {"DummyMeter":{"inputs":["value"],"child_inputs":[]}},
+                 {"DummyMeter":{"inputs":["value"],"child_inputs":[]}}
+             ]}}
+
+    cond_meter = ConditionalMeter(condition_parameter=(lambda x: True),success=DummyMeter(),failure=DummyMeter())
+    assert cond_meter.get_inputs() == {'ConditionalMeter':
+            {'child_inputs':
+                {'failure':
+                    {'DummyMeter': {'child_inputs': [], 'inputs': ['value']}},
+                 'success':
+                    {'DummyMeter': {'child_inputs': [],'inputs': ['value']}}},
+             'inputs': []
+             }}
