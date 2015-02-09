@@ -5,18 +5,17 @@ import inspect
 from itertools import chain
 
 class MeterBase(object):
-    def __init__(self,**kwargs):
-        if "input_mapping" in kwargs:
-            self.input_mapping = kwargs["input_mapping"]
-        else:
-            self.input_mapping = {}
-        if "output_mapping" in kwargs:
-            self.output_mapping = kwargs["output_mapping"]
-        else:
-            self.output_mapping = {}
+    def __init__(self,input_mapping={},output_mapping={},**kwargs):
+        self.input_mapping = input_mapping
+        self.output_mapping = output_mapping
 
     def evaluate(self,**kwargs):
         mapped_inputs = self.apply_input_mapping(kwargs)
+        inputs = self.get_inputs()[self.__class__.__name__]["inputs"]
+        for inpt in inputs:
+            if inpt not in mapped_inputs:
+                message = "expected argument '{}' for meter '{}'; got kwargs={} (with mapped_inputs={}) instead.".format(inpt,self.__class__.__name__,kwargs,mapped_inputs)
+                raise TypeError(message)
         result = self.evaluate_mapped_inputs(**mapped_inputs)
         mapped_outputs = self.apply_output_mapping(result)
         return mapped_outputs
