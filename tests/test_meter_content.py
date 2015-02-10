@@ -1,11 +1,12 @@
 from eemeter.config.yaml_parser import load
 from eemeter.consumption import ConsumptionHistory
+from eemeter.meter import BPI2400Meter
+
+import pytest
 from fixtures.consumption import consumption_history_1
 from fixtures.weather import gsod_722880_2012_2014_weather_source
 from fixtures.weather import tmy3_722880_weather_source
-
 from helpers import arrays_similar
-import pytest
 
 from datetime import datetime
 
@@ -213,3 +214,12 @@ def test_princeton_scorekeeping_method(consumption_history_1,
 
     assert result["electricity_presence"]
     assert not result["natural_gas_presence"]
+
+def test_bpi2400(consumption_history_1,
+                 tmy3_722880_weather_source):
+
+    meter = BPI2400Meter()
+    print meter.get_inputs()
+    result = meter.evaluate(consumption_history=consumption_history_1,
+                            weather_normal_source=tmy3_722880_weather_source)
+    assert result == {}

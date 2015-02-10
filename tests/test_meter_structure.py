@@ -2,6 +2,7 @@ from eemeter.config.yaml_parser import load
 from eemeter.meter import DummyMeter
 from eemeter.meter import SequentialMeter
 from eemeter.meter import ConditionalMeter
+from eemeter.meter import AndMeter
 
 import pytest
 
@@ -153,4 +154,26 @@ def test_sane_missing_input_error_messages():
     with pytest.raises(TypeError) as excinfo:
         seq_meter.evaluate(value_one=1)
     assert "expected argument 'value' for meter 'DummyMeter'; got kwargs={'result_one': 1, 'value_one': 1} (with mapped_inputs={'result_one': 1, 'value_one': 1}) instead." in excinfo.value
+
+def test_and_meter():
+    with pytest.raises(ValueError):
+        meter0 = AndMeter(inputs=[])
+
+    meter1 = AndMeter(inputs=["result_one"])
+    assert meter1.evaluate(result_one=True,result_two=True)["output"]
+
+    meter2 = AndMeter(inputs=["result_one","result_two"])
+    assert meter2.evaluate(result_one=True,result_two=True)["output"]
+    assert not meter2.evaluate(result_one=False,result_two=True)["output"]
+    assert not meter2.evaluate(result_one=True,result_two=False)["output"]
+    assert not meter2.evaluate(result_one=False,result_two=False)["output"]
+
+    meter3 = AndMeter(inputs=["result_one","result_two","result_three"])
+    with pytest.raises(ValueError):
+        assert meter3.evaluate(result_one=True,result_two=True)
+    assert meter3.evaluate(result_one=True,result_two=True,result_three=True)["output"]
+    assert not meter3.evaluate(result_one=True,result_two=True,result_three=False)["output"]
+    assert not meter3.evaluate(result_one=False,result_two=True,result_three=True)["output"]
+
+
 

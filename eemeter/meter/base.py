@@ -117,6 +117,24 @@ class ConditionalMeter(MeterBase):
             inputs["failure"] = self.success.get_inputs()
         return inputs
 
+class AndMeter(MeterBase):
+    def __init__(self,inputs,**kwargs):
+        super(self.__class__,self).__init__(**kwargs)
+        if len(inputs) == 0:
+            message = "requires at least one input."
+            raise ValueError(message)
+        self.inputs = inputs
+
+    def evaluate_mapped_inputs(self,**kwargs):
+        output = True
+        for inpt in self.inputs:
+            boolean = kwargs.get(inpt)
+            if boolean is None:
+                message = "could not find input '{}'".format(inpt)
+                raise ValueError(message)
+            output = output and boolean
+        return {"output": output}
+
 class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
     def __init__(self,fuel_unit_str,fuel_type,temperature_unit_str,model,**kwargs):
         super(self.__class__,self).__init__(**kwargs)
