@@ -1,3 +1,9 @@
+#!/usr/bin/python
+
+# Usage generate_portfolio [OUTDIR]
+# This script will generate projects projects, customers and consumption data
+# And output corresponding csv files in the specified directory
+
 from eemeter import generator
 from datetime import datetime
 from eemeter.consumption import DatetimePeriod
