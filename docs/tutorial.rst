@@ -65,15 +65,12 @@ near Chicago, IL, by providing a station identifier.
 
     ohare_weather_station_id = "725347"
 
-    # This directory must contain a file called "725347TY.csv"
-    path_to_tmy3_directory = "path/to/folder/"
-
     # Collect data from 2012 to 2014, inclusive.
     # (It may take a moment to collect this data - weather-data caching is soon to come!)
     ohare_weather_source = GSODWeatherSource(ohare_weather_station_id, 2012, 2014)
 
     # Collect TMY3 weather normals
-    ohare_weather_normals = TMY3WeatherSource(ohare_weather_station_id, path_to_tmy3_directory))
+    ohare_weather_normals = TMY3WeatherSource(ohare_weather_station_id))
 
 This function to makes some datetime periods that can be used as the billing
 periods. Note that there will also be generators for data at higher sampling

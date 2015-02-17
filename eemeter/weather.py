@@ -199,16 +199,16 @@ class ISDWeatherSource(WeatherSourceBase):
             self._data[line[15:25]] = air_temperature
 
 class TMY3WeatherSource(WeatherSourceBase):
-    def __init__(self,station_id,directory):
+    def __init__(self,station_id):
         self.station_id = station_id
         self._data = {}
         self._source_unit = ureg.degC
-        with open(os.path.join(directory,"{}TY.csv".format(station_id)),'r') as f:
-            lines = f.readlines()[2:]
-            for line in lines[1:]:
-                row = line.split(",")
-                date_string = row[0][0:2] + row[0][3:5] + row[1][0:2] # MMDDHH
-                self._data[date_string] = Q_(float(row[31]),self._source_unit)
+        r = requests.get("http://rredc.nrel.gov/solar/old_data/nsrdb/1991-2005/data/tmy3/{}TYA.CSV".format(station_id))
+
+        for line in r.text.splitlines()[3:]:
+            row = line.split(",")
+            date_string = row[0][0:2] + row[0][3:5] + row[1][0:2] # MMDDHH
+            self._data[date_string] = Q_(float(row[31]),self._source_unit)
 
     def get_consumption_average_temperature(self,consumption,unit):
         """Gets the normal average temperature during a particular Consumption

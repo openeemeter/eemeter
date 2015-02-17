@@ -11,4 +11,4 @@ def gsod_722880_2012_2014_weather_source():
 
 @pytest.fixture(scope="session")
 def tmy3_722880_weather_source():
-    return TMY3WeatherSource('722880',os.environ.get("TMY3_DIRECTORY"))
+    return TMY3WeatherSource('722880')
