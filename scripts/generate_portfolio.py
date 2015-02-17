@@ -4,65 +4,115 @@
 # This script will generate projects projects, customers and consumption data
 # And output corresponding csv files in the specified directory
 
-from eemeter import generator
-from datetime import datetime
-from eemeter.consumption import DatetimePeriod
-from eemeter.weather import TMY3WeatherSource
+from eemeter.generator import ProjectGenerator
+from eemeter.generator import generate_periods
+from eemeter.weather import GSODWeatherSource
+from eemeter.models import DoubleBalancePointModel
+from eemeter.models import PRISMModel
 
-import os
-import itertools
+from datetime import datetime
+from datetime import timedelta
+
 from scipy.stats import uniform
 import pandas as pd
-import sys
 
-outdir = sys.argv[1]
+import os
+import uuid
+import random
+import argparse
 
-# initialize periods, projects, portolio
-periods1 = [DatetimePeriod(datetime(2011,i,1), datetime(2011,i+1,1)) for i in range(1,11)] # monthly 2011
-periods2 = [DatetimePeriod(datetime(2012,i,1), datetime(2012,i+1,1)) for i in range(1,11)] # monthly 2012
+from itertools import chain, repeat
 
-project1 = generator.ProjectGenerator("Pasadena", 5, "electricity", "J", "degF", 
-                           uniform(loc=60, scale=10), uniform(loc=.5,scale=1), 
-                           uniform(loc=75, scale=10), uniform(loc=.5, scale=1),
-                           uniform(loc=5, scale=5))
 
-project2 = generator.ProjectGenerator("Chicago", 10, "gas", "J", "degF", 
-                           uniform(loc=60, scale=5), uniform(loc=.5,scale=1), 
-                           uniform(loc=0, scale=0), uniform(loc=0, scale=0),
-                           uniform(loc=5, scale=5))
+if __name__ == "__main__":
 
-portfolio = generator.PortfolioGenerator("My Project", [project1, project2])
+    parser = argparse.ArgumentParser(description='Generate a portfolio of projects.')
+    parser.add_argument('n_projects', type=int, help='number of projects in portfolio.')
+    parser.add_argument('start_date', type=str, help='start date of earliest consumption period (YYYY-MM-DD).')
+    parser.add_argument('outdir', type=str, help='directory in which to write CSV output.')
+    parser.add_argument('weather_station', type=str, help='weather station from which to pull temperature data. (e.g. 725300)')
+    args = parser.parse_args()
 
-# write projects csv
-projects = pd.DataFrame({'name': [p.name for p in portfolio.projects],
-              'fuel_type': [p.fuel_type for p in portfolio.projects],
-              'consumption_unit_name': [p.consumption_unit_name for p in portfolio.projects]})
-projects.index.name = 'id'
+    electricity_model = DoubleBalancePointModel()
+    gas_model = PRISMModel()
 
-projects.to_csv(os.path.join(outdir, 'projects.csv'))
+    electricity_param_distributions = (
+            uniform(loc=1, scale=.5),
+            uniform(loc=1, scale=.5),
+            uniform(loc=5, scale=5),
+            uniform(loc=62, scale=5),
+            uniform(loc=2, scale=5))
+    electricity_param_delta_distributions = (
+            uniform(loc=-.2,scale=.3),
+            uniform(loc=-.2, scale=.3),
+            uniform(loc=-2, scale=3),
+            uniform(loc=0, scale=0),
+            uniform(loc=0, scale=0))
+    gas_param_distributions = (
+            uniform(loc=62, scale=3),
+            uniform(loc=5, scale=5),
+            uniform(loc=1, scale=.5))
+    gas_param_delta_distributions = (
+            uniform(loc=0, scale=0),
+            uniform(loc=-2, scale=3),
+            uniform(loc=-.2,scale=.3))
 
-# write customers csv
-project_customer_ids = []
-project_ids = []
+    generator = ProjectGenerator(electricity_model, gas_model,
+                                 electricity_param_distributions,electricity_param_delta_distributions,
+                                 gas_param_distributions,gas_param_delta_distributions)
 
-for i in range(len(portfolio.projects)):
-    for j in range(portfolio.projects[i].n_homes):
-        project_ids.append(i)
-        project_customer_ids.append(j)
-    
-customers = pd.DataFrame({'project_customer_id': project_customer_ids, 'project_id' : project_ids})
-customers.index.name = 'id'
+    start_date = datetime.strptime(args.start_date,"%Y-%m-%d")
+    n_days = (datetime.now() - start_date).days
+    if n_days < 30:
+        message = "start_date ({}) must be at least 30 days before today".format(start_date)
+        raise ValueError(message)
 
-customers.to_csv(os.path.join(outdir, 'customers.csv'))
+    weather_source = GSODWeatherSource(args.weather_station,start_date.year,datetime.now().year)
 
-# initialize weather
-pasadena = TMY3WeatherSource('722880',os.environ.get("TMY3_DIRECTORY"))
-chicago = TMY3WeatherSource('725300',os.environ.get("TMY3_DIRECTORY"))
+    project_data = []
+    consumption_data = []
+    for _ in range(args.n_projects):
+        elec_periods = generate_periods(start_date,datetime.now())
+        gas_periods = generate_periods(start_date,datetime.now())
 
-consumptions = portfolio.generate([pasadena, chicago], [periods1, periods2], [None, None])
+        retrofit_start_date = start_date + timedelta(days=random.randint(0,n_days-30))
+        retrofit_completion_date = retrofit_start_date + timedelta(days=30)
 
-c = list(itertools.chain.from_iterable([[id, c.start, c.end, c.to("J")] for c in consumptions[id]] for id in range(len(consumptions))))
+        electricity_noise = None
+        gas_noise = None
 
-consumption = pd.DataFrame(c, columns=['customer_id', 'start', 'end', 'joules'])
-consumption.index.name = 'id'
-consumption.to_csv(os.path.join(outdir, 'consumption.csv'))
+        elec_consumption, gas_consumption = generator.generate(weather_source, elec_periods, gas_periods,
+                                                           retrofit_start_date, retrofit_completion_date,
+                                                           electricity_noise,gas_noise)
+        custom_id = uuid.uuid4()
+
+        p_data = {
+            "id": custom_id,
+            "retrofit_start_date": retrofit_start_date,
+            "retrofit_completion_date": retrofit_completion_date,
+            }
+        project_data.append(p_data)
+
+        for c,unit_name in chain(zip(elec_consumption,repeat("kWh")),zip(gas_consumption,repeat("therm"))):
+            c_data = {
+                    "project_id": custom_id,
+                    "fuel_type": c.fuel_type,
+                    "unit_name": unit_name,
+                    "quantity": c.to(unit_name),
+                    "start_date": c.start,
+                    "end_date": c.end,
+                    }
+            consumption_data.append(c_data)
+
+    # write projects csv
+    projects = pd.DataFrame({
+        'id': [p["id"] for p in project_data],
+        'retrofit_start_date': [p["retrofit_start_date"] for p in project_data],
+        'retrofit_completion_date': [p["retrofit_completion_date"] for p in project_data],
+        'weather_station': [args.weather_station for _ in project_data],
+        })
+    projects.to_csv(os.path.join(args.outdir, 'projects.csv'),index=False)
+
+    # write consumptions.csv
+    consumptions = pd.DataFrame(consumption_data)
+    consumptions.to_csv(os.path.join(args.outdir, 'consumptions.csv'),index=False)
