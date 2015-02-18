@@ -142,7 +142,7 @@ class AnnualizedUsageMeter(MeterBase):
         daily_temps = weather_normal_source.annual_daily_temperatures(self.temperature_unit_str)
         usage_estimates = self.model.compute_usage_estimates(temp_sensitivity_params,daily_temps)
         annualized_usage = np.sum(usage_estimates)
-        return {"annualized_usage":annualized_usage }
+        return {"annualized_usage": annualized_usage}
 
 class PrePostMeter(MeterBase):
     def __init__(self,meter,splittable_args,**kwargs):

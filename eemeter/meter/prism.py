@@ -25,8 +25,8 @@ class PRISMMeter(MeterBase):
                                     fuel_type: "electricity",
                                     temperature_unit_str: "degF",
                                     model: !obj:eemeter.models.PRISMModel &elec_model {
-                                        x0: [1.,1.,60],
-                                        bounds: [[0,100],[0,100],[55,65]],
+                                        x0: [60,1.,1.],
+                                        bounds: [[55,65][0,100],[0,100]],
                                     },
                                 },
                                 !obj:eemeter.meter.AnnualizedUsageMeter {
@@ -50,8 +50,8 @@ class PRISMMeter(MeterBase):
                                     fuel_type: "natural_gas",
                                     temperature_unit_str: "degF",
                                     model: !obj:eemeter.models.PRISMModel &gas_model {
-                                        x0: [1.,1.,60],
-                                        bounds: [[0,100],[0,100],[55,65]],
+                                        x0: [60,1.,1.],
+                                        bounds: [[55,65],[0,100],[0,100]],
                                     },
                                 },
                                 !obj:eemeter.meter.AnnualizedUsageMeter {
