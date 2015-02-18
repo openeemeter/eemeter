@@ -63,7 +63,7 @@ class ProjectGenerator:
                 self.gas_model, self.gas_param_dists,
                 self.gas_param_delta_dists, gas_noise,
                 retrofit_start_date, retrofit_completion_date,
-                "gas", "therm", self.temperature_unit_name)
+                "natural_gas", "therm", self.temperature_unit_name)
 
         return electricity_consumptions, gas_consumptions
 
