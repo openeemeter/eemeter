@@ -26,7 +26,7 @@ class PRISMMeter(MeterBase):
                                     temperature_unit_str: "degF",
                                     model: !obj:eemeter.models.PRISMModel &elec_model {
                                         x0: [60,1.,1.],
-                                        bounds: [[55,65][0,100],[0,100]],
+                                        bounds: [[55,65],[0,100],[0,100]],
                                     },
                                 },
                                 !obj:eemeter.meter.AnnualizedUsageMeter {
