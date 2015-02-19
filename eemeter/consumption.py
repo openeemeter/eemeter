@@ -4,6 +4,10 @@ from collections import defaultdict
 class DateRangeException(Exception): pass
 
 class DatetimePeriod:
+    """Class to represents a period of time with a start and an end. Used as the
+    Base class for consumptions. When `DatetimePeriod`s are compared, they are
+    compared by end time (because bills come at the end of the month).
+    """
     def __init__(self, start, end):
         self.start = start
         self.end = end
@@ -66,9 +70,16 @@ class Consumption(DatetimePeriod):
         return (self.joules * ureg.joules).to(ureg.parse_expression(unit)).magnitude
 
     def average_daily_usage(self,unit):
+        """Returns average daily usage over the period in the energy
+        unit supplied in `unit`.
+        """
         return (self.joules * ureg.joules / self.timedelta.days).to(ureg.parse_expression(unit)).magnitude
 
 class ConsumptionHistory:
+    """Represents energy usage attributed to a single property or project.
+    Separates usage by `fuel_type` and provides commonly-used filters and
+    iterators over its data. Often used as inputs to meters.
+    """
     def __init__(self,consumptions):
         self._data = {}
         for consumption in consumptions:
@@ -93,6 +104,9 @@ class ConsumptionHistory:
         return len(self._data.keys()) > 0
 
     def after(self,dt):
+        """Returns a ConsumptionHistory object containing all consumptions
+        which have start datetimes on or after the given datetime.
+        """
         consumptions = []
         for item in self.iteritems():
             if item.start >= dt:
@@ -100,6 +114,9 @@ class ConsumptionHistory:
         return ConsumptionHistory(consumptions)
 
     def before(self,dt):
+        """Returns a ConsumptionHistory object containing all consumptions
+        which have end datetimes on or before the given datetime.
+        """
         consumptions = []
         for item in self.iteritems():
             if item.end <= dt:
@@ -123,8 +140,8 @@ class ConsumptionHistory:
                 yield consumption
 
     def fuel_types(self):
-        """Iterates over (fuel_type,consumptions) pairs, in which fuel_type is
-        the string name of a fuel_type and consumptions is a list of all
-        consumption with that particular fuel type.
+        """Iterates over (fuel_type,consumptions) pairs in no particular order,
+        in which fuel_type is the string name of a fuel_type and consumptions
+        is a list of all consumption with that particular fuel type.
         """
         return self._data.iteritems()
