@@ -5,8 +5,8 @@ class DateRangeException(Exception): pass
 
 class DatetimePeriod:
     """Class to represents a period of time with a start and an end. Used as the
-    Base class for consumptions. When `DatetimePeriod`s are compared, they are
-    compared by end time (because bills come at the end of the month).
+    Base class for consumptions. When `DatetimePeriod` instances are compared,
+    they are compared by end time (because bills come at the end of the month).
     """
     def __init__(self, start, end):
         self.start = start

@@ -38,19 +38,20 @@ class HDDCDDBalancePointModel(ModelBase):
     def compute_usage_estimates(params,observed_daily_temps):
         """Returns usage estimates for a combined, dual balance point,
         heating/cooling degree day model. Parameters are given in the form
-        `params=(ts_low,ts_high,base_load,bp_low,bp_diff)`, in which:
+        `params = (ts_low, ts_high, base_load, bp_low, bp_diff)`, in which:
 
-            - `ts_low` is the (generally positive) temperature sensitivity
-            (units: usage per hdd) beyond the lower (heating degree day)
-            balance point
-            - `ts_high` is the (generally positive) temperature sensitivity
-            (units: usage per cdd) beyond the upper (cooling degree day balance
-            point
-            - `base_load` is the daily non-temperature-related usage
-            - `bp_low` is the reference temperature of the lower (hdd) balance
-            point
-            - bd_diff is the (generally positive) difference between the
-            implicitly defined `bp_high` and bp_low
+        - `ts_low` is the (generally positive) temperature sensitivity
+          (units: usage per hdd) beyond the lower (heating degree day)
+          balance point
+        - `ts_high` is the (generally positive) temperature sensitivity
+          (units: usage per cdd) beyond the upper (cooling degree day balance
+          point
+        - `base_load` is the daily non-temperature-related usage
+        - `bp_low` is the reference temperature of the lower (hdd) balance
+          point
+        - bd_diff is the (generally positive) difference between the
+          implicitly defined `bp_high` and `bp_low`
+
         """
         # get parameters
         ts_low,ts_high,base_load,bp_low,bp_diff = params
@@ -85,16 +86,17 @@ class HDDBalancePointModel(ModelBase):
     def compute_usage_estimates(params,observed_daily_temps):
         """Returns usage estimates for a simple single balance point, heating
         degree day model. Parameters are given in the form
-        `params=(reference_temperature,base_level_consumption,heating_slope)`,
-        in which:
+        `params = (reference_temperature, base_level_consumption,
+        heating_slope)`, in which:
 
-            - `reference_temperature` is the temperature base of the heating
-            degree day balance point
-            - `base_level_consumption` is the daily non-temperature-related
-            usage
-            - `heating_slope` is the (generally positive) temperature
-            sensitivity (units: usage per hdd) beyond the heating degree day
-            reference temperature
+        - `reference_temperature` is the temperature base of the heating
+          degree day balance point
+        - `base_level_consumption` is the daily non-temperature-related
+          usage
+        - `heating_slope` is the (generally positive) temperature
+          sensitivity (units: usage per hdd) beyond the heating degree day
+          reference temperature
+
         """
         # get parameters
         reference_temperature,base_level_consumption,heating_slope = params
@@ -112,7 +114,8 @@ class HDDBalancePointModel(ModelBase):
             hdds.append(hdd)
             base_loads.append(bl)
 
-        estimates = np.array([bl + heating_slope*hdd for hdd,bl in zip(hdds,base_loads)])
+        estimates = np.array([bl + heating_slope*hdd
+                              for hdd,bl in zip(hdds,base_loads)])
 
         return estimates
 
@@ -122,16 +125,17 @@ class CDDBalancePointModel(ModelBase):
     def compute_usage_estimates(params,observed_daily_temps):
         """Returns usage estimates for a simple single balance point, heating
         degree day model. Parameters are given in the form
-        `params=(reference_temperature,base_level_consumption,cooling_slope)`,
-        in which:
+        `params = (reference_temperature, base_level_consumption,
+        cooling_slope)`, in which:
 
-            - `reference_temperature` is the temperature base of the cooling
-            degree day balance point
-            - `base_level_consumption` is the daily non-temperature-related
-            usage
-            - `cooling_slope` is the (generally positive) temperature
-            sensitivity (units: usage per cdd) beyond the cooling degree day
-            reference temperature
+        - `reference_temperature` is the temperature base of the cooling
+          degree day balance point
+        - `base_level_consumption` is the daily non-temperature-related
+          usage
+        - `cooling_slope` is the (generally positive) temperature
+          sensitivity (units: usage per cdd) beyond the cooling degree day
+          reference temperature
+
         """
         # get parameters
         reference_temperature,base_level_consumption,cooling_slope = params
@@ -149,6 +153,7 @@ class CDDBalancePointModel(ModelBase):
             cdds.append(cdd)
             base_loads.append(bl)
 
-        estimates = np.array([bl + cooling_slope*cdd for cdd,bl in zip(cdds,base_loads)])
+        estimates = np.array([bl + cooling_slope*cdd
+                              for cdd,bl in zip(cdds,base_loads)])
 
         return estimates
