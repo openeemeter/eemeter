@@ -32,8 +32,9 @@ class DatetimePeriod:
 
 class Consumption(DatetimePeriod):
     """Represents energy usage. Each instance has start and end datetimes, a
-    particular unit (although it is stored internally as joules), a fuel type,
-    and whether or not it is estimated.
+    particular unit (although it is stored internally as joules), a string
+    identifying a `fuel_type` and whether or not it is estimated. (Sometimes
+    estimated bills are treated differently).
     """
 
     def __init__(self,usage,unit_name,fuel_type,start,end,estimated=False):
@@ -125,9 +126,9 @@ class ConsumptionHistory:
 
     def get(self,fuel_type):
         """Returns an array (not necessarily sorted) of Consumption instances
-        given a particular fuel_type. Fuel type may be specified as a string
-        matching the name of a particular fuel type, or by a fuel type
-        instance.
+        given a particular fuel_type. Fuel type should be specified as a
+        string such as `"electricity"` or `"natural_gas"`. Returns `None` if
+        no matching `Consumption` instannces are found.
         """
         return self._data.get(fuel_type)
 
@@ -141,7 +142,8 @@ class ConsumptionHistory:
 
     def fuel_types(self):
         """Iterates over (fuel_type,consumptions) pairs in no particular order,
-        in which fuel_type is the string name of a fuel_type and consumptions
-        is a list of all consumption with that particular fuel type.
+        in which fuel_type is the string reprenting a fuel_type (such as
+        `"electricity"` or `"natural_gas"`) and consumptions is a list of all
+        Consumption instances with that particular fuel type.
         """
         return self._data.iteritems()
