@@ -1,6 +1,9 @@
 from consumption import Consumption
 from datetime import timedelta
 from eemeter.consumption import DatetimePeriod
+
+from eemeter.meter import AnnualizedUsageMeter
+
 import random
 import numpy as np
 
@@ -47,27 +50,28 @@ class ProjectGenerator:
         self.gas_param_delta_dists = gas_param_delta_distributions
         self.temperature_unit_name = temperature_unit_name
 
-    def generate(self, weather_source, electricity_periods, gas_periods,
+    def generate(self, weather_source, weather_normal_source, electricity_periods, gas_periods,
             retrofit_start_date, retrofit_completion_date,
             electricity_noise=None,gas_noise=None):
 
-        electricity_consumptions = self._generate_fuel_consumptions(
-                weather_source, electricity_periods,
+        electricity_consumptions, estimated_electricity_savings = self._generate_fuel_consumptions(
+                weather_source, weather_normal_source, electricity_periods,
                 self.electricity_model, self.elec_param_dists,
                 self.elec_param_delta_dists, electricity_noise,
                 retrofit_start_date, retrofit_completion_date,
                 "electricity", "kWh", self.temperature_unit_name)
 
-        gas_consumptions = self._generate_fuel_consumptions(
-                weather_source, gas_periods,
+        gas_consumptions, estimated_gas_savings = self._generate_fuel_consumptions(
+                weather_source, weather_normal_source, gas_periods,
                 self.gas_model, self.gas_param_dists,
                 self.gas_param_delta_dists, gas_noise,
                 retrofit_start_date, retrofit_completion_date,
                 "natural_gas", "therm", self.temperature_unit_name)
 
-        return electricity_consumptions, gas_consumptions
 
-    def _generate_fuel_consumptions(self, weather_source, periods,
+        return electricity_consumptions, gas_consumptions, estimated_electricity_savings, estimated_gas_savings
+
+    def _generate_fuel_consumptions(self, weather_source, weather_normal_source, periods,
             model, param_dists, param_delta_dists, noise,
             retrofit_start_date, retrofit_completion_date,
             fuel_type, consumption_unit_name, temperature_unit_name):
@@ -76,11 +80,15 @@ class ProjectGenerator:
         param_deltas = np.array([pd.rvs() for pd in param_delta_dists])
         post_params = pre_params + param_deltas
 
+        annualized_usage_meter = AnnualizedUsageMeter(temperature_unit_name,model)
+        pre_annualized_usage = annualized_usage_meter.evaluate(temp_sensitivity_params=pre_params,weather_normal_source=weather_normal_source)["annualized_usage"]
+        post_annualized_usage = annualized_usage_meter.evaluate(temp_sensitivity_params=post_params,weather_normal_source=weather_normal_source)["annualized_usage"]
+        estimated_annualized_savings = pre_annualized_usage - post_annualized_usage
+
         pre_generator = ConsumptionGenerator(fuel_type, consumption_unit_name,
                 temperature_unit_name, model, pre_params)
         post_generator = ConsumptionGenerator(fuel_type, consumption_unit_name,
                 temperature_unit_name, model, post_params)
-
 
         pre_consumptions = pre_generator.generate(weather_source, periods, noise)
         post_consumptions = post_generator.generate(weather_source, periods, noise)
@@ -99,7 +107,7 @@ class ProjectGenerator:
 
             final_consumptions.append(consumption)
 
-        return final_consumptions
+        return final_consumptions, estimated_annualized_savings
 
 def generate_periods(start_datetime,end_datetime,period_length_mean=timedelta(days=30),period_jitter=timedelta(days=1),jitter_intensity=3):
     assert start_datetime < end_datetime

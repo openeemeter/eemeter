@@ -7,6 +7,7 @@
 from eemeter.generator import ProjectGenerator
 from eemeter.generator import generate_periods
 from eemeter.weather import GSODWeatherSource
+from eemeter.weather import TMY3WeatherSource
 from eemeter.models import DoubleBalancePointModel
 from eemeter.models import PRISMModel
 
@@ -68,6 +69,7 @@ if __name__ == "__main__":
         raise ValueError(message)
 
     weather_source = GSODWeatherSource(args.weather_station,start_date.year,datetime.now().year)
+    weather_normal_source = TMY3WeatherSource(args.weather_station)
 
     project_data = []
     consumption_data = []
@@ -81,7 +83,8 @@ if __name__ == "__main__":
         electricity_noise = None
         gas_noise = None
 
-        elec_consumption, gas_consumption = generator.generate(weather_source, elec_periods, gas_periods,
+        elec_consumption, gas_consumption, estimated_elec_savings,\
+                estimated_gas_savings = generator.generate(weather_source, weather_normal_source, elec_periods, gas_periods,
                                                            retrofit_start_date, retrofit_completion_date,
                                                            electricity_noise,gas_noise)
         custom_id = uuid.uuid4()
@@ -90,6 +93,8 @@ if __name__ == "__main__":
             "id": custom_id,
             "retrofit_start_date": retrofit_start_date,
             "retrofit_completion_date": retrofit_completion_date,
+            "estimated_elec_savings": estimated_elec_savings,
+            "estimated_gas_savings": estimated_gas_savings,
             }
         project_data.append(p_data)
 
@@ -109,6 +114,8 @@ if __name__ == "__main__":
         'id': [p["id"] for p in project_data],
         'retrofit_start_date': [p["retrofit_start_date"] for p in project_data],
         'retrofit_completion_date': [p["retrofit_completion_date"] for p in project_data],
+        'estimated_elec_savings': [p["estimated_elec_savings"] for p in project_data],
+        'estimated_gas_savings': [p["estimated_gas_savings"] for p in project_data],
         'weather_station': [args.weather_station for _ in project_data],
         })
     projects.to_csv(os.path.join(args.outdir, 'projects.csv'),index=False)
