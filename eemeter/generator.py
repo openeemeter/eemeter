@@ -8,6 +8,10 @@ import random
 import numpy as np
 
 class ConsumptionGenerator:
+    """Class for generating consumptions given a particular model, parameters,
+    and weather data. Useful for testing meters or meter deployments before
+    observed project data becomes available.
+    """
     def __init__(self, fuel_type, consumption_unit_name, temperature_unit_name,
             model, params):
         self.fuel_type = fuel_type
@@ -18,10 +22,12 @@ class ConsumptionGenerator:
         self.params = params
 
     def generate(self, weather_source, periods, noise=None):
-        """
-        `noise` is an instance of scipy.stats.rv_continuous, e.g. scipy.stats.normal()
-        noise is additive and sampled independently for each period
+        """Returns a list of consumption instances given a particular weather
+        source and a list of DatetimePeriod instances.
 
+        `noise` should be an instance of scipy.stats.rv_continuous,
+        e.g. scipy.stats.normal(). Noise is additive and sampled independently
+        for each period.
         """
         period_daily_temps = weather_source.get_daily_temperatures(periods,self.temperature_unit_name)
 
@@ -38,6 +44,10 @@ class ConsumptionGenerator:
         return consumptions
 
 class ProjectGenerator:
+    """Class for generating complete projects given a particular parameter
+    distributions and weather data. Useful for testing meters or meter
+    deployments before observed project data becomes available.
+    """
     def __init__(self, electricity_model, gas_model,
             electricity_param_distributions, electricity_param_delta_distributions,
             gas_param_distributions, gas_param_delta_distributions,
@@ -53,6 +63,9 @@ class ProjectGenerator:
     def generate(self, weather_source, weather_normal_source, electricity_periods, gas_periods,
             retrofit_start_date, retrofit_completion_date,
             electricity_noise=None,gas_noise=None):
+        """Returns a simple simulated project consisting of generated
+        electricity and gas consumptions and estimated savings for each.
+        """
 
         electricity_consumptions, estimated_electricity_savings = self._generate_fuel_consumptions(
                 weather_source, weather_normal_source, electricity_periods,
@@ -110,6 +123,9 @@ class ProjectGenerator:
         return final_consumptions, estimated_annualized_savings
 
 def generate_periods(start_datetime,end_datetime,period_length_mean=timedelta(days=30),period_jitter=timedelta(days=1),jitter_intensity=3):
+    """Returns an array of random, variable-length DatetimePeriods for more
+    realistic simulation of projects and portfolios.
+    """
     assert start_datetime < end_datetime
     periods = []
     previous_datetime = start_datetime
