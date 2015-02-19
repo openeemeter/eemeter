@@ -288,7 +288,13 @@ def nrel_tmy3_station_from_lat_long(lat,lng,api_key):
     station for a particular lat/long. Requires a (freely available) API key.
     """
     result = requests.get('http://developer.nrel.gov/api/solar/data_query/v1.json?api_key={}&lat={}&lon={}'.format(api_key,lat,lng))
-    return result.json()['outputs']['tmy3']['id'][2:]
+    result_json = result.json()
+    if result_json["errors"] == []:
+        if result_json['outputs']['tmy3'] is None:
+            return None
+        return result_json['outputs']['tmy3']['id'][2:]
+    else:
+        raise ValueError(result_json["errors"][0])
 
 def ziplocate_us(zipcode):
     """Use the Ziplocate API to find the population-weighted lat/long centroid
