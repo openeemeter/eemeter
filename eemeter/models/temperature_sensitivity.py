@@ -71,3 +71,27 @@ class HDDBalancePointModel(ModelBase):
         estimates = np.array([bl + heating_slope*hdd for hdd,bl in zip(hdds,base_loads)])
 
         return estimates
+
+class CDDBalancePointModel(ModelBase):
+
+    @staticmethod
+    def compute_usage_estimates(params,observed_daily_temps):
+        # get parameters
+        reference_temperature,base_level_consumption,cooling_slope = params
+
+        cdds = []
+        base_loads = []
+        for interval_daily_temps in observed_daily_temps:
+            cdd = 0
+            bl = 0
+            for daily_temp in interval_daily_temps:
+                if not np.isnan(daily_temp):
+                    if daily_temp >= reference_temperature:
+                        cdd += daily_temp - reference_temperature
+                bl += base_level_consumption
+            cdds.append(cdd)
+            base_loads.append(bl)
+
+        estimates = np.array([bl + cooling_slope*cdd for cdd,bl in zip(cdds,base_loads)])
+
+        return estimates
