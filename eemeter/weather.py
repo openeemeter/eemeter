@@ -12,8 +12,8 @@ from pkg_resources import resource_stream
 
 class WeatherSourceBase:
     def get_average_temperature(self,consumptions,unit_name):
-        """Returns a list of floats containing the average temperature during
-        each consumption period.
+        """Returns a list of average temperatures of each consumption period in
+        the given unit (usually "degF" or "degC").
         """
         unit = ureg.parse_expression(unit_name)
         avg_temps = []
@@ -22,10 +22,18 @@ class WeatherSourceBase:
         return avg_temps
 
     def get_consumption_average_temperature(self,consumption,unit):
+        """Returns the average temperature during the duration of a single
+        Consumption instance as calculated by taking the mean of daily average
+        temperatures.
+        """
         avg_temps = self.get_consumption_daily_temperatures(consumption,unit)
         return np.mean(avg_temps)
 
     def get_daily_temperatures(self,consumptions,unit_name):
+        """Returns, for each consumption, a list of average daily temperatures
+        observed during the duration of that consumption period. Return value
+        is a list of lists of temperatures.
+        """
         unit = ureg.parse_expression(unit_name)
         daily_temps = []
         for consumption in consumptions:
@@ -33,6 +41,10 @@ class WeatherSourceBase:
         return daily_temps
 
     def get_consumption_daily_temperatures(self,consumption,unit):
+        """Returns, for a particular consumption instance, a list of average
+        daily temperatures observed during the duration of that consumption
+        period. Result is a list of temperatures.
+        """
         avg_temps = []
         for days in xrange(consumption.timedelta.days):
             day = consumption.start + timedelta(days=days)
@@ -40,10 +52,16 @@ class WeatherSourceBase:
             avg_temps.append(temp)
         return avg_temps
 
-    def get_daily_average_temperature(self,consumption,unit):
+    def get_daily_average_temperature(self,day,unit):
+        """Should return the average temperature of the given day. Must be
+        implemented by inheriting classes.
+        """
         raise NotImplementedError
 
     def get_hdd(self,consumptions,unit_name,base):
+        """Returns, for each consumption, the total heating degree days
+        observed during the consumption period.
+        """
         unit = ureg.parse_expression(unit_name)
         hdds = []
         for consumption in consumptions:
@@ -51,6 +69,9 @@ class WeatherSourceBase:
         return hdds
 
     def get_consumption_hdd(self,consumption,unit,base):
+        """Returns the total heating degree days observed during the
+        consumption period.
+        """
         total_hdd = 0.
         for days in xrange(consumption.timedelta.days):
             day = consumption.start + timedelta(days=days)
@@ -60,6 +81,9 @@ class WeatherSourceBase:
         return total_hdd
 
     def get_cdd(self,consumptions,unit_name,base):
+        """Returns, for each consumption, the total cooling degree days
+        observed during the consumption period.
+        """
         unit = ureg.parse_expression(unit_name)
         cdds = []
         for consumption in consumptions:
@@ -67,6 +91,9 @@ class WeatherSourceBase:
         return cdds
 
     def get_consumption_cdd(self,consumption,unit,base):
+        """Returns the total cooling degree days observed during the
+        consumption period.
+        """
         total_cdd = 0.
         for days in xrange(consumption.timedelta.days):
             day = consumption.start + timedelta(days=days)
@@ -109,7 +136,8 @@ class GSODWeatherSource(WeatherSourceBase):
         ftp.quit()
 
     def get_daily_average_temperature(self,day,unit):
-        """Gets the average temperature during a particular day.
+        """Returns the average temperature on the given day. `day` can be
+        either a python `date` or a python `datetime` instance.
         """
         return self._data[day.strftime("%Y%m%d")].to(unit).magnitude
 
@@ -168,7 +196,9 @@ class ISDWeatherSource(WeatherSourceBase):
         return np.mean(masked_data)
 
     def get_daily_average_temperature(self,day,unit):
-        """Returns hourly average temperature.
+        """Returns the average temperature on the given day. `day` can be
+        either a python `date` or a python `datetime` instance. Calculated by
+        averaging hourly temperatures for the given day.
         """
         null = Q_(float("nan"),self._source_unit)
         day_str = day.strftime("%Y%m%d")
@@ -210,24 +240,10 @@ class TMY3WeatherSource(WeatherSourceBase):
             date_string = row[0][0:2] + row[0][3:5] + row[1][0:2] # MMDDHH
             self._data[date_string] = Q_(float(row[31]),self._source_unit)
 
-    def get_consumption_average_temperature(self,consumption,unit):
-        """Gets the normal average temperature during a particular Consumption
-        instance. Resolution limit: daily.
-        """
-        avg_temps = []
-        null = Q_(float("nan"),self._source_unit)
-        n_hours = consumption.timedelta.days * 24 + consumption.timedelta.seconds // 3600
-        for hours in xrange(n_hours):
-            hour = consumption.start + timedelta(seconds=hours*3600)
-            hourly = self._data.get(hour.strftime("%m%d%H"),null).to(unit).magnitude
-            avg_temps.append(hourly)
-        # mask nans
-        data = np.array(avg_temps)
-        masked_data = np.ma.masked_array(data,np.isnan(data))
-        return np.mean(masked_data)
-
     def get_daily_average_temperature(self,day,unit):
-        """Returns hourly average temperature.
+        """Returns the average temperature on the given day. `day` can be
+        either a python `date` or a python `datetime` instance. Calculated by
+        averaging hourly temperatures for the given day.
         """
         null = Q_(float("nan"),self._source_unit)
         day_str = day.strftime("%m%d")
@@ -240,6 +256,9 @@ class TMY3WeatherSource(WeatherSourceBase):
         return np.mean(masked_data)
 
     def annual_daily_temperatures(self,unit):
+        """Returns a list of daily temperature normals for a typical
+        meteorological year.
+        """
         null = Q_(float("nan"),self._source_unit)
         start_day = datetime(2012,1,1)
         temps = []
@@ -271,15 +290,16 @@ class WeatherUndergroundWeatherSource(WeatherSourceBase):
             self._get_query_data(query)
 
     def get_daily_average_temperature(self,day,unit):
-        """Gets the average temperature during a particular Consumption
-        instance. Resolution limit: daily.
+        """Returns the average temperature on the given day. `day` can be
+        either a python `date` or a python `datetime` instance.
         """
         return self._data[day.strftime("%Y%m%d")]["meantempi"].to(unit).magnitude
 
     def _get_query_data(self,query):
         unit = ureg.degF
         for day in requests.get(query).json()["history"]["dailysummary"]:
-            date_string = day["date"]["year"] + day["date"]["mon"] + day["date"]["mday"]
+            date_string = day["date"]["year"] + day["date"]["mon"] + \
+                    day["date"]["mday"]
             data = {"meantempi":Q_(int(day["meantempi"]),unit)}
             self._data[date_string] = data
 
@@ -287,7 +307,9 @@ def nrel_tmy3_station_from_lat_long(lat,lng,api_key):
     """Use the National Renewable Energy Lab API to find the closest weather
     station for a particular lat/long. Requires a (freely available) API key.
     """
-    result = requests.get('http://developer.nrel.gov/api/solar/data_query/v1.json?api_key={}&lat={}&lon={}'.format(api_key,lat,lng))
+    result = requests.get("http://developer.nrel.gov/api/solar/data_query/"
+                          "v1.json?api_key={}&lat={}&lon={}".format(api_key,
+                                                                    lat,lng))
     result_json = result.json()
     if result_json["errors"] == []:
         if result_json['outputs']['tmy3'] is None:
@@ -310,6 +332,8 @@ def ziplocate_us(zipcode):
         return None
 
 def usaf_station_from_zipcode(zipcode,nrel_api_key):
+    """Return a station identifier given a zipcode.
+    """
     lat,lng = ziplocate_us(zipcode)
     station = nrel_tmy3_station_from_lat_long(lat,lng,nrel_api_key)
     return station
