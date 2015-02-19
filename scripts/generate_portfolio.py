@@ -8,8 +8,8 @@ from eemeter.generator import ProjectGenerator
 from eemeter.generator import generate_periods
 from eemeter.weather import GSODWeatherSource
 from eemeter.weather import TMY3WeatherSource
-from eemeter.models import DoubleBalancePointModel
-from eemeter.models import PRISMModel
+from eemeter.models import HDDCDDBalancePointModel
+from eemeter.models import HDDBalancePointModel
 
 from datetime import datetime
 from datetime import timedelta
@@ -34,8 +34,8 @@ if __name__ == "__main__":
     parser.add_argument('weather_station', type=str, help='weather station from which to pull temperature data. (e.g. 725300)')
     args = parser.parse_args()
 
-    electricity_model = DoubleBalancePointModel()
-    gas_model = PRISMModel()
+    electricity_model = HDDCDDBalancePointModel()
+    gas_model = HDDBalancePointModel()
 
     electricity_param_distributions = (
             uniform(loc=1, scale=.5),

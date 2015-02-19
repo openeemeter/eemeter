@@ -3,10 +3,11 @@ from eemeter.generator import ProjectGenerator
 from eemeter.generator import generate_periods
 
 from eemeter.consumption import DatetimePeriod
-from eemeter.models.temperature_sensitivity import DoubleBalancePointModel
-from eemeter.models.temperature_sensitivity import PRISMModel
+from eemeter.models.temperature_sensitivity import HDDCDDBalancePointModel
+from eemeter.models.temperature_sensitivity import HDDBalancePointModel
 
 from fixtures.weather import gsod_722880_2012_2014_weather_source
+from fixtures.weather import tmy3_722880_weather_source
 
 import pytest
 from datetime import datetime
@@ -31,7 +32,7 @@ def periods_one_year():
 
 @pytest.mark.slow
 def test_consumption_generator_no_base_load(periods_one_year,gsod_722880_2012_2014_weather_source):
-    model = DoubleBalancePointModel()
+    model = HDDCDDBalancePointModel()
     params = 1.0,1.0,0.0,65.0,10.0
     gen = ConsumptionGenerator("electricity", "J", "degF", model, params)
     consumptions = gen.generate(gsod_722880_2012_2014_weather_source, periods_one_year)
@@ -40,7 +41,7 @@ def test_consumption_generator_no_base_load(periods_one_year,gsod_722880_2012_20
 
 @pytest.mark.slow
 def test_consumption_generator_with_base_load(periods_one_year,gsod_722880_2012_2014_weather_source):
-    model = DoubleBalancePointModel()
+    model = HDDCDDBalancePointModel()
     params = 1.0,1.0,1.0,65.0,10.0
     gen = ConsumptionGenerator("electricity", "J", "degF", model,params)
     consumptions = gen.generate(gsod_722880_2012_2014_weather_source, periods_one_year)
@@ -48,9 +49,9 @@ def test_consumption_generator_with_base_load(periods_one_year,gsod_722880_2012_
     assert_almost_equal(consumption_joules, [272.5, 308.2, 318.6, 169.2, 87.2, 32.1, 53.6, 185.3, 136.8, 84.4, 167.9, 382.1])
 
 @pytest.mark.slow
-def test_project_generator(gsod_722880_2012_2014_weather_source):
-    electricity_model = DoubleBalancePointModel()
-    gas_model = PRISMModel()
+def test_project_generator(gsod_722880_2012_2014_weather_source,tmy3_722880_weather_source):
+    electricity_model = HDDCDDBalancePointModel()
+    gas_model = HDDBalancePointModel()
     electricity_param_distributions = (
             uniform(loc=1, scale=.5),
             uniform(loc=1, scale=.5),
@@ -83,9 +84,11 @@ def test_project_generator(gsod_722880_2012_2014_weather_source):
     retrofit_start_date = datetime(2012,4,1)
     retrofit_completion_date = datetime(2012,5,1)
 
-    elec_consumption, gas_consumption = generator.generate(gsod_722880_2012_2014_weather_source, periods, periods,
-                                                           retrofit_start_date, retrofit_completion_date,
-                                                           electricity_noise=None,gas_noise=None)
+    elec_consumption, gas_consumption, elec_annual_usage, gas_annual_usage = \
+            generator.generate(gsod_722880_2012_2014_weather_source,
+                               tmy3_722880_weather_source, periods, periods,
+                               retrofit_start_date, retrofit_completion_date,
+                               electricity_noise=None,gas_noise=None)
 
     elec_kwh = [c.to("kWh") for c in elec_consumption]
     gas_therms = [c.to("therms") for c in gas_consumption]

@@ -22,7 +22,7 @@ def test_temperature_sensitivity_parameter_optimization(
             fuel_unit_str: "kWh",
             fuel_type: "electricity",
             temperature_unit_str: "degF",
-            model: !obj:eemeter.models.DoubleBalancePointModel {
+            model: !obj:eemeter.models.HDDCDDBalancePointModel {
                 x0: [1.,1.,1.,60.,7.],
                 bounds: [[0,200],[0,200],[0,2000],[55,65],[2,12]],
             }
@@ -48,7 +48,7 @@ def test_weather_normalization(consumption_history_1,
                     fuel_unit_str: "kWh",
                     fuel_type: "electricity",
                     temperature_unit_str: "degF",
-                    model: !obj:eemeter.models.DoubleBalancePointModel &model {
+                    model: !obj:eemeter.models.HDDCDDBalancePointModel &model {
                         x0: [1.,1.,1.,60.,7.],
                         bounds: [[0,200],[0,200],[0,2000],[55,65],[2,12]],
                     }
@@ -82,7 +82,7 @@ def test_pre_post_parameters(consumption_history_1,
                 fuel_unit_str: "kWh",
                 fuel_type: "electricity",
                 temperature_unit_str: "degF",
-                model: !obj:eemeter.models.DoubleBalancePointModel {
+                model: !obj:eemeter.models.HDDCDDBalancePointModel {
                     x0: [1.,1.,1.,60.,7.],
                     bounds: [[0,200],[0,200],[0,2000],[55,65],[2,12]],
                 }
@@ -117,7 +117,7 @@ def test_gross_savings_metric(consumption_history_1,
                         fuel_unit_str: "kWh",
                         fuel_type: "electricity",
                         temperature_unit_str: "degF",
-                        model: !obj:eemeter.models.DoubleBalancePointModel &model {
+                        model: !obj:eemeter.models.HDDCDDBalancePointModel &model {
                             x0: [1.,1.,1.,60.,7.],
                             bounds: [[0,200],[0,200],[0,2000],[55,65],[2,12]],
                         }
@@ -162,7 +162,7 @@ def test_annualized_gross_savings_metric(consumption_history_1,
                         fuel_unit_str: "kWh",
                         fuel_type: "electricity",
                         temperature_unit_str: "degF",
-                        model: !obj:eemeter.models.DoubleBalancePointModel &model {
+                        model: !obj:eemeter.models.HDDCDDBalancePointModel &model {
                             x0: [1.,1.,1.,60.,7.],
                             bounds: [[0,200],[0,200],[0,2000],[55,65],[2,12]],
                         }

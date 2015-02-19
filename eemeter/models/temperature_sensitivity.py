@@ -17,7 +17,7 @@ class ModelBase(object):
         params = result.x
         return params
 
-class DoubleBalancePointModel(ModelBase):
+class HDDCDDBalancePointModel(ModelBase):
 
     @staticmethod
     def compute_usage_estimates(params,observed_daily_temps):
@@ -48,7 +48,7 @@ class DoubleBalancePointModel(ModelBase):
 
         return estimates
 
-class PRISMModel(ModelBase):
+class HDDBalancePointModel(ModelBase):
 
     @staticmethod
     def compute_usage_estimates(params,observed_daily_temps):
