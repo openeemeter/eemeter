@@ -1,8 +1,8 @@
 API
 ===
 
-eemeter.meter.base
-------------------
+eemeter.meter
+-------------
 
 .. automodule:: eemeter.meter.base
     :members:
@@ -10,17 +10,14 @@ eemeter.meter.base
     :inherited-members:
     :show-inheritance:
 
-eemeter.meter.prism
--------------------
-
 .. automodule:: eemeter.meter.prism
     :members:
     :undoc-members:
     :inherited-members:
     :show-inheritance:
 
-eemeter.models.temperature_sensitivity
---------------------------------------
+eemeter.models
+--------------
 
 .. automodule:: eemeter.models.temperature_sensitivity
     :members:
@@ -49,11 +46,9 @@ eemeter.weather
 eemeter.config.yaml_parser
 --------------------------
 
-.. automodule:: eemeter.config.yaml_parser
-    :members:
-    :undoc-members:
-    :inherited-members:
-    :show-inheritance:
+.. autofunction:: eemeter.config.yaml_parser.load
+
+.. autofunction:: eemeter.config.yaml_parser.load_path
 
 eemeter.generator
 -----------------

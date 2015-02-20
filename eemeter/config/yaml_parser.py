@@ -16,6 +16,9 @@ class Proxy(BaseProxy):
         return hash(id(self))
 
 def load(stream):
+    """Load a Meter specification written in YAML format. `stream` can be a
+    string or a file object.
+    """
     global is_initialized
     if not is_initialized:
         initialize()
@@ -29,6 +32,9 @@ def load(stream):
     return _instantiate(proxy_graph,bindings={})
 
 def load_path(path):
+    """Load a Meter specification written in YAML format. `path` is the path
+    to the yaml file.
+    """
     with open(path, 'r') as f:
         content = ''.join(f.readlines())
     return load(content)
