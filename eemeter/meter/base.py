@@ -289,8 +289,9 @@ class DebugMeter(MeterBase):
         return {}
 
 class DummyMeter(MeterBase):
-    """Helpful for testing meters
-    """
     def evaluate_mapped_inputs(self,value,**kwargs):
+        """Helpful for testing meters - passes a value directly through. May
+        also be helpful for hacking input/output mappings.
+        """
         result = {"result": value}
         return result
