@@ -77,11 +77,11 @@ class PRISMMeter(MeterBase):
            ::
 
                {'electricity_presence': True,
-               'temp_sensitivity_params_electricity': array([  5.28680197e-02,   5.09216467e-02,   3.11451816e-01, 6.21000000e+01,   7.95406093e+00]),
-               'annualized_usage_electricity': 197.90877363035082,
-               'natural_gas_presence': True,
-               'temp_sensitivity_params_natural_gas': array([  6.36617250e+01,   2.64582535e-01,   2.89029866e-02]),
-               'annualized_usage_natural_gas': 133.05140290730517
+                'temp_sensitivity_params_electricity': array([  5.28680197e-02,   5.09216467e-02,   3.11451816e-01, 6.21000000e+01,   7.95406093e+00]),
+                'annualized_usage_electricity': 197.90877363035082,
+                'natural_gas_presence': True,
+                'temp_sensitivity_params_natural_gas': array([  6.36617250e+01,   2.64582535e-01,   2.89029866e-02]),
+                'annualized_usage_natural_gas': 133.05140290730517
                }
 
         """
