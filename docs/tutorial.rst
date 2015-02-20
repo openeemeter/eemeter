@@ -27,7 +27,7 @@ Installation
 
 To get started with the eemeter, use pip::
 
-    $ pip install git+git://github.com/impactlab/ee-meter.git#egg=ee-meter
+    $ pip install git+https://github.com/impactlab/eemeter.git
 
 or download it from github and install it using the setup.py::
 
