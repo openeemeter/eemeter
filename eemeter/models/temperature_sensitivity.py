@@ -12,9 +12,11 @@ class ModelBase(object):
         usages and the output of the a model which takes observed_daily_temps
         and returns usage estimates.
         """
+        n_daily_temps = np.array([len(temps) for temps in observed_daily_temps])
+
         def objective_function(params):
             usages_est = self.compute_usage_estimates(params,observed_daily_temps)
-            avg_usages_est = usages_est/np.array([len(temps) for temps in observed_daily_temps])
+            avg_usages_est = usages_est/n_daily_temps
             return np.sum((average_daily_usages - avg_usages_est)**2)
 
         assert len(average_daily_usages) == len(observed_daily_temps)
