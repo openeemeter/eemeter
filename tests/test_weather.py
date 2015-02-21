@@ -51,7 +51,7 @@ def gsod_weather_source(request):
 def isd_weather_source(request):
     return request.param
 
-@pytest.fixture(params=[TMY3WeatherSource('722880',os.environ.get("TMY3_DIRECTORY"))])
+@pytest.fixture(params=[TMY3WeatherSource('722880')])
 def tmy3_weather_source(request):
     return request.param
 

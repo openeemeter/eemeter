@@ -24,9 +24,9 @@ class PRISMMeter(MeterBase):
                                     fuel_unit_str: "kWh",
                                     fuel_type: "electricity",
                                     temperature_unit_str: "degF",
-                                    model: !obj:eemeter.models.PRISMModel &elec_model {
-                                        x0: [1.,1.,60],
-                                        bounds: [[0,100],[0,100],[55,65]],
+                                    model: !obj:eemeter.models.HDDCDDBalancePointModel &elec_model {
+                                        x0: [1.,1.,1.,60.,5],
+                                        bounds: [[0,100],[0,100],[0,100],[55,65],[2,10]],
                                     },
                                 },
                                 !obj:eemeter.meter.AnnualizedUsageMeter {
@@ -49,9 +49,9 @@ class PRISMMeter(MeterBase):
                                     fuel_unit_str: "therms",
                                     fuel_type: "natural_gas",
                                     temperature_unit_str: "degF",
-                                    model: !obj:eemeter.models.PRISMModel &gas_model {
-                                        x0: [1.,1.,60],
-                                        bounds: [[0,100],[0,100],[55,65]],
+                                    model: !obj:eemeter.models.HDDBalancePointModel &gas_model {
+                                        x0: [60,1.,1.],
+                                        bounds: [[55,65],[0,100],[0,100]],
                                     },
                                 },
                                 !obj:eemeter.meter.AnnualizedUsageMeter {
@@ -72,6 +72,19 @@ class PRISMMeter(MeterBase):
         return meter_yaml
 
     def evaluate_mapped_inputs(self,**kwargs):
+        """Returns a dictionary like the following:
+
+           ::
+
+               {'electricity_presence': True,
+                'temp_sensitivity_params_electricity': array([  5.28680197e-02,   5.09216467e-02,   3.11451816e-01, 6.21000000e+01,   7.95406093e+00]),
+                'annualized_usage_electricity': 197.90877363035082,
+                'natural_gas_presence': True,
+                'temp_sensitivity_params_natural_gas': array([  6.36617250e+01,   2.64582535e-01,   2.89029866e-02]),
+                'annualized_usage_natural_gas': 133.05140290730517
+               }
+
+        """
         return self.meter.evaluate(**kwargs)
 
     def _get_child_inputs(self):

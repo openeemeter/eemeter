@@ -6,9 +6,10 @@ import pytest
 from fixtures.consumption import consumption_history_1
 from fixtures.weather import gsod_722880_2012_2014_weather_source
 from fixtures.weather import tmy3_722880_weather_source
-from helpers import arrays_similar
 
 from datetime import datetime
+
+from numpy.testing import assert_almost_equal
 
 EPSILON = 1e-5
 
@@ -21,7 +22,7 @@ def test_temperature_sensitivity_parameter_optimization(
             fuel_unit_str: "kWh",
             fuel_type: "electricity",
             temperature_unit_str: "degF",
-            model: !obj:eemeter.models.DoubleBalancePointModel {
+            model: !obj:eemeter.models.HDDCDDBalancePointModel {
                 x0: [1.,1.,1.,60.,7.],
                 bounds: [[0,200],[0,200],[0,2000],[55,65],[2,12]],
             }
@@ -32,8 +33,8 @@ def test_temperature_sensitivity_parameter_optimization(
     result = meter.evaluate(consumption_history=consumption_history_1,
                             weather_source=gsod_722880_2012_2014_weather_source)
 
-    assert arrays_similar(result['temp_sensitivity_params'],
-                          [0.013456,0.029507,8.341199,65,3.8])
+    assert_almost_equal(result['temp_sensitivity_params'],
+            [0.4467628, 0.9689125, 8.2615838, 65., 4.1])
 
 @pytest.mark.slow
 def test_weather_normalization(consumption_history_1,
@@ -47,7 +48,7 @@ def test_weather_normalization(consumption_history_1,
                     fuel_unit_str: "kWh",
                     fuel_type: "electricity",
                     temperature_unit_str: "degF",
-                    model: !obj:eemeter.models.DoubleBalancePointModel &model {
+                    model: !obj:eemeter.models.HDDCDDBalancePointModel &model {
                         x0: [1.,1.,1.,60.,7.],
                         bounds: [[0,200],[0,200],[0,2000],[55,65],[2,12]],
                     }
@@ -65,10 +66,10 @@ def test_weather_normalization(consumption_history_1,
                             weather_source=gsod_722880_2012_2014_weather_source,
                             weather_normal_source=tmy3_722880_weather_source)
 
-    assert arrays_similar(result['temp_sensitivity_params'],
-                          [0.013456,0.029507,8.341199,65,3.8])
+    assert_almost_equal(result['temp_sensitivity_params'],
+            [0.4467628, 0.9689125, 8.2615838, 65., 4.1])
 
-    assert abs(result['annualized_usage'] - 3087.8412641) < EPSILON
+    assert abs(result['annualized_usage'] - 4411.471045) < EPSILON
 
 @pytest.mark.slow
 def test_pre_post_parameters(consumption_history_1,
@@ -81,7 +82,7 @@ def test_pre_post_parameters(consumption_history_1,
                 fuel_unit_str: "kWh",
                 fuel_type: "electricity",
                 temperature_unit_str: "degF",
-                model: !obj:eemeter.models.DoubleBalancePointModel {
+                model: !obj:eemeter.models.HDDCDDBalancePointModel {
                     x0: [1.,1.,1.,60.,7.],
                     bounds: [[0,200],[0,200],[0,2000],[55,65],[2,12]],
                 }
@@ -95,10 +96,10 @@ def test_pre_post_parameters(consumption_history_1,
                             retrofit_start_date=datetime(2013,9,25),
                             retrofit_end_date=datetime(2013,9,25))
 
-    assert arrays_similar(result["temp_sensitivity_params_pre"],
-            [0.016883,0.042749,6.013131,65,3.3])
-    assert arrays_similar(result["temp_sensitivity_params_post"],
-            [0.059923,0.001983,11.129708,55,2])
+    assert_almost_equal(result['temp_sensitivity_params_pre'],
+            [0.5887627, 1.5010216, 5.6613019, 65., 3.7943253])
+    assert_almost_equal(result['temp_sensitivity_params_post'],
+            [0.9456324, 0.2925248, 9.4393723, 62.6772884, 2.0227116])
 
     assert isinstance(result["consumption_history_pre"],ConsumptionHistory)
     assert isinstance(result["consumption_history_post"],ConsumptionHistory)
@@ -116,7 +117,7 @@ def test_gross_savings_metric(consumption_history_1,
                         fuel_unit_str: "kWh",
                         fuel_type: "electricity",
                         temperature_unit_str: "degF",
-                        model: !obj:eemeter.models.DoubleBalancePointModel &model {
+                        model: !obj:eemeter.models.HDDCDDBalancePointModel &model {
                             x0: [1.,1.,1.,60.,7.],
                             bounds: [[0,200],[0,200],[0,2000],[55,65],[2,12]],
                         }
@@ -138,14 +139,14 @@ def test_gross_savings_metric(consumption_history_1,
                             retrofit_start_date=datetime(2013,9,25),
                             retrofit_end_date=datetime(2013,9,25))
 
-    assert arrays_similar(result["temp_sensitivity_params_pre"],
-            [0.016883,0.042749,6.013131,65,3.3])
-    assert arrays_similar(result["temp_sensitivity_params_post"],
-            [0.059923,0.001983,11.129708,55,2])
+    assert_almost_equal(result['temp_sensitivity_params_pre'],
+            [0.5887627, 1.5010216, 5.6613019, 65., 3.7943253])
+    assert_almost_equal(result['temp_sensitivity_params_post'],
+            [0.9456324, 0.2925248, 9.4393723, 62.6772884, 2.0227116])
 
     assert isinstance(result["consumption_history_pre"],ConsumptionHistory)
     assert isinstance(result["consumption_history_post"],ConsumptionHistory)
-    assert abs(result["gross_savings"] - 494.442390) < EPSILON
+    assert abs(result["gross_savings"] - -115697.906777) < EPSILON
 
 @pytest.mark.slow
 def test_annualized_gross_savings_metric(consumption_history_1,
@@ -161,7 +162,7 @@ def test_annualized_gross_savings_metric(consumption_history_1,
                         fuel_unit_str: "kWh",
                         fuel_type: "electricity",
                         temperature_unit_str: "degF",
-                        model: !obj:eemeter.models.DoubleBalancePointModel &model {
+                        model: !obj:eemeter.models.HDDCDDBalancePointModel &model {
                             x0: [1.,1.,1.,60.,7.],
                             bounds: [[0,200],[0,200],[0,2000],[55,65],[2,12]],
                         }
@@ -183,12 +184,12 @@ def test_annualized_gross_savings_metric(consumption_history_1,
                             retrofit_start_date=datetime(2013,9,25),
                             retrofit_end_date=datetime(2013,9,25))
 
-    assert arrays_similar(result["temp_sensitivity_params_pre"],
-            [0.016883,0.042749,6.013131,65,3.3])
-    assert arrays_similar(result["temp_sensitivity_params_post"],
-            [0.059923,0.001983,11.129708,55,2])
+    assert_almost_equal(result['temp_sensitivity_params_pre'],
+            [0.5887627, 1.5010216, 5.6613019, 65., 3.7943253])
+    assert_almost_equal(result['temp_sensitivity_params_post'],
+            [0.9456324, 0.2925248, 9.4393723, 62.6772884, 2.0227116])
 
-    assert abs(result["annualized_gross_savings"] - -1822.821986) < EPSILON
+    assert abs(result["annualized_gross_savings"] - -735.775720) < EPSILON
 
 def test_fuel_type_presence_meter(consumption_history_1):
 
