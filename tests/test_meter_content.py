@@ -42,7 +42,7 @@ def test_weather_normalization(consumption_history_1,
                                tmy3_722880_weather_source):
 
     meter_yaml = """
-        !obj:eemeter.meter.SequentialMeter {
+        !obj:eemeter.meter.Sequence {
             sequence: [
                 !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
                     fuel_unit_str: "kWh",
@@ -76,7 +76,7 @@ def test_pre_post_parameters(consumption_history_1,
                              gsod_722880_2012_2014_weather_source):
 
     meter_yaml = """
-        !obj:eemeter.meter.PrePostMeter {
+        !obj:eemeter.meter.PrePost {
             splittable_args: ["consumption_history"],
             meter: !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
                 fuel_unit_str: "kWh",
@@ -109,9 +109,9 @@ def test_gross_savings_metric(consumption_history_1,
                               gsod_722880_2012_2014_weather_source):
 
     meter_yaml = """
-        !obj:eemeter.meter.SequentialMeter {
+        !obj:eemeter.meter.Sequence {
             sequence: [
-                !obj:eemeter.meter.PrePostMeter {
+                !obj:eemeter.meter.PrePost {
                     splittable_args: ["consumption_history"],
                     meter: !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
                         fuel_unit_str: "kWh",
@@ -154,9 +154,9 @@ def test_annualized_gross_savings_metric(consumption_history_1,
                                          tmy3_722880_weather_source):
 
     meter_yaml = """
-        !obj:eemeter.meter.SequentialMeter {
+        !obj:eemeter.meter.Sequence {
             sequence: [
-                !obj:eemeter.meter.PrePostMeter {
+                !obj:eemeter.meter.PrePost {
                     splittable_args: ["consumption_history"],
                     meter: !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
                         fuel_unit_str: "kWh",
@@ -220,7 +220,7 @@ def test_bpi2400(consumption_history_1,
                  tmy3_722880_weather_source):
 
     meter = BPI2400Meter()
-    print meter.get_inputs()
     result = meter.evaluate(consumption_history=consumption_history_1,
                             weather_normal_source=tmy3_722880_weather_source)
-    assert result == {}
+    assert "consumption_history_no_estimated" in result
+    assert False

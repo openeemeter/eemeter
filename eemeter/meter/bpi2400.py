@@ -11,17 +11,33 @@ class BPI2400Meter(MeterBase):
 
     def _meter_yaml(self):
         meter_yaml = """
-            !obj:eemeter.meter.SequentialMeter {
+            !obj:eemeter.meter.Sequence {
                 sequence: [
                     !obj:eemeter.meter.RecentReadingMeter {
                         n_days: 360
                     },
                     !obj:eemeter.meter.EstimatedReadingConsolidationMeter {
                     },
-                    !obj:eemeter.meter.AndMeter {
+                    !obj:eemeter.meter.And {
                         inputs: [
                             recent_reading,
-                        ]
+                        ],
+                        output_mapping: {
+                            output: meets_model_calibration_utility_bill_criteria
+                        }
+                    },
+                    !obj:eemeter.meter.Condition {
+                        condition_parameter: meets_model_calibration_utility_bill_criteria,
+                        success: !obj:eemeter.meter.DummyMeter {
+                            input_mapping: {
+                                consumption_history_no_estimated: value
+                            }
+                        },
+                        failure: !obj:eemeter.meter.DummyMeter {
+                            input_mapping: {
+                                consumption_history_no_estimated: value
+                            }
+                        }
                     }
                 ]
             }

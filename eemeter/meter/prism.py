@@ -11,14 +11,14 @@ class PRISMMeter(MeterBase):
 
     def _meter_yaml(self):
         meter_yaml = """
-            !obj:eemeter.meter.SequentialMeter {
+            !obj:eemeter.meter.Sequence {
                 sequence: [
                     !obj:eemeter.meter.FuelTypePresenceMeter {
                         fuel_types: [electricity,natural_gas]
                     },
-                    !obj:eemeter.meter.ConditionalMeter {
+                    !obj:eemeter.meter.Condition {
                         condition_parameter: electricity_presence,
-                        success: !obj:eemeter.meter.SequentialMeter {
+                        success: !obj:eemeter.meter.Sequence {
                             sequence: [
                                 !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
                                     fuel_unit_str: "kWh",
@@ -41,9 +41,9 @@ class PRISMMeter(MeterBase):
                             },
                         },
                     },
-                    !obj:eemeter.meter.ConditionalMeter {
+                    !obj:eemeter.meter.Condition {
                         condition_parameter: natural_gas_presence,
-                        success: !obj:eemeter.meter.SequentialMeter {
+                        success: !obj:eemeter.meter.Sequence {
                             sequence: [
                                 !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
                                     fuel_unit_str: "therms",

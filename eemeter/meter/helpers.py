@@ -1,4 +1,6 @@
 from .base import MeterBase
+from eemeter.consumption import Consumption
+from eemeter.consumption import ConsumptionHistory
 
 from datetime import datetime
 from datetime import timedelta
@@ -19,5 +21,18 @@ class RecentReadingMeter(MeterBase):
 class EstimatedReadingConsolidationMeter(MeterBase):
 
     def evaluate_mapped_inputs(self,consumption_history,**kwargs):
-        new_consumption_history = consumption_history
-        return {"consumption_history": new_consumption_history}
+        def combine_waitlist(wl):
+            usage = sum([c.to("kWh") for c in wl])
+            ft = wl[0].fuel_type
+            return Consumption(usage, "kWh", ft, wl[0].start, wl[-1].end,estimated=False)
+
+        new_consumptions = []
+        for fuel_type,consumptions in consumption_history.fuel_types():
+            waitlist = []
+            for c in sorted(consumptions):
+                waitlist.append(c)
+                if not c.estimated:
+                    new_consumptions.append(combine_waitlist(waitlist))
+                    waitlist = []
+
+        return {"consumption_history_no_estimated": ConsumptionHistory(new_consumptions)}

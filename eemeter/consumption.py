@@ -17,6 +17,10 @@ class DatetimePeriod:
         """
         return self.end < other.end
 
+    def __eq__(self,other):
+        return self.joules == other.joules and self.start == other.start and \
+                self.end == other.end and self.fuel_type == other.fuel_type and \
+                self.estimated == other.estimated
     @property
     def timedelta(self):
         """Property representing the timedelta between the start and end
@@ -83,7 +87,7 @@ class ConsumptionHistory:
     """
     def __init__(self,consumptions):
         self._data = {}
-        for consumption in consumptions:
+        for consumption in sorted(consumptions):
             if consumption.fuel_type in self._data:
                 self._data[consumption.fuel_type].append(consumption)
             else:
@@ -128,13 +132,12 @@ class ConsumptionHistory:
         """Returns an array (not necessarily sorted) of Consumption instances
         given a particular fuel_type. Fuel type should be specified as a
         string such as `"electricity"` or `"natural_gas"`. Returns `None` if
-        no matching `Consumption` instannces are found.
+        no matching `Consumption` instances are found.
         """
         return self._data.get(fuel_type)
 
     def iteritems(self):
-        """Iterator that returns all internally stored consumption instances in
-        no particular order.
+        """Iterator that returns all internally stored consumption instances.
         """
         for fuel_type,consumptions in self._data.items():
             for consumption in consumptions:

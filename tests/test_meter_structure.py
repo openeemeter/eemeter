@@ -1,14 +1,14 @@
 from eemeter.config.yaml_parser import load
 from eemeter.meter import DummyMeter
-from eemeter.meter import SequentialMeter
-from eemeter.meter import ConditionalMeter
-from eemeter.meter import AndMeter
+from eemeter.meter import Sequence
+from eemeter.meter import Condition
+from eemeter.meter import And
 
 import pytest
 
 def test_sequential_meter():
     meter_yaml = """
-        !obj:eemeter.meter.SequentialMeter {
+        !obj:eemeter.meter.Sequence {
             sequence: [
                 !obj:eemeter.meter.DummyMeter {},
             ]
@@ -22,7 +22,7 @@ def test_sequential_meter():
 
 def test_input_output_mappings():
     meter_yaml = """
-        !obj:eemeter.meter.SequentialMeter {
+        !obj:eemeter.meter.Sequence {
             sequence: [
                 !obj:eemeter.meter.DummyMeter {
                     input_mapping: {"value_one":"value"},
@@ -43,7 +43,7 @@ def test_input_output_mappings():
     assert result["result_two"] == 100
 
 def test_incorrect_input_mappings():
-    meter_yaml = """ !obj:eemeter.meter.SequentialMeter {
+    meter_yaml = """ !obj:eemeter.meter.Sequence {
             sequence: [
                 !obj:eemeter.meter.DummyMeter {
                     input_mapping: {"value_one":"value"},
@@ -62,7 +62,7 @@ def test_incorrect_input_mappings():
         result = meter.evaluate(value_one=10,value_two=100)
 
 def test_incorrect_output_mappings():
-    meter_yaml = """ !obj:eemeter.meter.SequentialMeter {
+    meter_yaml = """ !obj:eemeter.meter.Sequence {
             sequence: [
                 !obj:eemeter.meter.DummyMeter {
                     input_mapping: {"value_one":"value"},
@@ -82,7 +82,7 @@ def test_incorrect_output_mappings():
 
 def test_conditional_meter():
     meter_yaml="""
-        !obj:eemeter.meter.ConditionalMeter {
+        !obj:eemeter.meter.Condition {
             condition_parameter: "electricity_present",
             success: !obj:eemeter.meter.DummyMeter {
                 input_mapping: {"success":"value"},
@@ -98,7 +98,7 @@ def test_conditional_meter():
 
 def test_conditional_meter_without_params():
     meter_yaml="""
-        !obj:eemeter.meter.ConditionalMeter {
+        !obj:eemeter.meter.Condition {
             condition_parameter: "electricity_present",
         }
         """
@@ -109,7 +109,7 @@ def test_conditional_meter_without_params():
 def test_debug_meter():
 
     meter_yaml="""
-        !obj:eemeter.meter.DebugMeter {
+        !obj:eemeter.meter.Debug {
         }
         """
     meter = load(meter_yaml)
@@ -118,16 +118,16 @@ def test_get_meter_input():
     dummy_meter = DummyMeter()
     assert dummy_meter.get_inputs() == {"DummyMeter":{"inputs":["value"],"child_inputs":[]}}
 
-    seq_meter = SequentialMeter(sequence=[DummyMeter(),DummyMeter()])
-    assert seq_meter.get_inputs() == {"SequentialMeter":
+    seq_meter = Sequence(sequence=[DummyMeter(),DummyMeter()])
+    assert seq_meter.get_inputs() == {"Sequence":
             {"inputs": [],
              "child_inputs": [
                  {"DummyMeter":{"inputs":["value"],"child_inputs":[]}},
                  {"DummyMeter":{"inputs":["value"],"child_inputs":[]}}
              ]}}
 
-    cond_meter = ConditionalMeter(condition_parameter=(lambda x: True),success=DummyMeter(),failure=DummyMeter())
-    assert cond_meter.get_inputs() == {'ConditionalMeter':
+    cond_meter = Condition(condition_parameter=(lambda x: True),success=DummyMeter(),failure=DummyMeter())
+    assert cond_meter.get_inputs() == {'Condition':
             {'child_inputs':
                 {'failure':
                     {'DummyMeter': {'child_inputs': [], 'inputs': ['value']}},
@@ -142,7 +142,7 @@ def test_sane_missing_input_error_messages():
         dummy_meter.evaluate()
     assert "expected argument 'value' for meter 'DummyMeter'; got kwargs={} (with mapped_inputs={}) instead." in excinfo.value
 
-    seq_meter = SequentialMeter(sequence=[
+    seq_meter = Sequence(sequence=[
         DummyMeter(input_mapping={"value_one":"value"},
                    output_mapping={"result":"result_one"}),
         DummyMeter(input_mapping={"value_two":"value"},
@@ -157,18 +157,18 @@ def test_sane_missing_input_error_messages():
 
 def test_and_meter():
     with pytest.raises(ValueError):
-        meter0 = AndMeter(inputs=[])
+        meter0 = And(inputs=[])
 
-    meter1 = AndMeter(inputs=["result_one"])
+    meter1 = And(inputs=["result_one"])
     assert meter1.evaluate(result_one=True,result_two=True)["output"]
 
-    meter2 = AndMeter(inputs=["result_one","result_two"])
+    meter2 = And(inputs=["result_one","result_two"])
     assert meter2.evaluate(result_one=True,result_two=True)["output"]
     assert not meter2.evaluate(result_one=False,result_two=True)["output"]
     assert not meter2.evaluate(result_one=True,result_two=False)["output"]
     assert not meter2.evaluate(result_one=False,result_two=False)["output"]
 
-    meter3 = AndMeter(inputs=["result_one","result_two","result_three"])
+    meter3 = And(inputs=["result_one","result_two","result_three"])
     with pytest.raises(ValueError):
         assert meter3.evaluate(result_one=True,result_two=True)
     assert meter3.evaluate(result_one=True,result_two=True,result_three=True)["output"]

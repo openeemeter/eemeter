@@ -283,21 +283,21 @@ the result.
 In the example above, it's clearly more straightforward to directly declare the
 meter using python. However, since meters are so hierarchical, a specification
 like the following is usually more readable and straightforward. Note the usage
-of structural helper meters like :code:`SequentialMeter` and
-:code:`ConditionalMeter`, which allow for more flexible meter component
+of structural helper meters like :code:`Sequence` and
+:code:`Condition`, which allow for more flexible meter component
 definitions.
 
 .. code-block:: python
 
     prism_meter_yaml = """
-        !obj:eemeter.meter.SequentialMeter {
+        !obj:eemeter.meter.Sequence {
             sequence: [
                 !obj:eemeter.meter.FuelTypePresenceMeter {
                     fuel_types: [electricity,natural_gas]
                 },
-                !obj:eemeter.meter.ConditionalMeter {
+                !obj:eemeter.meter.Condition {
                     condition_parameter: electricity_presence,
-                    success: !obj:eemeter.meter.SequentialMeter {
+                    success: !obj:eemeter.meter.Sequence {
                         sequence: [
                             !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
                                 fuel_unit_str: "kWh",
@@ -320,9 +320,9 @@ definitions.
                         },
                     },
                 },
-                !obj:eemeter.meter.ConditionalMeter {
+                !obj:eemeter.meter.Conditionr {
                     condition_parameter: natural_gas_presence,
-                    success: !obj:eemeter.meter.SequentialMeter {
+                    success: !obj:eemeter.meter.Sequence {
                         sequence: [
                             !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
                                 fuel_unit_str: "therms",

@@ -107,6 +107,23 @@ def test_consumption_has_string_representation(consumption_zero_one_month):
 def test_consumption_usage_per_day(single_electricity_consumption):
     assert abs(single_electricity_consumption.average_daily_usage("kWh") - 1000/31.) < EPSILON
 
+def test_consumption_equality():
+    c1 = Consumption(1,"kWh","electricity",datetime(2012,1,1),datetime(2013,1,1),estimated=True)
+    c2 = Consumption(1,"kWh","electricity",datetime(2012,1,1),datetime(2013,1,1),estimated=True)
+    c3 = Consumption(2,"kWh","electricity",datetime(2012,1,1),datetime(2013,1,1),estimated=True)
+    c4 = Consumption(1,"therms","electricity",datetime(2012,1,1),datetime(2013,1,1),estimated=True)
+    c5 = Consumption(1,"kWh","natural_gas",datetime(2012,1,1),datetime(2013,1,1),estimated=True)
+    c6 = Consumption(1,"kWh","electricity",datetime(2012,1,2),datetime(2013,1,1),estimated=True)
+    c7 = Consumption(1,"kWh","electricity",datetime(2012,1,1),datetime(2013,2,1),estimated=True)
+    c8 = Consumption(1,"kWh","electricity",datetime(2012,1,1),datetime(2013,1,1),estimated=False)
+    assert c1 == c2
+    assert not c1 == c3
+    assert not c1 == c4
+    assert not c1 == c5
+    assert not c1 == c6
+    assert not c1 == c7
+    assert not c1 == c8
+
 def test_consumption_history(consumption_list_one_year_electricity,
                              consumption_list_one_year_gas):
     ch_elec = ConsumptionHistory(consumption_list_one_year_electricity)

@@ -92,7 +92,7 @@ class MeterBase(object):
     def _get_child_inputs(self):
         return []
 
-class SequentialMeter(MeterBase):
+class Sequence(MeterBase):
     def __init__(self,sequence,**kwargs):
         super(self.__class__,self).__init__(**kwargs)
         assert all([issubclass(meter.__class__,MeterBase)
@@ -123,7 +123,7 @@ class SequentialMeter(MeterBase):
             inputs.append(meter.get_inputs())
         return inputs
 
-class ConditionalMeter(MeterBase):
+class Condition(MeterBase):
     def __init__(self,condition_parameter,success=None,failure=None,**kwargs):
         super(self.__class__,self).__init__(**kwargs)
         self.condition_parameter = condition_parameter
@@ -154,7 +154,7 @@ class ConditionalMeter(MeterBase):
             inputs["failure"] = self.success.get_inputs()
         return inputs
 
-class AndMeter(MeterBase):
+class And(MeterBase):
     def __init__(self,inputs,**kwargs):
         super(self.__class__,self).__init__(**kwargs)
         if len(inputs) == 0:
@@ -206,7 +206,7 @@ class AnnualizedUsageMeter(MeterBase):
         annualized_usage = np.sum(usage_estimates)
         return {"annualized_usage": annualized_usage}
 
-class PrePostMeter(MeterBase):
+class PrePost(MeterBase):
     def __init__(self,meter,splittable_args,**kwargs):
         super(self.__class__,self).__init__(**kwargs)
         self.meter = meter
@@ -298,7 +298,7 @@ class FuelTypePresenceMeter(MeterBase):
             results[fuel_type + "_presence"] = consumptions is not None
         return results
 
-class DebugMeter(MeterBase):
+class Debug(MeterBase):
     def evaluate_mapped_inputs(self,**kwargs):
         """Helpful for debugging meter instances - prints out kwargs for
         inspection.
