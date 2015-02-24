@@ -139,7 +139,8 @@ class GSODWeatherSource(WeatherSourceBase):
         """Returns the average temperature on the given day. `day` can be
         either a python `date` or a python `datetime` instance.
         """
-        return self._data[day.strftime("%Y%m%d")].to(unit).magnitude
+        null = Q_(float("nan"),self._source_unit)
+        return self._data.get(day.strftime("%Y%m%d"),null).to(unit).magnitude
 
     def _add_file(self,f):
         for line in f.readlines()[1:]:
@@ -278,6 +279,7 @@ class TMY3WeatherSource(WeatherSourceBase):
 class WeatherUndergroundWeatherSource(WeatherSourceBase):
     def __init__(self,zipcode,start,end,api_key):
         self._data = {}
+        self._source_unit = ureg.degF
         assert end >= start
         date_format = "%Y%m%d"
         date_range_limit = 32
@@ -293,14 +295,14 @@ class WeatherUndergroundWeatherSource(WeatherSourceBase):
         """Returns the average temperature on the given day. `day` can be
         either a python `date` or a python `datetime` instance.
         """
-        return self._data[day.strftime("%Y%m%d")]["meantempi"].to(unit).magnitude
+        null = Q_(float("nan"),self._source_unit)
+        return self._data.get(day.strftime("%Y%m%d"),null).to(unit).magnitude
 
     def _get_query_data(self,query):
-        unit = ureg.degF
         for day in requests.get(query).json()["history"]["dailysummary"]:
             date_string = day["date"]["year"] + day["date"]["mon"] + \
                     day["date"]["mday"]
-            data = {"meantempi":Q_(int(day["meantempi"]),unit)}
+            data = Q_(int(day["meantempi"]),self._source_unit)
             self._data[date_string] = data
 
 def nrel_tmy3_station_from_lat_long(lat,lng,api_key):
