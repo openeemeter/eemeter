@@ -6,6 +6,13 @@ from eemeter.weather import WeatherUndergroundWeatherSource
 from eemeter.weather import nrel_tmy3_station_from_lat_long
 from eemeter.weather import ziplocate_us
 from eemeter.weather import usaf_station_from_zipcode
+from eemeter.weather import zipcode_to_lat_lng
+from eemeter.weather import lat_lng_to_zipcode
+from eemeter.weather import tmy3_to_lat_lng
+from eemeter.weather import lat_lng_to_tmy3
+from eemeter.weather import zipcode_to_tmy3
+from eemeter.weather import tmy3_to_zipcode
+from eemeter.weather import haversine
 
 from eemeter.consumption import ConsumptionHistory
 from eemeter.consumption import Consumption
@@ -64,6 +71,29 @@ def zipcode_to_station(request):
 
 
 ##### Tests #####
+
+def test_zipcode_to_lat_lng(lat_long_zipcode):
+    lat,lng,zipcode = lat_long_zipcode
+    assert lat,lng == zipcode_to_lat_lng(zipcode)
+
+def test_lat_lng_to_zipcode(lat_long_zipcode):
+    lat,lng,zipcode = lat_long_zipcode
+    assert zipcode == lat_lng_to_zipcode(lat,lng)
+
+def test_tmy3_to_lat_lng():
+    pass
+
+def test_lat_lng_to_tmy3():
+    pass
+
+def test_zipcode_to_tmy3():
+    pass
+
+def test_tmy3_to_zipcode():
+    pass
+
+def test_haversine():
+    pass
 
 def test_weather_source_base(consumption_history_one_summer_electricity):
     weather_source = WeatherSourceBase()
@@ -189,4 +219,3 @@ def test_tmy3_weather_source(consumption_history_one_summer_electricity,tmy3_wea
     assert abs(normal_cdds[0] - 111.01566097391235) < EPSILON
     assert abs(normal_cdds[1] - 258.15392544347725) < EPSILON
     assert abs(normal_cdds[2] - 297.40175153043384) < EPSILON
-

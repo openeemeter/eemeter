@@ -337,3 +337,24 @@ def usaf_station_from_zipcode(zipcode,nrel_api_key):
     lat,lng = ziplocate_us(zipcode)
     station = nrel_tmy3_station_from_lat_long(lat,lng,nrel_api_key)
     return station
+
+def haversine(lat1,lng1,lat2,lng2):
+    pass
+
+def lat_lng_to_tmy3(lat,lng):
+    pass
+
+def lat_lng_to_zipcode(lat,lng):
+    pass
+
+def tmy3_to_lat_lng(station):
+    pass
+
+def tmy3_to_zipcode(station):
+    pass
+
+def zipcode_to_lat_lng(zipcode):
+    pass
+
+def zipcode_to_tmy3(zipcode):
+    pass
