@@ -341,22 +341,71 @@ def usaf_station_from_zipcode(zipcode,nrel_api_key):
     return station
 
 def haversine(lat1,lng1,lat2,lng2):
-    pass
+    """ Calculate the great circle distance between two points
+    on the earth (specified in decimal degrees)
+    """
+    # convert decimal degrees to radians
+    lng1, lat1, lng2, lat2 = map(np.radians, [lng1, lat1, lng2, lat2])
+
+    # haversine formula
+    dlng = lng2 - lng1
+    dlat = lat2 - lat1
+    a = np.sin(dlat/2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlng/2)**2
+    c = 2 * np.arcsin(np.sqrt(a))
+    r = 6371 # Radius of earth in kilometers. Use 3956 for miles
+    return c * r
 
 def lat_lng_to_tmy3(lat,lng):
-    pass
+    """Return the closest TMY3 weather station id (USAF) using latitude and
+    longitude coordinates.
+    """
+    with resource_stream('eemeter.resources','tmy3_to_lat_lng.json') as f:
+        index = json.load(f)
+    dists = []
+    index_list = [i for i in index.iteritems()]
+    for station,(stat_lat,stat_lng) in index_list:
+        dists.append(haversine(lat,lng,stat_lat,stat_lng))
+    return index_list[np.argmin(dists)][0]
 
 def lat_lng_to_zipcode(lat,lng):
-    pass
+    """Return the closest ZIP code using latitude and
+    longitude coordinates.
+    """
+    with resource_stream('eemeter.resources','zipcode_to_lat_lng.json') as f:
+        index = json.load(f)
+    dists = []
+    index_list = [i for i in index.iteritems()]
+    for zipcode,(zip_lat,zip_lng) in index_list:
+        dists.append(haversine(lat,lng,zip_lat,zip_lng))
+    return index_list[np.argmin(dists)][0]
 
 def tmy3_to_lat_lng(station):
-    pass
+    """Return the latitude and longitude coordinates of the given station.
+    """
+    with resource_stream('eemeter.resources','tmy3_to_lat_lng.json') as f:
+        index = json.load(f)
+    return index.get(station)
 
 def tmy3_to_zipcode(station):
-    pass
+    """Return the nearest zipcode to the station by latitude and longitude
+    centroid. (Note: Not always the same as finding the containing ZIP code
+    area)
+    """
+    with resource_stream('eemeter.resources','tmy3_to_zipcode.json') as f:
+        index = json.load(f)
+    return index.get(station)
 
 def zipcode_to_lat_lng(zipcode):
-    pass
+    """Return the latitude and longitude centroid of a particular ZIP code.
+    """
+    with resource_stream('eemeter.resources','zipcode_to_lat_lng.json') as f:
+        index = json.load(f)
+    return index.get(zipcode)
 
 def zipcode_to_tmy3(zipcode):
-    pass
+    """Return the nearest TMY3 station (by latitude and longitude centroid) of
+    the ZIP code.
+    """
+    with resource_stream('eemeter.resources','zipcode_to_tmy3.json') as f:
+        index = json.load(f)
+    return index.get(zipcode)
