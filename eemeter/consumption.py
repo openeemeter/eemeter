@@ -74,6 +74,8 @@ class Consumption(DatetimePeriod):
         """Returns average daily usage over the period in the energy
         unit supplied in `unit`.
         """
+        if self.timedelta.days == 0:
+            return float('nan')
         return (self.joules * ureg.joules / self.timedelta.days).to(ureg.parse_expression(unit)).magnitude
 
 class ConsumptionHistory:

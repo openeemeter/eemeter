@@ -5,6 +5,7 @@ from eemeter.consumption import ConsumptionHistory
 
 from datetime import datetime
 from pint.unit import UndefinedUnitError
+import numpy as np
 
 import pytest
 
@@ -140,3 +141,7 @@ def test_consumption_history(consumption_list_one_year_electricity,
     with pytest.raises(KeyError):
         assert ch_gas.before(datetime(2011,7,1)).natural_gas
         assert ch_gas.after(datetime(2013,6,30)).natural_gas
+
+def test_consumption_average_daily_usage_no_division_by_zero():
+    c = Consumption(10,"kWh","electricity",datetime(2012,1,1),datetime(2012,1,1))
+    assert np.isnan(c.average_daily_usage("kWh"))
