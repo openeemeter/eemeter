@@ -25,8 +25,8 @@ class PRISMMeter(MeterBase):
                                     fuel_type: "electricity",
                                     temperature_unit_str: "degF",
                                     model: !obj:eemeter.models.HDDCDDBalancePointModel &elec_model {
-                                        x0: [1.,1.,0.,60.,5],
-                                        bounds: [[0,100],[0,100],[-100,100],[55,65],[2,10]],
+                                        x0: [0,0,0,60,5],
+                                        bounds: [[0,5],[0,5],[-20,80],[55,65],[2,10]],
                                     },
                                 },
                                 !obj:eemeter.meter.AnnualizedUsageMeter {
@@ -50,8 +50,8 @@ class PRISMMeter(MeterBase):
                                     fuel_type: "natural_gas",
                                     temperature_unit_str: "degF",
                                     model: !obj:eemeter.models.HDDBalancePointModel &gas_model {
-                                        x0: [60,1.,1.],
-                                        bounds: [[55,65],[0,100],[0,100]],
+                                        x0: [60,0,0],
+                                        bounds: [[55,65],[0,10],[0,5]],
                                     },
                                 },
                                 !obj:eemeter.meter.AnnualizedUsageMeter {
