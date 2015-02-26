@@ -12,6 +12,10 @@ class ModelBase(object):
         usages and the output of the a model which takes observed_daily_temps
         and returns usage estimates.
         """
+        # ignore nans
+        average_daily_usages = np.ma.masked_array(average_daily_usages,np.isnan(average_daily_usages))
+
+        # precalculate temps
         n_daily_temps = np.array([len(temps) for temps in observed_daily_temps])
 
         def objective_function(params):

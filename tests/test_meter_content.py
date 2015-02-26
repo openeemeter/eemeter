@@ -97,7 +97,7 @@ def test_pre_post_parameters(consumption_history_1,
                             retrofit_end_date=datetime(2013,9,25))
 
     assert_almost_equal(result['temp_sensitivity_params_pre'],
-            [0.5887627, 1.5010216, 5.6613019, 65., 3.7943253])
+            [0.5887528,1.5010468,5.6614777,65.,3.7944418])
     assert_almost_equal(result['temp_sensitivity_params_post'],
             [0.9456324, 0.2925248, 9.4393723, 62.6772884, 2.0227116])
 
@@ -140,13 +140,13 @@ def test_gross_savings_metric(consumption_history_1,
                             retrofit_end_date=datetime(2013,9,25))
 
     assert_almost_equal(result['temp_sensitivity_params_pre'],
-            [0.5887627, 1.5010216, 5.6613019, 65., 3.7943253])
+            [0.5887528,1.5010468,5.6614777,65.,3.7944418])
     assert_almost_equal(result['temp_sensitivity_params_post'],
             [0.9456324, 0.2925248, 9.4393723, 62.6772884, 2.0227116])
 
     assert isinstance(result["consumption_history_pre"],ConsumptionHistory)
     assert isinstance(result["consumption_history_post"],ConsumptionHistory)
-    assert abs(result["gross_savings"] - -115697.906777) < EPSILON
+    assert abs(result["gross_savings"] - -115699.476148) < EPSILON
 
 @pytest.mark.slow
 def test_annualized_gross_savings_metric(consumption_history_1,
@@ -185,11 +185,11 @@ def test_annualized_gross_savings_metric(consumption_history_1,
                             retrofit_end_date=datetime(2013,9,25))
 
     assert_almost_equal(result['temp_sensitivity_params_pre'],
-            [0.5887627, 1.5010216, 5.6613019, 65., 3.7943253])
+            [0.5887528,1.5010468,5.6614777,65.,3.7944418])
     assert_almost_equal(result['temp_sensitivity_params_post'],
             [0.9456324, 0.2925248, 9.4393723, 62.6772884, 2.0227116])
 
-    assert abs(result["annualized_gross_savings"] - -735.775720) < EPSILON
+    assert abs(result["annualized_gross_savings"] - -735.727517) < EPSILON
 
 def test_fuel_type_presence_meter(consumption_history_1):
 
