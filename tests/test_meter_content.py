@@ -213,5 +213,14 @@ def test_princeton_scorekeeping_method(consumption_history_1,
                             weather_source=gsod_722880_2012_2014_weather_source,
                             weather_normal_source=tmy3_722880_weather_source)
 
-    assert result["electricity_presence"]
-    assert not result["natural_gas_presence"]
+    assert result.get("electricity_presence")
+    assert_almost_equal(result.get("temp_sensitivity_params_electricity"),
+            [0.44667569,0.96903377,8.26148838,65.,4.10000001])
+    assert_almost_equal(result.get("annualized_usage_electricity"),4411.3924204)
+    assert_almost_equal(result.get("daily_standard_error_electricity"),14.1469073)
+
+    assert not result.get("natural_gas_presence")
+    assert result.get("temp_sensitivity_params_natural_gas") is None
+    assert result.get("annualized_usage_natural_gas") is None
+    assert result.get("daily_standard_error_natural_gas") is None
+
