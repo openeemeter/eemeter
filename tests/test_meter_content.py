@@ -97,7 +97,7 @@ def test_pre_post_parameters(consumption_history_1,
                             retrofit_end_date=datetime(2013,9,25))
 
     assert_almost_equal(result['temp_sensitivity_params_pre'],
-            [0.5887627, 1.5010216, 5.6613019, 65., 3.7943253])
+            [0.5887528,1.5010468,5.6614777,65.,3.7944418])
     assert_almost_equal(result['temp_sensitivity_params_post'],
             [0.9456324, 0.2925248, 9.4393723, 62.6772884, 2.0227116])
 
@@ -140,13 +140,13 @@ def test_gross_savings_metric(consumption_history_1,
                             retrofit_end_date=datetime(2013,9,25))
 
     assert_almost_equal(result['temp_sensitivity_params_pre'],
-            [0.5887627, 1.5010216, 5.6613019, 65., 3.7943253])
+            [0.5887528,1.5010468,5.6614777,65.,3.7944418])
     assert_almost_equal(result['temp_sensitivity_params_post'],
             [0.9456324, 0.2925248, 9.4393723, 62.6772884, 2.0227116])
 
     assert isinstance(result["consumption_history_pre"],ConsumptionHistory)
     assert isinstance(result["consumption_history_post"],ConsumptionHistory)
-    assert abs(result["gross_savings"] - -115697.906777) < EPSILON
+    assert abs(result["gross_savings"] - -115699.476148) < EPSILON
 
 @pytest.mark.slow
 def test_annualized_gross_savings_metric(consumption_history_1,
@@ -185,11 +185,11 @@ def test_annualized_gross_savings_metric(consumption_history_1,
                             retrofit_end_date=datetime(2013,9,25))
 
     assert_almost_equal(result['temp_sensitivity_params_pre'],
-            [0.5887627, 1.5010216, 5.6613019, 65., 3.7943253])
+            [0.5887528,1.5010468,5.6614777,65.,3.7944418])
     assert_almost_equal(result['temp_sensitivity_params_post'],
             [0.9456324, 0.2925248, 9.4393723, 62.6772884, 2.0227116])
 
-    assert abs(result["annualized_gross_savings"] - -735.775720) < EPSILON
+    assert abs(result["annualized_gross_savings"] - -735.727517) < EPSILON
 
 def test_fuel_type_presence_meter(consumption_history_1):
 
@@ -213,8 +213,16 @@ def test_princeton_scorekeeping_method(consumption_history_1,
                             weather_source=gsod_722880_2012_2014_weather_source,
                             weather_normal_source=tmy3_722880_weather_source)
 
-    assert result["electricity_presence"]
-    assert not result["natural_gas_presence"]
+    assert result.get("electricity_presence")
+    assert_almost_equal(result.get("temp_sensitivity_params_electricity"),
+            [0.44667569,0.96903377,8.26148838,65.,4.10000001])
+    assert_almost_equal(result.get("annualized_usage_electricity"),4411.3924204)
+    assert_almost_equal(result.get("daily_standard_error_electricity"),14.1469073)
+
+    assert not result.get("natural_gas_presence")
+    assert result.get("temp_sensitivity_params_natural_gas") is None
+    assert result.get("annualized_usage_natural_gas") is None
+    assert result.get("daily_standard_error_natural_gas") is None
 
 def test_bpi2400(consumption_history_1,
                  tmy3_722880_weather_source):

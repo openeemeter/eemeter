@@ -6,6 +6,13 @@ from eemeter.weather import WeatherUndergroundWeatherSource
 from eemeter.weather import nrel_tmy3_station_from_lat_long
 from eemeter.weather import ziplocate_us
 from eemeter.weather import usaf_station_from_zipcode
+from eemeter.weather import zipcode_to_lat_lng
+from eemeter.weather import lat_lng_to_zipcode
+from eemeter.weather import tmy3_to_lat_lng
+from eemeter.weather import lat_lng_to_tmy3
+from eemeter.weather import zipcode_to_tmy3
+from eemeter.weather import tmy3_to_zipcode
+from eemeter.weather import haversine
 
 from eemeter.consumption import ConsumptionHistory
 from eemeter.consumption import Consumption
@@ -64,6 +71,57 @@ def zipcode_to_station(request):
 
 
 ##### Tests #####
+
+def test_zipcode_to_lat_lng(lat_long_zipcode):
+    lat_lngs = [(41.8955360374983,-87.6217660821178),
+               (34.1678563835543,-118.126220490392),
+               (42.3769095103979,-71.1247640734676),
+               (42.3594006437094,-87.8581578622419)]
+    zipcodes = ["60611","91104","02138","60085"]
+    for (lat,lng),zipcode in zip(lat_lngs,zipcodes):
+        assert lat,lng == zipcode_to_lat_lng(zipcode)
+
+def test_lat_lng_to_zipcode():
+    lat_lngs = [(41.8955360374983,-87.6217660821178),
+               (34.1678563835543,-118.126220490392),
+               (42.3769095103979,-71.1247640734676),
+               (42.3594006437094,-87.8581578622419)]
+    zipcodes = ["60611","91104","02138","60085"]
+    for (lat,lng),zipcode in zip(lat_lngs,zipcodes):
+        assert zipcode == lat_lng_to_zipcode(lat,lng)
+
+def test_tmy3_to_lat_lng():
+    lat_lngs = [(41.8955360374983,-87.6217660821178),
+               (34.1678563835543,-118.126220490392),
+               (42.3769095103979,-71.1247640734676),
+               (42.3594006437094,-87.8581578622419)]
+    stations = ["725340","722880","725090","725347"]
+    for (lat,lng),station in zip(lat_lngs,stations):
+        assert lat,lng == tmy3_to_lat_lng(station)
+
+def test_lat_lng_to_tmy3():
+    lat_lngs = [(41.8955360374983,-87.6217660821178),
+               (34.1678563835543,-118.126220490392),
+               (42.3769095103979,-71.1247640734676),
+               (42.3594006437094,-87.8581578622419)]
+    stations = ["725340","722880","725090","725347"]
+    for (lat,lng),station in zip(lat_lngs,stations):
+        assert station == lat_lng_to_tmy3(lat,lng)
+
+def test_zipcode_to_tmy3():
+    zipcodes = ["60611","91104","02138","60085"]
+    stations = ["725340","722880","725090","725347"]
+    for zipcode,station in zip(zipcodes,stations):
+        assert station == zipcode_to_tmy3(zipcode)
+
+def test_tmy3_to_zipcode():
+    zipcodes = ["97459","45433","55601","96740"]
+    stations = ["726917","745700","727556","911975"]
+    for zipcode,station in zip(zipcodes,stations):
+        assert zipcode == tmy3_to_zipcode(station)
+
+def test_haversine():
+    pass
 
 def test_weather_source_base(consumption_history_one_summer_electricity):
     weather_source = WeatherSourceBase()
@@ -189,4 +247,3 @@ def test_tmy3_weather_source(consumption_history_one_summer_electricity,tmy3_wea
     assert abs(normal_cdds[0] - 111.01566097391235) < EPSILON
     assert abs(normal_cdds[1] - 258.15392544347725) < EPSILON
     assert abs(normal_cdds[2] - 297.40175153043384) < EPSILON
-

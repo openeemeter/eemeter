@@ -12,6 +12,10 @@ class ModelBase(object):
         usages and the output of the a model which takes observed_daily_temps
         and returns usage estimates.
         """
+        # ignore nans
+        average_daily_usages = np.ma.masked_array(average_daily_usages,np.isnan(average_daily_usages))
+
+        # precalculate temps
         n_daily_temps = np.array([len(temps) for temps in observed_daily_temps])
 
         def objective_function(params):
@@ -52,7 +56,7 @@ class HDDCDDBalancePointModel(ModelBase):
         - `base_load` is the daily non-temperature-related usage
         - `bp_low` is the reference temperature of the lower (hdd) balance
           point
-        - bd_diff is the (generally positive) difference between the
+        - `bd_diff` is the (generally positive) difference between the
           implicitly defined `bp_high` and `bp_low`
 
         """
