@@ -56,7 +56,7 @@ class HDDCDDBalancePointModel(ModelBase):
         - `base_load` is the daily non-temperature-related usage
         - `bp_low` is the reference temperature of the lower (hdd) balance
           point
-        - bd_diff is the (generally positive) difference between the
+        - `bd_diff` is the (generally positive) difference between the
           implicitly defined `bp_high` and `bp_low`
 
         """
