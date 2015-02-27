@@ -38,6 +38,7 @@ class PRISMMeter(MeterBase):
                             output_mapping: {
                                 temp_sensitivity_params: temp_sensitivity_params_electricity,
                                 annualized_usage: annualized_usage_electricity,
+                                daily_standard_error: daily_standard_error_electricity,
                             },
                         },
                     },
@@ -63,6 +64,7 @@ class PRISMMeter(MeterBase):
                             output_mapping: {
                                 temp_sensitivity_params: temp_sensitivity_params_natural_gas,
                                 annualized_usage: annualized_usage_natural_gas,
+                                daily_standard_error: daily_standard_error_natural_gas,
                             },
                         },
                     },
