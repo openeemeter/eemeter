@@ -6,7 +6,7 @@ class ModelBase(object):
         self.x0 = x0
         self.bounds = bounds
 
-    def parameter_optimization(self,average_daily_usages,observed_daily_temps, weights):
+    def parameter_optimization(self,average_daily_usages,observed_daily_temps, weights=None):
         """Returns parameters which, according to an optimization routine in
         `scipy.optimize`, minimize the sum of squared errors between observed
         usages and the output of the a model which takes observed_daily_temps
@@ -17,6 +17,9 @@ class ModelBase(object):
 
         # precalculate temps
         n_daily_temps = np.array([len(temps) for temps in observed_daily_temps])
+        
+        if weights == None:
+            weights = np.ones(len(average_daily_usages))
         
         def objective_function(params):
             usages_est = self.compute_usage_estimates(params,observed_daily_temps)
