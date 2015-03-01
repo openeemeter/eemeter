@@ -50,7 +50,7 @@ class WeatherSourceBase:
             day = consumption.start + timedelta(days=days)
             temp = self.get_daily_average_temperature(day,unit)
             avg_temps.append(temp)
-        return avg_temps
+        return np.array(avg_temps)
 
     def get_daily_average_temperature(self,day,unit):
         """Should return the average temperature of the given day. Must be
@@ -273,8 +273,8 @@ class TMY3WeatherSource(WeatherSourceBase):
             day_data = np.array(day_temps)
             masked_data = np.ma.masked_array(day_data,np.isnan(day_data))
             # wrap in array for compatibility with model input format
-            temps.append([np.mean(masked_data)])
-        return temps
+            temps.append(np.array([np.mean(masked_data)]))
+        return np.array(temps)
 
 class WeatherUndergroundWeatherSource(WeatherSourceBase):
     def __init__(self,zipcode,start,end,api_key):

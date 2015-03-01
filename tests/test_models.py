@@ -3,6 +3,7 @@ from eemeter.models import HDDBalancePointModel
 from eemeter.models import CDDBalancePointModel
 
 from numpy.testing import assert_almost_equal
+import numpy as np
 
 import pytest
 
@@ -16,7 +17,7 @@ def test_HDDCDDBalancePointModel():
     model = HDDCDDBalancePointModel(x0=x0,bounds=bounds)
 
     params = [1,1,1,60,5]
-    observed_temps = [[i] for i in range(50,70)]
+    observed_temps = np.array([[i] for i in range(50,70)])
     usages = model.compute_usage_estimates(params,observed_temps)
     assert_almost_equal(usages[8:18],[3,2,1,1,1,1,1,1,2,3])
     opt_params = model.parameter_optimization(usages, observed_temps)
@@ -33,7 +34,7 @@ def test_HDDBalancePointModel():
     model = HDDBalancePointModel(x0=x0,bounds=bounds)
 
     params = [60,1,1]
-    observed_temps = [[i] for i in range(50,70)]
+    observed_temps = np.array([[i] for i in range(50,70)])
     usages = model.compute_usage_estimates(params,observed_temps)
     assert_almost_equal(usages[8:13],[3,2,1,1,1])
     opt_params = model.parameter_optimization(usages, observed_temps)
@@ -49,7 +50,7 @@ def test_CDDBalancePointModel():
     model = CDDBalancePointModel(x0=x0,bounds=bounds)
 
     params = [60,1,1]
-    observed_temps = [[i] for i in range(50,70)]
+    observed_temps = np.array([[i] for i in range(50,70)])
     usages = model.compute_usage_estimates(params,observed_temps)
     assert_almost_equal(usages[8:13],[1,1,1,2,3])
     opt_params = model.parameter_optimization(usages, observed_temps)

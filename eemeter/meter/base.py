@@ -195,7 +195,7 @@ class AnnualizedUsageMeter(MeterBase):
         """
         daily_temps = weather_normal_source.annual_daily_temperatures(self.temperature_unit_str)
         usage_estimates = self.model.compute_usage_estimates(temp_sensitivity_params,daily_temps)
-        annualized_usage = np.sum(usage_estimates)
+        annualized_usage = np.nansum(usage_estimates)
         return {"annualized_usage": annualized_usage}
 
 class PrePostMeter(MeterBase):
@@ -248,7 +248,7 @@ class GrossSavingsMeter(MeterBase):
         usages = np.array([c.to(self.fuel_unit_str) for c in consumptions_post])
         usage_n_days = np.array([len(ts) for ts in observed_daily_temps])
         usage_estimates_post = np.array(self.model.compute_usage_estimates(temp_sensitivity_params_pre,observed_daily_temps)) * usage_n_days
-        return {"gross_savings": np.sum(usages - usage_estimates_post)}
+        return {"gross_savings": np.nansum(usages - usage_estimates_post)}
 
 class AnnualizedGrossSavingsMeter(MeterBase):
     def __init__(self,model,fuel_type,temperature_unit_str,**kwargs):

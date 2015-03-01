@@ -66,29 +66,14 @@ class HDDCDDBalancePointModel(ModelBase):
         # get parameters
         ts_low,ts_high,base_load,bp_low,bp_diff = params
         bp_high = bp_low + bp_diff
-
-        hdds = []
-        cdds = []
-        base_loads = []
+        
+        result = []
         for interval_daily_temps in observed_daily_temps:
-            hdd = 0
-            cdd = 0
-            bl = 0
-            for daily_temp in interval_daily_temps:
-                if not np.isnan(daily_temp):
-                    if daily_temp <= bp_low:
-                        hdd += bp_low - daily_temp
-                    elif daily_temp >= bp_high:
-                        cdd += daily_temp - bp_high
-                bl += base_load
-            hdds.append(hdd)
-            cdds.append(cdd)
-            base_loads.append(bl)
-
-        estimates = np.array([bl + ts_low*hdd + ts_high*cdd
-                              for hdd,cdd,bl in zip(hdds,cdds,base_loads)])
-
-        return estimates
+            cooling = np.maximum(interval_daily_temps - bp_high, 0)*ts_high
+            heating = np.maximum(bp_low - interval_daily_temps, 0)*ts_low
+            total = np.sum(cooling+heating) + base_load*len(interval_daily_temps)
+            result.append(total)
+        return result
 
 class HDDBalancePointModel(ModelBase):
 
@@ -110,24 +95,13 @@ class HDDBalancePointModel(ModelBase):
         """
         # get parameters
         reference_temperature,base_level_consumption,heating_slope = params
-
-        hdds = []
-        base_loads = []
+        
+        result = []
         for interval_daily_temps in observed_daily_temps:
-            hdd = 0
-            bl = 0
-            for daily_temp in interval_daily_temps:
-                if not np.isnan(daily_temp):
-                    if daily_temp <= reference_temperature:
-                        hdd += reference_temperature - daily_temp
-                bl += base_level_consumption
-            hdds.append(hdd)
-            base_loads.append(bl)
-
-        estimates = np.array([bl + heating_slope*hdd
-                              for hdd,bl in zip(hdds,base_loads)])
-
-        return estimates
+            heating = np.maximum(reference_temperature - interval_daily_temps, 0)*heating_slope
+            total = np.sum(heating) + base_level_consumption*len(interval_daily_temps)
+            result.append(total)
+        return result
 
 class CDDBalancePointModel(ModelBase):
 
@@ -150,20 +124,9 @@ class CDDBalancePointModel(ModelBase):
         # get parameters
         reference_temperature,base_level_consumption,cooling_slope = params
 
-        cdds = []
-        base_loads = []
+        result = []
         for interval_daily_temps in observed_daily_temps:
-            cdd = 0
-            bl = 0
-            for daily_temp in interval_daily_temps:
-                if not np.isnan(daily_temp):
-                    if daily_temp >= reference_temperature:
-                        cdd += daily_temp - reference_temperature
-                bl += base_level_consumption
-            cdds.append(cdd)
-            base_loads.append(bl)
-
-        estimates = np.array([bl + cooling_slope*cdd
-                              for cdd,bl in zip(cdds,base_loads)])
-
-        return estimates
+            cooling = np.maximum(interval_daily_temps - reference_temperature, 0)*cooling_slope
+            total = np.sum(cooling) + base_level_consumption*len(interval_daily_temps)
+            result.append(total)
+        return result
