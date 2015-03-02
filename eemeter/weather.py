@@ -145,7 +145,7 @@ class GSODWeatherSource(WeatherSourceBase):
     def _add_file(self,f):
         for line in f.readlines()[1:]:
             columns=line.split()
-            self._data[columns[2]] = Q_(float(columns[3]),self._source_unit)
+            self._data[columns[2].decode('utf-8')] = Q_(float(columns[3]),self._source_unit)
 
 class ISDWeatherSource(WeatherSourceBase):
     def __init__(self,station_id,start_year,end_year):
@@ -227,7 +227,7 @@ class ISDWeatherSource(WeatherSourceBase):
             air_temperature = Q_(float(line[87:92]) / 10, self._source_unit)
             if line[87:92] == "+9999":
                 air_temperature = Q_(float("nan"),self._source_unit)
-            self._data[line[15:25]] = air_temperature
+            self._data[line[15:25].decode('utf-8')] = air_temperature
 
 class TMY3WeatherSource(WeatherSourceBase):
     def __init__(self,station_id):
@@ -239,7 +239,7 @@ class TMY3WeatherSource(WeatherSourceBase):
         for line in r.text.splitlines()[3:]:
             row = line.split(",")
             date_string = row[0][0:2] + row[0][3:5] + row[1][0:2] # MMDDHH
-            self._data[date_string] = Q_(float(row[31]),self._source_unit)
+            self._data[date_string.decode('utf-8')] = Q_(float(row[31]),self._source_unit)
 
     def get_daily_average_temperature(self,day,unit):
         """Returns the average temperature on the given day. `day` can be
@@ -303,7 +303,7 @@ class WeatherUndergroundWeatherSource(WeatherSourceBase):
             date_string = day["date"]["year"] + day["date"]["mon"] + \
                     day["date"]["mday"]
             data = Q_(int(day["meantempi"]),self._source_unit)
-            self._data[date_string] = data
+            self._data[date_string.decode('utf-8')] = data
 
 def haversine(lat1,lng1,lat2,lng2):
     """ Calculate the great circle distance between two points
