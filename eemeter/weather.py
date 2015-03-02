@@ -107,7 +107,7 @@ class GSODWeatherSource(WeatherSourceBase):
         if len(station_id) == 6:
             # given station id is the six digit code, so need to get full name
             with resource_stream('eemeter.resources','GSOD-ISD_station_index.json') as f:
-                station_index = json.loads(f.read())
+                station_index = json.loads(f.read().decode("utf-8"))
             # take first station in list
             potential_station_ids = station_index[station_id]
         else:
@@ -152,7 +152,7 @@ class ISDWeatherSource(WeatherSourceBase):
         if len(station_id) == 6:
             # given station id is the six digit code, so need to get full name
             with resource_stream('eemeter.resources','GSOD-ISD_station_index.json') as f:
-                station_index = json.loads(f.read())
+                station_index = json.loads(f.read().decode("utf-8"))
             # take first station in list
             potential_station_ids = station_index[station_id]
         else:
@@ -325,7 +325,7 @@ def lat_lng_to_tmy3(lat,lng):
     longitude coordinates.
     """
     with resource_stream('eemeter.resources','tmy3_to_lat_lng.json') as f:
-        index = json.loads(f.read())
+        index = json.loads(f.read().decode("utf-8"))
     dists = []
     index_list = [i for i in index.items()]
     for station,(stat_lat,stat_lng) in index_list:
@@ -337,7 +337,7 @@ def lat_lng_to_zipcode(lat,lng):
     longitude coordinates.
     """
     with resource_stream('eemeter.resources','zipcode_to_lat_lng.json') as f:
-        index = json.loads(f.read())
+        index = json.loads(f.read().decode("utf-8"))
     dists = []
     index_list = [i for i in index.items()]
     for zipcode,(zip_lat,zip_lng) in index_list:
@@ -348,7 +348,7 @@ def tmy3_to_lat_lng(station):
     """Return the latitude and longitude coordinates of the given station.
     """
     with resource_stream('eemeter.resources','tmy3_to_lat_lng.json') as f:
-        index = json.loads(f.read())
+        index = json.loads(f.read().decode("utf-8"))
     return index.get(station)
 
 def tmy3_to_zipcode(station):
@@ -357,14 +357,14 @@ def tmy3_to_zipcode(station):
     area)
     """
     with resource_stream('eemeter.resources','tmy3_to_zipcode.json') as f:
-        index = json.loads(f.read())
+        index = json.loads(f.read().decode("utf-8"))
     return index.get(station)
 
 def zipcode_to_lat_lng(zipcode):
     """Return the latitude and longitude centroid of a particular ZIP code.
     """
     with resource_stream('eemeter.resources','zipcode_to_lat_lng.json') as f:
-        index = json.loads(f.read())
+        index = json.loads(f.read().decode("utf-8"))
     return index.get(zipcode)
 
 def zipcode_to_tmy3(zipcode):
@@ -372,5 +372,5 @@ def zipcode_to_tmy3(zipcode):
     the ZIP code.
     """
     with resource_stream('eemeter.resources','zipcode_to_tmy3.json') as f:
-        index = json.loads(f.read())
+        index = json.loads(f.read().decode("utf-8"))
     return index.get(zipcode)
