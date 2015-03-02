@@ -303,7 +303,7 @@ class WeatherUndergroundWeatherSource(WeatherSourceBase):
             date_string = day["date"]["year"] + day["date"]["mon"] + \
                     day["date"]["mday"]
             data = Q_(int(day["meantempi"]),self._source_unit)
-            self._data[date_string.decode('utf-8')] = data
+            self._data[date_string] = data
 
 def haversine(lat1,lng1,lat2,lng2):
     """ Calculate the great circle distance between two points

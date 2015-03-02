@@ -152,5 +152,8 @@ def test_sane_missing_input_error_messages():
 
     with pytest.raises(TypeError) as excinfo:
         seq_meter.evaluate(value_one=1)
-    assert "expected argument 'value' for meter 'DummyMeter'; got kwargs={'result_one': 1, 'value_one': 1} (with mapped_inputs={'result_one': 1, 'value_one': 1}) instead." in excinfo.value
+    assert "expected argument 'value' for meter 'DummyMeter';" \
+           " got kwargs={'result_one': 1, 'value_one': 1} " \
+           "(with mapped_inputs={'result_one': 1, 'value_one': 1}) instead." \
+                   == excinfo.value.message
 
