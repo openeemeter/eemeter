@@ -19,6 +19,8 @@ import pytest
 import os
 import warnings
 
+from numpy.testing import assert_almost_equal
+
 EPSILON = 10e-6
 
 ##### Fixtures #####
@@ -207,3 +209,18 @@ def test_tmy3_weather_source(consumption_history_one_summer_electricity,tmy3_wea
     assert abs(normal_cdds[0] - 111.01566097391235) < EPSILON
     assert abs(normal_cdds[1] - 258.15392544347725) < EPSILON
     assert abs(normal_cdds[2] - 297.40175153043384) < EPSILON
+
+def test_haversine():
+    lat_lng_dists = [(0,0,0,0,0),
+                     (76,1,76,1,0),
+                     (76,1,76,361,0),
+                     (0,0,0,90,10007.54339801),
+                     (0,0,0,180,20015.08679602),
+                     (0,-180,0,180,0),
+                     (-90,0,90,0,20015.08679602),
+                     (-90,0,90,180,20015.08679602),
+                     ]
+
+    for lat1,lng1,lat2,lng2,dist in lat_lng_dists:
+        assert_almost_equal(haversine(lat1,lng1,lat2,lng2),dist)
+
