@@ -214,11 +214,11 @@ expose the structure of the meter and the inputs needed to run it.
         actual_g = result_pre["annualized_usage_natural_gas"] - result_post["annualized_usage_natural_gas"]
         predicted_g = project["estimated_gas_savings"]
 
-        print "Electricity savings actual//predicted (# bills [pre]-[post]): {:.02f} // {:.02f} ({}-{})"\
-                .format(actual_e,predicted_e,len(ch_pre.electricity),len(ch_post.electricity))
-        print "Natural gas savings actual//predicted (# bills [pre]-[post]): {:.02f} // {:.02f} ({}-{})"\
-                .format(actual_g,predicted_g,len(ch_pre.natural_gas),len(ch_post.natural_gas))
-        print
+        print("Electricity savings actual//predicted (# bills [pre]-[post]): {:.02f} // {:.02f} ({}-{})"
+                .format(actual_e,predicted_e,len(ch_pre.electricity),len(ch_post.electricity)))
+        print("Natural gas savings actual//predicted (# bills [pre]-[post]): {:.02f} // {:.02f} ({}-{})"
+                .format(actual_g,predicted_g,len(ch_pre.natural_gas),len(ch_post.natural_gas)))
+        print()
 
 This will print something like the following::
 

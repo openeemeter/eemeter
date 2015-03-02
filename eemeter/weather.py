@@ -327,7 +327,7 @@ def lat_lng_to_tmy3(lat,lng):
     with resource_stream('eemeter.resources','tmy3_to_lat_lng.json') as f:
         index = json.load(f)
     dists = []
-    index_list = [i for i in index.iteritems()]
+    index_list = [i for i in index.items()]
     for station,(stat_lat,stat_lng) in index_list:
         dists.append(haversine(lat,lng,stat_lat,stat_lng))
     return index_list[np.argmin(dists)][0]
@@ -339,7 +339,7 @@ def lat_lng_to_zipcode(lat,lng):
     with resource_stream('eemeter.resources','zipcode_to_lat_lng.json') as f:
         index = json.load(f)
     dists = []
-    index_list = [i for i in index.iteritems()]
+    index_list = [i for i in index.items()]
     for zipcode,(zip_lat,zip_lng) in index_list:
         dists.append(haversine(lat,lng,zip_lat,zip_lng))
     return index_list[np.argmin(dists)][0]

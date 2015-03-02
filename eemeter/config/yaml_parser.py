@@ -45,7 +45,7 @@ def _instantiate_proxy_tuple(proxy,bindings):
         return bindings[proxy]
     else:
         kwargs = {k: _instantiate(v, bindings)
-                  for k, v in proxy.keywords.iteritems()}
+                  for k, v in proxy.keywords.items()}
         obj = proxy.callable(**kwargs)
 
     bindings[proxy] = obj
@@ -56,7 +56,7 @@ def _instantiate(proxy,bindings={}):
     if isinstance(proxy, Proxy):
         return _instantiate_proxy_tuple(proxy,bindings)
     elif isinstance(proxy, dict):
-        return {k: _instantiate(v,bindings) for k, v in proxy.iteritems()}
+        return {k: _instantiate(v,bindings) for k, v in proxy.items()}
     elif isinstance(proxy, list):
         return [_instantiate(v,bindings) for v in proxy]
     else:

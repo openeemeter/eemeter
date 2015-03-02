@@ -148,4 +148,4 @@ class ConsumptionHistory:
         `"electricity"` or `"natural_gas"`) and consumptions is a list of all
         Consumption instances with that particular fuel type.
         """
-        return self._data.iteritems()
+        return self._data.items()

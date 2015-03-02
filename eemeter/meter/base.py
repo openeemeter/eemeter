@@ -41,7 +41,7 @@ class MeterBase(object):
         are outgoing input names. (e.g. ({"old_input_name":"new_input_name"})
         """
         mapped_inputs = {}
-        for k,v in inputs.iteritems():
+        for k,v in inputs.items():
             if k in self.input_mapping:
                 new_key = self.input_mapping[k]
                 if new_key in self.input_mapping:
@@ -61,7 +61,7 @@ class MeterBase(object):
         are outgoing output names. (e.g. ({"old_output_name":"new_output_name"})
         """
         mapped_outputs = {}
-        for k,v in outputs.iteritems():
+        for k,v in outputs.items():
             if k in self.output_mapping:
                 new_key = self.output_mapping[k]
                 if new_key in self.output_mapping:
@@ -106,9 +106,9 @@ class SequentialMeter(MeterBase):
         """
         result = {}
         for meter in self.sequence:
-            args = {k:v for k,v in chain(kwargs.iteritems(),result.iteritems())}
+            args = {k:v for k,v in chain(kwargs.items(),result.items())}
             meter_result = meter.evaluate(**args)
-            for k,v in meter_result.iteritems():
+            for k,v in meter_result.items():
                 if k in result:
                     message = "unexpected repeated metric ({}) in {}. " \
                               "A different input_mapping or " \
@@ -212,7 +212,7 @@ class PrePostMeter(MeterBase):
         pre_kwargs = {}
         post_kwargs = {}
         split_kwargs = {}
-        for k,v in kwargs.iteritems():
+        for k,v in kwargs.items():
             if k in self.splittable_args:
                 pre_kwargs[k] = v.before(retrofit_start_date)
                 post_kwargs[k] = v.after(retrofit_end_date)
@@ -223,11 +223,11 @@ class PrePostMeter(MeterBase):
                 post_kwargs[k] = kwargs[k]
         pre_results = self.meter.evaluate(**pre_kwargs)
         post_results = self.meter.evaluate(**post_kwargs)
-        pre_results = {k + "_pre":v for k,v in pre_results.iteritems()}
-        post_results = {k + "_post":v for k,v in post_results.iteritems()}
-        results = {k:v for k,v in chain(pre_results.iteritems(),
-                                        post_results.iteritems(),
-                                        split_kwargs.iteritems())}
+        pre_results = {k + "_pre":v for k,v in pre_results.items()}
+        post_results = {k + "_post":v for k,v in post_results.items()}
+        results = {k:v for k,v in chain(pre_results.items(),
+                                        post_results.items(),
+                                        split_kwargs.items())}
         return results
 
 class GrossSavingsMeter(MeterBase):
@@ -295,7 +295,7 @@ class DebugMeter(MeterBase):
         """Helpful for debugging meter instances - prints out kwargs for
         inspection.
         """
-        print "DEBUG kwargs:", kwargs
+        print("DEBUG kwargs:", kwargs)
         return {}
 
 class DummyMeter(MeterBase):
