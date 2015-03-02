@@ -46,7 +46,7 @@ class WeatherSourceBase:
         period. Result is a list of temperatures.
         """
         avg_temps = []
-        for days in xrange(period.timedelta.days):
+        for days in range(period.timedelta.days):
             day = period.start + timedelta(days=days)
             temp = self.get_daily_average_temperature(day,unit)
             avg_temps.append(temp)
@@ -73,7 +73,7 @@ class WeatherSourceBase:
         period.
         """
         total_hdd = 0.
-        for days in xrange(period.timedelta.days):
+        for days in range(period.timedelta.days):
             day = period.start + timedelta(days=days)
             temp = self.get_daily_average_temperature(day,unit)
             if temp < base:
@@ -95,7 +95,7 @@ class WeatherSourceBase:
         period.
         """
         total_cdd = 0.
-        for days in xrange(period.timedelta.days):
+        for days in range(period.timedelta.days):
             day = period.start + timedelta(days=days)
             temp = self.get_daily_average_temperature(day,unit)
             if temp > base:
@@ -118,7 +118,7 @@ class GSODWeatherSource(WeatherSourceBase):
         ftp = ftplib.FTP("ftp.ncdc.noaa.gov")
         ftp.login()
         data = []
-        for year in xrange(start_year,end_year + 1):
+        for year in range(start_year,end_year + 1):
             string = BytesIO()
             # not every station will be available in every year, so use the
             # first one that works
@@ -163,7 +163,7 @@ class ISDWeatherSource(WeatherSourceBase):
         ftp = ftplib.FTP("ftp.ncdc.noaa.gov")
         ftp.login()
         data = []
-        for year in xrange(start_year,end_year + 1):
+        for year in range(start_year,end_year + 1):
             string = BytesIO()
             # not every station will be available in every year, so use the
             # first one that works
@@ -187,7 +187,7 @@ class ISDWeatherSource(WeatherSourceBase):
         avg_temps = []
         null = Q_(float("nan"),self._source_unit)
         n_hours = period.timedelta.days * 24 + period.timedelta.seconds // 3600
-        for hours in xrange(n_hours):
+        for hours in range(n_hours):
             hour = period.start + timedelta(seconds=hours*3600)
             hourly = self._data.get(hour.strftime("%Y%m%d%H"),null).to(unit).magnitude
             avg_temps.append(hourly)
