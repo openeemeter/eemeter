@@ -1,5 +1,5 @@
-from consumption import Consumption
 from datetime import timedelta
+from eemeter.consumption import Consumption
 from eemeter.consumption import DatetimePeriod
 
 from eemeter.meter import AnnualizedUsageMeter
