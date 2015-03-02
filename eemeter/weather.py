@@ -11,43 +11,43 @@ from . import ureg, Q_
 from pkg_resources import resource_stream
 
 class WeatherSourceBase:
-    def get_average_temperature(self,consumptions,unit_name):
-        """Returns a list of average temperatures of each consumption period in
+    def get_average_temperature(self,periods,unit_name):
+        """Returns a list of average temperatures of each DatetimePeriod in
         the given unit (usually "degF" or "degC").
         """
         unit = ureg.parse_expression(unit_name)
         avg_temps = []
-        for consumption in consumptions:
-            avg_temps.append(self.get_consumption_average_temperature(consumption,unit))
+        for period in periods:
+            avg_temps.append(self.get_period_average_temperature(period,unit))
         return avg_temps
 
-    def get_consumption_average_temperature(self,consumption,unit):
+    def get_period_average_temperature(self,period,unit):
         """Returns the average temperature during the duration of a single
-        Consumption instance as calculated by taking the mean of daily average
+        DatetimePeriod instance as calculated by taking the mean of daily average
         temperatures.
         """
-        avg_temps = self.get_consumption_daily_temperatures(consumption,unit)
+        avg_temps = self.get_period_daily_temperatures(period,unit)
         return np.mean(avg_temps)
 
-    def get_daily_temperatures(self,consumptions,unit_name):
-        """Returns, for each consumption, a list of average daily temperatures
-        observed during the duration of that consumption period. Return value
+    def get_daily_temperatures(self,periods,unit_name):
+        """Returns, for each period, a list of average daily temperatures
+        observed during the duration of that period. Return value
         is a list of lists of temperatures.
         """
         unit = ureg.parse_expression(unit_name)
         daily_temps = []
-        for consumption in consumptions:
-            daily_temps.append(self.get_consumption_daily_temperatures(consumption,unit))
+        for period in periods:
+            daily_temps.append(self.get_period_daily_temperatures(period,unit))
         return daily_temps
 
-    def get_consumption_daily_temperatures(self,consumption,unit):
-        """Returns, for a particular consumption instance, a list of average
-        daily temperatures observed during the duration of that consumption
+    def get_period_daily_temperatures(self,period,unit):
+        """Returns, for a particular period instance, a list of average
+        daily temperatures observed during the duration of that period
         period. Result is a list of temperatures.
         """
         avg_temps = []
-        for days in xrange(consumption.timedelta.days):
-            day = consumption.start + timedelta(days=days)
+        for days in xrange(period.timedelta.days):
+            day = period.start + timedelta(days=days)
             temp = self.get_daily_average_temperature(day,unit)
             avg_temps.append(temp)
         return np.array(avg_temps)
@@ -58,45 +58,45 @@ class WeatherSourceBase:
         """
         raise NotImplementedError
 
-    def get_hdd(self,consumptions,unit_name,base):
-        """Returns, for each consumption, the total heating degree days
-        observed during the consumption period.
+    def get_hdd(self,periods,unit_name,base):
+        """Returns, for each period, the total heating degree days
+        observed during the period.
         """
         unit = ureg.parse_expression(unit_name)
         hdds = []
-        for consumption in consumptions:
-            hdds.append(self.get_consumption_hdd(consumption,unit,base))
+        for period in periods:
+            hdds.append(self.get_period_hdd(period,unit,base))
         return hdds
 
-    def get_consumption_hdd(self,consumption,unit,base):
+    def get_period_hdd(self,period,unit,base):
         """Returns the total heating degree days observed during the
-        consumption period.
+        period.
         """
         total_hdd = 0.
-        for days in xrange(consumption.timedelta.days):
-            day = consumption.start + timedelta(days=days)
+        for days in xrange(period.timedelta.days):
+            day = period.start + timedelta(days=days)
             temp = self.get_daily_average_temperature(day,unit)
             if temp < base:
                 total_hdd += base - temp
         return total_hdd
 
-    def get_cdd(self,consumptions,unit_name,base):
-        """Returns, for each consumption, the total cooling degree days
-        observed during the consumption period.
+    def get_cdd(self,periods,unit_name,base):
+        """Returns, for each period, the total cooling degree days
+        observed during the period.
         """
         unit = ureg.parse_expression(unit_name)
         cdds = []
-        for consumption in consumptions:
-            cdds.append(self.get_consumption_cdd(consumption,unit,base))
+        for period in periods:
+            cdds.append(self.get_period_cdd(period,unit,base))
         return cdds
 
-    def get_consumption_cdd(self,consumption,unit,base):
+    def get_period_cdd(self,period,unit,base):
         """Returns the total cooling degree days observed during the
-        consumption period.
+        period.
         """
         total_cdd = 0.
-        for days in xrange(consumption.timedelta.days):
-            day = consumption.start + timedelta(days=days)
+        for days in xrange(period.timedelta.days):
+            day = period.start + timedelta(days=days)
             temp = self.get_daily_average_temperature(day,unit)
             if temp > base:
                 total_cdd += temp - base
@@ -180,15 +180,15 @@ class ISDWeatherSource(WeatherSourceBase):
             f.close()
         ftp.quit()
 
-    def get_consumption_average_temperature(self,consumption,unit):
-        """Gets the average temperature during a particular Consumption
+    def get_period_average_temperature(self,period,unit):
+        """Gets the average temperature during a particular DatetimePeriod
         instance. Resolution limit: hourly.
         """
         avg_temps = []
         null = Q_(float("nan"),self._source_unit)
-        n_hours = consumption.timedelta.days * 24 + consumption.timedelta.seconds // 3600
+        n_hours = period.timedelta.days * 24 + period.timedelta.seconds // 3600
         for hours in xrange(n_hours):
-            hour = consumption.start + timedelta(seconds=hours*3600)
+            hour = period.start + timedelta(seconds=hours*3600)
             hourly = self._data.get(hour.strftime("%Y%m%d%H"),null).to(unit).magnitude
             avg_temps.append(hourly)
         # mask nans
