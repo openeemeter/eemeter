@@ -239,7 +239,7 @@ class TMY3WeatherSource(WeatherSourceBase):
         for line in r.text.splitlines()[3:]:
             row = line.split(",")
             date_string = row[0][0:2] + row[0][3:5] + row[1][0:2] # MMDDHH
-            self._data[date_string.decode('utf-8')] = Q_(float(row[31]),self._source_unit)
+            self._data[date_string] = Q_(float(row[31]),self._source_unit)
 
     def get_daily_average_temperature(self,day,unit):
         """Returns the average temperature on the given day. `day` can be
