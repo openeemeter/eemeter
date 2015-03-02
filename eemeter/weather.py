@@ -1,5 +1,5 @@
 import ftplib
-import StringIO
+from io import BytesIO
 import gzip
 import os
 import json
@@ -119,7 +119,7 @@ class GSODWeatherSource(WeatherSourceBase):
         ftp.login()
         data = []
         for year in xrange(start_year,end_year + 1):
-            string = StringIO.StringIO()
+            string = BytesIO()
             # not every station will be available in every year, so use the
             # first one that works
             for station_id in potential_station_ids:
@@ -164,7 +164,7 @@ class ISDWeatherSource(WeatherSourceBase):
         ftp.login()
         data = []
         for year in xrange(start_year,end_year + 1):
-            string = StringIO.StringIO()
+            string = BytesIO()
             # not every station will be available in every year, so use the
             # first one that works
             for station_id in potential_station_ids:
