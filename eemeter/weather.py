@@ -305,41 +305,6 @@ class WeatherUndergroundWeatherSource(WeatherSourceBase):
             data = Q_(int(day["meantempi"]),self._source_unit)
             self._data[date_string] = data
 
-def nrel_tmy3_station_from_lat_long(lat,lng,api_key):
-    """Use the National Renewable Energy Lab API to find the closest weather
-    station for a particular lat/long. Requires a (freely available) API key.
-    """
-    result = requests.get("http://developer.nrel.gov/api/solar/data_query/"
-                          "v1.json?api_key={}&lat={}&lon={}".format(api_key,
-                                                                    lat,lng))
-    result_json = result.json()
-    if result_json["errors"] == []:
-        if result_json['outputs']['tmy3'] is None:
-            return None
-        return result_json['outputs']['tmy3']['id'][2:]
-    else:
-        raise ValueError(result_json["errors"][0])
-
-def ziplocate_us(zipcode):
-    """Use the Ziplocate API to find the population-weighted lat/long centroid
-    for this ZIP code.
-    """
-    result = requests.get('http://ziplocate.us/api/v1/{}'.format(zipcode))
-    if result.status_code == 200:
-        data = result.json()
-        return data.get('lat'), data.get('lng')
-    elif result.status_code == 404:
-        raise ValueError("No known lat/long centroid for this ZIP code.")
-    else:
-        return None
-
-def usaf_station_from_zipcode(zipcode,nrel_api_key):
-    """Return a station identifier given a zipcode.
-    """
-    lat,lng = ziplocate_us(zipcode)
-    station = nrel_tmy3_station_from_lat_long(lat,lng,nrel_api_key)
-    return station
-
 def haversine(lat1,lng1,lat2,lng2):
     """ Calculate the great circle distance between two points
     on the earth (specified in decimal degrees)
