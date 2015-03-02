@@ -242,7 +242,54 @@ meters.
 Loading consumption data
 ------------------------
 
-Tutorial coming soon! For now, see the eemeter.consumption API.
+To load consumption data, you'll need to use the SEED importer [FUTURE], the
+HPXML importer [FUTURE] or the GreenButton XML importer [FUTURE], or initialize
+the objects yourself. The importers haven't been built yet, so for now,
+you'll have to initialize the objects yourself.
+
+Consumption data consists of a quantity of energy (as defined by a magnitude a
+physical unit) of a particular fuel type consumed during a time period (as
+defined by start and end datetime objects). Additionally, a consumption data
+point may also indicate that it was estimated, as some meters require this bit
+of information for additional accuracy.
+
+A collection of Consumption data related to a single project is grouped into a
+ConsumptionHistory object, which helps keep the data organized by time period
+and fuel type.
+
+Here's a simple example of creating Consumption data from scratch, given two
+lists of bills, one for electricity Jan-Dec 2014, one for natural gas Jan-Dec
+2014.
+
+.. code-block:: python
+
+    from eemeter.consumption import Consumption
+    from eemeter.consumption import ConsumptionHistory
+    from datetime import datetime
+    from calendar import monthrange
+
+    kwh_electricity = [123,412,523,238,239,908,986,786,256,463,102,122]
+    thm_natural_gas = [241,143,178,78,67,23,14,33,12,23,234,222]
+
+    consumptions = []
+    for i,(elec,gas) in enumerate(zip(kwh_electricity,thm_natural_gas)):
+        month = i + 1
+        start_datetime = datetime(2014,month,1)
+        end_datetime = datetime(2014,month,monthrange(2014,month)[1])
+        elec_consumption = Consumption(elec,"kWh","electricity",start_datetime,end_datetime,estimated=False)
+        gas_consumption = Consumption(gas,"therm","natural_gas",start_datetime,end_datetime,estimated=False)
+        consumptions.append(elec_consumption)
+        consumptions.append(gas_consumption)
+
+    consumption_history = ConsumptionHistory(consumptions)
+
+Consumption energy data is stored internally in Joules, so to access it, you
+must also supply the unit you are interested in.
+
+.. code-block:: python
+
+    >>> consumption_history.electricity[0].kWh
+    123.00000000000001
 
 Creating a custom meter
 -----------------------
@@ -349,7 +396,9 @@ definitions.
         }
     """
     meter = load(prism_meter_yaml)
-    result = meter.evaluate(value=10)
+    result = meter.evaluate(consumption_history=...,
+                            weather_source=...,
+                            weather_normal_source=...)
 
 Another benefit to using structured YAML for meter specification is that the
 meter specifications can be stored externally as readable text files.
