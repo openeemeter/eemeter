@@ -25,7 +25,7 @@ class MeterBase(object):
         intentionally general (and therefore woefully unspecific, the function
         `meter.get_inputs()` exists to help describe the required inputs).
         """
-        mapped_inputs = self._apply_input_mapping(kwargs)
+        mapped_inputs = self._remap(kwargs,self.input_mapping)
         inputs = self.get_inputs()[self.__class__.__name__]["inputs"]
         for inpt in inputs:
             if inpt not in mapped_inputs:
@@ -35,48 +35,24 @@ class MeterBase(object):
                                           sorted(kwargs.items()),sorted(mapped_inputs.items()))
                 raise TypeError(message)
         result = self.evaluate_mapped_inputs(**mapped_inputs)
-        mapped_outputs = self._apply_output_mapping(result)
+        mapped_outputs = self._remap(result,self.output_mapping)
         return mapped_outputs
 
-    def _apply_input_mapping(self,inputs):
-        """Returns a dictionary of mapped inputs. `input_mapping` should be a
+    @staticmethod
+    def _remap(inputs,mapping):
+        """Returns a dictionary with mapped keys. `mapping` should be a
         dictionary with incoming input names as keys whose associated values
-        are outgoing input names. (e.g. ({"old_input_name":"new_input_name"})
+        are outgoing input names. (e.g. ({"old_key":"new_key"})
         """
-        mapped_inputs = {}
+        mapped_dict = {}
         for k,v in inputs.items():
-            if k in self.input_mapping:
-                new_key = self.input_mapping[k]
-                if new_key in self.input_mapping:
-                    message = "input_mapping for '{}' would overwrite existing key.".format(k)
-                    raise ValueError(message)
-                mapped_inputs[new_key] = v
-            else:
-                if k in mapped_inputs:
-                    message = "duplicate key '{}' found while mapping inputs.".format(k)
-                    raise ValueError(message)
-                mapped_inputs[k] = v
-        return mapped_inputs
-
-    def _apply_output_mapping(self,outputs):
-        """Returns a dictionary of mapped outputs. `output_mapping` should be a
-        dictionary with incoming output names as keys whose associated values
-        are outgoing output names. (e.g. ({"old_output_name":"new_output_name"})
-        """
-        mapped_outputs = {}
-        for k,v in outputs.items():
-            if k in self.output_mapping:
-                new_key = self.output_mapping[k]
-                if new_key in self.output_mapping:
-                    message = "output_mapping for '{}' would overwrite existing key.".format(k)
-                    raise ValueError(message)
-                mapped_outputs[new_key] = v
-            else:
-                if k in mapped_outputs:
-                    message = "duplicate key '{}' found while mapping outputs.".format(k)
-                    raise ValueError(message)
-                mapped_outputs[k] = v
-        return mapped_outputs
+            mapped_key = mapping.get(k,k)
+            if mapped_key in mapped_dict:
+                message = "duplicate key '{}' found while mapping"\
+                        .format(mapped_key)
+                raise ValueError(message)
+            mapped_dict[mapped_key] = v
+        return mapped_dict
 
     def evaluate_mapped_inputs(self,**kwargs):
         """Should be the workhorse method which implements the logic of the
