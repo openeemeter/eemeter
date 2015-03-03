@@ -149,8 +149,7 @@ class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
         consumptions = consumption_history.get(self.fuel_type)
         average_daily_usages = [c.average_daily_usage(self.fuel_unit_str) for c in consumptions]
         observed_daily_temps = weather_source.get_daily_temperatures(consumptions,self.temperature_unit_str)
-        weights = [c.timedelta.days for c in consumptions
-                   ]
+        weights = [c.timedelta.days for c in consumptions]
         params = self.model.parameter_optimization(average_daily_usages,observed_daily_temps, weights)
 
         n_daily_temps = np.array([len(temps) for temps in observed_daily_temps])
