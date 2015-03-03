@@ -31,8 +31,13 @@ class MeterBase(object):
             if inpt not in mapped_inputs:
                 message = "expected argument '{}' for meter '{}'; got kwargs={} (with mapped_inputs={}) instead.".format(inpt,self.__class__.__name__,kwargs,mapped_inputs)
                 raise TypeError(message)
+        print("kwargs",kwargs,self.__class__.__name__)
+        print("inputs",inputs,self.__class__.__name__)
+        print("mapped_inputs",mapped_inputs,self.__class__.__name__)
         result = self.evaluate_mapped_inputs(**mapped_inputs)
+        print("result",result,self.__class__.__name__)
         mapped_outputs = self._apply_output_mapping(result)
+        print("mapped_outputs",mapped_outputs,self.__class__.__name__)
         return mapped_outputs
 
     def _apply_input_mapping(self,inputs):

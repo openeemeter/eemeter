@@ -57,8 +57,10 @@ def test_incorrect_input_mappings():
 
     meter = load(meter_yaml)
 
+    print("start")
     with pytest.raises(ValueError):
         result = meter.evaluate(value_one=10,value_two=100)
+    print("end")
 
 def test_incorrect_output_mappings():
     meter_yaml = """ !obj:eemeter.meter.SequentialMeter {
