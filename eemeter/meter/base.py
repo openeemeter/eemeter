@@ -73,7 +73,7 @@ class MeterBase(object):
 
 class SequentialMeter(MeterBase):
     def __init__(self,sequence,**kwargs):
-        super(self.__class__,self).__init__(**kwargs)
+        super(SequentialMeter,self).__init__(**kwargs)
         assert all([issubclass(meter.__class__,MeterBase)
                     for meter in sequence])
         self.sequence = sequence
@@ -104,7 +104,7 @@ class SequentialMeter(MeterBase):
 
 class ConditionalMeter(MeterBase):
     def __init__(self,condition_parameter,success=None,failure=None,**kwargs):
-        super(self.__class__,self).__init__(**kwargs)
+        super(ConditionalMeter,self).__init__(**kwargs)
         self.condition_parameter = condition_parameter
         self.success = success
         self.failure = failure
@@ -135,7 +135,7 @@ class ConditionalMeter(MeterBase):
 
 class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
     def __init__(self,fuel_unit_str,fuel_type,temperature_unit_str,model,**kwargs):
-        super(self.__class__,self).__init__(**kwargs)
+        super(TemperatureSensitivityParameterOptimizationMeter,self).__init__(**kwargs)
         self.fuel_unit_str = fuel_unit_str
         self.fuel_type = fuel_type
         self.temperature_unit_str = temperature_unit_str
@@ -163,7 +163,7 @@ class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
 
 class AnnualizedUsageMeter(MeterBase):
     def __init__(self,temperature_unit_str,model,**kwargs):
-        super(self.__class__,self).__init__(**kwargs)
+        super(AnnualizedUsageMeter,self).__init__(**kwargs)
         self.temperature_unit_str = temperature_unit_str
         self.model = model
 
@@ -178,7 +178,7 @@ class AnnualizedUsageMeter(MeterBase):
 
 class PrePostMeter(MeterBase):
     def __init__(self,meter,splittable_args,**kwargs):
-        super(self.__class__,self).__init__(**kwargs)
+        super(PrePostMeter,self).__init__(**kwargs)
         self.meter = meter
         self.splittable_args = splittable_args
 
@@ -210,7 +210,7 @@ class PrePostMeter(MeterBase):
 
 class GrossSavingsMeter(MeterBase):
     def __init__(self,model,fuel_unit_str,fuel_type,temperature_unit_str,**kwargs):
-        super(self.__class__,self).__init__(**kwargs)
+        super(GrossSavingsMeter,self).__init__(**kwargs)
         self.model = model
         self.fuel_type = fuel_type
         self.fuel_unit_str = fuel_unit_str
@@ -230,7 +230,7 @@ class GrossSavingsMeter(MeterBase):
 
 class AnnualizedGrossSavingsMeter(MeterBase):
     def __init__(self,model,fuel_type,temperature_unit_str,**kwargs):
-        super(self.__class__,self).__init__(**kwargs)
+        super(AnnualizedGrossSavingsMeter,self).__init__(**kwargs)
         self.model = model
         self.fuel_type = fuel_type
         self.temperature_unit_str = temperature_unit_str
@@ -254,7 +254,7 @@ class AnnualizedGrossSavingsMeter(MeterBase):
 
 class FuelTypePresenceMeter(MeterBase):
     def __init__(self,fuel_types,**kwargs):
-        super(self.__class__,self).__init__(**kwargs)
+        super(FuelTypePresenceMeter,self).__init__(**kwargs)
         self.fuel_types = fuel_types
 
     def evaluate_mapped_inputs(self,consumption_history,**kwargs):

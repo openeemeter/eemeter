@@ -10,7 +10,11 @@ import requests
 from . import ureg, Q_
 from pkg_resources import resource_stream
 
-class WeatherSourceBase:
+class WeatherSourceBase(object):
+
+    def __init__(self):
+        pass
+
     def get_average_temperature(self,periods,unit_name):
         """Returns a list of average temperatures of each DatetimePeriod in
         the given unit (usually "degF" or "degC").
@@ -104,6 +108,7 @@ class WeatherSourceBase:
 
 class GSODWeatherSource(WeatherSourceBase):
     def __init__(self,station_id,start_year,end_year):
+        super(GSODWeatherSource,self).__init__()
         if len(station_id) == 6:
             # given station id is the six digit code, so need to get full name
             with resource_stream('eemeter.resources','GSOD-ISD_station_index.json') as f:
@@ -149,6 +154,7 @@ class GSODWeatherSource(WeatherSourceBase):
 
 class ISDWeatherSource(WeatherSourceBase):
     def __init__(self,station_id,start_year,end_year):
+        super(ISDWeatherSource,self).__init__()
         if len(station_id) == 6:
             # given station id is the six digit code, so need to get full name
             with resource_stream('eemeter.resources','GSOD-ISD_station_index.json') as f:
@@ -232,6 +238,7 @@ class ISDWeatherSource(WeatherSourceBase):
 
 class TMY3WeatherSource(WeatherSourceBase):
     def __init__(self,station_id):
+        super(TMY3WeatherSource,self).__init__()
         self.station_id = station_id
         self._data = {}
         self._source_unit = ureg.degC
@@ -279,6 +286,7 @@ class TMY3WeatherSource(WeatherSourceBase):
 
 class WeatherUndergroundWeatherSource(WeatherSourceBase):
     def __init__(self,zipcode,start,end,api_key):
+        super(WeatherUndergroundWeatherSource,self).__init__()
         self._data = {}
         self._source_unit = ureg.degF
         assert end >= start

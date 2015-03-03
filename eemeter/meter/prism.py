@@ -6,7 +6,7 @@ class PRISMMeter(MeterBase):
     """
 
     def __init__(self,**kwargs):
-        super(self.__class__, self).__init__(**kwargs)
+        super(PRISMMeter, self).__init__(**kwargs)
         self.meter = load(self._meter_yaml())
 
     def _meter_yaml(self):
