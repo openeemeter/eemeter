@@ -173,14 +173,14 @@ class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
         weights = [c.timedelta.days for c in consumptions
                    ]
         params = self.model.parameter_optimization(average_daily_usages,observed_daily_temps, weights)
-        
+
         n_daily_temps = np.array([len(temps) for temps in observed_daily_temps])
         estimated_daily_usages = self.model.compute_usage_estimates(params,observed_daily_temps)/n_daily_temps
         sqrtn = np.sqrt(len(estimated_daily_usages))
-        
+
         # use nansum to ignore consumptions with missing usages
         daily_standard_error = np.nansum(np.abs(estimated_daily_usages - average_daily_usages))/sqrtn
-        
+
         return {"temp_sensitivity_params": params, "daily_standard_error":daily_standard_error}
 
 class AnnualizedUsageMeter(MeterBase):
