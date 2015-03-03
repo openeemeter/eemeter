@@ -225,9 +225,10 @@ class ISDWeatherSource(WeatherSourceBase):
             # day = line[21:23]
             # hour = line[23:25]
             # minute = line[25:27]
-            air_temperature = Q_(float(line[87:92]) / 10, self._source_unit)
-            if line[87:92] == "+9999":
+            if line[87:92].decode('utf-8') == "+9999":
                 air_temperature = Q_(float("nan"),self._source_unit)
+            else:
+                air_temperature = Q_(float(line[87:92]) / 10, self._source_unit)
             self._data[line[15:25].decode('utf-8')] = air_temperature
 
 class TMY3WeatherSource(WeatherSourceBase):
