@@ -29,7 +29,10 @@ class MeterBase(object):
         inputs = self.get_inputs()[self.__class__.__name__]["inputs"]
         for inpt in inputs:
             if inpt not in mapped_inputs:
-                message = "expected argument '{}' for meter '{}'; got kwargs={} (with mapped_inputs={}) instead.".format(inpt,self.__class__.__name__,kwargs,mapped_inputs)
+                message = "expected argument '{}' for meter '{}'; "\
+                          "got kwargs={} (with mapped_inputs={}) instead."\
+                                  .format(inpt,self.__class__.__name__,
+                                          sorted(kwargs.items()),sorted(mapped_inputs.items()))
                 raise TypeError(message)
         result = self.evaluate_mapped_inputs(**mapped_inputs)
         mapped_outputs = self._apply_output_mapping(result)
