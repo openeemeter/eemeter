@@ -193,6 +193,7 @@ class ISDWeatherSource(WeatherSourceBase):
             avg_temps.append(hourly)
         # mask nans
         data = np.array(avg_temps)
+        print(data)
         masked_data = np.ma.masked_array(data,np.isnan(data))
         return np.mean(masked_data)
 
