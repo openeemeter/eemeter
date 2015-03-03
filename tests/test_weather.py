@@ -119,9 +119,6 @@ def test_tmy3_to_zipcode():
     for zipcode,station in zip(zipcodes,stations):
         assert zipcode == tmy3_to_zipcode(station)
 
-def test_haversine():
-    pass
-
 def test_weather_source_base(consumption_history_one_summer_electricity):
     weather_source = WeatherSourceBase()
     consumptions = consumption_history_one_summer_electricity.get("electricity")
