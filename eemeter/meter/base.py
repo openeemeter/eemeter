@@ -21,9 +21,9 @@ class MeterBase(object):
 
     def evaluate(self,**kwargs):
         """Returns a dictionary of evaluated meter outputs. Arguments must be
-        specified as keyword arguments. (**Note:** because `**kwargs` is
-        intentionally general (and therefore woefully unspecific, the function
-        `meter.get_inputs()` exists to help describe the required inputs).
+        specified as keyword arguments. **Note:** because `**kwargs` is
+        intentionally general (and therefore woefully unspecific), the function
+        `meter.get_inputs()` exists to help describe the required inputs.
         """
         mapped_inputs = self._remap(kwargs,self.input_mapping)
         inputs = self.get_inputs()[self.__class__.__name__]["inputs"]
