@@ -221,7 +221,7 @@ class GSODWeatherSource(WeatherSourceBase,CachedAverageTemperatureDataMixin):
     def __init__(self,station_id,start_year,end_year):
         super(GSODWeatherSource,self).__init__()
         self.source_unit = ureg.degF
-        self.station_id = station_id
+        self.station_id = station_id[:6]
         self.init_average_temperature_data()
 
         for days in range((datetime(end_year,12,31) - datetime(start_year,1,1)).days):
