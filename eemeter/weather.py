@@ -19,7 +19,7 @@ try:
     from sqlalchemy.ext.declarative import declarative_base
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy.orm import relationship, backref
-    from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey
+    from sqlalchemy import Column, Integer, String, Float, Date, DateTime, ForeignKey
     from sqlalchemy.orm.exc import NoResultFound
 
     Base = declarative_base()
@@ -29,26 +29,28 @@ try:
 
         id = Column(Integer, primary_key=True)
         usaf_id = Column(String)
-        temperature_normals = relationship("TemperatureNormal", order_by="TemperatureNormal.date", backref="weatherstation")
-        average_temperatures = relationship("AverageTemperature", order_by="AverageTemperature.date", backref="weatherstation")
+        hourly_temperature_normals = relationship("HourlyTemperatureNormal", order_by="HourlyTemperatureNormal.date", backref="weatherstation")
+        daily_temperature_normals = relationship("DailyTemperatureNormal", order_by="DailyTemperatureNormal.date", backref="weatherstation")
+        hourly_average_temperatures = relationship("HourlyAverageTemperature", order_by="HourlyAverageTemperature.date", backref="weatherstation")
+        daily_average_temperatures = relationship("DailyAverageTemperature", order_by="DailyAverageTemperature.date", backref="weatherstation")
 
         def __repr__(self):
                return "<WeatherStation('{}')".format(self.usaf_id)
 
-    class AverageTemperature(Base):
-        __tablename__ = 'averagetemperature'
+    class HourlyAverageTemperature(Base):
+        __tablename__ = 'hourlyaveragetemperature'
 
         id = Column(Integer, primary_key=True)
         weatherstation_id = Column(Integer, ForeignKey('weatherstation.id'))
         temp_C = Column(Float)
-        date = Column(Date)
+        date = Column(DateTime)
 
         def __repr__(self):
-               return "<AverageTemperature('{}', {}, {})>".format(
+               return "<HourlyAverageTemperature('{}', {}, {})>".format(
                                     self.weatherstation.usaf_id, self.temp_C, self.date)
 
-    class TemperatureNormal(Base):
-        __tablename__ = 'temperaturenormal'
+    class DailyAverageTemperature(Base):
+        __tablename__ = 'dailyaveragetemperature'
 
         id = Column(Integer, primary_key=True)
         weatherstation_id = Column(Integer, ForeignKey('weatherstation.id'))
@@ -56,7 +58,31 @@ try:
         date = Column(Date)
 
         def __repr__(self):
-               return "<TemperatureNormal('{}', {}, {})>".format(
+               return "<DailyAverageTemperature('{}', {}, {})>".format(
+                                    self.weatherstation.usaf_id, self.temp_C, self.date)
+
+    class HourlyTemperatureNormal(Base):
+        __tablename__ = 'hourlytemperaturenormal'
+
+        id = Column(Integer, primary_key=True)
+        weatherstation_id = Column(Integer, ForeignKey('weatherstation.id'))
+        temp_C = Column(Float)
+        date = Column(DateTime)
+
+        def __repr__(self):
+               return "<HourlyTemperatureNormal('{}', {}, {})>".format(
+                                    self.weatherstation.usaf_id, self.temp_C, self.date)
+
+    class DailyTemperatureNormal(Base):
+        __tablename__ = 'dailytemperaturenormal'
+
+        id = Column(Integer, primary_key=True)
+        weatherstation_id = Column(Integer, ForeignKey('weatherstation.id'))
+        temp_C = Column(Float)
+        date = Column(Date)
+
+        def __repr__(self):
+               return "<DailyTemperatureNormal('{}', {}, {})>".format(
                                     self.weatherstation.usaf_id, self.temp_C, self.date)
 
 except ImportError:
@@ -76,7 +102,6 @@ def initialize_cache():
 class WeatherSourceBase(object):
 
     def __init__(self):
-
 
         global Session
         if not Session:
@@ -185,9 +210,28 @@ class WeatherSourceBase(object):
                 total_cdd += temp - base
         return total_cdd
 
-class CachedAverageTemperatureDataMixin(object):
+class CachedDataMixin(object):
 
-    def init_average_temperature_data(self):
+    def init_temperature_data(self):
+        self.get_weather_station()
+        if self.weather_station:
+            date_format = self.get_date_format()
+            for t in self.get_temperature_set():
+                self.data[t.date.strftime(date_format)] = Q_(t.temp_C,ureg.degC)
+
+    def get_temperature_class(self):
+        # return Temperatures
+        raise NotImplementedError
+
+    def get_temperature_set(self):
+        #return self.weather_station.temperatures
+        raise NotImplementedError
+
+    def get_date_format(self):
+        #return "%Y%m%d"
+        raise NotImplementedError
+
+    def get_weather_station(self):
         if self.session:
             try:
                 self.weather_station = self.session.query(WeatherStation).filter(WeatherStation.usaf_id == self.station_id).one()
@@ -195,16 +239,15 @@ class CachedAverageTemperatureDataMixin(object):
                 self.weather_station = WeatherStation(usaf_id=self.station_id)
                 self.session.add(self.weather_station)
                 self.session.commit()
-            for t in self.weather_station.average_temperatures:
-                self.data[t.date.strftime("%Y%m%d")] = Q_(t.temp_C,ureg.degC)
         else:
             self.weather_station = None
 
     def update_cache(self,temp_C,date,overwrite=True):
         if self.session:
-            temps_query = self.session.query(AverageTemperature)\
-                        .filter(AverageTemperature.weatherstation == self.weather_station)\
-                        .filter(AverageTemperature.date==date)
+            temperature_class = self.get_temperature_class()
+            temps_query = self.session.query(temperature_class)\
+                        .filter(temperature_class.weatherstation == self.weather_station)\
+                        .filter(temperature_class.date==date)
 
             temps = temps_query.all()
             if overwrite:
@@ -213,16 +256,59 @@ class CachedAverageTemperatureDataMixin(object):
                 self.session.commit()
                 temps = []
             if temps == []:
-                t = AverageTemperature(weatherstation=self.weather_station,temp_C=temp_C,date=date)
+                t = temperature_class(weatherstation=self.weather_station,temp_C=temp_C,date=date)
                 self.session.add(t)
-                self.session.commit()
 
-class GSODWeatherSource(WeatherSourceBase,CachedAverageTemperatureDataMixin):
+class HourlyTemperatureNormalCachedDataMixin(CachedDataMixin):
+
+    def get_temperature_class(self):
+        return HourlyTemperatureNormal
+
+    def get_temperature_set(self):
+        return self.weather_station.hourly_temperature_normals
+
+    def get_date_format(self):
+        return "%m%d%H"
+
+class DailyTemperatureNormalCachedDataMixin(CachedDataMixin):
+
+    def get_temperature_class(self):
+        return DailyTemperatureNormal
+
+    def get_temperature_set(self):
+        return self.weather_station.daily_temperature_normals
+
+    def get_date_format(self):
+        return "%m%d"
+
+class HourlyAverageTemperatureCachedDataMixin(CachedDataMixin):
+
+    def get_temperature_class(self):
+        return HourlyAverageTemperature
+
+    def get_temperature_set(self):
+        return self.weather_station.hourly_average_temperatures
+
+    def get_date_format(self):
+        return "%m%d%H"
+
+class DailyAverageTemperatureCachedDataMixin(CachedDataMixin):
+
+    def get_temperature_class(self):
+        return DailyAverageTemperature
+
+    def get_temperature_set(self):
+        return self.weather_station.daily_average_temperatures
+
+    def get_date_format(self):
+        return "%Y%m%d"
+
+class GSODWeatherSource(WeatherSourceBase,DailyAverageTemperatureCachedDataMixin):
     def __init__(self,station_id,start_year,end_year):
         super(GSODWeatherSource,self).__init__()
         self.source_unit = ureg.degF
         self.station_id = station_id[:6]
-        self.init_average_temperature_data()
+        self.init_temperature_data()
 
         for days in range((datetime(end_year,12,31) - datetime(start_year,1,1)).days):
             dat = datetime(start_year,1,1) + timedelta(days=days)
@@ -280,6 +366,8 @@ class GSODWeatherSource(WeatherSourceBase,CachedAverageTemperatureDataMixin):
             temp_C = temp.to(ureg.degC).magnitude
             dat = datetime.strptime(date_str,"%Y%m%d").date()
             self.update_cache(temp_C,dat)
+        if self.session:
+            self.session.commit()
 
 class ISDWeatherSource(WeatherSourceBase):
     def __init__(self,station_id,start_year,end_year):
@@ -362,19 +450,33 @@ class ISDWeatherSource(WeatherSourceBase):
                 air_temperature = Q_(float(line[87:92]) / 10, self.source_unit)
             self.data[line[15:25].decode('utf-8')] = air_temperature
 
-class TMY3WeatherSource(WeatherSourceBase):
+class TMY3WeatherSource(WeatherSourceBase,HourlyTemperatureNormalCachedDataMixin):
     def __init__(self,station_id):
         super(TMY3WeatherSource,self).__init__()
         self.station_id = station_id
-        r = requests.get("http://rredc.nrel.gov/solar/old_data/nsrdb/1991-2005/data/tmy3/{}TYA.CSV".format(station_id))
+        self.init_temperature_data()
+
+        n_temp_normals = len(self.data.items())
+        if n_temp_normals < 364 * 24: #missing more than a day of data
+            self._fetch_data()
+
+    def _fetch_data(self):
+        r = requests.get("http://rredc.nrel.gov/solar/old_data/nsrdb/1991-2005/data/tmy3/{}TYA.CSV".format(self.station_id))
 
         for line in r.text.splitlines()[3:]:
             row = line.split(",")
-            date_string = row[0][0:2] + row[0][3:5] + row[1][0:2] # MMDDHH
-            self.data[date_string] = Q_(float(row[31]),self.source_unit)
+            date_string = "{}{}{}{:02d}".format(row[0][6:10], row[0][0:2],
+                                                row[0][3:5], int(row[1][0:2]) - 1) # YYYYMMDDHH
+            temp = Q_(float(row[31]),self.source_unit)
+            self.data[date_string[4:]] = temp # skip year in date string
+            temp_C = temp.to(ureg.degC).magnitude
+            dat = datetime.strptime(date_string,"%Y%m%d%H")
+            self.update_cache(temp_C,dat)
+        if self.session:
+            self.session.commit()
 
     def get_daily_average_temperature(self,day,unit):
-        """Returns the average temperature on the given day. `day` can be
+        """Returns the temperature normal on the given day. `day` can be
         either a python `date` or a python `datetime` instance. Calculated by
         averaging hourly temperatures for the given day.
         """
@@ -397,15 +499,9 @@ class TMY3WeatherSource(WeatherSourceBase):
         temps = []
         for days in range(365):
             day = start_day + timedelta(days=days)
-            day_temps = []
-            for hour in range(24):
-                time = day + timedelta(seconds=hour*3600)
-                temp = self.data.get(time.strftime("%m%d%H"),null).to(unit).magnitude
-                day_temps.append(temp)
-            day_data = np.array(day_temps)
-            masked_data = np.ma.masked_array(day_data,np.isnan(day_data))
+            temp = self.get_daily_average_temperature(day,unit)
             # wrap in array for compatibility with model input format
-            temps.append(np.array([np.mean(masked_data)]))
+            temps.append(np.array([temp]))
         return np.array(temps)
 
 class WeatherUndergroundWeatherSource(WeatherSourceBase):

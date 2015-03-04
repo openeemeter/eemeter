@@ -195,17 +195,17 @@ def test_isd_weather_source(consumption_history_one_summer_electricity,isd_weath
 def test_tmy3_weather_source(consumption_history_one_summer_electricity,tmy3_weather_source):
     consumptions = consumption_history_one_summer_electricity.get("electricity")
     normal_avg_temps = tmy3_weather_source.get_average_temperature(consumptions,"degF")
-    assert abs(normal_avg_temps[0] - 68.411913043478265) < EPSILON
-    assert abs(normal_avg_temps[1] - 73.327545582047691) < EPSILON
-    assert abs(normal_avg_temps[2] - 74.593604488078540) < EPSILON
+    assert abs(normal_avg_temps[0] - 68.182250399999958) < EPSILON
+    assert abs(normal_avg_temps[1] - 73.05548427096771) < EPSILON
+    assert abs(normal_avg_temps[2] - 74.315484270967701) < EPSILON
     normal_hdds = tmy3_weather_source.get_hdd(consumptions,"degF",65)
-    assert abs(normal_hdds[0] - 8.6582576695655149) < EPSILON
-    assert abs(normal_hdds[1] - 0.0) < EPSILON
+    assert abs(normal_hdds[0] - 10.072496800000259) < EPSILON
+    assert abs(normal_hdds[1] - 0.074999600000026589) < EPSILON
     assert abs(normal_hdds[2] - 0.0) < EPSILON
     normal_cdds = tmy3_weather_source.get_cdd(consumptions,"degF",65)
-    assert abs(normal_cdds[0] - 111.01566097391235) < EPSILON
-    assert abs(normal_cdds[1] - 258.15392544347725) < EPSILON
-    assert abs(normal_cdds[2] - 297.40175153043384) < EPSILON
+    assert abs(normal_cdds[0] - 105.54000879999927) < EPSILON
+    assert abs(normal_cdds[1] - 249.79501199999902) < EPSILON
+    assert abs(normal_cdds[2] - 288.78001239999907) < EPSILON
 
 def test_haversine():
     lat_lng_dists = [(0,0,0,0,0),
