@@ -290,7 +290,7 @@ class HourlyAverageTemperatureCachedDataMixin(CachedDataMixin):
         return self.weather_station.hourly_average_temperatures
 
     def get_date_format(self):
-        return "%m%d%H"
+        return "%Y%m%d%H"
 
 class DailyAverageTemperatureCachedDataMixin(CachedDataMixin):
 
@@ -369,35 +369,54 @@ class GSODWeatherSource(WeatherSourceBase,DailyAverageTemperatureCachedDataMixin
         if self.session:
             self.session.commit()
 
-class ISDWeatherSource(WeatherSourceBase):
+class ISDWeatherSource(WeatherSourceBase,HourlyAverageTemperatureCachedDataMixin):
     def __init__(self,station_id,start_year,end_year):
         super(ISDWeatherSource,self).__init__()
-        if len(station_id) == 6:
+        self.station_id = station_id[:6]
+        self.init_temperature_data()
+
+        if self.data == {}:
+            for year in range(start_year,end_year + 1):
+                self._fetch_year(year)
+        else:
+            for year in range(start_year,end_year + 1):
+                if year == datetime.now().year and not self.data.get(datetime.now().strftime("%Y%m%d") + "00"):
+                    self._fetch_year(datetime.now().year)
+                else:
+                    temps = []
+                    for days in range(365):
+                        dat = datetime(year,1,1) + timedelta(days=days)
+                        temps.append(self.data.get(dat.strftime("%Y%m%d") + "00"))
+                        temps.append(self.data.get(dat.strftime("%Y%m%d") + "01"))
+                if len(temps) < 700:
+                    self._fetch_year(dat.year)
+
+    def _fetch_year(self,year):
+        if len(self.station_id) == 6:
             # given station id is the six digit code, so need to get full name
             with resource_stream('eemeter.resources','GSOD-ISD_station_index.json') as f:
                 station_index = json.loads(f.read().decode("utf-8"))
             # take first station in list
-            potential_station_ids = station_index[station_id]
+            potential_station_ids = station_index[self.station_id]
         else:
             # otherwise, just use the given id
-            potential_station_ids = [station_id]
+            potential_station_ids = [self.station_id]
         ftp = ftplib.FTP("ftp.ncdc.noaa.gov")
         ftp.login()
-        for year in range(start_year,end_year + 1):
-            string = BytesIO()
-            # not every station will be available in every year, so use the
-            # first one that works
-            for station_id in potential_station_ids:
-                try:
-                    ftp.retrbinary('RETR /pub/data/noaa/{year}/{station_id}-{year}.gz'.format(station_id=station_id,year=year),string.write)
-                    break
-                except (IOError,ftplib.error_perm):
-                    pass
-            string.seek(0)
-            f = gzip.GzipFile(fileobj=string)
-            self._add_file(f)
-            string.close()
-            f.close()
+        string = BytesIO()
+        # not every station will be available in every year, so use the
+        # first one that works
+        for station_id in potential_station_ids:
+            try:
+                ftp.retrbinary('RETR /pub/data/noaa/{year}/{station_id}-{year}.gz'.format(station_id=station_id,year=year),string.write)
+                break
+            except (IOError,ftplib.error_perm):
+                pass
+        string.seek(0)
+        f = gzip.GzipFile(fileobj=string)
+        self._add_file(f)
+        string.close()
+        f.close()
         ftp.quit()
 
     def get_period_average_temperature(self,period,unit):
@@ -433,22 +452,17 @@ class ISDWeatherSource(WeatherSourceBase):
 
     def _add_file(self,f):
         for line in f.readlines():
-            # line[4:10] # USAF
-            # line[10:15] # WBAN
-            # line[28:34] # latitude
-            # line[34:41] # longitude
-            # line[46:51] # elevation
-            # line[92:93] # temperature reading quality
-            # year = line[15:19]
-            # month = line[19:21]
-            # day = line[21:23]
-            # hour = line[23:25]
-            # minute = line[25:27]
             if line[87:92].decode('utf-8') == "+9999":
                 air_temperature = Q_(float("nan"),self.source_unit)
             else:
                 air_temperature = Q_(float(line[87:92]) / 10, self.source_unit)
-            self.data[line[15:25].decode('utf-8')] = air_temperature
+            date_str = line[15:25].decode('utf-8')
+            self.data[date_str] = air_temperature
+            temp_C = air_temperature.to(ureg.degC).magnitude
+            dat = datetime.strptime(date_str,"%Y%m%d%H")
+            self.update_cache(temp_C,dat)
+        if self.session:
+            self.session.commit()
 
 class TMY3WeatherSource(WeatherSourceBase,HourlyTemperatureNormalCachedDataMixin):
     def __init__(self,station_id):
