@@ -402,3 +402,15 @@ definitions.
 
 Another benefit to using structured YAML for meter specification is that the
 meter specifications can be stored externally as readable text files.
+
+Caching Weather Data
+--------------------
+
+If you would like to cache weather data, please install :code:`sqlalchemy` and
+set the following environment variable, which must contain the credentials to
+a database you have set up for caching. If this variable is set properly, it
+will cache weather as it is pulled from various sources::
+
+    export EEMETER_WEATHER_CACHE_DATABASE_URL=dbtype://username:password@host:port/dbname
+
+For additional information on the syntax of the url, please see sqlalchemy docs.
