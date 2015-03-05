@@ -38,7 +38,7 @@ def get_daily(lines,start_index,verbose=False):
 
     def get_block(lines):
         if verbose:
-            print lines
+            print(lines)
         lines[0] = " ".join(lines[0].split()[1:])
         return { month:{ day:datum for day,datum in zip(days,line.split()[1:])}
                 for month,line in zip(months,lines)}
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     filenames = glob.glob(os.path.join(args.data_dir,"*"))
 
     for filename in filenames:
-        print filename.split("/")[-1]
+        print(filename.split("/")[-1])
         with open(filename,'r') as f:
             lines = [line.strip() for line in f.readlines()]
 

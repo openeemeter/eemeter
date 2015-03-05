@@ -3,8 +3,7 @@ from eemeter.generator import ProjectGenerator
 from eemeter.generator import generate_periods
 
 from eemeter.consumption import DatetimePeriod
-from eemeter.models.temperature_sensitivity import HDDCDDBalancePointModel
-from eemeter.models.temperature_sensitivity import HDDBalancePointModel
+from eemeter.models.temperature_sensitivity import TemperatureSensitivityModel
 
 from fixtures.weather import gsod_722880_2012_2014_weather_source
 from fixtures.weather import tmy3_722880_weather_source
@@ -32,8 +31,13 @@ def periods_one_year():
 
 @pytest.mark.slow
 def test_consumption_generator_no_base_load(periods_one_year,gsod_722880_2012_2014_weather_source):
-    model = HDDCDDBalancePointModel()
-    params = 1.0,1.0,0.0,65.0,10.0
+    model = TemperatureSensitivityModel(cooling=True,heating=True)
+    params = {
+        "base_consumption": 0.0,
+        "heating_slope": 1.0,
+        "heating_reference_temperature": 65.0,
+        "cooling_slope": 1.0,
+        "cooling_reference_temperature": 75.0 }
     gen = ConsumptionGenerator("electricity", "J", "degF", model, params)
     consumptions = gen.generate(gsod_722880_2012_2014_weather_source, periods_one_year)
     consumption_joules = [c.to("J") for c in consumptions]
@@ -41,8 +45,13 @@ def test_consumption_generator_no_base_load(periods_one_year,gsod_722880_2012_20
 
 @pytest.mark.slow
 def test_consumption_generator_with_base_load(periods_one_year,gsod_722880_2012_2014_weather_source):
-    model = HDDCDDBalancePointModel()
-    params = 1.0,1.0,1.0,65.0,10.0
+    model = TemperatureSensitivityModel(cooling=True,heating=True)
+    params = {
+        "base_consumption": 1.0,
+        "heating_slope": 1.0,
+        "heating_reference_temperature": 65.0,
+        "cooling_slope": 1.0,
+        "cooling_reference_temperature": 75.0 }
     gen = ConsumptionGenerator("electricity", "J", "degF", model,params)
     consumptions = gen.generate(gsod_722880_2012_2014_weather_source, periods_one_year)
     consumption_joules = [c.to("J") for c in consumptions]
@@ -50,28 +59,28 @@ def test_consumption_generator_with_base_load(periods_one_year,gsod_722880_2012_
 
 @pytest.mark.slow
 def test_project_generator(gsod_722880_2012_2014_weather_source,tmy3_722880_weather_source):
-    electricity_model = HDDCDDBalancePointModel()
-    gas_model = HDDBalancePointModel()
-    electricity_param_distributions = (
-            uniform(loc=1, scale=.5),
-            uniform(loc=1, scale=.5),
-            uniform(loc=5, scale=5),
-            uniform(loc=60, scale=5),
-            uniform(loc=2, scale=12))
-    electricity_param_delta_distributions = (
-            uniform(loc=-.2,scale=.3),
-            uniform(loc=-.2, scale=.3),
-            uniform(loc=-2, scale=3),
-            uniform(loc=0, scale=0),
-            uniform(loc=0, scale=0))
-    gas_param_distributions = (
-            uniform(loc=60, scale=5),
-            uniform(loc=5, scale=5),
-            uniform(loc=1, scale=.5))
-    gas_param_delta_distributions = (
-            uniform(loc=0, scale=0),
-            uniform(loc=-2, scale=3),
-            uniform(loc=-.2,scale=.3))
+    electricity_model = TemperatureSensitivityModel(cooling=True,heating=True)
+    gas_model = TemperatureSensitivityModel(cooling=False,heating=True)
+    electricity_param_distributions = {
+            "cooling_slope": uniform(loc=1, scale=.5),
+            "heating_slope": uniform(loc=1, scale=.5),
+            "base_consumption": uniform(loc=5, scale=5),
+            "cooling_reference_temperature": uniform(loc=70, scale=5),
+            "heating_reference_temperature": uniform(loc=60, scale=5)}
+    electricity_param_delta_distributions = {
+            "cooling_slope": uniform(loc=-.2, scale=.3),
+            "heating_slope": uniform(loc=-.2, scale=.3),
+            "base_consumption": uniform(loc=-2, scale=3),
+            "cooling_reference_temperature": uniform(loc=0, scale=0),
+            "heating_reference_temperature": uniform(loc=0, scale=0)}
+    gas_param_distributions = {
+            "heating_slope": uniform(loc=1, scale=.5),
+            "base_consumption": uniform(loc=5, scale=5),
+            "heating_reference_temperature": uniform(loc=60, scale=5)}
+    gas_param_delta_distributions = {
+            "heating_slope": uniform(loc=-.2, scale=.3),
+            "base_consumption": uniform(loc=-2, scale=3),
+            "heating_reference_temperature": uniform(loc=0, scale=0)}
 
     generator = ProjectGenerator(electricity_model, gas_model,
                                 electricity_param_distributions,

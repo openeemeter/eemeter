@@ -32,6 +32,6 @@ if __name__ == "__main__":
         if not started and filename == args.start_at:
             started = True
         if started:
-            print filename
+            print(filename)
             ftp.retrbinary('RETR {}'.format(filename), open(os.path.join(args.data_dir,filename), 'wb').write)
     ftp.quit()

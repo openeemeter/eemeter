@@ -3,9 +3,6 @@ from eemeter.weather import GSODWeatherSource
 from eemeter.weather import ISDWeatherSource
 from eemeter.weather import TMY3WeatherSource
 from eemeter.weather import WeatherUndergroundWeatherSource
-from eemeter.weather import nrel_tmy3_station_from_lat_long
-from eemeter.weather import ziplocate_us
-from eemeter.weather import usaf_station_from_zipcode
 from eemeter.weather import zipcode_to_lat_lng
 from eemeter.weather import lat_lng_to_zipcode
 from eemeter.weather import tmy3_to_lat_lng
@@ -21,6 +18,8 @@ from datetime import datetime
 import pytest
 import os
 import warnings
+
+from numpy.testing import assert_almost_equal
 
 EPSILON = 10e-6
 
@@ -120,9 +119,6 @@ def test_tmy3_to_zipcode():
     for zipcode,station in zip(zipcodes,stations):
         assert zipcode == tmy3_to_zipcode(station)
 
-def test_haversine():
-    pass
-
 def test_weather_source_base(consumption_history_one_summer_electricity):
     weather_source = WeatherSourceBase()
     consumptions = consumption_history_one_summer_electricity.get("electricity")
@@ -178,31 +174,6 @@ def test_weather_underground_weather_source(consumption_history_one_summer_elect
 
 @pytest.mark.slow
 @pytest.mark.internet
-def test_nrel_tmy3_station_from_lat_long(lat_long_station):
-    lat,lng,station = lat_long_station
-    nrel_api_key = os.environ.get('NREL_API_KEY')
-    if nrel_api_key:
-        assert station == nrel_tmy3_station_from_lat_long(lat,lng,nrel_api_key)
-    else:
-        warnings.warn("Skipping NREL tests. "
-                "Please set the environment variable "
-                "NREL_API_KEY to run the tests.")
-
-@pytest.mark.slow
-@pytest.mark.internet
-def test_ziplocate_us(lat_long_zipcode):
-    # TODO - use cached,scraped version
-    lat,lng,zipcode = lat_long_zipcode
-    if not lat or not lng:
-        with pytest.raises(ValueError):
-            ziplocate_us(zipcode)
-    else:
-        zip_lat, zip_lng = ziplocate_us(zipcode)
-        assert abs(lat - zip_lat) < EPSILON
-        assert abs(lng - zip_lng) < EPSILON
-
-@pytest.mark.slow
-@pytest.mark.internet
 def test_isd_weather_source(consumption_history_one_summer_electricity,isd_weather_source):
     isd_weather_source = ISDWeatherSource(*isd_weather_source)
     consumptions = consumption_history_one_summer_electricity.get("electricity")
@@ -221,29 +192,32 @@ def test_isd_weather_source(consumption_history_one_summer_electricity,isd_weath
 
 @pytest.mark.slow
 @pytest.mark.internet
-def test_usaf_station_from_zipcode(zipcode_to_station):
-    zipcode,station = zipcode_to_station
-    nrel_api_key = os.environ.get('NREL_API_KEY')
-    if nrel_api_key:
-        assert usaf_station_from_zipcode(zipcode,nrel_api_key) == station
-    else:
-        warnings.warn("Skipping NREL tests. "
-                "Please set the environment variable "
-                "NREL_API_KEY to run the tests.")
-
-@pytest.mark.slow
-@pytest.mark.internet
 def test_tmy3_weather_source(consumption_history_one_summer_electricity,tmy3_weather_source):
     consumptions = consumption_history_one_summer_electricity.get("electricity")
     normal_avg_temps = tmy3_weather_source.get_average_temperature(consumptions,"degF")
-    assert abs(normal_avg_temps[0] - 68.411913043478265) < EPSILON
-    assert abs(normal_avg_temps[1] - 73.327545582047691) < EPSILON
-    assert abs(normal_avg_temps[2] - 74.593604488078540) < EPSILON
+    assert abs(normal_avg_temps[0] - 68.182250399999958) < EPSILON
+    assert abs(normal_avg_temps[1] - 73.05548427096771) < EPSILON
+    assert abs(normal_avg_temps[2] - 74.315484270967701) < EPSILON
     normal_hdds = tmy3_weather_source.get_hdd(consumptions,"degF",65)
-    assert abs(normal_hdds[0] - 8.6582576695655149) < EPSILON
-    assert abs(normal_hdds[1] - 0.0) < EPSILON
+    assert abs(normal_hdds[0] - 10.072496800000259) < EPSILON
+    assert abs(normal_hdds[1] - 0.074999600000026589) < EPSILON
     assert abs(normal_hdds[2] - 0.0) < EPSILON
     normal_cdds = tmy3_weather_source.get_cdd(consumptions,"degF",65)
-    assert abs(normal_cdds[0] - 111.01566097391235) < EPSILON
-    assert abs(normal_cdds[1] - 258.15392544347725) < EPSILON
-    assert abs(normal_cdds[2] - 297.40175153043384) < EPSILON
+    assert abs(normal_cdds[0] - 105.54000879999927) < EPSILON
+    assert abs(normal_cdds[1] - 249.79501199999902) < EPSILON
+    assert abs(normal_cdds[2] - 288.78001239999907) < EPSILON
+
+def test_haversine():
+    lat_lng_dists = [(0,0,0,0,0),
+                     (76,1,76,1,0),
+                     (76,1,76,361,0),
+                     (0,0,0,90,10007.54339801),
+                     (0,0,0,180,20015.08679602),
+                     (0,-180,0,180,0),
+                     (-90,0,90,0,20015.08679602),
+                     (-90,0,90,180,20015.08679602),
+                     ]
+
+    for lat1,lng1,lat2,lng2,dist in lat_lng_dists:
+        assert_almost_equal(haversine(lat1,lng1,lat2,lng2),dist)
+

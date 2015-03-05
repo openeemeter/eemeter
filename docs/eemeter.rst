@@ -33,6 +33,7 @@ eemeter.consumption
     :undoc-members:
     :inherited-members:
     :show-inheritance:
+    :exclude-members: DateRangeException
 
 eemeter.weather
 ---------------
@@ -42,6 +43,7 @@ eemeter.weather
     :undoc-members:
     :inherited-members:
     :show-inheritance:
+    :exclude-members: WeatherStation, AverageTemperature, TemperatureNormal, relationship, initialize_cache
 
 eemeter.config.yaml_parser
 --------------------------

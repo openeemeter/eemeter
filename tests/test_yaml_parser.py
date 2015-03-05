@@ -17,7 +17,7 @@ def simple_yaml(request):
 def test_load_path():
     fd, fname = tempfile.mkstemp()
     with os.fdopen(fd, 'wb') as f:
-        f.write("a: 23")
+        f.write('a: 23'.encode('utf-8'))
     loaded = load_path(fname)
     assert loaded['a'] == 23
     os.remove(fname)

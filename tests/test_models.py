@@ -1,55 +1,70 @@
-from eemeter.models import HDDCDDBalancePointModel
-from eemeter.models import HDDBalancePointModel
-from eemeter.models import CDDBalancePointModel
+from eemeter.models import TemperatureSensitivityModel
 
 from numpy.testing import assert_almost_equal
+import numpy as np
 
 import pytest
 
-def test_HDDCDDBalancePointModel():
-    x0 = [0,0,0,55,2]
-    bounds = [[0,100],[0,100],[0,100],[50,60],[2,12]]
-    model = HDDCDDBalancePointModel()
-    model.x0 = None
-    model.bounds = None
-    model = HDDCDDBalancePointModel(x0,bounds)
-    model = HDDCDDBalancePointModel(x0=x0,bounds=bounds)
+def test_TemperatureSensitivityModel_with_heating_and_cooling():
+    initial_params = {
+        "base_consumption": -1,
+        "heating_slope": 0,
+        "cooling_slope": 0,
+        "heating_reference_temperature": 55,
+        "cooling_reference_temperature": 57,
+    }
+    param_bounds = {
+        "base_consumption": [0,100],
+        "heating_slope": [0,100],
+        "cooling_slope": [0,100],
+        "heating_reference_temperature": [50,60],
+        "cooling_reference_temperature": [52,72],
+    }
+    model = TemperatureSensitivityModel(heating=True,cooling=True)
+    model.initial_params = None
+    model.param_bounds = None
+    model = TemperatureSensitivityModel(True,True,initial_params,param_bounds)
 
-    params = [1,1,1,60,5]
-    observed_temps = [[i] for i in range(50,70)]
+    params = [1,1,60,1,65]
+    observed_temps = np.array([[i] for i in range(50,70)])
     usages = model.compute_usage_estimates(params,observed_temps)
     assert_almost_equal(usages[8:18],[3,2,1,1,1,1,1,1,2,3])
     opt_params = model.parameter_optimization(usages, observed_temps)
     assert_almost_equal(params,opt_params,decimal=3)
 
-
-def test_HDDBalancePointModel():
-    x0 = [55,0,0]
-    bounds = [[55,65],[0,100],[0,100]]
-    model = HDDBalancePointModel()
-    model.x0 = None
-    model.bounds = None
-    model = HDDBalancePointModel(x0,bounds)
-    model = HDDBalancePointModel(x0=x0,bounds=bounds)
-
-    params = [60,1,1]
-    observed_temps = [[i] for i in range(50,70)]
+def test_TemperatureSensitivityModel_with_heating():
+    initial_params = {
+        "base_consumption": 0,
+        "heating_slope": 0,
+        "heating_reference_temperature": 55,
+    }
+    param_bounds = {
+        "base_consumption": [0,100],
+        "heating_slope": [0,100],
+        "heating_reference_temperature": [50,60],
+    }
+    model = TemperatureSensitivityModel(heating=True,cooling=False,initial_params=initial_params,param_bounds=param_bounds)
+    params = [1,1,60]
+    observed_temps = np.array([[i] for i in range(50,70)])
     usages = model.compute_usage_estimates(params,observed_temps)
     assert_almost_equal(usages[8:13],[3,2,1,1,1])
     opt_params = model.parameter_optimization(usages, observed_temps)
     assert_almost_equal(params,opt_params,decimal=3)
 
-def test_CDDBalancePointModel():
-    x0 = [55,0,0]
-    bounds = [[55,65],[0,100],[0,100]]
-    model = CDDBalancePointModel()
-    model.x0 = None
-    model.bounds = None
-    model = CDDBalancePointModel(x0,bounds)
-    model = CDDBalancePointModel(x0=x0,bounds=bounds)
-
-    params = [60,1,1]
-    observed_temps = [[i] for i in range(50,70)]
+def test_TemperatureSensitivityModel_with_cooling():
+    initial_params = {
+        "base_consumption": 0,
+        "cooling_slope": 0,
+        "cooling_reference_temperature": 57,
+    }
+    param_bounds = {
+        "base_consumption": [0,100],
+        "cooling_slope": [0,100],
+        "cooling_reference_temperature": [52,72],
+    }
+    model = TemperatureSensitivityModel(heating=False,cooling=True,initial_params=initial_params,param_bounds=param_bounds)
+    params = [1,1,60]
+    observed_temps = np.array([[i] for i in range(50,70)])
     usages = model.compute_usage_estimates(params,observed_temps)
     assert_almost_equal(usages[8:13],[1,1,1,2,3])
     opt_params = model.parameter_optimization(usages, observed_temps)
