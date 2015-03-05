@@ -350,9 +350,23 @@ definitions.
                                 fuel_unit_str: "kWh",
                                 fuel_type: "electricity",
                                 temperature_unit_str: "degF",
-                                model: !obj:eemeter.models.HDDBalancePointModel &elec_model {
-                                    x0: [1.,1.,1.,65,5],
-                                    bounds: [[0,200],[0,200],[0,2000],[55,75],[2,12]],
+                                model: !obj:eemeter.models.TemperatureSensitivityModel &elec_model {
+                                    cooling: True,
+                                    heating: True,
+                                    initial_params: {
+                                        base_consumption: 0,
+                                        heating_slope: 0,
+                                        cooling_slope: 0,
+                                        heating_reference_temperature: 60,
+                                        cooling_reference_temperature: 70,
+                                    },
+                                    param_bounds: {
+                                        base_consumption: [-20,80],
+                                        heating_slope: [0,5],
+                                        cooling_slope: [0,5],
+                                        heating_reference_temperature: [58,66],
+                                        cooling_reference_temperature: [64,72],
+                                    },
                                 },
                             },
                             !obj:eemeter.meter.AnnualizedUsageMeter {
@@ -364,6 +378,7 @@ definitions.
                         output_mapping: {
                             temp_sensitivity_params: temp_sensitivity_params_electricity,
                             annualized_usage: annualized_usage_electricity,
+                            daily_standard_error: daily_standard_error_electricity,
                         },
                     },
                 },
@@ -375,9 +390,19 @@ definitions.
                                 fuel_unit_str: "therms",
                                 fuel_type: "natural_gas",
                                 temperature_unit_str: "degF",
-                                model: !obj:eemeter.models.HDDBalancePointModel &gas_model {
-                                    x0: [60,1.,1.],
-                                    bounds: [[55,65],[0,100],[0,100]],
+                                model: !obj:eemeter.models.TemperatureSensitivityModel &gas_model {
+                                    cooling: False,
+                                    heating: True,
+                                    initial_params: {
+                                        base_consumption: 0,
+                                        heating_slope: 0,
+                                        heating_reference_temperature: 60,
+                                    },
+                                    param_bounds: {
+                                        base_consumption: [0,10],
+                                        heating_slope: [0,5],
+                                        heating_reference_temperature: [58,66],
+                                    },
                                 },
                             },
                             !obj:eemeter.meter.AnnualizedUsageMeter {
@@ -389,6 +414,7 @@ definitions.
                         output_mapping: {
                             temp_sensitivity_params: temp_sensitivity_params_natural_gas,
                             annualized_usage: annualized_usage_natural_gas,
+                            daily_standard_error: daily_standard_error_natural_gas,
                         },
                     },
                 },

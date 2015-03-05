@@ -19,7 +19,7 @@ class ConsumptionGenerator:
         self.temperature_unit_name = temperature_unit_name
 
         self.model = model
-        self.params = params
+        self.params = self.model.param_dict_to_list(params)
 
     def generate(self, weather_source, periods, noise=None):
         """Returns a list of consumption instances given a particular weather
@@ -52,12 +52,15 @@ class ProjectGenerator:
             electricity_param_distributions, electricity_param_delta_distributions,
             gas_param_distributions, gas_param_delta_distributions,
             temperature_unit_name="degF"):
+
         self.electricity_model = electricity_model
-        self.gas_model = gas_model
         self.elec_param_dists = electricity_param_distributions
         self.elec_param_delta_dists = electricity_param_delta_distributions
+
+        self.gas_model = gas_model
         self.gas_param_dists = gas_param_distributions
         self.gas_param_delta_dists = gas_param_delta_distributions
+
         self.temperature_unit_name = temperature_unit_name
 
     def generate(self, weather_source, weather_normal_source, electricity_periods, gas_periods,
@@ -89,13 +92,19 @@ class ProjectGenerator:
             retrofit_start_date, retrofit_completion_date,
             fuel_type, consumption_unit_name, temperature_unit_name):
 
-        pre_params = np.array([pd.rvs() for pd in param_dists])
-        param_deltas = np.array([pd.rvs() for pd in param_delta_dists])
-        post_params = pre_params + param_deltas
+        pre_params = {}
+        post_params = {}
+        for k,v in param_dists.items():
+            pre_params[k] = v.rvs()
+            post_params[k] = pre_params[k] + param_delta_dists[k].rvs()
 
         annualized_usage_meter = AnnualizedUsageMeter(temperature_unit_name,model)
-        pre_annualized_usage = annualized_usage_meter.evaluate(temp_sensitivity_params=pre_params,weather_normal_source=weather_normal_source)["annualized_usage"]
-        post_annualized_usage = annualized_usage_meter.evaluate(temp_sensitivity_params=post_params,weather_normal_source=weather_normal_source)["annualized_usage"]
+        pre_annualized_usage = annualized_usage_meter.evaluate(
+                temp_sensitivity_params=model.param_dict_to_list(pre_params),
+                weather_normal_source=weather_normal_source)["annualized_usage"]
+        post_annualized_usage = annualized_usage_meter.evaluate(
+                temp_sensitivity_params=model.param_dict_to_list(post_params),
+                weather_normal_source=weather_normal_source)["annualized_usage"]
         estimated_annualized_savings = pre_annualized_usage - post_annualized_usage
 
         pre_generator = ConsumptionGenerator(fuel_type, consumption_unit_name,

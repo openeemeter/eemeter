@@ -1,6 +1,14 @@
 from eemeter.config.yaml_parser import load
 from eemeter.consumption import ConsumptionHistory
+from eemeter.models import TemperatureSensitivityModel
+from eemeter.meter import AnnualizedUsageMeter
 from fixtures.consumption import consumption_history_1
+from fixtures.consumption import generated_consumption_history_1
+from fixtures.consumption import generated_consumption_history_with_annualized_usage_1
+from fixtures.consumption import generated_consumption_history_pre_post_1
+from fixtures.consumption import generated_consumption_history_pre_post_with_gross_savings_1
+from fixtures.consumption import generated_consumption_history_pre_post_with_annualized_gross_savings_1
+from fixtures.consumption import prism_outputs_1
 from fixtures.weather import gsod_722880_2012_2014_weather_source
 from fixtures.weather import tmy3_722880_weather_source
 
@@ -11,33 +19,49 @@ from datetime import datetime
 from helpers import arrays_similar
 from numpy.testing import assert_allclose
 
-RTOL = 1e-1
+RTOL = 1e-2
+ATOL = 1e-2
 
 @pytest.mark.slow
 def test_temperature_sensitivity_parameter_optimization(
-        consumption_history_1,gsod_722880_2012_2014_weather_source):
+        generated_consumption_history_1,gsod_722880_2012_2014_weather_source):
 
     meter_yaml = """
         !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
             fuel_unit_str: "kWh",
             fuel_type: "electricity",
             temperature_unit_str: "degF",
-            model: !obj:eemeter.models.HDDCDDBalancePointModel {
-                x0: [1.,1.,1.,60.,7.],
-                bounds: [[0,200],[0,200],[0,2000],[55,65],[2,12]],
-            }
+            model: !obj:eemeter.models.TemperatureSensitivityModel {
+                cooling: True,
+                heating: True,
+                initial_params: {
+                    base_consumption: 0,
+                    heating_slope: 0,
+                    cooling_slope: 0,
+                    heating_reference_temperature: 60,
+                    cooling_reference_temperature: 70,
+                },
+                param_bounds: {
+                    base_consumption: [0,2000],
+                    heating_slope: [0,200],
+                    cooling_slope: [0,200],
+                    heating_reference_temperature: [55,65],
+                    cooling_reference_temperature: [65,75],
+                },
+            },
         }
         """
     meter = load(meter_yaml)
 
-    result = meter.evaluate(consumption_history=consumption_history_1,
+    ch, params = generated_consumption_history_1
+
+    result = meter.evaluate(consumption_history=ch,
                             weather_source=gsod_722880_2012_2014_weather_source)
 
-    assert_allclose(result['temp_sensitivity_params'],
-            [  0.4,   1.,   8.,  65.,   4.], rtol=RTOL)
+    assert_allclose(result['temp_sensitivity_params'], params, rtol=RTOL, atol=ATOL)
 
 @pytest.mark.slow
-def test_weather_normalization(consumption_history_1,
+def test_weather_normalization(generated_consumption_history_with_annualized_usage_1,
                                gsod_722880_2012_2014_weather_source,
                                tmy3_722880_weather_source):
 
@@ -48,10 +72,24 @@ def test_weather_normalization(consumption_history_1,
                     fuel_unit_str: "kWh",
                     fuel_type: "electricity",
                     temperature_unit_str: "degF",
-                    model: !obj:eemeter.models.HDDCDDBalancePointModel &model {
-                        x0: [1.,1.,1.,60.,7.],
-                        bounds: [[0,200],[0,200],[0,2000],[55,65],[2,12]],
-                    }
+                    model: !obj:eemeter.models.TemperatureSensitivityModel &model {
+                        cooling: True,
+                        heating: True,
+                        initial_params: {
+                            base_consumption: 0,
+                            heating_slope: 0,
+                            cooling_slope: 0,
+                            heating_reference_temperature: 60,
+                            cooling_reference_temperature: 70,
+                        },
+                        param_bounds: {
+                            base_consumption: [0,2000],
+                            heating_slope: [0,200],
+                            cooling_slope: [0,200],
+                            heating_reference_temperature: [55,65],
+                            cooling_reference_temperature: [65,75],
+                        },
+                    },
                 },
                 !obj:eemeter.meter.AnnualizedUsageMeter {
                     temperature_unit_str: "degF",
@@ -62,17 +100,16 @@ def test_weather_normalization(consumption_history_1,
         """
     meter = load(meter_yaml)
 
-    result = meter.evaluate(consumption_history=consumption_history_1,
+    ch, params, annualized_usage = generated_consumption_history_with_annualized_usage_1
+    result = meter.evaluate(consumption_history=ch,
                             weather_source=gsod_722880_2012_2014_weather_source,
                             weather_normal_source=tmy3_722880_weather_source)
 
-    assert_allclose(result['temp_sensitivity_params'],
-            [  0.4,   1.,   8.,  65.,   4.], rtol=RTOL)
-
-    assert_allclose(result['annualized_usage'], 4430, rtol=RTOL)
+    assert_allclose(result['temp_sensitivity_params'], params, rtol=RTOL, atol=ATOL)
+    assert_allclose(result['annualized_usage'], annualized_usage, rtol=RTOL, atol=ATOL)
 
 @pytest.mark.slow
-def test_pre_post_parameters(consumption_history_1,
+def test_pre_post_parameters(generated_consumption_history_pre_post_1,
                              gsod_722880_2012_2014_weather_source):
 
     meter_yaml = """
@@ -82,30 +119,44 @@ def test_pre_post_parameters(consumption_history_1,
                 fuel_unit_str: "kWh",
                 fuel_type: "electricity",
                 temperature_unit_str: "degF",
-                model: !obj:eemeter.models.HDDCDDBalancePointModel {
-                    x0: [1.,1.,1.,60.,7.],
-                    bounds: [[0,200],[0,200],[0,2000],[55,65],[2,12]],
-                }
+                model: !obj:eemeter.models.TemperatureSensitivityModel {
+                    cooling: True,
+                    heating: True,
+                    initial_params: {
+                        base_consumption: 0,
+                        heating_slope: 0,
+                        cooling_slope: 0,
+                        heating_reference_temperature: 60,
+                        cooling_reference_temperature: 70,
+                    },
+                    param_bounds: {
+                        base_consumption: [0,2000],
+                        heating_slope: [0,200],
+                        cooling_slope: [0,200],
+                        heating_reference_temperature: [55,65],
+                        cooling_reference_temperature: [65,75],
+                    },
+                },
             },
         }
         """
     meter = load(meter_yaml)
 
-    result = meter.evaluate(consumption_history=consumption_history_1,
-                            weather_source=gsod_722880_2012_2014_weather_source,
-                            retrofit_start_date=datetime(2013,9,25),
-                            retrofit_end_date=datetime(2013,9,25))
+    ch, pre_params, post_params, retrofit = generated_consumption_history_pre_post_1
 
-    assert_allclose(result['temp_sensitivity_params_pre'],
-            [0.57594211, 1.49516273, 5.7084898, 65., 3.6], rtol=RTOL)
-    assert_allclose(result['temp_sensitivity_params_post'],
-            [  0.90,   0.26,   9.7,  62.,   2.2], rtol=RTOL)
+    result = meter.evaluate(consumption_history=ch,
+                            weather_source=gsod_722880_2012_2014_weather_source,
+                            retrofit_start_date=retrofit,
+                            retrofit_end_date=retrofit)
+
+    assert_allclose(result['temp_sensitivity_params_pre'], pre_params, rtol=RTOL, atol=ATOL)
+    assert_allclose(result['temp_sensitivity_params_post'], post_params, rtol=RTOL, atol=ATOL)
 
     assert isinstance(result["consumption_history_pre"],ConsumptionHistory)
     assert isinstance(result["consumption_history_post"],ConsumptionHistory)
 
 @pytest.mark.slow
-def test_gross_savings_metric(consumption_history_1,
+def test_gross_savings_metric(generated_consumption_history_pre_post_with_gross_savings_1,
                               gsod_722880_2012_2014_weather_source):
 
     meter_yaml = """
@@ -117,10 +168,24 @@ def test_gross_savings_metric(consumption_history_1,
                         fuel_unit_str: "kWh",
                         fuel_type: "electricity",
                         temperature_unit_str: "degF",
-                        model: !obj:eemeter.models.HDDCDDBalancePointModel &model {
-                            x0: [1.,1.,1.,60.,7.],
-                            bounds: [[0,200],[0,200],[0,2000],[55,65],[2,12]],
-                        }
+                        model: !obj:eemeter.models.TemperatureSensitivityModel &model {
+                            cooling: True,
+                            heating: True,
+                            initial_params: {
+                                base_consumption: 0,
+                                heating_slope: 0,
+                                cooling_slope: 0,
+                                heating_reference_temperature: 60,
+                                cooling_reference_temperature: 70,
+                            },
+                            param_bounds: {
+                                base_consumption: [0,2000],
+                                heating_slope: [0,200],
+                                cooling_slope: [0,200],
+                                heating_reference_temperature: [55,65],
+                                cooling_reference_temperature: [65,75],
+                            },
+                        },
                     },
                 },
                 !obj:eemeter.meter.GrossSavingsMeter {
@@ -134,22 +199,23 @@ def test_gross_savings_metric(consumption_history_1,
         """
     meter = load(meter_yaml)
 
-    result = meter.evaluate(consumption_history=consumption_history_1,
-                            weather_source=gsod_722880_2012_2014_weather_source,
-                            retrofit_start_date=datetime(2013,9,25),
-                            retrofit_end_date=datetime(2013,9,25))
+    ch, pre_params, post_params, retrofit, savings = generated_consumption_history_pre_post_with_gross_savings_1
 
-    assert_allclose(result['temp_sensitivity_params_pre'],
-            [0.57594211, 1.49516273,  5.7084898 ,  65.,   3.6], rtol=RTOL)
-    assert_allclose(result['temp_sensitivity_params_post'],
-            [  0.90,   0.26,   9.7,  62.4,   2.2], rtol=RTOL)
+    result = meter.evaluate(consumption_history=ch,
+                            weather_source=gsod_722880_2012_2014_weather_source,
+                            retrofit_start_date=retrofit,
+                            retrofit_end_date=retrofit)
+
+    assert_allclose(result['temp_sensitivity_params_pre'], pre_params, rtol=RTOL, atol=ATOL)
+    assert_allclose(result['temp_sensitivity_params_post'], post_params, rtol=RTOL, atol=ATOL)
 
     assert isinstance(result["consumption_history_pre"],ConsumptionHistory)
     assert isinstance(result["consumption_history_post"],ConsumptionHistory)
-    assert_allclose(result["gross_savings"],-117000, rtol=RTOL)
+
+    assert_allclose(result["gross_savings"],savings, rtol=RTOL, atol=ATOL)
 
 @pytest.mark.slow
-def test_annualized_gross_savings_metric(consumption_history_1,
+def test_annualized_gross_savings_metric(generated_consumption_history_pre_post_with_annualized_gross_savings_1,
                                          gsod_722880_2012_2014_weather_source,
                                          tmy3_722880_weather_source):
 
@@ -162,10 +228,24 @@ def test_annualized_gross_savings_metric(consumption_history_1,
                         fuel_unit_str: "kWh",
                         fuel_type: "electricity",
                         temperature_unit_str: "degF",
-                        model: !obj:eemeter.models.HDDCDDBalancePointModel &model {
-                            x0: [1.,1.,1.,60.,7.],
-                            bounds: [[0,200],[0,200],[0,2000],[55,65],[2,12]],
-                        }
+                        model: !obj:eemeter.models.TemperatureSensitivityModel &model {
+                            cooling: True,
+                            heating: True,
+                            initial_params: {
+                                base_consumption: 0,
+                                heating_slope: 0,
+                                cooling_slope: 0,
+                                heating_reference_temperature: 60,
+                                cooling_reference_temperature: 70,
+                            },
+                            param_bounds: {
+                                base_consumption: [0,2000],
+                                heating_slope: [0,200],
+                                cooling_slope: [0,200],
+                                heating_reference_temperature: [55,65],
+                                cooling_reference_temperature: [65,75],
+                            },
+                        },
                     },
                 },
                 !obj:eemeter.meter.AnnualizedGrossSavingsMeter {
@@ -178,18 +258,22 @@ def test_annualized_gross_savings_metric(consumption_history_1,
         """
     meter = load(meter_yaml)
 
-    result = meter.evaluate(consumption_history=consumption_history_1,
+    ch, pre_params, post_params, retrofit, savings = generated_consumption_history_pre_post_with_annualized_gross_savings_1
+
+    result = meter.evaluate(consumption_history=ch,
                             weather_source=gsod_722880_2012_2014_weather_source,
                             weather_normal_source=tmy3_722880_weather_source,
-                            retrofit_start_date=datetime(2013,9,25),
-                            retrofit_end_date=datetime(2013,9,25))
+                            retrofit_start_date=retrofit,
+                            retrofit_end_date=retrofit)
 
-    assert_allclose(result['temp_sensitivity_params_pre'],
-            [0.6, 1.5, 5.7 , 65., 3.6], rtol=RTOL)
-    assert_allclose(result['temp_sensitivity_params_post'],
-            [0.90, 0.26, 9.7, 62, 2.2], rtol=RTOL)
+    assert_allclose(result['temp_sensitivity_params_pre'], pre_params, rtol=RTOL, atol=ATOL)
+    assert_allclose(result['temp_sensitivity_params_post'], post_params, rtol=RTOL, atol=ATOL)
 
-    assert_allclose(result["annualized_gross_savings"], -688.27346615653278, rtol=RTOL)
+    assert isinstance(result["consumption_history_pre"],ConsumptionHistory)
+    assert isinstance(result["consumption_history_post"],ConsumptionHistory)
+
+
+    assert_allclose(result["annualized_gross_savings"], savings, rtol=RTOL, atol=ATOL)
 
 def test_fuel_type_presence_meter(consumption_history_1):
 
@@ -205,19 +289,25 @@ def test_fuel_type_presence_meter(consumption_history_1):
     assert not result["natural_gas_presence"]
 
 @pytest.mark.slow
-def test_princeton_scorekeeping_method(consumption_history_1,
+def test_princeton_scorekeeping_method(prism_outputs_1,
                                        gsod_722880_2012_2014_weather_source,
                                        tmy3_722880_weather_source):
     meter = load("!obj:eemeter.meter.PRISMMeter {}")
-    result = meter.evaluate(consumption_history=consumption_history_1,
+
+    ch, elec_params, elec_presence, elec_annualized_usage, elec_error = prism_outputs_1
+    result = meter.evaluate(consumption_history=ch,
                             weather_source=gsod_722880_2012_2014_weather_source,
                             weather_normal_source=tmy3_722880_weather_source)
 
-    assert result.get("electricity_presence")
+
+
+    assert result.get("electricity_presence") == elec_presence
     assert_allclose(result.get("temp_sensitivity_params_electricity"),
-            [0.44667569,0.96903377,8.26148838,65.,4.10000001], rtol=RTOL)
-    assert_allclose(result.get("annualized_usage_electricity"),4411.3924204, rtol=RTOL)
-    assert_allclose(result.get("daily_standard_error_electricity"),14.1469073, rtol=RTOL)
+            elec_params, rtol=RTOL, atol=ATOL)
+    assert_allclose(result.get("annualized_usage_electricity"),
+            elec_annualized_usage, rtol=RTOL, atol=ATOL)
+    assert_allclose(result.get("daily_standard_error_electricity"),
+            elec_error, rtol=RTOL, atol=ATOL)
 
     assert not result.get("natural_gas_presence")
     assert result.get("temp_sensitivity_params_natural_gas") is None

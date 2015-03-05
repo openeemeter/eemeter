@@ -253,7 +253,6 @@ class CachedDataMixin(object):
             if overwrite:
                 for t in temps:
                     self.session.delete(t)
-                self.session.commit()
                 temps = []
             if temps == []:
                 t = temperature_class(weatherstation=self.weather_station,temp_C=temp_C,date=date)

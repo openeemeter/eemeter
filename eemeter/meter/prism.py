@@ -24,9 +24,23 @@ class PRISMMeter(MeterBase):
                                     fuel_unit_str: "kWh",
                                     fuel_type: "electricity",
                                     temperature_unit_str: "degF",
-                                    model: !obj:eemeter.models.HDDCDDBalancePointModel &elec_model {
-                                        x0: [0,0,0,60,5],
-                                        bounds: [[0,5],[0,5],[-20,80],[55,65],[2,10]],
+                                    model: !obj:eemeter.models.TemperatureSensitivityModel &elec_model {
+                                        cooling: True,
+                                        heating: True,
+                                        initial_params: {
+                                            base_consumption: 0,
+                                            heating_slope: 0,
+                                            cooling_slope: 0,
+                                            heating_reference_temperature: 60,
+                                            cooling_reference_temperature: 70,
+                                        },
+                                        param_bounds: {
+                                            base_consumption: [-20,80],
+                                            heating_slope: [0,5],
+                                            cooling_slope: [0,5],
+                                            heating_reference_temperature: [58,66],
+                                            cooling_reference_temperature: [64,72],
+                                        },
                                     },
                                 },
                                 !obj:eemeter.meter.AnnualizedUsageMeter {
@@ -50,9 +64,19 @@ class PRISMMeter(MeterBase):
                                     fuel_unit_str: "therms",
                                     fuel_type: "natural_gas",
                                     temperature_unit_str: "degF",
-                                    model: !obj:eemeter.models.HDDBalancePointModel &gas_model {
-                                        x0: [60,0,0],
-                                        bounds: [[55,65],[0,10],[0,5]],
+                                    model: !obj:eemeter.models.TemperatureSensitivityModel &gas_model {
+                                        cooling: False,
+                                        heating: True,
+                                        initial_params: {
+                                            base_consumption: 0,
+                                            heating_slope: 0,
+                                            heating_reference_temperature: 60,
+                                        },
+                                        param_bounds: {
+                                            base_consumption: [0,10],
+                                            heating_slope: [0,5],
+                                            heating_reference_temperature: [58,66],
+                                        },
                                     },
                                 },
                                 !obj:eemeter.meter.AnnualizedUsageMeter {
