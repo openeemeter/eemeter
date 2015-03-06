@@ -1,14 +1,20 @@
 import scipy.optimize as opt
 import numpy as np
 
+from datetime import timedelta
+from datetime import datetime
+from eemeter.consumption import DatetimePeriod
+
 import inspect
 from itertools import chain
+
+from pprint import pprint
 
 class MeterBase(object):
     """Base class for all Meter objects. Takes care of structural tasks such as
     input and output mapping.
     """
-    def __init__(self,input_mapping={},output_mapping={},**kwargs):
+    def __init__(self,input_mapping={},output_mapping={},extras={},**kwargs):
         """- `input_mapping` should be a dictionary with incoming input names
              as keys whose associated values are outgoing input names.
              (e.g. ({"old_input_name":"new_input_name"})
@@ -18,6 +24,7 @@ class MeterBase(object):
         """
         self.input_mapping = input_mapping
         self.output_mapping = output_mapping
+        self.extras = extras
 
     def evaluate(self,**kwargs):
         """Returns a dictionary of evaluated meter outputs. Arguments must be
@@ -26,6 +33,13 @@ class MeterBase(object):
         `meter.get_inputs()` exists to help describe the required inputs.
         """
         mapped_inputs = self._remap(kwargs,self.input_mapping)
+        for k,v in self.extras.items():
+            if k in mapped_inputs:
+                message = "duplicate key '{}' found while adding extras to inputs"\
+                        .format(k)
+                raise ValueError(message)
+            else:
+                mapped_inputs[k] = v
         inputs = self.get_inputs()[self.__class__.__name__]["inputs"]
         for inpt in inputs:
             if inpt not in mapped_inputs:
@@ -36,6 +50,13 @@ class MeterBase(object):
                 raise TypeError(message)
         result = self.evaluate_mapped_inputs(**mapped_inputs)
         mapped_outputs = self._remap(result,self.output_mapping)
+        for k,v in self.extras.items():
+            if k in mapped_outputs:
+                message = "duplicate key '{}' found while adding extras to inputs"\
+                        .format(k)
+                raise ValueError(message)
+            else:
+                mapped_outputs[k] = v
         return mapped_outputs
 
     @staticmethod
@@ -46,12 +67,16 @@ class MeterBase(object):
         """
         mapped_dict = {}
         for k,v in inputs.items():
-            mapped_key = mapping.get(k,k)
-            if mapped_key in mapped_dict:
-                message = "duplicate key '{}' found while mapping"\
-                        .format(mapped_key)
-                raise ValueError(message)
-            mapped_dict[mapped_key] = v
+            mapped_keys = mapping.get(k,k)
+            if mapped_keys is not None:
+                if isinstance(mapped_keys, basestring):
+                    mapped_keys = [mapped_keys]
+                for mapped_key in mapped_keys:
+                    if mapped_key in mapped_dict:
+                        message = "duplicate key '{}' found while mapping"\
+                                .format(mapped_key)
+                        raise ValueError(message)
+                    mapped_dict[mapped_key] = v
         return mapped_dict
 
     def evaluate_mapped_inputs(self,**kwargs):
@@ -73,7 +98,7 @@ class MeterBase(object):
 
 class Sequence(MeterBase):
     def __init__(self,sequence,**kwargs):
-        super(SequentialMeter,self).__init__(**kwargs)
+        super(Sequence,self).__init__(**kwargs)
         assert all([issubclass(meter.__class__,MeterBase)
                     for meter in sequence])
         self.sequence = sequence
@@ -104,7 +129,7 @@ class Sequence(MeterBase):
 
 class Condition(MeterBase):
     def __init__(self,condition_parameter,success=None,failure=None,**kwargs):
-        super(ConditionalMeter,self).__init__(**kwargs)
+        super(Condition,self).__init__(**kwargs)
         self.condition_parameter = condition_parameter
         self.success = success
         self.failure = failure
@@ -135,7 +160,7 @@ class Condition(MeterBase):
 
 class And(MeterBase):
     def __init__(self,inputs,**kwargs):
-        super(self.__class__,self).__init__(**kwargs)
+        super(And,self).__init__(**kwargs)
         if len(inputs) == 0:
             message = "requires at least one input."
             raise ValueError(message)
@@ -150,6 +175,25 @@ class And(MeterBase):
                 raise ValueError(message)
             output = output and boolean
         return {"output": output}
+
+class Or(MeterBase):
+    def __init__(self,inputs,**kwargs):
+        super(Or,self).__init__(**kwargs)
+        if len(inputs) == 0:
+            message = "requires at least one input."
+            raise ValueError(message)
+        self.inputs = inputs
+
+    def evaluate_mapped_inputs(self,**kwargs):
+        output = False
+        for inpt in self.inputs:
+            boolean = kwargs.get(inpt)
+            if boolean is None:
+                message = "could not find input '{}'".format(inpt)
+                raise ValueError(message)
+            output = output or boolean
+        return {"output": output}
+
 
 class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
     def __init__(self,fuel_unit_str,fuel_type,temperature_unit_str,model,**kwargs):
@@ -196,7 +240,7 @@ class AnnualizedUsageMeter(MeterBase):
 
 class PrePost(MeterBase):
     def __init__(self,meter,splittable_args,**kwargs):
-        super(PrePostMeter,self).__init__(**kwargs)
+        super(PrePost,self).__init__(**kwargs)
         self.meter = meter
         self.splittable_args = splittable_args
 
@@ -282,15 +326,199 @@ class FuelTypePresenceMeter(MeterBase):
         results = {}
         for fuel_type in self.fuel_types:
             consumptions = consumption_history.get(fuel_type)
-            results[fuel_type + "_presence"] = consumptions is not None
+            results[fuel_type + "_presence"] = (consumptions != [])
         return results
+
+class ForEachFuelType(MeterBase):
+    def __init__(self,fuel_types,meter,**kwargs):
+        super(ForEachFuelType,self).__init__(**kwargs)
+        self.fuel_types = fuel_types
+        self.meter = meter
+
+    def evaluate_mapped_inputs(self,**kwargs):
+        """Checks for fuel_type presence in a given consumption_history and
+        returns a dictionary of booleans keyed by `"[fuel_type]_presence"`
+        (e.g. `fuel_types = ["electricity"]` => `{'electricity_presence': False}`
+        """
+        results = {}
+        for fuel_type in self.fuel_types:
+            inputs = dict(kwargs.items() + {"fuel_type": fuel_type}.items())
+            result = self.meter.evaluate(**inputs)
+            for k,v in result.items():
+                results[ "{}_{}".format(k,fuel_type)] = v
+        return results
+
+class TimeSpanMeter(MeterBase):
+    def __init__(self,**kwargs):
+        super(TimeSpanMeter,self).__init__(**kwargs)
+
+    def evaluate_mapped_inputs(self,consumption_history,fuel_type,**kwargs):
+        consumptions = consumption_history.get(fuel_type)
+        dates = set()
+        for c in consumptions:
+            for days in range((c.end - c.start).days):
+                dat = c.start + timedelta(days=days)
+                dates.add(dat)
+        return { "time_span": len(dates) }
+
+class TotalHDDMeter(MeterBase):
+    def __init__(self,base,temperature_unit_str,**kwargs):
+        super(TotalHDDMeter,self).__init__(**kwargs)
+        self.base = base
+        self.temperature_unit_str = temperature_unit_str
+
+    def evaluate_mapped_inputs(self,consumption_history,fuel_type,weather_source,**kwargs):
+        consumptions = consumption_history.get(fuel_type)
+        hdd = weather_source.get_hdd(consumptions,self.temperature_unit_str,self.base)
+        return { "total_hdd": sum(hdd) }
+
+class TotalCDDMeter(MeterBase):
+    def __init__(self,base,temperature_unit_str,**kwargs):
+        super(TotalCDDMeter,self).__init__(**kwargs)
+        self.base = base
+        self.temperature_unit_str = temperature_unit_str
+
+    def evaluate_mapped_inputs(self,consumption_history,fuel_type,weather_source,**kwargs):
+        consumptions = consumption_history.get(fuel_type)
+        cdd = weather_source.get_cdd(consumptions,self.temperature_unit_str,self.base)
+        return { "total_cdd": sum(cdd) }
+
+class MeetsThresholds(MeterBase):
+    def __init__(self,values,thresholds,operations,proportions,output_names,**kwargs):
+        super(MeetsThresholds,self).__init__(**kwargs)
+        self.values = values
+        self.thresholds = thresholds
+        self.operations = operations
+        self.proportions = proportions
+        self.output_names = output_names
+
+    def evaluate_mapped_inputs(self,**kwargs):
+        result = {}
+        for v,t,o,p,n in zip(self.values,self.thresholds,self.operations,self.proportions,self.output_names):
+            value = kwargs.get(v)
+            if isinstance(t,basestring):
+                threshold = kwargs.get(t)
+            else:
+                threshold = t
+            if o == "lt":
+                result[n] = (value < threshold * p)
+            elif o == "gt":
+                result[n] = (value > threshold * p)
+            elif o == "lte":
+                result[n] = (value <= threshold * p)
+            elif o == "gte":
+                result[n] = (value >= threshold * p)
+        return result
+
+class NormalAnnualHDD(MeterBase):
+    def __init__(self,base,temperature_unit_str,**kwargs):
+        super(NormalAnnualHDD,self).__init__(**kwargs)
+        self.base = base
+        self.temperature_unit_str = temperature_unit_str
+
+    def evaluate_mapped_inputs(self,weather_normal_source,**kwargs):
+        periods = []
+        for days in range(365):
+            start = datetime(2013,1,1) + timedelta(days=days)
+            end = datetime(2013,1,1) + timedelta(days=days + 1)
+            periods.append(DatetimePeriod(start,end))
+        hdd = weather_normal_source.get_hdd(periods,self.temperature_unit_str,self.base)
+        return { "normal_annual_hdd": sum(hdd) }
+
+class NormalAnnualCDD(MeterBase):
+    def __init__(self,base,temperature_unit_str,**kwargs):
+        super(NormalAnnualCDD,self).__init__(**kwargs)
+        self.base = base
+        self.temperature_unit_str = temperature_unit_str
+
+    def evaluate_mapped_inputs(self,weather_normal_source,**kwargs):
+        periods = []
+        for days in range(365):
+            start = datetime(2013,1,1) + timedelta(days=days)
+            end = datetime(2013,1,1) + timedelta(days=days + 1)
+            periods.append(DatetimePeriod(start,end))
+        cdd = weather_normal_source.get_cdd(periods,self.temperature_unit_str,self.base)
+        return { "normal_annual_cdd": sum(cdd) }
+
+class NPeriodsMeetingHDDPerDayThreshold(MeterBase):
+    def __init__(self,base,temperature_unit_str,operation,proportion=1,**kwargs):
+        super(NPeriodsMeetingHDDPerDayThreshold,self).__init__(**kwargs)
+        self.base = base
+        self.temperature_unit_str = temperature_unit_str
+        self.operation = operation
+        self.proportion = proportion
+
+    def evaluate_mapped_inputs(self,consumption_history,fuel_type,hdd,weather_source,**kwargs):
+        n_periods = 0
+        consumptions = consumption_history.get(fuel_type)
+        hdds = weather_source.get_hdd_per_day(consumptions,self.temperature_unit_str,self.base)
+        for period_hdd in hdds:
+            if self.operation == "lt":
+                if period_hdd < self.proportion * hdd:
+                    n_periods += 1
+            elif self.operation == "lte":
+                if period_hdd <= self.proportion * hdd:
+                    n_periods += 1
+            elif self.operation == "gt":
+                if period_hdd > self.proportion * hdd:
+                    n_periods += 1
+            elif self.operation == "gte":
+                if period_hdd >= self.proportion * hdd:
+                    n_periods += 1
+        return {"n_periods": n_periods}
+
+class NPeriodsMeetingCDDPerDayThreshold(MeterBase):
+    def __init__(self,base,temperature_unit_str,operation,proportion=1,**kwargs):
+        super(NPeriodsMeetingCDDPerDayThreshold,self).__init__(**kwargs)
+        self.base = base
+        self.temperature_unit_str = temperature_unit_str
+        self.operation = operation
+        self.proportion = proportion
+
+    def evaluate_mapped_inputs(self,consumption_history,fuel_type,cdd,weather_source,**kwargs):
+        n_periods = 0
+        consumptions = consumption_history.get(fuel_type)
+        cdds = weather_source.get_cdd_per_day(consumptions,self.temperature_unit_str,self.base)
+        for period_cdd in cdds:
+            if self.operation == "lt":
+                if period_cdd < self.proportion * cdd:
+                    n_periods += 1
+            elif self.operation == "lte":
+                if period_cdd <= self.proportion * cdd:
+                    n_periods += 1
+            elif self.operation == "gt":
+                if period_cdd > self.proportion * cdd:
+                    n_periods += 1
+            elif self.operation == "gte":
+                if period_cdd >= self.proportion * cdd:
+                    n_periods += 1
+        return {"n_periods": n_periods}
+
+class Switch(MeterBase):
+    def __init__(self,target,cases,default=None,**kwargs):
+        super(Switch,self).__init__(**kwargs)
+        self.target = target
+        self.cases = cases
+        self.default = default
+
+    def evaluate_mapped_inputs(self,**kwargs):
+        item = kwargs.get(self.target)
+        if item is None:
+            return {}
+        meter = self.cases.get(item)
+        if meter is not None:
+            return meter.evaluate(**kwargs)
+        if self.default is not None:
+            return self.default.evaluate(**kwargs)
+        return {}
 
 class Debug(MeterBase):
     def evaluate_mapped_inputs(self,**kwargs):
         """Helpful for debugging meter instances - prints out kwargs for
         inspection.
         """
-        print("DEBUG kwargs:", kwargs)
+        print("DEBUG")
+        pprint(kwargs)
         return {}
 
 class DummyMeter(MeterBase):

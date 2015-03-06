@@ -3,6 +3,8 @@ from eemeter.meter import DummyMeter
 from eemeter.meter import Sequence
 from eemeter.meter import Condition
 from eemeter.meter import And
+from eemeter.meter import Or
+from eemeter.meter import ForEachFuelType
 
 import pytest
 
@@ -179,4 +181,158 @@ def test_and_meter():
     assert not meter3.evaluate(result_one=False,result_two=True,result_three=True)["output"]
 
 
+def test_null_key_mapping():
+    meter1 = Sequence(sequence=[
+        DummyMeter(input_mapping={"value_one":"value"},
+                   output_mapping={"result":"result_one"}),
+        DummyMeter(input_mapping={"result_one":None, "value_one":"value"},
+                   output_mapping={"result":"result_two"}),
+        DummyMeter(input_mapping={"result_one":"value"},
+                   output_mapping={"result":"result_three"}),
+        ])
 
+    result1 = meter1.evaluate(value_one=1)
+    assert result1["result_one"] == 1
+    assert result1["result_two"] == 1
+    assert result1["result_three"] == 1
+
+    meter2 = Sequence(sequence=[
+        DummyMeter(input_mapping={"value_one": "value"},
+                   output_mapping={"result": None}),
+        DummyMeter(input_mapping={"result": "value"},
+                   output_mapping={"result": "result_one"}),
+        ])
+
+
+    with pytest.raises(TypeError):
+        result2 = meter2.evaluate(value_one=1)
+
+def test_multiple_mapping():
+    meter = Sequence(sequence=[
+        DummyMeter(input_mapping={"value_one": "value"},
+                   output_mapping={"result": ["result_one","result_two"]}),
+        DummyMeter(input_mapping={"result_one": "value"},
+                   output_mapping={"result": "result_three"}),
+        DummyMeter(input_mapping={"result_two": "value"},
+                   output_mapping={"result": "result_four"}),
+        ])
+
+    result = meter.evaluate(value_one=1)
+    assert result["result_one"] == 1
+    assert result["result_two"] == 1
+    assert result["result_three"] == 1
+    assert result["result_four"] == 1
+
+def test_or_meter():
+    with pytest.raises(ValueError):
+        meter0 = Or(inputs=[])
+
+    meter1 = Or(inputs=["result_one"])
+    assert meter1.evaluate(result_one=True,result_two=True)["output"]
+
+    meter2 = Or(inputs=["result_one","result_two"])
+    assert meter2.evaluate(result_one=True,result_two=True)["output"]
+    assert meter2.evaluate(result_one=False,result_two=True)["output"]
+    assert meter2.evaluate(result_one=True,result_two=False)["output"]
+    assert not meter2.evaluate(result_one=False,result_two=False)["output"]
+
+    meter3 = Or(inputs=["result_one","result_two","result_three"])
+    with pytest.raises(ValueError):
+        assert meter3.evaluate(result_one=True,result_two=True)
+    assert meter3.evaluate(result_one=True,result_two=True,result_three=True)["output"]
+    assert meter3.evaluate(result_one=True,result_two=True,result_three=False)["output"]
+    assert meter3.evaluate(result_one=False,result_two=True,result_three=True)["output"]
+    assert not meter3.evaluate(result_one=False,result_two=False,result_three=False)["output"]
+
+def test_for_each_fuel_type():
+    meter_yaml = """
+        !obj:eemeter.meter.ForEachFuelType {
+            fuel_types: [electricity,natural_gas],
+            meter: !obj:eemeter.meter.Sequence {
+                sequence: [
+                    !obj:eemeter.meter.DummyMeter {
+                        input_mapping: {
+                            fuel_type: value,
+                        }
+                    },
+                    !obj:eemeter.meter.DummyMeter {
+                        input_mapping: {
+                            value_one: value,
+                        },
+                        output_mapping: {
+                            result: result_one
+                        }
+                    }
+                ]
+            }
+        }
+    """
+    meter = load(meter_yaml)
+
+    result = meter.evaluate(value_one=1)
+
+    assert result["result_electricity"] == "electricity"
+    assert result["result_natural_gas"] == "natural_gas"
+    assert result["result_one_electricity"] == 1
+    assert result["result_one_natural_gas"] == 1
+
+def test_switch():
+    meter_yaml = """
+        !obj:eemeter.meter.Switch {
+            target: target,
+            cases: {
+                1: !obj:eemeter.meter.DummyMeter {
+                    input_mapping: {
+                        value_one: value,
+                    },
+                },
+                2: !obj:eemeter.meter.DummyMeter {
+                    input_mapping: {
+                        value_two: value,
+                    },
+                },
+                3: !obj:eemeter.meter.DummyMeter {
+                    input_mapping: {
+                        value_three: value,
+                    },
+                },
+            },
+            default: !obj:eemeter.meter.DummyMeter {
+                input_mapping: {
+                    value_default: value,
+                },
+            }
+        }
+    """
+
+    meter = load(meter_yaml)
+
+    result1 = meter.evaluate(target=1,value_one=1,value_two=2,value_three=3,value_default=4)
+    result2 = meter.evaluate(target=2,value_one=1,value_two=2,value_three=3,value_default=4)
+    result3 = meter.evaluate(target=3,value_one=1,value_two=2,value_three=3,value_default=4)
+    result4 = meter.evaluate(target=4,value_one=1,value_two=2,value_three=3,value_default=4)
+    result5 = meter.evaluate(value_one=1,value_two=2,value_three=3,value_default=4)
+
+    assert 1 == result1.get("result")
+    assert 2 == result2.get("result")
+    assert 3 == result3.get("result")
+    assert 4 == result4.get("result")
+    assert None == result5.get("result")
+
+def test_meter_base():
+    meter_yaml = """
+        !obj:eemeter.meter.DummyMeter {
+            extras: {
+                has_extra: true,
+            },
+            output_mapping: {
+                has_extra: has_extra,
+            },
+        }
+    """
+    meter = load(meter_yaml)
+
+    result = meter.evaluate(value="dummy")
+
+    assert result["result"] == "dummy"
+    assert result["has_extra"]

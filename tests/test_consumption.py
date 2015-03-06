@@ -159,6 +159,8 @@ def test_consumption_history(consumption_list_one_year_electricity,
         assert ch_gas.before(datetime(2011,7,1)).natural_gas
         assert ch_gas.after(datetime(2013,6,30)).natural_gas
 
+    assert ch_elec.get("nonexistent") == []
+
 def test_consumption_average_daily_usage_no_division_by_zero():
     c = Consumption(10,"kWh","electricity",datetime(2012,1,1),datetime(2012,1,1))
     assert np.isnan(c.average_daily_usage("kWh"))

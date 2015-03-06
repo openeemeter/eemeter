@@ -144,6 +144,14 @@ def test_gsod_weather_source(consumption_history_one_summer_electricity,gsod_wea
     assert abs(cdds[0] - 42.2) < EPSILON
     assert abs(cdds[1] - 107.3) < EPSILON
     assert abs(cdds[2] - 292.8) < EPSILON
+    hdds_per_day = gsod_weather_source.get_hdd_per_day(consumptions,"degF",65)
+    assert abs(hdds_per_day[0] - 0.02333333333333485) < EPSILON
+    assert abs(hdds_per_day[1] - 0.658064516129031) < EPSILON
+    assert abs(hdds_per_day[2] - 0.0) < EPSILON
+    cdds_per_day = gsod_weather_source.get_cdd_per_day(consumptions,"degF",65)
+    assert abs(cdds_per_day[0] - 1.40666666666667) < EPSILON
+    assert abs(cdds_per_day[1] - 3.4612903225806466) < EPSILON
+    assert abs(cdds_per_day[2] - 9.44516129032255) < EPSILON
 
 @pytest.mark.slow
 @pytest.mark.internet
@@ -206,6 +214,7 @@ def test_tmy3_weather_source(consumption_history_one_summer_electricity,tmy3_wea
     assert abs(normal_cdds[0] - 105.54000879999927) < EPSILON
     assert abs(normal_cdds[1] - 249.79501199999902) < EPSILON
     assert abs(normal_cdds[2] - 288.78001239999907) < EPSILON
+
 
 def test_haversine():
     lat_lng_dists = [(0,0,0,0,0),

@@ -3,7 +3,6 @@ from eemeter.consumption import ConsumptionHistory
 
 import pytest
 
-from eemeter.meter import BPI2400Meter
 from eemeter.models import TemperatureSensitivityModel
 from eemeter.meter import AnnualizedUsageMeter
 
@@ -316,11 +315,3 @@ def test_princeton_scorekeeping_method(prism_outputs_1,
     assert result.get("annualized_usage_natural_gas") is None
     assert result.get("daily_standard_error_natural_gas") is None
 
-def test_bpi2400(consumption_history_1,
-                 tmy3_722880_weather_source):
-
-    meter = BPI2400Meter()
-    result = meter.evaluate(consumption_history=consumption_history_1,
-                            weather_normal_source=tmy3_722880_weather_source)
-    assert "consumption_history_no_estimated" in result
-    assert False

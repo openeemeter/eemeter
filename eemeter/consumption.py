@@ -136,7 +136,7 @@ class ConsumptionHistory:
         string such as `"electricity"` or `"natural_gas"`. Returns `None` if
         no matching `Consumption` instances are found.
         """
-        return self._data.get(fuel_type)
+        return self._data.get(fuel_type,[])
 
     def iteritems(self):
         """Iterator that returns all internally stored consumption instances.

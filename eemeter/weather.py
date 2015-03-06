@@ -176,6 +176,16 @@ class WeatherSourceBase(object):
             hdds.append(self.get_period_hdd(period,unit,base))
         return hdds
 
+    def get_hdd_per_day(self,periods,unit_name,base):
+        """Returns, for each period, the total heating degree days
+        observed during the period.
+        """
+        unit = ureg.parse_expression(unit_name)
+        hdds_per_day = []
+        for period in periods:
+            hdds_per_day.append(self.get_period_hdd_per_day(period,unit,base))
+        return hdds_per_day
+
     def get_period_hdd(self,period,unit,base):
         """Returns the total heating degree days observed during the
         period.
@@ -188,6 +198,19 @@ class WeatherSourceBase(object):
                 total_hdd += base - temp
         return total_hdd
 
+    def get_period_hdd_per_day(self,period,unit,base):
+        """Returns the total heating degree days observed during the
+        period.
+        """
+        total_hdd = 0.
+        n_days = period.timedelta.days
+        for days in range(n_days):
+            day = period.start + timedelta(days=days)
+            temp = self.get_daily_average_temperature(day,unit)
+            if temp < base:
+                total_hdd += base - temp
+        return total_hdd / n_days
+
     def get_cdd(self,periods,unit_name,base):
         """Returns, for each period, the total cooling degree days
         observed during the period.
@@ -197,6 +220,17 @@ class WeatherSourceBase(object):
         for period in periods:
             cdds.append(self.get_period_cdd(period,unit,base))
         return cdds
+
+    def get_cdd_per_day(self,periods,unit_name,base):
+        """Returns, for each period, the total cooling degree days
+        observed during the period.
+        """
+        unit = ureg.parse_expression(unit_name)
+        cdds_per_day = []
+        for period in periods:
+            cdds_per_day.append(self.get_period_cdd_per_day(period,unit,base))
+        return cdds_per_day
+
 
     def get_period_cdd(self,period,unit,base):
         """Returns the total cooling degree days observed during the
@@ -209,6 +243,19 @@ class WeatherSourceBase(object):
             if temp > base:
                 total_cdd += temp - base
         return total_cdd
+
+    def get_period_cdd_per_day(self,period,unit,base):
+        """Returns the total cooling degree days observed during the
+        period.
+        """
+        total_cdd = 0.
+        n_days = period.timedelta.days
+        for days in range(n_days):
+            day = period.start + timedelta(days=days)
+            temp = self.get_daily_average_temperature(day,unit)
+            if temp > base:
+                total_cdd += temp - base
+        return total_cdd / n_days
 
 class CachedDataMixin(object):
 
@@ -316,6 +363,8 @@ class GSODWeatherSource(WeatherSourceBase,DailyAverageTemperatureCachedDataMixin
             temp = self.data.get(dat.strftime("%Y%m%d"))
             if temp is None:
                 self._fetch_year(dat.year)
+        if self.session:
+            self.session.close()
 
     def _fetch_year(self,year):
         if len(self.station_id) == 6:
@@ -389,6 +438,8 @@ class ISDWeatherSource(WeatherSourceBase,HourlyAverageTemperatureCachedDataMixin
                         temps.append(self.data.get(dat.strftime("%Y%m%d") + "01"))
                 if len(temps) < 700:
                     self._fetch_year(dat.year)
+        if self.session:
+            self.session.close()
 
     def _fetch_year(self,year):
         if len(self.station_id) == 6:
@@ -472,6 +523,9 @@ class TMY3WeatherSource(WeatherSourceBase,HourlyTemperatureNormalCachedDataMixin
         n_temp_normals = len(self.data.items())
         if n_temp_normals < 364 * 24: #missing more than a day of data
             self._fetch_data()
+
+        if self.session:
+           self.session.close()
 
     def _fetch_data(self):
         r = requests.get("http://rredc.nrel.gov/solar/old_data/nsrdb/1991-2005/data/tmy3/{}TYA.CSV".format(self.station_id))

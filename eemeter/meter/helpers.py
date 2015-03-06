@@ -6,13 +6,13 @@ from datetime import datetime
 from datetime import timedelta
 
 class RecentReadingMeter(MeterBase):
-    def __init__(self,n_days,**kwargs):
+    def __init__(self,n_days,since_date=datetime.now(),**kwargs):
         super(self.__class__,self).__init__(**kwargs)
-        self.dt_target = datetime.now() - timedelta(days=n_days)
+        self.dt_target = since_date - timedelta(days=n_days)
 
-    def evaluate_mapped_inputs(self,consumption_history,**kwargs):
+    def evaluate_mapped_inputs(self,consumption_history,fuel_type,**kwargs):
         recent_reading = False
-        for consumption in consumption_history.iteritems():
+        for consumption in consumption_history.get(fuel_type):
             if consumption.end > self.dt_target:
                 recent_reading = True
                 break
