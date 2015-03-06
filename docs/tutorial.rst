@@ -27,8 +27,8 @@ existing meter components or by writing new components.
    The `eemeter` package is under rapid development; we are working quickly
    toward a stable release. In the mean time, please proceed to use the package,
    but as you do so, recognize that the docs might not be entirely up-to-date.
-   Feel free to open issues on github to report bugs, request features, or make
-   suggestions.
+   Feel free to open issues on `github <https://github.com/impactlab/eemeter>`
+   to report bugs, request features, or make suggestions.
 
 Installation
 ------------
@@ -64,24 +64,25 @@ consumption.
 
 .. code-block:: python
 
-    from eemeter.models import HDDCDDBalancePointModel
+    from eemeter.models import TemperatureSensitivityModel
     from scipy.stats import uniform
 
-    electricity_consumption_model = HDDCDDBalancePointModel()
+    electricity_consumption_model = TemperatureSensitivityModel(heating=True,cooling=True)
 
-    electricity_param_distributions = (
-            uniform(loc=1, scale=.5),   # HDD temperature sensitivity, temp/HDD
-            uniform(loc=1, scale=.5),   # CDD temperature sensitivity, temp/CDD
-            uniform(loc=5, scale=5),    # base load, kWh/day
-            uniform(loc=62, scale=5),   # HDD reference temperature degF
-            uniform(loc=2, scale=5))    # reference temperature difference (CDD reference temperature - HDD reference temperature)
-
-    electricity_param_delta_distributions = (
-            uniform(loc=-.2,scale=.3),  # change in HDD temperature sensitivity post retrofit
-            uniform(loc=-.2, scale=.3), # change in CDD temperature sensitivity post retrofit
-            uniform(loc=-2, scale=3),   # change in base load post retrofit
-            uniform(loc=0, scale=0),    # no change
-            uniform(loc=0, scale=0))    # no change
+    electricity_param_distributions = {
+        "cooling_slope": uniform(loc=1, scale=.5), # consumption per CDD
+        "heating_slope": uniform(loc=1, scale=.5), # consumption per HDD
+        "base_consumption": uniform(loc=5, scale=5), # per day
+        "cooling_reference_temperature": uniform(loc=70, scale=5), # degF
+        "heating_reference_temperature": uniform(loc=60, scale=5) # degF
+    }
+    electricity_param_delta_distributions = {
+        "cooling_slope": uniform(loc=-.2, scale=.3), # change in HDD temperature sensitivity post retrofit
+        "heating_slope": uniform(loc=-.2, scale=.3), # change in HDD temperature sensitivity post retrofit
+        "base_consumption": uniform(loc=-2, scale=3), # change in base load post retrofit
+        "cooling_reference_temperature": uniform(loc=0, scale=0), # no change
+        "heating_reference_temperature": uniform(loc=0, scale=0) # no change
+    }
 
 The following parameter distributions are for generating fake data using
 a model which takes only heating degree days (HDD) into account. This is
@@ -93,15 +94,16 @@ a suitable model for monthly natural gas consumption.
 
     gas_consumption_model = HDDBalancePointModel()
 
-    gas_param_distributions = (
-            uniform(loc=62, scale=3),   # HDD reference temperature degF
-            uniform(loc=5, scale=5),    # base load, kWh/day
-            uniform(loc=1, scale=.5))   # HDD temperature sensitivity, temp/HDD
-
-    gas_param_delta_distributions = (
-            uniform(loc=0, scale=0),    # no change
-            uniform(loc=-2, scale=3),   # change in base load
-            uniform(loc=-.2,scale=.3))  # change in temperature sensitivity
+    gas_param_distributions = {
+            "heating_slope": uniform(loc=1, scale=.5),
+            "base_consumption": uniform(loc=5, scale=5),
+            "heating_reference_temperature": uniform(loc=60, scale=5)
+    }
+    gas_param_delta_distributions = {
+            "heating_slope": uniform(loc=-.2, scale=.3),
+            "base_consumption": uniform(loc=-2, scale=3),
+            "heating_reference_temperature": uniform(loc=0, scale=0)
+    }
 
 With models and parameter distributions picked out, we can create a
 ProjectGenerator from which we can create portfolios of projects.
@@ -117,9 +119,11 @@ ProjectGenerator from which we can create portfolios of projects.
                                  gas_param_distributions,
                                  gas_param_delta_distributions)
 
-To make this generator work, we must provide them with weather data and usage
-periods. Here, we create weather sources with data from O'Hare INTL Airport
-near Chicago, IL, by providing a station identifier.
+To make this generator work, we must provide it with weather data and usage
+periods. Here, we create weather sources which automatically fetch data from
+O'Hare INTL Airport near Chicago, IL. Fetch data (which can and should be
+cached - see below) by providing the USAF weather station identifier
+corresponding to the station.
 
 .. code-block:: python
 
@@ -167,15 +171,18 @@ a set of energy efficiency measures. In this case, we generate a small set of
         retrofit_completion_date = retrofit_start_date + timedelta(days=30)
 
         # generate consumption data that mimics applying a measure and seeing a decrease in energy use
-        elec_consumption, gas_consumption, estimated_elec_savings, estimated_gas_savings =\
-                generator.generate(weather_source, weather_normal_source, elec_periods, gas_periods,
-                                   retrofit_start_date, retrofit_completion_date)
+        result = generator.generate(weather_source,
+                                    weather_normal_source,
+                                    elec_periods,
+                                    gas_periods,
+                                    retrofit_start_date,
+                                    retrofit_completion_date)
 
         data = {"consumption_history": ConsumptionHistory(elec_consumption + gas_consumption),
                 "retrofit_start_date": retrofit_start_date,
                 "retrofit_completion_date":retrofit_completion_date,
-                "estimated_elec_savings": estimated_elec_savings,
-                "estimated_gas_savings": estimated_gas_savings}
+                "estimated_elec_savings": result["electricity_savings_estimate"],
+                "estimated_gas_savings": result["natural_gas_savings_estimate"]}
         project_data.append(data)
 
 Phew! All of that was just to generate some projects so that we could learn how
