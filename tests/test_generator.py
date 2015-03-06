@@ -93,14 +93,19 @@ def test_project_generator(gsod_722880_2012_2014_weather_source,tmy3_722880_weat
     retrofit_start_date = datetime(2012,4,1)
     retrofit_completion_date = datetime(2012,5,1)
 
-    elec_consumption, gas_consumption, elec_annual_usage, gas_annual_usage = \
-            generator.generate(gsod_722880_2012_2014_weather_source,
+    results = generator.generate(gsod_722880_2012_2014_weather_source,
                                tmy3_722880_weather_source, periods, periods,
                                retrofit_start_date, retrofit_completion_date,
                                electricity_noise=None,gas_noise=None)
 
-    elec_kwh = [c.to("kWh") for c in elec_consumption]
-    gas_therms = [c.to("therms") for c in gas_consumption]
+    elec_kwh = [c.to("kWh") for c in results["electricity_consumptions"]]
+    gas_therms = [c.to("therms") for c in results["natural_gas_consumptions"]]
+    assert results.get("electricity_estimated_savings") is not None
+    assert results.get("natural_gas_estimated_savings") is not None
+    assert results.get("electricity_pre_params") is not None
+    assert results.get("natural_gas_pre_params") is not None
+    assert results.get("electricity_post_params") is not None
+    assert results.get("natural_gas_post_params") is not None
 
     assert len(elec_kwh) == 12
     assert len(gas_therms) == 12

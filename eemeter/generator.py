@@ -70,22 +70,32 @@ class ProjectGenerator:
         electricity and gas consumptions and estimated savings for each.
         """
 
-        electricity_consumptions, estimated_electricity_savings = self._generate_fuel_consumptions(
+        electricity_consumptions, estimated_electricity_savings, elec_pre_params, elec_post_params = self._generate_fuel_consumptions(
                 weather_source, weather_normal_source, electricity_periods,
                 self.electricity_model, self.elec_param_dists,
                 self.elec_param_delta_dists, electricity_noise,
                 retrofit_start_date, retrofit_completion_date,
                 "electricity", "kWh", self.temperature_unit_name)
 
-        gas_consumptions, estimated_gas_savings = self._generate_fuel_consumptions(
+        gas_consumptions, estimated_gas_savings, gas_pre_params, gas_post_params = self._generate_fuel_consumptions(
                 weather_source, weather_normal_source, gas_periods,
                 self.gas_model, self.gas_param_dists,
                 self.gas_param_delta_dists, gas_noise,
                 retrofit_start_date, retrofit_completion_date,
                 "natural_gas", "therm", self.temperature_unit_name)
 
+        results = {
+            "electricity_consumptions": electricity_consumptions,
+            "natural_gas_consumptions": gas_consumptions,
+            "electricity_estimated_savings": estimated_electricity_savings,
+            "natural_gas_estimated_savings": estimated_gas_savings,
+            "electricity_pre_params": elec_pre_params,
+            "natural_gas_pre_params": gas_pre_params,
+            "electricity_post_params": elec_post_params,
+            "natural_gas_post_params": gas_post_params,
+        }
 
-        return electricity_consumptions, gas_consumptions, estimated_electricity_savings, estimated_gas_savings
+        return results
 
     def _generate_fuel_consumptions(self, weather_source, weather_normal_source, periods,
             model, param_dists, param_delta_dists, noise,
@@ -129,7 +139,7 @@ class ProjectGenerator:
 
             final_consumptions.append(consumption)
 
-        return final_consumptions, estimated_annualized_savings
+        return final_consumptions, estimated_annualized_savings, pre_params, post_params
 
 def generate_periods(start_datetime,end_datetime,period_length_mean=timedelta(days=30),period_jitter=timedelta(days=1),jitter_intensity=3):
     """Returns an array of random, variable-length DatetimePeriods for more
