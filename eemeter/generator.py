@@ -36,7 +36,7 @@ class ConsumptionGenerator:
         consumptions = []
         for u,period in zip(usages,periods):
             if noise is not None:
-                u += noise.rvs()
+                u += np.sum(noise.rvs(size=period.timedelta.days))
 
             c = Consumption(u, self.consumption_unit_name, self.fuel_type, period.start, period.end)
             consumptions.append(c)
