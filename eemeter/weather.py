@@ -127,7 +127,7 @@ class WeatherSourceBase(object):
         avg_temps = []
         for period in periods:
             avg_temps.append(self.get_period_average_temperature(period,unit))
-        return avg_temps
+        return np.array(avg_temps)
 
     def get_period_average_temperature(self,period,unit):
         """Returns the average temperature during the duration of a single
@@ -146,7 +146,7 @@ class WeatherSourceBase(object):
         daily_temps = []
         for period in periods:
             daily_temps.append(self.get_period_daily_temperatures(period,unit))
-        return daily_temps
+        return np.array(daily_temps)
 
     def get_period_daily_temperatures(self,period,unit):
         """Returns, for a particular period instance, a list of average
@@ -174,7 +174,7 @@ class WeatherSourceBase(object):
         hdds = []
         for period in periods:
             hdds.append(self.get_period_hdd(period,unit,base))
-        return hdds
+        return np.array(hdds)
 
     def get_hdd_per_day(self,periods,unit_name,base):
         """Returns, for each period, the total heating degree days
@@ -184,7 +184,7 @@ class WeatherSourceBase(object):
         hdds_per_day = []
         for period in periods:
             hdds_per_day.append(self.get_period_hdd_per_day(period,unit,base))
-        return hdds_per_day
+        return np.array(hdds_per_day)
 
     def get_period_hdd(self,period,unit,base):
         """Returns the total heating degree days observed during the
@@ -219,7 +219,7 @@ class WeatherSourceBase(object):
         cdds = []
         for period in periods:
             cdds.append(self.get_period_cdd(period,unit,base))
-        return cdds
+        return np.array(cdds)
 
     def get_cdd_per_day(self,periods,unit_name,base):
         """Returns, for each period, the total cooling degree days
@@ -229,7 +229,7 @@ class WeatherSourceBase(object):
         cdds_per_day = []
         for period in periods:
             cdds_per_day.append(self.get_period_cdd_per_day(period,unit,base))
-        return cdds_per_day
+        return np.array(cdds_per_day)
 
 
     def get_period_cdd(self,period,unit,base):
