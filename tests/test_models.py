@@ -69,3 +69,10 @@ def test_TemperatureSensitivityModel_with_cooling():
     assert_almost_equal(usages[8:13],[1,1,1,2,3])
     opt_params = model.parameter_optimization(usages, observed_temps)
     assert_almost_equal(params,opt_params,decimal=3)
+
+def test_model_weather_input_not_np_array():
+    model = TemperatureSensitivityModel(heating=False,cooling=False)
+    params = [1]
+    observed_temps = [[70],[65,60]]
+    usages = model.compute_usage_estimates(params,observed_temps)
+    assert_almost_equal(usages,[1,2])

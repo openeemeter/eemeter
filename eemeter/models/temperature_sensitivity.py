@@ -92,6 +92,8 @@ class TemperatureSensitivityModel(object):
 
         usage_estimates = []
         for interval_daily_temps in observed_daily_temps:
+            if not isinstance(interval_daily_temps, np.ndarray):
+                interval_daily_temps = np.array(interval_daily_temps)
             if self.cooling:
                 cooling = np.maximum(interval_daily_temps - cooling_reference_temperature, 0)*cooling_slope
             else:
