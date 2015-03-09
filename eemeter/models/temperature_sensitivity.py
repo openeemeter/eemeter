@@ -76,20 +76,16 @@ class TemperatureSensitivityModel(object):
         # get parameters
         base_consumption = params[0]
         if self.heating:
-            if self.cooling:
-                heating_slope, heating_reference_temperature = params[1:3]
-                cooling_slope, cooling_reference_temperature = params[3:5]
-            else:
-                heating_slope, heating_reference_temperature = params[1:3]
-                cooling_slope, cooling_reference_temperature = None,None
+            heating_slope, heating_reference_temperature = params[1:3]
         else:
-            if self.cooling:
-                heating_slope, heating_reference_temperature = None,None
-                cooling_slope, cooling_reference_temperature = params[1:3]
-            else:
-                heating_slope, heating_reference_temperature = None,None
-                cooling_slope, cooling_reference_temperature = None,None
-
+            heating_slope, heating_reference_temperature = None,None
+        
+        if self.cooling:
+            cooling_params = params[3:5] if self.heating else params[1:3]
+            cooling_slope, cooling_reference_temperature = cooling_params
+        else:
+            cooling_slope, cooling_reference_temperature = None,None
+        
         usage_estimates = []
         for interval_daily_temps in observed_daily_temps:
             if not isinstance(interval_daily_temps, np.ndarray):
