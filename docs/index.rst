@@ -11,7 +11,7 @@ Open Energy Efficiency Meter
    The `eemeter` package is under rapid development; we are working quickly
    toward a stable release. In the mean time, please proceed to use the package,
    but as you do so, recognize that the docs might not be entirely up-to-date.
-   Feel free to open issues on `github <https://github.com/impactlab/eemeter>`
+   Feel free to open issues on `github <https://github.com/impactlab/eemeter>`_
    to report bugs, request features, or make suggestions.
 
 Description
