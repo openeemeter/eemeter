@@ -16,7 +16,7 @@ reports on realized energy savings.
 The meter handles import of consumption data from various formats and
 data-stores, including Green Button, HPXML, and SEED. It handles downloading
 and local caching of realtime or near realtime weather data and normals,
-including TMY3, GSOD, ISD, wunderground.com, degreedays.net.
+including TMY3, GSOD, ISD, and wunderground.com.
 
 Although the package comes with pre-written implementations of several
 efficiency metering standards, custom meters can be written by assembling
@@ -26,9 +26,10 @@ existing meter components or by writing new components.
 
    The `eemeter` package is under rapid development; we are working quickly
    toward a stable release. In the mean time, please proceed to use the package,
-   but as you do so, recognize that the docs might not be entirely up-to-date.
-   Feel free to open issues on `github <https://github.com/impactlab/eemeter>`_
-   to report bugs, request features, or make suggestions.
+   but as you do so, recognize that the API is in flux and the docs might not
+   be up-to-date. Feel free to contribute changes or open issues on
+   `github <https://github.com/impactlab/eemeter>`_ to report bugs, request
+   features, or make suggestions.
 
 Installation
 ------------
