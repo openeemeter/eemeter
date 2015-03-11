@@ -20,12 +20,6 @@ Description
 This package makes it simple to build and maintain residential and commercial
 energy efficieny monitoring systems that operate at scale.
 
-It implements a number of building energy efficiency monitoring standards,
-including the following standards:
-
-- PRISM
-- `ANSI/BPI-2400-S-2012 <http://www.bpi.org/Web%20Download/BPI%20Standards/BPI-2400-S-2012_Standard_Practice_for_Standardized_Qualification_of_Whole-House%20Energy%20Savings_9-28-12_sg.pdf>`_
-
 Usage
 -----
 
@@ -65,6 +59,13 @@ You should ensure that you are using the virtualenv py.test executable with
 Some tests are slow and are skipped by default; to run these, use the `--runslow` flag::
 
     $ py.test --runslow
+
+References
+----------
+
+- `PRISM <http://www.marean.mycpanel.princeton.edu/~marean/images/prism_intro.pdf>`_
+- `ANSI/BPI-2400-S-2012 <http://www.bpi.org/Web%20Download/BPI%20Standards/BPI-2400-S-2012_Standard_Practice_for_Standardized_Qualification_of_Whole-House%20Energy%20Savings_9-28-12_sg.pdf>`_
+- `NREL's Uniform Methods <http://energy.gov/sites/prod/files/2013/11/f5/53827-8.pdf>`_
 
 Licence
 -------
