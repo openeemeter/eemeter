@@ -163,7 +163,7 @@ def generated_consumption_history_pre_post_with_annualized_gross_savings_1(reque
     ch = ConsumptionHistory(pre_consumptions + post_consumptions)
     return ch, model.param_dict_to_list(pre_params), model.param_dict_to_list(post_params), retrofit, request.param[2]
 
-@pytest.fixture(params=[([-1, 1,60,1,70],True,929.0532551121628,0),
+@pytest.fixture(params=[([-1, 1,60,1,70],True,938.5257711762131,0),
                         ([10,2,58,1,72],True,4927.478974253085,0),
                         ([0,2,64,3,66],True,6017.849018719649,0)])
 def prism_outputs_1(request):

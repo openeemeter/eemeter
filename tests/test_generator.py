@@ -11,8 +11,11 @@ from fixtures.weather import tmy3_722880_weather_source
 import pytest
 from datetime import datetime
 from datetime import timedelta
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_allclose
 from scipy.stats import uniform
+
+RTOL=1e-2
+ATOL=1e-2
 
 @pytest.fixture
 def periods_one_year():
@@ -41,7 +44,7 @@ def test_consumption_generator_no_base_load(periods_one_year,gsod_722880_2012_20
     gen = ConsumptionGenerator("electricity", "J", "degF", model, params)
     consumptions = gen.generate(gsod_722880_2012_2014_weather_source, periods_one_year)
     consumption_joules = [c.to("J") for c in consumptions]
-    assert_almost_equal(consumption_joules, [241.5, 279.2, 287.6, 139.2, 56.2, 2.1, 22.6, 154.3, 106.8, 53.4, 137.9, 351.1])
+    assert_allclose(consumption_joules, [241.5, 279.2, 287.6, 139.2, 56.2, 2.1, 22.6, 154.3, 106.8, 53.4, 137.9, 351.1],rtol=RTOL,atol=ATOL)
 
 @pytest.mark.slow
 def test_consumption_generator_with_base_load(periods_one_year,gsod_722880_2012_2014_weather_source):
@@ -55,7 +58,7 @@ def test_consumption_generator_with_base_load(periods_one_year,gsod_722880_2012_
     gen = ConsumptionGenerator("electricity", "J", "degF", model,params)
     consumptions = gen.generate(gsod_722880_2012_2014_weather_source, periods_one_year)
     consumption_joules = [c.to("J") for c in consumptions]
-    assert_almost_equal(consumption_joules, [272.5, 308.2, 318.6, 169.2, 87.2, 32.1, 53.6, 185.3, 136.8, 84.4, 167.9, 382.1])
+    assert_allclose(consumption_joules, [272.5, 308.2, 318.6, 169.2, 87.2, 32.1, 53.6, 185.3, 136.8, 84.4, 167.9, 382.1],rtol=RTOL,atol=ATOL)
 
 @pytest.mark.slow
 def test_project_generator(gsod_722880_2012_2014_weather_source,tmy3_722880_weather_source):

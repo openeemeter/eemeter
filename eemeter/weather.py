@@ -9,8 +9,9 @@ from datetime import timedelta
 import warnings
 import numpy as np
 import requests
-from . import ureg, Q_
 from pkg_resources import resource_stream
+
+from eemeter.consumption import DatetimePeriod
 
 tmy3_to_lat_lng_index = None
 tmy3_to_zipcode_index = None
@@ -121,71 +122,81 @@ class WeatherSourceBase(object):
             self.session = None
 
         self.data = {}
-        self.source_unit = ureg.degC
         self.station_id = None
+        self._internal_unit = "degF"
 
-    def get_average_temperature(self,periods,unit_name):
+    def get_average_temperature(self,periods,unit):
         """Returns a list of average temperatures of each DatetimePeriod in
         the given unit (usually "degF" or "degC").
         """
-        unit = ureg.parse_expression(unit_name)
-        avg_temps = []
+        temps = []
         for period in periods:
-            avg_temps.append(self.get_period_average_temperature(period,unit))
-        return np.array(avg_temps)
+            temps.append(self.get_period_average_temperature(period,unit=None))
+        return self._unit_convert(np.array(temps),unit)
 
     def get_period_average_temperature(self,period,unit):
         """Returns the average temperature during the duration of a single
         DatetimePeriod instance as calculated by taking the mean of daily average
         temperatures.
         """
-        avg_temps = self.get_period_daily_temperatures(period,unit)
-        return np.mean(avg_temps)
+        temps = self.get_period_daily_temperatures(period,unit)
+        return np.mean(temps)
 
-    def get_daily_temperatures(self,periods,unit_name):
+    def get_daily_temperatures(self,periods,unit):
         """Returns, for each period, a list of average daily temperatures
         observed during the duration of that period. Return value
         is a list of lists of temperatures.
         """
-        unit = ureg.parse_expression(unit_name)
-        daily_temps = []
+        temps = []
         for period in periods:
-            daily_temps.append(self.get_period_daily_temperatures(period,unit))
-        return np.array(daily_temps)
+            temps.append(self.get_period_daily_temperatures(period,unit=None))
+        if unit is None:
+            return np.array(temps)
+        else:
+            return self._unit_convert(np.array(temps),unit)
 
     def get_period_daily_temperatures(self,period,unit):
         """Returns, for a particular period instance, a list of average
         daily temperatures observed during the duration of that period
         period. Result is a list of temperatures.
         """
-        avg_temps = []
+        temps = []
         for days in range(period.timedelta.days):
             day = period.start + timedelta(days=days)
-            temp = self.get_daily_average_temperature(day,unit)
-            avg_temps.append(temp)
-        return np.array(avg_temps)
+            temps.append(self.get_daily_average_temperature(day,unit))
+        if unit is None:
+            return np.array(temps)
+        else:
+            return self._unit_convert(np.array(temps),unit)
 
     def get_daily_average_temperature(self,day,unit):
-        """Should return the average temperature of the given day. Must be
-        implemented by inheriting classes.
+        """Returns the average temperature of the given day in correct units
+        """
+        internal_unit_temp = self.get_internal_unit_daily_average_temperature(day)
+        if unit is None:
+            return internal_unit_temp
+        else:
+            return self._unit_convert(internal_unit_temp,unit)
+
+    def get_internal_unit_daily_average_temperature(self,day):
+        """Should return the average temperature stored in the weather source's
+        internal units. Must be implemented by extending classes.
         """
         raise NotImplementedError
 
-    def get_hdd(self,periods,unit_name,base):
+    def get_hdd(self,periods,unit,base):
         """Returns, for each period, the total heating degree days
         observed during the period.
         """
-        unit = ureg.parse_expression(unit_name)
         hdds = []
         for period in periods:
             hdds.append(self.get_period_hdd(period,unit,base))
         return np.array(hdds)
 
-    def get_hdd_per_day(self,periods,unit_name,base):
+    def get_hdd_per_day(self,periods,unit,base):
         """Returns, for each period, the total heating degree days
         observed during the period.
         """
-        unit = ureg.parse_expression(unit_name)
         hdds_per_day = []
         for period in periods:
             hdds_per_day.append(self.get_period_hdd_per_day(period,unit,base))
@@ -195,42 +206,30 @@ class WeatherSourceBase(object):
         """Returns the total heating degree days observed during the
         period.
         """
-        total_hdd = 0.
-        for days in range(period.timedelta.days):
-            day = period.start + timedelta(days=days)
-            temp = self.get_daily_average_temperature(day,unit)
-            if temp < base:
-                total_hdd += base - temp
-        return total_hdd
+        temps = self.get_period_daily_temperatures(period,unit)
+        return np.sum(np.maximum(base - temps,0))
 
     def get_period_hdd_per_day(self,period,unit,base):
         """Returns the total heating degree days observed during the
         period.
         """
-        total_hdd = 0.
+        period_hdd = self.get_period_hdd(period,unit,base)
         n_days = period.timedelta.days
-        for days in range(n_days):
-            day = period.start + timedelta(days=days)
-            temp = self.get_daily_average_temperature(day,unit)
-            if temp < base:
-                total_hdd += base - temp
-        return total_hdd / n_days
+        return period_hdd / n_days
 
-    def get_cdd(self,periods,unit_name,base):
+    def get_cdd(self,periods,unit,base):
         """Returns, for each period, the total cooling degree days
         observed during the period.
         """
-        unit = ureg.parse_expression(unit_name)
         cdds = []
         for period in periods:
             cdds.append(self.get_period_cdd(period,unit,base))
         return np.array(cdds)
 
-    def get_cdd_per_day(self,periods,unit_name,base):
+    def get_cdd_per_day(self,periods,unit,base):
         """Returns, for each period, the total cooling degree days
         observed during the period.
         """
-        unit = ureg.parse_expression(unit_name)
         cdds_per_day = []
         for period in periods:
             cdds_per_day.append(self.get_period_cdd_per_day(period,unit,base))
@@ -241,26 +240,36 @@ class WeatherSourceBase(object):
         """Returns the total cooling degree days observed during the
         period.
         """
-        total_cdd = 0.
-        for days in range(period.timedelta.days):
-            day = period.start + timedelta(days=days)
-            temp = self.get_daily_average_temperature(day,unit)
-            if temp > base:
-                total_cdd += temp - base
-        return total_cdd
+        temps = self.get_period_daily_temperatures(period,unit)
+        return np.sum(np.maximum(temps - base,0))
 
     def get_period_cdd_per_day(self,period,unit,base):
         """Returns the total cooling degree days observed during the
         period.
         """
-        total_cdd = 0.
+        period_cdd = self.get_period_cdd(period,unit,base)
         n_days = period.timedelta.days
-        for days in range(n_days):
-            day = period.start + timedelta(days=days)
-            temp = self.get_daily_average_temperature(day,unit)
-            if temp > base:
-                total_cdd += temp - base
-        return total_cdd / n_days
+        return period_cdd / n_days
+
+    def _unit_convert(self,temps_array,unit):
+        if unit == self._internal_unit:
+            return temps_array
+        else:
+            if unit == "degC":
+                return self._degF_to_degC(temps_array)
+            elif unit == "degF":
+                return self._degC_to_degF(temps_array)
+            else:
+                message = "Unit not recognized ({}). Should be one of 'degC' or 'degF'".format(unit)
+                raise ValueError(message)
+
+    @staticmethod
+    def _degC_to_degF(temp_C):
+        return 1.8*temp_C + 32.
+
+    @staticmethod
+    def _degF_to_degC(temp_F):
+        return (5./9.) * (temp_F - 32.)
 
 class CachedDataMixin(object):
 
@@ -268,8 +277,12 @@ class CachedDataMixin(object):
         self.get_weather_station()
         if self.weather_station:
             date_format = self.get_date_format()
-            for t in self.get_temperature_set():
-                self.data[t.date.strftime(date_format)] = Q_(t.temp_C,ureg.degC)
+            if self._internal_unit == "degC":
+                for t in self.get_temperature_set():
+                    self.data[t.date.strftime(date_format)] = t.temp_C
+            elif self._internal_unit == "degF":
+                for t in self.get_temperature_set():
+                    self.data[t.date.strftime(date_format)] = self._degC_to_degF(t.temp_C)
 
     def get_temperature_class(self):
         # return Temperatures
@@ -357,7 +370,6 @@ class DailyAverageTemperatureCachedDataMixin(CachedDataMixin):
 class GSODWeatherSource(WeatherSourceBase,DailyAverageTemperatureCachedDataMixin):
     def __init__(self,station_id,start_year,end_year):
         super(GSODWeatherSource,self).__init__()
-        self.source_unit = ureg.degF
         self.station_id = station_id[:6]
         self.init_temperature_data()
 
@@ -403,20 +415,20 @@ class GSODWeatherSource(WeatherSourceBase,DailyAverageTemperatureCachedDataMixin
         string.close()
         f.close()
 
-    def get_daily_average_temperature(self,day,unit):
+    def get_internal_unit_daily_average_temperature(self,day):
         """Returns the average temperature on the given day. `day` can be
-        either a python `date` or a python `datetime` instance.
+        either a python `date` or a python `datetime` instance. Temperature is
+        given in the units in which it is internally stored.
         """
-        null = Q_(float("nan"),self.source_unit)
-        return self.data.get(day.strftime("%Y%m%d"),null).to(unit).magnitude
+        return self.data.get(day.strftime("%Y%m%d"),float("nan"))
 
     def _add_file(self,f):
         for line in f.readlines()[1:]:
             columns=line.split()
             date_str = columns[2].decode('utf-8')
-            temp = Q_(float(columns[3]),self.source_unit)
+            temp = float(columns[3])
             self.data[date_str] = temp
-            temp_C = temp.to(ureg.degC).magnitude
+            temp_C = self._degF_to_degC(temp)
             dat = datetime.strptime(date_str,"%Y%m%d").date()
             self.update_cache(temp_C,dat)
         if self.session:
@@ -474,32 +486,15 @@ class ISDWeatherSource(WeatherSourceBase,HourlyAverageTemperatureCachedDataMixin
         f.close()
         ftp.quit()
 
-    def get_period_average_temperature(self,period,unit):
-        """Gets the average temperature during a particular DatetimePeriod
-        instance. Resolution limit: hourly.
-        """
-        avg_temps = []
-        null = Q_(float("nan"),self.source_unit)
-        n_hours = period.timedelta.days * 24 + period.timedelta.seconds // 3600
-        for hours in range(n_hours):
-            hour = period.start + timedelta(seconds=hours*3600)
-            hourly = self.data.get(hour.strftime("%Y%m%d%H"),null).to(unit).magnitude
-            avg_temps.append(hourly)
-        # mask nans
-        data = np.array(avg_temps)
-        masked_data = np.ma.masked_array(data,np.isnan(data))
-        return np.mean(masked_data)
-
-    def get_daily_average_temperature(self,day,unit):
+    def get_internal_unit_daily_average_temperature(self,day):
         """Returns the average temperature on the given day. `day` can be
         either a python `date` or a python `datetime` instance. Calculated by
         averaging hourly temperatures for the given day.
         """
-        null = Q_(float("nan"),self.source_unit)
         day_str = day.strftime("%Y%m%d")
         avg_temps = []
         for i in range(24):
-            hourly = self.data.get("{}{:02d}".format(day_str,i),null).to(unit).magnitude
+            hourly = self.data.get("{}{:02d}".format(day_str,i),float("nan"))
             avg_temps.append(hourly)
         data = np.array(avg_temps)
         masked_data = np.ma.masked_array(data,np.isnan(data))
@@ -508,12 +503,11 @@ class ISDWeatherSource(WeatherSourceBase,HourlyAverageTemperatureCachedDataMixin
     def _add_file(self,f):
         for line in f.readlines():
             if line[87:92].decode('utf-8') == "+9999":
-                air_temperature = Q_(float("nan"),self.source_unit)
+                temp_C = float("nan")
             else:
-                air_temperature = Q_(float(line[87:92]) / 10, self.source_unit)
+                temp_C = float(line[87:92]) / 10
             date_str = line[15:25].decode('utf-8')
-            self.data[date_str] = air_temperature
-            temp_C = air_temperature.to(ureg.degC).magnitude
+            self.data[date_str] = self._degC_to_degF(temp_C)
             dat = datetime.strptime(date_str,"%Y%m%d%H")
             self.update_cache(temp_C,dat)
         if self.session:
@@ -539,24 +533,22 @@ class TMY3WeatherSource(WeatherSourceBase,HourlyTemperatureNormalCachedDataMixin
             row = line.split(",")
             date_string = "{}{}{}{:02d}".format(row[0][6:10], row[0][0:2],
                                                 row[0][3:5], int(row[1][0:2]) - 1) # YYYYMMDDHH
-            temp = Q_(float(row[31]),self.source_unit)
-            self.data[date_string[4:]] = temp # skip year in date string
-            temp_C = temp.to(ureg.degC).magnitude
+            temp_C = float(row[31])
+            self.data[date_string[4:]] = self._degC_to_degF(temp_C) # skip year in date string
             dat = datetime.strptime(date_string,"%Y%m%d%H")
             self.update_cache(temp_C,dat)
         if self.session:
             self.session.commit()
 
-    def get_daily_average_temperature(self,day,unit):
+    def get_internal_unit_daily_average_temperature(self,day):
         """Returns the temperature normal on the given day. `day` can be
         either a python `date` or a python `datetime` instance. Calculated by
         averaging hourly temperatures for the given day.
         """
-        null = Q_(float("nan"),self.source_unit)
         day_str = day.strftime("%m%d")
         avg_temps = []
         for i in range(24):
-            hourly = self.data.get("{}{:02d}".format(day_str,i),null).to(unit).magnitude
+            hourly = self.data.get("{}{:02d}".format(day_str,i),float('nan'))
             avg_temps.append(hourly)
         data = np.array(avg_temps)
         masked_data = np.ma.masked_array(data,np.isnan(data))
@@ -566,20 +558,12 @@ class TMY3WeatherSource(WeatherSourceBase,HourlyTemperatureNormalCachedDataMixin
         """Returns a list of daily temperature normals for a typical
         meteorological year.
         """
-        null = Q_(float("nan"),self.source_unit)
-        start_day = datetime(2012,1,1)
-        temps = []
-        for days in range(365):
-            day = start_day + timedelta(days=days)
-            temp = self.get_daily_average_temperature(day,unit)
-            # wrap in array for compatibility with model input format
-            temps.append(np.array([temp]))
-        return np.array(temps)
+        periods = [DatetimePeriod(start=datetime(2013,1,1),end=datetime(2014,1,1))]
+        return self.get_daily_temperatures(periods,unit)
 
 class WeatherUndergroundWeatherSource(WeatherSourceBase):
     def __init__(self,zipcode,start,end,api_key):
         super(WeatherUndergroundWeatherSource,self).__init__()
-        self.source_unit = ureg.degF
         assert end >= start
         date_format = "%Y%m%d"
         date_range_limit = 32
@@ -591,19 +575,17 @@ class WeatherUndergroundWeatherSource(WeatherSourceBase):
                     .format(api_key,start_date_str,end_date_str,zipcode)
             self._get_query_data(query)
 
-    def get_daily_average_temperature(self,day,unit):
+    def get_internal_unit_daily_average_temperature(self,day):
         """Returns the average temperature on the given day. `day` can be
         either a python `date` or a python `datetime` instance.
         """
-        null = Q_(float("nan"),self.source_unit)
-        return self.data.get(day.strftime("%Y%m%d"),null).to(unit).magnitude
+        return self.data.get(day.strftime("%Y%m%d"),float('nan'))
 
     def _get_query_data(self,query):
         for day in requests.get(query).json()["history"]["dailysummary"]:
             date_string = day["date"]["year"] + day["date"]["mon"] + \
                     day["date"]["mday"]
-            data = Q_(int(day["meantempi"]),self.source_unit)
-            self.data[date_string] = data
+            self.data[date_string] = float(day["meantempi"])
 
 def haversine(lat1,lng1,lat2,lng2):
     """ Calculate the great circle distance between two points

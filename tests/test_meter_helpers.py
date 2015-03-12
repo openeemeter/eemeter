@@ -170,7 +170,7 @@ def test_total_hdd_meter(generated_consumption_history_with_hdd_1,gsod_722880_20
     result = meter.evaluate(consumption_history=ch,
                             fuel_type=fuel_type,
                             weather_source=gsod_722880_2012_2014_weather_source)
-    assert hdd == result["total_hdd"]
+    assert_allclose(hdd,result["total_hdd"],rtol=RTOL,atol=ATOL)
 
 def test_total_cdd_meter(generated_consumption_history_with_cdd_1,gsod_722880_2012_2014_weather_source):
     ch, fuel_type, cdd = generated_consumption_history_with_cdd_1
@@ -178,7 +178,7 @@ def test_total_cdd_meter(generated_consumption_history_with_cdd_1,gsod_722880_20
     result = meter.evaluate(consumption_history=ch,
                             fuel_type=fuel_type,
                             weather_source=gsod_722880_2012_2014_weather_source)
-    assert cdd == result["total_cdd"]
+    assert_allclose(cdd,result["total_cdd"],rtol=RTOL,atol=ATOL)
 
 def test_meets_thresholds():
     meter = MeetsThresholds(values=["one","two","three","four"],
