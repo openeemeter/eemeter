@@ -1,5 +1,4 @@
 from . import ureg, Q_
-from collections import defaultdict
 
 class DateRangeException(Exception): pass
 
