@@ -107,6 +107,49 @@ class BPI2400Meter(MeterBase):
                                 !obj:eemeter.meter.Switch {
                                     target: fuel_type,
                                     cases: {
+                                        electricity: !obj:eemeter.meter.CVRMSE {
+                                            fuel_unit_str: kWh,
+                                            model: !obj:eemeter.models.TemperatureSensitivityModel {
+                                                heating: True,
+                                                cooling: True,
+                                                initial_params: {
+                                                    base_consumption: 0,
+                                                    heating_slope: 0,
+                                                    cooling_slope: 0,
+                                                    heating_reference_temperature: 60,
+                                                    cooling_reference_temperature: 70,
+                                                },
+                                                param_bounds: {
+                                                    base_consumption: [-20,80],
+                                                    heating_slope: [0,5],
+                                                    cooling_slope: [0,5],
+                                                    heating_reference_temperature: [58,66],
+                                                    cooling_reference_temperature: [64,72],
+                                                },
+                                            }
+                                        },
+                                        natural_gas: !obj:eemeter.meter.CVRMSE {
+                                            fuel_unit_str: therms,
+                                            model: !obj:eemeter.models.TemperatureSensitivityModel {
+                                                heating: true,
+                                                cooling: false,
+                                                initial_params: {
+                                                    base_consumption: 0,
+                                                    heating_slope: 0,
+                                                    heating_reference_temperature: 60,
+                                                },
+                                                param_bounds: {
+                                                    base_consumption: [0,10],
+                                                    heating_slope: [0,5],
+                                                    heating_reference_temperature: [58,66],
+                                                },
+                                            }
+                                        },
+                                    },
+                                },
+                                !obj:eemeter.meter.Switch {
+                                    target: fuel_type,
+                                    cases: {
                                         electricity: !obj:eemeter.meter.MeetsThresholds {
                                             values: [
                                                 time_span,
@@ -117,10 +160,11 @@ class BPI2400Meter(MeterBase):
                                                 n_periods_low_hdd_per_day,
                                                 n_periods_high_cdd_per_day,
                                                 n_periods_low_cdd_per_day,
+                                                cvrmse,
                                             ],
-                                            thresholds: [330,183,hdd_65_tmy,cdd_65_tmy,1,1,1,1],
-                                            operations: [gte,gt,gt,gt,gte,gte,gte,gte],
-                                            proportions: [1,1,.5,.5,1,1,1,1],
+                                            thresholds: [330,183,hdd_65_tmy,cdd_65_tmy,1,1,1,1,20],
+                                            operations: [gte,gt,gt,gt,gte,gte,gte,gte,lte],
+                                            proportions: [1,1,.5,.5,1,1,1,1,1],
                                             output_names: [
                                                 spans_330_days,
                                                 spans_184_days,
@@ -130,6 +174,7 @@ class BPI2400Meter(MeterBase):
                                                 has_enough_periods_with_low_hdd_per_day,
                                                 has_enough_periods_with_high_cdd_per_day,
                                                 has_enough_periods_with_low_cdd_per_day,
+                                                meets_cvrmse_limit,
                                             ],
                                         },
                                         natural_gas: !obj:eemeter.meter.MeetsThresholds {
@@ -139,16 +184,18 @@ class BPI2400Meter(MeterBase):
                                                 total_hdd,
                                                 n_periods_high_hdd_per_day,
                                                 n_periods_low_hdd_per_day,
+                                                cvrmse,
                                             ],
-                                            thresholds: [330,183,hdd_65_tmy,1,1],
-                                            operations: [gte,gt,gt,gte,gte],
-                                            proportions: [1,1,.5,1,1],
+                                            thresholds: [330,183,hdd_65_tmy,1,1,20],
+                                            operations: [gte,gt,gt,gte,gte,lte],
+                                            proportions: [1,1,.5,1,1,1],
                                             output_names: [
                                                 spans_330_days,
                                                 spans_184_days,
                                                 has_enough_total_hdd,
                                                 has_enough_periods_with_high_hdd_per_day,
                                                 has_enough_periods_with_low_hdd_per_day,
+                                                meets_cvrmse_limit,
                                             ],
                                             extras: {
                                                 has_enough_total_cdd: true,
@@ -204,7 +251,7 @@ class BPI2400Meter(MeterBase):
                                 },
                                 !obj:eemeter.meter.And {
                                     inputs: [
-                                        has_recent_reading, has_enough_data
+                                        has_recent_reading, has_enough_data, meets_cvrmse_limit,
                                     ],
                                     output_mapping: {
                                         output: meets_model_calibration_utility_bill_criteria

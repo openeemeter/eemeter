@@ -1,22 +1,68 @@
 from .base import MeterBase
+
 from eemeter.consumption import Consumption
 from eemeter.consumption import ConsumptionHistory
 
-from datetime import datetime
-from datetime import timedelta
+from itertools import chain
 
-class RecentReadingMeter(MeterBase):
-    def __init__(self,n_days,since_date=datetime.now(),**kwargs):
-        super(self.__class__,self).__init__(**kwargs)
-        self.dt_target = since_date - timedelta(days=n_days)
+class PrePost(MeterBase):
+    def __init__(self,meter,splittable_args,**kwargs):
+        super(PrePost,self).__init__(**kwargs)
+        self.meter = meter
+        self.splittable_args = splittable_args
 
-    def evaluate_mapped_inputs(self,consumption_history,fuel_type,**kwargs):
-        recent_reading = False
-        for consumption in consumption_history.get(fuel_type):
-            if consumption.end > self.dt_target:
-                recent_reading = True
-                break
-        return {"recent_reading": recent_reading}
+    def evaluate_mapped_inputs(self,retrofit_start_date,retrofit_end_date,**kwargs):
+        """Splits consuption_history into pre and post retrofit periods, then
+        evaluates a meter on each subset of consumptions, appending the strings
+        `"_pre"` and `"_post"`, respectively, to each key of each meter output.
+        """
+        pre_kwargs = {}
+        post_kwargs = {}
+        split_kwargs = {}
+        for k,v in kwargs.items():
+            if k in self.splittable_args:
+                pre_kwargs[k] = v.before(retrofit_start_date)
+                post_kwargs[k] = v.after(retrofit_end_date)
+                split_kwargs[k + "_pre"] = pre_kwargs[k]
+                split_kwargs[k + "_post"] = post_kwargs[k]
+            else:
+                pre_kwargs[k] = kwargs[k]
+                post_kwargs[k] = kwargs[k]
+        pre_results = self.meter.evaluate(**pre_kwargs)
+        post_results = self.meter.evaluate(**post_kwargs)
+        pre_results = {k + "_pre":v for k,v in pre_results.items()}
+        post_results = {k + "_post":v for k,v in post_results.items()}
+        results = {k:v for k,v in chain(pre_results.items(),
+                                        post_results.items(),
+                                        split_kwargs.items())}
+        return results
+
+class MeetsThresholds(MeterBase):
+    def __init__(self,values,thresholds,operations,proportions,output_names,**kwargs):
+        super(MeetsThresholds,self).__init__(**kwargs)
+        self.values = values
+        self.thresholds = thresholds
+        self.operations = operations
+        self.proportions = proportions
+        self.output_names = output_names
+
+    def evaluate_mapped_inputs(self,**kwargs):
+        result = {}
+        for v,t,o,p,n in zip(self.values,self.thresholds,self.operations,self.proportions,self.output_names):
+            value = kwargs.get(v)
+            if isinstance(t,basestring):
+                threshold = kwargs.get(t)
+            else:
+                threshold = t
+            if o == "lt":
+                result[n] = (value < threshold * p)
+            elif o == "gt":
+                result[n] = (value > threshold * p)
+            elif o == "lte":
+                result[n] = (value <= threshold * p)
+            elif o == "gte":
+                result[n] = (value >= threshold * p)
+        return result
 
 class EstimatedReadingConsolidationMeter(MeterBase):
 
