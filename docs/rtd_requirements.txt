@@ -1,9 +1,9 @@
 Pint==0.6
 PyYAML==3.11
 numpy==1.9.1
+numpydoc==0.5
 py==1.4.26
 pytest==2.6.4
 requests==2.5.1
 scipy==0.15.1
 wsgiref==0.1.2
-sphinxcontrib-napoleon==0.3.1
