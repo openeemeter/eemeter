@@ -126,14 +126,15 @@ class WeatherSourceBase(object):
         self._internal_unit = "degF"
 
     def get_average_temperature(self,periods,unit):
-        """The average temperatures of during each period the given unit
+        """The average temperatures during each period as calculated by taking
+        the mean of all available daily average temperatures during that
+        period.
 
         Parameters
         ----------
-        periods : array_like
-            Arrays of DatetimePeriod objects over which temperatures will be
-            aggregated
-        unit : {"degF", "degC"}
+        periods : list of eemeter.consumption.DatetimePeriod objects
+            Time periods over which temperatures will be aggregated.
+        unit : {"degC", "degF"}
             The unit in which average temperatures should be returned.
 
         Returns
@@ -147,17 +148,40 @@ class WeatherSourceBase(object):
         return self._unit_convert(np.array(temps),unit)
 
     def get_period_average_temperature(self,period,unit):
-        """Returns the average temperature during the duration of a single
-        DatetimePeriod instance as calculated by taking the mean of daily average
-        temperatures.
+        """The average temperatures during the period as calculated by taking
+        the mean of all available daily average temperatures during the period.
+
+        Parameters
+        ----------
+        period : eemeter.consumption.DatetimePeriod
+            Time period over which temperatures will be aggregated.
+        unit : {"degC", "degF"}
+            The unit in which average temperature should be returned.
+
+        Returns
+        -------
+        out : float
+            Average temperature observed during the period.
         """
         temps = self.get_period_daily_temperatures(period,unit)
         return np.mean(temps)
 
     def get_daily_temperatures(self,periods,unit):
-        """Returns, for each period, a list of average daily temperatures
-        observed during the duration of that period. Return value
-        is a list of lists of temperatures.
+        """The daily average temperatures for each period.
+
+        Parameters
+        ----------
+        periods : list of eemeter.consumption.DatetimePeriod objects
+            Time periods over which daily average temperatures will be
+            collected.
+        unit : {"degC", "degF"}
+            The unit in which temperatures should be returned.
+
+        Returns
+        -------
+        out : np.ndarray
+            Array of arrays of average daily temperatures observed during each
+            period. Note: array is not guaranteed to be rectangular.
         """
         temps = []
         for period in periods:
@@ -168,9 +192,19 @@ class WeatherSourceBase(object):
             return self._unit_convert(np.array(temps),unit)
 
     def get_period_daily_temperatures(self,period,unit):
-        """Returns, for a particular period instance, a list of average
-        daily temperatures observed during the duration of that period
-        period. Result is a list of temperatures.
+        """The daily average temperatures for a particular period.
+
+        Parameters
+        ----------
+        period : eemeter.consumption.DatetimePeriod
+            Time period over which temperatures will be aggregated.
+        unit : {"degC", "degF"}
+            The unit in which daily average temperatures should be returned.
+
+        Returns
+        -------
+        out : np.ndarray
+            Daily average temperatures observed during the period.
         """
         temps = []
         for days in range(period.timedelta.days):
@@ -182,7 +216,19 @@ class WeatherSourceBase(object):
             return self._unit_convert(np.array(temps),unit)
 
     def get_daily_average_temperature(self,day,unit):
-        """Returns the average temperature of the given day in correct units
+        """The daily average temperatures for a particular period.
+
+        Parameters
+        ----------
+        day : datetime.datetime or datetime.date
+            The date for which to find or calculate the average temperature.
+        unit : {"degC", "degF"}
+            The unit in which the daily average temperature should be returned.
+
+        Returns
+        -------
+        out : np.ndarray
+            Average temperature observed.
         """
         internal_unit_temp = self.get_internal_unit_daily_average_temperature(day)
         if unit is None:
@@ -197,8 +243,22 @@ class WeatherSourceBase(object):
         raise NotImplementedError
 
     def get_hdd(self,periods,unit,base):
-        """Returns, for each period, the total heating degree days
-        observed during the period.
+        """The total heating degree days observed during each time period.
+
+        Parameters
+        ----------
+        periods : list of eemeter.consumption.DatetimePeriod objects
+            Time periods over which heating degree days will be calculated and
+            collected.
+        unit : {"degC", "degF"}
+            The temperature unit to be used
+        base : int or float
+            The base of the heating degree day
+
+        Returns
+        -------
+        out : np.ndarray
+            Array of heating degree days observed during each time period.
         """
         hdds = []
         for period in periods:
@@ -206,8 +266,23 @@ class WeatherSourceBase(object):
         return np.array(hdds)
 
     def get_hdd_per_day(self,periods,unit,base):
-        """Returns, for each period, the total heating degree days
-        observed during the period.
+        """The average heating degree days per day observed during each time
+        period.
+
+        Parameters
+        ----------
+        periods : list of eemeter.consumption.DatetimePeriod objects
+            Time periods over which heating degree days per day will be
+            calculated and collected.
+        unit : {"degC", "degF"}
+            The temperature unit to be used
+        base : int or float
+            The base of the heating degree day
+
+        Returns
+        -------
+        out : np.ndarray
+            Array of heating degree days observed during each time period.
         """
         hdds_per_day = []
         for period in periods:
@@ -215,23 +290,66 @@ class WeatherSourceBase(object):
         return np.array(hdds_per_day)
 
     def get_period_hdd(self,period,unit,base):
-        """Returns the total heating degree days observed during the
-        period.
+        """The total heating degree days observed during a particular
+        time period.
+
+        Parameters
+        ----------
+        period : eemeter.consumption.DatetimePeriod
+            Time period over which heating degree days will be summed.
+        unit : {"degC", "degF"}
+            The temperature unit to be used
+        base : int or float
+            The base of the heating degree day
+
+        Returns
+        -------
+        out : float
+            Total heating degree days observed during the time period.
         """
         temps = self.get_period_daily_temperatures(period,unit)
         return np.sum(np.maximum(base - temps,0))
 
     def get_period_hdd_per_day(self,period,unit,base):
-        """Returns the total heating degree days observed during the
-        period.
+        """The average heating degree days per day observed during a particular
+        time period.
+
+        Parameters
+        ----------
+        period : eemeter.consumption.DatetimePeriod
+            Time period over which heating degree days will be averaged.
+        unit : {"degC", "degF"}
+            The temperature unit to be used
+        base : int or float
+            The base of the heating degree day
+
+        Returns
+        -------
+        out : float
+            Average heating degree days per day observed during the time
+            period.
         """
         period_hdd = self.get_period_hdd(period,unit,base)
         n_days = period.timedelta.days
         return period_hdd / n_days
 
     def get_cdd(self,periods,unit,base):
-        """Returns, for each period, the total cooling degree days
-        observed during the period.
+        """The total cooling degree days observed during each time period.
+
+        Parameters
+        ----------
+        periods : list of eemeter.consumption.DatetimePeriod objects
+            Time periods over which cooling degree days will be calculated and
+            collected.
+        unit : {"degC", "degF"}
+            The temperature unit to be used
+        base : int or float
+            The base of the cooling degree day
+
+        Returns
+        -------
+        out : np.ndarray
+            Array of cooling degree days observed during each time period.
         """
         cdds = []
         for period in periods:
@@ -239,8 +357,23 @@ class WeatherSourceBase(object):
         return np.array(cdds)
 
     def get_cdd_per_day(self,periods,unit,base):
-        """Returns, for each period, the total cooling degree days
-        observed during the period.
+        """The average cooling degree days per day observed during each time
+        period.
+
+        Parameters
+        ----------
+        periods : list of eemeter.consumption.DatetimePeriod objects
+            Time periods over which cooling degree days per day will be
+            calculated and collected.
+        unit : {"degC", "degF"}
+            The temperature unit to be used
+        base : int or float
+            The base of the cooling degree day
+
+        Returns
+        -------
+        out : np.ndarray
+            Array of cooling degree days observed during each time period.
         """
         cdds_per_day = []
         for period in periods:
@@ -249,15 +382,44 @@ class WeatherSourceBase(object):
 
 
     def get_period_cdd(self,period,unit,base):
-        """Returns the total cooling degree days observed during the
-        period.
+        """The total cooling degree days observed during a particular
+        time period.
+
+        Parameters
+        ----------
+        period : eemeter.consumption.DatetimePeriod
+            Time period over which cooling degree days will be summed.
+        unit : {"degC", "degF"}
+            The temperature unit to be used
+        base : int or float
+            The base of the cooling degree day
+
+        Returns
+        -------
+        out : float
+            Total cooling degree days observed during the time period.
         """
         temps = self.get_period_daily_temperatures(period,unit)
         return np.sum(np.maximum(temps - base,0))
 
     def get_period_cdd_per_day(self,period,unit,base):
-        """Returns the total cooling degree days observed during the
-        period.
+        """The average cooling degree days per day observed during a particular
+        time period.
+
+        Parameters
+        ----------
+        period : eemeter.consumption.DatetimePeriod
+            Time period over which cooling degree days will be averaged.
+        unit : {"degC", "degF"}
+            The temperature unit to be used
+        base : int or float
+            The base of the cooling degree day
+
+        Returns
+        -------
+        out : float
+            Average cooling degree days per day observed during the time
+            period.
         """
         period_cdd = self.get_period_cdd(period,unit,base)
         n_days = period.timedelta.days
