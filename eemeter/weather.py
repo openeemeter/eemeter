@@ -331,7 +331,7 @@ class CachedDataMixin(object):
             self.weather_station = None
 
     def update_cache(self,temp_C,date,overwrite=True):
-        """If cacheing is enabled, store the given temp, overwriting if necessary.
+        """If caching is enabled, store the given temp, overwriting if necessary.
 
         Warning: Slow! (TODO: speed this up)
         """
