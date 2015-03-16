@@ -353,45 +353,73 @@ class CachedDataMixin(object):
 class HourlyTemperatureNormalCachedDataMixin(CachedDataMixin):
 
     def get_temperature_class(self):
+        """Returns the SQLAlchemy database class used for caching.
+        """
         return HourlyTemperatureNormal
 
     def get_temperature_set(self):
+        """Returns the set of all database temperature objects.
+        """
         return self.weather_station.hourly_temperature_normals
 
     def get_date_format(self):
+        """Returns the date format for fetching and storing temperature objects
+        in memory.
+        """
         return "%m%d%H"
 
 class DailyTemperatureNormalCachedDataMixin(CachedDataMixin):
 
     def get_temperature_class(self):
+        """Returns the SQLAlchemy database class used for caching.
+        """
         return DailyTemperatureNormal
 
     def get_temperature_set(self):
+        """Returns the set of all database temperature objects.
+        """
         return self.weather_station.daily_temperature_normals
 
     def get_date_format(self):
+        """Returns the date format for fetching and storing temperature objects
+        in memory.
+        """
         return "%m%d"
 
 class HourlyAverageTemperatureCachedDataMixin(CachedDataMixin):
 
     def get_temperature_class(self):
+        """Returns the SQLAlchemy database class used for caching.
+        """
         return HourlyAverageTemperature
 
     def get_temperature_set(self):
+        """Returns the set of all database temperature objects.
+        """
         return self.weather_station.hourly_average_temperatures
 
     def get_date_format(self):
+        """Returns the date format for fetching and storing temperature objects
+        in memory.
+        """
         return "%Y%m%d%H"
 
 class DailyAverageTemperatureCachedDataMixin(CachedDataMixin):
 
     def get_temperature_class(self):
+        """Returns the SQLAlchemy database class used for caching.
+        """
         return DailyAverageTemperature
 
     def get_temperature_set(self):
+        """Returns the set of all database temperature objects.
+        """
         return self.weather_station.daily_average_temperatures
 
     def get_date_format(self):
+        """Returns the date format for fetching and storing temperature objects
+        in memory.
+        """
         return "%Y%m%d"
 
 class GSODWeatherSource(WeatherSourceBase,DailyAverageTemperatureCachedDataMixin):
