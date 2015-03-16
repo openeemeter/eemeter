@@ -43,7 +43,7 @@ eemeter.weather
     :undoc-members:
     :inherited-members:
     :show-inheritance:
-    :exclude-members: WeatherStation, AverageTemperature, TemperatureNormal, relationship, initialize_cache
+    :exclude-members: WeatherStation, AverageTemperature, TemperatureNormal, relationship, initialize_cache, CachedDataMixin, DailyAverageTemperatureCachedDataMixin, DailyTemperatureNormalCachedDataMixin, HourlyAverageTemperatureCachedDataMixin, HourlyTemperatureNormalCachedDataMixin
 
 eemeter.config.yaml_parser
 --------------------------

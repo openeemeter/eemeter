@@ -252,6 +252,8 @@ class WeatherSourceBase(object):
         return period_cdd / n_days
 
     def _unit_convert(self,temps_array,unit):
+        """Returns an array converted to the correct units.
+        """
         if unit == self._internal_unit:
             return temps_array
         else:
@@ -265,15 +267,23 @@ class WeatherSourceBase(object):
 
     @staticmethod
     def _degC_to_degF(temp_C):
+        """Returns temperature(s) in degrees Fahrenheit given a temperature (or
+        array of temperatures) in degrees Celsius.
+        """
         return 1.8*temp_C + 32.
 
     @staticmethod
     def _degF_to_degC(temp_F):
+        """Returns temperature(s) in degrees Celsius given a temperature (or
+        array of temperatures) in degrees Fahrenheit.
+        """
         return (5./9.) * (temp_F - 32.)
 
 class CachedDataMixin(object):
 
     def init_temperature_data(self):
+        """Pulls all cached weather data into memory.
+        """
         self.get_weather_station()
         if self.weather_station:
             date_format = self.get_date_format()
@@ -285,18 +295,31 @@ class CachedDataMixin(object):
                     self.data[t.date.strftime(date_format)] = self._degC_to_degF(t.temp_C)
 
     def get_temperature_class(self):
-        # return Temperatures
+        """Returns the SQLAlchemy database class used for caching.
+
+        E.g. `return Temperature`
+        """
         raise NotImplementedError
 
     def get_temperature_set(self):
-        #return self.weather_station.temperatures
+        """Returns the set of all database temperature objects.
+
+        E.g. `return self.weather_station.temperatures`
+        """
         raise NotImplementedError
 
     def get_date_format(self):
-        #return "%Y%m%d"
+        """Returns the date format for fetching and storing temperature objects
+        in memory.
+
+        E.g. `return "%Y%m%d"`
+        """
         raise NotImplementedError
 
     def get_weather_station(self):
+        """Sets the weather_station attribute using the db session and
+        self.station_id, if available.
+        """
         if self.session:
             try:
                 self.weather_station = self.session.query(WeatherStation).filter(WeatherStation.usaf_id == self.station_id).one()
@@ -308,6 +331,10 @@ class CachedDataMixin(object):
             self.weather_station = None
 
     def update_cache(self,temp_C,date,overwrite=True):
+        """If cacheing is enabled, store the given temp, overwriting if necessary.
+
+        Warning: Slow! (TODO: speed this up)
+        """
         if self.session:
             temperature_class = self.get_temperature_class()
             temps_query = self.session.query(temperature_class)\
