@@ -126,8 +126,20 @@ class WeatherSourceBase(object):
         self._internal_unit = "degF"
 
     def get_average_temperature(self,periods,unit):
-        """Returns a list of average temperatures of each DatetimePeriod in
-        the given unit (usually "degF" or "degC").
+        """The average temperatures of during each period the given unit
+
+        Parameters
+        ----------
+        periods : array_like
+            Arrays of DatetimePeriod objects over which temperatures will be
+            aggregated
+        unit : {"degF", "degC"}
+            The unit in which average temperatures should be returned.
+
+        Returns
+        -------
+        out : np.ndarray
+            Array of average temperatures observed during each period.
         """
         temps = []
         for period in periods:
