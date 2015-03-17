@@ -98,17 +98,47 @@ class PRISMMeter(MeterBase):
         return meter_yaml
 
     def evaluate_mapped_inputs(self,**kwargs):
-        """Returns a dictionary like the following:
+        """PRISM-style evaluation of temperature sensitivity and
+        weather-normalized annual consumption (NAC) at the single-project
+        level.
 
-           ::
+        **Note:** In order to take advantage of input and output mappings, you
+        should call the method :code:`meter.evaluate(**kwargs)` instead of
+        this method.
 
-               {'electricity_presence': True,
-                'temp_sensitivity_params_electricity': array([  5.28680197e-02,   5.09216467e-02,   3.11451816e-01, 6.21000000e+01,   7.95406093e+00]),
-                'annualized_usage_electricity': 197.90877363035082,
-                'natural_gas_presence': True,
-                'temp_sensitivity_params_natural_gas': array([  6.36617250e+01,   2.64582535e-01,   2.89029866e-02]),
-                'annualized_usage_natural_gas': 133.05140290730517
-               }
+        .. code-block:: python
+
+            meter.evaluate(consumption_history=consumption_history,
+                           weather_source=weather_source,
+                           weather_normal_source=weather_normal_source)
+
+        Parameters
+        ----------
+        consumption_history : eemeter.consumption.ConsumptionHistory
+            All available consumption data for this project and reporting
+            period.
+        weather_source : eemeter.meter.WeatherSourceBase
+            A weather source with data available for at least the duration of
+            the reporting period.
+        weather_normal_source : eemeter.meter.WeatherSourceBase
+            A weather source which additionally provides the function
+            :code:`weather_source.annual_daily_temperatures(unit)`.
+
+        Returns
+        -------
+        out : dict
+            Dictionary of results like the following
+
+            ::
+
+                {
+                    'electricity_presence': True,
+                    'temp_sensitivity_params_electricity': array([  5.28680197e-02,   5.09216467e-02,   3.11451816e-01, 6.21000000e+01,   7.95406093e+00]),
+                    'annualized_usage_electricity': 197.90877363035082,
+                    'natural_gas_presence': True,
+                    'temp_sensitivity_params_natural_gas': array([  6.36617250e+01,   2.64582535e-01,   2.89029866e-02]),
+                    'annualized_usage_natural_gas': 133.05140290730517
+                }
 
         """
         return self.meter.evaluate(**kwargs)

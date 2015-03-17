@@ -4,17 +4,10 @@ API
 eemeter.meter
 -------------
 
-.. automodule:: eemeter.meter.base
-    :members:
-    :undoc-members:
-    :inherited-members:
-    :show-inheritance:
+.. toctree::
+   :maxdepth: 4
 
-.. automodule:: eemeter.meter.prism
-    :members:
-    :undoc-members:
-    :inherited-members:
-    :show-inheritance:
+   meters
 
 eemeter.models
 --------------
@@ -38,12 +31,19 @@ eemeter.consumption
 eemeter.weather
 ---------------
 
-.. automodule:: eemeter.weather
+.. toctree::
+   :maxdepth: 4
+
+   weather
+
+eemeter.location
+---------------
+
+.. automodule:: eemeter.location
     :members:
     :undoc-members:
     :inherited-members:
     :show-inheritance:
-    :exclude-members: WeatherStation, AverageTemperature, TemperatureNormal, relationship, initialize_cache, CachedDataMixin, DailyAverageTemperatureCachedDataMixin, DailyTemperatureNormalCachedDataMixin, HourlyAverageTemperatureCachedDataMixin, HourlyTemperatureNormalCachedDataMixin
 
 eemeter.config.yaml_parser
 --------------------------

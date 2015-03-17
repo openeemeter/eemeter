@@ -115,7 +115,7 @@ def test_project_generator(gsod_722880_2012_2014_weather_source,tmy3_722880_weat
     assert elec_kwh[0] > elec_kwh[5]
     assert gas_therms[0] > gas_therms[5]
     assert elec_kwh[0] < 700 # could probably lower this upper bound
-    assert gas_therms[0] < 600 # could probably lower this upper bound
+    assert gas_therms[0] < 700 # could probably lower this upper bound
 
 def test_generate_periods():
     uniform_periods = generate_periods(datetime(2012,1,1),datetime(2013,1,1),period_jitter=timedelta(days=0))

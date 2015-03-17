@@ -3,24 +3,37 @@ import inspect
 class MeterBase(object):
     """Base class for all Meter objects. Takes care of structural tasks such as
     input and output mapping.
+
+    Parameters
+    ----------
+    input_mapping, output_mapping : dict, optional
+        Keys are incoming input (or output) names and values are outgoing
+        input (or output) names. To map one key to multiple values, use a
+        list; to remove a key, use None. **Note:** in YAML, `None` is spelled
+        `null`; otherwise, it will be interpreted as a string.
+
+        E.g. ({"old_input_name":"new_input_name"})
+    extras : dict
+        Extra persistent key/value pairs to make available in the meter
+        evaluation namespace.
     """
     def __init__(self,input_mapping={},output_mapping={},extras={},**kwargs):
-        """- `input_mapping` should be a dictionary with incoming input names
-             as keys whose associated values are outgoing input names.
-             (e.g. ({"old_input_name":"new_input_name"})
-           - `output_mapping` should be a dictionary with incoming output names
-             as keys whose associated values are outgoing output names.
-             (e.g. ({"old_output_name":"new_output_name"})
-        """
         self.input_mapping = input_mapping
         self.output_mapping = output_mapping
         self.extras = extras
 
     def evaluate(self,**kwargs):
-        """Returns a dictionary of evaluated meter outputs. Arguments must be
-        specified as keyword arguments. **Note:** because `**kwargs` is
-        intentionally general (and therefore woefully unspecific), the function
-        `meter.get_inputs()` exists to help describe the required inputs.
+        """Evaluate mapped meter inputs to and return mapped outputs. Arguments
+        must be specified as keyword arguments.
+
+        **Note:** because `**kwargs` is intentionally general (and therefore
+        woefully unspecific), the function `meter.get_inputs()` exists to help
+        describe the required inputs.
+
+        Returns
+        -------
+        out : dict
+            Mapped outputs from meter evaluation.
         """
         mapped_inputs = self._remap(kwargs,self.input_mapping)
         for k,v in self.extras.items():
@@ -76,8 +89,13 @@ class MeterBase(object):
         raise NotImplementedError
 
     def get_inputs(self):
-        """Returns a recursively structured object which shows necessary
-        inputs.
+        """A structured object which shows necessary inputs.
+
+        Returns
+        -------
+        out : dict
+            Structure mirroring the structure of the meter and showing its
+            inputs and child_inputs.
         """
         inputs = inspect.getargspec(self.evaluate_mapped_inputs).args[1:]
         child_inputs = self._get_child_inputs()
@@ -85,4 +103,3 @@ class MeterBase(object):
 
     def _get_child_inputs(self):
         return []
-
