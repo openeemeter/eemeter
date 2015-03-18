@@ -2,6 +2,7 @@ from eemeter.weather import WeatherSourceBase
 from eemeter.weather import GSODWeatherSource
 from eemeter.weather import ISDWeatherSource
 from eemeter.weather import TMY3WeatherSource
+from eemeter.weather import CZ2010WeatherSource
 from eemeter.weather import WeatherUndergroundWeatherSource
 
 from eemeter.consumption import ConsumptionHistory
@@ -146,3 +147,24 @@ def test_tmy3_weather_source(consumption_history_one_summer_electricity,tmy3_wea
 
     cdds = tmy3_weather_source.get_cdd(consumptions,"degF",65)
     assert_allclose(cdds, [105.540,249.795,288.780], rtol=RTOL,atol=ATOL)
+
+@pytest.mark.slow
+@pytest.mark.internet
+def test_cz2010_weather_source(consumption_history_one_summer_electricity):
+    cz2010_file = os.environ.get('EEMETER_PATH_TO_ALTURAS_725958_CZ2010_CSV')
+    if cz2010_file:
+        cz2010_weather_source = CZ2010WeatherSource(cz2010_file)
+        consumptions = consumption_history_one_summer_electricity.get("electricity")
+
+        avg_temps = cz2010_weather_source.get_average_temperature(consumptions,"degF")
+        assert_allclose(avg_temps, [68.1822,73.05548,74.315], rtol=RTOL,atol=ATOL)
+
+        hdds = cz2010_weather_source.get_hdd(consumptions,"degF",65)
+        assert_allclose(hdds, [106.3725,0.,11.775 ], rtol=RTOL,atol=ATOL)
+
+        cdds = cz2010_weather_source.get_cdd(consumptions,"degF",65)
+        assert_allclose(cdds, [51.7875,227.49,116.415], rtol=RTOL,atol=ATOL)
+    else:
+        warnings.warn("Skipping CZ2010WeatherSource tests. "
+            "Please set the environment variable "
+            "EEMETER_PATH_TO_ALTURAS_725958_CZ2010_CSV to run the tests.")
