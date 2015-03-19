@@ -2,8 +2,14 @@ import tempfile
 import os
 from eemeter.importers import import_hpxml
 from eemeter.importers import import_green_button_xml
+from eemeter.importers import import_seed_timeseries
 
 from numpy.testing import assert_allclose
+from datetime import datetime
+from datetime import timedelta
+
+from sqlalchemy import create_engine
+from sqlalchemy import Table, Column, Integer, Float, Numeric, String, MetaData, ForeignKey, TIMESTAMP
 
 RTOL = 1e-2
 ATOL = 1e-2
@@ -724,3 +730,73 @@ def test_import_green_button_xml():
                             21.021, 21.021, 21.021, 21.021, 21.021,
                             25.662, 25.662, 21.021, 21.021, 21.021,
                             21.021], rtol=RTOL, atol=ATOL)
+
+def test_import_seed_timeseries():
+    fd, fname = tempfile.mkstemp()
+    db_url = 'sqlite:///{}'.format(fname)
+    engine = create_engine(db_url, echo=True)
+    metadata = MetaData()
+    seed_meter = Table('seed_meter', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('name', String),
+        Column('energy_type', Integer),
+        Column('energy_units', Integer),
+    )
+    seed_timeseries = Table('seed_timeseries', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('meter_id', None, ForeignKey('seed_meter.id')),
+        Column('reading', Float),
+        Column('cost', Numeric),
+        Column('begin_time', TIMESTAMP),
+        Column('end_time', TIMESTAMP),
+    )
+    seed_meter_building_snapshot = Table('seed_meter_building_snapshot', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('meter_id', None, ForeignKey('seed_meter.id')),
+        Column('buildingsnapshot_id', Integer),
+    )
+    metadata.create_all(engine)
+
+    conn = engine.connect()
+
+    conn.execute(seed_meter.insert(), [
+        {"name": "test1", "energy_type": 2, "energy_units": 1},
+        {"name": "test2", "energy_type": 1, "energy_units": 2},
+        {"name": "test3", "energy_type": 2, "energy_units": 1},
+        {"name": "test4", "energy_type": 1, "energy_units": 2},
+    ])
+
+    dates = [ datetime(2011,1,1) + timedelta(days=i) for i in range(0,120,30)]
+
+    timestamps = [(d, d + timedelta(days=30)) for d in dates]
+
+    conn.execute(seed_timeseries.insert(), [
+        {"meter_id": meter, "reading": 1.0, "cost": 0, "begin_time": ts[0],"end_time": ts[1]}
+        for ts in timestamps for meter in [1,2,3,4]]
+    )
+
+    conn.execute(seed_meter_building_snapshot.insert(), [
+        {"meter_id": 1, "buildingsnapshot_id": 1},
+        {"meter_id": 2, "buildingsnapshot_id": 1},
+        {"meter_id": 3, "buildingsnapshot_id": 2},
+        {"meter_id": 4, "buildingsnapshot_id": 2},
+    ])
+
+    buildings = import_seed_timeseries(db_url)
+
+    building_1_ch = buildings[1]
+    building_2_ch = buildings[2]
+
+    c_1_e = building_1_ch.electricity
+    c_1_g = building_1_ch.natural_gas
+    c_2_e = building_2_ch.electricity
+    c_2_g = building_2_ch.natural_gas
+
+
+    assert_allclose([c.kWh for c in c_1_e],[1,1,1,1],rtol=RTOL,atol=ATOL)
+    assert_allclose([c.therms for c in c_1_g],[1,1,1,1],rtol=RTOL,atol=ATOL)
+    assert_allclose([c.kWh for c in c_2_e],[1,1,1,1],rtol=RTOL,atol=ATOL)
+    assert_allclose([c.therms for c in c_2_g],[1,1,1,1],rtol=RTOL,atol=ATOL)
+
+    assert c_1_e[0].start == datetime(2011,1,1)
+    assert c_1_g[3].end == datetime(2011,5,1)
