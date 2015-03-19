@@ -4,6 +4,7 @@ from datetime import datetime
 from datetime import timedelta
 from eemeter.consumption import DatetimePeriod
 
+from itertools import chain
 import numpy as np
 
 class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
@@ -121,7 +122,7 @@ class ForEachFuelType(MeterBase):
         """
         results = {}
         for fuel_type in self.fuel_types:
-            inputs = dict(kwargs.items() + {"fuel_type": fuel_type}.items())
+            inputs = dict(chain(kwargs.items(),{"fuel_type": fuel_type}.items()))
             result = self.meter.evaluate(**inputs)
             for k,v in result.items():
                 results[ "{}_{}".format(k,fuel_type)] = v
@@ -279,4 +280,4 @@ class CVRMSE(MeterBase):
         n = len(consumptions)
         p = len(params)
         cvrmse = 100 * (np.sum((y - y_hat)**2) / (n - p) )**.5 / y_bar
-        return {"CVRMSE": cvrmse}
+        return {"cvrmse": cvrmse}

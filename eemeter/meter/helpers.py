@@ -5,6 +5,12 @@ from eemeter.consumption import ConsumptionHistory
 
 from itertools import chain
 
+try:
+    unicode = unicode
+except NameError:
+    # 'unicode' is undefined, must be Python 3
+    basestring = (str,bytes)
+
 class PrePost(MeterBase):
     def __init__(self,meter,splittable_args,**kwargs):
         super(PrePost,self).__init__(**kwargs)
