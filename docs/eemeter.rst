@@ -28,6 +28,16 @@ eemeter.consumption
     :show-inheritance:
     :exclude-members: DateRangeException
 
+eemeter.importers
+-----------------
+
+.. automodule:: eemeter.importers
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :show-inheritance:
+    :exclude-members: select
+
 eemeter.weather
 ---------------
 
