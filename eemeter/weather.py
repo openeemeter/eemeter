@@ -737,7 +737,15 @@ class ISDWeatherSource(WeatherSourceBase,HourlyAverageTemperatureCachedDataMixin
         if self.session:
             self.session.commit()
 
-class TMY3WeatherSource(WeatherSourceBase,HourlyTemperatureNormalCachedDataMixin):
+class WeatherNormalMixin(object):
+    def annual_daily_temperatures(self,unit):
+        """Returns a list of daily temperature normals for a typical
+        meteorological year.
+        """
+        periods = [DatetimePeriod(start=datetime(2013,1,1),end=datetime(2014,1,1))]
+        return self.get_daily_temperatures(periods,unit)
+
+class TMY3WeatherSource(WeatherSourceBase,WeatherNormalMixin,HourlyTemperatureNormalCachedDataMixin):
     def __init__(self,station_id):
         super(TMY3WeatherSource,self).__init__()
         self.station_id = station_id
@@ -778,12 +786,38 @@ class TMY3WeatherSource(WeatherSourceBase,HourlyTemperatureNormalCachedDataMixin
         masked_data = np.ma.masked_array(data,np.isnan(data))
         return np.mean(masked_data)
 
-    def annual_daily_temperatures(self,unit):
-        """Returns a list of daily temperature normals for a typical
-        meteorological year.
+class CZ2010WeatherSource(WeatherSourceBase,WeatherNormalMixin):
+    def __init__(self,filepath):
+        super(CZ2010WeatherSource,self).__init__()
+        self.filepath = filepath
+
+        self._fetch_data()
+
+    def _fetch_data(self):
+        with open(self.filepath, 'r') as f:
+            text = f.read()
+            for line in text.splitlines()[2:]:
+                row = line.split(",")
+                date_string = "{}{}{}{:02d}".format(row[0][6:10],
+                                                    row[0][0:2],
+                                                    row[0][3:5],
+                                                    int(row[1][0:2]) - 1)
+                temp_C = float(row[31])
+                self.data[date_string[4:]] = self._degC_to_degF(temp_C) # skip year in date string
+
+    def get_internal_unit_daily_average_temperature(self,day):
+        """Returns the temperature normal on the given day. `day` can be
+        either a python `date` or a python `datetime` instance. Calculated by
+        averaging hourly temperatures for the given day.
         """
-        periods = [DatetimePeriod(start=datetime(2013,1,1),end=datetime(2014,1,1))]
-        return self.get_daily_temperatures(periods,unit)
+        day_str = day.strftime("%m%d")
+        avg_temps = []
+        for i in range(24):
+            hourly = self.data.get("{}{:02d}".format(day_str,i),float('nan'))
+            avg_temps.append(hourly)
+        data = np.array(avg_temps)
+        masked_data = np.ma.masked_array(data,np.isnan(data))
+        return np.mean(masked_data)
 
 class WeatherUndergroundWeatherSource(WeatherSourceBase):
     def __init__(self,zipcode,start,end,api_key):
