@@ -9,6 +9,18 @@ from sqlalchemy import Table, Column, Integer, Float, Numeric, String, MetaData,
 from sqlalchemy.sql import select
 
 def import_hpxml(filename):
+    """Import from HPXML 2.0.
+
+    Parameters
+    ----------
+    filename : str
+        Full path to HPXML file
+
+    Returns
+    -------
+    out : eemeter.consumption.ConsumptionHistory
+        Consumption history available for this project
+    """
 
     hpxml_fuel_type_mapping = {
         "electricity": "electricity",
@@ -47,6 +59,18 @@ def import_hpxml(filename):
     return ConsumptionHistory(consumptions)
 
 def import_green_button_xml(filename):
+    """Import from Green Button XML.
+
+    Parameters
+    ----------
+    filename : str
+        Full path to Green Button XML file
+
+    Returns
+    -------
+    out : eemeter.consumption.ConsumptionHistory
+        Consumption history available for this project
+    """
     with(open(filename,'r')) as f:
         tree = etree.parse(f)
 
@@ -74,6 +98,18 @@ def import_green_button_xml(filename):
     return ConsumptionHistory(consumptions)
 
 def import_seed_timeseries(db_url):
+    """Import from SEED database
+
+    Parameters
+    ----------
+    db_url : str
+        SEED database url (should be interpretable by SQLAlchemy)
+
+    Returns
+    -------
+    out : dict
+        Dictionary of ConsumptionHistory objects keyed on BuildingSnapshot id
+    """
     ENERGY_TYPES = {
         1: "natural_gas",
         2: "electricity",
