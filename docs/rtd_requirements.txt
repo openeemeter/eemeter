@@ -1,5 +1,6 @@
 Pint==0.6
 PyYAML==3.11
+lxml==3.4.2
 numpy==1.9.1
 numpydoc==0.5
 py==1.4.26
