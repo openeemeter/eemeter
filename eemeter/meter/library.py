@@ -280,4 +280,4 @@ class CVRMSE(MeterBase):
         n = len(consumptions)
         p = len(params)
         cvrmse = 100 * (np.sum((y - y_hat)**2) / (n - p) )**.5 / y_bar
-        return {"CVRMSE": cvrmse}
+        return {"cvrmse": cvrmse}
