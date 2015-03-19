@@ -1,5 +1,11 @@
 import inspect
 
+try:
+    unicode = unicode
+except NameError:
+    # 'unicode' is undefined, must be Python 3
+    basestring = (str,bytes)
+
 class MeterBase(object):
     """Base class for all Meter objects. Takes care of structural tasks such as
     input and output mapping.
