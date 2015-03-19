@@ -147,7 +147,6 @@ def import_seed_timeseries(db_url):
             unit_name = ENERGY_UNITS[meter_row["energy_units"]]
 
             timeseries = select([seed_timeseries]).where(seed_timeseries.c.meter_id == meter_id)
-            print timeseries
             for row in conn.execute(timeseries):
                 start = row["begin_time"]
                 end = row["end_time"]
