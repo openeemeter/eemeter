@@ -1,3 +1,5 @@
+from eemeter.config.yaml_parser import load
+
 from eemeter.meter import RecentReadingMeter
 from eemeter.meter import EstimatedReadingConsolidationMeter
 from eemeter.meter import TimeSpanMeter
@@ -16,6 +18,7 @@ from eemeter.consumption import ConsumptionHistory
 from eemeter.generator import ConsumptionGenerator
 from eemeter.generator import generate_periods
 
+from fixtures.consumption import generated_consumption_history_pre_post_1
 from fixtures.consumption import time_span_1
 from fixtures.consumption import generated_consumption_history_with_hdd_1
 from fixtures.consumption import generated_consumption_history_with_cdd_1
@@ -35,6 +38,53 @@ RTOL=1e-2
 ATOL=1e-2
 
 import pytest
+
+@pytest.mark.slow
+def test_pre_post_parameters(generated_consumption_history_pre_post_1,
+                             gsod_722880_2012_2014_weather_source):
+
+    meter_yaml = """
+        !obj:eemeter.meter.PrePost {
+            splittable_args: ["consumption_history"],
+            meter: !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
+                fuel_unit_str: "kWh",
+                fuel_type: "electricity",
+                temperature_unit_str: "degF",
+                model: !obj:eemeter.models.TemperatureSensitivityModel {
+                    cooling: True,
+                    heating: True,
+                    initial_params: {
+                        base_consumption: 0,
+                        heating_slope: 0,
+                        cooling_slope: 0,
+                        heating_reference_temperature: 60,
+                        cooling_reference_temperature: 70,
+                    },
+                    param_bounds: {
+                        base_consumption: [0,2000],
+                        heating_slope: [0,200],
+                        cooling_slope: [0,200],
+                        heating_reference_temperature: [55,65],
+                        cooling_reference_temperature: [65,75],
+                    },
+                },
+            },
+        }
+        """
+    meter = load(meter_yaml)
+
+    ch, pre_params, post_params, retrofit = generated_consumption_history_pre_post_1
+
+    result = meter.evaluate(consumption_history=ch,
+                            weather_source=gsod_722880_2012_2014_weather_source,
+                            retrofit_start_date=retrofit,
+                            retrofit_end_date=retrofit)
+
+    assert_allclose(result['temp_sensitivity_params_pre'], pre_params, rtol=RTOL, atol=ATOL)
+    assert_allclose(result['temp_sensitivity_params_post'], post_params, rtol=RTOL, atol=ATOL)
+
+    assert isinstance(result["consumption_history_pre"],ConsumptionHistory)
+    assert isinstance(result["consumption_history_post"],ConsumptionHistory)
 
 def test_recent_reading_meter():
     recent_consumption = Consumption(0,"kWh","electricity",datetime.now() - timedelta(days=390),datetime.now() - timedelta(days=360))
