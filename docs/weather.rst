@@ -7,6 +7,15 @@ GSODWeatherSource
     :inherited-members:
     :show-inheritance:
 
+ISDWeatherSource
+-----------------
+
+.. autoclass:: eemeter.weather.ISDWeatherSource
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :show-inheritance:
+
 TMY3WeatherSource
 -----------------
 
@@ -16,14 +25,15 @@ TMY3WeatherSource
     :inherited-members:
     :show-inheritance:
 
-ISDWeatherSource
------------------
+CZ2010WeatherSource
+-------------------
 
-.. autoclass:: eemeter.weather.ISDWeatherSource
+.. autoclass:: eemeter.weather.CZ2010WeatherSource
     :members:
     :undoc-members:
     :inherited-members:
     :show-inheritance:
+
 
 WeatherUndergroundWeatherSource
 -------------------------------
