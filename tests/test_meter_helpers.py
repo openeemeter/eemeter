@@ -186,3 +186,19 @@ def test_estimated_reading_consolidation_meter_multiple_fuel_type():
         for c1,c2 in zip(result["consumption_history_no_estimated"].get("natural_gas"),
                          ch_no_est.get("natural_gas")):
             assert c1 == c2
+
+def test_debug_meter():
+
+    meter_yaml="""
+        !obj:eemeter.meter.Debug {
+        }
+        """
+    meter = load(meter_yaml)
+
+def test_dummy_meter():
+
+    meter_yaml="""
+        !obj:eemeter.meter.DummyMeter {
+        }
+        """
+    meter = load(meter_yaml)

@@ -47,14 +47,6 @@ def test_conditional_meter_without_params():
     assert isinstance(meter.evaluate(electricity_present=True),dict)
     assert isinstance(meter.evaluate(electricity_present=False),dict)
 
-def test_debug_meter():
-
-    meter_yaml="""
-        !obj:eemeter.meter.Debug {
-        }
-        """
-    meter = load(meter_yaml)
-
 def test_and_meter():
     with pytest.raises(ValueError):
         meter0 = And(inputs=[])

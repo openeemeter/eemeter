@@ -118,20 +118,3 @@ class Switch(MeterBase):
         if self.default is not None:
             return self.default.evaluate(**kwargs)
         return {}
-
-class Debug(MeterBase):
-    def evaluate_mapped_inputs(self,**kwargs):
-        """Helpful for debugging meter instances - prints out kwargs for
-        inspection.
-        """
-        print("DEBUG")
-        pprint(kwargs)
-        return {}
-
-class DummyMeter(MeterBase):
-    def evaluate_mapped_inputs(self,value,**kwargs):
-        """Helpful for testing meters - passes a value directly through. May
-        also be helpful for hacking input/output mappings.
-        """
-        result = {"result": value}
-        return result

@@ -88,3 +88,20 @@ class EstimatedReadingConsolidationMeter(MeterBase):
                     waitlist = []
 
         return {"consumption_history_no_estimated": ConsumptionHistory(new_consumptions)}
+
+class Debug(MeterBase):
+    def evaluate_mapped_inputs(self,**kwargs):
+        """Helpful for debugging meter instances - prints out kwargs for
+        inspection.
+        """
+        print("DEBUG")
+        pprint(kwargs)
+        return {}
+
+class DummyMeter(MeterBase):
+    def evaluate_mapped_inputs(self,value,**kwargs):
+        """Helpful for testing meters - passes a value directly through. May
+        also be helpful for hacking input/output mappings.
+        """
+        result = {"result": value}
+        return result
