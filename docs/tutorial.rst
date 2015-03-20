@@ -91,9 +91,7 @@ a suitable model for monthly natural gas consumption.
 
 .. code-block:: python
 
-    from eemeter.models import HDDBalancePointModel
-
-    gas_consumption_model = HDDBalancePointModel()
+    gas_consumption_model = TemperatureSensitivityModel(heating=True,cooling=False)
 
     gas_param_distributions = {
             "heating_slope": uniform(loc=1, scale=.5),
@@ -179,11 +177,13 @@ a set of energy efficiency measures. In this case, we generate a small set of
                                     retrofit_start_date,
                                     retrofit_completion_date)
 
-        data = {"consumption_history": ConsumptionHistory(elec_consumption + gas_consumption),
+        consumptions = result["electricity_consumptions"] + result["natural_gas_consumptions"]
+
+        data = {"consumption_history": ConsumptionHistory(consumptions),
                 "retrofit_start_date": retrofit_start_date,
                 "retrofit_completion_date":retrofit_completion_date,
-                "estimated_elec_savings": result["electricity_savings_estimate"],
-                "estimated_gas_savings": result["natural_gas_savings_estimate"]}
+                "estimated_elec_savings": result["electricity_estimated_savings"],
+                "estimated_gas_savings": result["natural_gas_estimated_savings"]}
         project_data.append(data)
 
 Phew! All of that was just to generate some projects so that we could learn how
@@ -226,7 +226,7 @@ expose the structure of the meter and the inputs needed to run it.
                 .format(actual_e,predicted_e,len(ch_pre.electricity),len(ch_post.electricity)))
         print("Natural gas savings actual//predicted (# bills [pre]-[post]): {:.02f} // {:.02f} ({}-{})"
                 .format(actual_g,predicted_g,len(ch_pre.natural_gas),len(ch_post.natural_gas)))
-        print()
+        print("")
 
 This will print something like the following::
 
@@ -250,10 +250,9 @@ meters.
 Loading consumption data
 ------------------------
 
-To load consumption data, you'll need to use the SEED importer [FUTURE], the
-HPXML importer [FUTURE] or the GreenButton XML importer [FUTURE], or initialize
-the objects yourself. The importers haven't been built yet, so for now,
-you'll have to initialize the objects yourself.
+To load consumption data, you'll need to use the SEED importer, the
+HPXML importer, the Green Button XML importer, or initialize
+the objects yourself. See :ref:`eemeter-importers` for usage details.
 
 Consumption data consists of a quantity of energy (as defined by a magnitude a
 physical unit) of a particular fuel type consumed during a time period (as

@@ -28,6 +28,8 @@ eemeter.consumption
     :show-inheritance:
     :exclude-members: DateRangeException
 
+.. _eemeter-importers:
+
 eemeter.importers
 -----------------
 
