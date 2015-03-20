@@ -22,7 +22,15 @@ class Mock(MagicMock):
     def __getattr__(cls, name):
             return Mock()
 
-MOCK_MODULES = ['numpy','scipy','pint','scipy.optimize','six','sqlalchemy']
+MOCK_MODULES = [
+    'numpy',
+    'pint',
+    'scipy',
+    'scipy.optimize',
+    'six',
+    'sqlalchemy',
+    'sqlalchemy.sql',
+]
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # If extensions (or modules to document with autodoc) are in another directory,
