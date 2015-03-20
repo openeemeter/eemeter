@@ -274,10 +274,10 @@ class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(MeterBase):
         consumption_history : eemeter.consumption.ConsumptionHistory
             All available billing data (of all fuel types) available for the
             target project. Estimated bills must be flagged.
-        weather_source: eemeter.weather.WeatherSourceBase
+        weather_source : eemeter.weather.WeatherSourceBase
             Weather data should come from a source as geographically and
             climatically similar to the target project as possible.
-        weather_normal_source: eemeter.weather.WeatherSourceBase with eemeter.weather.WeatherNormalMixin
+        weather_normal_source : eemeter.weather.WeatherSourceBase with eemeter.weather.WeatherNormalMixin
             Weather normal data should come from a source as geographically and
             climatically similar to the target project as possible.
 
