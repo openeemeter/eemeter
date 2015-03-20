@@ -31,7 +31,7 @@ def test_pre_post_parameters(generated_consumption_history_pre_post_1,
     meter_yaml = """
         !obj:eemeter.meter.PrePost {
             splittable_args: ["consumption_history"],
-            meter: !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
+            pre_meter: !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter &meter {
                 fuel_unit_str: "kWh",
                 fuel_type: "electricity",
                 temperature_unit_str: "degF",
@@ -54,6 +54,7 @@ def test_pre_post_parameters(generated_consumption_history_pre_post_1,
                     },
                 },
             },
+            post_meter: *meter,
         }
         """
     meter = load(meter_yaml)

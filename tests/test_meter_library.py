@@ -133,7 +133,7 @@ def test_gross_savings_metric(generated_consumption_history_pre_post_with_gross_
             sequence: [
                 !obj:eemeter.meter.PrePost {
                     splittable_args: ["consumption_history"],
-                    meter: !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
+                    pre_meter: !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter &meter {
                         fuel_unit_str: "kWh",
                         fuel_type: "electricity",
                         temperature_unit_str: "degF",
@@ -156,6 +156,7 @@ def test_gross_savings_metric(generated_consumption_history_pre_post_with_gross_
                             },
                         },
                     },
+                    post_meter: *meter,
                 },
                 !obj:eemeter.meter.GrossSavingsMeter {
                     fuel_unit_str: "kWh",
@@ -193,7 +194,7 @@ def test_annualized_gross_savings_metric(generated_consumption_history_pre_post_
             sequence: [
                 !obj:eemeter.meter.PrePost {
                     splittable_args: ["consumption_history"],
-                    meter: !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
+                    pre_meter: !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter &meter {
                         fuel_unit_str: "kWh",
                         fuel_type: "electricity",
                         temperature_unit_str: "degF",
@@ -216,6 +217,7 @@ def test_annualized_gross_savings_metric(generated_consumption_history_pre_post_
                             },
                         },
                     },
+                    post_meter: *meter,
                 },
                 !obj:eemeter.meter.AnnualizedGrossSavingsMeter {
                     fuel_type: "electricity",

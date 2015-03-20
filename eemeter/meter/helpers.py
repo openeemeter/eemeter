@@ -12,9 +12,10 @@ except NameError:
     basestring = (str,bytes)
 
 class PrePost(MeterBase):
-    def __init__(self,meter,splittable_args,**kwargs):
+    def __init__(self,pre_meter,post_meter,splittable_args,**kwargs):
         super(PrePost,self).__init__(**kwargs)
-        self.meter = meter
+        self.pre_meter = pre_meter
+        self.post_meter = post_meter
         self.splittable_args = splittable_args
 
     def evaluate_mapped_inputs(self,retrofit_start_date,retrofit_end_date,**kwargs):
@@ -34,8 +35,8 @@ class PrePost(MeterBase):
             else:
                 pre_kwargs[k] = kwargs[k]
                 post_kwargs[k] = kwargs[k]
-        pre_results = self.meter.evaluate(**pre_kwargs)
-        post_results = self.meter.evaluate(**post_kwargs)
+        pre_results = self.pre_meter.evaluate(**pre_kwargs)
+        post_results = self.post_meter.evaluate(**post_kwargs)
         pre_results = {k + "_pre":v for k,v in pre_results.items()}
         post_results = {k + "_post":v for k,v in post_results.items()}
         results = {k:v for k,v in chain(pre_results.items(),
