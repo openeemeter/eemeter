@@ -40,7 +40,7 @@ class TemperatureSensitivityModel(object):
         # precalculate temps
         n_daily_temps = np.array([len(temps) for temps in observed_daily_temps])
 
-        if weights == None:
+        if weights is None:
             weights = np.ones(len(average_daily_usages))
 
         def objective_function(params):
