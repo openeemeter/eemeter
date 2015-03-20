@@ -30,6 +30,7 @@ MOCK_MODULES = [
     'six',
     'sqlalchemy',
     'sqlalchemy.sql',
+    'sqlalchemy.ext',
     'sqlalchemy.ext.declarative',
     'sqlalchemy.orm',
     'sqlalchemy.orm.exc',
@@ -203,7 +204,7 @@ html_static_path = ['_static']
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'EEMeterdoc'
+htmlhelp_basename = 'OpenEEMeterdoc'
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -223,7 +224,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'EEMeter.tex', u'EEMeter Documentation',
+  ('index', 'OpenEEMeter.tex', u'OpenEEMeter Documentation',
    u'Phil Ngo', 'manual'),
 ]
 
@@ -253,7 +254,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'eemeter', u'EEMeter Documentation',
+    ('index', 'eemeter', u'OpenEEMeter Documentation',
      [u'Phil Ngo'], 1)
 ]
 
@@ -267,8 +268,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'EEMeter', u'EEMeter Documentation',
-   u'Phil Ngo', 'EEMeter', 'One line description of project.',
+  ('index', 'OpenEEMeter', u'OpenEEMeter Documentation',
+   u'Phil Ngo', 'EEMeter', 'Standard methods for calculating Energy Efficiency Savings.',
    'Miscellaneous'),
 ]
 
@@ -283,3 +284,5 @@ texinfo_documents = [
 
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
+
+numpydoc_show_class_members = False
