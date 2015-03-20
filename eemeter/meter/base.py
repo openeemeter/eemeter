@@ -90,7 +90,8 @@ class MeterBase(object):
 
     def evaluate_mapped_inputs(self,**kwargs):
         """Should be the workhorse method which implements the logic of the
-        meter, returning a dictionary of meter outputs.
+        meter, returning a dictionary of meter outputs. Must be defined by
+        inheriting class.
         """
         raise NotImplementedError
 
