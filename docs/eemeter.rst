@@ -47,7 +47,7 @@ eemeter.weather
    weather
 
 eemeter.location
----------------
+----------------
 
 .. automodule:: eemeter.location
     :members:
