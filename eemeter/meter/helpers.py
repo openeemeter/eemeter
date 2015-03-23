@@ -12,16 +12,43 @@ except NameError:
     basestring = (str,bytes)
 
 class PrePost(MeterBase):
+    """Meter which divides data into pre- and post- retrofit parts, then
+    executes potentially different pre- and post- retrofit meters.
+
+    Parameters
+    ----------
+    pre_meter : eemeter.meter.MeterBase
+        Meter to evaluate on pre-retrofit data. Meter results keys will be
+        prepended with "_pre". (Note, it will have access to both pre- and
+        post-retrofit data.
+    post_meter : eemeter.meter.MeterBase
+        Meter to evaluate on pre-retrofit data. Meter results keys will be
+        prepended with "_post". (Note: it will have access to both pre- and
+        post-retrofit data.
+    splittable_args : list of str
+        List of keys which should be split using the `before(date)` and
+        `after(date)` methods.
+    """
+
     def __init__(self,pre_meter,post_meter,splittable_args,**kwargs):
         super(PrePost,self).__init__(**kwargs)
         self.pre_meter = pre_meter
         self.post_meter = post_meter
         self.splittable_args = splittable_args
 
-    def evaluate_mapped_inputs(self,retrofit_start_date,retrofit_end_date,**kwargs):
+    def evaluate_mapped_inputs(self,retrofit_start_date,retrofit_completion_date,**kwargs):
         """Splits consuption_history into pre and post retrofit periods, then
         evaluates a meter on each subset of consumptions, appending the strings
         `"_pre"` and `"_post"`, respectively, to each key of each meter output.
+
+        Parameters
+        ----------
+        retrofit_start_date : datetime.date or datetime.datetime
+            Date of retrofit start. "pre" data will include consumptions which
+            end before or on this date.
+        retrofit_completion_date : datetime.date or datetime.datetime
+            Date of retrofit start. "ost" data will include consumptions which
+            begin after or on this date.
         """
         pre_kwargs = {}
         post_kwargs = {}
@@ -29,7 +56,7 @@ class PrePost(MeterBase):
         for k,v in kwargs.items():
             if k in self.splittable_args:
                 pre_kwargs[k] = v.before(retrofit_start_date)
-                post_kwargs[k] = v.after(retrofit_end_date)
+                post_kwargs[k] = v.after(retrofit_completion_date)
                 split_kwargs[k + "_pre"] = pre_kwargs[k]
                 split_kwargs[k + "_post"] = post_kwargs[k]
             else:
