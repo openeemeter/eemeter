@@ -50,6 +50,7 @@ class PrePost(MeterBase):
             Date of retrofit start. "ost" data will include consumptions which
             begin after or on this date.
         """
+
         pre_kwargs = {}
         post_kwargs = {}
         split_kwargs = {}
@@ -72,6 +73,26 @@ class PrePost(MeterBase):
         return results
 
 class MeetsThresholds(MeterBase):
+    """Evaluates whether or not particular named metrics meet thresholds of
+    acceptance criteria and returns booleans indicating acceptance or failure.
+
+    Parameters
+    ----------
+    values : list of str
+        List of names of inputs for which to check acceptance criteria.
+    thresholds : list of comparable items
+        Thresholds that must be met. Must have same length as `values`.
+    operations : list of {"lt","gt","lte","gte"}
+        Direction of criterion. Options are less than, greater than, less than
+        or equal to, or greater than or equal to. Must have same length as
+        `values`.
+    proportions : list of float
+        Multipliers on the threshold (e.g. (value < threshold * proportion)).
+        Must have same length as `values`.
+    output_names : list of str
+        Names of output booleans. Must have same length as `values`.
+    """
+
     def __init__(self,values,thresholds,operations,proportions,output_names,**kwargs):
         super(MeetsThresholds,self).__init__(**kwargs)
         self.values = values
@@ -81,6 +102,13 @@ class MeetsThresholds(MeterBase):
         self.output_names = output_names
 
     def evaluate_mapped_inputs(self,**kwargs):
+        """Evaluates threshold comparisons on incoming data.
+
+        Parameters
+        ----------
+        out : dict
+            Boolean outputs keyed on output names.
+        """
         result = {}
         for v,t,o,p,n in zip(self.values,self.thresholds,self.operations,self.proportions,self.output_names):
             value = kwargs.get(v)
@@ -99,8 +127,24 @@ class MeetsThresholds(MeterBase):
         return result
 
 class EstimatedReadingConsolidationMeter(MeterBase):
+    """Consolidates estimated readings by either combining them with actual
+    reads or dropping them entirely (e.g. final read is estimated).
+
+    Parameters
+    ----------
+    consumption_history : eemeter.consumption.ConsumptionHistory
+        Meter readings to consolidate.
+    """
 
     def evaluate_mapped_inputs(self,consumption_history,**kwargs):
+        """Evaluates threshold comparisons on incoming data.
+
+        Parameters
+        ----------
+        out : dict
+            Contains the consolidated consumption history keyed by the string
+            "consumption_history_no_estimated".
+        """
         def combine_waitlist(wl):
             usage = sum([c.to("kWh") for c in wl])
             ft = wl[0].fuel_type
@@ -121,6 +165,10 @@ class Debug(MeterBase):
     def evaluate_mapped_inputs(self,**kwargs):
         """Helpful for debugging meter instances - prints out kwargs for
         inspection.
+
+        Returns
+        -------
+        out : {}
         """
         print("DEBUG")
         pprint(kwargs)
@@ -128,8 +176,17 @@ class Debug(MeterBase):
 
 class DummyMeter(MeterBase):
     def evaluate_mapped_inputs(self,value,**kwargs):
-        """Helpful for testing meters - passes a value directly through. May
-        also be helpful for hacking input/output mappings.
+        """Helpful for testing meters or creating simple pass through meters.
+
+        Parameters
+        ----------
+        value : object
+            Value to return
+
+        Returns
+        -------
+        out : dict
+            Value stored on key "result".
         """
         result = {"result": value}
         return result
