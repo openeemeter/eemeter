@@ -179,7 +179,7 @@ class Switch(MeterBase):
         The name of the parameter on which to switch.
     cases : dict
         A dictionary of meters to execute depending on the value of the target
-        parameter; keyed on cases.
+        parameter; keyed on potential values of target.
     default : eemeter.meter.MeterBase, optional
         The meter to exectute if the value of the parameter was not found in
         the dictionary of cases.
