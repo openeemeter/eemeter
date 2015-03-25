@@ -64,7 +64,7 @@ def test_pre_post_parameters(generated_consumption_history_pre_post_1,
     result = meter.evaluate(consumption_history=ch,
                             weather_source=gsod_722880_2012_2014_weather_source,
                             retrofit_start_date=retrofit,
-                            retrofit_end_date=retrofit)
+                            retrofit_completion_date=retrofit)
 
     assert_allclose(result['temp_sensitivity_params_pre'], pre_params, rtol=RTOL, atol=ATOL)
     assert_allclose(result['temp_sensitivity_params_post'], post_params, rtol=RTOL, atol=ATOL)

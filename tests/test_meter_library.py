@@ -174,7 +174,7 @@ def test_gross_savings_metric(generated_consumption_history_pre_post_with_gross_
     result = meter.evaluate(consumption_history=ch,
                             weather_source=gsod_722880_2012_2014_weather_source,
                             retrofit_start_date=retrofit,
-                            retrofit_end_date=retrofit)
+                            retrofit_completion_date=retrofit)
 
     assert_allclose(result['temp_sensitivity_params_pre'], pre_params, rtol=RTOL, atol=ATOL)
     assert_allclose(result['temp_sensitivity_params_post'], post_params, rtol=RTOL, atol=ATOL)
@@ -235,7 +235,7 @@ def test_annualized_gross_savings_metric(generated_consumption_history_pre_post_
                             weather_source=gsod_722880_2012_2014_weather_source,
                             weather_normal_source=tmy3_722880_weather_source,
                             retrofit_start_date=retrofit,
-                            retrofit_end_date=retrofit)
+                            retrofit_completion_date=retrofit)
 
     assert_allclose(result['temp_sensitivity_params_pre'], pre_params, rtol=RTOL, atol=ATOL)
     assert_allclose(result['temp_sensitivity_params_post'], post_params, rtol=RTOL, atol=ATOL)
