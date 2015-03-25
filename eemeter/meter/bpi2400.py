@@ -1,12 +1,12 @@
 from eemeter.meter import MeterBase
 from eemeter.config.yaml_parser import load
 
-class BPI2400Meter(MeterBase):
-    """Implementation of BPI-2400 standard
+class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(MeterBase):
+    """Implementation of BPI-2400-S-2012 section 3.2.2.
     """
 
     def __init__(self,**kwargs):
-        super(BPI2400Meter, self).__init__(**kwargs)
+        super(BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria, self).__init__(**kwargs)
         self.meter = load(self._meter_yaml())
 
     def _meter_yaml(self):
@@ -257,35 +257,36 @@ class BPI2400Meter(MeterBase):
                                         output: meets_model_calibration_utility_bill_criteria
                                     }
                                 },
-                                !obj:eemeter.meter.Condition {
-                                    condition_parameter: meets_model_calibration_utility_bill_criteria,
-                                    success: !obj:eemeter.meter.Sequence {
-                                        input_mapping: {
-                                            consumption_history: null,
-                                            consumption_history_no_estimated: consumption_history
-                                        },
-                                        sequence: [
-                                        ]
-                                    },
-                                    failure: !obj:eemeter.meter.Sequence {
-                                        input_mapping: {
-                                            consumption_history: null,
-                                            consumption_history_no_estimated: consumption_history
-                                        },
-                                        sequence: [
-                                        ]
-                                    }
-                                }
-                            ]
+                            ],
                         }
-                    },
-                    !obj:eemeter.meter.Debug {},
+                    }
                 ]
             }
             """
         return meter_yaml
 
     def evaluate_mapped_inputs(self,**kwargs):
+        """Evaluates utility bills for compliance with criteria specified in
+        ANSI/BPI-2400-S-2012 section 3.2.2.
+
+        Parameters
+        ----------
+        consumption_history : eemeter.consumption.ConsumptionHistory
+            All available billing data (of all fuel types) available for the
+            target project. Estimated bills must be flagged.
+        weather_source : eemeter.weather.WeatherSourceBase
+            Weather data should come from a source as geographically and
+            climatically similar to the target project as possible.
+        weather_normal_source : eemeter.weather.WeatherSourceBase with eemeter.weather.WeatherNormalMixin
+            Weather normal data should come from a source as geographically and
+            climatically similar to the target project as possible.
+
+        Returns
+        -------
+        out : dict
+            Dictionary of outputs and sub-outputs. The main boolean output is
+            :code:`meets_model_calibration_utility_bill_criteria`.
+        """
         return self.meter.evaluate(**kwargs)
 
     def _get_child_inputs(self):

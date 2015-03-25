@@ -29,17 +29,9 @@ class MeterBase(object):
         self.extras = extras
 
     def evaluate(self,**kwargs):
-        """Evaluate mapped meter inputs to and return mapped outputs. Arguments
-        must be specified as keyword arguments.
-
-        **Note:** because `**kwargs` is intentionally general (and therefore
-        woefully unspecific), the function `meter.get_inputs()` exists to help
-        describe the required inputs.
-
-        Returns
-        -------
-        out : dict
-            Mapped outputs from meter evaluation.
+        """Thin wrapper on `evaluate_mapped_inputs` which performs input
+        and output mappings. Arguments must be specified as keyword arguments.
+        This is the preferred method for evaluating meters.
         """
         mapped_inputs = self._remap(kwargs,self.input_mapping)
         for k,v in self.extras.items():
@@ -90,7 +82,8 @@ class MeterBase(object):
 
     def evaluate_mapped_inputs(self,**kwargs):
         """Should be the workhorse method which implements the logic of the
-        meter, returning a dictionary of meter outputs.
+        meter, returning a dictionary of meter outputs. Must be defined by
+        inheriting class.
         """
         raise NotImplementedError
 
