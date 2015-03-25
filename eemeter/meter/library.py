@@ -198,7 +198,7 @@ class AnnualizedGrossSavingsMeter(MeterBase):
         Returns
         -------
         out : dict
-            Annualized gross savings keyed by the string "gross_savings".
+            Annualized gross savings keyed by the string "annualized_gross_savings".
         """
 
         meter = AnnualizedUsageMeter(self.temperature_unit_str,self.model)

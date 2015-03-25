@@ -29,7 +29,7 @@ class MeterBase(object):
         self.extras = extras
 
     def evaluate(self,**kwargs):
-        """Thin wrapper on evaluate_mapped_inputs method which performs input
+        """Thin wrapper on `evaluate_mapped_inputs` which performs input
         and output mappings. Arguments must be specified as keyword arguments.
         This is the preferred method for evaluating meters.
         """

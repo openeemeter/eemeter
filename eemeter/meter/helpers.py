@@ -47,8 +47,15 @@ class PrePost(MeterBase):
             Date of retrofit start. "pre" data will include consumptions which
             end before or on this date.
         retrofit_completion_date : datetime.date or datetime.datetime
-            Date of retrofit start. "ost" data will include consumptions which
+            Date of retrofit start. "post" data will include consumptions which
             begin after or on this date.
+
+        Returns
+        -------
+        out : dict
+            Dictionary with results of pre- and post- retrofit meter results
+            and split inputs. Results will have "_pre" or "_post" appended to
+            key string.
         """
 
         pre_kwargs = {}
@@ -129,11 +136,6 @@ class MeetsThresholds(MeterBase):
 class EstimatedReadingConsolidationMeter(MeterBase):
     """Consolidates estimated readings by either combining them with actual
     reads or dropping them entirely (e.g. final read is estimated).
-
-    Parameters
-    ----------
-    consumption_history : eemeter.consumption.ConsumptionHistory
-        Meter readings to consolidate.
     """
 
     def evaluate_mapped_inputs(self,consumption_history,**kwargs):
@@ -141,6 +143,11 @@ class EstimatedReadingConsolidationMeter(MeterBase):
 
         Parameters
         ----------
+        consumption_history : eemeter.consumption.ConsumptionHistory
+            Meter readings to consolidate.
+
+        Returns
+        -------
         out : dict
             Contains the consolidated consumption history keyed by the string
             "consumption_history_no_estimated".
