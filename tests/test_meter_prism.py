@@ -16,9 +16,10 @@ import pytest
 def test_princeton_scorekeeping_method(prism_outputs_1,
                                        gsod_722880_2012_2014_weather_source,
                                        tmy3_722880_weather_source):
-    meter = PRISMMeter()
+    ch, elec_params, elec_presence, elec_annualized_usage, elec_error, temp_unit = prism_outputs_1
 
-    ch, elec_params, elec_presence, elec_annualized_usage, elec_error = prism_outputs_1
+    meter = PRISMMeter(temperature_unit_str=temp_unit)
+
     result = meter.evaluate(consumption_history=ch,
                             weather_source=gsod_722880_2012_2014_weather_source,
                             weather_normal_source=tmy3_722880_weather_source)
@@ -38,3 +39,7 @@ def test_princeton_scorekeeping_method(prism_outputs_1,
     assert result.get("annualized_usage_natural_gas") is None
     assert result.get("daily_standard_error_natural_gas") is None
 
+def test_prism_bad_temp_unit():
+
+    with pytest.raises(ValueError):
+        meter = PRISMMeter(temperature_unit_str="bad_unit")

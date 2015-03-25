@@ -163,9 +163,11 @@ def generated_consumption_history_pre_post_with_annualized_gross_savings_1(reque
     ch = ConsumptionHistory(pre_consumptions + post_consumptions)
     return ch, model.param_dict_to_list(pre_params), model.param_dict_to_list(post_params), retrofit, request.param[2]
 
-@pytest.fixture(params=[([-1, 1,60,1,70],True,938.5257711762131,0),
-                        ([10,2,58,1,72],True,4927.478974253085,0),
-                        ([0,2,64,3,66],True,6017.849018719649,0)])
+@pytest.fixture(params=[([-1, 1,14.5,8,17.8],True,6119.297438069778,0,"degC"),
+                        ([10,2,15.5,1,19.5],True,4927.478974253085,0,"degC"),
+                        ([0,2,18.8,7,22.2],True,3616.249477948155,0,"degC"),
+                        ([0,2,65,3,71],True,4700.226534599519,0,"degF"),
+                        ])
 def prism_outputs_1(request):
     model = TemperatureSensitivityModel(cooling=True,heating=True)
     params = {
@@ -178,9 +180,9 @@ def prism_outputs_1(request):
     start = datetime(2012,1,1)
     end = datetime(2014,12,31)
     periods = generate_periods(start,end,jitter_intensity=0)
-    gen = ConsumptionGenerator("electricity", "kWh", "degF", model, params)
+    gen = ConsumptionGenerator("electricity", "kWh", request.param[4], model, params)
     consumptions = gen.generate(gsod_722880_2012_2014_weather_source(), periods)
-    return ConsumptionHistory(consumptions), model.param_dict_to_list(params), request.param[1], request.param[2], request.param[3]
+    return ConsumptionHistory(consumptions), model.param_dict_to_list(params), request.param[1], request.param[2], request.param[3], request.param[4]
 
 @pytest.fixture(params=[([10,2,58,1,72],[10,1,65],0)])
 def bpi_2400_1(request):
