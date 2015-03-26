@@ -4,6 +4,7 @@ from eemeter.consumption import Consumption
 from eemeter.consumption import ConsumptionHistory
 
 from itertools import chain
+from pprint import pprint
 
 try:
     unicode = unicode
@@ -40,6 +41,7 @@ class PrePost(MeterBase):
         """Splits consuption_history into pre and post retrofit periods, then
         evaluates a meter on each subset of consumptions, appending the strings
         `"_pre"` and `"_post"`, respectively, to each key of each meter output.
+        The values "is_pre" and "is_post" are also defined.
 
         Parameters
         ----------
@@ -58,8 +60,18 @@ class PrePost(MeterBase):
             key string.
         """
 
-        pre_kwargs = {}
-        post_kwargs = {}
+        pre_kwargs = {
+            "is_pre":True,
+            "is_post":False,
+            "retrofit_start_date": retrofit_start_date,
+            "retrofit_completion_date": retrofit_completion_date
+        }
+        post_kwargs = {
+            "is_pre": False,
+            "is_post": True,
+            "retrofit_start_date": retrofit_start_date,
+            "retrofit_completion_date": retrofit_completion_date
+        }
         split_kwargs = {}
         for k,v in kwargs.items():
             if k in self.splittable_args:
@@ -68,8 +80,8 @@ class PrePost(MeterBase):
                 split_kwargs[k + "_pre"] = pre_kwargs[k]
                 split_kwargs[k + "_post"] = post_kwargs[k]
             else:
-                pre_kwargs[k] = kwargs[k]
-                post_kwargs[k] = kwargs[k]
+                pre_kwargs[k] = v
+                post_kwargs[k] = v
         pre_results = self.pre_meter.evaluate(**pre_kwargs)
         post_results = self.post_meter.evaluate(**post_kwargs)
         pre_results = {k + "_pre":v for k,v in pre_results.items()}
