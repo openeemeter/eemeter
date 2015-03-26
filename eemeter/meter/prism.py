@@ -57,88 +57,103 @@ class PRISMMeter(MeterBase):
             raise ValueError("Invalid temperature_unit_str: should be one of 'degF' or 'degC'.")
 
         meter_yaml = """
-            !obj:eemeter.meter.Sequence {{
-                sequence: [
-                    !obj:eemeter.meter.FuelTypePresenceMeter {{
-                        fuel_types: [electricity,natural_gas]
-                    }},
-                    !obj:eemeter.meter.Condition {{
-                        condition_parameter: electricity_presence,
-                        success: !obj:eemeter.meter.Sequence {{
-                            sequence: [
-                                !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {{
-                                    fuel_unit_str: "kWh",
-                                    fuel_type: "electricity",
-                                    temperature_unit_str: "{temp_unit}",
-                                    model: !obj:eemeter.models.TemperatureSensitivityModel &elec_model {{
-                                        cooling: True,
-                                        heating: True,
-                                        initial_params: {{
-                                            base_consumption: 0,
-                                            heating_slope: 0,
-                                            cooling_slope: 0,
-                                            heating_reference_temperature: {h_ref_x0},
-                                            cooling_reference_temperature: {c_ref_x0},
-                                        }},
-                                        param_bounds: {{
-                                            base_consumption: [-20,80],
-                                            heating_slope: [0,{h_slope_h}],
-                                            cooling_slope: [0,{c_slope_h}],
-                                            heating_reference_temperature: [{h_ref_l},{h_ref_h}],
-                                            cooling_reference_temperature: [{c_ref_l},{c_ref_h}],
-                                        }},
-                                    }},
-                                }},
-                                !obj:eemeter.meter.AnnualizedUsageMeter {{
-                                    fuel_type: "electricity",
-                                    temperature_unit_str: "{temp_unit}",
-                                    model: *elec_model,
-                                }},
+            !obj:eemeter.meter.PrePost {{
+                splittable_args: [consumption_history],
+                pre_meter: !obj:eemeter.meter.Sequence &core_meter {{
+                    sequence: [
+                        !obj:eemeter.meter.Condition  {{
+                            condition_parameter: is_pre,
+                            success: !obj:eemeter.meter.BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria {{
+                                input_mapping: {{
+                                    retrofit_start_date: [retrofit_start_date, since_date],
+                                }}
+                            }},
+                            failure: !obj:eemeter.meter.BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria {{}},
+                        }},
+                        !obj:eemeter.meter.ForEachFuelType {{
+                            fuel_types: [electricity, natural_gas],
+                            gathered_inputs: [
+                                meets_model_calibration_utility_bill_criteria,
                             ],
-                            output_mapping: {{
-                                temp_sensitivity_params: temp_sensitivity_params_electricity,
-                                annualized_usage: annualized_usage_electricity,
-                                daily_standard_error: daily_standard_error_electricity,
+                            meter: !obj:eemeter.meter.Condition {{
+                                condition_parameter: meets_model_calibration_utility_bill_criteria_current_fuel,
+                                success: !obj:eemeter.meter.Sequence {{
+                                    sequence: [
+                                        !obj:eemeter.meter.Switch {{
+                                            target: fuel_type,
+                                            cases: {{
+                                                electricity: !obj:eemeter.meter.Sequence {{
+                                                    sequence: [
+                                                        !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {{
+                                                            fuel_unit_str: kWh,
+                                                            fuel_type: electricity,
+                                                            temperature_unit_str: {temp_unit},
+                                                            model: !obj:eemeter.models.TemperatureSensitivityModel &electricity_model {{
+                                                                cooling: True,
+                                                                heating: True,
+                                                                initial_params: {{
+                                                                    base_consumption: 0,
+                                                                    heating_slope: 0,
+                                                                    cooling_slope: 0,
+                                                                    heating_reference_temperature: {h_ref_x0},
+                                                                    cooling_reference_temperature: {c_ref_x0},
+                                                                }},
+                                                                param_bounds: {{
+                                                                    base_consumption: [-20,80],
+                                                                    heating_slope: [0,{h_slope_h}],
+                                                                    cooling_slope: [0,{c_slope_h}],
+                                                                    heating_reference_temperature: [{h_ref_l},{h_ref_h}],
+                                                                    cooling_reference_temperature: [{c_ref_l},{c_ref_h}],
+                                                                }},
+                                                            }},
+                                                        }},
+                                                        !obj:eemeter.meter.AnnualizedUsageMeter {{
+                                                            fuel_type: electricity,
+                                                            temperature_unit_str: {temp_unit},
+                                                            model: *electricity_model,
+                                                        }},
+                                                    ]
+                                                }},
+                                                natural_gas: !obj:eemeter.meter.Sequence {{
+                                                    sequence: [
+                                                        !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {{
+                                                            fuel_unit_str: therms,
+                                                            fuel_type: natural_gas,
+                                                            temperature_unit_str: {temp_unit},
+                                                            model: !obj:eemeter.models.TemperatureSensitivityModel &natural_gas_model {{
+                                                                cooling: False,
+                                                                heating: True,
+                                                                initial_params: {{
+                                                                    base_consumption: 0,
+                                                                    heating_slope: 0,
+                                                                    heating_reference_temperature: {h_ref_x0},
+                                                                }},
+                                                                param_bounds: {{
+                                                                    base_consumption: [-20,80],
+                                                                    heating_slope: [0,{h_slope_h}],
+                                                                    heating_reference_temperature: [{h_ref_l},{h_ref_h}],
+                                                                }},
+                                                            }},
+                                                        }},
+                                                        !obj:eemeter.meter.AnnualizedUsageMeter {{
+                                                            fuel_type: natural_gas,
+                                                            temperature_unit_str: {temp_unit},
+                                                            model: *natural_gas_model,
+                                                        }},
+                                                    ]
+                                                }},
+                                            }},
+                                        }},
+                                    ],
+                                }},
+                                failure: !obj:eemeter.meter.Sequence {{
+                                    sequence: [],
+                                }},
                             }},
                         }},
-                    }},
-                    !obj:eemeter.meter.Condition {{
-                        condition_parameter: natural_gas_presence,
-                        success: !obj:eemeter.meter.Sequence {{
-                            sequence: [
-                                !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {{
-                                    fuel_unit_str: "therms",
-                                    fuel_type: "natural_gas",
-                                    temperature_unit_str: "{temp_unit}",
-                                    model: !obj:eemeter.models.TemperatureSensitivityModel &gas_model {{
-                                        cooling: False,
-                                        heating: True,
-                                        initial_params: {{
-                                            base_consumption: 0,
-                                            heating_slope: 0,
-                                            heating_reference_temperature: {h_ref_x0},
-                                        }},
-                                        param_bounds: {{
-                                            base_consumption: [0,10],
-                                            heating_slope: [0,{h_slope_h}],
-                                            heating_reference_temperature: [{h_ref_l},{h_ref_h}],
-                                        }},
-                                    }},
-                                }},
-                                !obj:eemeter.meter.AnnualizedUsageMeter {{
-                                    fuel_type: "natural_gas",
-                                    temperature_unit_str: "{temp_unit}",
-                                    model: *gas_model,
-                                }},
-                            ],
-                            output_mapping: {{
-                                temp_sensitivity_params: temp_sensitivity_params_natural_gas,
-                                annualized_usage: annualized_usage_natural_gas,
-                                daily_standard_error: daily_standard_error_natural_gas,
-                            }},
-                        }},
-                    }},
-                ]
+                    ]
+                }},
+                post_meter: *core_meter,
             }}
             """.format(temp_unit=self.temperature_unit_str,
                        h_ref_l=heating_ref_temp_low,

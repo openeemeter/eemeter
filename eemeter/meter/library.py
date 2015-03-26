@@ -7,6 +7,8 @@ from eemeter.consumption import DatetimePeriod
 from itertools import chain
 import numpy as np
 
+import re
+
 class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
     """Optimizes temperature senstivity parameter choices.
 
@@ -254,11 +256,17 @@ class ForEachFuelType(MeterBase):
         Fuel types to execute meter for; e.g. ["electricity","natural_gas"]
     meter : eemeter.meter.MeterBase
         Meter to execute once for each fuel type.
+    gathered_inputs : list of str
+        Key strings for fuel-type-specific inputs that should be gathered and
+        cleaned. Keys in this list will be remapped from "*_{fuel_type}" to
+        "*_current_fuel". E.g. "output_electricity" -> "output_current_fuel".
+        This increases meter reusability.
     """
-    def __init__(self,fuel_types,meter,**kwargs):
+    def __init__(self,fuel_types,meter,gathered_inputs=[],**kwargs):
         super(ForEachFuelType,self).__init__(**kwargs)
         self.fuel_types = fuel_types
         self.meter = meter
+        self.gathered_inputs = gathered_inputs
 
     def evaluate_mapped_inputs(self,**kwargs):
         """Evaluates the meter once for each fuel type; appending
@@ -272,7 +280,17 @@ class ForEachFuelType(MeterBase):
         """
         results = {}
         for fuel_type in self.fuel_types:
-            inputs = dict(chain(kwargs.items(),{"fuel_type": fuel_type}.items()))
+            inputs = {}
+            p = re.compile("(_{}$)".format(fuel_type))
+            for k,v in kwargs.items():
+                stripped_k = p.sub('',k)
+                if stripped_k in self.gathered_inputs:
+                    subbed_key = p.sub('_current_fuel',k)
+                    inputs[subbed_key] = v
+                else:
+                    inputs[k] = v
+            inputs["fuel_type"] = fuel_type
+
             result = self.meter.evaluate(**inputs)
             for k,v in result.items():
                 results[ "{}_{}".format(k,fuel_type)] = v
@@ -604,14 +622,12 @@ class RecentReadingMeter(MeterBase):
     ----------
     n_days : int
         The target number of days since the most recent reading.
-    since_date : datetime.datetime
-        The date to count from; defaults to datetime.now().
     """
-    def __init__(self,n_days,since_date=datetime.now(),**kwargs):
+    def __init__(self,n_days,**kwargs):
         super(RecentReadingMeter,self).__init__(**kwargs)
-        self.dt_target = since_date - timedelta(days=n_days)
+        self.n_days = n_days
 
-    def evaluate_mapped_inputs(self,consumption_history,fuel_type,**kwargs):
+    def evaluate_mapped_inputs(self,consumption_history,fuel_type,since_date=datetime.now(),**kwargs):
         """Evaluates the number of days since the last reading against the
         threshold.
 
@@ -622,6 +638,8 @@ class RecentReadingMeter(MeterBase):
         fuel_type : str
             A string representing the consumption fuel_type used to fetch
             periods; e.g. "electricity"
+        since_date : datetime.datetime, optional
+            The date to count from; defaults to datetime.now().
 
         Returns
         -------
@@ -629,9 +647,10 @@ class RecentReadingMeter(MeterBase):
             A dictionary containing a single item with the key "recent_reading"
             containing True if the most recent reading is within the threshold.
         """
+        dt_target = since_date - timedelta(days=self.n_days)
         recent_reading = False
         for consumption in consumption_history.get(fuel_type):
-            if consumption.end > self.dt_target:
+            if consumption.end > dt_target:
                 recent_reading = True
                 break
         return {"recent_reading": recent_reading}
