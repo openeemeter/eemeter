@@ -3,6 +3,8 @@ from dateutil.parser import parse
 from eemeter.consumption import Consumption
 from eemeter.consumption import ConsumptionHistory
 from datetime import datetime
+from csv import DictReader
+import dateutil.parser
 
 from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, Integer, Float, Numeric, String, MetaData, ForeignKey, TIMESTAMP
@@ -193,3 +195,43 @@ def import_seed_timeseries(db_url):
         buildings_data[building_id] = ConsumptionHistory(consumptions)
 
     return buildings_data
+
+def import_csv(filename):
+    """Import from csv spreadsheet with the following columns:
+
+    - Consumption: float
+    - UnitofMeasure: {"therms", "kWh"}
+    - FuelType: {"natural gas", "electricity"}
+    - StartDateTime: str (ISO 8601 combined date time)
+    - EndDateTime: str (ISO 8601 combined date time)
+    - ReadingType: {"actual", "estimated"}
+
+    Parameters
+    ----------
+    filename : str
+        Full path to CSV file
+
+    Returns
+    -------
+    out : eemeter.consumption.ConsumptionHistory
+        Consumption history available for this project
+    """
+    fuel_type_mapping = {
+        "electricity": "electricity",
+        "natural gas": "natural_gas",
+    }
+
+    with open(filename,'rU') as f:
+        consumptions = []
+        for row in DictReader(f):
+            usage = float(row["Consumption"])
+            unit_str = row["UnitofMeasure"]
+            fuel_type = fuel_type_mapping[row["FuelType"]]
+            start_date = dateutil.parser.parse(row["StartDateTime"])
+            end_date = dateutil.parser.parse(row["EndDateTime"])
+            estimated = (row["ReadingType"] == "estimated")
+            c = Consumption(usage,unit_str,fuel_type,start_date,end_date,estimated)
+            consumptions.append(c)
+    return ConsumptionHistory(consumptions)
+
+

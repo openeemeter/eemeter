@@ -3,6 +3,7 @@ import os
 from eemeter.importers import import_hpxml
 from eemeter.importers import import_green_button_xml
 from eemeter.importers import import_seed_timeseries
+from eemeter.importers import import_csv
 
 from numpy.testing import assert_allclose
 from datetime import datetime
@@ -800,3 +801,23 @@ def test_import_seed_timeseries():
 
     assert c_1_e[0].start == datetime(2011,1,1)
     assert c_1_g[3].end == datetime(2011,5,1)
+
+def test_import_csv():
+    data0 = \
+"""Consumption,UnitofMeasure,FuelType,StartDateTime,EndDateTime,ReadingType
+25.0,therms,natural gas,2013-12-15T00:00:00+00:00,2014-01-14T00:00:00+00:00,estimated
+1000,kWh,electricity,2013-11-10T00:00:00+00:00,2013-12-15T00:00:00+00:00,actual"""
+
+    fd, fname = tempfile.mkstemp()
+    with os.fdopen(fd, 'wb') as f:
+        f.write(data0.encode('utf-8'))
+
+    ch = import_csv(fname)
+    assert len(ch.natural_gas) == 1
+    assert len(ch.electricity) == 1
+    assert_allclose(ch.natural_gas[0].therms,25,rtol=RTOL,atol=ATOL)
+    assert_allclose(ch.electricity[0].kWh,1000,rtol=RTOL,atol=ATOL)
+    assert ch.natural_gas[0].estimated
+    assert not ch.electricity[0].estimated
+    assert ch.natural_gas[0].timedelta.days == 30
+    assert ch.electricity[0].timedelta.days == 35
