@@ -258,8 +258,8 @@ class ForEachFuelType(MeterBase):
         Meter to execute once for each fuel type.
     gathered_inputs : list of str
         Key strings for fuel-type-specific inputs that should be gathered and
-        cleaned. Keys in this list will be remapped from "*_{fuel_type}" to
-        "*_current_fuel". E.g. "output_electricity" -> "output_current_fuel".
+        cleaned. Keys in this list will be remapped from "\*_{fuel_type}" to
+        "\*_current_fuel". E.g. "output_electricity" -> "output_current_fuel".
         This increases meter reusability.
     """
     def __init__(self,fuel_types,meter,gathered_inputs=[],**kwargs):

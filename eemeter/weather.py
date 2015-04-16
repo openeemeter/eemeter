@@ -124,6 +124,7 @@ class WeatherSourceBase(object):
         """The average temperatures during each period as calculated by taking
         the mean of all available daily average temperatures during that
         period.
+
         Parameters
         ----------
         periods : [list of] eemeter.consumption.DatetimePeriod
@@ -131,6 +132,7 @@ class WeatherSourceBase(object):
             datetime period may be given.
         unit : {"degC", "degF"}
             The unit in which average temperatures should be returned.
+
         Returns
         -------
         out : np.ndarray
@@ -149,12 +151,14 @@ class WeatherSourceBase(object):
     def _period_average_temperature(self,period,unit):
         """The average temperatures during the period as calculated by taking
         the mean of all available daily average temperatures during the period.
+
         Parameters
         ----------
         period : eemeter.consumption.DatetimePeriod
             Time period over which temperatures will be aggregated.
         unit : {"degC", "degF"}
             The unit in which average temperature should be returned.
+
         Returns
         -------
         out : float
@@ -165,6 +169,7 @@ class WeatherSourceBase(object):
 
     def daily_temperatures(self,periods,unit):
         """The daily average temperatures for each period.
+
         Parameters
         ----------
         periods : [list of] eemeter.consumption.DatetimePeriod
@@ -172,6 +177,7 @@ class WeatherSourceBase(object):
             datetime period may be given.
         unit : {"degC", "degF"}
             The unit in which temperatures should be returned.
+
         Returns
         -------
         out : np.ndarray
@@ -193,12 +199,14 @@ class WeatherSourceBase(object):
 
     def _period_daily_temperatures(self,period,unit):
         """The daily average temperatures for a particular period.
+
         Parameters
         ----------
         period : eemeter.consumption.DatetimePeriod
             Time period over which temperatures will be aggregated.
         unit : {"degC", "degF"}
             The unit in which daily average temperatures should be returned.
+
         Returns
         -------
         out : np.ndarray
