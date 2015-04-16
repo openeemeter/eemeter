@@ -53,7 +53,7 @@ class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
         """
         consumptions = consumption_history.get(self.fuel_type)
         average_daily_usages = [c.average_daily_usage(self.fuel_unit_str) for c in consumptions]
-        observed_daily_temps = weather_source.get_daily_temperatures(consumptions,self.temperature_unit_str)
+        observed_daily_temps = weather_source.daily_temperatures(consumptions,self.temperature_unit_str)
         weights = [c.timedelta.days for c in consumptions]
         params = self.model.parameter_optimization(average_daily_usages,observed_daily_temps, weights)
 
@@ -152,7 +152,7 @@ class GrossSavingsMeter(MeterBase):
 
         """
         consumptions_post = consumption_history_post.get(self.fuel_type)
-        observed_daily_temps = weather_source.get_daily_temperatures(consumptions_post,self.temperature_unit_str)
+        observed_daily_temps = weather_source.daily_temperatures(consumptions_post,self.temperature_unit_str)
         usages_post = np.array([c.to(self.fuel_unit_str) for c in consumptions_post])
         usage_estimates_pre = self.model.compute_usage_estimates(temp_sensitivity_params_pre,observed_daily_temps)
         return {"gross_savings": np.nansum(usage_estimates_pre - usages_post)}
@@ -363,7 +363,7 @@ class TotalHDDMeter(MeterBase):
         """
 
         consumptions = consumption_history.get(fuel_type)
-        hdd = weather_source.get_hdd(consumptions,self.temperature_unit_str,self.base)
+        hdd = weather_source.hdd(consumptions,self.temperature_unit_str,self.base)
         return { "total_hdd": sum(hdd) }
 
 class TotalCDDMeter(MeterBase):
@@ -403,7 +403,7 @@ class TotalCDDMeter(MeterBase):
             total CDDs observed during the period
         """
         consumptions = consumption_history.get(fuel_type)
-        cdd = weather_source.get_cdd(consumptions,self.temperature_unit_str,self.base)
+        cdd = weather_source.cdd(consumptions,self.temperature_unit_str,self.base)
         return { "total_cdd": sum(cdd) }
 
 
@@ -442,7 +442,7 @@ class NormalAnnualHDD(MeterBase):
             start = datetime(2013,1,1) + timedelta(days=days)
             end = datetime(2013,1,1) + timedelta(days=days + 1)
             periods.append(DatetimePeriod(start,end))
-        hdd = weather_normal_source.get_hdd(periods,self.temperature_unit_str,self.base)
+        hdd = weather_normal_source.hdd(periods,self.temperature_unit_str,self.base)
         return { "normal_annual_hdd": sum(hdd) }
 
 class NormalAnnualCDD(MeterBase):
@@ -481,7 +481,7 @@ class NormalAnnualCDD(MeterBase):
             start = datetime(2013,1,1) + timedelta(days=days)
             end = datetime(2013,1,1) + timedelta(days=days + 1)
             periods.append(DatetimePeriod(start,end))
-        cdd = weather_normal_source.get_cdd(periods,self.temperature_unit_str,self.base)
+        cdd = weather_normal_source.cdd(periods,self.temperature_unit_str,self.base)
         return { "normal_annual_cdd": sum(cdd) }
 
 class NPeriodsMeetingHDDPerDayThreshold(MeterBase):
@@ -533,7 +533,7 @@ class NPeriodsMeetingHDDPerDayThreshold(MeterBase):
         """
         n_periods = 0
         consumptions = consumption_history.get(fuel_type)
-        hdds = weather_source.get_hdd_per_day(consumptions,self.temperature_unit_str,self.base)
+        hdds = weather_source.hdd(consumptions,self.temperature_unit_str,self.base,per_day=True)
         for period_hdd in hdds:
             if self.operation == "lt":
                 if period_hdd < self.proportion * hdd:
@@ -598,7 +598,7 @@ class NPeriodsMeetingCDDPerDayThreshold(MeterBase):
         """
         n_periods = 0
         consumptions = consumption_history.get(fuel_type)
-        cdds = weather_source.get_cdd_per_day(consumptions,self.temperature_unit_str,self.base)
+        cdds = weather_source.cdd(consumptions,self.temperature_unit_str,self.base,per_day=True)
         for period_cdd in cdds:
             if self.operation == "lt":
                 if period_cdd < self.proportion * cdd:
@@ -694,7 +694,7 @@ class CVRMSE(MeterBase):
         consumptions = consumption_history.get(fuel_type)
         weights = np.array([c.timedelta.days for c in consumptions])
         average_daily_usages = np.array([c.to(self.fuel_unit_str) for c in consumptions]) / weights
-        observed_daily_temps = weather_source.get_daily_temperatures(consumptions,"degF")
+        observed_daily_temps = weather_source.daily_temperatures(consumptions,"degF")
         params = self.model.parameter_optimization(average_daily_usages,observed_daily_temps,weights)
         estimated_daily_usages = self.model.compute_usage_estimates(params,observed_daily_temps) / weights
         y = average_daily_usages

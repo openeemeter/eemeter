@@ -70,9 +70,9 @@ def test_weather_source_base(consumption_history_one_summer_electricity):
     weather_source = WeatherSourceBase()
     consumptions = consumption_history_one_summer_electricity.get("electricity")
     with pytest.raises(NotImplementedError):
-        avg_temps = weather_source.get_average_temperature(consumptions,"degF")
+        avg_temps = weather_source.average_temperature(consumptions,"degF")
     with pytest.raises(NotImplementedError):
-        hdds = weather_source.get_hdd(consumptions,"degF",base=65)
+        hdds = weather_source.hdd(consumptions,"degF",base=65)
 
 @pytest.mark.slow
 @pytest.mark.internet
@@ -80,19 +80,19 @@ def test_gsod_weather_source(consumption_history_one_summer_electricity,gsod_wea
     gsod_weather_source = GSODWeatherSource(*gsod_weather_source)
     consumptions = consumption_history_one_summer_electricity.get("electricity")
 
-    avg_temps = gsod_weather_source.get_average_temperature(consumptions,"degF")
+    avg_temps = gsod_weather_source.average_temperature(consumptions,"degF")
     assert_allclose(avg_temps, [66.3833,67.803,74.445], rtol=RTOL,atol=ATOL)
 
-    hdds = gsod_weather_source.get_hdd(consumptions,"degF",65)
+    hdds = gsod_weather_source.hdd(consumptions,"degF",65)
     assert_allclose(hdds, [0.7,20.4,0.0], rtol=RTOL,atol=ATOL)
 
-    cdds = gsod_weather_source.get_cdd(consumptions,"degF",65)
+    cdds = gsod_weather_source.cdd(consumptions,"degF",65)
     assert_allclose(cdds, [42.2,107.3,292.8], rtol=RTOL,atol=ATOL)
 
-    hdds_per_day = gsod_weather_source.get_hdd_per_day(consumptions,"degF",65)
+    hdds_per_day = gsod_weather_source.hdd(consumptions,"degF",65,per_day=True)
     assert_allclose(hdds_per_day, [0.023,0.658,0.0], rtol=RTOL,atol=ATOL)
 
-    cdds_per_day = gsod_weather_source.get_cdd_per_day(consumptions,"degF",65)
+    cdds_per_day = gsod_weather_source.cdd(consumptions,"degF",65,per_day=True)
     assert_allclose(cdds_per_day, [1.406,3.461,9.445], rtol=RTOL,atol=ATOL)
 
 @pytest.mark.slow
@@ -106,13 +106,13 @@ def test_weather_underground_weather_source(consumption_history_one_summer_elect
                                                             wunderground_api_key)
         consumptions = consumption_history_one_summer_electricity.get("electricity")
 
-        avg_temps = wu_weather_source.get_average_temperature(consumptions,"degF")
+        avg_temps = wu_weather_source.average_temperature(consumptions,"degF")
         assert_allclose(avg_temps, [74.433,82.677,75.451], rtol=RTOL,atol=ATOL)
 
-        hdds = wu_weather_source.get_hdd(consumptions,"degF",65)
+        hdds = wu_weather_source.hdd(consumptions,"degF",65)
         assert_allclose(hdds, [14.0,0.0,0.0], rtol=RTOL,atol=ATOL)
 
-        cdds = wu_weather_source.get_cdd(consumptions,"degF",65)
+        cdds = wu_weather_source.cdd(consumptions,"degF",65)
         assert_allclose(cdds, [297.0,548.0,324.0], rtol=RTOL,atol=ATOL)
     else:
         warnings.warn("Skipping WeatherUndergroundWeatherSource tests. "
@@ -125,13 +125,13 @@ def test_isd_weather_source(consumption_history_one_summer_electricity,isd_weath
     isd_weather_source = ISDWeatherSource(*isd_weather_source)
     consumptions = consumption_history_one_summer_electricity.get("electricity")
 
-    avg_temps = isd_weather_source.get_average_temperature(consumptions,"degF")
+    avg_temps = isd_weather_source.average_temperature(consumptions,"degF")
     assert_allclose(avg_temps, [66.576,68.047,74.697], rtol=RTOL,atol=ATOL)
 
-    hdds = isd_weather_source.get_hdd(consumptions,"degF",65)
+    hdds = isd_weather_source.hdd(consumptions,"degF",65)
     assert_allclose(hdds, [0.294,20.309,0.0], rtol=RTOL,atol=ATOL)
 
-    cdds = isd_weather_source.get_cdd(consumptions,"degF",65)
+    cdds = isd_weather_source.cdd(consumptions,"degF",65)
     assert_allclose(cdds, [47.603,113.775,300.722], rtol=RTOL,atol=ATOL)
 
 @pytest.mark.slow
@@ -139,13 +139,13 @@ def test_isd_weather_source(consumption_history_one_summer_electricity,isd_weath
 def test_tmy3_weather_source(consumption_history_one_summer_electricity,tmy3_weather_source):
     consumptions = consumption_history_one_summer_electricity.get("electricity")
 
-    avg_temps = tmy3_weather_source.get_average_temperature(consumptions,"degF")
+    avg_temps = tmy3_weather_source.average_temperature(consumptions,"degF")
     assert_allclose(avg_temps, [68.1822,73.05548,74.315], rtol=RTOL,atol=ATOL)
 
-    hdds = tmy3_weather_source.get_hdd(consumptions,"degF",65)
+    hdds = tmy3_weather_source.hdd(consumptions,"degF",65)
     assert_allclose(hdds, [10.072,0.0749,0.0], rtol=RTOL,atol=ATOL)
 
-    cdds = tmy3_weather_source.get_cdd(consumptions,"degF",65)
+    cdds = tmy3_weather_source.cdd(consumptions,"degF",65)
     assert_allclose(cdds, [105.540,249.795,288.780], rtol=RTOL,atol=ATOL)
 
 @pytest.mark.slow
@@ -156,13 +156,13 @@ def test_cz2010_weather_source(consumption_history_one_summer_electricity):
         cz2010_weather_source = CZ2010WeatherSource(cz2010_file)
         consumptions = consumption_history_one_summer_electricity.get("electricity")
 
-        avg_temps = cz2010_weather_source.get_average_temperature(consumptions,"degF")
+        avg_temps = cz2010_weather_source.average_temperature(consumptions,"degF")
         assert_allclose(avg_temps, [68.1822,73.05548,74.315], rtol=RTOL,atol=ATOL)
 
-        hdds = cz2010_weather_source.get_hdd(consumptions,"degF",65)
+        hdds = cz2010_weather_source.hdd(consumptions,"degF",65)
         assert_allclose(hdds, [106.3725,0.,11.775 ], rtol=RTOL,atol=ATOL)
 
-        cdds = cz2010_weather_source.get_cdd(consumptions,"degF",65)
+        cdds = cz2010_weather_source.cdd(consumptions,"degF",65)
         assert_allclose(cdds, [51.7875,227.49,116.415], rtol=RTOL,atol=ATOL)
     else:
         warnings.warn("Skipping CZ2010WeatherSource tests. "
