@@ -4,10 +4,16 @@ from eemeter.importers import import_hpxml
 from eemeter.importers import import_green_button_xml
 from eemeter.importers import import_seed_timeseries
 from eemeter.importers import import_csv
+from eemeter.importers import import_pandas
+from eemeter.importers import import_excel
+
+from fixtures.importers import consumption_csv_filename,consumption_xlsx_filename
 
 from numpy.testing import assert_allclose
 from datetime import datetime
 from datetime import timedelta
+
+import pandas as pd
 
 from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, Integer, Float, Numeric, String, MetaData, ForeignKey, TIMESTAMP
@@ -802,17 +808,42 @@ def test_import_seed_timeseries():
     assert c_1_e[0].start == datetime(2011,1,1)
     assert c_1_g[3].end == datetime(2011,5,1)
 
-def test_import_csv():
-    data0 = \
-"""Consumption,UnitofMeasure,FuelType,StartDateTime,EndDateTime,ReadingType
-25.0,therms,natural gas,2013-12-15T00:00:00+00:00,2014-01-14T00:00:00+00:00,estimated
-1000,kWh,electricity,2013-11-10T00:00:00+00:00,2013-12-15T00:00:00+00:00,actual"""
+def test_import_csv(consumption_csv_filename):
 
-    fd, fname = tempfile.mkstemp()
-    with os.fdopen(fd, 'wb') as f:
-        f.write(data0.encode('utf-8'))
+    ch = import_csv(consumption_csv_filename)
 
-    ch = import_csv(fname)
+    assert len(ch.natural_gas) == 1
+    assert len(ch.electricity) == 1
+    assert_allclose(ch.natural_gas[0].therms,25,rtol=RTOL,atol=ATOL)
+    assert_allclose(ch.electricity[0].kWh,1000,rtol=RTOL,atol=ATOL)
+    assert ch.natural_gas[0].estimated
+    assert not ch.electricity[0].estimated
+    assert ch.natural_gas[0].timedelta.days == 30
+    assert ch.electricity[0].timedelta.days == 35
+
+def test_import_pandas():
+    df = pd.DataFrame({"Consumption": [25,1000],
+                       "UnitofMeasure": ["therms","kWh"],
+                       "FuelType":["natural gas","electricity"],
+                       "StartDateTime":[datetime(2013,12,15),datetime(2013,11,10)],
+                       "EndDateTime":[datetime(2014,1,14),datetime(2013,12,15)],
+                       "ReadingType":["estimated","actual"]})
+
+    ch = import_pandas(df)
+
+    assert len(ch.natural_gas) == 1
+    assert len(ch.electricity) == 1
+    assert_allclose(ch.natural_gas[0].therms,25,rtol=RTOL,atol=ATOL)
+    assert_allclose(ch.electricity[0].kWh,1000,rtol=RTOL,atol=ATOL)
+    assert ch.natural_gas[0].estimated
+    assert not ch.electricity[0].estimated
+    assert ch.natural_gas[0].timedelta.days == 30
+    assert ch.electricity[0].timedelta.days == 35
+
+def test_import_excel(consumption_xlsx_filename):
+
+    ch = import_excel(consumption_xlsx_filename)
+
     assert len(ch.natural_gas) == 1
     assert len(ch.electricity) == 1
     assert_allclose(ch.natural_gas[0].therms,25,rtol=RTOL,atol=ATOL)
