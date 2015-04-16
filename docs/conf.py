@@ -34,6 +34,7 @@ MOCK_MODULES = [
     'sqlalchemy.ext.declarative',
     'sqlalchemy.orm',
     'sqlalchemy.orm.exc',
+    'pandas',
 ]
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
