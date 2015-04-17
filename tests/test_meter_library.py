@@ -367,9 +367,10 @@ def test_recent_reading_meter():
     assert meter.evaluate(consumption_history=mixed_ch,fuel_type="electricity")["recent_reading"]
     assert not meter.evaluate(consumption_history=mixed_ch,fuel_type="natural_gas")["recent_reading"]
 
-    meter = RecentReadingMeter(n_days=365,since_date=datetime.now() + timedelta(days=1000))
-    assert not meter.evaluate(consumption_history=mixed_ch,fuel_type="electricity")["recent_reading"]
-    assert not meter.evaluate(consumption_history=mixed_ch,fuel_type="natural_gas")["recent_reading"]
+    assert not meter.evaluate(consumption_history=mixed_ch,fuel_type="electricity",
+                              since_date=datetime.now() + timedelta(days=1000))["recent_reading"]
+    assert not meter.evaluate(consumption_history=mixed_ch,fuel_type="natural_gas",
+                              since_date=datetime.now() + timedelta(days=1000))["recent_reading"]
 
 def test_cvrmse(generated_consumption_history_1,gsod_722880_2012_2014_weather_source):
     meter_yaml = """!obj:eemeter.meter.CVRMSE {
