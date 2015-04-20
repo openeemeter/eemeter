@@ -12,6 +12,8 @@ from eemeter.meter import NPeriodsMeetingHDDPerDayThreshold
 from eemeter.meter import NPeriodsMeetingCDDPerDayThreshold
 from eemeter.meter import RecentReadingMeter
 from eemeter.meter import CVRMSE
+from eemeter.meter import AverageDailyUsage
+from eemeter.meter import EstimatedAverageDailyUsage
 
 from fixtures.weather import gsod_722880_2012_2014_weather_source
 from fixtures.weather import tmy3_722880_weather_source
@@ -31,6 +33,7 @@ from datetime import datetime
 from datetime import timedelta
 
 from numpy.testing import assert_allclose
+import numpy as np
 
 RTOL = 1e-2
 ATOL = 1e-2
@@ -43,8 +46,6 @@ def test_temperature_sensitivity_parameter_optimization(
 
     meter_yaml = """
         !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
-            fuel_unit_str: "kWh",
-            fuel_type: "electricity",
             temperature_unit_str: "degF",
             model: !obj:eemeter.models.TemperatureSensitivityModel {
                 cooling: True,
@@ -71,9 +72,15 @@ def test_temperature_sensitivity_parameter_optimization(
     ch, params = generated_consumption_history_1
 
     result = meter.evaluate(consumption_history=ch,
-                            weather_source=gsod_722880_2012_2014_weather_source)
+                            weather_source=gsod_722880_2012_2014_weather_source,
+                            fuel_type="electricity",
+                            fuel_unit_str="kWh")
 
     assert_allclose(result['temp_sensitivity_params'], params, rtol=RTOL, atol=ATOL)
+    assert result.get('n_days') is not None
+    assert result.get('average_daily_usages') is not None
+    assert result.get('estimated_average_daily_usages') is not None
+    assert result.get('daily_standard_error') is not None
 
 
 @pytest.mark.slow
@@ -85,8 +92,6 @@ def test_annualized_usage_meter(generated_consumption_history_with_annualized_us
         !obj:eemeter.meter.Sequence {
             sequence: [
                 !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
-                    fuel_unit_str: "kWh",
-                    fuel_type: "electricity",
                     temperature_unit_str: "degF",
                     model: !obj:eemeter.models.TemperatureSensitivityModel &model {
                         cooling: True,
@@ -119,7 +124,9 @@ def test_annualized_usage_meter(generated_consumption_history_with_annualized_us
     ch, params, annualized_usage = generated_consumption_history_with_annualized_usage_1
     result = meter.evaluate(consumption_history=ch,
                             weather_source=gsod_722880_2012_2014_weather_source,
-                            weather_normal_source=tmy3_722880_weather_source)
+                            weather_normal_source=tmy3_722880_weather_source,
+                            fuel_unit_str="kWh",
+                            fuel_type="electricity")
 
     assert_allclose(result['temp_sensitivity_params'], params, rtol=RTOL, atol=ATOL)
     assert_allclose(result['annualized_usage'], annualized_usage, rtol=RTOL, atol=ATOL)
@@ -130,12 +137,14 @@ def test_gross_savings_metric(generated_consumption_history_pre_post_with_gross_
 
     meter_yaml = """
         !obj:eemeter.meter.Sequence {
+            extras: {
+                fuel_unit_str: "kWh",
+                fuel_type: "electricity",
+            },
             sequence: [
                 !obj:eemeter.meter.PrePost {
                     splittable_args: ["consumption_history"],
                     pre_meter: !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter &meter {
-                        fuel_unit_str: "kWh",
-                        fuel_type: "electricity",
                         temperature_unit_str: "degF",
                         model: !obj:eemeter.models.TemperatureSensitivityModel &model {
                             cooling: True,
@@ -191,12 +200,14 @@ def test_annualized_gross_savings_metric(generated_consumption_history_pre_post_
 
     meter_yaml = """
         !obj:eemeter.meter.Sequence {
+            extras: {
+                fuel_unit_str: "kWh",
+                fuel_type: "electricity",
+            },
             sequence: [
                 !obj:eemeter.meter.PrePost {
                     splittable_args: ["consumption_history"],
                     pre_meter: !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter &meter {
-                        fuel_unit_str: "kWh",
-                        fuel_type: "electricity",
                         temperature_unit_str: "degF",
                         model: !obj:eemeter.models.TemperatureSensitivityModel &model {
                             cooling: True,
@@ -263,6 +274,7 @@ def test_for_each_fuel_type():
     meter_yaml = """
         !obj:eemeter.meter.ForEachFuelType {
             fuel_types: [electricity,natural_gas],
+            fuel_unit_strs: [kWh,therms],
             meter: !obj:eemeter.meter.Sequence {
                 sequence: [
                     !obj:eemeter.meter.DummyMeter {
@@ -291,22 +303,25 @@ def test_for_each_fuel_type():
     assert result["result_one_electricity"] == 1
     assert result["result_one_natural_gas"] == 1
 
+    with pytest.raises(ValueError):
+        meter = load("!obj:eemeter.meter.ForEachFuelType { fuel_types:[electricity],fuel_unit_strs:[], meter: null }")
+
 def test_time_span_meter(time_span_1):
     ch, fuel_type, n_days = time_span_1
     meter = TimeSpanMeter()
     assert n_days == meter.evaluate(consumption_history=ch,fuel_type=fuel_type)["time_span"]
 
 def test_total_hdd_meter(generated_consumption_history_with_hdd_1,gsod_722880_2012_2014_weather_source):
-    ch, fuel_type, hdd = generated_consumption_history_with_hdd_1
-    meter = TotalHDDMeter(base=65,temperature_unit_str="degF")
+    ch, fuel_type, hdd, base, temp_unit = generated_consumption_history_with_hdd_1
+    meter = TotalHDDMeter(base=base,temperature_unit_str=temp_unit)
     result = meter.evaluate(consumption_history=ch,
                             fuel_type=fuel_type,
                             weather_source=gsod_722880_2012_2014_weather_source)
     assert_allclose(hdd,result["total_hdd"],rtol=RTOL,atol=ATOL)
 
 def test_total_cdd_meter(generated_consumption_history_with_cdd_1,gsod_722880_2012_2014_weather_source):
-    ch, fuel_type, cdd = generated_consumption_history_with_cdd_1
-    meter = TotalCDDMeter(base=65,temperature_unit_str="degF")
+    ch, fuel_type, cdd, base, temp_unit = generated_consumption_history_with_cdd_1
+    meter = TotalCDDMeter(base=base,temperature_unit_str=temp_unit)
     result = meter.evaluate(consumption_history=ch,
                             fuel_type=fuel_type,
                             weather_source=gsod_722880_2012_2014_weather_source)
@@ -372,33 +387,41 @@ def test_recent_reading_meter():
     assert not meter.evaluate(consumption_history=mixed_ch,fuel_type="natural_gas",
                               since_date=datetime.now() + timedelta(days=1000))["recent_reading"]
 
-def test_cvrmse(generated_consumption_history_1,gsod_722880_2012_2014_weather_source):
-    meter_yaml = """!obj:eemeter.meter.CVRMSE {
-        fuel_unit_str: kWh,
-        model: !obj:eemeter.models.TemperatureSensitivityModel {
-            cooling: True,
-            heating: True,
-            initial_params: {
-                base_consumption: 0,
-                heating_slope: 0,
-                cooling_slope: 0,
-                heating_reference_temperature: 60,
-                cooling_reference_temperature: 70,
+def test_cvrmse():
+    meter = CVRMSE()
+    result = meter.evaluate(y=np.array([12,13,414,12,23,12,32]),
+                            y_hat=np.array([32,12,322,21,22,41,32]),
+                            params=np.array([1,3,4]))
+
+    assert_allclose(result["cvrmse"],66.84,rtol=RTOL,atol=ATOL)
+
+def test_average_daily_usage(generated_consumption_history_1):
+
+    ch,params = generated_consumption_history_1
+    meter = AverageDailyUsage()
+    result = meter.evaluate(consumption_history=ch,
+                            fuel_type="electricity",
+                            fuel_unit_str="kWh")
+    assert result["average_daily_usages"] is not None
+
+def test_estimated_average_daily_usage(generated_consumption_history_1,gsod_722880_2012_2014_weather_source):
+    meter_yaml = """
+        !obj:eemeter.meter.EstimatedAverageDailyUsage {
+            temperature_unit_str: "degF",
+            model: !obj:eemeter.models.TemperatureSensitivityModel {
+                cooling: True,
+                heating: True,
             },
-            param_bounds: {
-                base_consumption: [0,2000],
-                heating_slope: [0,200],
-                cooling_slope: [0,200],
-                heating_reference_temperature: [55,65],
-                cooling_reference_temperature: [65,75],
-            },
-        },
-    }
-    """
-    ch, params = generated_consumption_history_1
+        }
+        """
     meter = load(meter_yaml)
+
+    ch,params = generated_consumption_history_1
+
     result = meter.evaluate(consumption_history=ch,
                             weather_source=gsod_722880_2012_2014_weather_source,
-                            fuel_type="electricity")
-
-    assert result["cvrmse"] < 1e-4
+                            temp_sensitivity_params=params,
+                            fuel_type="electricity",
+                            fuel_unit_str="kWh")
+    assert result["estimated_average_daily_usages"] is not None
+    assert result["n_days"] is not None

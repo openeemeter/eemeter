@@ -48,7 +48,7 @@ class MeterBase(object):
                 message = "expected argument '{}' for meter '{}'; "\
                           "got kwargs={} (with mapped_inputs={}) instead."\
                                   .format(inpt,self.__class__.__name__,
-                                          sorted(kwargs.items()),sorted(mapped_inputs.items()))
+                                          sorted(kwargs.keys()),sorted(mapped_inputs.keys()))
                 raise TypeError(message)
         result = self.evaluate_mapped_inputs(**mapped_inputs)
         mapped_outputs = self._remap(result,self.output_mapping)

@@ -163,34 +163,6 @@ def generated_consumption_history_pre_post_with_annualized_gross_savings_1(reque
     ch = ConsumptionHistory(pre_consumptions + post_consumptions)
     return ch, model.param_dict_to_list(pre_params), model.param_dict_to_list(post_params), retrofit, request.param[2]
 
-@pytest.fixture(params=[([10,2,58,1,72],[10,1,65],0)])
-def bpi_2400_1(request):
-    elec_model = TemperatureSensitivityModel(cooling=True,heating=True)
-    gas_model = TemperatureSensitivityModel(cooling=False,heating=True)
-    elec_params = {
-        "base_consumption": request.param[0][0],
-        "heating_slope": request.param[0][1],
-        "heating_reference_temperature": request.param[0][2],
-        "cooling_slope": request.param[0][3],
-        "cooling_reference_temperature": request.param[0][4]
-    }
-    gas_params = {
-        "base_consumption": request.param[1][0],
-        "heating_slope": request.param[1][1],
-        "heating_reference_temperature": request.param[1][2],
-    }
-    start = datetime(2012,1,1)
-    end = datetime(2014,12,31)
-    periods = generate_periods(start,end,jitter_intensity=0)
-    gen_elec = ConsumptionGenerator("electricity", "kWh", "degF", elec_model, elec_params)
-    gen_gas = ConsumptionGenerator("natural_gas", "therms", "degF", gas_model, gas_params)
-    elec_consumptions = gen_elec.generate(gsod_722880_2012_2014_weather_source(), periods)
-    gas_consumptions = gen_gas.generate(gsod_722880_2012_2014_weather_source(), periods)
-    consumptions = elec_consumptions + gas_consumptions
-    elec_param_list = elec_model.param_dict_to_list(elec_params)
-    gas_param_list = gas_model.param_dict_to_list(gas_params)
-    return ConsumptionHistory(consumptions), elec_param_list, gas_param_list
-
 @pytest.fixture(params=[([10,2,58,1,72],"electricity",(datetime(2012,1,1),datetime(2012,12,31)),360),
                         ([10,2,58,1,72],"electricity",(datetime(2012,1,1),datetime(2012,9,30)),270),
                         ([10,2,58,1,72],"electricity",(datetime(2012,1,1),datetime(2012,7,1)),180),
@@ -213,8 +185,10 @@ def time_span_1(request):
     param_list = model.param_dict_to_list(params)
     return ConsumptionHistory(consumptions), fuel_type, n_days
 
-@pytest.fixture(params=[([0, 1,65,1,75],(datetime(2012,1,1),datetime(2012,12,31)),1416.100000000004),
-                        ([10,2,61,1,73],(datetime(2012,1,1),datetime(2013,12,31)),2562.8000000000056)])
+@pytest.fixture(params=[([0, 1,65,1,75],(datetime(2012,1,1),datetime(2012,12,31)),1416.100000000004,65,"degF"),
+                        ([10,2,61,1,73],(datetime(2012,1,1),datetime(2013,12,31)),2562.8000000000056,65,"degF"),
+                        ([8, 1,16,1,22],(datetime(2012,1,1),datetime(2013,12,31)),1422.6478,18.33,"degC"),
+                        ])
 def generated_consumption_history_with_hdd_1(request):
     model = TemperatureSensitivityModel(cooling=True,heating=True)
     params = {
@@ -229,10 +203,12 @@ def generated_consumption_history_with_hdd_1(request):
     fuel_type = "electricity"
     gen = ConsumptionGenerator(fuel_type, "kWh", "degF", model, params)
     consumptions = gen.generate(gsod_722880_2012_2014_weather_source(), periods)
-    return ConsumptionHistory(consumptions),fuel_type, request.param[2]
+    return ConsumptionHistory(consumptions),fuel_type, request.param[2], request.param[3], request.param[4]
 
-@pytest.fixture(params=[([0, 1,65,1,75],(datetime(2012,1,1),datetime(2012,12,31)),1348.8999999999976),
-                        ([10,2,61,1,73],(datetime(2012,1,1),datetime(2013,12,31)),3022.2999999999947)])
+@pytest.fixture(params=[([0, 1,65,1,75],(datetime(2012,1,1),datetime(2012,12,31)),1348.8999999999976,65,"degF"),
+                        ([10,2,61,1,73],(datetime(2012,1,1),datetime(2013,12,31)),3022.2999999999947,65,"degF"),
+                        ([8, 1,16,1,22],(datetime(2012,1,1),datetime(2013,12,31)),1680.3254,18.33,"degC"),
+                        ])
 def generated_consumption_history_with_cdd_1(request):
     model = TemperatureSensitivityModel(cooling=True,heating=True)
     params = {
@@ -247,7 +223,7 @@ def generated_consumption_history_with_cdd_1(request):
     fuel_type = "electricity"
     gen = ConsumptionGenerator(fuel_type, "kWh", "degF", model, params)
     consumptions = gen.generate(gsod_722880_2012_2014_weather_source(), periods)
-    return ConsumptionHistory(consumptions), fuel_type, request.param[2]
+    return ConsumptionHistory(consumptions), fuel_type, request.param[2], request.param[3], request.param[4]
 
 @pytest.fixture(params=[([0, 1,65,1,75],(datetime(2012,1,1),datetime(2012,12,31)),5,7,1),
                         ([10,2,61,1,73],(datetime(2012,1,1),datetime(2013,12,31)),11,13,1)])

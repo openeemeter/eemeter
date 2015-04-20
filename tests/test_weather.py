@@ -148,6 +148,12 @@ def test_tmy3_weather_source(consumption_history_one_summer_electricity,tmy3_wea
     cdds = tmy3_weather_source.cdd(consumptions,"degF",65)
     assert_allclose(cdds, [105.540,249.795,288.780], rtol=RTOL,atol=ATOL)
 
+    hdds = tmy3_weather_source.hdd(consumptions,"degC",18.33)
+    assert_allclose(hdds, [5.95,0.0416,0.0], rtol=RTOL,atol=ATOL)
+
+    cdds = tmy3_weather_source.cdd(consumptions,"degC",18.33)
+    assert_allclose(cdds, [58.63,138.775,160.433], rtol=RTOL,atol=ATOL)
+
 @pytest.mark.slow
 @pytest.mark.internet
 def test_cz2010_weather_source(consumption_history_one_summer_electricity):

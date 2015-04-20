@@ -216,10 +216,7 @@ class WeatherSourceBase(object):
         for days in range(period.timedelta.days):
             dt = period.start + timedelta(days=days)
             temps.append(self.datetime_average_temperature(dt,unit))
-        if unit is None:
-            return np.array(temps)
-        else:
-            return self._unit_convert(np.array(temps),unit)
+        return np.array(temps)
 
     def datetime_average_temperature(self,dt,unit):
         """The daily average temperatures for a particular period.
@@ -695,7 +692,8 @@ class TMY3WeatherSource(WeatherSourceBase,WeatherNormalMixin,HourlyTemperatureNo
     def __init__(self,station_id):
         super(TMY3WeatherSource,self).__init__()
         self.station_id = station_id
-        self.init_temperature_data()
+        self._internal_unit = "degC"
+        self.init_temperature_data() # load cached data
 
         n_temp_normals = len(self.data.items())
         if n_temp_normals < 364 * 24: #missing more than a day of data
@@ -712,9 +710,9 @@ class TMY3WeatherSource(WeatherSourceBase,WeatherNormalMixin,HourlyTemperatureNo
             date_string = "{}{}{}{:02d}".format(row[0][6:10], row[0][0:2],
                                                 row[0][3:5], int(row[1][0:2]) - 1) # YYYYMMDDHH
             temp_C = float(row[31])
-            self.data[date_string[4:]] = self._degC_to_degF(temp_C) # skip year in date string
+            self.data[date_string[4:]] = temp_C # skip year in date string
             dat = datetime.strptime(date_string,"%Y%m%d%H")
-            self.update_cache(temp_C,dat)
+            self.update_cache(temp_C,dat) # cache always uses degC
         if self.session:
             self.session.commit()
 

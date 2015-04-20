@@ -137,9 +137,12 @@ class PRISMMeter(MeterBase):
         meter_yaml = """
             !obj:eemeter.meter.Sequence {{
                 sequence: [
-                    !obj:eemeter.meter.BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria {{}},
+                    !obj:eemeter.meter.BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria {{
+                        temperature_unit_str: {temp_unit}
+                    }},
                     !obj:eemeter.meter.ForEachFuelType {{
                         fuel_types: [electricity, natural_gas],
+                        fuel_unit_strs: [kWh, therms],
                         gathered_inputs: [
                             meets_model_calibration_utility_bill_criteria,
                         ],
@@ -153,8 +156,6 @@ class PRISMMeter(MeterBase):
                                             electricity: !obj:eemeter.meter.Sequence {{
                                                 sequence: [
                                                     !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {{
-                                                        fuel_unit_str: kWh,
-                                                        fuel_type: electricity,
                                                         temperature_unit_str: {temp_unit},
                                                         model: !obj:eemeter.models.TemperatureSensitivityModel &electricity_model {{
                                                             cooling: True,
@@ -176,7 +177,6 @@ class PRISMMeter(MeterBase):
                                                         }},
                                                     }},
                                                     !obj:eemeter.meter.AnnualizedUsageMeter {{
-                                                        fuel_type: electricity,
                                                         temperature_unit_str: {temp_unit},
                                                         model: *electricity_model,
                                                     }},
@@ -185,8 +185,6 @@ class PRISMMeter(MeterBase):
                                             natural_gas: !obj:eemeter.meter.Sequence {{
                                                 sequence: [
                                                     !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {{
-                                                        fuel_unit_str: therms,
-                                                        fuel_type: natural_gas,
                                                         temperature_unit_str: {temp_unit},
                                                         model: !obj:eemeter.models.TemperatureSensitivityModel &natural_gas_model {{
                                                             cooling: False,
@@ -204,7 +202,6 @@ class PRISMMeter(MeterBase):
                                                         }},
                                                     }},
                                                     !obj:eemeter.meter.AnnualizedUsageMeter {{
-                                                        fuel_type: natural_gas,
                                                         temperature_unit_str: {temp_unit},
                                                         model: *natural_gas_model,
                                                     }},
@@ -214,7 +211,6 @@ class PRISMMeter(MeterBase):
                                     }},
                                 ],
                             }},
-                            failure: *core_meter,
                         }},
                     }},
                 ]
@@ -262,19 +258,7 @@ class PRISMMeter(MeterBase):
         Returns
         -------
         out : dict
-            Dictionary of results like the following
-
-            ::
-
-                {
-                    'electricity_presence': True,
-                    'temp_sensitivity_params_electricity': array([  5.28680197e-02,   5.09216467e-02,   3.11451816e-01, 6.21000000e+01,   7.95406093e+00]),
-                    'annualized_usage_electricity': 197.90877363035082,
-                    'natural_gas_presence': True,
-                    'temp_sensitivity_params_natural_gas': array([  6.36617250e+01,   2.64582535e-01,   2.89029866e-02]),
-                    'annualized_usage_natural_gas': 133.05140290730517
-                }
-
+            Dictionary of results
         """
         return self.meter.evaluate(**kwargs)
 
