@@ -15,6 +15,7 @@ from eemeter.meter import CVRMSE
 from eemeter.meter import AverageDailyUsage
 from eemeter.meter import EstimatedAverageDailyUsage
 from eemeter.meter import RMSE
+from eemeter.meter import RSquared
 
 from fixtures.weather import gsod_722880_2012_2014_weather_source
 from fixtures.weather import tmy3_722880_weather_source
@@ -431,3 +432,10 @@ def test_rmse():
                             y_hat=np.array([32,12,322,21,22,41,32]))
 
     assert_allclose(result["rmse"],37.3898,rtol=RTOL,atol=ATOL)
+
+def test_r_squared():
+    meter = RSquared()
+    result = meter.evaluate(y=np.array([12,13,414,12,23,12,32]),
+                            y_hat=np.array([32,12,322,21,22,41,32]))
+
+    assert_allclose(result["r_squared"],0.9276,rtol=RTOL,atol=ATOL)

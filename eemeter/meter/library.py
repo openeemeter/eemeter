@@ -767,7 +767,7 @@ class EstimatedAverageDailyUsage(MeterBase):
 class RMSE(MeterBase):
     """Compute the root-mean-square error (sometimes referred to as
     root-mean-square deviation, or RMSD) of observed samples and estimated
-    samples.
+    values.
     """
     def evaluate_mapped_inputs(self,y,y_hat,**kwargs):
         """Evaluates the Coefficient of Variation of Root-Mean-Square Error of
@@ -789,3 +789,28 @@ class RMSE(MeterBase):
         rmse = (np.sum((y - y_hat)**2) / n )**.5
         return {"rmse": rmse}
 
+class RSquared(MeterBase):
+    """Compute the r^2 metric (coefficient of determination) of observed
+    samples and estimated values. Used to measure the fitness of a model.
+    """
+    def evaluate_mapped_inputs(self,y,y_hat,**kwargs):
+        """Evaluates the r^2 fitness metric for particular samples
+
+        Parameters
+        ----------
+        y : array_like
+            Observed values.
+        y_hat : array_like
+            Estimated values.
+
+        Returns
+        -------
+        out : dict
+            - "r_squared" : the calculated r^2 fitness metric.
+        """
+        y_bar = np.mean(y)
+        ss_residual = np.nansum( (y - y_hat)**2 )
+        ss_total = np.nansum( (y - y_bar)**2 )
+        r_squared = 1 - ss_residual / ss_total
+
+        return {"r_squared": r_squared}
