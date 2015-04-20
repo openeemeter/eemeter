@@ -17,10 +17,10 @@ ATOL = 1e-2
 
 import pytest
 
-@pytest.fixture(params=[([-1, 1,14.5,8,17.8],True,6119.297438069778,0,"degC",693.5875,876.9934,2587.6109,1805.0001),
-                        ([10,2,15.5,1,19.5],True,4927.478974253085,0,"degC",693.5875,876.9934,2587.6109,1805.0001),
-                        ([0,2,18.8,7,22.2],True,3616.249477948155,0,"degC",693.5875,876.9934,2587.6109,1805.0001),
-                        ([0,2,65,3,71],True,4700.226534599519,0,"degF",1248.4575,1578.5882,4657.6997,3249.0002),
+@pytest.fixture(params=[([-1, 1,14.5,8,17.8],True,6119.297438069778,0,"degC",693.5875,876.9934,2587.6109,1805.0001,0),
+                        ([10,2,15.5,1,19.5],True,4927.478974253085,0,"degC",693.5875,876.9934,2587.6109,1805.0001,0),
+                        ([0,2,18.8,7,22.2],True,3616.249477948155,0,"degC",693.5875,876.9934,2587.6109,1805.0001,0),
+                        ([0,2,65,3,71],True,4700.226534599519,0,"degF",1248.4575,1578.5882,4657.6997,3249.0002,0),
                         ])
 def prism_outputs_1(request):
     model = TemperatureSensitivityModel(cooling=True,heating=True)
@@ -44,7 +44,8 @@ def prism_outputs_1(request):
             request.param[3], request.param[4], \
             retrofit_start_date, retrofit_completion_date, \
             request.param[5],request.param[6], \
-            request.param[7],request.param[8]
+            request.param[7],request.param[8], \
+            request.param[9]
     return fixture
 
 @pytest.mark.slow
@@ -54,7 +55,7 @@ def test_princeton_scorekeeping_method(prism_outputs_1,
     ch, elec_params, elec_presence, \
             elec_annualized_usage, elec_error, temp_unit, \
             retrofit_start_date, retrofit_completion_date, \
-            cdd_tmy, hdd_tmy, total_cdd, total_hdd\
+            cdd_tmy, hdd_tmy, total_cdd, total_hdd, rmse_electricity \
             = prism_outputs_1
 
     with pytest.raises(ValueError):
@@ -86,7 +87,6 @@ def test_princeton_scorekeeping_method(prism_outputs_1,
     assert result['consumption_history_no_estimated'] is not None
     assert result['cvrmse_electricity'] < 1e-2
     assert np.isnan(result['cvrmse_natural_gas'])
-    assert result['daily_standard_error_electricity'] < 1e-2
     assert result['electricity_presence'] == True
     assert result['has_enough_cdd_electricity'] == True
     assert result['has_enough_cdd_natural_gas'] == True
@@ -124,6 +124,7 @@ def test_princeton_scorekeeping_method(prism_outputs_1,
     assert result['n_periods_low_cdd_per_day_natural_gas'] == 0
     assert result['n_periods_low_hdd_per_day_natural_gas'] == 0
     assert result['natural_gas_presence'] == False
+    assert_allclose(result['rmse_electricity'], rmse_electricity, rtol=RTOL, atol=ATOL) # higher than default precision
     assert result['spans_183_days_and_has_enough_hdd_cdd_electricity'] == True
     assert result['spans_183_days_and_has_enough_hdd_cdd_natural_gas'] == False
     assert result['spans_184_days_electricity'] == True

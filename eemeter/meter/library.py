@@ -50,8 +50,6 @@ class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
               as given by the model.
             - "n_days": an array of the number of days in each consumption
               period (weights)
-            - "daily_standard_error": the standard error on an estimate of
-              daily usage due to the optimized model parameters.
         """
         consumptions = consumption_history.get(fuel_type)
         average_daily_usages = [c.average_daily_usage(fuel_unit_str) for c in consumptions]
@@ -62,16 +60,11 @@ class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
         params = self.model.parameter_optimization(average_daily_usages, observed_daily_temps, n_days)
 
         estimated_daily_usages = self.model.compute_usage_estimates(params,observed_daily_temps) / n_days
-        sqrtn = np.sqrt(len(estimated_daily_usages))
-
-        # use nansum to ignore consumptions with missing usages
-        daily_standard_error = np.nansum(np.abs(estimated_daily_usages - average_daily_usages))/sqrtn
 
         return {"temp_sensitivity_params": params,
                 "average_daily_usages": average_daily_usages,
                 "estimated_average_daily_usages": estimated_daily_usages,
-                "n_days": n_days,
-                "daily_standard_error": daily_standard_error}
+                "n_days": n_days}
 
 class AnnualizedUsageMeter(MeterBase):
     """Weather normalizes modeled usage for an annualized estimate of
@@ -678,17 +671,16 @@ class CVRMSE(MeterBase):
         Parameters
         ----------
         y : array_like
-            Values to be estimated
+            Observed values.
         y_hat : array_like
             Estimated values.
         params : int
-            Model parameters (used only for counting the number of parameters)
+            Model parameters (used only for counting the number of parameters).
 
         Returns
         -------
         out : dict
-            A dictionary containing a single item with the key "cvrmse"
-            containing the calculated CVRMSE metric.
+            - "cvrmse" : the calculated CVRMSE metric.
         """
         y_bar = np.mean(y)
         n = len(y)
@@ -771,3 +763,29 @@ class EstimatedAverageDailyUsage(MeterBase):
                                                    observed_daily_temps) / n_days
         return {"estimated_average_daily_usages": estimated_average_daily_usages,
                 "n_days": n_days}
+
+class RMSE(MeterBase):
+    """Compute the root-mean-square error (sometimes referred to as
+    root-mean-square deviation, or RMSD) of observed samples and estimated
+    samples.
+    """
+    def evaluate_mapped_inputs(self,y,y_hat,**kwargs):
+        """Evaluates the Coefficient of Variation of Root-Mean-Square Error of
+        a model fit.
+
+        Parameters
+        ----------
+        y : array_like
+            Observed values.
+        y_hat : array_like
+            Estimated values.
+
+        Returns
+        -------
+        out : dict
+            - "rmse" : the calculated RMSE metric.
+        """
+        n = len(y)
+        rmse = (np.sum((y - y_hat)**2) / n )**.5
+        return {"rmse": rmse}
+

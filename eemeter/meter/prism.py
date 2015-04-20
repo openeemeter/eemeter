@@ -209,6 +209,12 @@ class PRISMMeter(MeterBase):
                                             }},
                                         }},
                                     }},
+                                    !obj:eemeter.meter.RMSE {{
+                                        input_mapping: {{
+                                            average_daily_usages: y,
+                                            estimated_average_daily_usages: y_hat,
+                                        }}
+                                    }},
                                 ],
                             }},
                         }},

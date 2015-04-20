@@ -14,6 +14,7 @@ from eemeter.meter import RecentReadingMeter
 from eemeter.meter import CVRMSE
 from eemeter.meter import AverageDailyUsage
 from eemeter.meter import EstimatedAverageDailyUsage
+from eemeter.meter import RMSE
 
 from fixtures.weather import gsod_722880_2012_2014_weather_source
 from fixtures.weather import tmy3_722880_weather_source
@@ -80,7 +81,6 @@ def test_temperature_sensitivity_parameter_optimization(
     assert result.get('n_days') is not None
     assert result.get('average_daily_usages') is not None
     assert result.get('estimated_average_daily_usages') is not None
-    assert result.get('daily_standard_error') is not None
 
 
 @pytest.mark.slow
@@ -396,7 +396,6 @@ def test_cvrmse():
     assert_allclose(result["cvrmse"],66.84,rtol=RTOL,atol=ATOL)
 
 def test_average_daily_usage(generated_consumption_history_1):
-
     ch,params = generated_consumption_history_1
     meter = AverageDailyUsage()
     result = meter.evaluate(consumption_history=ch,
@@ -425,3 +424,10 @@ def test_estimated_average_daily_usage(generated_consumption_history_1,gsod_7228
                             fuel_unit_str="kWh")
     assert result["estimated_average_daily_usages"] is not None
     assert result["n_days"] is not None
+
+def test_rmse():
+    meter = RMSE()
+    result = meter.evaluate(y=np.array([12,13,414,12,23,12,32]),
+                            y_hat=np.array([32,12,322,21,22,41,32]))
+
+    assert_allclose(result["rmse"],37.3898,rtol=RTOL,atol=ATOL)
