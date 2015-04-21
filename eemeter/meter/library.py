@@ -674,7 +674,7 @@ class CVRMSE(MeterBase):
             Observed values.
         y_hat : array_like
             Estimated values.
-        params : int
+        params : array_like
             Model parameters (used only for counting the number of parameters).
 
         Returns
