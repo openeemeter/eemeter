@@ -499,22 +499,22 @@ class PRISMMeter(MeterBase):
             :code:`meets_model_calibration_utility_bill_criteria_natural_gas`
             is :code:`True`:
 
-            - annualized_usage_natural_gas : Natural gas usage in a typical
+            - *"annualized_usage_natural_gas"* : Natural gas usage in a typical
               meteorological year, as estimated by the fitted hdd/cdd
               natural gas use model.
-            - average_daily_usages_natural_gas : Average natural gas usage per
+            - *"average_daily_usages_natural_gas"* : Average natural gas usage per
               day (therms/day) for the natural gas consumption periods.
-            - estimated_average_daily_usages_natural_gas : Average natural gas
+            - *"estimated_average_daily_usages_natural_gas"* : Average natural gas
               usage per day (therms/day) for the natural gas consumption
               periods as estimated by the fitted temperature sensitivity model.
-            - n_days_natural_gas : The number of days in each natural_gas
+            - *"n_days_natural_gas"* : The number of days in each natural_gas
               consumption period; used as weights in model fitting.
-            - rmse_natural_gas : Root-mean-square error of fitted hdd/cdd
+            - *"rmse_natural_gas"* : Root-mean-square error of fitted hdd/cdd
               natural gas use model estimations for all consumption periods.
-            - r_squared_natural_gas : Coefficient of Determination (r^2) of
+            - *"r_squared_natural_gas"* : Coefficient of Determination (r^2) of
               fitted HDD/CDD natural gas use model estimations for all
               consumption periods.
-            - temp_sensitivity_params_natural_gas : Fitted temperature
+            - *"temp_sensitivity_params_natural_gas"* : Fitted temperature
               sensitivity parameters for HDD/CDD natural gas use model in an
               array of values with the following order: [base_consumption
               (kWh/day), heating_slope (kWh/HDD), heating_reference_temperature
