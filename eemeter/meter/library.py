@@ -709,7 +709,7 @@ class AverageDailyUsage(MeterBase):
         -------
         out : dict
             - "average_daily_usages": an array of average usage
-            values - one value for each consumption of the given fuel type.
+              values - one value for each consumption of the given fuel type.
         """
         consumptions = consumption_history.get(fuel_type)
         average_daily_usages = np.array([c.average_daily_usage(fuel_unit_str) for c in consumptions])
@@ -752,7 +752,7 @@ class EstimatedAverageDailyUsage(MeterBase):
         -------
         out : dict
             - "estimated_average_daily_usages": an array of average usage
-            values - one value for each consumption of the given fuel type.
+              values - one value for each consumption of the given fuel type.
             - "n_days": the number of days in each consumption period.
         """
         consumptions = consumption_history.get(fuel_type)

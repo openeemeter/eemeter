@@ -270,10 +270,8 @@ class PRISMMeter(MeterBase):
         Returns
         -------
         out : dict
-            Dictionary of results
-            ---------------------
-
             The following results are always available:
+
             - cdd_tmy : Total cooling degree days (base 65 degF or 18.33 degC)
               in a typical meteorological year (TMY3).
             - consumption_history_no_estimated : The input consumption history
@@ -453,6 +451,7 @@ class PRISMMeter(MeterBase):
             The following results are only available if
             :code:`meets_model_calibration_utility_bill_criteria_electricity`
             is :code:`True`:
+
             - annualized_usage_electricity : Electricity usage in a typical
               meteorological year, as estimated by the fitted hdd/cdd
               electricity use model.
@@ -471,6 +470,7 @@ class PRISMMeter(MeterBase):
             The following results are only available if
             :code:`meets_model_calibration_utility_bill_criteria_natural_gas`
             is :code:`True`:
+
             - annualized_usage_natural_gas : Natural gas usage in a typical
               meteorological year, as estimated by the fitted hdd/cdd
               natural gas use model.
@@ -484,6 +484,7 @@ class PRISMMeter(MeterBase):
               array of values with the following order: [base_consumption
               (kWh/day), heating_slope (kWh/HDD), heating_reference_temperature
               (degF or degC)]
+
         """
         return self.meter.evaluate(**kwargs)
 
