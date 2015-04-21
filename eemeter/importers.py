@@ -3,6 +3,10 @@ from dateutil.parser import parse
 from eemeter.consumption import Consumption
 from eemeter.consumption import ConsumptionHistory
 from datetime import datetime
+from csv import DictReader
+import dateutil.parser
+
+import pandas as pd
 
 from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, Integer, Float, Numeric, String, MetaData, ForeignKey, TIMESTAMP
@@ -193,3 +197,90 @@ def import_seed_timeseries(db_url):
         buildings_data[building_id] = ConsumptionHistory(consumptions)
 
     return buildings_data
+
+def import_pandas(df):
+    """Import from pandas dataframe with the following columns:
+
+    - Consumption: float
+    - UnitofMeasure: {"therms", "kWh"}
+    - FuelType: {"natural gas", "electricity"}
+    - StartDateTime: str (ISO 8601 combined date time)
+    - EndDateTime: str (ISO 8601 combined date time)
+    - ReadingType: {"actual", "estimated"}
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        pandas DataFrame with the Columns outlined above.
+
+    Returns
+    -------
+    out : eemeter.consumption.ConsumptionHistory
+        Consumption history for all consumptions stored in this DataFrame
+    """
+    fuel_type_mapping = {
+        "electricity": "electricity",
+        "natural gas": "natural_gas",
+    }
+
+    consumptions = []
+    for i,row in df.iterrows():
+        usage = row["Consumption"]
+        unit_str = row["UnitofMeasure"]
+        fuel_type = fuel_type_mapping[row["FuelType"]]
+        start_date = row["StartDateTime"]
+        end_date = row["EndDateTime"]
+        estimated = (row["ReadingType"] == "estimated")
+        c = Consumption(usage,unit_str,fuel_type,start_date,end_date,estimated)
+        consumptions.append(c)
+    return ConsumptionHistory(consumptions)
+
+def import_csv(filename):
+    """Import from csv spreadsheet with the following columns:
+
+    - Consumption: float
+    - UnitofMeasure: {"therms", "kWh"}
+    - FuelType: {"natural gas", "electricity"}
+    - StartDateTime: str (ISO 8601 combined date time)
+    - EndDateTime: str (ISO 8601 combined date time)
+    - ReadingType: {"actual", "estimated"}
+
+    Parameters
+    ----------
+    filename : str
+        Full path to CSV file
+
+    Returns
+    -------
+    out : eemeter.consumption.ConsumptionHistory
+        Consumption history stored in this file
+    """
+    df = pd.read_csv(filename)
+    df['StartDateTime'] = pd.to_datetime(df['StartDateTime'])
+    df['EndDateTime'] = pd.to_datetime(df['EndDateTime'])
+    return import_pandas(df)
+
+def import_excel(filename):
+    """Import from excel spreadsheet with the following columns:
+
+    - Consumption: float
+    - UnitofMeasure: {"therms", "kWh"}
+    - FuelType: {"natural gas", "electricity"}
+    - StartDateTime: str (ISO 8601 combined date time)
+    - EndDateTime: str (ISO 8601 combined date time)
+    - ReadingType: {"actual", "estimated"}
+
+    Parameters
+    ----------
+    filename : str
+        Full path to XLSX file
+
+    Returns
+    -------
+    out : eemeter.consumption.ConsumptionHistory
+        Consumption history stored in this file
+    """
+    df = pd.read_excel(filename)
+    df['StartDateTime'] = pd.to_datetime(df['StartDateTime'])
+    df['EndDateTime'] = pd.to_datetime(df['EndDateTime'])
+    return import_pandas(df)

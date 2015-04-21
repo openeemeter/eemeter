@@ -3,6 +3,7 @@ from eemeter.config.yaml_parser import load
 from eemeter.meter import DummyMeter
 from eemeter.meter import Sequence
 from eemeter.meter import Condition
+from eemeter.meter import MeterBase
 
 import pytest
 
@@ -124,8 +125,8 @@ def test_sane_missing_input_error_messages():
     with pytest.raises(TypeError) as excinfo:
         seq_meter.evaluate(value_one=1)
     assert "expected argument 'value' for meter 'DummyMeter';" \
-           " got kwargs=[('result_one', 1), ('value_one', 1)] " \
-           "(with mapped_inputs=[('result_one', 1), ('value_one', 1)]) instead." \
+           " got kwargs=['result_one', 'value_one'] " \
+           "(with mapped_inputs=['result_one', 'value_one']) instead." \
                    == excinfo.value.args[0]
 
 def test_null_key_mapping():
@@ -170,4 +171,11 @@ def test_multiple_mapping():
     assert result["result_three"] == 1
     assert result["result_four"] == 1
 
+def test_optional_args_no_error():
+    class TestMeter(MeterBase):
+        def evaluate_mapped_inputs(self,optional=None,**kwargs):
+            return {"test": optional}
 
+    meter = TestMeter()
+    assert meter.evaluate()["test"] is None
+    assert meter.evaluate(optional="hi")["test"] == "hi"

@@ -29,7 +29,7 @@ class ConsumptionGenerator:
         e.g. scipy.stats.normal(). Noise is additive and sampled independently
         for each period.
         """
-        period_daily_temps = weather_source.get_daily_temperatures(periods,self.temperature_unit_name)
+        period_daily_temps = weather_source.daily_temperatures(periods,self.temperature_unit_name)
 
         usages = self.model.compute_usage_estimates(self.params,period_daily_temps)
 

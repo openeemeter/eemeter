@@ -1,7 +1,6 @@
 from .base import MeterBase
 
 from itertools import chain
-from pprint import pprint
 
 class Sequence(MeterBase):
     """Collects and returns a series of meter object evaluation outputs in

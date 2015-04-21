@@ -447,3 +447,24 @@ will cache weather as it is pulled from various sources::
     export EEMETER_WEATHER_CACHE_DATABASE_URL=dbtype://username:password@host:port/dbname
 
 For additional information on the syntax of the url, please see sqlalchemy docs.
+
+Creating a Weather Source from WeatherSourceBase
+------------------------------------------------
+
+Occasionally, you may want to incorporate a weather source of your own. To do
+this, it is often easiest to extend the API by inheriting from the class
+:code:`eemeter.meter.WeatherSourceBase`. To do this, you need only define the
+method
+
+
+    class MyWeatherSource(WeatherSourceBase):
+
+        def get_internal_unit_daily_average_temperature(self,day):
+            # return the average temperature on the given day, according to
+            # your weather source. Use source units.
+
+If you are defining a weather normal source, add the `WeatherNormalMixin`.
+
+If you wish to take advantage of the caching mechanisms provided by `eemeter`,
+use a `CachedDataMixin`.
+

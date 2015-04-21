@@ -42,12 +42,13 @@ class MeterBase(object):
             else:
                 mapped_inputs[k] = v
         inputs = self.get_inputs()[self.__class__.__name__]["inputs"]
+        optional_inputs = self._get_optional_inputs()
         for inpt in inputs:
-            if inpt not in mapped_inputs:
+            if inpt not in mapped_inputs and inpt not in optional_inputs:
                 message = "expected argument '{}' for meter '{}'; "\
                           "got kwargs={} (with mapped_inputs={}) instead."\
                                   .format(inpt,self.__class__.__name__,
-                                          sorted(kwargs.items()),sorted(mapped_inputs.items()))
+                                          sorted(kwargs.keys()),sorted(mapped_inputs.keys()))
                 raise TypeError(message)
         result = self.evaluate_mapped_inputs(**mapped_inputs)
         mapped_outputs = self._remap(result,self.output_mapping)
@@ -99,6 +100,13 @@ class MeterBase(object):
         inputs = inspect.getargspec(self.evaluate_mapped_inputs).args[1:]
         child_inputs = self._get_child_inputs()
         return {self.__class__.__name__:{"inputs":inputs,"child_inputs":child_inputs}}
+
+    def _get_optional_inputs(self):
+        argspec = inspect.getargspec(self.evaluate_mapped_inputs)
+        if argspec.defaults is None:
+            return {}
+        return dict(zip(reversed(argspec.args), reversed(argspec.defaults)))
+
 
     def _get_child_inputs(self):
         return []
