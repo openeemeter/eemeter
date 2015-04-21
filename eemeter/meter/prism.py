@@ -29,13 +29,13 @@ class PRISMMeter(MeterBase):
         defaults to 22.22 degC or 72 degF
     electricity_heating_slope_high : float
         Highest heating slope in parameter optimization for electricity;
-        defaults to 9 degC or 5 degF
+        defaults to 9 energy/degC or 5 energy/degF
     natural_gas_heating_slope_high : float
         Highest heating slope in parameter optimization for natural gas;
-        defaults to 9 degC or 5 degF
+        defaults to 9 energy/degC or 5 energy/degF
     electricity_cooling_slope_high : float
         Highest cooling slope in parameter optimization for electricity;
-        defaults to 9 degC or 5 degF
+        defaults to 9 energy/degC or 5 energy/degF
     """
 
     def __init__(self,temperature_unit_str="degC",
@@ -271,6 +271,219 @@ class PRISMMeter(MeterBase):
         -------
         out : dict
             Dictionary of results
+            ---------------------
+
+            The following results are always available:
+            - cdd_tmy : Total cooling degree days (base 65 degF or 18.33 degC)
+              in a typical meteorological year (TMY3).
+            - consumption_history_no_estimated : The input consumption history
+              with estimated periods consolidated or removed.
+            - cvrmse_electricity : The Coefficient of Variation of
+              Root-mean-squared Error on the outputs of the electricity usage
+              model.
+            - cvrmse_natural_gas : The Coefficient of Variation of
+              Root-mean-squared Error on the outputs of the electricity usage
+              model.
+            - electricity_presence : A boolean indicating presence of any
+              electricity consumption data.
+            - has_enough_cdd_electricity : A boolean indicating whether or not
+              the electricity consumption data covers (a) enough total CDD, (b)
+              enough periods with low CDD, and (c) enough periods with high
+              CDD.
+            - has_enough_cdd_natural_gas : A boolean indicating whether or not
+              the natural gas consumption data covers (a) enough total CDD, (b)
+              enough periods with low CDD, and (c) enough periods with high
+              CDD.
+            - has_enough_data_electricity : A boolean indicating whether or not
+              the electricity consumption data covers a period of at least 330
+              days or a period of at least 184 days with enough CDD and HDD
+              variation, as indicated by the results
+              "has_enough_cdd_electricity" and "has_enough_hdd_electricity".
+            - has_enough_data_natural_gas : A boolean indicating whether or not
+              the natural gas consumption data covers a period of at least 330
+              days or a period of at least 184 days with enough CDD and HDD
+              variation, as indicated by the result
+              "has_enough_hdd_cdd_natural_gas".
+            - has_enough_hdd_cdd_electricity : A boolean indicating whether or
+              not the electricity consumption data covers a period with enough
+              variation in hdd and cdd; equivalent to the boolean value
+              ("has_enough_cdd_electricity" and "has_enough_hdd_electricity")
+            - has_enough_hdd_cdd_natural_gas : A boolean indicating whether or
+              not the natural gas consumption data covers a period with enough
+              variation in hdd and cdd; equivalent to the boolean value
+              ("has_enough_cdd_natural_gas" and "has_enough_hdd_natural_gas")
+            - has_enough_hdd_electricity : A boolean indicating whether or not
+              the electricity consumption data covers (a) enough total HDD, (b)
+              enough periods with low HDD, and (c) enough periods with high
+              HDD.
+            - has_enough_hdd_natural_gas : A boolean indicating whether or not
+              the natural gas consumption data covers (a) enough total HDD, (b)
+              enough periods with low HDD, and (c) enough periods with high
+              HDD.
+            - has_enough_periods_with_high_cdd_per_day_electricity : A boolean
+              indicating whether or not the electricity consumption data has
+              enough periods with at least 1.2x average normal CDD/day (TMY3,
+              base 65 degF or 18.33 degC).
+            - has_enough_periods_with_high_cdd_per_day_natural_gas : Always
+              True.
+            - has_enough_periods_with_high_hdd_per_day_electricity : A boolean
+              indicating whether or not the electricity consumption data has
+              enough periods with at least 1.2x average normal HDD/day (TMY3,
+              base 65 degF or 18.33 degC).
+            - has_enough_periods_with_high_hdd_per_day_natural_gas : A boolean
+              indicating whether or not the natural_gas consumption data has
+              enough periods with at least 1.2x average normal HDD/day (TMY3,
+              base 65 degF or 18.33 degC).
+            - has_enough_periods_with_low_cdd_per_day_electricity : A boolean
+              indicating whether or not the electricity consumption data has
+              enough periods with less than 0.2x average normal CDD/day (TMY3,
+              base 65 degF or 18.33 degC).
+            - has_enough_periods_with_low_cdd_per_day_natural_gas : Always
+              True
+            - has_enough_periods_with_low_hdd_per_day_electricity : A boolean
+              indicating whether or not the electricity consumption data has
+              enough periods with less than 0.2x average normal HDD/day (TMY3,
+              base 65 degF or 18.33 degC).
+            - has_enough_periods_with_low_hdd_per_day_natural_gas : A boolean
+              indicating whether or not the natural gas consumption data has
+              enough periods with less than 0.2x average normal HDD/day (TMY3,
+              base 65 degF or 18.33 degC).
+            - has_enough_total_cdd_electricity : A boolean indicating whether
+              or not the total CDD during the total time span of the
+              electricity data is at least 0.5x normal annual CDD/day (TMY3,
+              base 65 degF or 18.33 degC).
+            - has_enough_total_cdd_natural_gas : Always True
+            - has_enough_total_hdd_electricity : A boolean indicating whether
+              or not the total HDD during the total time span of the
+              electricity data is at least 0.5x normal annual HDD/day (TMY3,
+              base 65 degF or 18.33 degC).
+            - has_enough_total_hdd_natural_gas : A boolean indicating whether
+              or not the total CDD during the total time span of the
+              natural gas data is at least 0.5x normal annual HDD/day (TMY3,
+              base 65 degF or 18.33 degC).
+            - has_recent_reading_electricity : A boolean indicating whether or
+              not there is a electricity consumption data within 365 days of
+              the current date (default) or the "since_date", the target end
+              date of energy consumption evaluation period.
+            - has_recent_reading_natural_gas : A boolean indicating whether or
+              not there is a natural gas consumption data within 365 days of
+              the current date (default) or the "since_date", the target end
+              date of energy consumption evaluation period.
+            - hdd_tmy : Total heating degree days (base 65 degF or 18.33 degC)
+              in a typical meteorological year (TMY3).
+            - meets_cvrmse_limit_electricity : A boolean indicating whether or
+              not the Coefficient of Variation of the Root-mean-square Error
+              (CVRMSE) of a regression of electricity consumption data against
+              local observed HDD/CDD, as determined using equation 3.2.2.G.i
+              of the ANSI/BPI-2400-S-2012 specification is less than 20.
+            - meets_cvrmse_limit_natural_gas : A boolean indicating whether or
+              not the Coefficient of Variation of the Root-mean-square Error
+              (CVRMSE) of a regression of natural gas consumption data against
+              local observed HDD/CDD, as determined using equation 3.2.2.G.i
+              of the ANSI/BPI-2400-S-2012 specification is less than 20.
+            - meets_model_calibration_utility_bill_criteria_electricity : A
+              boolean indicating whether or not all electricity consumption
+              acceptance criteria, as outlined in section 3.2.2 of the
+              ANSI/BPI-2400-S-2012 specification, have been met.
+            - meets_model_calibration_utility_bill_criteria_natural_gas : A
+              boolean indicating whether or not all natural gas consumption
+              acceptance criteria, as outlined in section 3.2.2 of the
+              ANSI/BPI-2400-S-2012 specification, have been met.
+            - n_periods_high_cdd_per_day_electricity : The number of
+              electricity consumption data periods with observed CDD greater
+              than 1.2x average normal CDD/day (TMY3, base 65 degF or 18.33
+              degC).
+            - n_periods_high_hdd_per_day_electricity : The number of
+              electricity consumption data periods with observed HDD greater
+              than 1.2x average normal CDD/day (TMY3, base 65 degF or 18.33
+              degC).
+            - n_periods_low_cdd_per_day_electricity : The number of
+              electricity consumption data periods with observed CDD less than
+              0.2x average normal CDD/day (TMY3, base 65 degF or 18.33 degC).
+            - n_periods_low_hdd_per_day_electricity : The number of
+              electricity consumption data periods with observed HDD less than
+              1.2x average normal CDD/day (TMY3, base 65 degF or 18.33 degC).
+            - n_periods_high_cdd_per_day_natural_gas : The number of natural
+              gas consumption data periods with observed CDD greater than 1.2x
+              average normal CDD/day (TMY3, base 65 degF or 18.33 degC).
+            - n_periods_high_hdd_per_day_natural_gas : The number of natural
+              gas consumption data periods with observed HDD greater than 1.2x
+              average normal CDD/day (TMY3, base 65 degF or 18.33 degC).
+            - n_periods_low_cdd_per_day_natural_gas : The number of natural gas
+              consumption data periods with observed CDD less than 0.2x average
+              normal CDD/day (TMY3, base 65 degF or 18.33 degC).
+            - n_periods_low_hdd_per_day_natural_gas : The number of natural gas
+              consumption data periods with observed HDD less than 1.2x average
+              normal CDD/day (TMY3, base 65 degF or 18.33 degC).
+            - natural_gas_presence : A boolean indicating presence of any
+              natural_gas consumption data.
+            - spans_183_days_and_has_enough_hdd_cdd_electricity : A boolean
+              indicating whether or not electricity consumption data spans at
+              least 184 days and is associated with sufficient breadth and
+              variation in observed HDD and CDD.
+            - spans_183_days_and_has_enough_hdd_cdd_natural_gas : A boolean
+              indicating whether or not natural gas consumption data spans at
+              least 184 days and is associated with sufficient breadth and
+              variation in observed HDD and CDD.
+            - spans_184_days_electricity : A boolean indicating whether or not
+              electricity consumption data spans at least 184 days.
+            - spans_184_days_natural_gas : A boolean indicating whether or not
+              natural gas consumption data spans at least 184 days.
+            - spans_330_days_electricity : A boolean indicating whether or not
+              electricity consumption data spans at least 330 days.
+            - spans_330_days_natural_gas : A boolean indicating whether or not
+              natural gas consumption data spans at least 330 days.
+            - time_span_electricity : Number of days between earliest available
+              electricity data and latest available electricity data.
+            - time_span_natural_gas : Number of days between earliest available
+              natural gas data and latest available natural gas data.
+            - total_cdd_electricity : The total cooling degree days (base 65
+              degF or 18.33 degC) observed during the all electricity
+              consumption data periods.
+            - total_cdd_natural_gas : The total cooling degree days (base 65
+              degF or 18.33 degC) observed during the all natural gas
+              consumption data periods.
+            - total_hdd_electricity : The total heating degree days (base 65
+              degF or 18.33 degC) observed during the all electricity
+              consumption data periods.
+            - total_hdd_natural_gas : The total heating degree days (base 65
+              degF or 18.33 degC) observed during the all natural gas
+              consumption data periods.
+
+            The following results are only available if
+            :code:`meets_model_calibration_utility_bill_criteria_electricity`
+            is :code:`True`:
+            - annualized_usage_electricity : Electricity usage in a typical
+              meteorological year, as estimated by the fitted hdd/cdd
+              electricity use model.
+            - rmse_electricity : Root-mean-square error of fitted hdd/cdd
+              electricity use model estimations for all consumption periods.
+            - r_squared_electricity : Coefficient of Determination (r^2) of
+              fitted HDD/CDD electricity-use model estimations for all
+              consumption periods.
+            - temp_sensitivity_params_electricity : Fitted temperature
+              sensitivity parameters for HDD/CDD electricity use model in an
+              array of values with the following order: [base_consumption
+              (kWh/day), heating_slope (kWh/HDD), heating_reference_temperature
+              (degF or degC), cooling_slope (kWh/CDD),
+              cooling_reference_temperature (degF or degC)]
+
+            The following results are only available if
+            :code:`meets_model_calibration_utility_bill_criteria_natural_gas`
+            is :code:`True`:
+            - annualized_usage_natural_gas : Natural gas usage in a typical
+              meteorological year, as estimated by the fitted hdd/cdd
+              natural gas use model.
+            - rmse_natural_gas : Root-mean-square error of fitted hdd/cdd
+              natural gas use model estimations for all consumption periods.
+            - r_squared_natural_gas : Coefficient of Determination (r^2) of
+              fitted HDD/CDD natural gas use model estimations for all
+              consumption periods.
+            - temp_sensitivity_params_natural_gas : Fitted temperature
+              sensitivity parameters for HDD/CDD natural gas use model in an
+              array of values with the following order: [base_consumption
+              (kWh/day), heating_slope (kWh/HDD), heating_reference_temperature
+              (degF or degC)]
         """
         return self.meter.evaluate(**kwargs)
 
