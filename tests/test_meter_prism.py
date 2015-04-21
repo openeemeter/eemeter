@@ -68,24 +68,6 @@ def test_princeton_scorekeeping_method(prism_outputs_1,
             average_daily_usages, estimated_average_daily_usages, n_days \
             = prism_outputs_1
 
-    with pytest.raises(ValueError):
-        PRISMMeter(temperature_unit_str="unexpected")
-
-    with pytest.raises(ValueError):
-        PRISMMeter(heating_ref_temp_high=0,heating_ref_temp_x0=1,heating_ref_temp_low=2)
-
-    with pytest.raises(ValueError):
-        PRISMMeter(cooling_ref_temp_high=0,cooling_ref_temp_x0=1,cooling_ref_temp_low=2)
-
-    with pytest.raises(ValueError):
-        PRISMMeter(electricity_heating_slope_high=-1)
-
-    with pytest.raises(ValueError):
-        PRISMMeter(natural_gas_heating_slope_high=-1)
-
-    with pytest.raises(ValueError):
-        PRISMMeter(electricity_cooling_slope_high=-1)
-
     meter = PRISMMeter(temperature_unit_str=temp_unit)
 
     result = meter.evaluate(consumption_history=ch,
@@ -153,7 +135,23 @@ def test_princeton_scorekeeping_method(prism_outputs_1,
     assert_allclose(result['total_hdd_electricity'], total_hdd, rtol=RTOL, atol=ATOL)
     assert result['total_hdd_natural_gas'] == 0
 
-def test_prism_bad_temp_unit():
+def test_prism_bad_inputs():
 
     with pytest.raises(ValueError):
-        meter = PRISMMeter(temperature_unit_str="bad_unit")
+        PRISMMeter(temperature_unit_str="unexpected")
+
+    with pytest.raises(ValueError):
+        PRISMMeter(heating_ref_temp_high=0,heating_ref_temp_x0=1,heating_ref_temp_low=2)
+
+    with pytest.raises(ValueError):
+        PRISMMeter(cooling_ref_temp_high=0,cooling_ref_temp_x0=1,cooling_ref_temp_low=2)
+
+    with pytest.raises(ValueError):
+        PRISMMeter(electricity_heating_slope_high=-1)
+
+    with pytest.raises(ValueError):
+        PRISMMeter(natural_gas_heating_slope_high=-1)
+
+    with pytest.raises(ValueError):
+        PRISMMeter(electricity_cooling_slope_high=-1)
+
