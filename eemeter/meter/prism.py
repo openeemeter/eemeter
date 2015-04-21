@@ -455,6 +455,13 @@ class PRISMMeter(MeterBase):
             - annualized_usage_electricity : Electricity usage in a typical
               meteorological year, as estimated by the fitted hdd/cdd
               electricity use model.
+            - average_daily_usages_electricity : Average electricity usage per
+              day (kWh/day) for the electricity consumption periods.
+            - estimated_average_daily_usages_electricity : Average electricity
+              usage per day (kWh/day) for the electricity consumption periods
+              as estimated by the fitted temperature sensitivity model.
+            - n_days_electricity : The number of days in each electricity
+              consumption period; used as weights in model fitting.
             - rmse_electricity : Root-mean-square error of fitted hdd/cdd
               electricity use model estimations for all consumption periods.
             - r_squared_electricity : Coefficient of Determination (r^2) of
@@ -474,6 +481,13 @@ class PRISMMeter(MeterBase):
             - annualized_usage_natural_gas : Natural gas usage in a typical
               meteorological year, as estimated by the fitted hdd/cdd
               natural gas use model.
+            - average_daily_usages_natural_gas : Average natural gas usage per
+              day (therms/day) for the natural gas consumption periods.
+            - estimated_average_daily_usages_natural_gas : Average natural gas
+              usage per day (therms/day) for the natural gas consumption
+              periods as estimated by the fitted temperature sensitivity model.
+            - n_days_natural_gas : The number of days in each natural_gas
+              consumption period; used as weights in model fitting.
             - rmse_natural_gas : Root-mean-square error of fitted hdd/cdd
               natural gas use model estimations for all consumption periods.
             - r_squared_natural_gas : Coefficient of Determination (r^2) of

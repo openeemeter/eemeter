@@ -17,10 +17,14 @@ ATOL = 1e-2
 
 import pytest
 
-@pytest.fixture(params=[([-1, 1,14.5,8,17.8],True,6119.297438069778,0,"degC",693.5875,876.9934,2587.6109,1805.0001,0,1),
-                        ([10,2,15.5,1,19.5],True,4927.478974253085,0,"degC",693.5875,876.9934,2587.6109,1805.0001,0,1),
-                        ([0,2,18.8,7,22.2],True,3616.249477948155,0,"degC",693.5875,876.9934,2587.6109,1805.0001,0,1),
-                        ([0,2,65,3,71],True,4700.226534599519,0,"degF",1248.4575,1578.5882,4657.6997,3249.0002,0,1),
+@pytest.fixture(params=[([-1, 1,14.5,8,17.8],True,6119.297438069778,0,"degC",
+                          693.5875,876.9934,2587.6109,1805.0001,0,1),
+                        ([10,2,15.5,1,19.5],True,4927.478974253085,0,"degC",
+                          693.5875,876.9934,2587.6109,1805.0001,0,1),
+                        ([0,2,18.8,7,22.2],True,3616.249477948155,0,"degC",
+                          693.5875,876.9934,2587.6109,1805.0001,0,1),
+                        ([0,2,65,3,71],True,4700.226534599519,0,"degF",
+                          1248.4575,1578.5882,4657.6997,3249.0002,0,1),
                         ])
 def prism_outputs_1(request):
     model = TemperatureSensitivityModel(cooling=True,heating=True)
@@ -39,13 +43,17 @@ def prism_outputs_1(request):
     periods = generate_periods(start,end,jitter_intensity=0)
     gen = ConsumptionGenerator("electricity", "kWh", request.param[4], model, params)
     consumptions = gen.generate(gsod_722880_2012_2014_weather_source(), periods)
+    consumption_kWh_per_day = [c.kWh / c.timedelta.days for c in consumptions]
+    consumption_n_days = [p.timedelta.days for p in periods]
     fixture = ConsumptionHistory(consumptions), model.param_dict_to_list(params), \
             request.param[1], request.param[2], \
             request.param[3], request.param[4], \
             retrofit_start_date, retrofit_completion_date, \
             request.param[5], request.param[6], \
             request.param[7], request.param[8], \
-            request.param[9], request.param[10]
+            request.param[9], request.param[10], \
+            consumption_kWh_per_day, consumption_kWh_per_day, \
+            consumption_n_days
     return fixture
 
 @pytest.mark.slow
@@ -56,7 +64,8 @@ def test_princeton_scorekeeping_method(prism_outputs_1,
             elec_annualized_usage, elec_error, temp_unit, \
             retrofit_start_date, retrofit_completion_date, \
             cdd_tmy, hdd_tmy, total_cdd, total_hdd, \
-            rmse_electricity, r_squared_electricity \
+            rmse_electricity, r_squared_electricity, \
+            average_daily_usages, estimated_average_daily_usages, n_days \
             = prism_outputs_1
 
     with pytest.raises(ValueError):
@@ -84,11 +93,13 @@ def test_princeton_scorekeeping_method(prism_outputs_1,
                             weather_normal_source=tmy3_722880_weather_source)
 
     assert_allclose(result['annualized_usage_electricity'], elec_annualized_usage, rtol=RTOL, atol=ATOL)
+    assert_allclose(result['average_daily_usages_electricity'],average_daily_usages,rtol=RTOL,atol=ATOL)
     assert_allclose(result['cdd_tmy'], cdd_tmy, rtol=RTOL, atol=ATOL)
     assert result['consumption_history_no_estimated'] is not None
     assert result['cvrmse_electricity'] < 1e-2
     assert np.isnan(result['cvrmse_natural_gas'])
     assert result['electricity_presence'] == True
+    assert_allclose(result['estimated_average_daily_usages_electricity'],estimated_average_daily_usages,rtol=RTOL,atol=ATOL)
     assert result['has_enough_cdd_electricity'] == True
     assert result['has_enough_cdd_natural_gas'] == True
     assert result['has_enough_data_electricity'] == True
@@ -116,6 +127,7 @@ def test_princeton_scorekeeping_method(prism_outputs_1,
     assert result['meets_cvrmse_limit_natural_gas'] == False
     assert result['meets_model_calibration_utility_bill_criteria_electricity'] == True
     assert result['meets_model_calibration_utility_bill_criteria_natural_gas'] == False
+    assert_allclose(result['n_days_electricity'],n_days,rtol=RTOL,atol=ATOL)
     assert result['n_periods_high_cdd_per_day_electricity'] > 0
     assert result['n_periods_high_hdd_per_day_electricity'] > 0
     assert result['n_periods_low_cdd_per_day_electricity'] > 0
