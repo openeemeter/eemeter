@@ -57,9 +57,14 @@ def bpi_2400_1(request):
     elec_param_list = elec_model.param_dict_to_list(elec_params)
     gas_param_list = gas_model.param_dict_to_list(gas_params)
 
+    average_daily_usages_elec = [c.kWh/c.timedelta.days for c in elec_consumptions]
+    average_daily_usages_gas = [c.therms/c.timedelta.days for c in gas_consumptions]
+
+
     return ch, elec_param_list, gas_param_list, normal_cdd, normal_hdd, \
             cvrmse_electricity, cvrmse_natural_gas, \
-            n_periods, time_span, total_cdd, total_hdd, temp_unit
+            n_periods, time_span, total_cdd, total_hdd, temp_unit, \
+            average_daily_usages_elec, average_daily_usages_gas
 
 def test_bpi2400(bpi_2400_1,
                  gsod_722880_2012_2014_weather_source,
@@ -67,7 +72,9 @@ def test_bpi2400(bpi_2400_1,
 
     ch, elec_params, gas_params, normal_cdd, normal_hdd, \
             cvrmse_electricity, cvrmse_natural_gas, n_periods, time_span,\
-            total_cdd, total_hdd, temp_unit = bpi_2400_1
+            total_cdd, total_hdd, temp_unit, \
+            average_daily_usages_electricity,average_daily_usages_natural_gas \
+            = bpi_2400_1
 
     meter = BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(temperature_unit_str=temp_unit)
 
@@ -75,12 +82,11 @@ def test_bpi2400(bpi_2400_1,
                             weather_source=gsod_722880_2012_2014_weather_source,
                             weather_normal_source=tmy3_722880_weather_source)
 
-    assert 'consumption_history' not in result
-    assert 'weather_normal_source' not in result
-    assert 'weather_source' not in result
-
     for c in result["consumption_history_no_estimated"].iteritems():
         assert not c.estimated
+
+    assert_allclose(result["average_daily_usages_bpi2400_electricity"],average_daily_usages_electricity,rtol=RTOL,atol=ATOL)
+    assert_allclose(result["average_daily_usages_bpi2400_natural_gas"],average_daily_usages_natural_gas,rtol=RTOL,atol=ATOL)
 
     assert_allclose(result['cdd_tmy'],normal_cdd,rtol=RTOL,atol=ATOL)
     assert_allclose(result['hdd_tmy'],normal_hdd,rtol=RTOL,atol=ATOL)
@@ -90,6 +96,9 @@ def test_bpi2400(bpi_2400_1,
 
     assert result['electricity_presence']
     assert result['natural_gas_presence']
+
+    assert_allclose(result["estimated_average_daily_usages_bpi2400_electricity"],average_daily_usages_electricity,rtol=RTOL,atol=ATOL)
+    assert_allclose(result["estimated_average_daily_usages_bpi2400_natural_gas"],average_daily_usages_natural_gas,rtol=RTOL,atol=ATOL)
 
     assert result['has_enough_cdd_electricity']
     assert result['has_enough_cdd_natural_gas']
@@ -113,6 +122,7 @@ def test_bpi2400(bpi_2400_1,
     assert result['has_enough_total_hdd_natural_gas']
     assert result['has_recent_reading_electricity']
     assert result['has_recent_reading_natural_gas']
+
     assert result['meets_cvrmse_limit_electricity']
     assert result['meets_cvrmse_limit_natural_gas']
     assert result['meets_model_calibration_utility_bill_criteria_electricity']
@@ -134,6 +144,9 @@ def test_bpi2400(bpi_2400_1,
     assert result['spans_330_days_electricity']
     assert result['spans_330_days_natural_gas']
 
+    assert_allclose(result["temp_sensitivity_params_bpi2400_electricity"],elec_params,rtol=RTOL,atol=ATOL)
+    assert_allclose(result["temp_sensitivity_params_bpi2400_natural_gas"],gas_params,rtol=RTOL,atol=ATOL)
+
     assert_allclose(result['time_span_electricity'],time_span,rtol=RTOL,atol=ATOL)
     assert_allclose(result['time_span_natural_gas'],time_span,rtol=RTOL,atol=ATOL)
 
@@ -141,3 +154,64 @@ def test_bpi2400(bpi_2400_1,
     assert_allclose(result['total_cdd_natural_gas'],total_cdd,rtol=RTOL,atol=ATOL)
     assert_allclose(result['total_hdd_electricity'],total_hdd,rtol=RTOL,atol=ATOL)
     assert_allclose(result['total_hdd_natural_gas'],total_hdd,rtol=RTOL,atol=ATOL)
+
+    all_inputs = ["average_daily_usages_bpi2400_electricity",
+            "average_daily_usages_bpi2400_natural_gas",
+            "cdd_tmy",
+            "consumption_history_no_estimated",
+            "cvrmse_electricity",
+            "cvrmse_natural_gas",
+            "electricity_presence",
+            "estimated_average_daily_usages_bpi2400_electricity",
+            "estimated_average_daily_usages_bpi2400_natural_gas",
+            "has_enough_cdd_electricity",
+            "has_enough_cdd_natural_gas",
+            "has_enough_data_electricity",
+            "has_enough_data_natural_gas",
+            "has_enough_hdd_cdd_electricity",
+            "has_enough_hdd_cdd_natural_gas",
+            "has_enough_hdd_electricity",
+            "has_enough_hdd_natural_gas",
+            "has_enough_periods_with_high_cdd_per_day_electricity",
+            "has_enough_periods_with_high_cdd_per_day_natural_gas",
+            "has_enough_periods_with_high_hdd_per_day_electricity",
+            "has_enough_periods_with_high_hdd_per_day_natural_gas",
+            "has_enough_periods_with_low_cdd_per_day_electricity",
+            "has_enough_periods_with_low_cdd_per_day_natural_gas",
+            "has_enough_periods_with_low_hdd_per_day_electricity",
+            "has_enough_periods_with_low_hdd_per_day_natural_gas",
+            "has_enough_total_cdd_electricity",
+            "has_enough_total_cdd_natural_gas",
+            "has_enough_total_hdd_electricity",
+            "has_enough_total_hdd_natural_gas",
+            "has_recent_reading_electricity",
+            "has_recent_reading_natural_gas",
+            "hdd_tmy",
+            "meets_cvrmse_limit_electricity",
+            "meets_cvrmse_limit_natural_gas",
+            "meets_model_calibration_utility_bill_criteria_electricity",
+            "meets_model_calibration_utility_bill_criteria_natural_gas",
+            "n_periods_high_cdd_per_day_electricity",
+            "n_periods_high_hdd_per_day_electricity",
+            "n_periods_low_cdd_per_day_electricity",
+            "n_periods_low_hdd_per_day_electricity",
+            "n_periods_high_cdd_per_day_natural_gas",
+            "n_periods_high_hdd_per_day_natural_gas",
+            "n_periods_low_cdd_per_day_natural_gas",
+            "n_periods_low_hdd_per_day_natural_gas",
+            "natural_gas_presence",
+            "spans_183_days_and_has_enough_hdd_cdd_electricity",
+            "spans_183_days_and_has_enough_hdd_cdd_natural_gas",
+            "spans_184_days_electricity",
+            "spans_184_days_natural_gas",
+            "spans_330_days_electricity",
+            "spans_330_days_natural_gas",
+            "temp_sensitivity_params_bpi2400_electricity",
+            "temp_sensitivity_params_bpi2400_natural_gas",
+            "time_span_electricity",
+            "time_span_natural_gas",
+            "total_cdd_electricity",
+            "total_cdd_natural_gas",
+            "total_hdd_electricity",
+            "total_hdd_natural_gas"]
+    assert set(all_inputs) == set(result.keys())
