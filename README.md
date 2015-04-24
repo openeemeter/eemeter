@@ -11,7 +11,7 @@ Installation
 
 Execute the following command to install:
 
-    $ pip install git+https://github.com/impactlab/eemeter.git
+    $ pip install eemeter
 
 Testing
 -------
@@ -28,7 +28,8 @@ and in a virtual environment execute the following commands:
 You should ensure that you are using the virtualenv py.test executable with
 `py.test --version`.
 
-Some tests are slow and are skipped by default; to run these, use the `--runslow` flag:
+Some tests are slow and are skipped by default; to run these (you should!),
+use the `--runslow` flag:
 
     $ py.test --runslow
 
