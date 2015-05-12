@@ -50,9 +50,12 @@ and in a virtual environment execute the following commands::
     $ git clone https://github.com/impactlab/eemeter
     $ cd eemeter
     $ mkvirtualenv eemeter
-    $ pip install numpy scipy pytest lxml python-dateutil pandas xlrd sqlalchemy psycopg2
+    $ pip install numpy scipy pytest lxml python-dateutil pandas xlrd sqlalchemy
     $ python setup.py develop
     $ py.test --runslow
+
+You may also need to `pip install psycopg2` (or another DB library) in order to
+use test using the weather cache.
 
 If you run into problems with the py.test executable, please ensure that you
 are using the virtualenv py.test::
