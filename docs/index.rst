@@ -39,8 +39,7 @@ Installation
 
 Execute the following command to install the eemeter package and its dependencies::
 
-   pip install git+https://github.com/impactlab/eemeter.git
-
+   pip install eemeter
 
 Testing
 -------
@@ -50,14 +49,18 @@ and in a virtual environment execute the following commands::
 
     $ git clone https://github.com/impactlab/eemeter
     $ cd eemeter
-    $ pip install numpy scipy pytest
+    $ mkvirtualenv eemeter
+    $ pip install numpy scipy pytest lxml python-dateutil pandas xlrd sqlalchemy psycopg2
     $ python setup.py develop
-    $ py.test
+    $ py.test --runslow
 
-You should ensure that you are using the virtualenv py.test executable with
-`py.test --version`.
+If you run into problems with the py.test executable, please ensure that you
+are using the virtualenv py.test::
 
-Some tests are slow and are skipped by default; to run these, use the `--runslow` flag::
+    $ py.test --version
+
+Some tests are slow and are skipped by default; to run these (you should!),
+use the `--runslow` flag::
 
     $ py.test --runslow
 
