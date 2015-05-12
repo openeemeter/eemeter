@@ -36,13 +36,7 @@ Installation
 
 To get started with the eemeter, use pip::
 
-    $ pip install git+https://github.com/impactlab/eemeter.git
-
-or download it from github and install it using the setup.py::
-
-    $ git clone git://github.com/impactlab/ee-meter.git
-    $ cd ee-meter/
-    $ python setup.py install
+    $ pip install eemeter
 
 Using an existing meter
 -----------------------
