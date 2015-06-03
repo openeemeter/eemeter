@@ -13,109 +13,67 @@ from pkg_resources import resource_stream
 
 from eemeter.consumption import DatetimePeriod
 
-Session = None
+conn = None
 
 try:
     from sqlalchemy import create_engine
-    from sqlalchemy.ext.declarative import declarative_base
-    from sqlalchemy.orm import sessionmaker
-    from sqlalchemy.orm import relationship, backref
-    from sqlalchemy import Column, Integer, String, Float, Date, DateTime, ForeignKey
+    from sqlalchemy import Table, Column, MetaData, Integer, String, Float, Date, DateTime, ForeignKey
+    from sqlalchemy.sql import select
     from sqlalchemy.orm.exc import NoResultFound
+    from sqlalchemy import extract
 
-    Base = declarative_base()
+    metadata = MetaData()
 
-    class WeatherStation(Base):
-        __tablename__ = 'weatherstation'
+    weather_stations = Table('weatherstation', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('usaf_id', String(20)),
+    )
 
-        id = Column(Integer, primary_key=True)
-        usaf_id = Column(String)
-        hourly_temperature_normals = relationship("HourlyTemperatureNormal", order_by="HourlyTemperatureNormal.date", backref="weatherstation")
-        daily_temperature_normals = relationship("DailyTemperatureNormal", order_by="DailyTemperatureNormal.date", backref="weatherstation")
-        hourly_average_temperatures = relationship("HourlyAverageTemperature", order_by="HourlyAverageTemperature.date", backref="weatherstation")
-        daily_average_temperatures = relationship("DailyAverageTemperature", order_by="DailyAverageTemperature.date", backref="weatherstation")
+    hourly_average_temperatures = Table('hourlyaveragetemperature', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('weatherstation_id', None, ForeignKey('weatherstation.id')),
+        Column('temp_C', Float),
+        Column('dt', DateTime),
+    )
 
-        def __repr__(self):
-               return "<WeatherStation('{}')".format(self.usaf_id)
+    daily_average_temperatures = Table('dailyaveragetemperature', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('weatherstation_id', None, ForeignKey('weatherstation.id')),
+        Column('temp_C', Float),
+        Column('dt', DateTime),
+    )
 
-    class HourlyAverageTemperature(Base):
-        __tablename__ = 'hourlyaveragetemperature'
+    hourly_temperature_normals = Table('hourlytemperaturenormal', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('weatherstation_id', None, ForeignKey('weatherstation.id')),
+        Column('temp_C', Float),
+        Column('dt', DateTime),
+    )
 
-        id = Column(Integer, primary_key=True)
-        weatherstation_id = Column(Integer, ForeignKey('weatherstation.id'))
-        temp_C = Column(Float)
-        date = Column(DateTime)
-
-        def __repr__(self):
-               return "<HourlyAverageTemperature('{}', {}, {})>".format(
-                                    self.weatherstation.usaf_id, self.temp_C, self.date)
-
-    class DailyAverageTemperature(Base):
-        __tablename__ = 'dailyaveragetemperature'
-
-        id = Column(Integer, primary_key=True)
-        weatherstation_id = Column(Integer, ForeignKey('weatherstation.id'))
-        temp_C = Column(Float)
-        date = Column(Date)
-
-        def __repr__(self):
-               return "<DailyAverageTemperature('{}', {}, {})>".format(
-                                    self.weatherstation.usaf_id, self.temp_C, self.date)
-
-    class HourlyTemperatureNormal(Base):
-        __tablename__ = 'hourlytemperaturenormal'
-
-        id = Column(Integer, primary_key=True)
-        weatherstation_id = Column(Integer, ForeignKey('weatherstation.id'))
-        temp_C = Column(Float)
-        date = Column(DateTime)
-
-        def __repr__(self):
-               return "<HourlyTemperatureNormal('{}', {}, {})>".format(
-                                    self.weatherstation.usaf_id, self.temp_C, self.date)
-
-    class DailyTemperatureNormal(Base):
-        __tablename__ = 'dailytemperaturenormal'
-
-        id = Column(Integer, primary_key=True)
-        weatherstation_id = Column(Integer, ForeignKey('weatherstation.id'))
-        temp_C = Column(Float)
-        date = Column(Date)
-
-        def __repr__(self):
-               return "<DailyTemperatureNormal('{}', {}, {})>".format(
-                                    self.weatherstation.usaf_id, self.temp_C, self.date)
-
+    daily_temperature_normals = Table('dailytemperaturenormal', metadata,
+        Column('id', Integer, primary_key=True),
+        Column('weatherstation_id', None, ForeignKey('weatherstation.id')),
+        Column('temp_C', Float),
+        Column('dt', DateTime),
+    )
 except ImportError:
-    warnings.warn("cache disabled. To use, please install sqlalchemy.")
+    warnings.warn("Weather cache disabled. To use, please install sqlalchemy.")
 
 def initialize_cache():
     cache_db_url = os.environ.get("EEMETER_WEATHER_CACHE_DATABASE_URL")
     if cache_db_url is None:
-        warnings.warn("cache disabled. To use, please set the EEMETER_WEATHER_CACHE_DATABASE_URL environment variable.")
+        warnings.warn("Weather cache disabled. To use, please set the"\
+                " EEMETER_WEATHER_CACHE_DATABASE_URL environment variable.")
         return None
     engine = create_engine(cache_db_url)
-    Session = sessionmaker()
-    Session.configure(bind=engine)
-    Base.metadata.create_all(engine)
-    return Session
+    metadata.create_all(engine)
+    conn = engine.connect()
+    return conn
 
 class WeatherSourceBase(object):
 
-    def __init__(self):
-
-        global Session
-        if not Session:
-            try:
-                Session = initialize_cache()
-            except NameError:
-                Session = None
-
-        if Session:
-            self.session = Session()
-        else:
-            self.session = None
-
+    def __init__(self,*args,**kwargs):
+        super(WeatherSourceBase, self).__init__(*args, **kwargs)
         self.data = {}
         self.station_id = None
         self._internal_unit = "degF"
@@ -393,32 +351,46 @@ class WeatherSourceBase(object):
 
 class CachedDataMixin(object):
 
+    def __init__(self,*args,**kwargs):
+        super(CachedDataMixin,self).__init__(*args,**kwargs)
+        global conn
+        if not conn:
+            try:
+                conn = initialize_cache()
+            except NameError:
+                conn = None
+
+        self.conn = conn
+
     def init_temperature_data(self):
         """Pulls all cached weather data into memory.
         """
         self.get_weather_station()
-        if self.weather_station:
+        if self.weather_station_pk:
             date_format = self.get_date_format()
-            if self._internal_unit == "degC":
-                for t in self.get_temperature_set():
-                    self.data[t.date.strftime(date_format)] = t.temp_C
-            elif self._internal_unit == "degF":
-                for t in self.get_temperature_set():
-                    self.data[t.date.strftime(date_format)] = self._degC_to_degF(t.temp_C)
+            for t in self.get_temperature_set():
+                temp_C = t.temp_C
+                if temp_C is None:
+                    temp_C = float('nan')
+                if self._internal_unit == "degC":
+                    self.data[t.dt.strftime(date_format)] = temp_C
+                elif self._internal_unit == "degF":
+                    self.data[t.dt.strftime(date_format)] = self._degC_to_degF(temp_C)
 
-    def get_temperature_class(self):
+    def get_temperature_table(self):
         """Returns the SQLAlchemy database class used for caching.
 
-        E.g. `return Temperature`
+        E.g. `return hourly_average_temperatures`
         """
         raise NotImplementedError
 
     def get_temperature_set(self):
         """Returns the set of all database temperature objects.
-
-        E.g. `return self.weather_station.temperatures`
         """
-        raise NotImplementedError
+        temperature_table = self.get_temperature_table()
+        s = select([temperature_table]).where(temperature_table.c.weatherstation_id == self.weather_station_pk)
+        result = self.conn.execute(s)
+        return result
 
     def get_date_format(self):
         """Returns the date format for fetching and storing temperature objects
@@ -429,50 +401,61 @@ class CachedDataMixin(object):
         raise NotImplementedError
 
     def get_weather_station(self):
-        """Sets the weather_station attribute using the db session and
+        """Sets the weather_station_pk attribute using the db connection and
         self.station_id, if available.
         """
-        if self.session:
-            try:
-                self.weather_station = self.session.query(WeatherStation).filter(WeatherStation.usaf_id == self.station_id).one()
-            except NoResultFound:
-                self.weather_station = WeatherStation(usaf_id=self.station_id)
-                self.session.add(self.weather_station)
-                self.session.commit()
+        if self.conn:
+            s = select([weather_stations.c.id]).where(weather_stations.c.usaf_id == self.station_id)
+            result = self.conn.execute(s)
+            row = result.fetchone()
+            if row:
+                self.weather_station_pk = row['id']
+            else:
+                ins = weather_stations.insert().values(usaf_id=self.station_id)
+                result = self.conn.execute(ins)
+                self.weather_station_pk = result.inserted_primary_key[0]
+            result.close()
         else:
-            self.weather_station = None
+            self.weather_station_pk = None
 
-    def update_cache(self,temp_C,date,overwrite=True):
-        """If caching is enabled, store the given temp, overwriting if necessary.
-
-        Warning: Slow! (TODO: speed this up)
+    def update_cache(self,records):
+        """If caching is enabled, update the cache for the given data.
         """
-        if self.session:
-            temperature_class = self.get_temperature_class()
-            temps_query = self.session.query(temperature_class)\
-                        .filter(temperature_class.weatherstation == self.weather_station)\
-                        .filter(temperature_class.date==date)
+        # add current weather station to each temperature to be inserted.
+        for r in records:
+            r["weatherstation_id"] = self.weather_station_pk
 
-            temps = temps_query.all()
-            if overwrite:
-                for t in temps:
-                    self.session.delete(t)
-                temps = []
-            if temps == []:
-                t = temperature_class(weatherstation=self.weather_station,temp_C=temp_C,date=date)
-                self.session.add(t)
+        # figure out which dates need to be overwritten
+        dates = set([d["dt"] for d in records])
+
+        if self.conn:
+
+            # delete existing records (if necessary)
+            all_temps = self.get_temperature_set()
+            old_records = [t for t in all_temps if t["dt"] in dates]
+            for record in old_records:
+                self.conn.execute(record.delete())
+
+            # insert new records
+            self.conn.execute(self.get_temperature_table().insert(), records)
+
+    def has_cached_data_for_year(self,year):
+        """Return True if data for the given year is in the cache.
+        """
+        if self.conn:
+            temps = self.get_temperature_table()
+            s = select([temps.c.dt]).where(extract('year', temps.c.dt) == year)
+            result = self.conn.execute(s)
+            n_results = len(result.fetchall())
+            return n_results > 1000
+        return False
 
 class HourlyTemperatureNormalCachedDataMixin(CachedDataMixin):
 
-    def get_temperature_class(self):
-        """Returns the SQLAlchemy database class used for caching.
+    def get_temperature_table(self):
+        """Returns the SQLAlchemy database table used for caching.
         """
-        return HourlyTemperatureNormal
-
-    def get_temperature_set(self):
-        """Returns the set of all database temperature objects.
-        """
-        return self.weather_station.hourly_temperature_normals
+        return hourly_temperature_normals
 
     def get_date_format(self):
         """Returns the date format for fetching and storing temperature objects
@@ -482,15 +465,10 @@ class HourlyTemperatureNormalCachedDataMixin(CachedDataMixin):
 
 class DailyTemperatureNormalCachedDataMixin(CachedDataMixin):
 
-    def get_temperature_class(self):
-        """Returns the SQLAlchemy database class used for caching.
+    def get_temperature_table(self):
+        """Returns the SQLAlchemy database table used for caching.
         """
-        return DailyTemperatureNormal
-
-    def get_temperature_set(self):
-        """Returns the set of all database temperature objects.
-        """
-        return self.weather_station.daily_temperature_normals
+        return daily_temperature_normals
 
     def get_date_format(self):
         """Returns the date format for fetching and storing temperature objects
@@ -500,15 +478,10 @@ class DailyTemperatureNormalCachedDataMixin(CachedDataMixin):
 
 class HourlyAverageTemperatureCachedDataMixin(CachedDataMixin):
 
-    def get_temperature_class(self):
-        """Returns the SQLAlchemy database class used for caching.
+    def get_temperature_table(self):
+        """Returns the SQLAlchemy database table used for caching.
         """
-        return HourlyAverageTemperature
-
-    def get_temperature_set(self):
-        """Returns the set of all database temperature objects.
-        """
-        return self.weather_station.hourly_average_temperatures
+        return hourly_average_temperatures
 
     def get_date_format(self):
         """Returns the date format for fetching and storing temperature objects
@@ -518,15 +491,10 @@ class HourlyAverageTemperatureCachedDataMixin(CachedDataMixin):
 
 class DailyAverageTemperatureCachedDataMixin(CachedDataMixin):
 
-    def get_temperature_class(self):
-        """Returns the SQLAlchemy database class used for caching.
+    def get_temperature_table(self):
+        """Returns the SQLAlchemy database table used for caching.
         """
-        return DailyAverageTemperature
-
-    def get_temperature_set(self):
-        """Returns the set of all database temperature objects.
-        """
-        return self.weather_station.daily_average_temperatures
+        return daily_average_temperatures
 
     def get_date_format(self):
         """Returns the date format for fetching and storing temperature objects
@@ -534,21 +502,21 @@ class DailyAverageTemperatureCachedDataMixin(CachedDataMixin):
         """
         return "%Y%m%d"
 
-class GSODWeatherSource(WeatherSourceBase,DailyAverageTemperatureCachedDataMixin):
+class GSODWeatherSource(DailyAverageTemperatureCachedDataMixin,WeatherSourceBase):
     def __init__(self,station_id,start_year,end_year):
         super(GSODWeatherSource,self).__init__()
         self.station_id = station_id[:6]
-        self.init_temperature_data()
+        self.init_temperature_data() # load cached data
 
-        for days in range((datetime(end_year,12,31) - datetime(start_year,1,1)).days):
-            dat = datetime(start_year,1,1) + timedelta(days=days)
-            if dat > datetime.now() - timedelta(days=1):
-                break
-            temp = self.data.get(dat.strftime("%Y%m%d"))
-            if temp is None:
-                self._fetch_year(dat.year)
-        if self.session:
-            self.session.close()
+        if self.data == {}:
+            for year in range(start_year,end_year + 1):
+                self._fetch_year(year)
+        else:
+            for year in range(start_year,end_year + 1):
+                one_week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y%m%d")
+                if (year == datetime.now().year and not self.data.get(one_week_ago)) \
+                        or not self.has_cached_data_for_year(year):
+                    self._fetch_year(year)
 
     def _fetch_year(self,year):
         if len(self.station_id) == 6:
@@ -590,40 +558,32 @@ class GSODWeatherSource(WeatherSourceBase,DailyAverageTemperatureCachedDataMixin
         return self.data.get(dt.strftime("%Y%m%d"),float("nan"))
 
     def _add_file(self,f):
+        records = []
         for line in f.readlines()[1:]:
             columns=line.split()
             date_str = columns[2].decode('utf-8')
             temp = float(columns[3])
             self.data[date_str] = temp
             temp_C = self._degF_to_degC(temp)
-            dat = datetime.strptime(date_str,"%Y%m%d").date()
-            self.update_cache(temp_C,dat)
-        if self.session:
-            self.session.commit()
+            dt = datetime.strptime(date_str,"%Y%m%d").date()
+            records.append({"temp_C": temp_C, "dt": dt})
+        self.update_cache(records)
 
 class ISDWeatherSource(WeatherSourceBase,HourlyAverageTemperatureCachedDataMixin):
     def __init__(self,station_id,start_year,end_year):
         super(ISDWeatherSource,self).__init__()
         self.station_id = station_id[:6]
-        self.init_temperature_data()
+        self.init_temperature_data() # load cached data
 
         if self.data == {}:
             for year in range(start_year,end_year + 1):
                 self._fetch_year(year)
         else:
             for year in range(start_year,end_year + 1):
-                if year == datetime.now().year and not self.data.get(datetime.now().strftime("%Y%m%d") + "00"):
-                    self._fetch_year(datetime.now().year)
-                else:
-                    temps = []
-                    for days in range(365):
-                        dat = datetime(year,1,1) + timedelta(days=days)
-                        temps.append(self.data.get(dat.strftime("%Y%m%d") + "00"))
-                        temps.append(self.data.get(dat.strftime("%Y%m%d") + "01"))
-                if len(temps) < 700:
-                    self._fetch_year(dat.year)
-        if self.session:
-            self.session.close()
+                one_week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y%m%d") + "00"
+                if (year == datetime.now().year and not self.data.get(one_week_ago))\
+                        or not self.has_cached_data_for_year(year):
+                    self._fetch_year(year)
 
     def _fetch_year(self,year):
         if len(self.station_id) == 6:
@@ -668,6 +628,7 @@ class ISDWeatherSource(WeatherSourceBase,HourlyAverageTemperatureCachedDataMixin
         return np.mean(masked_data)
 
     def _add_file(self,f):
+        records = []
         for line in f.readlines():
             if line[87:92].decode('utf-8') == "+9999":
                 temp_C = float("nan")
@@ -675,10 +636,9 @@ class ISDWeatherSource(WeatherSourceBase,HourlyAverageTemperatureCachedDataMixin
                 temp_C = float(line[87:92]) / 10
             date_str = line[15:25].decode('utf-8')
             self.data[date_str] = self._degC_to_degF(temp_C)
-            dat = datetime.strptime(date_str,"%Y%m%d%H")
-            self.update_cache(temp_C,dat)
-        if self.session:
-            self.session.commit()
+            dt = datetime.strptime(date_str,"%Y%m%d%H")
+            records.append({"temp_C": temp_C, "dt": dt})
+        self.update_cache(records)
 
 class WeatherNormalMixin(object):
     def annual_daily_temperatures(self,unit):
@@ -699,22 +659,19 @@ class TMY3WeatherSource(WeatherSourceBase,WeatherNormalMixin,HourlyTemperatureNo
         if n_temp_normals < 364 * 24: #missing more than a day of data
             self._fetch_data()
 
-        if self.session:
-           self.session.close()
-
     def _fetch_data(self):
         r = requests.get("http://rredc.nrel.gov/solar/old_data/nsrdb/1991-2005/data/tmy3/{}TYA.CSV".format(self.station_id))
 
+        records = []
         for line in r.text.splitlines()[3:]:
             row = line.split(",")
             date_string = "{}{}{}{:02d}".format(row[0][6:10], row[0][0:2],
                                                 row[0][3:5], int(row[1][0:2]) - 1) # YYYYMMDDHH
             temp_C = float(row[31])
             self.data[date_string[4:]] = temp_C # skip year in date string
-            dat = datetime.strptime(date_string,"%Y%m%d%H")
-            self.update_cache(temp_C,dat) # cache always uses degC
-        if self.session:
-            self.session.commit()
+            dt = datetime.strptime(date_string,"%Y%m%d%H")
+            records.append({"temp_C": temp_C, "dt": dt})
+        self.update_cache(records)
 
     def internal_unit_datetime_average_temperature(self,dt):
         """Returns the temperature normal on the given datetime. `dt` can be
