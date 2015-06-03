@@ -23,6 +23,8 @@ class Mock(MagicMock):
             return Mock()
 
 MOCK_MODULES = [
+    'dateutil',
+    'dateutil.parser',
     'numpy',
     'pint',
     'scipy',
