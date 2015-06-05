@@ -50,7 +50,7 @@ and in a virtual environment execute the following commands::
     $ git clone https://github.com/impactlab/eemeter
     $ cd eemeter
     $ mkvirtualenv eemeter
-    $ pip install numpy scipy pytest lxml python-dateutil pandas xlrd sqlalchemy
+    $ pip install scipy pytest lxml pandas xlrd sqlalchemy
     $ python setup.py develop
     $ py.test --runslow
 
