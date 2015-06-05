@@ -20,13 +20,12 @@ from mock import Mock as MagicMock
 class Mock(MagicMock):
     @classmethod
     def __getattr__(cls, name):
-            return Mock()
+        return Mock()
 
 MOCK_MODULES = [
     'dateutil',
     'dateutil.parser',
     'numpy',
-    'pint',
     'scipy',
     'scipy.optimize',
     'six',
@@ -37,6 +36,7 @@ MOCK_MODULES = [
     'sqlalchemy.orm',
     'sqlalchemy.orm.exc',
     'pandas',
+    'pint',
 ]
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
@@ -129,7 +129,7 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'default'
+html_theme = 'classic'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
