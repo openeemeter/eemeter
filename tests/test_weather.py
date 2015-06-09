@@ -134,6 +134,21 @@ def test_isd_weather_source(consumption_history_one_summer_electricity,isd_weath
     cdds = isd_weather_source.cdd(consumptions,"degF",65)
     assert_allclose(cdds, [47.603,113.775,300.722], rtol=RTOL,atol=ATOL)
 
+    hourly_temps = isd_weather_source.hourly_temperatures(consumptions,"degF")
+    assert_allclose(hourly_temps[0][:5],[69.98,66.92,64.04,62.96,62.96],rtol=RTOL,atol=ATOL)
+
+    hourly_temps = isd_weather_source.hourly_temperatures(consumptions[0],"degF")
+    assert_allclose(hourly_temps[:5],[69.98,66.92,64.04,62.96,62.96],rtol=RTOL,atol=ATOL)
+
+    # test single consumption case (is iterable type error caught?)
+    daily_temps = isd_weather_source.daily_temperatures(consumptions[0],"degF")
+    assert_allclose(daily_temps[:3], [66.466,66.098,66.685], rtol=RTOL, atol=ATOL)
+
+    # test single consumption case (is iterable type error caught?)
+    daily_temps = isd_weather_source.daily_temperatures(consumptions[0],"degF")
+    avg_temp = isd_weather_source.average_temperature(consumptions[0],"degF")
+    assert_allclose(avg_temp, 66.576, rtol=RTOL, atol=ATOL)
+
 @pytest.mark.slow
 @pytest.mark.internet
 def test_tmy3_weather_source(consumption_history_one_summer_electricity,tmy3_weather_source):

@@ -63,6 +63,9 @@ class Consumption(DatetimePeriod):
     def __getattr__(self,unit):
         return (self.joules * ureg.joules).to(ureg.parse_expression(unit)).magnitude
 
+    def __iter__(self):
+        raise TypeError("Consumption objects cannot act as iterators.")
+
     def to(self,unit):
         """Returns internally stored energy value in the given unit. The `unit`
         should be a representative string in abbreviation or otherwise, in
