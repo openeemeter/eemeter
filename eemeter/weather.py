@@ -627,6 +627,59 @@ class ISDWeatherSource(WeatherSourceBase,HourlyAverageTemperatureCachedDataMixin
         masked_data = np.ma.masked_array(data,np.isnan(data))
         return np.mean(masked_data)
 
+    def hourly_temperatures(self,periods,unit):
+        """The hourly observed temperatures for each period.
+
+        Parameters
+        ----------
+        periods : [list of] eemeter.consumption.DatetimePeriod
+            Time periods over which temperatures will be collected. A single
+            datetime period may be given.
+        unit : {"degC", "degF"}
+            The unit in which temperatures should be returned.
+
+        Returns
+        -------
+        out : np.ndarray
+            Array of arrays of observed_daily temperatures observed during each
+            period. Note: array is not guaranteed to be rectangular. If a
+            single datetime period is given, a single numpy array of
+            temperatures will be returned.
+        """
+        try:
+            temps = []
+            for period in periods:
+                temps.append(self._period_hourly_temperatures(period,unit=None))
+            if unit is None:
+                return np.array(temps)
+            else:
+                return self._unit_convert(np.array(temps),unit)
+        except TypeError:
+            return self._period_hourly_temperatures(periods,unit)
+
+    def _period_hourly_temperatures(self,period,unit):
+        temps = []
+        for seconds in range(0,int(period.timedelta.total_seconds()),3600):
+            dt = period.start + timedelta(seconds=seconds)
+            temps.append(self.datetime_hourly_temperature(dt,unit))
+        return np.array(temps)
+
+    def datetime_hourly_temperature(self,dt,unit):
+        internal_unit_temp = self.internal_unit_datetime_hourly_temperature(dt)
+        if unit is None:
+            return internal_unit_temp
+        else:
+            return self._unit_convert(internal_unit_temp,unit)
+
+    def internal_unit_datetime_hourly_temperature(self,dt):
+        """Returns the hourly temperature on the given datetime. `dt` can be
+        either a python `date` or a python `datetime` instance. Calculated by
+        averaging hourly temperatures for the given day.
+        """
+        dt_str = dt.strftime("%Y%m%d%H")
+        hourly_temp = self.data.get(dt_str,float("nan"))
+        return hourly_temp
+
     def _add_file(self,f):
         records = []
         for line in f.readlines():
