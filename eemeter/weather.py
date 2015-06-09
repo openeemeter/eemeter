@@ -104,7 +104,7 @@ class WeatherSourceBase(object):
                 temps.append(self._period_average_temperature(period,unit=None))
             return self._unit_convert(np.array(temps),unit)
         except TypeError:
-            return self._period_average_temperature(period,unit)
+            return self._period_average_temperature(periods,unit)
 
     def _period_average_temperature(self,period,unit):
         """The average temperatures during the period as calculated by taking
@@ -153,7 +153,7 @@ class WeatherSourceBase(object):
             else:
                 return self._unit_convert(np.array(temps),unit)
         except TypeError:
-            return _period_daily_temperatures(period,unit)
+            return self._period_daily_temperatures(periods,unit)
 
     def _period_daily_temperatures(self,period,unit):
         """The daily average temperatures for a particular period.
