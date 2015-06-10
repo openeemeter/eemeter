@@ -129,10 +129,10 @@ def test_isd_weather_source(consumption_history_one_summer_electricity,isd_weath
     assert_allclose(avg_temps, [66.576,68.047,74.697], rtol=RTOL,atol=ATOL)
 
     hdds = isd_weather_source.hdd(consumptions,"degF",65)
-    assert_allclose(hdds, [0.294,20.309,0.0], rtol=RTOL,atol=ATOL)
+    assert_allclose(hdds, [0.945,24.517,0.000], rtol=RTOL,atol=ATOL)
 
     cdds = isd_weather_source.cdd(consumptions,"degF",65)
-    assert_allclose(cdds, [47.603,113.775,300.722], rtol=RTOL,atol=ATOL)
+    assert_allclose(cdds, [42.06,107.0925,292.46837], rtol=RTOL,atol=ATOL)
 
     hourly_temps = isd_weather_source.hourly_temperatures(consumptions,"degF")
     assert_allclose(hourly_temps[0][:5],[69.98,66.92,64.04,62.96,62.96],rtol=RTOL,atol=ATOL)
