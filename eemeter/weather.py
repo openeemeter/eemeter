@@ -372,10 +372,13 @@ class CachedDataMixin(object):
                 temp_C = t.temp_C
                 if temp_C is None:
                     temp_C = float('nan')
-                if self._internal_unit == "degC":
-                    self.data[t.dt.strftime(date_format)] = temp_C
-                elif self._internal_unit == "degF":
-                    self.data[t.dt.strftime(date_format)] = self._degC_to_degF(temp_C)
+                date_str = t.dt.strftime(date_format)
+                # only add if it won't overwrite an existing non-NaN temperature
+                if date_str not in self.data or np.isnan(self.data.get(date_str,float('nan'))):
+                    if self._internal_unit == "degC":
+                        self.data[date_str] = temp_C
+                    elif self._internal_unit == "degF":
+                        self.data[date_str] = self._degC_to_degF(temp_C)
 
     def get_temperature_table(self):
         """Returns the SQLAlchemy database class used for caching.
@@ -688,7 +691,8 @@ class ISDWeatherSource(WeatherSourceBase,HourlyAverageTemperatureCachedDataMixin
             else:
                 temp_C = float(line[87:92]) / 10
             date_str = line[15:25].decode('utf-8')
-            self.data[date_str] = self._degC_to_degF(temp_C)
+            if self.data.get(date_str) is None or np.isnan(self.data.get(date_str)):
+                self.data[date_str] = self._degC_to_degF(temp_C)
             dt = datetime.strptime(date_str,"%Y%m%d%H")
             records.append({"temp_C": temp_C, "dt": dt})
         self.update_cache(records)
