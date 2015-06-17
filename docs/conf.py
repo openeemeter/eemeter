@@ -28,7 +28,6 @@ MOCK_MODULES = [
     'numpy',
     'scipy',
     'scipy.optimize',
-    'six',
     'sqlalchemy',
     'sqlalchemy.sql',
     'sqlalchemy.ext',
