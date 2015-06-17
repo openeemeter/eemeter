@@ -13,53 +13,68 @@ from pkg_resources import resource_stream
 
 from eemeter.consumption import DatetimePeriod
 
-conn = None
-
 try:
     from sqlalchemy import create_engine
     from sqlalchemy import Table, Column, MetaData, Integer, String, Float, Date, DateTime, ForeignKey
     from sqlalchemy.sql import select
     from sqlalchemy.orm.exc import NoResultFound
     from sqlalchemy import extract
-
-    metadata = MetaData()
-
-    weather_stations = Table('weatherstation', metadata,
-        Column('id', Integer, primary_key=True),
-        Column('usaf_id', String(20)),
-    )
-
-    hourly_average_temperatures = Table('hourlyaveragetemperature', metadata,
-        Column('id', Integer, primary_key=True),
-        Column('weatherstation_id', None, ForeignKey('weatherstation.id')),
-        Column('temp_C', Float),
-        Column('dt', DateTime),
-    )
-
-    daily_average_temperatures = Table('dailyaveragetemperature', metadata,
-        Column('id', Integer, primary_key=True),
-        Column('weatherstation_id', None, ForeignKey('weatherstation.id')),
-        Column('temp_C', Float),
-        Column('dt', DateTime),
-    )
-
-    hourly_temperature_normals = Table('hourlytemperaturenormal', metadata,
-        Column('id', Integer, primary_key=True),
-        Column('weatherstation_id', None, ForeignKey('weatherstation.id')),
-        Column('temp_C', Float),
-        Column('dt', DateTime),
-    )
-
-    daily_temperature_normals = Table('dailytemperaturenormal', metadata,
-        Column('id', Integer, primary_key=True),
-        Column('weatherstation_id', None, ForeignKey('weatherstation.id')),
-        Column('temp_C', Float),
-        Column('dt', DateTime),
-    )
+    sqlalchemy_installed = True
 except ImportError:
+    sqlalchemy_installed = False
     warnings.warn("Weather cache disabled. To use, please install sqlalchemy.")
 
+conn = None
+weather_stations = None
+hourly_average_temperatures = None
+daily_average_temperatures = None
+hourly_temperature_normals = None
+daily_temperature_normals = None
+
 def initialize_cache():
+    if sqlalchemy_installed:
+
+        global weather_stations
+        global hourly_average_temperatures
+        global daily_average_temperatures
+        global hourly_temperature_normals
+        global daily_temperature_normals
+
+        metadata = MetaData()
+
+        weather_stations = Table('weatherstation', metadata,
+            Column('id', Integer, primary_key=True),
+            Column('usaf_id', String(20)),
+        )
+
+        hourly_average_temperatures = Table('hourlyaveragetemperature', metadata,
+            Column('id', Integer, primary_key=True),
+            Column('weatherstation_id', None, ForeignKey('weatherstation.id')),
+            Column('temp_C', Float),
+            Column('dt', DateTime),
+        )
+
+        daily_average_temperatures = Table('dailyaveragetemperature', metadata,
+            Column('id', Integer, primary_key=True),
+            Column('weatherstation_id', None, ForeignKey('weatherstation.id')),
+            Column('temp_C', Float),
+            Column('dt', DateTime),
+        )
+
+        hourly_temperature_normals = Table('hourlytemperaturenormal', metadata,
+            Column('id', Integer, primary_key=True),
+            Column('weatherstation_id', None, ForeignKey('weatherstation.id')),
+            Column('temp_C', Float),
+            Column('dt', DateTime),
+        )
+
+        daily_temperature_normals = Table('dailytemperaturenormal', metadata,
+            Column('id', Integer, primary_key=True),
+            Column('weatherstation_id', None, ForeignKey('weatherstation.id')),
+            Column('temp_C', Float),
+            Column('dt', DateTime),
+        )
+
     cache_db_url = os.environ.get("EEMETER_WEATHER_CACHE_DATABASE_URL")
     if cache_db_url is None:
         warnings.warn("Weather cache disabled. To use, please set the"\
@@ -432,15 +447,16 @@ class CachedDataMixin(object):
         dates = set([d["dt"] for d in records])
 
         if self.conn:
+            table = self.get_temperature_table()
 
             # delete existing records (if necessary)
             all_temps = self.get_temperature_set()
             old_records = [t for t in all_temps if t["dt"] in dates]
             for record in old_records:
-                self.conn.execute(record.delete())
+                self.conn.execute(table.delete().where(table.c.id == record.id))
 
             # insert new records
-            self.conn.execute(self.get_temperature_table().insert(), records)
+            self.conn.execute(table.insert(), records)
 
     def has_cached_data_for_year(self,year):
         """Return True if data for the given year is in the cache.
