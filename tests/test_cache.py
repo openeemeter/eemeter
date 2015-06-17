@@ -1,8 +1,10 @@
 import os
+from datetime import datetime
 
 from eemeter.weather import GSODWeatherSource
 from eemeter.weather import ISDWeatherSource
 from eemeter.weather import TMY3WeatherSource
+from sqlalchemy import select
 
 import pytest
 
@@ -66,3 +68,22 @@ def test_tmy3_weather_cache():
     assert 8759 == len(ws.get_temperature_set().fetchall())
     global ws_pk
     assert ws.weather_station_pk == ws_pk
+
+@pytest.mark.slow
+def test_cache_deletes_old_records():
+    ws = ISDWeatherSource("722660",2012,2012)
+
+    # Make sure there are two records to begin with (this just happens to be
+    # the case for this weather station at this particular hour - usually there
+    # is only one record per hour.
+    temperature_set = ws.get_temperature_set()
+    assert 2 == sum([t.dt == datetime(2012,1,1,0) for t in temperature_set])
+
+    # overwrite it
+    records = [{"temp_C": 0, "dt": datetime(2012,1,1,0)}]
+    ws.update_cache(records)
+
+    # Now there should just be one
+    temperature_set = ws.get_temperature_set()
+    assert 1 == sum([t.dt == datetime(2012,1,1,0) for t in temperature_set])
+

@@ -447,15 +447,16 @@ class CachedDataMixin(object):
         dates = set([d["dt"] for d in records])
 
         if self.conn:
+            table = self.get_temperature_table()
 
             # delete existing records (if necessary)
             all_temps = self.get_temperature_set()
             old_records = [t for t in all_temps if t["dt"] in dates]
             for record in old_records:
-                self.conn.execute(record.delete())
+                self.conn.execute(table.delete().where(table.c.id == record.id))
 
             # insert new records
-            self.conn.execute(self.get_temperature_table().insert(), records)
+            self.conn.execute(table.insert(), records)
 
     def has_cached_data_for_year(self,year):
         """Return True if data for the given year is in the cache.
