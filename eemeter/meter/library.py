@@ -3,6 +3,7 @@ from .base import MeterBase
 from datetime import datetime
 from datetime import timedelta
 from eemeter.consumption import DatetimePeriod
+import pytz
 
 from itertools import chain
 import numpy as np
@@ -633,7 +634,7 @@ class RecentReadingMeter(MeterBase):
         super(RecentReadingMeter,self).__init__(**kwargs)
         self.n_days = n_days
 
-    def evaluate_mapped_inputs(self,consumption_history,fuel_type,since_date=datetime.now(),**kwargs):
+    def evaluate_mapped_inputs(self,consumption_history,fuel_type,since_date=datetime.now(pytz.utc),**kwargs):
         """Evaluates the number of days since the last reading against the
         threshold.
 
@@ -645,7 +646,7 @@ class RecentReadingMeter(MeterBase):
             A string representing the consumption fuel_type used to fetch
             periods; e.g. "electricity"
         since_date : datetime.datetime, optional
-            The date to count from; defaults to datetime.now().
+            The date to count from; defaults to datetime.now(pytz.utc).
 
         Returns
         -------

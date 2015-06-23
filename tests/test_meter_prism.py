@@ -11,6 +11,7 @@ from numpy.testing import assert_allclose
 import numpy as np
 
 from datetime import datetime
+import pytz
 
 RTOL = 1e-2
 ATOL = 1e-2
@@ -35,10 +36,10 @@ def prism_outputs_1(request):
         "cooling_slope": request.param[0][3],
         "cooling_reference_temperature": request.param[0][4]
     }
-    start = datetime(2012,1,1)
-    end = datetime(2014,12,31)
-    retrofit_start_date = datetime(2013,6,1)
-    retrofit_completion_date = datetime(2013,8,1)
+    start = datetime(2012,1,1,tzinfo=pytz.utc)
+    end = datetime(2014,12,31,tzinfo=pytz.utc)
+    retrofit_start_date = datetime(2013,6,1,tzinfo=pytz.utc)
+    retrofit_completion_date = datetime(2013,8,1,tzinfo=pytz.utc)
 
     periods = generate_periods(start,end,jitter_intensity=0)
     gen = ConsumptionGenerator("electricity", "kWh", request.param[4], model, params)

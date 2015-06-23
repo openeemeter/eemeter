@@ -12,6 +12,7 @@ from eemeter.models import TemperatureSensitivityBalancePointModel
 
 from datetime import datetime
 from datetime import timedelta
+import pytz
 
 from scipy.stats import uniform
 import pandas as pd
@@ -62,19 +63,19 @@ if __name__ == "__main__":
                                  gas_param_distributions,gas_param_delta_distributions)
 
     start_date = datetime.strptime(args.start_date,"%Y-%m-%d")
-    n_days = (datetime.now() - start_date).days
+    n_days = (datetime.now(pytz.utc) - start_date).days
     if n_days < 30:
         message = "start_date ({}) must be at least 30 days before today".format(start_date)
         raise ValueError(message)
 
-    weather_source = GSODWeatherSource(args.weather_station,start_date.year,datetime.now().year)
+    weather_source = GSODWeatherSource(args.weather_station,start_date.year,datetime.now(pytz.utc).year)
     weather_normal_source = TMY3WeatherSource(args.weather_station)
 
     project_data = []
     consumption_data = []
     for _ in range(args.n_projects):
-        elec_periods = generate_periods(start_date,datetime.now())
-        gas_periods = generate_periods(start_date,datetime.now())
+        elec_periods = generate_periods(start_date,datetime.now(pytz.utc))
+        gas_periods = generate_periods(start_date,datetime.now(pytz.utc))
 
         retrofit_start_date = start_date + timedelta(days=random.randint(0,n_days-30))
         retrofit_completion_date = retrofit_start_date + timedelta(days=30)
