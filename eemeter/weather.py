@@ -6,6 +6,7 @@ import json
 from datetime import datetime
 from datetime import date
 from datetime import timedelta
+import pytz
 import warnings
 import numpy as np
 import requests
@@ -532,8 +533,8 @@ class GSODWeatherSource(DailyAverageTemperatureCachedDataMixin,WeatherSourceBase
                 self._fetch_year(year)
         else:
             for year in range(start_year,end_year + 1):
-                one_week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y%m%d")
-                if (year == datetime.now().year and not self.data.get(one_week_ago)) \
+                one_week_ago = (datetime.now(pytz.utc) - timedelta(days=7)).strftime("%Y%m%d")
+                if (year == datetime.now(pytz.utc).year and not self.data.get(one_week_ago)) \
                         or not self.has_cached_data_for_year(year):
                     self._fetch_year(year)
 
@@ -599,8 +600,8 @@ class ISDWeatherSource(WeatherSourceBase,HourlyAverageTemperatureCachedDataMixin
                 self._fetch_year(year)
         else:
             for year in range(start_year,end_year + 1):
-                one_week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y%m%d") + "00"
-                if (year == datetime.now().year and not self.data.get(one_week_ago))\
+                one_week_ago = (datetime.now(pytz.utc) - timedelta(days=7)).strftime("%Y%m%d") + "00"
+                if (year == datetime.now(pytz.utc).year and not self.data.get(one_week_ago))\
                         or not self.has_cached_data_for_year(year):
                     self._fetch_year(year)
 

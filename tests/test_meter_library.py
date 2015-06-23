@@ -33,6 +33,7 @@ from fixtures.consumption import generated_consumption_history_with_n_periods_cd
 
 from datetime import datetime
 from datetime import timedelta
+import pytz
 
 from numpy.testing import assert_allclose
 import numpy as np
@@ -369,7 +370,7 @@ def test_n_periods_meeting_cdd_per_day_threshold(generated_consumption_history_w
     assert n_periods_gt == result_gt["n_periods"]
 
 def test_recent_reading_meter():
-    recent_consumption = Consumption(0,"kWh","electricity",datetime.now() - timedelta(days=390),datetime.now() - timedelta(days=360))
+    recent_consumption = Consumption(0,"kWh","electricity",datetime.now(pytz.utc) - timedelta(days=390),datetime.now(pytz.utc) - timedelta(days=360))
     old_consumption = Consumption(0,"kWh","electricity",datetime(2012,1,1),datetime(2012,2,1))
     no_ch = ConsumptionHistory([])
     old_ch = ConsumptionHistory([old_consumption])
@@ -384,9 +385,9 @@ def test_recent_reading_meter():
     assert not meter.evaluate(consumption_history=mixed_ch,fuel_type="natural_gas")["recent_reading"]
 
     assert not meter.evaluate(consumption_history=mixed_ch,fuel_type="electricity",
-                              since_date=datetime.now() + timedelta(days=1000))["recent_reading"]
+                              since_date=datetime.now(pytz.utc) + timedelta(days=1000))["recent_reading"]
     assert not meter.evaluate(consumption_history=mixed_ch,fuel_type="natural_gas",
-                              since_date=datetime.now() + timedelta(days=1000))["recent_reading"]
+                              since_date=datetime.now(pytz.utc) + timedelta(days=1000))["recent_reading"]
 
 def test_cvrmse():
     meter = CVRMSE()

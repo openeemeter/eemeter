@@ -129,7 +129,7 @@ corresponding to the station.
 
     ohare_weather_station_id = "725347" # Chicago O'Hare Intl Airport
 
-    weather_source = GSODWeatherSource(ohare_weather_station_id,start_date.year,datetime.now().year)
+    weather_source = GSODWeatherSource(ohare_weather_station_id,start_date.year,datetime.now(pytz.utc).year)
     weather_normal_source = TMY3WeatherSource(ohare_weather_station_id)
 
 With weather sources and weather normal sources, we are now equipped to
@@ -150,14 +150,14 @@ a set of energy efficiency measures. In this case, we generate a small set of
     import random
 
     n_projects = 10
-    n_days = (datetime.now() - start_date).days
+    n_days = (datetime.now(pytz.utc) - start_date).days
 
     project_data = []
     for _ in range(n_projects):
 
         #generate random monthly periods to treat as billing periods
-        elec_periods = generate_periods(start_date,datetime.now())
-        gas_periods = generate_periods(start_date,datetime.now())
+        elec_periods = generate_periods(start_date,datetime.now(pytz.utc))
+        gas_periods = generate_periods(start_date,datetime.now(pytz.utc))
 
         # pick retrofit dates somewhere in the right range
         retrofit_start_date = start_date + timedelta(days=random.randint(100,n_days-130))
