@@ -1,6 +1,7 @@
 from eemeter.meter import MeterBase
 from eemeter.config.yaml_parser import load
 from datetime import datetime
+import pytz
 
 class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(MeterBase):
     """Implementation of BPI-2400-S-2012 section 3.2.2.
@@ -339,7 +340,7 @@ class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(MeterBase):
             climatically similar to the target project as possible.
         since_date : datetime.datetime, optional
             The date from which to count days since most recent reading;
-            defaults to datetime.now().
+            defaults to datetime.now(pytz.utc).
 
         Returns
         -------

@@ -23,6 +23,7 @@ setup(name='eemeter',
                       'pyyaml',
                       'scipy',
                       'numpy',
-                      'requests'],
+                      'requests',
+                      'pytz'],
     package_data={'': ['*.json']},
 )
