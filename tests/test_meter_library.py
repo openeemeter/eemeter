@@ -371,7 +371,7 @@ def test_n_periods_meeting_cdd_per_day_threshold(generated_consumption_history_w
 
 def test_recent_reading_meter():
     recent_consumption = Consumption(0,"kWh","electricity",datetime.now(pytz.utc) - timedelta(days=390),datetime.now(pytz.utc) - timedelta(days=360))
-    old_consumption = Consumption(0,"kWh","electricity",datetime(2012,1,1),datetime(2012,2,1))
+    old_consumption = Consumption(0,"kWh","electricity",datetime(2012,1,1,tzinfo=pytz.utc),datetime(2012,2,1,tzinfo=pytz.utc))
     no_ch = ConsumptionHistory([])
     old_ch = ConsumptionHistory([old_consumption])
     recent_ch = ConsumptionHistory([recent_consumption])

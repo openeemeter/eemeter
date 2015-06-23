@@ -11,6 +11,7 @@ from datetime import datetime
 import pytest
 
 from numpy.testing import assert_allclose
+import pytz
 
 RTOL = 1e-2
 ATOL = 1e-2
@@ -43,8 +44,8 @@ def bpi_2400_1(request):
     total_hdd = request.param[9]
     temp_unit = request.param[10]
 
-    start = datetime(2012,1,1)
-    end = datetime(2014,12,31)
+    start = datetime(2012,1,1,tzinfo=pytz.utc)
+    end = datetime(2014,12,31,tzinfo=pytz.utc)
     periods = generate_periods(start,end,jitter_intensity=0)
     elec_model = TemperatureSensitivityModel(cooling=True,heating=True)
     gas_model = TemperatureSensitivityModel(cooling=False,heating=True)
