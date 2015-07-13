@@ -683,10 +683,10 @@ class CVRMSE(MeterBase):
         out : dict
             - "cvrmse" : the calculated CVRMSE metric.
         """
-        y_bar = np.mean(y)
+        y_bar = np.nanmean(y)
         n = len(y)
         p = len(params)
-        cvrmse = 100 * (np.sum((y - y_hat)**2) / (n - p) )**.5 / y_bar
+        cvrmse = 100 * (np.nansum((y - y_hat)**2) / (n - p) )**.5 / y_bar
         return {"cvrmse": cvrmse}
 
 class AverageDailyUsage(MeterBase):
@@ -787,7 +787,7 @@ class RMSE(MeterBase):
             - "rmse" : the calculated RMSE metric.
         """
         n = len(y)
-        rmse = (np.sum((y - y_hat)**2) / n )**.5
+        rmse = (np.nansum((y - y_hat)**2) / n )**.5
         return {"rmse": rmse}
 
 class RSquared(MeterBase):
@@ -809,7 +809,7 @@ class RSquared(MeterBase):
         out : dict
             - "r_squared" : the calculated r^2 fitness metric.
         """
-        y_bar = np.mean(y)
+        y_bar = np.nanmean(y)
         ss_residual = np.nansum( (y - y_hat)**2 )
         ss_total = np.nansum( (y - y_bar)**2 )
         r_squared = 1 - ss_residual / ss_total

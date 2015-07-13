@@ -391,11 +391,11 @@ def test_recent_reading_meter():
 
 def test_cvrmse():
     meter = CVRMSE()
-    result = meter.evaluate(y=np.array([12,13,414,12,23,12,32]),
-                            y_hat=np.array([32,12,322,21,22,41,32]),
+    result = meter.evaluate(y=np.array([12,13,414,12,23,12,32,np.nan]),
+                            y_hat=np.array([32,12,322,21,22,41,32,np.nan]),
                             params=np.array([1,3,4]))
 
-    assert_allclose(result["cvrmse"],66.84,rtol=RTOL,atol=ATOL)
+    assert_allclose(result["cvrmse"],59.79,rtol=RTOL,atol=ATOL)
 
 def test_average_daily_usage(generated_consumption_history_1):
     ch,params = generated_consumption_history_1
@@ -429,14 +429,14 @@ def test_estimated_average_daily_usage(generated_consumption_history_1,gsod_7228
 
 def test_rmse():
     meter = RMSE()
-    result = meter.evaluate(y=np.array([12,13,414,12,23,12,32]),
-                            y_hat=np.array([32,12,322,21,22,41,32]))
+    result = meter.evaluate(y=np.array([12,13,414,12,23,12,32,np.nan]),
+                            y_hat=np.array([32,12,322,21,22,41,32,np.nan]))
 
-    assert_allclose(result["rmse"],37.3898,rtol=RTOL,atol=ATOL)
+    assert_allclose(result["rmse"],34.97,rtol=RTOL,atol=ATOL)
 
 def test_r_squared():
     meter = RSquared()
-    result = meter.evaluate(y=np.array([12,13,414,12,23,12,32]),
-                            y_hat=np.array([32,12,322,21,22,41,32]))
+    result = meter.evaluate(y=np.array([12,13,414,12,23,12,32,np.nan]),
+                            y_hat=np.array([32,12,322,21,22,41,32,np.nan]))
 
     assert_allclose(result["r_squared"],0.9276,rtol=RTOL,atol=ATOL)

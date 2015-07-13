@@ -139,7 +139,7 @@ class WeatherSourceBase(object):
             Average temperature observed during the period.
         """
         temps = self._period_daily_temperatures(period,unit)
-        return np.mean(temps)
+        return np.nanmean(temps)
 
     def daily_temperatures(self,periods,unit):
         """The daily average temperatures for each period.
