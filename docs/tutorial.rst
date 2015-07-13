@@ -124,8 +124,9 @@ corresponding to the station.
     from eemeter.weather import TMY3WeatherSource
 
     from datetime import datetime
+    import pytz
 
-    start_date = datetime(2012,1,1)
+    start_date = datetime(2010,1,1,tzinfo=pytz.utc)
 
     ohare_weather_station_id = "725347" # Chicago O'Hare Intl Airport
 
@@ -160,7 +161,7 @@ a set of energy efficiency measures. In this case, we generate a small set of
         gas_periods = generate_periods(start_date,datetime.now(pytz.utc))
 
         # pick retrofit dates somewhere in the right range
-        retrofit_start_date = start_date + timedelta(days=random.randint(100,n_days-130))
+        retrofit_start_date = start_date + timedelta(days=random.randint(365,n_days-365))
         retrofit_completion_date = retrofit_start_date + timedelta(days=30)
 
         # generate consumption data that mimics applying a measure and seeing a decrease in energy use
@@ -203,17 +204,28 @@ expose the structure of the meter and the inputs needed to run it.
 
         result_pre = meter.evaluate(consumption_history=ch_pre,
                                 weather_source=weather_source,
-                                weather_normal_source=weather_normal_source)
+                                weather_normal_source=weather_normal_source,
+                                since_date=project["retrofit_start_date"])
 
         result_post = meter.evaluate(consumption_history=ch_post,
                                 weather_source=weather_source,
                                 weather_normal_source=weather_normal_source)
 
 
-        actual_e = result_pre["annualized_usage_electricity"] - result_post["annualized_usage_electricity"]
+        result_pre_e = result_pre.get("annualized_usage_electricity")
+        result_post_e = result_post.get("annualized_usage_electricity")
+        if result_pre_e is not None and result_post_e is not None:
+            actual_e = result_pre_e - result_post_e
+        else:
+            actual_e = float('nan')
         predicted_e = project["estimated_elec_savings"]
 
-        actual_g = result_pre["annualized_usage_natural_gas"] - result_post["annualized_usage_natural_gas"]
+        result_pre_g = result_pre.get("annualized_usage_natural_gas")
+        result_post_g = result_post.get("annualized_usage_natural_gas")
+        if result_pre_g is not None and result_post_g is not None:
+            actual_g = result_pre_g - result_post_g
+        else:
+            actual_g = float('nan')
         predicted_g = project["estimated_gas_savings"]
 
         print("Electricity savings actual//predicted (# bills [pre]-[post]): {:.02f} // {:.02f} ({}-{})"

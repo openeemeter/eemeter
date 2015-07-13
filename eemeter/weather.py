@@ -271,7 +271,8 @@ class WeatherSourceBase(object):
             Total heating degree days observed during the time period.
         """
         temps = self._period_daily_temperatures(period,unit)
-        total_hdd = np.sum(np.maximum(base - temps,0))
+        masked_temps = np.ma.masked_array(temps,np.isnan(temps))
+        total_hdd = np.sum(np.maximum(base - masked_temps,0))
         if per_day:
             n_days = period.timedelta.days
             return total_hdd / n_days
@@ -330,7 +331,8 @@ class WeatherSourceBase(object):
             Total cooling degree days observed during the time period.
         """
         temps = self._period_daily_temperatures(period,unit)
-        total_cdd = np.sum(np.maximum(temps - base,0))
+        masked_temps = np.ma.masked_array(temps,np.isnan(temps))
+        total_cdd = np.sum(np.maximum(masked_temps - base,0))
         if per_day:
             n_days = period.timedelta.days
             return total_cdd / n_days

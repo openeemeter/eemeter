@@ -7,11 +7,15 @@ from eemeter.weather import WeatherUndergroundWeatherSource
 
 from eemeter.consumption import ConsumptionHistory
 from eemeter.consumption import Consumption
+from eemeter.consumption import DatetimePeriod
 
 from datetime import datetime
+from datetime import timedelta
 import pytest
 import os
 import warnings
+
+import numpy as np
 
 from numpy.testing import assert_allclose
 
@@ -189,3 +193,34 @@ def test_cz2010_weather_source(consumption_history_one_summer_electricity):
         warnings.warn("Skipping CZ2010WeatherSource tests. "
             "Please set the environment variable "
             "EEMETER_PATH_TO_ALTURAS_725958_CZ2010_CSV to run the tests.")
+
+def test_generic_daily_weather_source_hdd_nan_handling():
+    class GenericDailyWeatherSource(WeatherSourceBase):
+        def __init__(self):
+            data = {}
+            offset = 4.2
+            temps = 55 + 30*np.sin(np.linspace(offset,offset+2*np.pi,365)) # degF, year
+            for t,dt in zip(temps,[datetime(2014,1,1) + timedelta(days=days) for days in range(365)]):
+                data[dt.strftime("%Y%m%d")] = t
+            self.data = data
+            self._internal_unit = "degF"
+
+        def internal_unit_datetime_average_temperature(self,dt):
+            return self.data.get(dt.strftime("%Y%m%d"),np.nan)
+
+    ws = GenericDailyWeatherSource()
+    period = DatetimePeriod(datetime(2014,1,1),datetime(2015,1,1))
+
+    # verify that it works to begin with.
+    assert len(ws.data) == 365
+    assert_allclose(ws.hdd(period,'degF',65),5527.026,rtol=RTOL,atol=ATOL)
+    assert_allclose(ws.hdd(period,'degF',70),6691.383,rtol=RTOL,atol=ATOL)
+    assert_allclose(ws.cdd(period,'degF',65),1850.879,rtol=RTOL,atol=ATOL)
+    assert_allclose(ws.cdd(period,'degF',70),1190.235,rtol=RTOL,atol=ATOL)
+
+    # now remove a random date, should be able to handle the nan.
+    del(ws.data["20140201"])
+    assert len(ws.data) == 364
+    assert_allclose(ws.hdd(period,'degF',65),5487.034,rtol=RTOL,atol=ATOL)
+    assert_allclose(ws.cdd(period,'degF',70),1190.235,rtol=RTOL,atol=ATOL)
+
