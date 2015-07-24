@@ -1,13 +1,17 @@
 from datetime import timedelta
-from eemeter.consumption import Consumption
-from eemeter.consumption import DatetimePeriod
+from eemeter.consumption import ConsumptionData
+from eemeter.evaluation import Period
+from eemeter.project import Project
 
 from eemeter.meter import AnnualizedUsageMeter
 
 import random
 import numpy as np
+import pandas as pd
 
-class ConsumptionGenerator:
+from scipy.stats import poisson
+
+class MonthlyBillingConsumptionGenerator:
     """Class for generating consumptions given a particular model, parameters,
     and weather data. Useful for testing meters or meter deployments before
     observed project data becomes available.
@@ -21,27 +25,39 @@ class ConsumptionGenerator:
         self.model = model
         self.params = self.model.param_dict_to_list(params)
 
-    def generate(self, weather_source, periods, noise=None):
-        """Returns a list of consumption instances given a particular weather
-        source and a list of DatetimePeriod instances.
+    def generate(self, weather_source, datetimes, daily_noise_dist=None):
+        """Returns a ConsumptionData instance given a particular weather
+        source and a list of datetimes.
 
-        `noise` should be an instance of scipy.stats.rv_continuous,
-        e.g. scipy.stats.normal(). Noise is additive and sampled independently
-        for each period.
+        Parameters
+        ----------
+        weather_source : eemeter.weather.WeatherSourceBase
+            Weather source from which to draw outdoor temperature data.
+        datetimes : list of datetime objects
+            Periods over which to simulate consumption.
+        daily_noise_dist : scipy.stats.rv_continuous, default None
+            Noise to add to each day in a period. Noise is additive and sampled
+            independently for each period. e.g. scipy.stats.normal().
         """
-        period_daily_temps = weather_source.daily_temperatures(periods,self.temperature_unit_name)
+        records = [{"start": start, "end": end, "value": np.nan}
+                for start, end in zip(datetimes, datetimes[1:])]
+        cd = ConsumptionData(records, self.fuel_type,
+                self.consumption_unit_name, record_type="arbitrary")
+
+        periods = cd.periods()
+        period_daily_temps = weather_source.daily_temperatures(periods,
+                self.temperature_unit_name)
 
         usages = self.model.compute_usage_estimates(self.params,period_daily_temps)
 
-        consumptions = []
-        for u,period in zip(usages,periods):
-            if noise is not None:
-                u += np.sum(noise.rvs(size=period.timedelta.days))
+        for usage, period in zip(usages,periods):
+            if daily_noise_dist is not None:
+                n_days = period.timedelta.days
+                noises = daily_noise_dist.rvs(n_days)
+                usage += np.sum(noises)
+            cd.data[period.start] = usage
 
-            c = Consumption(u, self.consumption_unit_name, self.fuel_type, period.start, period.end)
-            consumptions.append(c)
-
-        return consumptions
+        return cd
 
 class ProjectGenerator:
     """Class for generating complete projects given a particular parameter
@@ -63,97 +79,180 @@ class ProjectGenerator:
 
         self.temperature_unit_name = temperature_unit_name
 
-    def generate(self, weather_source, weather_normal_source, electricity_periods, gas_periods,
-            retrofit_start_date, retrofit_completion_date,
-            electricity_noise=None,gas_noise=None):
+    def generate(self, location, period_elec, period_gas,
+            baseline_period, reporting_period,
+            noise_elec=None, noise_gas=None):
         """Returns a simple simulated project consisting of generated
         electricity and gas consumptions and estimated savings for each.
+
+        Parameters
+        ----------
+        location : eemeter.location.Location
+            Location of project
         """
+        early_date = None
+        late_date = None
 
-        electricity_consumptions, estimated_electricity_savings, elec_pre_params, elec_post_params = self._generate_fuel_consumptions(
-                weather_source, weather_normal_source, electricity_periods,
-                self.electricity_model, self.elec_param_dists,
-                self.elec_param_delta_dists, electricity_noise,
-                retrofit_start_date, retrofit_completion_date,
-                "electricity", "kWh", self.temperature_unit_name)
+        if not period_elec.closed or not period_gas.closed:
+            message = "Periods of consumption must have start and end."
+            raise ValueError(message)
 
-        gas_consumptions, estimated_gas_savings, gas_pre_params, gas_post_params = self._generate_fuel_consumptions(
-                weather_source, weather_normal_source, gas_periods,
-                self.gas_model, self.gas_param_dists,
-                self.gas_param_delta_dists, gas_noise,
-                retrofit_start_date, retrofit_completion_date,
-                "natural_gas", "therm", self.temperature_unit_name)
+        all_periods = [period_elec, period_gas, baseline_period,
+                reporting_period]
+        for period in all_periods:
+            if period.start is not None and period.start < early_date:
+                early_date = period.start
+            if period.end is not None and late_date < period.end:
+                late_date = period.end
+
+        weather_source = GSODWeatherSource(location.station,early_date.year,
+                late_date.year)
+        weather_normal_source = TMY3WeatherSource(location.station)
+
+        cd_elec, est_savings_elec, elec_bl_params, elec_rp_params = \
+                self._generate_fuel_consumptions(
+                        weather_source, weather_normal_source, period_elec,
+                        self.electricity_model, self.elec_param_dists,
+                        self.elec_param_delta_dists, noise_elec,
+                        baseline_period, reporting_period,
+                        "electricity", "kWh", self.temperature_unit_name)
+
+        cd_gas, est_savings_gas, gas_bl_params, gas_rp_params = \
+                self._generate_fuel_consumptions(
+                        weather_source, weather_normal_source, period_gas,
+                        self.gas_model, self.gas_param_dists,
+                        self.gas_param_delta_dists, noise_gas,
+                        baseline_period, reporting_period,
+                        "natural_gas", "therm", self.temperature_unit_name)
+
+        project = Project(location, [cd_elec, cd_gas], baseline_period,
+                reporting_period)
 
         results = {
-            "electricity_consumptions": electricity_consumptions,
-            "natural_gas_consumptions": gas_consumptions,
-            "electricity_estimated_savings": estimated_electricity_savings,
-            "natural_gas_estimated_savings": estimated_gas_savings,
-            "electricity_pre_params": elec_pre_params,
-            "natural_gas_pre_params": gas_pre_params,
-            "electricity_post_params": elec_post_params,
-            "natural_gas_post_params": gas_post_params,
+            "project": project,
+            "electricity_estimated_savings": est_savings_elec,
+            "natural_gas_estimated_savings": est_savings_gas,
+            "electricity_pre_params": elec_bl_params,
+            "natural_gas_pre_params": gas_bl_params,
+            "electricity_post_params": elec_rp_params,
+            "natural_gas_post_params": gas_rp_params,
         }
 
         return results
 
-    def _generate_fuel_consumptions(self, weather_source, weather_normal_source, periods,
-            model, param_dists, param_delta_dists, noise,
-            retrofit_start_date, retrofit_completion_date,
+    def _generate_fuel_consumptions(self, weather_source,
+            weather_normal_source, period, model, param_dists,
+            param_delta_dists, noise, baseline_period, reporting_period,
             fuel_type, consumption_unit_name, temperature_unit_name):
 
-        pre_params = {}
-        post_params = {}
+        baseline_params = {}
+        reporting_params = {}
         for k,v in param_dists.items():
-            pre_params[k] = v.rvs()
-            post_params[k] = pre_params[k] + param_delta_dists[k].rvs()
+            baseline_params[k] = v.rvs()
+            reporting_params[k] = baseline_params[k] + \
+                    param_delta_dists[k].rvs()
 
-        annualized_usage_meter = AnnualizedUsageMeter(temperature_unit_name,model)
-        pre_annualized_usage = annualized_usage_meter.evaluate(
-                temp_sensitivity_params=model.param_dict_to_list(pre_params),
+        annualized_usage_meter = AnnualizedUsageMeter(temperature_unit_name,
+                model)
+        baseline_param_list = model.param_dict_to_list(baseline_params)
+        baseline_annualized_usage = annualized_usage_meter.evaluate(
+                temp_sensitivity_params=baseline_param_list,
                 weather_normal_source=weather_normal_source)["annualized_usage"]
-        post_annualized_usage = annualized_usage_meter.evaluate(
-                temp_sensitivity_params=model.param_dict_to_list(post_params),
+        reporting_params_list = model.param_dict_to_list(reporting_params)
+        reporting_annualized_usage = annualized_usage_meter.evaluate(
+                temp_sensitivity_params=reporting_params_list,
                 weather_normal_source=weather_normal_source)["annualized_usage"]
-        estimated_annualized_savings = pre_annualized_usage - post_annualized_usage
+        estimated_annualized_savings = baseline_annualized_usage - \
+                reporting_annualized_usage
 
-        pre_generator = ConsumptionGenerator(fuel_type, consumption_unit_name,
-                temperature_unit_name, model, pre_params)
-        post_generator = ConsumptionGenerator(fuel_type, consumption_unit_name,
-                temperature_unit_name, model, post_params)
+        baseline_generator = MonthlyBillingConsumptionGenerator(fuel_type,
+                consumption_unit_name, temperature_unit_name, model,
+                baseline_params)
+        reporting_generator = MonthlyBillingConsumptionGenerator(fuel_type,
+                consumption_unit_name, temperature_unit_name, model,
+                reporting_params)
 
-        pre_consumptions = pre_generator.generate(weather_source, periods, noise)
-        post_consumptions = post_generator.generate(weather_source, periods, noise)
+        datetimes = generate_monthly_billing_datetimes(period, dist=None)
 
-        final_consumptions = []
-        for pre_c, post_c, period in zip(pre_consumptions,post_consumptions,periods):
-            pre_retrofit_completion = period.start < retrofit_completion_date
-            post_retrofit_start = period.end > retrofit_start_date
-            if not pre_retrofit_completion:
-                consumption = post_c
-            elif not post_retrofit_start:
-                consumption = pre_c
+        baseline_consumption_data = baseline_generator.generate(weather_source,
+                datetimes, daily_noise_dist=noise)
+        reporting_consumption_data = reporting_generator.generate(weather_source,
+                datetimes, daily_noise_dist=noise)
+
+        baseline_data = baseline_consumption_data.data
+        reporting_data = reporting_consumption_data.data
+        periods = baseline_consumption_data.periods()
+
+        records = []
+        for bl_data, rp_data, period in zip(baseline_data, reporting_data, period):
+            if period in reporting_period:
+                val = rp_data
             else:
-                usage = (pre_c.to(consumption_unit_name) + post_c.to(consumption_unit_name)) / 2
-                consumption = Consumption(usage,consumption_unit_name,fuel_type,period.start,period.end)
+                val = bl_data
+            record = {"start": period.start, "end": period.end, "value": val}
+            records.append(record)
 
-            final_consumptions.append(consumption)
+        cd = ConsumptionData(records, fuel_type, consumption_unit_name,
+                record_type="arbitrary")
 
-        return final_consumptions, estimated_annualized_savings, pre_params, post_params
+        return cd, estimated_annualized_savings, pre_params, post_params
 
-def generate_periods(start_datetime,end_datetime,period_length_mean=timedelta(days=30),period_jitter=timedelta(days=1),jitter_intensity=3):
-    """Returns an array of random, variable-length DatetimePeriods for more
-    realistic simulation of projects and portfolios.
+def generate_monthly_billing_datetimes(period,dist=None):
+    """Returns an array of poisson distributed datetimes falling on simulated
+    monthly billing dates.
+
+    Parameters
+    ----------
+
+    period : eemeter.evaluation.Period
+        The period over which to generate datetimes. Datetimes will all fall
+        within the bounds of this period, and will start on the start date of
+        the period. Must be on a closed interval.
+    dist : scipy.stats.rv_discrete, default None
+        The distribution from which to draw samples of number of days between
+        monthly bills. Defaults to poisson(365/12.).
+
     """
-    assert start_datetime < end_datetime
-    periods = []
-    previous_datetime = start_datetime
+    # make sure period is closed
+    period_delta = period.timedelta
+    if period_delta is None:
+        message = "Please provide a period with valid start and end date."
+        raise ValueError(message)
+
+    # The default distribution is poisson, which is a discrete distribution
+    # often used to simulate rare events in nature with a particular average
+    # frequency. In this case, we're using an average frequency of 12 times per
+    # 365 days.
+    if dist is None:
+        dist = poison(365/12.)
+
+    periods = [period.start]
     while True:
-        next_datetime = previous_datetime + period_length_mean + (period_jitter * random.randint(-jitter_intensity,jitter_intensity))
-        if next_datetime < end_datetime:
-            periods.append(DatetimePeriod(previous_datetime,next_datetime))
-            previous_datetime = next_datetime
+        next_date = periods[-1] + timedelta(days=dist.rvs())
+        if next_date < period.end:
+            periods.append(next_date)
         else:
             break
     return periods
 
+def generate_interval_datetimes(period, freq):
+    """Returns an array of equally-spaced dates that simulate AMI periods.
+
+    Parameters
+    ----------
+
+    period : eemeter.evaluation.Period
+        The period over which to generate periods. Periods will fall within
+        the bounds of this period, and will start on the start date of the
+        period. Must be on a closed interval.
+    freq : str
+        Should be a period specification following the syntax of pandas
+        offset aliases.
+
+    """
+    # make sure period is closed
+    if period.start is None or period.end is None:
+        message = "Please provide a period with valid start and end date."
+        raise ValueError(message)
+
+    return [d for d in pd.date_range(period.start,period.end,freq=freq)]

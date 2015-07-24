@@ -12,7 +12,7 @@ import numpy as np
 import requests
 from pkg_resources import resource_stream
 
-from eemeter.consumption import DatetimePeriod
+from eemeter.evaluation import Period
 
 try:
     from sqlalchemy import create_engine
@@ -101,7 +101,7 @@ class WeatherSourceBase(object):
 
         Parameters
         ----------
-        periods : [list of] eemeter.consumption.DatetimePeriod
+        periods : [list of] eemeter.evaluation.Period
             Time periods over which temperatures will be aggregated. A single
             datetime period may be given.
         unit : {"degC", "degF"}
@@ -128,7 +128,7 @@ class WeatherSourceBase(object):
 
         Parameters
         ----------
-        period : eemeter.consumption.DatetimePeriod
+        period : eemeter.evaluation.Period
             Time period over which temperatures will be aggregated.
         unit : {"degC", "degF"}
             The unit in which average temperature should be returned.
@@ -146,7 +146,7 @@ class WeatherSourceBase(object):
 
         Parameters
         ----------
-        periods : [list of] eemeter.consumption.DatetimePeriod
+        periods : [list of] eemeter.evaluation.Period
             Time periods over which temperatures will be aggregated. A single
             datetime period may be given.
         unit : {"degC", "degF"}
@@ -176,7 +176,7 @@ class WeatherSourceBase(object):
 
         Parameters
         ----------
-        period : eemeter.consumption.DatetimePeriod
+        period : eemeter.evaluation.Period
             Time period over which temperatures will be aggregated.
         unit : {"degC", "degF"}
             The unit in which daily average temperatures should be returned.
@@ -224,7 +224,7 @@ class WeatherSourceBase(object):
 
         Parameters
         ----------
-        periods : [list of] eemeter.consumption.DatetimePeriod
+        periods : [list of] eemeter.evaluation.Period
             Time periods over which heating degree days will be calculated and
             collected. A single period may be supplied.
         unit : {"degC", "degF"}
@@ -255,7 +255,7 @@ class WeatherSourceBase(object):
 
         Parameters
         ----------
-        period : eemeter.consumption.DatetimePeriod
+        period : eemeter.evaluation.Period
             Time period over which heating degree days will be summed.
         unit : {"degC", "degF"}
             The temperature unit to be used
@@ -284,9 +284,9 @@ class WeatherSourceBase(object):
 
         Parameters
         ----------
-        periods : list of eemeter.consumption.DatetimePeriod objects
+        periods : list of eemeter.evaluation.Period objects
             Time periods over which cooling degree days will be calculated and
-            collected. A single DatetimePeriod may be given.
+            collected. A single Period may be given.
         unit : {"degC", "degF"}
             The temperature unit to be used
         base : int or float
@@ -315,7 +315,7 @@ class WeatherSourceBase(object):
 
         Parameters
         ----------
-        period : eemeter.consumption.DatetimePeriod
+        period : eemeter.evaluation.Period
             Time period over which cooling degree days will be summed.
         unit : {"degC", "degF"}
             The temperature unit to be used
@@ -654,7 +654,7 @@ class ISDWeatherSource(WeatherSourceBase,HourlyAverageTemperatureCachedDataMixin
 
         Parameters
         ----------
-        periods : [list of] eemeter.consumption.DatetimePeriod
+        periods : [list of] eemeter.evaluation.Period
             Time periods over which temperatures will be collected. A single
             datetime period may be given.
         unit : {"degC", "degF"}
@@ -721,7 +721,7 @@ class WeatherNormalMixin(object):
         """Returns a list of daily temperature normals for a typical
         meteorological year.
         """
-        periods = [DatetimePeriod(start=datetime(2013,1,1),end=datetime(2014,1,1))]
+        periods = [Period(start=datetime(2013,1,1),end=datetime(2014,1,1))]
         return self.daily_temperatures(periods,unit)
 
 class TMY3WeatherSource(WeatherSourceBase,WeatherNormalMixin,HourlyTemperatureNormalCachedDataMixin):
