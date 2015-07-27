@@ -191,15 +191,15 @@ class Location(object):
             station_finding_method="closest"):
         if lat_lng is not None:
             self.lat, self.lng = lat_lng
-            self.zipcode = lat_lng_to_zipcode(lat,lng)
-            self.station = lat_lng_to_station(lat,lng)
+            self.zipcode = lat_lng_to_zipcode(self.lat,self.lng)
+            self.station = lat_lng_to_station(self.lat,self.lng)
         elif zipcode is not None:
             self.lat, self.lng = zipcode_to_lat_lng(zipcode)
             self.zipcode = zipcode
-            self.station = lat_lng_to_station(lat,lng)
+            self.station = lat_lng_to_station(self.lat,self.lng)
         elif station is not None:
-            self.lat, self.lng = station_to_lat_lng(station_id)
-            self.zipcode = lat_lng_to_zipcode(lat,lng)
+            self.lat, self.lng = station_to_lat_lng(station)
+            self.zipcode = lat_lng_to_zipcode(self.lat,self.lng)
             self.station = station
         else:
             raise ValueError("Please supply a lat/long, ZIP code or Weather Station ID")
