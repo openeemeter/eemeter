@@ -3,13 +3,7 @@ from eemeter.config.yaml_parser import load
 from eemeter.meter import MeetsThresholds
 from eemeter.meter import EstimatedReadingConsolidationMeter
 
-from eemeter.consumption import Consumption
-from eemeter.consumption import ConsumptionHistory
-
-from eemeter.generator import ConsumptionGenerator
-from eemeter.generator import generate_periods
-
-from fixtures.consumption import generated_consumption_history_pre_post_1
+from eemeter.consumption import ConsumptionData
 
 from fixtures.weather import gsod_722880_2012_2014_weather_source
 from fixtures.weather import tmy3_722880_weather_source
@@ -18,61 +12,48 @@ from datetime import datetime
 from datetime import timedelta
 
 from numpy.testing import assert_allclose
+import numpy as np
 
 RTOL=1e-2
 ATOL=1e-2
 
 import pytest
 
-@pytest.mark.slow
-def test_pre_post_parameters(generated_consumption_history_pre_post_1,
-                             gsod_722880_2012_2014_weather_source):
-
-    meter_yaml = """
-        !obj:eemeter.meter.PrePost {
-            extras: {
-                fuel_type: electricity,
-                fuel_unit_str: kWh
-            },
-            splittable_args: ["consumption_history"],
-            pre_meter: !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter &meter {
-                temperature_unit_str: "degF",
-                model: !obj:eemeter.models.TemperatureSensitivityModel {
-                    cooling: True,
-                    heating: True,
-                    initial_params: {
-                        base_consumption: 0,
-                        heating_slope: 0,
-                        cooling_slope: 0,
-                        heating_reference_temperature: 60,
-                        cooling_reference_temperature: 70,
-                    },
-                    param_bounds: {
-                        base_consumption: [0,2000],
-                        heating_slope: [0,200],
-                        cooling_slope: [0,200],
-                        heating_reference_temperature: [55,65],
-                        cooling_reference_temperature: [65,75],
-                    },
-                },
-            },
-            post_meter: *meter,
-        }
-        """
-    meter = load(meter_yaml)
-
-    ch, pre_params, post_params, retrofit = generated_consumption_history_pre_post_1
-
-    result = meter.evaluate(consumption_history=ch,
-                            weather_source=gsod_722880_2012_2014_weather_source,
-                            retrofit_start_date=retrofit,
-                            retrofit_completion_date=retrofit)
-
-    assert_allclose(result['temp_sensitivity_params_pre'], pre_params, rtol=RTOL, atol=ATOL)
-    assert_allclose(result['temp_sensitivity_params_post'], post_params, rtol=RTOL, atol=ATOL)
-
-    assert isinstance(result["consumption_history_pre"],ConsumptionHistory)
-    assert isinstance(result["consumption_history_post"],ConsumptionHistory)
+@pytest.fixture(params=[
+    [{"start": datetime(2012,1,1),"value": 0},
+     {"start": datetime(2012,1,2), "value": 0, "estimated": True},
+     {"start": datetime(2012,1,3), "value": 0},
+     {"start": datetime(2012,1,4), "value": 0},
+     {"start": datetime(2012,1,5), "value": np.nan}],
+    [{"start": datetime(2012,1,1),"value": 0},
+     {"start": datetime(2012,1,2), "value": 0},
+     {"start": datetime(2012,1,4), "value": 0},
+     {"start": datetime(2012,1,5), "value": np.nan}],
+    [{"start": datetime(2012,1,1),"value": 0},
+     {"start": datetime(2012,1,2), "value": 0},
+     {"start": datetime(2012,1,4), "value": 0},
+     {"start": datetime(2012,1,5), "value": np.nan},
+     {"start": datetime(2012,1,6), "value": np.nan, "estimated": True}],
+    [{"start": datetime(2012,1,1),"value": 0},
+     {"start": datetime(2012,1,2), "value": 0},
+     {"start": datetime(2012,1,4), "value": 0},
+     {"start": datetime(2012,1,5), "value": np.nan},
+     {"start": datetime(2012,1,6), "value": np.nan, "estimated": True},
+     {"start": datetime(2012,1,7), "value": np.nan, "estimated": True}],
+    [{"start": datetime(2012,1,1),"value": 0},
+     {"start": datetime(2012,2,1), "value": 0, "estimated": True},
+     {"start": datetime(2012,2,10), "value": 0, "estimated": True},
+     {"start": datetime(2012,3,1), "value": 0},
+     {"start": datetime(2012,4,1), "value": 0},
+     {"start": datetime(2012,5,1), "value": np.nan}],
+    [{"start": datetime(2012,1,1),"value": 0, "estimated": True},
+     {"start": datetime(2012,1,10), "value": 0},
+     {"start": datetime(2012,2,1), "value": 0},
+     {"start": datetime(2012,4,1), "value": 0},
+     {"start": datetime(2012,5,1), "value": np.nan}],
+    ])
+def consumption_data(request):
+    return ConsumptionData(request.param, "electricity", "kWh", record_type="arbitrary_start")
 
 def test_meets_thresholds():
     meter = MeetsThresholds(values=["one","two","three","four"],
@@ -86,109 +67,13 @@ def test_meets_thresholds():
     assert result["three_gt_half_two"]
     assert not result["four_gte_twice_three"]
 
-def test_estimated_reading_consolidation_meter_single_fuel_type():
-    ch1 = ConsumptionHistory([
-            Consumption(0,"kWh","electricity",datetime(2012,1,1),datetime(2012,2,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,2,1),datetime(2012,3,1),estimated=True),
-            Consumption(0,"kWh","electricity",datetime(2012,3,1),datetime(2012,4,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,4,1),datetime(2012,5,1))
-            ])
-
-    ch2 = ConsumptionHistory([
-            Consumption(0,"kWh","electricity",datetime(2012,1,1),datetime(2012,2,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,2,1),datetime(2012,4,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,4,1),datetime(2012,5,1))
-            ])
-
-
-    ch3 = ConsumptionHistory([
-            Consumption(0,"kWh","electricity",datetime(2012,1,1),datetime(2012,2,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,2,1),datetime(2012,4,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,4,1),datetime(2012,5,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,5,1),datetime(2012,6,1),estimated=True)
-            ])
-
-    ch4 = ConsumptionHistory([
-            Consumption(0,"kWh","electricity",datetime(2012,1,1),datetime(2012,2,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,2,1),datetime(2012,4,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,4,1),datetime(2012,5,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,5,1),datetime(2012,6,1),estimated=True),
-            Consumption(0,"kWh","electricity",datetime(2012,6,1),datetime(2012,7,1),estimated=True)
-            ])
-
-    ch5 = ConsumptionHistory([
-            Consumption(0,"kWh","electricity",datetime(2012,1,1),datetime(2012,2,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,2,1),datetime(2012,2,10),estimated=True),
-            Consumption(0,"kWh","electricity",datetime(2012,2,10),datetime(2012,3,1),estimated=True),
-            Consumption(0,"kWh","electricity",datetime(2012,3,1),datetime(2012,4,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,4,1),datetime(2012,5,1))
-            ])
-
-    ch6 = ConsumptionHistory([
-            Consumption(0,"kWh","electricity",datetime(2012,1,1),datetime(2012,1,10),estimated=True),
-            Consumption(0,"kWh","electricity",datetime(2012,1,10),datetime(2012,2,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,2,1),datetime(2012,4,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,4,1),datetime(2012,5,1))
-            ])
-
-    ch7 = ConsumptionHistory([
-            Consumption(0,"kWh","electricity",datetime(2012,4,1),datetime(2012,5,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,2,1),datetime(2012,4,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,1,1),datetime(2012,1,10),estimated=True),
-            Consumption(0,"kWh","electricity",datetime(2012,1,10),datetime(2012,2,1))
-            ])
-
-    ch_no_est = ConsumptionHistory([
-            Consumption(0,"kWh","electricity",datetime(2012,1,1),datetime(2012,2,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,2,1),datetime(2012,4,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,4,1),datetime(2012,5,1))
-            ])
+def test_estimated_reading_consolidation_meter_single_fuel_type(consumption_data):
 
     meter = EstimatedReadingConsolidationMeter()
-    result1 = meter.evaluate(consumption_history=ch1)
-    result2 = meter.evaluate(consumption_history=ch2)
-    result3 = meter.evaluate(consumption_history=ch3)
-    result4 = meter.evaluate(consumption_history=ch4)
-    result5 = meter.evaluate(consumption_history=ch5)
-    result6 = meter.evaluate(consumption_history=ch6)
-    result7 = meter.evaluate(consumption_history=ch7)
+    result = meter.evaluate(consumption_data=consumption_data)
+    values = result["consumption_data_no_estimated"].data.values
 
-    for result in [result1,result2,result3,result4,result5,result6,result7]:
-        for c1,c2 in zip(result["consumption_history_no_estimated"].iteritems(),
-                         ch_no_est.iteritems()):
-            assert c1 == c2
-
-def test_estimated_reading_consolidation_meter_multiple_fuel_type():
-    ch1 = ConsumptionHistory([
-            Consumption(0,"kWh","electricity",datetime(2012,1,1),datetime(2012,2,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,2,1),datetime(2012,3,1),estimated=True),
-            Consumption(0,"kWh","electricity",datetime(2012,3,1),datetime(2012,4,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,4,1),datetime(2012,5,1)),
-            Consumption(0,"therm","natural_gas",datetime(2012,1,1),datetime(2012,2,1)),
-            Consumption(0,"therm","natural_gas",datetime(2012,2,1),datetime(2012,3,1),estimated=True),
-            Consumption(0,"therm","natural_gas",datetime(2012,3,1),datetime(2012,4,1)),
-            Consumption(0,"therm","natural_gas",datetime(2012,4,1),datetime(2012,5,1))
-            ])
-
-    ch_no_est = ConsumptionHistory([
-            Consumption(0,"therm","natural_gas",datetime(2012,1,1),datetime(2012,2,1)),
-            Consumption(0,"therm","natural_gas",datetime(2012,2,1),datetime(2012,4,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,1,1),datetime(2012,2,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,2,1),datetime(2012,4,1)),
-            Consumption(0,"kWh","electricity",datetime(2012,4,1),datetime(2012,5,1)),
-            Consumption(0,"therm","natural_gas",datetime(2012,4,1),datetime(2012,5,1))
-            ])
-
-    meter = EstimatedReadingConsolidationMeter()
-    result1 = meter.evaluate(consumption_history=ch1)
-
-    for result in [result1]:
-        for c1,c2 in zip(result["consumption_history_no_estimated"].get("electricity"),
-                         ch_no_est.get("electricity")):
-            assert c1 == c2
-        for c1,c2 in zip(result["consumption_history_no_estimated"].get("natural_gas"),
-                         ch_no_est.get("natural_gas")):
-            assert c1 == c2
+    assert_allclose(values,np.array([0,0,0,np.nan]),rtol=RTOL,atol=ATOL)
 
 def test_debug_meter():
 

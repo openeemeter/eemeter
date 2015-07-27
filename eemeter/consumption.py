@@ -329,3 +329,62 @@ class ConsumptionData(object):
             periods = [Period(dt, dt + self.freq_timedelta)
                        for dt in self.data.index]
             return periods
+
+    def average_daily_consumptions(self):
+        if self.freq_timedelta is None:
+            # ignore last period which is NaN and acting as an end point
+            avgs, n_days = [], []
+            for v, ns in zip(self.data,np.diff(self.data.index)):
+                # nanoseconds to days
+                days = ns.astype('d')/8.64e13
+                avgs.append(v/days)
+                n_days.append(days)
+            return np.array(avgs), np.array(n_days)
+        else:
+            days = self.freq_timedelta.days + self.freq_timedelta.seconds/8.64e4
+            avgs, n_days = [], []
+            for v in self.data:
+                avgs.append(v/days)
+                n_days.append(days)
+            return np.array(avgs), np.array(n_days)
+
+    def total_days(self):
+        if self.data.shape[0] < 1:
+            return 0
+        start_date = self.data.index[0]
+        end_date = self.data.index[-1]
+        if self.freq_timedelta is not None:
+            end_date += self.freq_timedelta
+        tdelta = (end_date - start_date)
+        return tdelta.days + tdelta.seconds/8.64e4
+
+    def records(self, record_type="arbitrary"):
+        records = []
+        if record_type == "interval":
+            for i,v in self.data.iteritems():
+                records.append({"start": i, "value": v})
+        elif record_type in ["arbitrary", "billing"]:
+            for v,s,e in zip(self.data,self.data.index,self.data.index[1:]):
+                records.append({"start": s,"end": e,"value": v})
+        elif record_type in ["arbitrary_start", "billing_start"]:
+            for i,v in self.data.iteritems():
+                records.append({"start": i,"value": v})
+        elif record_type in ["arbitrary_end", "billing_end"]:
+            records.append({"end": self.data.index[0], "value": np.nan})
+            for v,e in zip(self.data,self.data.index[1:]):
+                records.append({"end": e,"value": v})
+        elif record_type == "pulse":
+            for i in self.data.index:
+                records.append({"pulse": i})
+            shape = (self.data.values.shape[0] - 1,)
+            if len(records) > 1 and not all(self.data.values[1:] == \
+                    np.tile(self.data.values[1], shape)):
+                message = 'record_type="pulse" implies that all values' \
+                        ' should be the same, but they are not: {}'\
+                        .format(self.data.values)
+                warn(message)
+        else:
+            message = "Unsupported record_type: {}".format(record_type)
+            raise ValueError(message)
+        return records
+

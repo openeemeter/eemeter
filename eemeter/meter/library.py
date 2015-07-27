@@ -2,7 +2,7 @@ from .base import MeterBase
 
 from datetime import datetime
 from datetime import timedelta
-from eemeter.consumption import DatetimePeriod
+from eemeter.evaluation import Period
 import pytz
 
 from itertools import chain
@@ -21,26 +21,26 @@ class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
         Model of energy usage for which to optimize parameter choices.
     """
 
-    def __init__(self,temperature_unit_str,model,**kwargs):
-        super(TemperatureSensitivityParameterOptimizationMeter,self).__init__(**kwargs)
+    def __init__(self, temperature_unit_str, model, **kwargs):
+        super(TemperatureSensitivityParameterOptimizationMeter,
+                self).__init__(**kwargs)
         self.temperature_unit_str = temperature_unit_str
         self.model = model
 
-    def evaluate_mapped_inputs(self,consumption_history,weather_source,fuel_type,fuel_unit_str,**kwargs):
+    def evaluate_mapped_inputs(self, consumption_data, weather_source,
+            fuel_unit_str, **kwargs):
         """Run optimization of temperature sensitivity parameters given a
         observed consumption data, and observed temperature data.
 
         Parameters
         ----------
-        consumption_history : eemeter.consumption.ConsumptionHistory
+        consumption_data : eemeter.consumption.ConsumptionHistory
             Consumption history to use as basis of model.
         weather_source : eemeter.weather.WeatherSourceBase
             Weather data source containing data covering at least the duration
-            of the consumption history of the chosen fuel_type.
+            of the consumption data.
         fuel_unit_str : str
             Unit of fuel, usually "kWh" or "therms".
-        fuel_type : str
-            Type of fuel, usually "electricity" or "natural_gas".
 
         Returns
         -------
@@ -52,15 +52,16 @@ class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
             - "n_days": an array of the number of days in each consumption
               period (weights)
         """
-        consumptions = consumption_history.get(fuel_type)
-        average_daily_usages = [c.average_daily_usage(fuel_unit_str) for c in consumptions]
-        observed_daily_temps = weather_source.daily_temperatures(consumptions,self.temperature_unit_str)
+        average_daily_usages, n_days = \
+                consumption_data.average_daily_consumptions()
+        observed_daily_temps = weather_source.daily_temperatures(consumptions,
+                self.temperature_unit_str)
 
-        n_days = np.array([len(temps) for temps in observed_daily_temps])
+        params = self.model.parameter_optimization(average_daily_usages,
+                observed_daily_temps, n_days)
 
-        params = self.model.parameter_optimization(average_daily_usages, observed_daily_temps, n_days)
-
-        estimated_daily_usages = self.model.compute_usage_estimates(params,observed_daily_temps) / n_days
+        estimated_daily_usages = self.model.compute_usage_estimates(params,
+                observed_daily_temps) / n_days
 
         return {"temp_sensitivity_params": params,
                 "average_daily_usages": average_daily_usages,
@@ -79,12 +80,13 @@ class AnnualizedUsageMeter(MeterBase):
         Model of energy usage
     """
 
-    def __init__(self,temperature_unit_str,model,**kwargs):
+    def __init__(self, temperature_unit_str, model, **kwargs):
         super(AnnualizedUsageMeter,self).__init__(**kwargs)
         self.temperature_unit_str = temperature_unit_str
         self.model = model
 
-    def evaluate_mapped_inputs(self,temp_sensitivity_params,weather_normal_source,**kwargs):
+    def evaluate_mapped_inputs(self, temp_sensitivity_params,
+            weather_normal_source, **kwargs):
         """Evaluates the annualized usage metric given a particular set of
         model parameters and a weather normal source.
 
@@ -101,10 +103,14 @@ class AnnualizedUsageMeter(MeterBase):
         -------
         out : dict
             Dictionary with annualized usage given temperature sensitivity
-            parameters and weather normals keyed by the string "annualized_usage"
+            parameters and weather normals keyed by the string
+            "annualized_usage"
         """
-        daily_temps = weather_normal_source.annual_daily_temperatures(self.temperature_unit_str)
-        usage_estimates = self.model.compute_usage_estimates(temp_sensitivity_params,daily_temps)
+        daily_temps = weather_normal_source.annual_daily_temperatures(
+                self.temperature_unit_str)
+        usage_estimates = self.model.compute_usage_estimates(
+                temp_sensitivity_params, daily_temps)
+
         annualized_usage = np.nansum(usage_estimates)
         return {"annualized_usage": annualized_usage}
 
@@ -116,22 +122,21 @@ class GrossSavingsMeter(MeterBase):
     ----------
     model : eemeter.model.TemperatureSensitivityModel
         Model of energy usage
-    fuel_type : str
-        Type of fuel, usually "electricity" or "natural_gas".
     fuel_unit_str : str
         Unit of fuel, usually "kWh" or "therms".
     temperature_unit_str : str
         Unit of temperature, usually "degC" or "degF".
     """
 
-    def __init__(self,model,fuel_unit_str,fuel_type,temperature_unit_str,**kwargs):
-        super(GrossSavingsMeter,self).__init__(**kwargs)
+    def __init__(self, model, fuel_unit_str, temperature_unit_str,
+            **kwargs):
+        super(GrossSavingsMeter, self).__init__(**kwargs)
         self.model = model
-        self.fuel_type = fuel_type
         self.fuel_unit_str = fuel_unit_str
         self.temperature_unit_str = temperature_unit_str
 
-    def evaluate_mapped_inputs(self,temp_sensitivity_params_pre,consumption_history_post,weather_source,**kwargs):
+    def evaluate_mapped_inputs(self, temp_sensitivity_params_pre,
+            consumption_data_post, weather_source, **kwargs):
         """Evaluates the gross savings metric.
 
         Parameters
@@ -139,12 +144,12 @@ class GrossSavingsMeter(MeterBase):
         temp_sensitivity_params_pre : object
             Parameters in a format recognized by the model
             `compute_usage_estimates` method.
-        consumption_history_post : eemeter.consumption.ConsumptionHistory
+        consumption_data_post : eemeter.consumption.ConsumptionData
             Consumption periods over which gross savings estimate will be
             calculated.
         weather_source : eemeter.weather.WeatherSourceBase
             Weather data source containing data covering at least the duration
-            of the consumption history of the chosen fuel_type.
+            of the consumption data.
 
         Returns
         -------
@@ -152,10 +157,12 @@ class GrossSavingsMeter(MeterBase):
             Gross savings keyed by the string "gross_savings"
 
         """
-        consumptions_post = consumption_history_post.get(self.fuel_type)
-        observed_daily_temps = weather_source.daily_temperatures(consumptions_post,self.temperature_unit_str)
-        usages_post = np.array([c.to(self.fuel_unit_str) for c in consumptions_post])
-        usage_estimates_pre = self.model.compute_usage_estimates(temp_sensitivity_params_pre,observed_daily_temps)
+        consumption_periods = consumptions_data_post.periods()
+        usages_post = consumptions_data_post.to(self.fuel_unit_str)
+        observed_daily_temps = weather_source.daily_temperatures(
+                consumption_periods, self.temperature_unit_str)
+        usage_estimates_pre = self.model.compute_usage_estimates(
+                temp_sensitivity_params_pre, observed_daily_temps)
         return {"gross_savings": np.nansum(usage_estimates_pre - usages_post)}
 
 class AnnualizedGrossSavingsMeter(MeterBase):
@@ -173,13 +180,15 @@ class AnnualizedGrossSavingsMeter(MeterBase):
         Unit of temperature, usually "degC" or "degF".
     """
 
-    def __init__(self,model,fuel_type,temperature_unit_str,**kwargs):
+    def __init__(self, model, fuel_type, temperature_unit_str, **kwargs):
         super(AnnualizedGrossSavingsMeter,self).__init__(**kwargs)
         self.model = model
         self.fuel_type = fuel_type
         self.temperature_unit_str = temperature_unit_str
 
-    def evaluate_mapped_inputs(self,temp_sensitivity_params_pre,temp_sensitivity_params_post,consumption_history_post,weather_normal_source,**kwargs):
+    def evaluate_mapped_inputs(self, temp_sensitivity_params_pre,
+            temp_sensitivity_params_post, consumption_data_post,
+            weather_normal_source, **kwargs):
         """Evaluates the annualized gross savings metric.
 
         Parameters
@@ -190,7 +199,7 @@ class AnnualizedGrossSavingsMeter(MeterBase):
         temp_sensitivity_params_post : object
             Parameters for post-retrofit period in a format recognized by the
             model `compute_usage_estimates` method.
-        consumption_history_post : eemeter.consumption.ConsumptionHistory
+        consumption_data_post : eemeter.consumption.ConsumptionData
             Consumption periods over which annualized gross savings estimate will be
             calculated. (Note: only used for finding appropriate number of days
             multiplier).
@@ -205,18 +214,19 @@ class AnnualizedGrossSavingsMeter(MeterBase):
         """
 
         meter = AnnualizedUsageMeter(self.temperature_unit_str,self.model)
-        annualized_usage_pre = meter.evaluate(temp_sensitivity_params=temp_sensitivity_params_pre,
-                                              weather_normal_source=weather_normal_source)["annualized_usage"]
-        annualized_usage_post = meter.evaluate(temp_sensitivity_params=temp_sensitivity_params_post,
-                                               weather_normal_source=weather_normal_source)["annualized_usage"]
+        annualized_usage_pre = meter.evaluate(
+                temp_sensitivity_params=temp_sensitivity_params_pre,
+                weather_normal_source=weather_normal_source)["annualized_usage"]
+        annualized_usage_post = meter.evaluate(
+                temp_sensitivity_params=temp_sensitivity_params_post,
+                weather_normal_source=weather_normal_source)["annualized_usage"]
         annualized_usage_savings = annualized_usage_pre - annualized_usage_post
-        consumptions_post = consumption_history_post.get(self.fuel_type)
-        n_years = np.sum([c.timedelta.days for c in consumptions_post])/365.
+        n_years = consumption_data_post.total_days()/365.
         annualized_gross_savings = n_years * annualized_usage_savings
         return {"annualized_gross_savings": annualized_gross_savings}
 
 class FuelTypePresenceMeter(MeterBase):
-    """Checks for fuel type presence in a given consumption history.
+    """Checks for fuel type presence in a given project.
 
     Parameters
     ----------
@@ -224,17 +234,17 @@ class FuelTypePresenceMeter(MeterBase):
         Names of fuel types to be evaluated for presence.
     """
 
-    def __init__(self,fuel_types,**kwargs):
+    def __init__(self, fuel_types, **kwargs):
         super(FuelTypePresenceMeter,self).__init__(**kwargs)
         self.fuel_types = fuel_types
 
-    def evaluate_mapped_inputs(self,consumption_history,**kwargs):
+    def evaluate_mapped_inputs(self, project, **kwargs):
         """Check for fuel type presence.
 
         Parameters
         ----------
-        consumption_history : eemeter.consumption.ConsumptionHistory
-            Consumption history to check for presence.
+        project : eemeter.project.Project
+            Project in which to check for presence of data.
 
         Returns
         -------
@@ -242,10 +252,10 @@ class FuelTypePresenceMeter(MeterBase):
             A dictionary of booleans keyed by `"[fuel_type]_presence"` (e.g.
             `fuel_types = ["electricity"]` => `{'electricity_presence': False}`
         """
-        results = {}
-        for fuel_type in self.fuel_types:
-            consumptions = consumption_history.get(fuel_type)
-            results[fuel_type + "_presence"] = (consumptions != [])
+        results = {"{}_presence".format(ft): False for ft in self.fuel_types}
+        for consumption in project.consumptions:
+            if consumption.fuel_type in self.fuel_types:
+                results["{}_presence".format(consumption.fuel_type)] = True
         return results
 
 class ForEachFuelType(MeterBase):
@@ -265,7 +275,8 @@ class ForEachFuelType(MeterBase):
         "\*_current_fuel". E.g. "output_electricity" -> "output_current_fuel".
         This increases meter reusability.
     """
-    def __init__(self,fuel_types,fuel_unit_strs,meter,gathered_inputs=[],**kwargs):
+    def __init__(self, fuel_types, fuel_unit_strs, meter, gathered_inputs=[],
+            **kwargs):
         super(ForEachFuelType,self).__init__(**kwargs)
         self.fuel_types = fuel_types
         self.fuel_unit_strs = fuel_unit_strs
@@ -274,7 +285,7 @@ class ForEachFuelType(MeterBase):
         self.meter = meter
         self.gathered_inputs = gathered_inputs
 
-    def evaluate_mapped_inputs(self,**kwargs):
+    def evaluate_mapped_inputs(self, **kwargs):
         """Evaluates the meter once for each fuel type; appending
         "_{fuel_type}" to the each result of the meter.
 
@@ -285,13 +296,13 @@ class ForEachFuelType(MeterBase):
             fuel_type markers in keys as described above.
         """
         results = {}
-        for fuel_type,fuel_unit_str in zip(self.fuel_types,self.fuel_unit_strs):
+        for fuel_type, fuel_unit_str in zip(self.fuel_types, self.fuel_unit_strs):
             inputs = {}
             p = re.compile("(_{}$)".format(fuel_type))
             for k,v in kwargs.items():
                 stripped_k = p.sub('',k)
                 if stripped_k in self.gathered_inputs:
-                    subbed_key = p.sub('_current_fuel',k)
+                    subbed_key = p.sub('_current_fuel', k)
                     inputs[subbed_key] = v
                 else:
                     inputs[k] = v
@@ -300,22 +311,22 @@ class ForEachFuelType(MeterBase):
 
             result = self.meter.evaluate(**inputs)
             for k,v in result.items():
-                results[ "{}_{}".format(k,fuel_type)] = v
+                results[ "{}_{}".format(k, fuel_type)] = v
         return results
 
 class TimeSpanMeter(MeterBase):
-    """Meters the time span (in days) of a ConsumptionHistory instance.
+    """Meters the time span (in days) of a ConsumptionData instance.
     """
-    def __init__(self,**kwargs):
-        super(TimeSpanMeter,self).__init__(**kwargs)
+    def __init__(self, **kwargs):
+        super(TimeSpanMeter, self).__init__(**kwargs)
 
-    def evaluate_mapped_inputs(self,consumption_history,fuel_type,**kwargs):
+    def evaluate_mapped_inputs(self, consumption_data, **kwargs):
         """Evaluates a ConsumptionHistory instance to determine the number of
         unique days covered by consumption periods
 
         Parameters
         ----------
-        consumption_history : eemeter.consumption.ConsumptionHistory
+        consumption_data : eemeter.consumption.ConsumptionData
             Target of time span analysis
 
         Returns
@@ -324,13 +335,7 @@ class TimeSpanMeter(MeterBase):
             Contains an item with the key "time_span" containing the number of
             days covered by the consumption history.
         """
-        consumptions = consumption_history.get(fuel_type)
-        dates = set()
-        for c in consumptions:
-            for days in range((c.end - c.start).days):
-                dat = c.start + timedelta(days=days)
-                dates.add(dat)
-        return { "time_span": len(dates) }
+        return { "time_span": consumption_data.total_days() }
 
 class TotalHDDMeter(MeterBase):
     """Sums the total heating degree days observed over the course of a
@@ -348,16 +353,13 @@ class TotalHDDMeter(MeterBase):
         self.base = base
         self.temperature_unit_str = temperature_unit_str
 
-    def evaluate_mapped_inputs(self,consumption_history,fuel_type,weather_source,**kwargs):
+    def evaluate_mapped_inputs(self, consumption_data, weather_source,**kwargs):
         """Sums the total observed HDD over a consumption history.
 
         Parameters
         ----------
-        consumption_history : eemeter.meter.ConsumptionHistory
-            The consumption history over which to sum heating degree days
-        fuel_type : str
-            A string representing the consumption fuel_type used to fetch
-            periods; e.g. "natural_gas"
+        consumption_data : eemeter.meter.ConsumptionData
+            The consumption data over which to sum heating degree days
         weather_source : eemeter.weather.WeatherSourceBase
             A weather data source from a location as geographically and
             climatically close as possible to the target project.
@@ -368,9 +370,9 @@ class TotalHDDMeter(MeterBase):
             Contains a single item with the key "total_hdd" containing the
             total HDDs observed during the period
         """
-
-        consumptions = consumption_history.get(fuel_type)
-        hdd = weather_source.hdd(consumptions,self.temperature_unit_str,self.base)
+        consumption_periods = consumption_data.periods()
+        hdd = weather_source.hdd(consumption_periods,
+                self.temperature_unit_str, self.base)
         return { "total_hdd": sum(hdd) }
 
 class TotalCDDMeter(MeterBase):
@@ -384,21 +386,19 @@ class TotalCDDMeter(MeterBase):
     temperature_unit_str : {"degF", "degC"}
         A string denoting the temperature unit to be used.
     """
-    def __init__(self,base,temperature_unit_str,**kwargs):
+    def __init__(self, base, temperature_unit_str, **kwargs):
         super(TotalCDDMeter,self).__init__(**kwargs)
         self.base = base
         self.temperature_unit_str = temperature_unit_str
 
-    def evaluate_mapped_inputs(self,consumption_history,fuel_type,weather_source,**kwargs):
+    def evaluate_mapped_inputs(self, consumption_data, weather_source,
+            **kwargs):
         """Sums the total observed CDD over a consumption history.
 
         Parameters
         ----------
-        consumption_history : eemeter.meter.ConsumptionHistory
-            The consumption history over which to sum cooling degree days
-        fuel_type : str
-            A string representing the consumption fuel_type used to fetch
-            periods; e.g. "electricity"
+        consumption_data : eemeter.meter.ConsumptionData
+            The consumption data over which to sum cooling degree days
         weather_source : eemeter.weather.WeatherSourceBase
             A weather data source from a location as geographically and
             climatically close as possible to the target project.
@@ -409,8 +409,9 @@ class TotalCDDMeter(MeterBase):
             Contains a single item with the key "total_cdd" containing the
             total CDDs observed during the period
         """
-        consumptions = consumption_history.get(fuel_type)
-        cdd = weather_source.cdd(consumptions,self.temperature_unit_str,self.base)
+        consumption_periods = consumption_data.periods()
+        hdd = weather_source.hdd(consumption_periods,
+                self.temperature_unit_str, self.base)
         return { "total_cdd": sum(cdd) }
 
 
@@ -424,12 +425,12 @@ class NormalAnnualHDD(MeterBase):
     temperature_unit_str : {"degF", "degC"}
         A string denoting the temperature unit to be used.
     """
-    def __init__(self,base,temperature_unit_str,**kwargs):
+    def __init__(self, base, temperature_unit_str, **kwargs):
         super(NormalAnnualHDD,self).__init__(**kwargs)
         self.base = base
         self.temperature_unit_str = temperature_unit_str
 
-    def evaluate_mapped_inputs(self,weather_normal_source,**kwargs):
+    def evaluate_mapped_inputs(self, weather_normal_source, **kwargs):
         """Sums the total observed HDD in a normal year
 
         Parameters
@@ -444,13 +445,11 @@ class NormalAnnualHDD(MeterBase):
             Contains a single item with the key "normal_annual_hdd" containing the
             total HDDs observed during the normal year
         """
-        periods = []
-        for days in range(365):
-            start = datetime(2013,1,1) + timedelta(days=days)
-            end = datetime(2013,1,1) + timedelta(days=days + 1)
-            periods.append(DatetimePeriod(start,end))
-        hdd = weather_normal_source.hdd(periods,self.temperature_unit_str,self.base)
-        return { "normal_annual_hdd": sum(hdd) }
+        # year of this annual period will be ignored
+        annual_period = Period(datetime(2013,1,1), datetime(2014,1,1))
+        hdd = weather_normal_source.hdd(annual_period,
+                self.temperature_unit_str, self.base)
+        return { "normal_annual_hdd": hdd }
 
 class NormalAnnualCDD(MeterBase):
     """Sums the total cooling degree days observed in a normal year.
@@ -462,12 +461,12 @@ class NormalAnnualCDD(MeterBase):
     temperature_unit_str : {"degF", "degC"}
         A string denoting the temperature unit to be used.
     """
-    def __init__(self,base,temperature_unit_str,**kwargs):
+    def __init__(self, base, temperature_unit_str, **kwargs):
         super(NormalAnnualCDD,self).__init__(**kwargs)
         self.base = base
         self.temperature_unit_str = temperature_unit_str
 
-    def evaluate_mapped_inputs(self,weather_normal_source,**kwargs):
+    def evaluate_mapped_inputs(self, weather_normal_source, **kwargs):
         """Sums the total observed CDD in a normal year
 
         Parameters
@@ -483,13 +482,10 @@ class NormalAnnualCDD(MeterBase):
             total CDDs observed during the normal year
         """
 
-        periods = []
-        for days in range(365):
-            start = datetime(2013,1,1) + timedelta(days=days)
-            end = datetime(2013,1,1) + timedelta(days=days + 1)
-            periods.append(DatetimePeriod(start,end))
-        cdd = weather_normal_source.cdd(periods,self.temperature_unit_str,self.base)
-        return { "normal_annual_cdd": sum(cdd) }
+        annual_period = Period(datetime(2013,1,1), datetime(2014,1,1))
+        cdd = weather_normal_source.cdd(annual_period,
+                self.temperature_unit_str, self.base)
+        return { "normal_annual_cdd": cdd }
 
 class NPeriodsMeetingHDDPerDayThreshold(MeterBase):
     """Counts the number of periods meeting a particular heating degree day
@@ -508,24 +504,22 @@ class NPeriodsMeetingHDDPerDayThreshold(MeterBase):
         A proportion multiplier for the number of hdd; defualt is 1.
         E.g. period_hdd <= proportion * hdd:
     """
-    def __init__(self,base,temperature_unit_str,operation,proportion=1,**kwargs):
+    def __init__(self, base, temperature_unit_str, operation, proportion=1,
+            **kwargs):
         super(NPeriodsMeetingHDDPerDayThreshold,self).__init__(**kwargs)
         self.base = base
         self.temperature_unit_str = temperature_unit_str
         self.operation = operation
         self.proportion = proportion
 
-    def evaluate_mapped_inputs(self,consumption_history,fuel_type,hdd,weather_source,**kwargs):
+    def evaluate_mapped_inputs(self,consumption_data,hdd,weather_source,**kwargs):
         """Evaluates the number of periods meeting a consumption history limit
         according to data from a particular weather source.
 
         Parameters
         ----------
-        consumption_history : eemeter.consumption.ConsumptionHistory
-            Consumption history over which to count periods
-        fuel_type : str
-            A string representing the consumption fuel_type used to fetch
-            periods; e.g. "electricity"
+        consumption_data : eemeter.consumption.ConsumptionData
+            Consumption data over which to count periods
         hdd : int or float
             The target number of HDD.
         weather_source : eemeter.weather.WeatherSourceBase
@@ -539,8 +533,9 @@ class NPeriodsMeetingHDDPerDayThreshold(MeterBase):
             containing the number of periods meeting the threshold.
         """
         n_periods = 0
-        consumptions = consumption_history.get(fuel_type)
-        hdds = weather_source.hdd(consumptions,self.temperature_unit_str,self.base,per_day=True)
+        periods = consumption_data.periods()
+        hdds = weather_source.hdd(periods, self.temperature_unit_str,
+                self.base, per_day=True)
         for period_hdd in hdds:
             if self.operation == "lt":
                 if period_hdd < self.proportion * hdd:
@@ -573,24 +568,23 @@ class NPeriodsMeetingCDDPerDayThreshold(MeterBase):
         A proportion multiplier for the number of cdd; defualt is 1.
         E.g. period_cdd <= proportion * cdd:
     """
-    def __init__(self,base,temperature_unit_str,operation,proportion=1,**kwargs):
+    def __init__(self, base, temperature_unit_str, operation, proportion=1,
+            **kwargs):
         super(NPeriodsMeetingCDDPerDayThreshold,self).__init__(**kwargs)
         self.base = base
         self.temperature_unit_str = temperature_unit_str
         self.operation = operation
         self.proportion = proportion
 
-    def evaluate_mapped_inputs(self,consumption_history,fuel_type,cdd,weather_source,**kwargs):
+    def evaluate_mapped_inputs(self, consumption_data, cdd, weather_source,
+            **kwargs):
         """Evaluates the number of periods meeting a consumption history limit
         according to data from a particular weather source.
 
         Parameters
         ----------
-        consumption_history : eemeter.consumption.ConsumptionHistory
-            Consumption history over which to count periods
-        fuel_type : str
-            A string representing the consumption fuel_type used to fetch
-            periods; e.g. "electricity"
+        consumption_data : eemeter.consumption.ConsumptionData
+            Consumption data over which to count periods.
         cdd : int or float
             The target number of CDD.
         weather_source : eemeter.weather.WeatherSourceBase
@@ -604,8 +598,9 @@ class NPeriodsMeetingCDDPerDayThreshold(MeterBase):
             containing the number of periods meeting the threshold.
         """
         n_periods = 0
-        consumptions = consumption_history.get(fuel_type)
-        cdds = weather_source.cdd(consumptions,self.temperature_unit_str,self.base,per_day=True)
+        periods = consumption_data.periods()
+        cdds = weather_source.cdd(periods, self.temperature_unit_str,
+                self.base, per_day=True)
         for period_cdd in cdds:
             if self.operation == "lt":
                 if period_cdd < self.proportion * cdd:
@@ -630,21 +625,19 @@ class RecentReadingMeter(MeterBase):
     n_days : int
         The target number of days since the most recent reading.
     """
-    def __init__(self,n_days,**kwargs):
-        super(RecentReadingMeter,self).__init__(**kwargs)
+    def __init__(self, n_days, **kwargs):
+        super(RecentReadingMeter, self).__init__(**kwargs)
         self.n_days = n_days
 
-    def evaluate_mapped_inputs(self,consumption_history,fuel_type,since_date=datetime.now(pytz.utc),**kwargs):
+    def evaluate_mapped_inputs(self, consumption_data, since_date=None,
+            **kwargs):
         """Evaluates the number of days since the last reading against the
         threshold.
 
         Parameters
         ----------
-        consumption_history : eemeter.consumption.ConsumptionHistory
-            Consumption history in which to find a most recent period
-        fuel_type : str
-            A string representing the consumption fuel_type used to fetch
-            periods; e.g. "electricity"
+        consumption_data : eemeter.consumption.ConsumptionData
+            Consumption data in which to find a most recent period
         since_date : datetime.datetime, optional
             The date to count from; defaults to datetime.now(pytz.utc).
 
@@ -654,18 +647,16 @@ class RecentReadingMeter(MeterBase):
             A dictionary containing a single item with the key "recent_reading"
             containing True if the most recent reading is within the threshold.
         """
+        if since_date is None:
+            since_date = datetime.now(pytz.utc)
         dt_target = since_date - timedelta(days=self.n_days)
-        recent_reading = False
-        for consumption in consumption_history.get(fuel_type):
-            if consumption.end > dt_target:
-                recent_reading = True
-                break
+        recent_reading = any(consumption_data.data.index > dt_target)
         return {"recent_reading": recent_reading}
 
 class CVRMSE(MeterBase):
     """Coefficient of Variation of Root-Mean-Square Error for a model fit.
     """
-    def evaluate_mapped_inputs(self,y,y_hat,params,**kwargs):
+    def evaluate_mapped_inputs(self, y, y_hat, params, **kwargs):
         """Evaluates the Coefficient of Variation of Root-Mean-Square Error of
         a model fit.
 
@@ -693,18 +684,17 @@ class AverageDailyUsage(MeterBase):
     """Computes average daily usage given consumption.
     """
 
-    def evaluate_mapped_inputs(self,consumption_history,fuel_type,fuel_unit_str,**kwargs):
+    def evaluate_mapped_inputs(self, consumption_data, fuel_unit_str,
+            **kwargs):
         """Compute the average daily usage for each consumption of
         a particular fuel type.
 
         Parameters
         ----------
-        consumption_history : eemeter.consumption.ConsumptionHistory
-            Consumption history to draw from.
+        consumption_data : eemeter.consumption.ConsumptionData
+            Consumption data to draw from.
         fuel_unit_str : str
             Unit of fuel, usually "kWh" or "therms".
-        fuel_type : str
-            Type of fuel, usually "electricity" or "natural_gas".
 
         Returns
         -------
@@ -712,8 +702,8 @@ class AverageDailyUsage(MeterBase):
             - "average_daily_usages": an array of average usage
               values - one value for each consumption of the given fuel type.
         """
-        consumptions = consumption_history.get(fuel_type)
-        average_daily_usages = np.array([c.average_daily_usage(fuel_unit_str) for c in consumptions])
+        average_daily_consumptions, _ = \
+                consumption_dat.average_daily_consumptions()
         return {"average_daily_usages": average_daily_usages}
 
 class EstimatedAverageDailyUsage(MeterBase):
@@ -728,40 +718,40 @@ class EstimatedAverageDailyUsage(MeterBase):
         Model of energy usage for which to optimize parameter choices.
     """
 
-    def __init__(self,temperature_unit_str,model,**kwargs):
+    def __init__(self, temperature_unit_str, model, **kwargs):
         super(EstimatedAverageDailyUsage,self).__init__(**kwargs)
         self.temperature_unit_str = temperature_unit_str
         self.model = model
 
-    def evaluate_mapped_inputs(self,consumption_history,weather_source,temp_sensitivity_params,fuel_type,**kwargs):
+    def evaluate_mapped_inputs(self, consumption_data, weather_source,
+            temp_sensitivity_params, **kwargs):
         """Compute the average daily usage for each consumption of
         a particular fuel type.
 
         Parameters
         ----------
-        consumption_history : eemeter.consumption.ConsumptionHistory
-            Consumption history to draw from.
+        consumption_data : eemeter.consumption.ConsumptionData
+            Consumption data to draw from.
         weather_source : eemeter.weather.WeatherSourceBase
             Weather data source containing data covering at least the duration
-            of the consumption history of the chosen fuel_type.
+            of the consumption data.
         temp_sensitivity_params : array_like
             Parameters to use in the estimation.
-        fuel_type : str
-            Type of fuel, usually "electricity" or "natural_gas".
 
         Returns
         -------
         out : dict
             - "estimated_average_daily_usages": an array of average usage
-              values - one value for each consumption of the given fuel type.
+              values.
             - "n_days": the number of days in each consumption period.
         """
-        consumptions = consumption_history.get(fuel_type)
-        observed_daily_temps = weather_source.daily_temperatures(consumptions,self.temperature_unit_str)
+        periods = consumption_data.periods()
+        observed_daily_temps = weather_source.daily_temperatures(periods,
+                self.temperature_unit_str)
         n_days = np.array([len(temps) for temps in observed_daily_temps])
         estimated_average_daily_usages = \
-                self.model.compute_usage_estimates(temp_sensitivity_params,
-                                                   observed_daily_temps) / n_days
+                self.model.compute_usage_estimates(
+                        temp_sensitivity_params, observed_daily_temps) / n_days
         return {"estimated_average_daily_usages": estimated_average_daily_usages,
                 "n_days": n_days}
 
@@ -770,7 +760,7 @@ class RMSE(MeterBase):
     root-mean-square deviation, or RMSD) of observed samples and estimated
     values.
     """
-    def evaluate_mapped_inputs(self,y,y_hat,**kwargs):
+    def evaluate_mapped_inputs(self, y, y_hat, **kwargs):
         """Evaluates the Coefficient of Variation of Root-Mean-Square Error of
         a model fit.
 
@@ -794,7 +784,7 @@ class RSquared(MeterBase):
     """Compute the r^2 metric (coefficient of determination) of observed
     samples and estimated values. Used to measure the fitness of a model.
     """
-    def evaluate_mapped_inputs(self,y,y_hat,**kwargs):
+    def evaluate_mapped_inputs(self, y, y_hat, **kwargs):
         """Evaluates the r^2 fitness metric for particular samples
 
         Parameters

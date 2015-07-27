@@ -1,7 +1,6 @@
 from eemeter.config.yaml_parser import load
 
-from eemeter.consumption import ConsumptionHistory
-from eemeter.consumption import Consumption
+from eemeter.consumption import ConsumptionData
 
 from eemeter.meter import TimeSpanMeter
 from eemeter.meter import TotalHDDMeter

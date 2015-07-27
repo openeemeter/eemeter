@@ -1,41 +1,47 @@
 import pytest
 
 from eemeter.models import TemperatureSensitivityModel
-from eemeter.consumption import Consumption,ConsumptionHistory
-from eemeter.generator import ConsumptionGenerator
-from eemeter.generator import generate_periods
+from eemeter.consumption import ConsumptionData
+from eemeter.generator import MonthlyBillingConsumptionGenerator
+from eemeter.generator import generate_monthly_billing_datetimes
 
 from .weather import gsod_722880_2012_2014_weather_source
+
+from scipy.stats import randint
 
 from datetime import datetime
 
 @pytest.fixture
 def consumption_history_1():
-    c_list = [Consumption(687600000,"J","electricity",datetime(2012,9,26),datetime(2012,10,24)),
-            Consumption(874800000,"J","electricity",datetime(2012,10,24),datetime(2012,11,21)),
-            Consumption(1332000000,"J","electricity",datetime(2012,11,21),datetime(2012,12,27)),
-            Consumption(1454400000,"J","electricity",datetime(2012,12,27),datetime(2013,1,29)),
-            Consumption(1155600000,"J","electricity",datetime(2013,1,29),datetime(2013,2,26)),
-            Consumption(1195200000,"J","electricity",datetime(2013,2,26),datetime(2013,3,27)),
-            Consumption(1033200000,"J","electricity",datetime(2013,3,27),datetime(2013,4,25)),
-            Consumption(752400000,"J","electricity",datetime(2013,4,25),datetime(2013,5,23)),
-            Consumption(889200000,"J","electricity",datetime(2013,5,23),datetime(2013,6,22)),
-            Consumption(3434400000,"J","electricity",datetime(2013,6,22),datetime(2013,7,26)),
-            Consumption(828000000,"J","electricity",datetime(2013,7,26),datetime(2013,8,22)),
-            Consumption(2217600000,"J","electricity",datetime(2013,8,22),datetime(2013,9,25)),
-            Consumption(680400000,"J","electricity",datetime(2013,9,25),datetime(2013,10,23)),
-            Consumption(1062000000,"J","electricity",datetime(2013,10,23),datetime(2013,11,22)),
-            Consumption(1720800000,"J","electricity",datetime(2013,11,22),datetime(2013,12,27)),
-            Consumption(1915200000,"J","electricity",datetime(2013,12,27),datetime(2014,1,30)),
-            Consumption(1458000000,"J","electricity",datetime(2014,1,30),datetime(2014,2,27)),
-            Consumption(1332000000,"J","electricity",datetime(2014,2,27),datetime(2014,3,29)),
-            Consumption(954000000,"J","electricity",datetime(2014,3,29),datetime(2014,4,26)),
-            Consumption(842400000,"J","electricity",datetime(2014,4,26),datetime(2014,5,28)),
-            Consumption(1220400000,"J","electricity",datetime(2014,5,28),datetime(2014,6,25)),
-            Consumption(1702800000,"J","electricity",datetime(2014,6,25),datetime(2014,7,25)),
-            Consumption(1375200000,"J","electricity",datetime(2014,7,25),datetime(2014,8,23)),
-            Consumption(1623600000,"J","electricity",datetime(2014,8,23),datetime(2014,9,25))]
-    return ConsumptionHistory(c_list)
+
+    records = [
+            {"start": datetime(2012,9,26), "value": 191},
+            {"start": datetime(2012,10,24), "value": 243},
+            {"start": datetime(2012,11,21), "value": 370},
+            {"start": datetime(2012,12,27), "value": 404},
+            {"start": datetime(2013,1,29), "value": 321},
+            {"start": datetime(2013,2,26), "value": 332},
+            {"start": datetime(2013,3,27), "value": 287},
+            {"start": datetime(2013,4,25), "value": 209},
+            {"start": datetime(2013,5,23), "value": 247},
+            {"start": datetime(2013,6,22), "value": 954},
+            {"start": datetime(2013,7,26), "value": 230},
+            {"start": datetime(2013,8,22), "value": 616},
+            {"start": datetime(2013,9,25), "value": 189},
+            {"start": datetime(2013,10,23), "value": 295},
+            {"start": datetime(2013,11,22), "value": 478},
+            {"start": datetime(2013,12,27), "value": 532},
+            {"start": datetime(2014,1,30), "value": 405},
+            {"start": datetime(2014,2,27), "value": 370},
+            {"start": datetime(2014,3,29), "value": 265},
+            {"start": datetime(2014,4,26), "value": 234},
+            {"start": datetime(2014,5,28), "value": 339},
+            {"start": datetime(2014,6,25), "value": 473},
+            {"start": datetime(2014,7,25), "value": 382},
+            {"start": datetime(2014,8,23), "end": datetime(2014,9,25),
+                "value": 451}]
+    return ConsumptionData(records, "electricity", "kWh",
+            record_type="arbitrary_start")
 
 @pytest.fixture(params=[[0, 1,65,1,75],
                         [10,2,61,1,73]])
@@ -48,15 +54,16 @@ def generated_consumption_history_1(request):
         "cooling_slope": request.param[3],
         "cooling_reference_temperature": request.param[4]
     }
-    start = datetime(2012,1,1)
-    end = datetime(2014,12,31)
-    periods = generate_periods(start,end,jitter_intensity=0)
-    gen = ConsumptionGenerator("electricity", "kWh", "degF", model, params)
-    consumptions = gen.generate(gsod_722880_2012_2014_weather_source(), periods)
+    period = Period(datetime(2012,1,1),datetime(2014,12,31))
+    datetimes = generate_monthly_billing_datetimes(period, dist=randint(30,31))
+    gen = MonthlyBillingConsumptionGenerator("electricity", "kWh", "degF",
+            model, params)
+    consumptions = gen.generate(gsod_722880_2012_2014_weather_source(),
+            datetimes)
     return ConsumptionHistory(consumptions), model.param_dict_to_list(params)
 
-@pytest.fixture(params=[([0, 1,65,1,75],1784.8507747107692),
-                        ([10,2,61,1,73],5643.731382817317)])
+@pytest.fixture(params=[([0, 1, 65, 1, 75],1784.8507747107692),
+                        ([10, 2, 61, 1, 73],5643.731382817317)])
 def generated_consumption_history_with_annualized_usage_1(request):
     model = TemperatureSensitivityModel(cooling=True,heating=True)
     params = {
@@ -66,15 +73,16 @@ def generated_consumption_history_with_annualized_usage_1(request):
         "cooling_slope": request.param[0][3],
         "cooling_reference_temperature": request.param[0][4]
     }
-    start = datetime(2012,1,1)
-    end = datetime(2014,12,31)
-    periods = generate_periods(start,end,jitter_intensity=0)
-    gen = ConsumptionGenerator("electricity", "kWh", "degF", model, params)
-    consumptions = gen.generate(gsod_722880_2012_2014_weather_source(), periods)
-    return ConsumptionHistory(consumptions), model.param_dict_to_list(params), request.param[1]
+    period = Period(datetime(2012,1,1),datetime(2014,12,31))
+    datetimes = generate_monthly_billing_datetimes(period, dist=randint(30,31))
+    gen = MonthlyBillingConsumptionGenerator("electricity", "kWh", "degF", model, params)
+    consumptions = gen.generate(gsod_722880_2012_2014_weather_source(),
+            datetimes)
+    return ConsumptionHistory(consumptions), model.param_dict_to_list(params),\
+            request.param[1]
 
-@pytest.fixture(params=[([0, 1,65,1,75],[0,.5,63,.7,75]),
-                        ([10,2,61,1,73],[9, 1,61,.5,73])])
+@pytest.fixture(params=[([0, 1, 65, 1, 75],[0, .5, 63, .7, 75]),
+                        ([10, 2, 61, 1, 73],[9, 1, 61, .5, 73])])
 def generated_consumption_history_pre_post_1(request):
     model = TemperatureSensitivityModel(cooling=True,heating=True)
     pre_params = {
@@ -91,15 +99,21 @@ def generated_consumption_history_pre_post_1(request):
         "cooling_slope": request.param[1][3],
         "cooling_reference_temperature": request.param[1][4]
     }
-    start = datetime(2012,1,1)
-    retrofit = datetime(2013,6,15)
-    end = datetime(2014,12,31)
-    pre_periods = generate_periods(start,retrofit,jitter_intensity=0)
-    post_periods = generate_periods(retrofit,end,jitter_intensity=0)
-    pre_gen = ConsumptionGenerator("electricity", "kWh", "degF", model, pre_params)
-    post_gen = ConsumptionGenerator("electricity", "kWh", "degF", model, post_params)
-    pre_consumptions = pre_gen.generate(gsod_722880_2012_2014_weather_source(), pre_periods)
-    post_consumptions = post_gen.generate(gsod_722880_2012_2014_weather_source(), post_periods)
+    pre_period = Period(datetime(2012,1,1),datetime(2013,6,15))
+    post_period = Period(datetime(2013,6,15),datetime(2014,12,31))
+    pre_datetimes = generate_monthly_billing_datetimes(pre_period,
+            dist=randint(30,31))
+    post_datetimes = generate_monthly_billing_datetimes(post_period,
+            dist=randint(30,31))
+    pre_gen = MonthlyBillingConsumptionGenerator("electricity", "kWh", "degF",
+            model, pre_params)
+    post_gen = MonthlyBillingConsumptionGenerator("electricity", "kWh", "degF",
+            model, post_params)
+    pre_consumptions = pre_gen.generate(
+            gsod_722880_2012_2014_weather_source(), pre_datetimes)
+    post_consumptions = post_gen.generate(
+            gsod_722880_2012_2014_weather_source(), post_datetimes)
+
     ch = ConsumptionHistory(pre_consumptions + post_consumptions)
     return ch, model.param_dict_to_list(pre_params), model.param_dict_to_list(post_params), retrofit
 

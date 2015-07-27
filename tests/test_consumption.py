@@ -355,6 +355,13 @@ def test_consumption_data_arbitrary_start(records_arbitrary_start,
     assert cd.freq_timedelta is None
     assert cd.pulse_value is None
 
+    generated_records = cd.records(record_type=record_type_arbitrary_start)
+    assert len(generated_records) == 5
+    assert generated_records[0] == {"start": datetime(2015,1,1), "value": 0}
+    assert generated_records[4]["start"] == datetime(2015,2,1)
+    assert pd.isnull(generated_records[4]["value"])
+    assert len(generated_records[4].keys()) == 2
+
 def test_consumption_data_arbitrary_end(records_arbitrary_end,
         fuel_type, unit_name, record_type_arbitrary_end):
     cd = ConsumptionData(records_arbitrary_end,
@@ -366,6 +373,11 @@ def test_consumption_data_arbitrary_end(records_arbitrary_end,
     assert cd.freq is None
     assert cd.freq_timedelta is None
     assert cd.pulse_value is None
+
+    generated_records = cd.records(record_type=record_type_arbitrary_end)
+    assert len(generated_records) == 6
+    assert generated_records[0] == {"end": datetime(2014,2,2),"value": np.nan}
+    assert generated_records[5] == {"end": datetime(2015,2,1),"value":0}
 
 def test_consumption_data_pulse(records_pulse,
         fuel_type, unit_name):
@@ -388,6 +400,12 @@ def test_consumption_data_pulse(records_pulse,
     assert cd.freq is None
     assert cd.freq_timedelta is None
     assert cd.pulse_value == 1
+
+    generated_records = cd.records(record_type="pulse")
+    sorted_records = sorted(records_pulse, key=lambda x: x["pulse"])
+    assert len(generated_records) == len(sorted_records)
+    for r1, r2 in zip(generated_records,sorted_records):
+        assert r1 == r2
 
 def test_consumption_data_empty_records(fuel_type, unit_name):
     cd = ConsumptionData([], fuel_type, unit_name, freq="S")
@@ -427,3 +445,27 @@ def test_consumption_periods_arbitrary(consumption_data_kWh_arbitrary):
     assert periods[0].start == datetime(2015,1,1)
     assert periods[9].end == datetime(2015,1,11)
     assert len(periods) == 10
+
+def test_consumption_data_average_daily_consumtions_interval(consumption_data_kWh_interval):
+    values, n_days = consumption_data_kWh_interval.average_daily_consumptions()
+    assert_allclose(values, np.tile(1, consumption_data_kWh_interval.data.values.shape),
+            rtol=RTOL, atol=ATOL)
+    assert_allclose(n_days, np.tile(1, consumption_data_kWh_interval.data.values.shape),
+            rtol=RTOL, atol=ATOL)
+
+def test_consumption_data_average_daily_consumtions_arbitrary(consumption_data_kWh_arbitrary):
+    values, n_days = consumption_data_kWh_arbitrary.average_daily_consumptions()
+    assert_allclose(values, np.tile(1, (10,)),
+            rtol=RTOL, atol=ATOL)
+    assert_allclose(n_days, np.tile(1, (10,)),
+            rtol=RTOL, atol=ATOL)
+
+def test_consumption_data_total_days_interval(consumption_data_kWh_interval):
+    n_days = consumption_data_kWh_interval.total_days()
+    assert_allclose(n_days, 10,
+            rtol=RTOL, atol=ATOL)
+
+def test_consumption_data_total_days_arbitrary(consumption_data_kWh_arbitrary):
+    n_days = consumption_data_kWh_arbitrary.total_days()
+    assert_allclose(n_days, 10,
+            rtol=RTOL, atol=ATOL)

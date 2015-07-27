@@ -174,17 +174,18 @@ class ProjectGenerator:
 
         datetimes = generate_monthly_billing_datetimes(period, dist=None)
 
-        baseline_consumption_data = baseline_generator.generate(weather_source,
-                datetimes, daily_noise_dist=noise)
-        reporting_consumption_data = reporting_generator.generate(weather_source,
-                datetimes, daily_noise_dist=noise)
+        baseline_consumption_data = baseline_generator.generate(
+                weather_source, datetimes, daily_noise_dist=noise)
+        reporting_consumption_data = reporting_generator.generate(
+                weather_source, datetimes, daily_noise_dist=noise)
 
         baseline_data = baseline_consumption_data.data
         reporting_data = reporting_consumption_data.data
         periods = baseline_consumption_data.periods()
 
         records = []
-        for bl_data, rp_data, period in zip(baseline_data, reporting_data, period):
+        for bl_data, rp_data, period in zip(baseline_data, reporting_data,
+                period):
             if period in reporting_period:
                 val = rp_data
             else:
@@ -197,7 +198,7 @@ class ProjectGenerator:
 
         return cd, estimated_annualized_savings, pre_params, post_params
 
-def generate_monthly_billing_datetimes(period,dist=None):
+def generate_monthly_billing_datetimes(period, dist=None):
     """Returns an array of poisson distributed datetimes falling on simulated
     monthly billing dates.
 
