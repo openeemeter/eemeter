@@ -17,6 +17,7 @@ from datetime import datetime
 from datetime import timedelta
 
 import pandas as pd
+import numpy as np
 
 from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, Integer, Float, Numeric, String, MetaData, ForeignKey, TIMESTAMP
@@ -25,39 +26,36 @@ RTOL = 1e-2
 ATOL = 1e-2
 
 def test_import_hpxml(consumption_hpxml_filename):
-    ch = import_hpxml(consumption_hpxml_filename)
+    consumption = import_hpxml(consumption_hpxml_filename)
 
-    consumptions_e = ch.electricity
-    consumptions_g = ch.natural_gas
-    assert_allclose([ c.kWh for c in consumptions_e],[10.,11.,12.],rtol=RTOL,atol=ATOL)
-    assert_allclose([ c.therms for c in consumptions_g],[10.,11.,12.],rtol=RTOL,atol=ATOL)
-    assert len(consumptions_e) == 3
-    assert len(consumptions_g) == 3
-    assert not consumptions_e[0].estimated
-    assert not consumptions_e[1].estimated
-    assert not consumptions_g[0].estimated
-    assert not consumptions_g[1].estimated
-    assert consumptions_e[2].estimated
-    assert consumptions_g[2].estimated
+    elec_data = consumption[0].data
+    gas_data = consumption[1].data
+    elec_estimated = consumption[0].estimated
+    gas_estimated = consumption[1].estimated
+    assert_allclose(elec_data.values, [10.,11.,12., np.nan],
+            rtol=RTOL, atol=ATOL)
+    assert_allclose(gas_data.values, [10.,11.,12., np.nan],
+            rtol=RTOL, atol=ATOL)
+    assert_allclose(elec_estimated.values, [False, False, True, False],
+            rtol=RTOL, atol=ATOL)
+    assert_allclose(gas_estimated.values, [False, False, True, False],
+            rtol=RTOL, atol=ATOL)
 
 def test_import_green_button_xml(consumption_gbxml_filename):
-    ch = import_green_button_xml(consumption_gbxml_filename)
+    cd = import_green_button_xml(consumption_gbxml_filename)
 
-    consumptions_e = ch.electricity
-
-    c_kWh = [c.kWh for c in consumptions_e]
-
-    assert_allclose(c_kWh, [25.662, 21.021, 21.021, 21.021, 21.021,
-                            21.021, 25.662, 25.662, 21.021, 21.021,
-                            21.021, 21.021, 21.021, 25.662, 25.662,
-                            21.021, 21.021, 21.021, 21.021, 21.021,
-                            25.662, 25.662, 21.021, 21.021, 21.021,
-                            21.021, 21.021, 25.662, 25.662, 21.021,
-                            21.021, 25.662, 25.662, 21.021, 21.021,
-                            21.021, 21.021, 21.021, 25.662, 25.389,
-                            21.021, 21.021, 21.021, 21.021, 21.021,
-                            25.662, 25.662, 21.021, 21.021, 21.021,
-                            21.021], rtol=RTOL, atol=ATOL)
+    assert_allclose(cd.data.values,
+            [25.662, 21.021, 21.021, 21.021, 21.021,
+             21.021, 25.662, 25.662, 21.021, 21.021,
+             21.021, 21.021, 21.021, 25.662, 25.662,
+             21.021, 21.021, 21.021, 21.021, 21.021,
+             25.662, 25.662, 21.021, 21.021, 21.021,
+             21.021, 21.021, 25.662, 25.662, 21.021,
+             21.021, np.nan, 25.662, 25.662, 21.021,
+             21.021, 21.021, 21.021, 21.021, 25.662,
+             25.389, 21.021, 21.021, 21.021, 21.021,
+             21.021, 25.662, 25.662, 21.021, 21.021,
+             21.021, 21.021, np.nan], rtol=RTOL, atol=ATOL)
 
 def test_import_seed_timeseries():
     fd, fname = tempfile.mkstemp()
@@ -112,35 +110,29 @@ def test_import_seed_timeseries():
 
     buildings = import_seed_timeseries(db_url)
 
-    building_1_ch = buildings[1]
-    building_2_ch = buildings[2]
+    building_1_consumption = buildings[1]
+    building_2_consumption = buildings[2]
 
-    c_1_e = building_1_ch.electricity
-    c_1_g = building_1_ch.natural_gas
-    c_2_e = building_2_ch.electricity
-    c_2_g = building_2_ch.natural_gas
+    c_1_e = building_1_consumption[0]
+    c_1_g = building_1_consumption[1]
+    c_2_e = building_2_consumption[0]
+    c_2_g = building_2_consumption[1]
 
 
-    assert_allclose([c.kWh for c in c_1_e],[1,1,1,1],rtol=RTOL,atol=ATOL)
-    assert_allclose([c.therms for c in c_1_g],[1,1,1,1],rtol=RTOL,atol=ATOL)
-    assert_allclose([c.kWh for c in c_2_e],[1,1,1,1],rtol=RTOL,atol=ATOL)
-    assert_allclose([c.therms for c in c_2_g],[1,1,1,1],rtol=RTOL,atol=ATOL)
+    assert_allclose(c_1_e.data.values,[1,1,1,1,np.nan],rtol=RTOL,atol=ATOL)
+    assert_allclose(c_1_g.data.values,[1,1,1,1,np.nan],rtol=RTOL,atol=ATOL)
+    assert_allclose(c_2_e.data.values,[1,1,1,1,np.nan],rtol=RTOL,atol=ATOL)
+    assert_allclose(c_2_g.data.values,[1,1,1,1,np.nan],rtol=RTOL,atol=ATOL)
 
-    assert c_1_e[0].start == datetime(2011,1,1)
-    assert c_1_g[3].end == datetime(2011,5,1)
+    assert c_1_e.data.index[0] == datetime(2011,1,1)
+    assert c_1_g.data.index[4] == datetime(2011,5,1)
 
 def test_import_csv(consumption_csv_filename):
 
-    ch = import_csv(consumption_csv_filename)
+    cd = import_csv(consumption_csv_filename)
 
-    assert len(ch.natural_gas) == 1
-    assert len(ch.electricity) == 1
-    assert_allclose(ch.natural_gas[0].therms,25,rtol=RTOL,atol=ATOL)
-    assert_allclose(ch.electricity[0].kWh,1000,rtol=RTOL,atol=ATOL)
-    assert ch.natural_gas[0].estimated
-    assert not ch.electricity[0].estimated
-    assert ch.natural_gas[0].timedelta.days == 30
-    assert ch.electricity[0].timedelta.days == 35
+    assert_allclose(cd.data.values,[25,np.nan],rtol=RTOL,atol=ATOL)
+    assert_allclose(cd.estimated.values,[True,False],rtol=RTOL,atol=ATOL)
 
 def test_import_pandas():
     df = pd.DataFrame({"Consumption": [25,1000],
@@ -150,26 +142,14 @@ def test_import_pandas():
                        "EndDateTime":[datetime(2014,1,14),datetime(2013,12,15)],
                        "ReadingType":["estimated","actual"]})
 
-    ch = import_pandas(df)
+    cd = import_pandas(df)
 
-    assert len(ch.natural_gas) == 1
-    assert len(ch.electricity) == 1
-    assert_allclose(ch.natural_gas[0].therms,25,rtol=RTOL,atol=ATOL)
-    assert_allclose(ch.electricity[0].kWh,1000,rtol=RTOL,atol=ATOL)
-    assert ch.natural_gas[0].estimated
-    assert not ch.electricity[0].estimated
-    assert ch.natural_gas[0].timedelta.days == 30
-    assert ch.electricity[0].timedelta.days == 35
+    assert_allclose(cd.data.values,[25,np.nan],rtol=RTOL,atol=ATOL)
+    assert_allclose(cd.estimated.values,[True,False],rtol=RTOL,atol=ATOL)
 
 def test_import_excel(consumption_xlsx_filename):
 
-    ch = import_excel(consumption_xlsx_filename)
+    cd = import_excel(consumption_xlsx_filename)
 
-    assert len(ch.natural_gas) == 1
-    assert len(ch.electricity) == 1
-    assert_allclose(ch.natural_gas[0].therms,25,rtol=RTOL,atol=ATOL)
-    assert_allclose(ch.electricity[0].kWh,1000,rtol=RTOL,atol=ATOL)
-    assert ch.natural_gas[0].estimated
-    assert not ch.electricity[0].estimated
-    assert ch.natural_gas[0].timedelta.days == 30
-    assert ch.electricity[0].timedelta.days == 35
+    assert_allclose(cd.data.values,[25,np.nan],rtol=RTOL,atol=ATOL)
+    assert_allclose(cd.estimated.values,[True,False],rtol=RTOL,atol=ATOL)

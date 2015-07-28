@@ -4,6 +4,7 @@ from eemeter.consumption import ConsumptionData
 from datetime import datetime
 from csv import DictReader
 import dateutil.parser
+from warnings import warn
 
 import pandas as pd
 
@@ -21,13 +22,18 @@ def import_hpxml(filename):
 
     Returns
     -------
-    out : eemeter.consumption.ConsumptionHistory
-        Consumption history available for this project
+    out : list of eemeter.consumption.ConsumptionData
+        Consumption data available for this project
     """
 
     hpxml_fuel_type_mapping = {
         "electricity": "electricity",
         "natural gas": "natural_gas",
+    }
+
+    hpxml_unit_of_measure_mapping = {
+        "kWh": "kWh",
+        "therms": "therm",
     }
 
     with(open(filename,'r')) as f:
@@ -39,15 +45,16 @@ def import_hpxml(filename):
     consumption_info_xpath = "ns2:Consumption/ns2:ConsumptionDetails/ns2:ConsumptionInfo"
     consumption_infos = root.xpath(consumption_info_xpath,namespaces=ns)
 
-    consumptions = []
+    consumption = []
     for info in consumption_infos:
         fuel_type = info.xpath("ns2:ConsumptionType/ns2:Energy/ns2:FuelType",namespaces=ns)
         unit_of_measure = info.xpath("ns2:ConsumptionType/ns2:Energy/ns2:UnitofMeasure",namespaces=ns)
         if fuel_type == [] or unit_of_measure == []:
             continue
         fuel_type = hpxml_fuel_type_mapping[fuel_type[0].text]
-        unit_str = unit_of_measure[0].text
+        unit_str = hpxml_unit_of_measure_mapping[unit_of_measure[0].text]
         consumption_details = info.xpath("ns2:ConsumptionDetail",namespaces=ns)
+        records = []
         for details in consumption_details:
             usage = float(details.xpath("ns2:Consumption",namespaces=ns)[0].text)
             start = parse(details.xpath("ns2:StartDateTime",namespaces=ns)[0].text)
@@ -57,9 +64,12 @@ def import_hpxml(filename):
                 estimated = False
             else:
                 estimated = (reading_type[0].text == "estimated")
-            consumption = Consumption(usage,unit_str,fuel_type,start,end,estimated)
-            consumptions.append(consumption)
-    return ConsumptionHistory(consumptions)
+            records.append({"start": start, "end": end, "estimated": estimated, "value": usage})
+        consumption_data = ConsumptionData(records, fuel_type, unit_str,
+                record_type="arbitrary")
+        consumption.append(consumption_data)
+
+    return consumption
 
 def import_green_button_xml(filename):
     """Import from Green Button XML.
@@ -79,26 +89,28 @@ def import_green_button_xml(filename):
 
     interval_blocks = tree.xpath("//*[local-name() = 'IntervalBlock']")
 
-    def get_consumption(reading):
-        usage = int(reading.xpath("*[local-name() = 'value']")[0].text)
-        fuel_type = "electricity"
-        unit_str = "Wh"
+    def get_record(reading):
+        usage_Wh = int(reading.xpath("*[local-name() = 'value']")[0].text)
+        usage_kWh = usage_Wh / 1000.
         time_period = reading.xpath("*[local-name() = 'timePeriod']")[0]
-        start_ms = int(time_period.xpath("*[local-name() = 'start']")[0].text)
-        duration_ms = int(time_period.xpath("*[local-name() = 'duration']")[0].text)
-        end_ms = start_ms + duration_ms
-        start = datetime.fromtimestamp(start_ms)
-        end = datetime.fromtimestamp(end_ms)
-        return Consumption(usage,unit_str,fuel_type,start,end)
+        start_s = int(time_period.xpath("*[local-name() = 'start']")[0].text)
+        start = datetime.fromtimestamp(start_s)
+        duration_s = int(time_period.xpath("*[local-name() = 'duration']")[0].text)
+        end_s = start_s + duration_s
+        end = datetime.fromtimestamp(end_s)
+        return {"value": usage_kWh, "start": start, "end": end}
 
-    consumptions = []
+    records = []
     for block in interval_blocks:
         readings = block.xpath("*[local-name() = 'IntervalReading']")
-        for reading in readings:
-            consumption = get_consumption(reading)
-            consumptions.append(consumption)
+        records.extend([get_record(reading) for reading in readings])
 
-    return ConsumptionHistory(consumptions)
+    fuel_type = "electricity"
+    unit_str = "kWh"
+    record_type = "arbitrary"
+    consumption_data = ConsumptionData(records, fuel_type, unit_str,
+            record_type)
+    return consumption_data
 
 def import_seed_timeseries(db_url):
     """Import from SEED database
@@ -139,7 +151,7 @@ def import_seed_timeseries(db_url):
 
     ENERGY_UNITS = {
         1: "kWh",
-        2: "therms",
+        2: "therm",
         3: "Wh",
     }
 
@@ -178,7 +190,7 @@ def import_seed_timeseries(db_url):
             building_meters[building_id].append(meter_id)
     buildings_data = {}
     for building_id, meter_ids in building_meters.items():
-        consumptions = []
+        consumption = []
         for meter_id in meter_ids:
             meters = select([seed_meter]).where(seed_meter.c.id == meter_id)
             meter_row = conn.execute(meters).fetchone()
@@ -186,14 +198,18 @@ def import_seed_timeseries(db_url):
             unit_name = ENERGY_UNITS[meter_row["energy_units"]]
 
             timeseries = select([seed_timeseries]).where(seed_timeseries.c.meter_id == meter_id)
+
+            records = []
             for row in conn.execute(timeseries):
                 start = row["begin_time"]
                 end = row["end_time"]
                 usage = row["reading"]
-                consumption = Consumption(usage,unit_name,fuel_type,start,end)
-                consumptions.append(consumption)
+                record = {"start": start, "end": end, "value": usage}
+                records.append(record)
+            consumption_data = ConsumptionData(records, fuel_type, unit_name, record_type="arbitrary")
+            consumption.append(consumption_data)
 
-        buildings_data[building_id] = ConsumptionHistory(consumptions)
+        buildings_data[building_id] = consumption
 
     return buildings_data
 
@@ -214,7 +230,7 @@ def import_pandas(df):
 
     Returns
     -------
-    out : eemeter.consumption.ConsumptionHistory
+    out : eemeter.consumption.ConsumptionData
         Consumption history for all consumptions stored in this DataFrame
     """
     fuel_type_mapping = {
@@ -222,17 +238,47 @@ def import_pandas(df):
         "natural gas": "natural_gas",
     }
 
+    unit_of_measure_mapping = {
+        "kWh": "kWh",
+        "therms": "therm",
+    }
+
     consumptions = []
+    fuel_type = None
+    unit_name = None
+    records = []
     for i,row in df.iterrows():
         usage = row["Consumption"]
-        unit_str = row["UnitofMeasure"]
-        fuel_type = fuel_type_mapping[row["FuelType"]]
+
+        # unit_name must be consistent
+        _unit_name = unit_of_measure_mapping[row["UnitofMeasure"]]
+        if unit_name is None:
+            unit_name = _unit_name
+        elif unit_name != _unit_name:
+            message = "Inconsistent UnitofMeasure did not match {}: {}"\
+                    .format(unit_name, _unit_name)
+            warn(message)
+            continue
+
+        # fuel_type must be consistent
+        _fuel_type = fuel_type_mapping[row["FuelType"]]
+        if fuel_type is None:
+            fuel_type = _fuel_type
+        elif fuel_type != _fuel_type:
+            message = "Inconsistent FuelType did not match {}: {}"\
+                    .format(fuel_type, _fuel_type)
+            warn(message)
+            continue
+
         start_date = row["StartDateTime"]
         end_date = row["EndDateTime"]
         estimated = (row["ReadingType"] == "estimated")
-        c = Consumption(usage,unit_str,fuel_type,start_date,end_date,estimated)
-        consumptions.append(c)
-    return ConsumptionHistory(consumptions)
+        record = {"start": start_date, "end": end_date, "value": usage,
+                "estimated": estimated}
+        records.append(record)
+    consumption_data = ConsumptionData(records, fuel_type, unit_name,
+            record_type="arbitrary")
+    return consumption_data
 
 def import_csv(filename):
     """Import from csv spreadsheet with the following columns:
