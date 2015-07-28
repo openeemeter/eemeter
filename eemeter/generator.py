@@ -4,6 +4,8 @@ from eemeter.evaluation import Period
 from eemeter.project import Project
 
 from eemeter.meter import AnnualizedUsageMeter
+from eemeter.weather import GSODWeatherSource
+from eemeter.weather import TMY3WeatherSource
 
 import random
 import numpy as np
@@ -100,6 +102,10 @@ class ProjectGenerator:
         all_periods = [period_elec, period_gas, baseline_period,
                 reporting_period]
         for period in all_periods:
+            if early_date is None:
+                early_date = period.start
+            if late_date is None:
+                late_date = period.end
             if period.start is not None and period.start < early_date:
                 early_date = period.start
             if period.end is not None and late_date < period.end:
@@ -185,7 +191,7 @@ class ProjectGenerator:
 
         records = []
         for bl_data, rp_data, period in zip(baseline_data, reporting_data,
-                period):
+                periods):
             if period in reporting_period:
                 val = rp_data
             else:
@@ -196,7 +202,8 @@ class ProjectGenerator:
         cd = ConsumptionData(records, fuel_type, consumption_unit_name,
                 record_type="arbitrary")
 
-        return cd, estimated_annualized_savings, pre_params, post_params
+        return cd, estimated_annualized_savings, baseline_params, \
+                reporting_params
 
 def generate_monthly_billing_datetimes(period, dist=None):
     """Returns an array of poisson distributed datetimes falling on simulated
@@ -225,7 +232,7 @@ def generate_monthly_billing_datetimes(period, dist=None):
     # frequency. In this case, we're using an average frequency of 12 times per
     # 365 days.
     if dist is None:
-        dist = poison(365/12.)
+        dist = poisson(365/12.)
 
     periods = [period.start]
     while True:

@@ -3,8 +3,9 @@ from fixtures.weather import tmy3_722880_weather_source
 from fixtures.weather import gsod_722880_2012_2014_weather_source
 
 from eemeter.models import TemperatureSensitivityModel
-from eemeter.generator import generate_periods,ConsumptionGenerator
-from eemeter.consumption import ConsumptionHistory
+from eemeter.generator import generate_monthly_billing_datetimes
+from eemeter.generator import MonthlyBillingConsumptionGenerator
+from eemeter.consumption import ConsumptionData
 
 from datetime import datetime
 

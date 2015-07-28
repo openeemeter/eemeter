@@ -1,7 +1,6 @@
 from lxml import etree
 from dateutil.parser import parse
-from eemeter.consumption import Consumption
-from eemeter.consumption import ConsumptionHistory
+from eemeter.consumption import ConsumptionData
 from datetime import datetime
 from csv import DictReader
 import dateutil.parser
