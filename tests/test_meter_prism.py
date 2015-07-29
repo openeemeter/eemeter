@@ -3,12 +3,16 @@ from eemeter.models import TemperatureSensitivityModel
 from eemeter.generator import MonthlyBillingConsumptionGenerator
 from eemeter.generator import generate_monthly_billing_datetimes
 from eemeter.consumption import ConsumptionData
+from eemeter.evaluation import Period
+from eemeter.location import Location
+from eemeter.project import Project
 
 from fixtures.weather import gsod_722880_2012_2014_weather_source
 from fixtures.weather import tmy3_722880_weather_source
 
 from numpy.testing import assert_allclose
 import numpy as np
+from scipy.stats import randint
 
 from datetime import datetime
 import pytz
@@ -27,55 +31,60 @@ import pytest
                         ([0,2,65,3,71],True,4700.226534599519,0,"degF",
                           1248.4575,1578.5882,4657.6997,3249.0002,0,1,[0,0,60]),
                         ])
-def prism_outputs_1(request):
+def prism_outputs_1(request, gsod_722880_2012_2014_weather_source):
+    model_params, elec_presence, elec_annualized_usage, elec_error, \
+            temp_unit, cdd_tmy, hdd_tmy, total_cdd, total_hdd, \
+            rmse_electricity, r_squared_electricity, gas_param_defaults \
+            = request.param
     model = TemperatureSensitivityModel(cooling=True,heating=True)
     params = {
-        "base_consumption": request.param[0][0],
-        "heating_slope": request.param[0][1],
-        "heating_reference_temperature": request.param[0][2],
-        "cooling_slope": request.param[0][3],
-        "cooling_reference_temperature": request.param[0][4]
+        "base_consumption": model_params[0],
+        "heating_slope": model_params[1],
+        "heating_reference_temperature": model_params[2],
+        "cooling_slope": model_params[3],
+        "cooling_reference_temperature": model_params[4]
     }
-    start = datetime(2012,1,1,tzinfo=pytz.utc)
-    end = datetime(2014,12,31,tzinfo=pytz.utc)
+    period = Period(datetime(2012,1,1,tzinfo=pytz.utc),
+            datetime(2014,12,31,tzinfo=pytz.utc))
     retrofit_start_date = datetime(2013,6,1,tzinfo=pytz.utc)
     retrofit_completion_date = datetime(2013,8,1,tzinfo=pytz.utc)
 
-    periods = generate_periods(start,end,jitter_intensity=0)
-    gen = ConsumptionGenerator("electricity", "kWh", request.param[4], model, params)
-    consumptions = gen.generate(gsod_722880_2012_2014_weather_source(), periods)
-    consumption_kWh_per_day = [c.kWh / c.timedelta.days for c in consumptions]
-    consumption_n_days = [p.timedelta.days for p in periods]
-    fixture = ConsumptionHistory(consumptions), model.param_dict_to_list(params), \
-            request.param[1], request.param[2], \
-            request.param[3], request.param[4], \
+    datetimes = generate_monthly_billing_datetimes(period,randint(30,31))
+    gen = MonthlyBillingConsumptionGenerator("electricity", "kWh", temp_unit,
+            model, params)
+    consumption_data = gen.generate(gsod_722880_2012_2014_weather_source, datetimes)
+    consumption_kWh_per_day, consumption_n_days = \
+            consumption_data.average_daily_consumptions()
+
+    elec_params = model.param_dict_to_list(params)
+
+    fixture = consumption_data, elec_params, elec_presence, \
+            elec_annualized_usage, elec_error, temp_unit, \
             retrofit_start_date, retrofit_completion_date, \
-            request.param[5], request.param[6], \
-            request.param[7], request.param[8], \
-            request.param[9], request.param[10], \
+            cdd_tmy, hdd_tmy, total_cdd, total_hdd, \
+            rmse_electricity, r_squared_electricity, \
             consumption_kWh_per_day, consumption_kWh_per_day, \
-            consumption_n_days, \
-            request.param[11]
+            consumption_n_days, gas_param_defaults
     return fixture
 
 @pytest.mark.slow
 def test_princeton_scorekeeping_method(prism_outputs_1,
                                        gsod_722880_2012_2014_weather_source,
                                        tmy3_722880_weather_source):
-    ch, elec_params, elec_presence, \
+    consumption_data, elec_params, elec_presence, \
             elec_annualized_usage, elec_error, temp_unit, \
             retrofit_start_date, retrofit_completion_date, \
             cdd_tmy, hdd_tmy, total_cdd, total_hdd, \
             rmse_electricity, r_squared_electricity, \
-            average_daily_usages, estimated_average_daily_usages, n_days, \
-            gas_param_defaults \
-            = prism_outputs_1
+            average_daily_usages, estimated_average_daily_usages, \
+            n_days, gas_param_defaults = prism_outputs_1
 
     meter = PRISMMeter(temperature_unit_str=temp_unit)
 
-    result = meter.evaluate(consumption_history=ch,
-                            weather_source=gsod_722880_2012_2014_weather_source,
-                            weather_normal_source=tmy3_722880_weather_source)
+    location = Location(station="722880")
+    project = Project(location, consumption_data)
+
+    result = meter.evaluate(project=project)
 
     assert_allclose(result['annualized_usage_electricity'], elec_annualized_usage, rtol=RTOL, atol=ATOL)
     assert_allclose(result['average_daily_usages_bpi2400_electricity'],average_daily_usages,rtol=RTOL,atol=ATOL)

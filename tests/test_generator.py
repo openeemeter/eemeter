@@ -124,8 +124,8 @@ def test_project_generator(gsod_722880_2012_2014_weather_source,tmy3_722880_weat
     assert results.get("electricity_post_params") is not None
     assert results.get("natural_gas_post_params") is not None
 
-    assert len(elec_data) in [11,12,13]
-    assert len(gas_data) in [11,12,13]
+    assert len(elec_data) in range(9,16)
+    assert len(gas_data) in range(9,16)
     assert elec_data[0] > elec_data[5]
     assert gas_data[0] > gas_data[5]
     assert elec_data[0] < 700 # could probably lower this upper bound

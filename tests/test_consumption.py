@@ -469,3 +469,8 @@ def test_consumption_data_total_days_arbitrary(consumption_data_kWh_arbitrary):
     n_days = consumption_data_kWh_arbitrary.total_days()
     assert_allclose(n_days, 10,
             rtol=RTOL, atol=ATOL)
+
+def test_consumption_data_total_period_arbitrary(consumption_data_kWh_arbitrary):
+    period = consumption_data_kWh_arbitrary.total_period()
+    assert period.start == datetime(2015,1,1)
+    assert period.end == datetime(2015,1,11)

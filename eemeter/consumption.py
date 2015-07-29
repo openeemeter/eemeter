@@ -348,14 +348,17 @@ class ConsumptionData(object):
                 n_days.append(days)
             return np.array(avgs), np.array(n_days)
 
-    def total_days(self):
+    def total_period(self):
         if self.data.shape[0] < 1:
-            return 0
+            return None
         start_date = self.data.index[0]
         end_date = self.data.index[-1]
         if self.freq_timedelta is not None:
             end_date += self.freq_timedelta
-        tdelta = (end_date - start_date)
+        return Period(start_date, end_date)
+
+    def total_days(self):
+        tdelta = self.total_period().timedelta
         return tdelta.days + tdelta.seconds/8.64e4
 
     def records(self, record_type="arbitrary"):
