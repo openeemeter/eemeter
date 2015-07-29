@@ -175,7 +175,7 @@ def generated_consumption_history_with_hdd_1(request,
 
     datetimes = generate_monthly_billing_datetimes(period, dist=randint(30,31))
     consumption_data = gen.generate(gsod_722880_2012_2014_weather_source,
-            periods)
+            datetimes)
 
     return consumption_data, total_hdd, base, temp_unit
 
@@ -203,7 +203,7 @@ def generated_consumption_history_with_cdd_1(request,
 
     datetimes = generate_monthly_billing_datetimes(period, dist=randint(30,31))
     consumption_data = gen.generate(gsod_722880_2012_2014_weather_source,
-            periods)
+            datetimes)
 
     return consumption_data, total_cdd, base, temp_unit
 
@@ -227,7 +227,7 @@ def generated_consumption_history_with_n_periods_hdd_1(request,
 
     datetimes = generate_monthly_billing_datetimes(period, dist=randint(30,31))
     consumption_data = gen.generate(gsod_722880_2012_2014_weather_source,
-            periods)
+            datetimes)
     return consumption_data, n_periods_1, n_periods_2, n_periods_3
 
 @pytest.fixture(params=[

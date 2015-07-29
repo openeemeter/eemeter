@@ -11,18 +11,16 @@ class Project(object):
         weather_source is provided.
     consumption : list of eemeter.consumption.ConsumptionData objects
         All available consumption data for this project.
-    baseline_period : eemeter.evaluation.Period object
+    baseline_period : eemeter.evaluation.Period
         Date/time period for baselining.
-    reporting_period : eemeter.evaluation.Period object
+    reporting_period : eemeter.evaluation.Period
         Date/time period for reporting.
     other_periods : list of eemeter.evaluation.Period objects
         Other named date/time periods of interest, perhaps particular seasons or years of interest.
     weather_source : eemeter.weather.WeatherSourceBase
-        Source of weather data overriding location.
-    weather_source : eemeter.weather.WeatherSourceBase
-        Source of weather data overriding location.
+        Source of weather data.
     weather_normal_source : eemeter.weather.WeatherSourceBase
-        Source of weather normal data overriding location.
+        Source of weather normal data.
     """
 
     def __init__(self, location, consumption=[], baseline_period=None,
@@ -57,7 +55,7 @@ class Project(object):
         consumption_periods = [cd.total_period() for cd in self.consumption]
         periods += consumption_periods
 
-        period = [p for p in periods if p is not None]
+        periods = [p for p in periods if p is not None]
 
         period_starts = [ p.start for p in periods]
         if None in period_starts:
