@@ -54,7 +54,8 @@ class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
         """
         average_daily_usages, n_days = \
                 consumption_data.average_daily_consumptions()
-        observed_daily_temps = weather_source.daily_temperatures(consumptions,
+        periods = consumption_data.periods()
+        observed_daily_temps = weather_source.daily_temperatures(periods,
                 self.temperature_unit_str)
 
         params = self.model.parameter_optimization(average_daily_usages,
@@ -410,7 +411,7 @@ class TotalCDDMeter(MeterBase):
             total CDDs observed during the period
         """
         consumption_periods = consumption_data.periods()
-        hdd = weather_source.hdd(consumption_periods,
+        cdd = weather_source.cdd(consumption_periods,
                 self.temperature_unit_str, self.base)
         return { "total_cdd": sum(cdd) }
 
@@ -703,8 +704,8 @@ class AverageDailyUsage(MeterBase):
               values - one value for each consumption of the given fuel type.
         """
         average_daily_consumptions, _ = \
-                consumption_dat.average_daily_consumptions()
-        return {"average_daily_usages": average_daily_usages}
+                consumption_data.average_daily_consumptions()
+        return {"average_daily_usages": average_daily_consumptions}
 
 class EstimatedAverageDailyUsage(MeterBase):
     """Computes estmiated average daily usage given consumption, a model, and

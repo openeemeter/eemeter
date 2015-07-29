@@ -13,8 +13,7 @@ from scipy.stats import randint
 from datetime import datetime
 
 @pytest.fixture
-def consumption_history_1():
-
+def consumption_data_1():
     records = [
             {"start": datetime(2012,9,26), "value": 191},
             {"start": datetime(2012,10,24), "value": 243},
@@ -58,7 +57,8 @@ def consumption_generator_1(request):
     }
     generator = MonthlyBillingConsumptionGenerator(fuel_type,
             consumption_unit_name, temperature_unit_name, model, params)
-    return generator
+    param_list = model.param_dict_to_list(params)
+    return generator, param_list
 
 @pytest.fixture(params=[([9, 1, 61, .5, 73], "electricity", "kWh", "degF")])
 def consumption_generator_2(request):
@@ -74,40 +74,42 @@ def consumption_generator_2(request):
     }
     generator = MonthlyBillingConsumptionGenerator(fuel_type,
             consumption_unit_name, temperature_unit_name, model, params)
-    return generator
+    param_list = model.param_dict_to_list(params)
+    return generator, param_list
 
-@pytest.fixture(params=[(Period(datetime(2012,1,1),datetime(2014,12,31)),randint(30,31))])
-def generated_consumption_history_1(request,
+@pytest.fixture(params=[(Period(datetime(2012,1,1),datetime(2014,12,31)),
+    randint(30,31))])
+def generated_consumption_data_1(request,
         gsod_722880_2012_2014_weather_source, consumption_generator_1):
     period, dist = request.param
+    generator, param_list = consumption_generator_1
     datetimes = generate_monthly_billing_datetimes(period, dist)
-    consumption_data = consumption_generator_1.generate(
+    consumption_data = generator.generate(
             gsod_722880_2012_2014_weather_source, datetimes)
-    param_list = model.param_dict_to_list(params)
     return consumption_data, param_list
 
 @pytest.fixture(params=[(Period(datetime(2012,1,1),datetime(2014,12,31)),randint(30,31))])
-def generated_consumption_history_2(request,
+def generated_consumption_data_2(request,
         gsod_722880_2012_2014_weather_source, consumption_generator_2):
     period, dist = request.param
+    generator, param_list = consumption_generator_2
     datetimes = generate_monthly_billing_datetimes(period, dist)
-    consumption_data = consumption_generator_2.generate(
+    consumption_data = generator.generate(
             gsod_722880_2012_2014_weather_source, datetimes)
-    param_list = model.param_dict_to_list(params)
     return consumption_data, param_list
 
 @pytest.fixture(params=[5643.731])
-def generated_consumption_history_with_annualized_usage_1(request,
-        generated_consumption_history_1):
-    cd, param_list = generated_consumption_history_1
-    annualized_usage = request.param[1]
+def generated_consumption_data_with_annualized_usage_1(request,
+        generated_consumption_data_1):
+    cd, param_list = generated_consumption_data_1
+    annualized_usage = request.param
     return cd, param_list, annualized_usage
 
 @pytest.fixture
-def generated_consumption_history_pre_post_1(request,
-        generated_consumption_history_1, generated_consumption_history_2):
-    cd_pre, param_list_pre = generated_consumption_history_1
-    cd_post, param_list_post = generated_consumption_history_2
+def generated_consumption_data_pre_post_1(request,
+        generated_consumption_data_1, generated_consumption_data_2):
+    cd_pre, param_list_pre = generated_consumption_data_1
+    cd_post, param_list_post = generated_consumption_data_2
     record_type = "arbitrary"
     pre_records = cd_pre.records(record_type)
     post_records = cd_post.records(record_type)
@@ -122,19 +124,19 @@ def generated_consumption_history_pre_post_1(request,
     return consumption_data, param_list_pre, param_list_post, retrofit_date
 
 @pytest.fixture(params=[1323.450])
-def generated_consumption_history_pre_post_with_gross_savings_1(request,
-        generated_consumption_history_pre_post_1):
+def generated_consumption_data_pre_post_with_gross_savings_1(request,
+        generated_consumption_data_pre_post_1):
     cd, param_list_pre, param_list_post, retrofit_date = \
-            generated_consumption_history_pre_post_1
-    gross_savings = param.request
+            generated_consumption_data_pre_post_1
+    gross_savings = request.param
     return cd, param_list_pre, param_list_post, retrofit_date, gross_savings
 
 @pytest.fixture(params=[2020.733])
-def generated_consumption_history_pre_post_with_annualized_gross_savings_1(
-        request, generated_consumption_history_pre_post_1):
+def generated_consumption_data_pre_post_with_annualized_gross_savings_1(
+        request, generated_consumption_data_pre_post_1):
     cd, param_list_pre, param_list_post, retrofit_date = \
-            generated_consumption_history_pre_post_1
-    annualized_gross_savings = param.request
+            generated_consumption_data_pre_post_1
+    annualized_gross_savings = request.param
     return cd, param_list_pre, param_list_post, retrofit_date, \
         annualized_gross_savings
 
@@ -145,8 +147,9 @@ def generated_consumption_history_pre_post_with_annualized_gross_savings_1(
 def time_span_1(request, consumption_generator_1,
         gsod_722880_2012_2014_weather_source):
     period, n_days = request.param
+    generator,_ = consumption_generator_1
     datetimes = generate_monthly_billing_datetimes(period, dist=randint(30,31))
-    consumption_data = consumption_generator_1.generate(
+    consumption_data = generator.generate(
             gsod_722880_2012_2014_weather_source, datetimes)
     return consumption_data, n_days
 
@@ -158,7 +161,7 @@ def time_span_1(request, consumption_generator_1,
     ([8,1,16,1,22], Period(datetime(2012,1,1),datetime(2013,12,31)),
         1422.6478,18.33,"degC")
     ])
-def generated_consumption_history_with_hdd_1(request,
+def generated_consumption_data_with_hdd_1(request,
         gsod_722880_2012_2014_weather_source):
     model_params, period, total_hdd, base, temp_unit = request.param
 
@@ -187,7 +190,7 @@ def generated_consumption_history_with_hdd_1(request,
     ([8,1,16,1,22],Period(datetime(2012,1,1),datetime(2013,12,31)),
         1680.3254, 18.33, "degC")
     ])
-def generated_consumption_history_with_cdd_1(request,
+def generated_consumption_data_with_cdd_1(request,
         gsod_722880_2012_2014_weather_source):
     model_params, period, total_cdd, base, temp_unit = request.param
     model = TemperatureSensitivityModel(cooling=True,heating=True)
@@ -211,7 +214,7 @@ def generated_consumption_history_with_cdd_1(request,
     ([0, 1,65,1,75], Period(datetime(2012,1,1),datetime(2012,12,31)),5,7,1),
     ([10,2,61,1,73], Period(datetime(2012,1,1),datetime(2013,12,31)),11,13,1)
     ])
-def generated_consumption_history_with_n_periods_hdd_1(request,
+def generated_consumption_data_with_n_periods_hdd_1(request,
         gsod_722880_2012_2014_weather_source):
     model_params, period, n_periods_1, n_periods_2, n_periods_3 = request.param
     model = TemperatureSensitivityModel(cooling=True,heating=True)
@@ -236,7 +239,7 @@ def generated_consumption_history_with_n_periods_hdd_1(request,
     ([10,2,61,1,73], Period(datetime(2012,1,1),datetime(2012,12,27)),5,7,1),
     ([10,2,61,1,73], Period(datetime(2012,12,27),datetime(2014,12,31)),7,17,1)
     ])
-def generated_consumption_history_with_n_periods_cdd_1(request,
+def generated_consumption_data_with_n_periods_cdd_1(request,
         gsod_722880_2012_2014_weather_source):
     model_params, period, n_periods_1, n_periods_2, n_periods_3 = request.param
     model = TemperatureSensitivityModel(cooling=True,heating=True)
