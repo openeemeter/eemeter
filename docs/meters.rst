@@ -1,7 +1,7 @@
-PRISM
------
+Default
+-------
 
-.. automodule:: eemeter.meter.prism
+.. automodule:: eemeter.meter.default
     :members:
     :undoc-members:
     :inherited-members:

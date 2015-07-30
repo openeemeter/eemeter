@@ -86,14 +86,14 @@ class AnnualizedUsageMeter(MeterBase):
         self.temperature_unit_str = temperature_unit_str
         self.model = model
 
-    def evaluate_mapped_inputs(self, temp_sensitivity_params,
+    def evaluate_mapped_inputs(self, model_params,
             weather_normal_source, **kwargs):
         """Evaluates the annualized usage metric given a particular set of
         model parameters and a weather normal source.
 
         Parameters
         ----------
-        temp_sensitivity_params : object
+        model_params : object
             Parameters in a format recognized by the model
             `compute_usage_estimates` method.
         weather_normal_source : eemeter.weather.WeatherBase and eemeter.weather.WeatherNormalMixin
@@ -110,13 +110,13 @@ class AnnualizedUsageMeter(MeterBase):
         daily_temps = weather_normal_source.annual_daily_temperatures(
                 self.temperature_unit_str)
         usage_estimates = self.model.compute_usage_estimates(
-                temp_sensitivity_params, daily_temps)
+                model_params, daily_temps)
 
         annualized_usage = np.nansum(usage_estimates)
         return {"annualized_usage": annualized_usage}
 
 class GrossSavingsMeter(MeterBase):
-    """Calculates savings due to an efficiency retrofit of ECM for a particular
+    """Calculates savings due to an efficiency retrofit or ECM for a particular
     fuel type using a conterfactual usage estimate and actual usage.
 
     Parameters
@@ -136,18 +136,18 @@ class GrossSavingsMeter(MeterBase):
         self.fuel_unit_str = fuel_unit_str
         self.temperature_unit_str = temperature_unit_str
 
-    def evaluate_mapped_inputs(self, temp_sensitivity_params_pre,
-            consumption_data_post, weather_source, **kwargs):
+    def evaluate_mapped_inputs(self, model_params_baseline,
+            consumption_data_reporting, weather_source, **kwargs):
         """Evaluates the gross savings metric.
 
         Parameters
         ----------
-        temp_sensitivity_params_pre : object
+        model_params_baseline : object
             Parameters in a format recognized by the model
             `compute_usage_estimates` method.
-        consumption_data_post : eemeter.consumption.ConsumptionData
-            Consumption periods over which gross savings estimate will be
-            calculated.
+        consumption_data_reporting : eemeter.consumption.ConsumptionData
+            Consumption periods in reporting period over which gross savings
+            will be estimated.
         weather_source : eemeter.weather.WeatherSourceBase
             Weather data source containing data covering at least the duration
             of the consumption data.
@@ -158,13 +158,15 @@ class GrossSavingsMeter(MeterBase):
             Gross savings keyed by the string "gross_savings"
 
         """
-        consumption_periods = consumptions_data_post.periods()
-        usages_post = consumptions_data_post.to(self.fuel_unit_str)
+        consumption_periods = consumption_data_reporting.periods()
+        consumption_reporting = consumption_data_reporting.to(self.fuel_unit_str)[:-1]
         observed_daily_temps = weather_source.daily_temperatures(
                 consumption_periods, self.temperature_unit_str)
-        usage_estimates_pre = self.model.compute_usage_estimates(
-                temp_sensitivity_params_pre, observed_daily_temps)
-        return {"gross_savings": np.nansum(usage_estimates_pre - usages_post)}
+        consumption_estimates_baseline = self.model.compute_usage_estimates(
+                model_params_baseline, observed_daily_temps)
+        gross_savings = np.nansum(consumption_estimates_baseline -
+                consumption_reporting)
+        return {"gross_savings": gross_savings}
 
 class AnnualizedGrossSavingsMeter(MeterBase):
     """Annualized gross savings accumulated since the completion of a retrofit
@@ -175,34 +177,31 @@ class AnnualizedGrossSavingsMeter(MeterBase):
     ----------
     model : eemeter.model.TemperatureSensitivityModel
         Model of energy usage
-    fuel_type : str
-        Type of fuel, usually "electricity" or "natural_gas".
     temperature_unit_str : str
         Unit of temperature, usually "degC" or "degF".
     """
 
-    def __init__(self, model, fuel_type, temperature_unit_str, **kwargs):
+    def __init__(self, model, temperature_unit_str, **kwargs):
         super(AnnualizedGrossSavingsMeter,self).__init__(**kwargs)
         self.model = model
-        self.fuel_type = fuel_type
         self.temperature_unit_str = temperature_unit_str
 
-    def evaluate_mapped_inputs(self, temp_sensitivity_params_pre,
-            temp_sensitivity_params_post, consumption_data_post,
+    def evaluate_mapped_inputs(self, model_params_baseline,
+            model_params_reporting, consumption_data_reporting,
             weather_normal_source, **kwargs):
         """Evaluates the annualized gross savings metric.
 
         Parameters
         ----------
-        temp_sensitivity_params_pre : object
-            Parameters for pre-retrofit period in a format recognized by the
+        model_params_baseline : object
+            Parameters for baseline period in a format recognized by the
             model `compute_usage_estimates` method.
-        temp_sensitivity_params_post : object
-            Parameters for post-retrofit period in a format recognized by the
+        model_params_reporting : object
+            Parameters for reporting period in a format recognized by the
             model `compute_usage_estimates` method.
-        consumption_data_post : eemeter.consumption.ConsumptionData
-            Consumption periods over which annualized gross savings estimate will be
-            calculated. (Note: only used for finding appropriate number of days
+        consumption_data_reporting : eemeter.consumption.ConsumptionData
+            Consumption data over which annualized gross savings will be
+            estimated. (Note: only used for finding appropriate number of days
             multiplier).
         weather_normal_source : eemeter.weather.WeatherBase and eemeter.weather.WeatherNormalMixin
             Weather normal data source. Should be from a location (station) as
@@ -214,106 +213,18 @@ class AnnualizedGrossSavingsMeter(MeterBase):
             Annualized gross savings keyed by the string "annualized_gross_savings".
         """
 
-        meter = AnnualizedUsageMeter(self.temperature_unit_str,self.model)
-        annualized_usage_pre = meter.evaluate(
-                temp_sensitivity_params=temp_sensitivity_params_pre,
+        meter = AnnualizedUsageMeter(self.temperature_unit_str, self.model)
+        annualized_usage_baseline = meter.evaluate(
+                model_params=model_params_baseline,
                 weather_normal_source=weather_normal_source)["annualized_usage"]
-        annualized_usage_post = meter.evaluate(
-                temp_sensitivity_params=temp_sensitivity_params_post,
+        annualized_usage_reporting = meter.evaluate(
+                model_params=model_params_reporting,
                 weather_normal_source=weather_normal_source)["annualized_usage"]
-        annualized_usage_savings = annualized_usage_pre - annualized_usage_post
-        n_years = consumption_data_post.total_days()/365.
-        annualized_gross_savings = n_years * annualized_usage_savings
+        annualized_avoided_consumption = annualized_consumption_baseline - \
+                annualized_consumption_reporting
+        n_years = consumption_data_reporting.total_days()/365.
+        annualized_gross_savings = n_years * annualized_avoided_consumption
         return {"annualized_gross_savings": annualized_gross_savings}
-
-class FuelTypePresenceMeter(MeterBase):
-    """Checks for fuel type presence in a given project.
-
-    Parameters
-    ----------
-    fuel_types : list of str
-        Names of fuel types to be evaluated for presence.
-    """
-
-    def __init__(self, fuel_types, **kwargs):
-        super(FuelTypePresenceMeter,self).__init__(**kwargs)
-        self.fuel_types = fuel_types
-
-    def evaluate_mapped_inputs(self, project, **kwargs):
-        """Check for fuel type presence.
-
-        Parameters
-        ----------
-        project : eemeter.project.Project
-            Project in which to check for presence of data.
-
-        Returns
-        -------
-        out : dict
-            A dictionary of booleans keyed by `"[fuel_type]_presence"` (e.g.
-            `fuel_types = ["electricity"]` => `{'electricity_presence': False}`
-        """
-        results = {"{}_presence".format(ft): False for ft in self.fuel_types}
-        for consumption in project.consumptions:
-            if consumption.fuel_type in self.fuel_types:
-                results["{}_presence".format(consumption.fuel_type)] = True
-        return results
-
-class ForEachFuelType(MeterBase):
-    """Executes a meter once for each fuel type.
-
-    Parameters
-    ----------
-    fuel_types : list of str
-        Fuel types to execute meter for; e.g. ["electricity","natural_gas"]
-    fuel_unit_strs : list of str
-        Fuel units to use during meter execution.
-    meter : eemeter.meter.MeterBase
-        Meter to execute once for each fuel type.
-    gathered_inputs : list of str
-        Key strings for fuel-type-specific inputs that should be gathered and
-        cleaned. Keys in this list will be remapped from "\*_{fuel_type}" to
-        "\*_current_fuel". E.g. "output_electricity" -> "output_current_fuel".
-        This increases meter reusability.
-    """
-    def __init__(self, fuel_types, fuel_unit_strs, meter, gathered_inputs=[],
-            **kwargs):
-        super(ForEachFuelType,self).__init__(**kwargs)
-        self.fuel_types = fuel_types
-        self.fuel_unit_strs = fuel_unit_strs
-        if not len(fuel_types) == len(fuel_unit_strs):
-            raise ValueError("Fuel types and units lists must have matching lengths.")
-        self.meter = meter
-        self.gathered_inputs = gathered_inputs
-
-    def evaluate_mapped_inputs(self, **kwargs):
-        """Evaluates the meter once for each fuel type; appending
-        "_{fuel_type}" to the each result of the meter.
-
-        Returns
-        -------
-        out : dict
-            Dictionary of outputs containing all results with appended
-            fuel_type markers in keys as described above.
-        """
-        results = {}
-        for fuel_type, fuel_unit_str in zip(self.fuel_types, self.fuel_unit_strs):
-            inputs = {}
-            p = re.compile("(_{}$)".format(fuel_type))
-            for k,v in kwargs.items():
-                stripped_k = p.sub('',k)
-                if stripped_k in self.gathered_inputs:
-                    subbed_key = p.sub('_current_fuel', k)
-                    inputs[subbed_key] = v
-                else:
-                    inputs[k] = v
-            inputs["fuel_type"] = fuel_type
-            inputs["fuel_unit_str"] = fuel_unit_str
-
-            result = self.meter.evaluate(**inputs)
-            for k,v in result.items():
-                results[ "{}_{}".format(k, fuel_type)] = v
-        return results
 
 class TimeSpanMeter(MeterBase):
     """Meters the time span (in days) of a ConsumptionData instance.

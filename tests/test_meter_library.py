@@ -78,7 +78,8 @@ def test_temperature_sensitivity_parameter_optimization(
     cd, params = generated_consumption_data_1
 
     result = meter.evaluate(consumption_data=cd,
-            weather_source=gsod_722880_2012_2014_weather_source)
+            weather_source=gsod_722880_2012_2014_weather_source,
+            fuel_unit_str="kWh")
 
     assert_allclose(result['temp_sensitivity_params'], params, rtol=RTOL,
             atol=ATOL)
@@ -145,32 +146,34 @@ def test_gross_savings_metric(generated_consumption_data_pre_post_with_gross_sav
                 fuel_unit_str: "kWh",
             },
             sequence: [
-                !obj:eemeter.meter.PrePost {
-                    splittable_args: ["consumption_data"],
-                    pre_meter: !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter &meter {
-                        temperature_unit_str: "degF",
-                        model: !obj:eemeter.models.TemperatureSensitivityModel &model {
-                            cooling: True,
-                            heating: True,
-                            initial_params: {
-                                base_consumption: 0,
-                                heating_slope: 0,
-                                cooling_slope: 0,
-                                heating_reference_temperature: 60,
-                                cooling_reference_temperature: 70,
-                            },
-                            param_bounds: {
-                                base_consumption: [0,2000],
-                                heating_slope: [0,200],
-                                cooling_slope: [0,200],
-                                heating_reference_temperature: [55,65],
-                                cooling_reference_temperature: [65,75],
-                            },
+                !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter &meter {
+                    temperature_unit_str: "degF",
+                    model: !obj:eemeter.models.TemperatureSensitivityModel &model {
+                        cooling: True,
+                        heating: True,
+                        initial_params: {
+                            base_consumption: 0,
+                            heating_slope: 0,
+                            cooling_slope: 0,
+                            heating_reference_temperature: 60,
+                            cooling_reference_temperature: 70,
+                        },
+                        param_bounds: {
+                            base_consumption: [0,2000],
+                            heating_slope: [0,200],
+                            cooling_slope: [0,200],
+                            heating_reference_temperature: [55,65],
+                            cooling_reference_temperature: [65,75],
                         },
                     },
-                    post_meter: *meter,
+                    output_mapping: {
+                        temp_sensitivity_params: model_params_baseline,
+                    },
                 },
                 !obj:eemeter.meter.GrossSavingsMeter {
+                    input_mapping: {
+                        consumption_data: consumption_data_reporting,
+                    },
                     fuel_unit_str: "kWh",
                     temperature_unit_str: "degF",
                     model: *model,
@@ -180,25 +183,18 @@ def test_gross_savings_metric(generated_consumption_data_pre_post_with_gross_sav
         """
     meter = load(meter_yaml)
 
-    cd, pre_params, post_params, retrofit, savings = generated_consumption_data_pre_post_with_gross_savings_1
+    cd, _, _, retrofit, savings = \
+            generated_consumption_data_pre_post_with_gross_savings_1
 
     result = meter.evaluate(consumption_data=cd,
-                            weather_source=gsod_722880_2012_2014_weather_source,
-                            retrofit_start_date=retrofit,
-                            retrofit_completion_date=retrofit)
+            weather_source=gsod_722880_2012_2014_weather_source)
 
-    assert_allclose(result['temp_sensitivity_params_pre'], pre_params, rtol=RTOL, atol=ATOL)
-    assert_allclose(result['temp_sensitivity_params_post'], post_params, rtol=RTOL, atol=ATOL)
-
-    assert isinstance(result["consumption_data_pre"],ConsumptionData)
-    assert isinstance(result["consumption_data_post"],ConsumptionData)
-
-    assert_allclose(result["gross_savings"],savings, rtol=RTOL, atol=ATOL)
+    assert_allclose(result["gross_savings"], savings, rtol=RTOL, atol=ATOL)
 
 @pytest.mark.slow
-def test_annualized_gross_savings_metric(generated_consumption_data_pre_post_with_annualized_gross_savings_1,
-                                         gsod_722880_2012_2014_weather_source,
-                                         tmy3_722880_weather_source):
+def test_annualized_gross_savings_metric(
+        generated_consumption_data_pre_post_with_annualized_gross_savings_1,
+        gsod_722880_2012_2014_weather_source, tmy3_722880_weather_source):
 
     meter_yaml = """
         !obj:eemeter.meter.Sequence {
@@ -206,32 +202,37 @@ def test_annualized_gross_savings_metric(generated_consumption_data_pre_post_wit
                 fuel_unit_str: "kWh",
             },
             sequence: [
-                !obj:eemeter.meter.PrePost {
-                    splittable_args: ["consumption_data"],
-                    pre_meter: !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter &meter {
-                        temperature_unit_str: "degF",
-                        model: !obj:eemeter.models.TemperatureSensitivityModel &model {
-                            cooling: True,
-                            heating: True,
-                            initial_params: {
-                                base_consumption: 0,
-                                heating_slope: 0,
-                                cooling_slope: 0,
-                                heating_reference_temperature: 60,
-                                cooling_reference_temperature: 70,
-                            },
-                            param_bounds: {
-                                base_consumption: [0,2000],
-                                heating_slope: [0,200],
-                                cooling_slope: [0,200],
-                                heating_reference_temperature: [55,65],
-                                cooling_reference_temperature: [65,75],
-                            },
+                !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter &meter {
+                    temperature_unit_str: "degF",
+                    model: !obj:eemeter.models.TemperatureSensitivityModel &model {
+                        cooling: True,
+                        heating: True,
+                        initial_params: {
+                            base_consumption: 0,
+                            heating_slope: 0,
+                            cooling_slope: 0,
+                            heating_reference_temperature: 60,
+                            cooling_reference_temperature: 70,
+                        },
+                        param_bounds: {
+                            base_consumption: [0,2000],
+                            heating_slope: [0,200],
+                            cooling_slope: [0,200],
+                            heating_reference_temperature: [55,65],
+                            cooling_reference_temperature: [65,75],
                         },
                     },
-                    post_meter: *meter,
+                    output_mapping: {
+                        temp_sensitivity_params: [
+                            model_params_baseline,
+                            model_params_reporting
+                        ],
+                    },
                 },
                 !obj:eemeter.meter.AnnualizedGrossSavingsMeter {
+                    input_mapping: {
+                        consumption_data: consumption_data_reporting,
+                    },
                     temperature_unit_str: "degF",
                     model: *model,
                 }
@@ -240,72 +241,16 @@ def test_annualized_gross_savings_metric(generated_consumption_data_pre_post_wit
         """
     meter = load(meter_yaml)
 
-    cd, pre_params, post_params, retrofit, savings = \
+    cd, _, _, retrofit, savings = \
             generated_consumption_data_pre_post_with_annualized_gross_savings_1
 
     result = meter.evaluate(consumption_data=cd,
-                            weather_source=gsod_722880_2012_2014_weather_source,
-                            weather_normal_source=tmy3_722880_weather_source,
-                            retrofit_start_date=retrofit,
-                            retrofit_completion_date=retrofit)
-
-    assert_allclose(result['temp_sensitivity_params_pre'], pre_params, rtol=RTOL, atol=ATOL)
-    assert_allclose(result['temp_sensitivity_params_post'], post_params, rtol=RTOL, atol=ATOL)
-
-    assert isinstance(result["consumption_data_pre"],Consumptiondata)
-    assert isinstance(result["consumption_data_post"],Consumptiondata)
-
+            weather_source=gsod_722880_2012_2014_weather_source,
+            weather_normal_source=tmy3_722880_weather_source,
+            retrofit_start_date=retrofit,
+            retrofit_completion_date=retrofit)
 
     assert_allclose(result["annualized_gross_savings"], savings, rtol=RTOL, atol=ATOL)
-
-def test_fuel_type_presence_meter(consumption_data_1):
-
-    meter_yaml = """
-        !obj:eemeter.meter.FuelTypePresenceMeter {
-            fuel_types: [electricity,natural_gas]
-        }
-        """
-    meter = load(meter_yaml)
-    result = meter.evaluate(consumption_data=consumption_data_1)
-
-    assert result["electricity_presence"]
-    assert not result["natural_gas_presence"]
-
-def test_for_each_fuel_type():
-    meter_yaml = """
-        !obj:eemeter.meter.ForEachFuelType {
-            fuel_types: [electricity,natural_gas],
-            fuel_unit_strs: [kWh,therms],
-            meter: !obj:eemeter.meter.Sequence {
-                sequence: [
-                    !obj:eemeter.meter.DummyMeter {
-                        input_mapping: {
-                            fuel_type: value,
-                        }
-                    },
-                    !obj:eemeter.meter.DummyMeter {
-                        input_mapping: {
-                            value_one: value,
-                        },
-                        output_mapping: {
-                            result: result_one
-                        }
-                    }
-                ]
-            }
-        }
-    """
-    meter = load(meter_yaml)
-
-    result = meter.evaluate(value_one=1)
-
-    assert result["result_electricity"] == "electricity"
-    assert result["result_natural_gas"] == "natural_gas"
-    assert result["result_one_electricity"] == 1
-    assert result["result_one_natural_gas"] == 1
-
-    with pytest.raises(ValueError):
-        meter = load("!obj:eemeter.meter.ForEachFuelType { fuel_types:[electricity],fuel_unit_strs:[], meter: null }")
 
 def test_time_span_meter(time_span_1):
     cd, n_days = time_span_1

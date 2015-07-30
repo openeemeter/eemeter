@@ -1,8 +1,9 @@
 from eemeter.meter.base import MeterBase
 from eemeter.config.yaml_parser import load
 
-class PRISMMeter(MeterBase):
-    """Implementation of Princeton Scorekeeping Method.
+class DefaultResidentialMeter(MeterBase):
+    """Implementation of the core EE-Meter savings evaluation method with
+    defualt settings for evaluation of residential energy efficiency projects.
 
     Parameters
     ----------

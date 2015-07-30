@@ -1,4 +1,4 @@
-from eemeter.meter import PRISMMeter
+from eemeter.meter import DefaultResidentialMeter
 from eemeter.models import TemperatureSensitivityModel
 from eemeter.generator import MonthlyBillingConsumptionGenerator
 from eemeter.generator import generate_monthly_billing_datetimes
