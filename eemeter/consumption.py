@@ -67,10 +67,12 @@ class ConsumptionData(object):
         frequency marker (e.g. '15T' ==> 15 minutes)
     pulse_value : float
         The value of a single pulse. Used for record_type="pulse".
+    name : str, default None
+        An identifier for this instance of Consumption Data.
     """
 
     def __init__(self, records, fuel_type, unit_name, record_type="interval",
-            freq=None, pulse_value=None):
+            freq=None, pulse_value=None, name=None):
 
         # verify and save unit name
         if unit_name not in ["kWh", "therm"]:
@@ -86,8 +88,10 @@ class ConsumptionData(object):
         else:
             self.fuel_type = fuel_type
 
+        # set misc attributes
         self.freq = freq
         self.pulse_value = pulse_value
+        self.name = name
 
         # import records
         if "interval" == record_type:
@@ -391,3 +395,16 @@ class ConsumptionData(object):
             raise ValueError(message)
         return records
 
+    def filter_by_period(self, period):
+        filtered_data = None
+        if period.start is None and period.end is None:
+            filtered_data = self.data.copy()
+        elif period.start is None and period.end is not None:
+            filtered_data = self.data[:period.end].copy()
+        elif period.start is not None and period.end is None:
+            filtered_data = self.data[period.start:].copy()
+        else:
+            filtered_data = self.data[period.start:period.end].copy()
+        if self.freq is None and filtered_data.shape[0] > 0:
+            filtered_data.iloc[-1] = np.nan
+        return filtered_data

@@ -49,9 +49,13 @@ class Project(object):
         if weather_normal_source is None:
             weather_normal_source = TMY3WeatherSource(location.station)
 
-    def _total_date_range(self):
+    def all_periods(self):
         periods = [self.baseline_period, self.reporting_period] + \
                 self.other_periods
+        return periods
+
+    def _total_date_range(self):
+        periods = self.all_periods()
         consumption_periods = [cd.total_period() for cd in self.consumption]
         periods += consumption_periods
 
@@ -69,3 +73,13 @@ class Project(object):
         else:
             end_date = min(period_ends)
         return start_date, end_date
+
+    def segmented_consumption_data(self):
+        """ Get sections of consumption data defined by user-defined periods
+        (Baseline, reporting, other).
+        """
+        periods = self.all_periods()
+        views = [ c.filter_by_period(p) for c in self.consumption
+                 for p in periods]
+        return views
+

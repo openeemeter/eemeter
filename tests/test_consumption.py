@@ -1,4 +1,6 @@
 from eemeter.consumption import ConsumptionData
+from eemeter.evaluation import Period
+
 from datetime import timedelta
 from datetime import datetime
 import numpy as np
@@ -470,7 +472,79 @@ def test_consumption_data_total_days_arbitrary(consumption_data_kWh_arbitrary):
     assert_allclose(n_days, 10,
             rtol=RTOL, atol=ATOL)
 
-def test_consumption_data_total_period_arbitrary(consumption_data_kWh_arbitrary):
+def test_consumption_data_total_period_arbitrary(
+        consumption_data_kWh_arbitrary):
     period = consumption_data_kWh_arbitrary.total_period()
     assert period.start == datetime(2015,1,1)
     assert period.end == datetime(2015,1,11)
+
+def test_consumption_data_filter_by_period_arbitrary(
+        consumption_data_kWh_arbitrary):
+    period = Period(datetime(2015,1,1), datetime(2015,1,3))
+    filtered_data = consumption_data_kWh_arbitrary.filter_by_period(period)
+    assert_allclose(filtered_data, np.array([1,1,np.nan]),
+            rtol=RTOL, atol=ATOL)
+    assert filtered_data.index[0] == datetime(2015,1,1)
+    assert filtered_data.index[2] == datetime(2015,1,3)
+
+    period = Period(datetime(2014,1,1), datetime(2014,1,3,1))
+    filtered_data = consumption_data_kWh_arbitrary.filter_by_period(period)
+    assert_allclose(filtered_data, [],
+            rtol=RTOL, atol=ATOL)
+
+    period = Period(None, datetime(2015,1,3))
+    filtered_data = consumption_data_kWh_arbitrary.filter_by_period(period)
+    assert_allclose(filtered_data, np.array([1,1,np.nan]),
+            rtol=RTOL, atol=ATOL)
+    assert filtered_data.index[0] == datetime(2015,1,1)
+    assert filtered_data.index[2] == datetime(2015,1,3)
+
+    period = Period(datetime(2015,1,9),None)
+    filtered_data = consumption_data_kWh_arbitrary.filter_by_period(period)
+    assert_allclose(filtered_data, np.array([1,1,np.nan]),
+            rtol=RTOL, atol=ATOL)
+    assert filtered_data.index[0] == datetime(2015,1,9)
+    assert filtered_data.index[2] == datetime(2015,1,11)
+
+    period = Period(None,None)
+    filtered_data = consumption_data_kWh_arbitrary.filter_by_period(period)
+    assert_allclose(filtered_data, np.array([1,1,1,1,1,1,1,1,1,1,np.nan]),
+            rtol=RTOL, atol=ATOL)
+    assert filtered_data.index[0] == datetime(2015,1,1)
+    assert filtered_data.index[10] == datetime(2015,1,11)
+
+def test_consumption_data_filter_by_period_interval(
+        consumption_data_kWh_interval):
+
+    period = Period(datetime(2015,1,1), datetime(2015,1,3))
+    filtered_data = consumption_data_kWh_interval.filter_by_period(period)
+    assert_allclose(filtered_data, np.array([1,1,1]),
+            rtol=RTOL, atol=ATOL)
+    assert filtered_data.index[0] == datetime(2015,1,1)
+    assert filtered_data.index[2] == datetime(2015,1,3)
+
+    period = Period(datetime(2014,1,1), datetime(2014,1,3,1))
+    filtered_data = consumption_data_kWh_interval.filter_by_period(period)
+    assert_allclose(filtered_data, [],
+            rtol=RTOL, atol=ATOL)
+
+    period = Period(None, datetime(2015,1,3))
+    filtered_data = consumption_data_kWh_interval.filter_by_period(period)
+    assert_allclose(filtered_data, np.array([1,1,1]),
+            rtol=RTOL, atol=ATOL)
+    assert filtered_data.index[0] == datetime(2015,1,1)
+    assert filtered_data.index[2] == datetime(2015,1,3)
+
+    period = Period(datetime(2015,1,9),None)
+    filtered_data = consumption_data_kWh_interval.filter_by_period(period)
+    assert_allclose(filtered_data, np.array([1,1]),
+            rtol=RTOL, atol=ATOL)
+    assert filtered_data.index[0] == datetime(2015,1,9)
+    assert filtered_data.index[1] == datetime(2015,1,10)
+
+    period = Period(None,None)
+    filtered_data = consumption_data_kWh_interval.filter_by_period(period)
+    assert_allclose(filtered_data, np.array([1,1,1,1,1,1,1,1,1,1]),
+            rtol=RTOL, atol=ATOL)
+    assert filtered_data.index[0] == datetime(2015,1,1)
+    assert filtered_data.index[9] == datetime(2015,1,10)

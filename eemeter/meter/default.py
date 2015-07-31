@@ -50,7 +50,7 @@ class DefaultResidentialMeter(MeterBase):
                       natural_gas_heating_slope_high=None,
                       electricity_cooling_slope_high=None,
                       **kwargs):
-        super(PRISMMeter, self).__init__(**kwargs)
+        super(DefaultResidentialMeter, self).__init__(**kwargs)
 
         if temperature_unit_str not in ["degF","degC"]:
             raise ValueError("Invalid temperature_unit_str: should be one of 'degF' or 'degC'.")

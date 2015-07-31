@@ -110,3 +110,7 @@ class MeterBase(object):
 
     def _get_child_inputs(self):
         return []
+
+
+from collections import namedtuple
+Output = namedtuple("Output", ["name","value","type","tags"])

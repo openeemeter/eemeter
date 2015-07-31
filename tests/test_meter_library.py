@@ -116,6 +116,9 @@ def test_annualized_usage_meter(
                             cooling_reference_temperature: [65,75],
                         },
                     },
+                    output_mapping: {
+                        temp_sensitivity_params: model_params,
+                    },
                 },
                 !obj:eemeter.meter.AnnualizedUsageMeter {
                     temperature_unit_str: "degF",
@@ -133,7 +136,7 @@ def test_annualized_usage_meter(
                             weather_normal_source=tmy3_722880_weather_source,
                             fuel_unit_str="kWh")
 
-    assert_allclose(result['temp_sensitivity_params'], params, rtol=RTOL, atol=ATOL)
+    assert_allclose(result['model_params'], params, rtol=RTOL, atol=ATOL)
     assert_allclose(result['annualized_usage'], annualized_usage, rtol=RTOL, atol=ATOL)
 
 @pytest.mark.slow

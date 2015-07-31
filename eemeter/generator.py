@@ -162,11 +162,11 @@ class ProjectGenerator:
                 model)
         baseline_param_list = model.param_dict_to_list(baseline_params)
         baseline_annualized_usage = annualized_usage_meter.evaluate(
-                temp_sensitivity_params=baseline_param_list,
+                model_params=baseline_param_list,
                 weather_normal_source=weather_normal_source)["annualized_usage"]
         reporting_params_list = model.param_dict_to_list(reporting_params)
         reporting_annualized_usage = annualized_usage_meter.evaluate(
-                temp_sensitivity_params=reporting_params_list,
+                model_params=reporting_params_list,
                 weather_normal_source=weather_normal_source)["annualized_usage"]
         estimated_annualized_savings = baseline_annualized_usage - \
                 reporting_annualized_usage

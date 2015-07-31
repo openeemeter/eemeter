@@ -112,3 +112,7 @@ def test_period_both_open():
     assert p in p
 
     assert Period(datetime(2014,1,1),datetime(2014,1,2)) in p
+
+def test_period_name():
+    p = Period(name="baseline")
+    assert p.name == "baseline"

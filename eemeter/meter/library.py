@@ -214,10 +214,10 @@ class AnnualizedGrossSavingsMeter(MeterBase):
         """
 
         meter = AnnualizedUsageMeter(self.temperature_unit_str, self.model)
-        annualized_usage_baseline = meter.evaluate(
+        annualized_consumption_baseline = meter.evaluate(
                 model_params=model_params_baseline,
                 weather_normal_source=weather_normal_source)["annualized_usage"]
-        annualized_usage_reporting = meter.evaluate(
+        annualized_consumption_reporting = meter.evaluate(
                 model_params=model_params_reporting,
                 weather_normal_source=weather_normal_source)["annualized_usage"]
         annualized_avoided_consumption = annualized_consumption_baseline - \

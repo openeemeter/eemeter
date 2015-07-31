@@ -123,7 +123,7 @@ def generated_consumption_data_pre_post_1(request,
 
     return consumption_data, param_list_pre, param_list_post, retrofit_date
 
-@pytest.fixture(params=[1323.450])
+@pytest.fixture(params=[-0.443])
 def generated_consumption_data_pre_post_with_gross_savings_1(request,
         generated_consumption_data_pre_post_1):
     cd, param_list_pre, param_list_post, retrofit_date = \
@@ -131,7 +131,7 @@ def generated_consumption_data_pre_post_with_gross_savings_1(request,
     gross_savings = request.param
     return cd, param_list_pre, param_list_post, retrofit_date, gross_savings
 
-@pytest.fixture(params=[2020.733])
+@pytest.fixture(params=[0.0])
 def generated_consumption_data_pre_post_with_annualized_gross_savings_1(
         request, generated_consumption_data_pre_post_1):
     cd, param_list_pre, param_list_post, retrofit_date = \

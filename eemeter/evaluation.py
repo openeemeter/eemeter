@@ -9,9 +9,10 @@ class Period:
     end : datetime.datetime or None, default None
         The end date of the Period.
     """
-    def __init__(self, start=None, end=None):
+    def __init__(self, start=None, end=None, name=None):
         self.start = start
         self.end = end
+        self.name = name
 
     @property
     def timedelta(self):

@@ -31,7 +31,7 @@ import pytest
                         ([0,2,65,3,71],True,4700.226534599519,0,"degF",
                           1248.4575,1578.5882,4657.6997,3249.0002,0,1,[0,0,60]),
                         ])
-def prism_outputs_1(request, gsod_722880_2012_2014_weather_source):
+def default_residential_outputs_1(request, gsod_722880_2012_2014_weather_source):
     model_params, elec_presence, elec_annualized_usage, elec_error, \
             temp_unit, cdd_tmy, hdd_tmy, total_cdd, total_hdd, \
             rmse_electricity, r_squared_electricity, gas_param_defaults \
@@ -68,18 +68,17 @@ def prism_outputs_1(request, gsod_722880_2012_2014_weather_source):
     return fixture
 
 @pytest.mark.slow
-def test_princeton_scorekeeping_method(prism_outputs_1,
-                                       gsod_722880_2012_2014_weather_source,
-                                       tmy3_722880_weather_source):
+def test_default_residential_meter(default_residential_outputs_1,
+        gsod_722880_2012_2014_weather_source, tmy3_722880_weather_source):
     consumption_data, elec_params, elec_presence, \
             elec_annualized_usage, elec_error, temp_unit, \
             retrofit_start_date, retrofit_completion_date, \
             cdd_tmy, hdd_tmy, total_cdd, total_hdd, \
             rmse_electricity, r_squared_electricity, \
             average_daily_usages, estimated_average_daily_usages, \
-            n_days, gas_param_defaults = prism_outputs_1
+            n_days, gas_param_defaults = default_residential_outputs_1
 
-    meter = PRISMMeter(temperature_unit_str=temp_unit)
+    meter = DefaultResidentialMeter(temperature_unit_str=temp_unit)
 
     location = Location(station="722880")
     project = Project(location, consumption_data)
@@ -221,23 +220,23 @@ def test_princeton_scorekeeping_method(prism_outputs_1,
             "total_hdd_natural_gas"]
     assert set(all_inputs) == set(result.keys())
 
-def test_prism_bad_inputs():
+def test_default_residential_meter_bad_inputs():
 
     with pytest.raises(ValueError):
-        PRISMMeter(temperature_unit_str="unexpected")
+        DefaultResidentialMeter(temperature_unit_str="unexpected")
 
     with pytest.raises(ValueError):
-        PRISMMeter(heating_ref_temp_high=0,heating_ref_temp_x0=1,heating_ref_temp_low=2)
+        DefaultResidentialMeter(heating_ref_temp_high=0,heating_ref_temp_x0=1,heating_ref_temp_low=2)
 
     with pytest.raises(ValueError):
-        PRISMMeter(cooling_ref_temp_high=0,cooling_ref_temp_x0=1,cooling_ref_temp_low=2)
+        DefaultResidentialMeter(cooling_ref_temp_high=0,cooling_ref_temp_x0=1,cooling_ref_temp_low=2)
 
     with pytest.raises(ValueError):
-        PRISMMeter(electricity_heating_slope_high=-1)
+        DefaultResidentialMeter(electricity_heating_slope_high=-1)
 
     with pytest.raises(ValueError):
-        PRISMMeter(natural_gas_heating_slope_high=-1)
+        DefaultResidentialMeter(natural_gas_heating_slope_high=-1)
 
     with pytest.raises(ValueError):
-        PRISMMeter(electricity_cooling_slope_high=-1)
+        DefaultResidentialMeter(electricity_cooling_slope_high=-1)
 

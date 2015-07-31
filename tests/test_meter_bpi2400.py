@@ -12,6 +12,7 @@ from datetime import datetime
 import pytest
 
 from numpy.testing import assert_allclose
+from scipy.stats import randint
 import pytz
 
 RTOL = 1e-2
@@ -21,7 +22,7 @@ ATOL = 1e-2
                          [15,15,7,7,11,11,16,16],1080,4657.6997,3249.0001,"degF"),
                         ([10,2,14.4,1,22.22],[10,1,18.33],693.5875,876.9934,0.0573,0,
                          [15,15,7,7,11,11,16,16],1080,2587.610,1805.0001,"degC")])
-def bpi_2400_1(request):
+def bpi_2400_1(request,gsod_722880_2012_2014_weather_source):
     elec_params = {
         "base_consumption": request.param[0][0],
         "heating_slope": request.param[0][1],
@@ -45,16 +46,15 @@ def bpi_2400_1(request):
     total_hdd = request.param[9]
     temp_unit = request.param[10]
 
-    start = datetime(2012,1,1,tzinfo=pytz.utc)
-    end = datetime(2014,12,31,tzinfo=pytz.utc)
-    periods = generate_periods(start,end,jitter_intensity=0)
-    elec_model = TemperatureSensitivityModel(cooling=True,heating=True)
-    gas_model = TemperatureSensitivityModel(cooling=False,heating=True)
+    period = Period(datetime(2012, 1, 1, tzinfo=pytz.utc),
+            datetime(2014, 12, 31, tzinfo=pytz.utc))
+    datetimes = generate_monthly_billing_datetimes(period, randint(30,31))
+    elec_model = TemperatureSensitivityModel(cooling=True, heating=True)
+    gas_model = TemperatureSensitivityModel(cooling=False, heating=True)
     gen_elec = ConsumptionGenerator("electricity", "kWh", temp_unit, elec_model, elec_params)
     gen_gas = ConsumptionGenerator("natural_gas", "therms", temp_unit, gas_model, gas_params)
-    elec_consumptions = gen_elec.generate(gsod_722880_2012_2014_weather_source(), periods)
-    gas_consumptions = gen_gas.generate(gsod_722880_2012_2014_weather_source(), periods)
-    ch = ConsumptionHistory(elec_consumptions + gas_consumptions)
+    elec_consumptions = gen_elec.generate(gsod_722880_2012_2014_weather_source, datetimes)
+    gas_consumptions = gen_gas.generate(gsod_722880_2012_2014_weather_source, datetimes)
 
     elec_param_list = elec_model.param_dict_to_list(elec_params)
     gas_param_list = gas_model.param_dict_to_list(gas_params)
@@ -63,7 +63,8 @@ def bpi_2400_1(request):
     average_daily_usages_gas = [c.therms/c.timedelta.days for c in gas_consumptions]
 
 
-    return ch, elec_param_list, gas_param_list, normal_cdd, normal_hdd, \
+    return elec_consumptions, gas_consumptions, elec_param_list,\
+            gas_param_list, normal_cdd, normal_hdd, \
             cvrmse_electricity, cvrmse_natural_gas, \
             n_periods, time_span, total_cdd, total_hdd, temp_unit, \
             average_daily_usages_elec, average_daily_usages_gas
@@ -72,15 +73,16 @@ def test_bpi2400(bpi_2400_1,
                  gsod_722880_2012_2014_weather_source,
                  tmy3_722880_weather_source):
 
-    ch, elec_params, gas_params, normal_cdd, normal_hdd, \
-            cvrmse_electricity, cvrmse_natural_gas, n_periods, time_span,\
-            total_cdd, total_hdd, temp_unit, \
-            average_daily_usages_electricity,average_daily_usages_natural_gas \
+    elec_consumptions, gas_consumptions, elec_params, gas_params, normal_cdd, \
+            normal_hdd, cvrmse_electricity, cvrmse_natural_gas, n_periods, \
+            time_span, total_cdd, total_hdd, temp_unit, \
+            average_daily_usages_electricity, \
+            average_daily_usages_natural_gas \
             = bpi_2400_1
 
     meter = BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(temperature_unit_str=temp_unit)
 
-    result = meter.evaluate(consumption_history=ch,
+    result = meter.evaluate(consumption_data=cd,
                             weather_source=gsod_722880_2012_2014_weather_source,
                             weather_normal_source=tmy3_722880_weather_source)
 
