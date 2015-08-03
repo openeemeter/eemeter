@@ -1,29 +1,60 @@
 from eemeter.config.yaml_parser import load
 
+from eemeter.meter import MeterBase
+from eemeter.meter import DataContainer
+from eemeter.meter import DataCollection
+
 from eemeter.meter import DummyMeter
 from eemeter.meter import Sequence
 from eemeter.meter import Condition
-from eemeter.meter import MeterBase
 
 import pytest
 
-def test_meter_base():
+@pytest.fixture
+def data_container_name_value():
+    value = DataContainer(name="name", value="value", tags=["tag"])
+    return value
+
+@pytest.fixture
+def data_collection(data_container_name_value):
+    dc = DataCollection()
+    dc.add_data(data_container_name_value)
+    return dc
+
+def test_data_container(data_container_name_value):
+    assert data_container_name_value.name == "name"
+    assert data_container_name_value.value == "value"
+    assert data_container_name_value.get_value() == "value"
+
+    data_container_name_value.set_value("value1")
+    assert data_container_name_value.get_value() == "value1"
+
+    assert type(data_container_name_value.tags) == frozenset
+    assert "tag" in data_container_name_value.tags
+
+def test_data_collection(data_collection):
+    assert data_collection.get_data("name").name == "name"
+    assert data_collection.get_data("name", tags=["tag"]).name == "name"
+    assert data_collection.get_data("name", tags=["nonexistent"]) is None
+    assert data_collection.get_data("nonexistent") is None
+
+def test_dummy_meter(data_collection):
     meter_yaml = """
         !obj:eemeter.meter.DummyMeter {
-            extras: {
-                has_extra: true,
-            },
-            output_mapping: {
-                has_extra: has_extra,
+            input_mapping: {
+                "value": {
+                    "name":"name",
+                    "tags": [],
+                },
             },
         }
     """
+
     meter = load(meter_yaml)
+    result = meter.evaluate(data_collection)
 
-    result = meter.evaluate(value="dummy")
-
-    assert result["result"] == "dummy"
-    assert result["has_extra"]
+    assert result.get_data(name="name").value == "value"
+    assert result.get_data(name="nonexistent") == None
 
 def test_input_output_mappings():
     meter_yaml = """

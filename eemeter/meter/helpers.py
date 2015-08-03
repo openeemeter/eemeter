@@ -116,7 +116,7 @@ class Debug(MeterBase):
         return {}
 
 class DummyMeter(MeterBase):
-    def evaluate_mapped_inputs(self,value,**kwargs):
+    def evaluate_mapped_inputs(self, value, **kwargs):
         """Helpful for testing meters or creating simple pass through meters.
 
         Parameters
