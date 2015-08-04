@@ -93,11 +93,18 @@ def test_meets_thresholds():
 
 def test_estimated_reading_consolidation_meter_single_fuel_type(consumption_data):
 
-    meter = EstimatedReadingConsolidationMeter()
-    result = meter.evaluate(consumption_data=consumption_data)
-    values = result["consumption_data_no_estimated"].data.values
+    meter_yaml = """
+        !obj:eemeter.meter.EstimatedReadingConsolidationMeter {
+            input_mapping: {"consumption_data": {}},
+            output_mapping: {"consumption_data_no_estimated": {}},
+        }
+    """
+    meter = load(meter_yaml)
+    data_collection = DataCollection(consumption_data=consumption_data)
+    result = meter.evaluate(data_collection)
+    values = result.get_data("consumption_data_no_estimated").value.data.values
 
-    assert_allclose(values,np.array([0,0,0,np.nan]),rtol=RTOL,atol=ATOL)
+    assert_allclose(values, np.array([0, 0, 0, np.nan]), rtol=RTOL, atol=ATOL)
 
 def test_debug_meter():
 
