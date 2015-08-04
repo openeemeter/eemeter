@@ -17,30 +17,36 @@ class MeetsThresholds(MeterBase):
 
     Parameters
     ----------
-    values : list of str
-        List of names of inputs for which to check acceptance criteria.
-    thresholds : list of comparable items
-        Thresholds that must be met. Must have same length as `values`.
-    operations : list of {"lt","gt","lte","gte"}
-        Direction of criterion. Options are less than, greater than, less than
-        or equal to, or greater than or equal to. Must have same length as
-        `values`.
-    proportions : list of float
-        Multipliers on the threshold (e.g. (value < threshold * proportion)).
-        Must have same length as `values`.
-    output_names : list of str
-        Names of output booleans. Must have same length as `values`.
+    equations : list of lists
+        Each list should contain 6 elements:
+
+        [value, inequality, proportion, threshold, bias, output_name]
+
+        E.g.
+
+            ["input1", "<", 2, "input2", 0, "output_name1"]
+
+        Is roughly equivalent to:
+
+            output_name1 = bool(input1 < 3 * input2 + 0)
+
+        - output_name : str
+            Name of output booleans.
+        - value : str
+            Name of input for which to evaluate acceptance criteria.
+        - inequality : {"<",">","<=",">="}
+            Inequality to use during evaluation.
+        - proportion, threshold, bias: float, int, or str
+            number or name of real-valued input
     """
 
-    def __init__(self,values,thresholds,operations,proportions,output_names,**kwargs):
+    def __init__(self, equations, **kwargs):
         super(MeetsThresholds,self).__init__(**kwargs)
-        self.values = values
-        self.thresholds = thresholds
-        self.operations = operations
-        self.proportions = proportions
-        self.output_names = output_names
+        self.equations = equations
+        for e in equations:
+            assert len(e) == 6
 
-    def evaluate_mapped_inputs(self,**kwargs):
+    def evaluate_raw(self, **kwargs):
         """Evaluates threshold comparisons on incoming data.
 
         Parameters
@@ -49,20 +55,22 @@ class MeetsThresholds(MeterBase):
             Boolean outputs keyed on output names.
         """
         result = {}
-        for v,t,o,p,n in zip(self.values,self.thresholds,self.operations,self.proportions,self.output_names):
+        for v,i,p,t,b,n in self.equations:
             value = kwargs.get(v)
-            if isinstance(t,basestring):
-                threshold = kwargs.get(t)
+            p = kwargs.get(p) if isinstance(p, basestring) else float(p)
+            t = kwargs.get(t) if isinstance(t, basestring) else float(t)
+            b = kwargs.get(b) if isinstance(b, basestring) else float(b)
+            if i == "<":
+                result[n] = (value < p*t + b)
+            elif i == ">":
+                result[n] = (value > p*t + b)
+            elif i == "<=":
+                result[n] = (value <= p*t + b)
+            elif i == ">=":
+                result[n] = (value >= p*t + b)
             else:
-                threshold = t
-            if o == "lt":
-                result[n] = (value < threshold * p)
-            elif o == "gt":
-                result[n] = (value > threshold * p)
-            elif o == "lte":
-                result[n] = (value <= threshold * p)
-            elif o == "gte":
-                result[n] = (value >= threshold * p)
+                message = "Inequality not recognized: {}".format(i)
+                raise ValueError(message)
         return result
 
 class EstimatedReadingConsolidationMeter(MeterBase):
@@ -70,7 +78,7 @@ class EstimatedReadingConsolidationMeter(MeterBase):
     reads or dropping them entirely (e.g. final read is estimated).
     """
 
-    def evaluate_mapped_inputs(self,consumption_data,**kwargs):
+    def evaluate_raw(self,consumption_data,**kwargs):
         """Evaluates threshold comparisons on incoming data.
 
         Parameters
@@ -103,7 +111,7 @@ class EstimatedReadingConsolidationMeter(MeterBase):
         return {"consumption_data_no_estimated": cd_no_est}
 
 class Debug(MeterBase):
-    def evaluate_mapped_inputs(self,**kwargs):
+    def evaluate_raw(self,**kwargs):
         """Helpful for debugging meter instances - prints out kwargs for
         inspection.
 
@@ -116,7 +124,7 @@ class Debug(MeterBase):
         return {}
 
 class DummyMeter(MeterBase):
-    def evaluate_mapped_inputs(self, value, **kwargs):
+    def evaluate_raw(self, value, **kwargs):
         """Helpful for testing meters or creating simple pass through meters.
 
         Parameters

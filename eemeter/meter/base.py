@@ -25,8 +25,11 @@ class DataContainer:
 
 class DataCollection:
 
-    def __init__(self):
+    def __init__(self, tags=[], **kwargs):
         self._name_index = defaultdict(list)
+        for k,v in kwargs.iteritems():
+            dc = DataContainer(name=k,value=v,tags=tags)
+            self.add_data(dc)
 
     def add_data(self, data_container):
         name, tags = data_container.name, data_container.tags
@@ -146,7 +149,7 @@ class MeterBase(object):
         all_inputs = dict(mapped_input_dict.items() + self.auxiliary_data.items())
 
         # evaluate meter
-        result_dict = self.evaluate_mapped_inputs(**all_inputs)
+        result_dict = self.evaluate_raw(**all_inputs)
 
         # map meter evaluations back to data_collection form
         mapped_output_data_collection = self._data_collection_from_dict(
@@ -192,7 +195,7 @@ class MeterBase(object):
                 data_collection.add_data(data)
         return data_collection
 
-    def evaluate_raw(self, **kwargs):
+    def evaluate_raw(self):
         """Should be the workhorse method which implements the logic of the
         meter, returning a dictionary of meter outputs. Must be defined by
         inheriting class.

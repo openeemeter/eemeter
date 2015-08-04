@@ -3,6 +3,8 @@ from eemeter.config.yaml_parser import load
 from eemeter.meter import MeetsThresholds
 from eemeter.meter import EstimatedReadingConsolidationMeter
 
+from eemeter.meter import DataCollection
+
 from eemeter.consumption import ConsumptionData
 
 from fixtures.weather import gsod_722880_2012_2014_weather_source
@@ -56,16 +58,38 @@ def consumption_data(request):
     return ConsumptionData(request.param, "electricity", "kWh", record_type="arbitrary_start")
 
 def test_meets_thresholds():
-    meter = MeetsThresholds(values=["one","two","three","four"],
-                            thresholds=[0,"two","four",3],
-                            operations=["lt","lte","gt","gte"],
-                            proportions=[1,1,.5,2],
-                            output_names=["one_lt_zero","two_lte_two","three_gt_half_two","four_gte_twice_three"])
-    result = meter.evaluate(one=1,two=2,three=3,four=4)
-    assert not result["one_lt_zero"]
-    assert result["two_lte_two"]
-    assert result["three_gt_half_two"]
-    assert not result["four_gte_twice_three"]
+    meter_yaml = """
+        !obj:eemeter.meter.MeetsThresholds {
+            input_mapping: {
+                "one": {},
+                "two": {},
+                "three": {},
+                "four": {},
+            },
+            equations: [
+                ["one",   "<",   1,      0,  0, "one_lt_zero"],
+                ["two",  "<=",  1,  "two",  0, "two_lte_two"],
+                ["three", ">",  .5, "four",  0, "three_gt_half_four"],
+                ["four", ">=",  "two",      3,  0, "four_gte_twice_three"],
+                ["four", ">=",  2,      1, "two", "four_gte_four"],
+            ],
+            output_mapping: {
+                "one_lt_zero": {},
+                "two_lte_two": {},
+                "three_gt_half_four": {},
+                "four_gte_twice_three": {},
+                "four_gte_four": {},
+            },
+        }
+    """
+    meter = load(meter_yaml)
+    data_collection = DataCollection(one=1, two=2, three=3.0, four=4)
+    result = meter.evaluate(data_collection)
+    assert not result.get_data("one_lt_zero").value
+    assert result.get_data("two_lte_two").value
+    assert result.get_data("three_gt_half_four").value
+    assert not result.get_data("four_gte_twice_three").value
+    assert result.get_data("four_gte_four").value
 
 def test_estimated_reading_consolidation_meter_single_fuel_type(consumption_data):
 
@@ -79,14 +103,6 @@ def test_debug_meter():
 
     meter_yaml="""
         !obj:eemeter.meter.Debug {
-        }
-        """
-    meter = load(meter_yaml)
-
-def test_dummy_meter():
-
-    meter_yaml="""
-        !obj:eemeter.meter.DummyMeter {
         }
         """
     meter = load(meter_yaml)

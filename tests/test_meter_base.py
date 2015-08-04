@@ -89,10 +89,17 @@ def test_data_collection_iteritems(data_collection):
     for item in data_collection.iteritems():
         assert item.name == "name"
 
-def test_copy(data_collection):
+def test_data_collection_copy(data_collection):
     for item1,item2 in zip(data_collection.iteritems(),
             data_collection.copy().iteritems()):
         assert item1.name == item2.name
+
+def test_data_collection_creation_shortcut():
+    dc = DataCollection(item1="item1_value", item2="item2_value", tags=["tag"])
+    assert dc.get_data("item1",tags=["tag"]).name == "item1"
+    assert dc.get_data("item1",tags=["tag"]).value == "item1_value"
+    assert dc.get_data("item2",tags=["tag"]).name == "item2"
+    assert dc.get_data("item2",tags=["tag"]).value == "item2_value"
 
 def test_dummy_meter(data_collection):
     meter_yaml = """
