@@ -8,8 +8,6 @@ import pytz
 from itertools import chain
 import numpy as np
 
-import re
-
 class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
     """Optimizes temperature senstivity parameter choices.
 
@@ -27,8 +25,8 @@ class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
         self.temperature_unit_str = temperature_unit_str
         self.model = model
 
-    def evaluate_mapped_inputs(self, consumption_data, weather_source,
-            fuel_unit_str, **kwargs):
+    def evaluate_raw(self, consumption_data, weather_source,
+            energy_unit_str, **kwargs):
         """Run optimization of temperature sensitivity parameters given a
         observed consumption data, and observed temperature data.
 
@@ -39,8 +37,8 @@ class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
         weather_source : eemeter.weather.WeatherSourceBase
             Weather data source containing data covering at least the duration
             of the consumption data.
-        fuel_unit_str : str
-            Unit of fuel, usually "kWh" or "therms".
+        energy_unit_str : str
+            Unit of energy, usually "kWh" or "therms".
 
         Returns
         -------
@@ -86,7 +84,7 @@ class AnnualizedUsageMeter(MeterBase):
         self.temperature_unit_str = temperature_unit_str
         self.model = model
 
-    def evaluate_mapped_inputs(self, model_params,
+    def evaluate_raw(self, model_params,
             weather_normal_source, **kwargs):
         """Evaluates the annualized usage metric given a particular set of
         model parameters and a weather normal source.
@@ -123,21 +121,18 @@ class GrossSavingsMeter(MeterBase):
     ----------
     model : eemeter.model.TemperatureSensitivityModel
         Model of energy usage
-    fuel_unit_str : str
-        Unit of fuel, usually "kWh" or "therms".
     temperature_unit_str : str
         Unit of temperature, usually "degC" or "degF".
     """
 
-    def __init__(self, model, fuel_unit_str, temperature_unit_str,
+    def __init__(self, model, temperature_unit_str,
             **kwargs):
         super(GrossSavingsMeter, self).__init__(**kwargs)
         self.model = model
-        self.fuel_unit_str = fuel_unit_str
         self.temperature_unit_str = temperature_unit_str
 
-    def evaluate_mapped_inputs(self, model_params_baseline,
-            consumption_data_reporting, weather_source, **kwargs):
+    def evaluate_raw(self, model_params_baseline, consumption_data_reporting,
+            weather_source, energy_unit_str, **kwargs):
         """Evaluates the gross savings metric.
 
         Parameters
@@ -151,6 +146,8 @@ class GrossSavingsMeter(MeterBase):
         weather_source : eemeter.weather.WeatherSourceBase
             Weather data source containing data covering at least the duration
             of the consumption data.
+        energy_unit_str : str
+            Unit of energy, usually "kWh" or "therms".
 
         Returns
         -------
@@ -159,7 +156,7 @@ class GrossSavingsMeter(MeterBase):
 
         """
         consumption_periods = consumption_data_reporting.periods()
-        consumption_reporting = consumption_data_reporting.to(self.fuel_unit_str)[:-1]
+        consumption_reporting = consumption_data_reporting.to(energy_unit_str)[:-1]
         observed_daily_temps = weather_source.daily_temperatures(
                 consumption_periods, self.temperature_unit_str)
         consumption_estimates_baseline = self.model.compute_usage_estimates(
@@ -186,7 +183,7 @@ class AnnualizedGrossSavingsMeter(MeterBase):
         self.model = model
         self.temperature_unit_str = temperature_unit_str
 
-    def evaluate_mapped_inputs(self, model_params_baseline,
+    def evaluate_raw(self, model_params_baseline,
             model_params_reporting, consumption_data_reporting,
             weather_normal_source, **kwargs):
         """Evaluates the annualized gross savings metric.
@@ -214,10 +211,10 @@ class AnnualizedGrossSavingsMeter(MeterBase):
         """
 
         meter = AnnualizedUsageMeter(self.temperature_unit_str, self.model)
-        annualized_consumption_baseline = meter.evaluate(
+        annualized_consumption_baseline = meter.evaluate_raw(
                 model_params=model_params_baseline,
                 weather_normal_source=weather_normal_source)["annualized_usage"]
-        annualized_consumption_reporting = meter.evaluate(
+        annualized_consumption_reporting = meter.evaluate_raw(
                 model_params=model_params_reporting,
                 weather_normal_source=weather_normal_source)["annualized_usage"]
         annualized_avoided_consumption = annualized_consumption_baseline - \
@@ -232,7 +229,7 @@ class TimeSpanMeter(MeterBase):
     def __init__(self, **kwargs):
         super(TimeSpanMeter, self).__init__(**kwargs)
 
-    def evaluate_mapped_inputs(self, consumption_data, **kwargs):
+    def evaluate_raw(self, consumption_data, **kwargs):
         """Evaluates a ConsumptionHistory instance to determine the number of
         unique days covered by consumption periods
 
@@ -265,7 +262,7 @@ class TotalHDDMeter(MeterBase):
         self.base = base
         self.temperature_unit_str = temperature_unit_str
 
-    def evaluate_mapped_inputs(self, consumption_data, weather_source,**kwargs):
+    def evaluate_raw(self, consumption_data, weather_source,**kwargs):
         """Sums the total observed HDD over a consumption history.
 
         Parameters
@@ -303,7 +300,7 @@ class TotalCDDMeter(MeterBase):
         self.base = base
         self.temperature_unit_str = temperature_unit_str
 
-    def evaluate_mapped_inputs(self, consumption_data, weather_source,
+    def evaluate_raw(self, consumption_data, weather_source,
             **kwargs):
         """Sums the total observed CDD over a consumption history.
 
@@ -342,7 +339,7 @@ class NormalAnnualHDD(MeterBase):
         self.base = base
         self.temperature_unit_str = temperature_unit_str
 
-    def evaluate_mapped_inputs(self, weather_normal_source, **kwargs):
+    def evaluate_raw(self, weather_normal_source, **kwargs):
         """Sums the total observed HDD in a normal year
 
         Parameters
@@ -378,7 +375,7 @@ class NormalAnnualCDD(MeterBase):
         self.base = base
         self.temperature_unit_str = temperature_unit_str
 
-    def evaluate_mapped_inputs(self, weather_normal_source, **kwargs):
+    def evaluate_raw(self, weather_normal_source, **kwargs):
         """Sums the total observed CDD in a normal year
 
         Parameters
@@ -424,7 +421,7 @@ class NPeriodsMeetingHDDPerDayThreshold(MeterBase):
         self.operation = operation
         self.proportion = proportion
 
-    def evaluate_mapped_inputs(self,consumption_data,hdd,weather_source,**kwargs):
+    def evaluate_raw(self,consumption_data,hdd,weather_source,**kwargs):
         """Evaluates the number of periods meeting a consumption history limit
         according to data from a particular weather source.
 
@@ -488,7 +485,7 @@ class NPeriodsMeetingCDDPerDayThreshold(MeterBase):
         self.operation = operation
         self.proportion = proportion
 
-    def evaluate_mapped_inputs(self, consumption_data, cdd, weather_source,
+    def evaluate_raw(self, consumption_data, cdd, weather_source,
             **kwargs):
         """Evaluates the number of periods meeting a consumption history limit
         according to data from a particular weather source.
@@ -541,7 +538,7 @@ class RecentReadingMeter(MeterBase):
         super(RecentReadingMeter, self).__init__(**kwargs)
         self.n_days = n_days
 
-    def evaluate_mapped_inputs(self, consumption_data, since_date=None,
+    def evaluate_raw(self, consumption_data, since_date=None,
             **kwargs):
         """Evaluates the number of days since the last reading against the
         threshold.
@@ -565,38 +562,11 @@ class RecentReadingMeter(MeterBase):
         recent_reading = any(consumption_data.data.index > dt_target)
         return {"recent_reading": recent_reading}
 
-class CVRMSE(MeterBase):
-    """Coefficient of Variation of Root-Mean-Square Error for a model fit.
-    """
-    def evaluate_mapped_inputs(self, y, y_hat, params, **kwargs):
-        """Evaluates the Coefficient of Variation of Root-Mean-Square Error of
-        a model fit.
-
-        Parameters
-        ----------
-        y : array_like
-            Observed values.
-        y_hat : array_like
-            Estimated values.
-        params : array_like
-            Model parameters (used only for counting the number of parameters).
-
-        Returns
-        -------
-        out : dict
-            - "cvrmse" : the calculated CVRMSE metric.
-        """
-        y_bar = np.nanmean(y)
-        n = len(y)
-        p = len(params)
-        cvrmse = 100 * (np.nansum((y - y_hat)**2) / (n - p) )**.5 / y_bar
-        return {"cvrmse": cvrmse}
-
 class AverageDailyUsage(MeterBase):
     """Computes average daily usage given consumption.
     """
 
-    def evaluate_mapped_inputs(self, consumption_data, fuel_unit_str,
+    def evaluate_raw(self, consumption_data, energy_unit_str,
             **kwargs):
         """Compute the average daily usage for each consumption of
         a particular fuel type.
@@ -605,8 +575,8 @@ class AverageDailyUsage(MeterBase):
         ----------
         consumption_data : eemeter.consumption.ConsumptionData
             Consumption data to draw from.
-        fuel_unit_str : str
-            Unit of fuel, usually "kWh" or "therms".
+        energy_unit_str : str
+            Unit of energy, usually "kWh" or "therms".
 
         Returns
         -------
@@ -635,7 +605,7 @@ class EstimatedAverageDailyUsage(MeterBase):
         self.temperature_unit_str = temperature_unit_str
         self.model = model
 
-    def evaluate_mapped_inputs(self, consumption_data, weather_source,
+    def evaluate_raw(self, consumption_data, weather_source,
             temp_sensitivity_params, **kwargs):
         """Compute the average daily usage for each consumption of
         a particular fuel type.
@@ -666,54 +636,3 @@ class EstimatedAverageDailyUsage(MeterBase):
                         temp_sensitivity_params, observed_daily_temps) / n_days
         return {"estimated_average_daily_usages": estimated_average_daily_usages,
                 "n_days": n_days}
-
-class RMSE(MeterBase):
-    """Compute the root-mean-square error (sometimes referred to as
-    root-mean-square deviation, or RMSD) of observed samples and estimated
-    values.
-    """
-    def evaluate_mapped_inputs(self, y, y_hat, **kwargs):
-        """Evaluates the Coefficient of Variation of Root-Mean-Square Error of
-        a model fit.
-
-        Parameters
-        ----------
-        y : array_like
-            Observed values.
-        y_hat : array_like
-            Estimated values.
-
-        Returns
-        -------
-        out : dict
-            - "rmse" : the calculated RMSE metric.
-        """
-        n = len(y)
-        rmse = (np.nansum((y - y_hat)**2) / n )**.5
-        return {"rmse": rmse}
-
-class RSquared(MeterBase):
-    """Compute the r^2 metric (coefficient of determination) of observed
-    samples and estimated values. Used to measure the fitness of a model.
-    """
-    def evaluate_mapped_inputs(self, y, y_hat, **kwargs):
-        """Evaluates the r^2 fitness metric for particular samples
-
-        Parameters
-        ----------
-        y : array_like
-            Observed values.
-        y_hat : array_like
-            Estimated values.
-
-        Returns
-        -------
-        out : dict
-            - "r_squared" : the calculated r^2 fitness metric.
-        """
-        y_bar = np.nanmean(y)
-        ss_residual = np.nansum( (y - y_hat)**2 )
-        ss_total = np.nansum( (y - y_bar)**2 )
-        r_squared = 1 - ss_residual / ss_total
-
-        return {"r_squared": r_squared}

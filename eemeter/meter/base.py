@@ -34,7 +34,7 @@ class DataCollection:
     def __init__(self, tags=[], **kwargs):
         self._name_index = defaultdict(list)
         for k,v in kwargs.iteritems():
-            dc = DataContainer(name=k,value=v,tags=tags)
+            dc = DataContainer(name=k, value=v, tags=tags)
             self.add_data(dc)
 
     def add_data(self, data_container):

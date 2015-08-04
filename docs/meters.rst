@@ -25,6 +25,15 @@ Library
     :inherited-members:
     :show-inheritance:
 
+Fitness Metrics
+---------------
+
+.. automodule:: eemeter.meter.fitness
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :show-inheritance:
+
 Control Flow
 ------------
 
