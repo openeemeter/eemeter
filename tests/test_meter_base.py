@@ -32,6 +32,21 @@ def test_data_container(data_container_name_value):
     assert type(data_container_name_value.tags) == frozenset
     assert "tag" in data_container_name_value.tags
 
+def test_data_container_add_tags(data_container_name_value):
+    assert data_container_name_value.tags == frozenset(["tag"])
+
+    data_container_name_value.add_tags(["tag1"])
+
+    assert data_container_name_value.tags == frozenset(["tag","tag1"])
+
+def test_data_collection_add_tags(data_collection):
+    assert data_collection.get_data("name").tags == frozenset(["tag"])
+    data_collection.add_tags(["tag1"])
+    assert data_collection.get_data("name").tags == frozenset(["tag","tag1"])
+
+def test_data_collection_count(data_collection):
+    assert data_collection.count() == 1
+
 def test_data_collection_get_data(data_collection):
     assert data_collection.get_data("name").name == "name"
     assert data_collection.get_data("name", tags=["tag"]).name == "name"
@@ -121,8 +136,7 @@ def test_dummy_meter(data_collection):
     result = meter.evaluate(data_collection)
 
     assert result.get_data(name="result").value == "value"
-    assert result.get_data(name="name").value == "value"
-    assert result.get_data(name="nonexistent") == None
+    assert result.get_data(name="name") == None
 
 def test_dummy_meter_tags(data_collection):
     meter_yaml = """
@@ -146,9 +160,8 @@ def test_dummy_meter_tags(data_collection):
 
     result = meter.evaluate(data_collection)
 
-    assert result.get_data("name").value == "value"
     assert result.get_data("result_1").value == "value"
     assert result.get_data("result_1",tags=["tag_1"]).value == "value"
     assert result.get_data("result_1",tags=["tag"]) == None
     assert result.get_data("result") == None
-    assert result.get_data(name="nonexistent") == None
+    assert result.get_data(name="name") == None

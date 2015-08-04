@@ -16,8 +16,8 @@ BPI2400
     :inherited-members:
     :show-inheritance:
 
-Components
-----------
+Library
+-------
 
 .. automodule:: eemeter.meter.library
     :members:
@@ -25,17 +25,26 @@ Components
     :inherited-members:
     :show-inheritance:
 
-Structural elements
--------------------
+Control Flow
+------------
 
-.. automodule:: eemeter.meter.components
+.. automodule:: eemeter.meter.control
     :members:
     :undoc-members:
     :inherited-members:
     :show-inheritance:
 
-Helpers
--------
+Boolean Helpers
+---------------
+
+.. automodule:: eemeter.meter.boolean
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :show-inheritance:
+
+General Helpers
+---------------
 
 .. automodule:: eemeter.meter.helpers
     :members:

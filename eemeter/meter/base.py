@@ -23,6 +23,12 @@ class DataContainer:
     def get_value(self):
         return self.value
 
+    def add_tags(self, tags):
+        self.tags = self.tags.union(tags)
+
+    def __repr__(self):
+        return "<{}:{} (tags={})>".format(self.name, self.value, list(self.tags))
+
 class DataCollection:
 
     def __init__(self, tags=[], **kwargs):
@@ -45,6 +51,10 @@ class DataCollection:
         for item in data_collection.iteritems():
             new_item = DataContainer(item.name, item.value, item.tags | set(tagspace))
             self.add_data(new_item)
+
+    def add_tags(self, tags):
+        for item in self.iteritems():
+            item.add_tags(tags)
 
     def get_data(self, name, tags=None):
         potential_matches = self._name_index[name]
@@ -76,6 +86,15 @@ class DataCollection:
         for item in self.iteritems():
             new_data_collection.add_data(item)
         return new_data_collection
+
+    def count(self):
+        return len([i for i in self.iteritems()])
+
+    def __repr__(self):
+        string = "DataCollection ({} items):".format(self.count())
+        for item in self.iteritems():
+            string += "\n  {:>25} {:<25} tags={}".format(item.name, item.value, list(item.tags))
+        return string
 
 class MeterBase(object):
     """Base class for all Meter objects. Takes care of structural tasks such as
@@ -155,12 +174,10 @@ class MeterBase(object):
         mapped_output_data_collection = self._data_collection_from_dict(
                 self.output_mapping, result_dict)
 
-        # combine with original data, adding tags as necessary
-        output_data_collection = data_collection.copy()
-        output_data_collection.add_data_collection(
-                mapped_output_data_collection, self.tagspace)
+        # combine with original data, add tags as necessary
+        mapped_output_data_collection.add_tags(self.tagspace)
 
-        return output_data_collection
+        return mapped_output_data_collection
 
     def _dict_from_data_collection(self, mapping, data_collection):
         """ Resolves a DataCollection to dict mapping.
