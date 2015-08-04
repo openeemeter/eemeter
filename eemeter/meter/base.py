@@ -182,7 +182,7 @@ class MeterBase(object):
         for result_name, target_data in mapping.iteritems():
             target_name = target_data.get("name", result_name)
             target_tags = target_data.get("tags", [])
-            target_value = result_name.get(result_name)
+            target_value = data_dict.get(result_name)
             if target_value is None:
                 message = "Data not found during mapping: {}" \
                         .format(result_name)
