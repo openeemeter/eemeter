@@ -91,9 +91,9 @@ class DataCollection:
         return len([i for i in self.iteritems()])
 
     def __repr__(self):
-        string = "DataCollection ({} items):".format(self.count())
+        string = "DataCollection ({} items)".format(self.count())
         for item in self.iteritems():
-            string += "\n  {:>25} {:<25} tags={}".format(item.name, item.value, list(item.tags))
+            string += "\n  {:>30}  {:<30} tags={}".format(item.name, item.value, list(item.tags))
         return string
 
 class MeterBase(object):
@@ -121,22 +121,29 @@ class MeterBase(object):
                 },
             }
 
-    auxiliary_data : dict
+    auxiliary_inputs : dict
         Extra key/value pairs to make available in the meter evaluation
-        namespace.
+        namespace. These will be added *after* input mapping has occurred.
 
         E.g.
 
-        auxiliary_data = {
-            "extra_input1": {
-                "value": value,
-                "tags": ["tag1","tag2"],
-            },
-            "extra_input2": {
-                "value": value,
-                "tags": ["tag1","tag2"],
-            },
+        auxiliary_inputs = {
+            "extra_input1": "value1"
+            "extra_input2": "value2"
         }
+
+    auxiliary_outputs : dict
+        Extra key/value pairs to add to the output namespace. Note that these
+        will be added *before* output mapping has occurred, so they will also
+        need to be explicitly added to the output space.
+
+        E.g.
+
+        auxiliary_outputs = {
+            "extra_output1": "value1"
+            "extra_output2": "value2"
+        }
+
     tagspace : list of str
         Tags to apply to outputs generated local to this meter.
 
@@ -144,11 +151,12 @@ class MeterBase(object):
 
         tagspace = ["tag_for_all_submeters"]
     """
-    def __init__(self, input_mapping={}, output_mapping={}, auxiliary_data={},
-            tagspace={}, **kwargs):
+    def __init__(self, input_mapping={}, output_mapping={},
+            auxiliary_inputs={}, auxiliary_outputs={}, tagspace={}, **kwargs):
         self.input_mapping = input_mapping
         self.output_mapping = output_mapping
-        self.auxiliary_data = auxiliary_data
+        self.auxiliary_inputs = auxiliary_inputs
+        self.auxiliary_outputs = auxiliary_outputs
         self.tagspace = tagspace
 
     def evaluate(self, data_collection):
@@ -164,15 +172,19 @@ class MeterBase(object):
         mapped_input_dict = self._dict_from_data_collection(self.input_mapping,
                 data_collection)
 
-        # combine aux data with mapped inputs
-        all_inputs = dict(mapped_input_dict.items() + self.auxiliary_data.items())
+        # combine auxiliary inputs with mapped inputs
+        all_inputs = dict(mapped_input_dict.items() + self.auxiliary_inputs.items())
 
         # evaluate meter
-        result_dict = self.evaluate_raw(**all_inputs)
+        outputs_dict = self.evaluate_raw(**all_inputs)
+
+        # combine auxiliary outputs with raw outputs
+        all_outputs = dict(outputs_dict.items() + self.auxiliary_outputs.items())
+
 
         # map meter evaluations back to data_collection form
         mapped_output_data_collection = self._data_collection_from_dict(
-                self.output_mapping, result_dict)
+                self.output_mapping, all_outputs)
 
         # combine with original data, add tags as necessary
         mapped_output_data_collection.add_tags(self.tagspace)
@@ -188,7 +200,7 @@ class MeterBase(object):
             search_tags = search_criteria.get("tags", [])
             target_data = data_collection.get_data(search_name, search_tags)
             if target_data is None:
-                message = "Data not found during mapping: name={}, tags=" \
+                message = "Data not found during mapping: name={}, tags={}" \
                         .format(search_name, search_tags)
                 raise ValueError(message)
             else:

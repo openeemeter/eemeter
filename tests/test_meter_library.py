@@ -13,6 +13,7 @@ from eemeter.meter import NPeriodsMeetingCDDPerDayThreshold
 from eemeter.meter import RecentReadingMeter
 from eemeter.meter import AverageDailyUsage
 from eemeter.meter import EstimatedAverageDailyUsage
+from eemeter.meter import ConsumptionAttributes
 
 from fixtures.weather import gsod_722880_2012_2014_weather_source
 from fixtures.weather import tmy3_722880_weather_source
@@ -335,8 +336,8 @@ def test_normal_annual_cdd(tmy3_722880_weather_source):
 
 def test_n_periods_meeting_hdd_per_day_threshold(generated_consumption_data_with_n_periods_hdd_1,gsod_722880_2012_2014_weather_source):
     cd, n_periods_lt, n_periods_gt, hdd = generated_consumption_data_with_n_periods_hdd_1
-    meter_lt = NPeriodsMeetingHDDPerDayThreshold(base=65,temperature_unit_str="degF",operation="lt")
-    meter_gt = NPeriodsMeetingHDDPerDayThreshold(base=65,temperature_unit_str="degF",operation="gt")
+    meter_lt = NPeriodsMeetingHDDPerDayThreshold(base=65,temperature_unit_str="degF",operation="<")
+    meter_gt = NPeriodsMeetingHDDPerDayThreshold(base=65,temperature_unit_str="degF",operation=">")
     result_lt = meter_lt.evaluate_raw(consumption_data=cd,
                             hdd=hdd,
                             weather_source=gsod_722880_2012_2014_weather_source)
@@ -348,8 +349,8 @@ def test_n_periods_meeting_hdd_per_day_threshold(generated_consumption_data_with
 
 def test_n_periods_meeting_cdd_per_day_threshold(generated_consumption_data_with_n_periods_cdd_1,gsod_722880_2012_2014_weather_source):
     cd, n_periods_lt, n_periods_gt, cdd = generated_consumption_data_with_n_periods_cdd_1
-    meter_lt = NPeriodsMeetingCDDPerDayThreshold(base=65,temperature_unit_str="degF",operation="lt")
-    meter_gt = NPeriodsMeetingCDDPerDayThreshold(base=65,temperature_unit_str="degF",operation="gt")
+    meter_lt = NPeriodsMeetingCDDPerDayThreshold(base=65,temperature_unit_str="degF",operation="<")
+    meter_gt = NPeriodsMeetingCDDPerDayThreshold(base=65,temperature_unit_str="degF",operation=">")
     result_lt = meter_lt.evaluate_raw(consumption_data=cd,
                             cdd=cdd,
                             weather_source=gsod_722880_2012_2014_weather_source)
@@ -412,3 +413,14 @@ def test_estimated_average_daily_usage(generated_consumption_data_1,gsod_722880_
             energy_unit_str="kWh")
     assert result["estimated_average_daily_usages"] is not None
     assert result["n_days"] is not None
+
+def test_consumption_data_attributes(generated_consumption_data_1):
+    cd,params = generated_consumption_data_1
+    meter = ConsumptionAttributes()
+    result = meter.evaluate_raw(consumption_data=cd)
+    assert result["fuel_type"] == "electricity"
+    assert result["unit_name"] == "kWh"
+    assert result["freq"] == None
+    assert result["freq_timedelta"] == None
+    assert result["pulse_value"] == None
+    assert result["name"] == None

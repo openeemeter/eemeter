@@ -78,7 +78,7 @@ class EstimatedReadingConsolidationMeter(MeterBase):
     reads or dropping them entirely (e.g. final read is estimated).
     """
 
-    def evaluate_raw(self,consumption_data,**kwargs):
+    def evaluate_raw(self, consumption_data, **kwargs):
         """Evaluates threshold comparisons on incoming data.
 
         Parameters

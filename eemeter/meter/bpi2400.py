@@ -1,4 +1,5 @@
 from eemeter.meter import MeterBase
+from eemeter.meter import DataCollection
 from eemeter.config.yaml_parser import load
 from datetime import datetime
 import pytz
@@ -7,10 +8,15 @@ class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(MeterBase):
     """Implementation of BPI-2400-S-2012 section 3.2.2.
     """
 
-    def __init__(self,temperature_unit_str,**kwargs):
+    def __init__(self, temperature_unit_str, **kwargs):
         super(BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria, self).__init__(**kwargs)
         self.temperature_unit_str = temperature_unit_str
         self.meter = load(self._meter_yaml())
+        self.input_mapping = {
+                "consumption_data": {},
+                "weather_source": {},
+                "weather_normal_source": {},
+            }
 
     def _meter_yaml(self):
 
@@ -45,266 +51,320 @@ class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(MeterBase):
             !obj:eemeter.meter.Sequence {{
                 sequence: [
                     !obj:eemeter.meter.EstimatedReadingConsolidationMeter {{
-                    }},
-                    !obj:eemeter.meter.FuelTypePresenceMeter {{
-                        fuel_types: [electricity,natural_gas]
+                        input_mapping: {{ consumption_data: {{}} }},
+                        output_mapping: {{ consumption_data_no_estimated: {{}} }},
                     }},
                     !obj:eemeter.meter.NormalAnnualHDD {{
                         base: {hdd_base},
                         temperature_unit_str: {temp_unit},
-                        output_mapping: {{
-                            normal_annual_hdd: hdd_tmy,
-                        }},
+                        input_mapping: {{ weather_normal_source: {{}} }},
+                        output_mapping: {{ normal_annual_hdd: {{ name: hdd_tmy }} }},
                     }},
                     !obj:eemeter.meter.NormalAnnualCDD {{
                         base: {cdd_base},
                         temperature_unit_str: {temp_unit},
+                        input_mapping: {{ weather_normal_source: {{}} }},
+                        output_mapping: {{ normal_annual_cdd: {{ name: cdd_tmy }} }},
+                    }},
+                    !obj:eemeter.meter.RecentReadingMeter {{
+                        n_days: 360,
+                        input_mapping: {{ consumption_data: {{ name: consumption_data_no_estimated }} }},
+                        output_mapping: {{ recent_reading: {{ name: has_recent_reading }} }}
+                    }},
+                    !obj:eemeter.meter.TimeSpanMeter {{
+                        input_mapping: {{ consumption_data: {{ name: consumption_data_no_estimated }} }},
+                        output_mapping: {{ time_span: {{}} }}
+                    }},
+                    !obj:eemeter.meter.TotalHDDMeter {{
+                        base: {hdd_base},
+                        temperature_unit_str: {temp_unit},
+                        input_mapping: {{
+                            consumption_data: {{ name: consumption_data_no_estimated }},
+                            weather_source: {{}},
+                        }},
+                        output_mapping: {{ total_hdd: {{}} }}
+                    }},
+                    !obj:eemeter.meter.TotalCDDMeter {{
+                        base: {cdd_base},
+                        temperature_unit_str: {temp_unit},
+                        input_mapping: {{
+                            consumption_data: {{ name: consumption_data_no_estimated }},
+                            weather_source: {{}},
+                        }},
+                        output_mapping: {{ total_cdd: {{}} }}
+                    }},
+                    !obj:eemeter.meter.NPeriodsMeetingHDDPerDayThreshold {{
+                        base: {hdd_base},
+                        temperature_unit_str: {temp_unit},
+                        operation: ">",
+                        proportion: 0.0032876712,
+                        input_mapping: {{
+                            consumption_data: {{ name: consumption_data_no_estimated }},
+                            weather_source: {{}},
+                            hdd: {{ name: hdd_tmy, }},
+                        }},
+                        output_mapping: {{ n_periods: {{ name: n_periods_high_hdd_per_day }}, }}
+                    }},
+                    !obj:eemeter.meter.NPeriodsMeetingHDDPerDayThreshold {{
+                        base: {hdd_base},
+                        temperature_unit_str: {temp_unit},
+                        operation: "<",
+                        proportion: .00054794521,
+                        input_mapping: {{
+                            consumption_data: {{ name: consumption_data_no_estimated }},
+                            weather_source: {{}},
+                            hdd: {{ name: hdd_tmy, }},
+                        }},
+                        output_mapping: {{ n_periods: {{ name: n_periods_low_hdd_per_day }}, }}
+                    }},
+                    !obj:eemeter.meter.NPeriodsMeetingCDDPerDayThreshold {{
+                        base: {cdd_base},
+                        temperature_unit_str: {temp_unit},
+                        operation: ">",
+                        proportion: 0.0032876712,
+                        input_mapping: {{
+                            consumption_data: {{ name: consumption_data_no_estimated }},
+                            weather_source: {{}},
+                            cdd: {{ name: cdd_tmy, }},
+                        }},
+                        output_mapping: {{ n_periods: {{ name: n_periods_high_cdd_per_day }}, }}
+                    }},
+                    !obj:eemeter.meter.NPeriodsMeetingCDDPerDayThreshold {{
+                        base: {cdd_base},
+                        temperature_unit_str: {temp_unit},
+                        operation: "<",
+                        proportion: .00054794521,
+                        input_mapping: {{
+                            consumption_data: {{ name: consumption_data_no_estimated }},
+                            weather_source: {{}},
+                            cdd: {{ name: cdd_tmy, }},
+                        }},
+                        output_mapping: {{ n_periods: {{ name: n_periods_low_cdd_per_day}}, }}
+                    }},
+                    !obj:eemeter.meter.ConsumptionAttributes {{
+                        input_mapping: {{ consumption_data: {{ name: consumption_data_no_estimated, }}, }},
                         output_mapping: {{
-                            normal_annual_cdd: cdd_tmy,
+                            fuel_type: {{}},
+                            unit_name: {{ name: energy_unit_str }}
+                        }}
+                    }},
+                    !obj:eemeter.meter.Switch {{
+                        target: {{ name: fuel_type }},
+                        cases: {{
+                            electricity: !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {{
+                                temperature_unit_str: {temp_unit},
+                                model: !obj:eemeter.models.TemperatureSensitivityModel {{
+                                    cooling: True,
+                                    heating: True,
+                                    initial_params: {{
+                                        base_consumption: 0,
+                                        heating_slope: 0,
+                                        cooling_slope: 0,
+                                        heating_reference_temperature: {h_ref_x0},
+                                        cooling_reference_temperature: {c_ref_x0},
+                                    }},
+                                    param_bounds: {{
+                                        base_consumption: [-20,80],
+                                        heating_slope: [0,{e_h_slope_h}],
+                                        cooling_slope: [0,{e_c_slope_h}],
+                                        heating_reference_temperature: [{h_ref_l},{h_ref_h}],
+                                        cooling_reference_temperature: [{c_ref_l},{c_ref_h}],
+                                    }},
+                                }},
+                                input_mapping: {{
+                                    consumption_data: {{ name: consumption_data_no_estimated, }},
+                                    weather_source: {{}},
+                                    energy_unit_str: {{}},
+                                }},
+                                output_mapping: {{
+                                    average_daily_usages: {{ name: average_daily_usages_bpi2400 }},
+                                    estimated_average_daily_usages: {{ name: estimated_average_daily_usages_bpi2400 }},
+                                    temp_sensitivity_params: {{ name: temp_sensitivity_params_bpi2400 }},
+                                }},
+                            }},
+                            natural_gas: !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {{
+                                temperature_unit_str: {temp_unit},
+                                model: !obj:eemeter.models.TemperatureSensitivityModel {{
+                                    cooling: False,
+                                    heating: True,
+                                    initial_params: {{
+                                        base_consumption: 0,
+                                        heating_slope: 0,
+                                        heating_reference_temperature: {h_ref_x0},
+                                    }},
+                                    param_bounds: {{
+                                        base_consumption: [-20,80],
+                                        heating_slope: [0,{n_g_h_slope_h}],
+                                        heating_reference_temperature: [{h_ref_l},{h_ref_h}],
+                                    }},
+                                }},
+                                input_mapping: {{
+                                    consumption_data: {{ name: consumption_data_no_estimated, }},
+                                    weather_source: {{}},
+                                    energy_unit_str: {{}},
+                                }},
+                                output_mapping: {{
+                                    average_daily_usages: {{ name: average_daily_usages_bpi2400 }},
+                                    estimated_average_daily_usages: {{ name: estimated_average_daily_usages_bpi2400 }},
+                                    temp_sensitivity_params: {{ name: temp_sensitivity_params_bpi2400 }},
+                                }},
+                            }},
                         }},
                     }},
-                    !obj:eemeter.meter.ForEachFuelType {{
-                        fuel_types: [electricity,natural_gas],
-                        fuel_unit_strs: [kWh,therms],
-                        meter: !obj:eemeter.meter.Sequence {{
-                            input_mapping: {{
-                                consumption_history: null,
-                                consumption_history_no_estimated: consumption_history
+                    !obj:eemeter.meter.CVRMSE {{
+                        input_mapping: {{
+                            y: {{ name: average_daily_usages_bpi2400 }},
+                            y_hat: {{ name: estimated_average_daily_usages_bpi2400 }},
+                            params: {{ name: temp_sensitivity_params_bpi2400 }},
+                        }},
+                        output_mapping: {{ cvrmse: {{}} }},
+                    }},
+                    !obj:eemeter.meter.Switch {{
+                        target: {{ name: fuel_type }},
+                        cases: {{
+                            electricity: !obj:eemeter.meter.MeetsThresholds {{
+                                equations: [
+                                    [time_span, ">=", 1, 330, 0, spans_330_days],
+                                    [time_span, ">", 1, 184, 0, spans_184_days],
+                                    [total_hdd, ">", .5, hdd_tmy, 0, has_enough_total_hdd],
+                                    [total_cdd, ">", .5, cdd_tmy, 0, has_enough_total_cdd],
+                                    [n_periods_high_hdd_per_day, ">=", 1, 1, 0, has_enough_periods_with_high_hdd_per_day],
+                                    [n_periods_low_hdd_per_day, ">=", 1, 1, 0, has_enough_periods_with_low_hdd_per_day],
+                                    [n_periods_high_cdd_per_day, ">=", 1, 1, 0, has_enough_periods_with_high_cdd_per_day],
+                                    [n_periods_low_cdd_per_day, ">=", 1, 1, 0, has_enough_periods_with_low_cdd_per_day],
+                                    [cvrmse, "<=", 1, 20, 0, meets_cvrmse_limit],
+                                ],
+                                input_mapping: {{
+                                    time_span: {{}},
+                                    total_hdd: {{}},
+                                    hdd_tmy: {{}},
+                                    total_cdd: {{}},
+                                    cdd_tmy: {{}},
+                                    n_periods_high_hdd_per_day: {{}},
+                                    n_periods_low_hdd_per_day: {{}},
+                                    n_periods_high_cdd_per_day: {{}},
+                                    n_periods_low_cdd_per_day: {{}},
+                                    cvrmse: {{}},
+                                }},
+                                output_mapping: {{
+                                    spans_330_days: {{}},
+                                    spans_184_days: {{}},
+                                    has_enough_total_hdd: {{}},
+                                    has_enough_total_cdd: {{}},
+                                    has_enough_periods_with_high_hdd_per_day: {{}},
+                                    has_enough_periods_with_low_hdd_per_day: {{}},
+                                    has_enough_periods_with_high_cdd_per_day: {{}},
+                                    has_enough_periods_with_low_cdd_per_day: {{}},
+                                    meets_cvrmse_limit: {{}},
+                                }},
                             }},
-                            sequence: [
-                                !obj:eemeter.meter.RecentReadingMeter {{
-                                    n_days: 360,
-                                    output_mapping: {{
-                                        recent_reading: has_recent_reading
-                                    }}
+                            natural_gas: !obj:eemeter.meter.MeetsThresholds {{
+                                equations: [
+                                    [time_span, ">=", 1, 330, 0, spans_330_days],
+                                    [time_span, ">", 1, 184, 0, spans_184_days],
+                                    [total_hdd, ">", .5, hdd_tmy, 0, has_enough_total_hdd],
+                                    [n_periods_high_hdd_per_day, ">=", 1, 1, 0, has_enough_periods_with_high_hdd_per_day],
+                                    [n_periods_low_hdd_per_day, ">=", 1, 1, 0, has_enough_periods_with_low_hdd_per_day],
+                                    [cvrmse, "<=", 1, 20, 0, meets_cvrmse_limit],
+                                ],
+                                input_mapping: {{
+                                    time_span: {{}},
+                                    total_hdd: {{}},
+                                    hdd_tmy: {{}},
+                                    n_periods_high_hdd_per_day: {{}},
+                                    n_periods_low_hdd_per_day: {{}},
+                                    cvrmse: {{}},
                                 }},
-                                !obj:eemeter.meter.TimeSpanMeter {{
+                                auxiliary_outputs: {{
+                                    has_enough_total_cdd: true,
+                                    has_enough_periods_with_high_cdd_per_day: true,
+                                    has_enough_periods_with_low_cdd_per_day: true,
                                 }},
-                                !obj:eemeter.meter.TotalHDDMeter {{
-                                    base: {hdd_base},
-                                    temperature_unit_str: {temp_unit},
+                                output_mapping: {{
+                                    spans_330_days: {{}},
+                                    spans_184_days: {{}},
+                                    has_enough_total_hdd: {{}},
+                                    has_enough_total_cdd: {{}},
+                                    has_enough_periods_with_high_hdd_per_day: {{}},
+                                    has_enough_periods_with_low_hdd_per_day: {{}},
+                                    has_enough_periods_with_high_cdd_per_day: {{}},
+                                    has_enough_periods_with_low_cdd_per_day: {{}},
+                                    meets_cvrmse_limit: {{}},
                                 }},
-                                !obj:eemeter.meter.TotalCDDMeter {{
-                                    base: {cdd_base},
-                                    temperature_unit_str: {temp_unit},
-                                }},
-                                !obj:eemeter.meter.NPeriodsMeetingHDDPerDayThreshold {{
-                                    input_mapping: {{
-                                        hdd_tmy: hdd,
-                                    }},
-                                    base: {hdd_base},
-                                    temperature_unit_str: {temp_unit},
-                                    operation: "gt",
-                                    proportion: 0.0032876712,
-                                    output_mapping: {{
-                                        n_periods: n_periods_high_hdd_per_day
-                                    }}
-                                }},
-                                !obj:eemeter.meter.NPeriodsMeetingHDDPerDayThreshold {{
-                                    input_mapping: {{
-                                        hdd_tmy: hdd,
-                                    }},
-                                    base: {hdd_base},
-                                    temperature_unit_str: {temp_unit},
-                                    operation: "lt",
-                                    proportion: .00054794521,
-                                    output_mapping: {{
-                                        n_periods: n_periods_low_hdd_per_day
-                                    }}
-                                }},
-                                !obj:eemeter.meter.NPeriodsMeetingCDDPerDayThreshold {{
-                                    input_mapping: {{
-                                        cdd_tmy: cdd,
-                                    }},
-                                    base: {cdd_base},
-                                    temperature_unit_str: {temp_unit},
-                                    operation: "gt",
-                                    proportion: 0.0032876712,
-                                    output_mapping: {{
-                                        n_periods: n_periods_high_cdd_per_day
-                                    }}
-                                }},
-                                !obj:eemeter.meter.NPeriodsMeetingCDDPerDayThreshold {{
-                                    input_mapping: {{
-                                        cdd_tmy: cdd,
-                                    }},
-                                    base: {cdd_base},
-                                    temperature_unit_str: {temp_unit},
-                                    operation: "lt",
-                                    proportion: .00054794521,
-                                    output_mapping: {{
-                                        n_periods: n_periods_low_cdd_per_day
-                                    }}
-                                }},
-                                !obj:eemeter.meter.Switch {{
-                                    target: fuel_type,
-                                    cases: {{
-                                        electricity: !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {{
-                                            temperature_unit_str: {temp_unit},
-                                            model: !obj:eemeter.models.TemperatureSensitivityModel {{
-                                                cooling: True,
-                                                heating: True,
-                                                initial_params: {{
-                                                    base_consumption: 0,
-                                                    heating_slope: 0,
-                                                    cooling_slope: 0,
-                                                    heating_reference_temperature: {h_ref_x0},
-                                                    cooling_reference_temperature: {c_ref_x0},
-                                                }},
-                                                param_bounds: {{
-                                                    base_consumption: [-20,80],
-                                                    heating_slope: [0,{e_h_slope_h}],
-                                                    cooling_slope: [0,{e_c_slope_h}],
-                                                    heating_reference_temperature: [{h_ref_l},{h_ref_h}],
-                                                    cooling_reference_temperature: [{c_ref_l},{c_ref_h}],
-                                                }},
-                                            }},
-                                        }},
-                                        natural_gas: !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {{
-                                            temperature_unit_str: {temp_unit},
-                                            model: !obj:eemeter.models.TemperatureSensitivityModel {{
-                                                cooling: False,
-                                                heating: True,
-                                                initial_params: {{
-                                                    base_consumption: 0,
-                                                    heating_slope: 0,
-                                                    heating_reference_temperature: {h_ref_x0},
-                                                }},
-                                                param_bounds: {{
-                                                    base_consumption: [-20,80],
-                                                    heating_slope: [0,{n_g_h_slope_h}],
-                                                    heating_reference_temperature: [{h_ref_l},{h_ref_h}],
-                                                }},
-                                            }},
-                                        }},
-                                    }},
-                                    output_mapping: {{
-                                        average_daily_usages: average_daily_usages_bpi2400,
-                                        estimated_average_daily_usages: estimated_average_daily_usages_bpi2400,
-                                        temp_sensitivity_params: temp_sensitivity_params_bpi2400,
-                                        daily_standard_error: null,
-                                        n_days: null,
-                                    }},
-                                }},
-                                !obj:eemeter.meter.CVRMSE {{
-                                    input_mapping: {{
-                                        average_daily_usages_bpi2400: y,
-                                        estimated_average_daily_usages_bpi2400: y_hat,
-                                        temp_sensitivity_params_bpi2400: params,
-                                    }},
-                                }},
-                                !obj:eemeter.meter.Switch {{
-                                    target: fuel_type,
-                                    cases: {{
-                                        electricity: !obj:eemeter.meter.MeetsThresholds {{
-                                            values: [
-                                                time_span,
-                                                time_span,
-                                                total_hdd,
-                                                total_cdd,
-                                                n_periods_high_hdd_per_day,
-                                                n_periods_low_hdd_per_day,
-                                                n_periods_high_cdd_per_day,
-                                                n_periods_low_cdd_per_day,
-                                                cvrmse,
-                                            ],
-                                            thresholds: [330,183,hdd_tmy,cdd_tmy,1,1,1,1,20],
-                                            operations: [gte,gt,gt,gt,gte,gte,gte,gte,lte],
-                                            proportions: [1,1,.5,.5,1,1,1,1,1],
-                                            output_names: [
-                                                spans_330_days,
-                                                spans_184_days,
-                                                has_enough_total_hdd,
-                                                has_enough_total_cdd,
-                                                has_enough_periods_with_high_hdd_per_day,
-                                                has_enough_periods_with_low_hdd_per_day,
-                                                has_enough_periods_with_high_cdd_per_day,
-                                                has_enough_periods_with_low_cdd_per_day,
-                                                meets_cvrmse_limit,
-                                            ],
-                                        }},
-                                        natural_gas: !obj:eemeter.meter.MeetsThresholds {{
-                                            values: [
-                                                time_span,
-                                                time_span,
-                                                total_hdd,
-                                                n_periods_high_hdd_per_day,
-                                                n_periods_low_hdd_per_day,
-                                                cvrmse,
-                                            ],
-                                            thresholds: [330,183,hdd_tmy,1,1,20],
-                                            operations: [gte,gt,gt,gte,gte,lte],
-                                            proportions: [1,1,.5,1,1,1],
-                                            output_names: [
-                                                spans_330_days,
-                                                spans_184_days,
-                                                has_enough_total_hdd,
-                                                has_enough_periods_with_high_hdd_per_day,
-                                                has_enough_periods_with_low_hdd_per_day,
-                                                meets_cvrmse_limit,
-                                            ],
-                                            extras: {{
-                                                has_enough_total_cdd: true,
-                                                has_enough_periods_with_high_cdd_per_day: true,
-                                                has_enough_periods_with_low_cdd_per_day: true,
-                                            }},
-                                        }},
-                                    }}
-                                }},
-                                !obj:eemeter.meter.And {{
-                                    inputs: [
-                                        has_enough_total_hdd,
-                                        has_enough_periods_with_high_hdd_per_day,
-                                        has_enough_periods_with_low_hdd_per_day,
-                                    ],
-                                    output_mapping: {{
-                                        output: has_enough_hdd
-                                    }},
-                                }},
-                                !obj:eemeter.meter.And {{
-                                    inputs: [
-                                        has_enough_total_cdd,
-                                        has_enough_periods_with_high_cdd_per_day,
-                                        has_enough_periods_with_low_cdd_per_day,
-                                    ],
-                                    output_mapping: {{
-                                        output: has_enough_cdd
-                                    }},
-                                }},
-                                !obj:eemeter.meter.And {{
-                                    inputs: [
-                                        has_enough_hdd, has_enough_cdd
-                                    ],
-                                    output_mapping: {{
-                                        output: has_enough_hdd_cdd
-                                    }}
-                                }},
-                                !obj:eemeter.meter.And {{
-                                    inputs: [
-                                        spans_184_days, has_enough_hdd_cdd
-                                    ],
-                                    output_mapping: {{
-                                        output: spans_183_days_and_has_enough_hdd_cdd
-                                    }}
-                                }},
-                                !obj:eemeter.meter.Or {{
-                                    inputs: [
-                                        spans_330_days, spans_183_days_and_has_enough_hdd_cdd
-                                    ],
-                                    output_mapping: {{
-                                        output: has_enough_data
-                                    }}
-                                }},
-                                !obj:eemeter.meter.And {{
-                                    inputs: [
-                                        has_recent_reading, has_enough_data, meets_cvrmse_limit,
-                                    ],
-                                    output_mapping: {{
-                                        output: meets_model_calibration_utility_bill_criteria
-                                    }}
-                                }},
-                            ],
+                            }},
                         }}
+                    }},
+                    !obj:eemeter.meter.And {{
+                        inputs: [
+                            has_enough_total_hdd,
+                            has_enough_periods_with_high_hdd_per_day,
+                            has_enough_periods_with_low_hdd_per_day,
+                        ],
+                        input_mapping: {{
+                            has_enough_total_hdd: {{}},
+                            has_enough_periods_with_high_hdd_per_day: {{}},
+                            has_enough_periods_with_low_hdd_per_day: {{}},
+                        }},
+                        output_mapping: {{ output: {{ name: has_enough_hdd, }}, }},
+                    }},
+                    !obj:eemeter.meter.And {{
+                        inputs: [
+                            has_enough_total_cdd,
+                            has_enough_periods_with_high_cdd_per_day,
+                            has_enough_periods_with_low_cdd_per_day,
+                        ],
+                        input_mapping: {{
+                            has_enough_total_cdd: {{}},
+                            has_enough_periods_with_high_cdd_per_day: {{}},
+                            has_enough_periods_with_low_cdd_per_day: {{}},
+                        }},
+                        output_mapping: {{ output: {{ name: has_enough_cdd, }}, }},
+                    }},
+                    !obj:eemeter.meter.And {{
+                        inputs: [
+                            has_enough_hdd,
+                            has_enough_cdd
+                        ],
+                        input_mapping: {{
+                            has_enough_hdd: {{}},
+                            has_enough_cdd: {{}},
+                        }},
+                        output_mapping: {{ output: {{ name: has_enough_hdd_cdd }}, }}
+                    }},
+                    !obj:eemeter.meter.And {{
+                        inputs: [
+                            spans_184_days,
+                            has_enough_hdd_cdd
+                        ],
+                        input_mapping: {{
+                            spans_184_days: {{}},
+                            has_enough_hdd_cdd: {{}},
+                        }},
+                        output_mapping: {{ output: {{ name: spans_183_days_and_has_enough_hdd_cdd, }}, }}
+                    }},
+                    !obj:eemeter.meter.Or {{
+                        inputs: [
+                            spans_330_days,
+                            spans_183_days_and_has_enough_hdd_cdd
+                        ],
+                        input_mapping: {{
+                            spans_330_days: {{}},
+                            spans_183_days_and_has_enough_hdd_cdd: {{}},
+                        }},
+                        output_mapping: {{ output: {{ name: has_enough_data }} }}
+                    }},
+                    !obj:eemeter.meter.And {{
+                        inputs: [
+                            has_recent_reading,
+                            has_enough_data,
+                            meets_cvrmse_limit,
+                        ],
+                        input_mapping: {{
+                            has_recent_reading: {{}},
+                            has_enough_data: {{}},
+                            meets_cvrmse_limit: {{}},
+                        }},
+                        output_mapping: {{ output: {{ name: meets_model_calibration_utility_bill_criteria }}, }}
                     }}
                 ]
             }}
@@ -323,7 +383,7 @@ class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(MeterBase):
                        )
         return meter_yaml
 
-    def evaluate_mapped_inputs(self,**kwargs):
+    def evaluate(self, data_collection):
         """Evaluates utility bills for compliance with criteria specified in
         ANSI/BPI-2400-S-2012 section 3.2.2.
 
@@ -544,7 +604,7 @@ class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(MeterBase):
               consumption data periods.
 
         """
-        return self.meter.evaluate(**kwargs)
+        return self.meter.evaluate(data_collection)
 
     def _get_child_inputs(self):
         return self.meter.get_inputs()

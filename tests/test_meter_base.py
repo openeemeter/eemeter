@@ -119,16 +119,8 @@ def test_data_collection_creation_shortcut():
 def test_dummy_meter(data_collection):
     meter_yaml = """
         !obj:eemeter.meter.DummyMeter {
-            input_mapping: {
-                "value": {
-                    "name":"name",
-                },
-            },
-            output_mapping: {
-                "result": {
-                    "name":"result",
-                },
-            },
+            input_mapping: { "value": { "name":"name", }, },
+            output_mapping: { "result": { "name":"result", }, },
         }
     """
 
@@ -165,3 +157,35 @@ def test_dummy_meter_tags(data_collection):
     assert result.get_data("result_1",tags=["tag"]) == None
     assert result.get_data("result") == None
     assert result.get_data(name="name") == None
+
+def test_dummy_meter_auxiliary_inputs():
+    meter_yaml = """
+        !obj:eemeter.meter.DummyMeter {
+            auxiliary_inputs: { "value": "aux" },
+            output_mapping: { "result": {}, },
+        }
+    """
+
+    meter = load(meter_yaml)
+    data_collection = DataCollection()
+    result = meter.evaluate(data_collection)
+
+    assert result.get_data(name="result").value == "aux"
+
+def test_dummy_meter_auxiliary_outputs(data_collection):
+    meter_yaml = """
+        !obj:eemeter.meter.DummyMeter {
+            input_mapping: { "value": { "name":"name", }, },
+            output_mapping: {
+                "result": { "name":"result", },
+                "aux_result": { "name":"aux_result", },
+            },
+            auxiliary_outputs: { "aux_result": "aux" },
+        }
+    """
+
+    meter = load(meter_yaml)
+    result = meter.evaluate(data_collection)
+
+    assert result.get_data(name="result").value == "value"
+    assert result.get_data(name="aux_result").value == "aux"

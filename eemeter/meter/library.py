@@ -262,7 +262,7 @@ class TotalHDDMeter(MeterBase):
         self.base = base
         self.temperature_unit_str = temperature_unit_str
 
-    def evaluate_raw(self, consumption_data, weather_source,**kwargs):
+    def evaluate_raw(self, consumption_data, weather_source, **kwargs):
         """Sums the total observed HDD over a consumption history.
 
         Parameters
@@ -406,7 +406,7 @@ class NPeriodsMeetingHDDPerDayThreshold(MeterBase):
         The heating degree day base.
     temperature_unit_str : {"degF", "degC"}
         A string denoting the temperature unit to be used.
-    operation : {"lt", "lte", "gt", "gte"}
+    operation : {"<", "<=", ">", ">="}
         A string representing the type of inequality test. (I.e. Is the
         threshold an upper or lower bound? Is the endpoint included?)
     proportion : float, optional
@@ -421,7 +421,7 @@ class NPeriodsMeetingHDDPerDayThreshold(MeterBase):
         self.operation = operation
         self.proportion = proportion
 
-    def evaluate_raw(self,consumption_data,hdd,weather_source,**kwargs):
+    def evaluate_raw(self, consumption_data, hdd, weather_source, **kwargs):
         """Evaluates the number of periods meeting a consumption history limit
         according to data from a particular weather source.
 
@@ -446,16 +446,16 @@ class NPeriodsMeetingHDDPerDayThreshold(MeterBase):
         hdds = weather_source.hdd(periods, self.temperature_unit_str,
                 self.base, per_day=True)
         for period_hdd in hdds:
-            if self.operation == "lt":
+            if self.operation == "<":
                 if period_hdd < self.proportion * hdd:
                     n_periods += 1
-            elif self.operation == "lte":
+            elif self.operation == "<=":
                 if period_hdd <= self.proportion * hdd:
                     n_periods += 1
-            elif self.operation == "gt":
+            elif self.operation == ">":
                 if period_hdd > self.proportion * hdd:
                     n_periods += 1
-            elif self.operation == "gte":
+            elif self.operation == ">=":
                 if period_hdd >= self.proportion * hdd:
                     n_periods += 1
         return {"n_periods": n_periods}
@@ -470,7 +470,7 @@ class NPeriodsMeetingCDDPerDayThreshold(MeterBase):
         The cooling degree day base.
     temperature_unit_str : {"degF", "degC"}
         A string denoting the temperature unit to be used.
-    operation : {"lt", "lte", "gt", "gte"}
+    operation : {"<", "<=", ">", ">="}
         A string representing the type of inequality test. (I.e. Is the
         threshold an upper or lower bound? Is the endpoint included?)
     proportion : float, optional
@@ -511,16 +511,16 @@ class NPeriodsMeetingCDDPerDayThreshold(MeterBase):
         cdds = weather_source.cdd(periods, self.temperature_unit_str,
                 self.base, per_day=True)
         for period_cdd in cdds:
-            if self.operation == "lt":
+            if self.operation == "<":
                 if period_cdd < self.proportion * cdd:
                     n_periods += 1
-            elif self.operation == "lte":
+            elif self.operation == "<=":
                 if period_cdd <= self.proportion * cdd:
                     n_periods += 1
-            elif self.operation == "gt":
+            elif self.operation == ">":
                 if period_cdd > self.proportion * cdd:
                     n_periods += 1
-            elif self.operation == "gte":
+            elif self.operation == ">=":
                 if period_cdd >= self.proportion * cdd:
                     n_periods += 1
         return {"n_periods": n_periods}
@@ -538,8 +538,7 @@ class RecentReadingMeter(MeterBase):
         super(RecentReadingMeter, self).__init__(**kwargs)
         self.n_days = n_days
 
-    def evaluate_raw(self, consumption_data, since_date=None,
-            **kwargs):
+    def evaluate_raw(self, consumption_data, since_date=None, **kwargs):
         """Evaluates the number of days since the last reading against the
         threshold.
 
@@ -636,3 +635,41 @@ class EstimatedAverageDailyUsage(MeterBase):
                         temp_sensitivity_params, observed_daily_temps) / n_days
         return {"estimated_average_daily_usages": estimated_average_daily_usages,
                 "n_days": n_days}
+
+class ConsumptionAttributes(MeterBase):
+    """ Returns the attributes of the ConsumptionData object passed in.
+    """
+
+    def evaluate_raw(self, consumption_data, **kwargs):
+        """ Finds the fuel type of the data.
+
+        Parameters
+        ----------
+        consumption_data : eemeter.consumption.ConsumptionData
+            Consumption data for which to return fuel type.
+
+        Returns
+        -------
+        out : dict
+            - "fuel_type": string describing the fuel type of the consumption
+              data.
+            - "unit_name": string decsribing the energy units of the
+              consumption data.
+            - "freq": string decsribing the frequency of the intervals (if
+              applicable).
+            - "freq_timedelta": timedelta decsribing the frequency of the
+              intervals (if applicable).
+            - "pulse_value": the pulse value at each consumption timestamp (if
+              applicable.
+            - "name": the name of the consumption data.
+        """
+        attributes = {
+            "fuel_type": consumption_data.fuel_type,
+            "unit_name": consumption_data.unit_name,
+            "freq": consumption_data.freq,
+            "freq_timedelta": consumption_data.freq_timedelta,
+            "pulse_value": consumption_data.pulse_value,
+            "name": consumption_data.name,
+        }
+        return attributes
+
