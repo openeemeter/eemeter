@@ -122,3 +122,28 @@ def test_switch():
     assert 3 == result3.get_data("result").value
     assert 4 == result4.get_data("result").value
     assert None == result5.get_data("result")
+
+def test_for():
+    meter_yaml = """
+        !obj:eemeter.meter.For {
+            variable_name: value,
+            iterable: {
+                name: iterable,
+            },
+            meter: !obj:eemeter.meter.DummyMeter {
+                output_mapping: { result: {} },
+            }
+        }
+    """
+    meter = load(meter_yaml)
+    iterable = [
+        {
+            "value": 1, "tags": ["one"]
+        }, {
+            "value": 2, "tags": ["two"]
+        }]
+    data_collection = DataCollection(iterable=iterable)
+    result = meter.evaluate(data_collection)
+
+    assert 1 == result.get_data("result", tags=["one"]).value
+    assert 2 == result.get_data("result", tags=["two"]).value
