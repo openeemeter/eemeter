@@ -161,11 +161,11 @@ class ProjectGenerator:
         annualized_usage_meter = AnnualizedUsageMeter(temperature_unit_name,
                 model)
         baseline_param_list = model.param_dict_to_list(baseline_params)
-        baseline_annualized_usage = annualized_usage_meter.evaluate(
+        baseline_annualized_usage = annualized_usage_meter.evaluate_raw(
                 model_params=baseline_param_list,
                 weather_normal_source=weather_normal_source)["annualized_usage"]
         reporting_params_list = model.param_dict_to_list(reporting_params)
-        reporting_annualized_usage = annualized_usage_meter.evaluate(
+        reporting_annualized_usage = annualized_usage_meter.evaluate_raw(
                 model_params=reporting_params_list,
                 weather_normal_source=weather_normal_source)["annualized_usage"]
         estimated_annualized_savings = baseline_annualized_usage - \
