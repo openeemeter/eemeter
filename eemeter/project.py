@@ -43,11 +43,13 @@ class Project(object):
 
         if weather_source is None:
             start_date, end_date = self._total_date_range()
-            self.weather_source = GSODWeatherSource(location.station,
+            weather_source = GSODWeatherSource(location.station,
                     start_date.year, end_date.year)
+        self.weather_source = weather_source
 
         if weather_normal_source is None:
             weather_normal_source = TMY3WeatherSource(location.station)
+        self.weather_normal_source = weather_normal_source
 
     def all_periods(self):
         periods = [self.baseline_period, self.reporting_period] + \

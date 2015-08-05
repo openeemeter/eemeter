@@ -636,12 +636,12 @@ class EstimatedAverageDailyUsage(MeterBase):
         return {"estimated_average_daily_usages": estimated_average_daily_usages,
                 "n_days": n_days}
 
-class ConsumptionAttributes(MeterBase):
-    """ Returns the attributes of the ConsumptionData object passed in.
+class ConsumptionDataAttributes(MeterBase):
+    """ Outputs the attributes of the ConsumptionData object passed in.
     """
 
     def evaluate_raw(self, consumption_data, **kwargs):
-        """ Finds the fuel type of the data.
+        """ Exports the attributes of the consumption_data object.
 
         Parameters
         ----------
@@ -672,4 +672,73 @@ class ConsumptionAttributes(MeterBase):
             "name": consumption_data.name,
         }
         return attributes
+
+
+class ProjectAttributes(MeterBase):
+    """ Outputs the attributes of the Project object passed in.
+    """
+
+    def evaluate_raw(self, project, **kwargs):
+        """ Finds the fuel type of the data.
+
+        Parameters
+        ----------
+        project : eemeter.consumption.ConsumptionData
+            Consumption data for which to return fuel type.
+
+        Returns
+        -------
+        out : dict
+            - "location": eemeter.location.Location object
+            - "consumption": list of eemeter.consumption.ConsumptionData objects
+            - "baseline_period": eemeter.evaluation.Period
+            - "reporting_period": eemeter.evaluation.Period
+            - "other_periods": list of eemeter.evaluation.Period objects
+            - "weather_source": eemeter.weather.GSODWeatherSource
+            - "weather_normal_source": eemeter.weather.TMY3WeatherSource
+        """
+        attributes = {
+            "location": project.location,
+            "consumption": project.consumption,
+            "baseline_period": project.baseline_period,
+            "reporting_period": project.reporting_period,
+            "other_periods": project.other_periods,
+            "weather_source": project.weather_source,
+            "weather_normal_source": project.weather_normal_source,
+        }
+        return attributes
+
+class ProjectConsumptionDataBaselineReporting(MeterBase):
+    """ Splits project consumption data by period and fuel.
+    """
+
+    def evaluate_raw(self, project, **kwargs):
+        """ Creates a list of tagged ConsumptionData objects for each of this
+        project's fuel types in the baseline period and the reporting period.
+
+        Parameters
+        ----------
+        project : eemeter.project.Project
+            Project instance from which to get consumption data.
+
+        Returns
+        -------
+        out : dict
+            - "consumption": list of tagged ConsumptionData instances.
+        """
+        consumption = []
+
+        for c in project.consumption
+            baseline_data = {
+                "value": c.filter_by_period(project.baseline_period),
+                "tags": [c.fuel_type, "baseline"]
+            }
+            reporting_data = {
+                "value": c.filter_by_period(project.reporting_period),
+                "tags": [c.fuel_type, "reporting"]
+            }
+            consumption.append(baseline_data)
+            consumption.append(reporting_data)
+
+        return consumption
 

@@ -141,7 +141,7 @@ class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(MeterBase):
                         }},
                         output_mapping: {{ n_periods: {{ name: n_periods_low_cdd_per_day}}, }}
                     }},
-                    !obj:eemeter.meter.ConsumptionAttributes {{
+                    !obj:eemeter.meter.ConsumptionDataAttributes {{
                         input_mapping: {{ consumption_data: {{ name: consumption_data_no_estimated, }}, }},
                         output_mapping: {{
                             fuel_type: {{}},

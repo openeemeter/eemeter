@@ -416,7 +416,7 @@ def test_estimated_average_daily_usage(generated_consumption_data_1,gsod_722880_
 
 def test_consumption_data_attributes(generated_consumption_data_1):
     cd,params = generated_consumption_data_1
-    meter = ConsumptionAttributes()
+    meter = ConsumptionDataAttributes()
     result = meter.evaluate_raw(consumption_data=cd)
     assert result["fuel_type"] == "electricity"
     assert result["unit_name"] == "kWh"
