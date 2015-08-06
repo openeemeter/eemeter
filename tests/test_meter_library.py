@@ -2,6 +2,9 @@ from eemeter.config.yaml_parser import load
 from eemeter.meter import DataCollection
 
 from eemeter.consumption import ConsumptionData
+from eemeter.evaluation import Period
+from eemeter.location import Location
+from eemeter.project import Project
 
 from eemeter.meter import TimeSpanMeter
 from eemeter.meter import TotalHDDMeter
@@ -13,7 +16,9 @@ from eemeter.meter import NPeriodsMeetingCDDPerDayThreshold
 from eemeter.meter import RecentReadingMeter
 from eemeter.meter import AverageDailyUsage
 from eemeter.meter import EstimatedAverageDailyUsage
-from eemeter.meter import ConsumptionAttributes
+from eemeter.meter import ConsumptionDataAttributes
+from eemeter.meter import ProjectAttributes
+from eemeter.meter import ProjectConsumptionDataBaselineReporting
 
 from fixtures.weather import gsod_722880_2012_2014_weather_source
 from fixtures.weather import tmy3_722880_weather_source
@@ -424,3 +429,35 @@ def test_consumption_data_attributes(generated_consumption_data_1):
     assert result["freq_timedelta"] == None
     assert result["pulse_value"] == None
     assert result["name"] == None
+
+def test_project_attributes(generated_consumption_data_1):
+    cd,params = generated_consumption_data_1
+    baseline_period = Period(datetime(2014,1,1),datetime(2014,1,1))
+    location = Location(zipcode="91104")
+    project = Project(location,[cd],baseline_period,None)
+    meter = ProjectAttributes(project)
+    result = meter.evaluate_raw(project=project)
+    assert result["location"].zipcode == location.zipcode
+    assert result["consumption"][0] is not None
+    assert result["baseline_period"] is not None
+    assert result["reporting_period"] is None
+    assert result["other_periods"] == []
+    assert result["weather_source"].station_id == "722880"
+    assert result["weather_normal_source"].station_id == "722880"
+
+def test_project_consumption_baseline_reporting(generated_consumption_data_1):
+    cd, _ = generated_consumption_data_1
+    baseline_period = Period(datetime(2011,1,1),datetime(2013,6,1))
+    reporting_period = Period(datetime(2013,6,1),datetime(2016,1,1))
+    location = Location(zipcode="91104")
+    project = Project(location,[cd],baseline_period,reporting_period)
+    meter = ProjectConsumptionDataBaselineReporting()
+    result = meter.evaluate_raw(project=project)
+    assert result["consumption"][0]["value"].index[0] == datetime(2012,1,1)
+    assert result["consumption"][0]["value"].index[17] == datetime(2013,5,25)
+    assert result["consumption"][0]["tags"][0] == "electricity"
+    assert result["consumption"][0]["tags"][1] == "baseline"
+    assert result["consumption"][1]["value"].index[0] == datetime(2013,6,24)
+    assert result["consumption"][1]["value"].index[18] == datetime(2014,12,16)
+    assert result["consumption"][1]["tags"][0] == "electricity"
+    assert result["consumption"][1]["tags"][1] == "reporting"

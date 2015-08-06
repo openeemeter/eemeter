@@ -728,7 +728,7 @@ class ProjectConsumptionDataBaselineReporting(MeterBase):
         """
         consumption = []
 
-        for c in project.consumption
+        for c in project.consumption:
             baseline_data = {
                 "value": c.filter_by_period(project.baseline_period),
                 "tags": [c.fuel_type, "baseline"]
@@ -740,5 +740,5 @@ class ProjectConsumptionDataBaselineReporting(MeterBase):
             consumption.append(baseline_data)
             consumption.append(reporting_data)
 
-        return consumption
+        return { "consumption": consumption }
 
