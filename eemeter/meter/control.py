@@ -41,11 +41,13 @@ class Sequence(MeterBase):
         out : dict
             Collected outputs from all meters in the sequence.
         """
-        sequence_data_collection = data_collection.copy()
+        input_data_collection = data_collection.copy()
+        output_data_collection = DataCollection()
         for meter in self.sequence:
-            meter_result = meter.evaluate(sequence_data_collection)
-            sequence_data_collection.add_data_collection(meter_result)
-        return sequence_data_collection
+            meter_result = meter.evaluate(input_data_collection)
+            input_data_collection.add_data_collection(meter_result)
+            output_data_collection.add_data_collection(meter_result)
+        return output_data_collection
 
 class Condition(MeterBase):
     """Collects and returns a series of meter object evaluation outputs in
@@ -77,7 +79,7 @@ class Condition(MeterBase):
         self.failure = failure
 
     def evaluate(self, data_collection):
-        """Overrides the evalute method to evaluate either the `success` meter
+        """Overrides the evaluate method to evaluate either the `success` meter
         or the `failure` meter on the boolean value of a particular meter
         input stored in the element with the name `condition_parameter`.
 
@@ -137,11 +139,12 @@ class Switch(MeterBase):
         if item is None:
             return DataCollection()
         meter = self.cases.get(item.value)
-        if meter is not None:
-            return meter.evaluate(data_collection)
-        if self.default is not None:
-            return self.default.evaluate(data_collection)
-        return DataCollection()
+        if meter is None:
+            if self.default is None:
+                return DataCollection()
+            else:
+                meter = self.default
+        return meter.evaluate(data_collection)
 
 class For(MeterBase):
     """ Operates like a python-style for loop, looping over parameters to feed
@@ -150,7 +153,7 @@ class For(MeterBase):
     Parameters
     ----------
     variable : str
-        Name for an object; will be appended to the auxiliary_inputs
+        Name for an object; will be appended to the data collection
         supplied to the meter on each iteration of the loop.
 
         E.g.
@@ -213,8 +216,6 @@ class For(MeterBase):
         out : dict
             Contains the results of each meter run.
         """
-
-        original_aux_inputs = self.meter.auxiliary_inputs
         output_data_collection = DataCollection()
         for i in data_collection.get_data(**self.iterable).value:
             variable_name = self.variable["name"]

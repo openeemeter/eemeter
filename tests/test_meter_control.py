@@ -30,7 +30,7 @@ def test_sequential_meter():
     data_collection = DataCollection(value=10)
     result = meter.evaluate(data_collection)
 
-    assert result.get_data("value").value == 10
+    assert result.get_data("value") is None
     assert result.get_data("value1").value == 10
     assert result.get_data("result").value == 10
     assert result.get_data("result1").value == 10

@@ -43,6 +43,7 @@ from datetime import timedelta
 import pytz
 
 from numpy.testing import assert_allclose
+import numpy as np
 
 RTOL = 1e-2
 ATOL = 1e-2
@@ -380,15 +381,11 @@ def test_recent_reading_meter():
     mixed_cd = ConsumptionData([recent_record,old_record],
             "electricity", "kWh", record_type="arbitrary")
 
-    meter = RecentReadingMeter(n_days=365)
-    assert not meter.evaluate_raw(consumption_data=no_cd)["recent_reading"]
-    assert not meter.evaluate_raw(consumption_data=old_cd)["recent_reading"]
-    assert meter.evaluate_raw(consumption_data=recent_cd)["recent_reading"]
-    assert meter.evaluate_raw(consumption_data=mixed_cd)["recent_reading"]
-
-    since_date = datetime.now(pytz.utc) + timedelta(days=1000)
-    assert not meter.evaluate_raw(consumption_data=mixed_cd,
-            since_date=since_date)["recent_reading"]
+    meter = RecentReadingMeter()
+    assert meter.evaluate_raw(consumption_data=no_cd)["n_days"] == np.inf
+    assert meter.evaluate_raw(consumption_data=old_cd)["n_days"] == 31
+    assert meter.evaluate_raw(consumption_data=recent_cd)["n_days"] == 30
+    assert meter.evaluate_raw(consumption_data=mixed_cd)["n_days"] == 30
 
 def test_average_daily_usage(generated_consumption_data_1):
     cd,params = generated_consumption_data_1

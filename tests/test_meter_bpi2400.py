@@ -97,7 +97,6 @@ def test_bpi2400(bpi_2400_1,
                 rtol=RTOL, atol=ATOL)
         assert_allclose(result_elec.get_data('hdd_tmy').value, normal_hdd,
                 rtol=RTOL, atol=ATOL)
-
         assert_allclose(result.get_data("temp_sensitivity_params_bpi2400").value,
                 params, rtol=RTOL,atol=ATOL)
         assert_allclose(result.get_data('average_daily_usages_bpi2400').value,

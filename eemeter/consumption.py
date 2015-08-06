@@ -446,7 +446,7 @@ class ConsumptionData(object):
             filtered_estimated = self.estimated[period.start:].copy()
         else:
             filtered_data = self.data[period.start:period.end].copy()
-            filtered_estimated = self.data[period.start:period.end].copy()
+            filtered_estimated = self.estimated[period.start:period.end].copy()
         if self.freq is None and filtered_data.shape[0] > 0:
             filtered_data.iloc[-1] = np.nan
             filtered_estimated.iloc[-1] = np.nan

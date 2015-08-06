@@ -12,11 +12,6 @@ class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(MeterBase):
         super(BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria, self).__init__(**kwargs)
         self.temperature_unit_str = temperature_unit_str
         self.meter = load(self._meter_yaml())
-        self.input_mapping = {
-                "consumption_data": {},
-                "weather_source": {},
-                "weather_normal_source": {},
-            }
 
     def _meter_yaml(self):
 
@@ -67,9 +62,10 @@ class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(MeterBase):
                         output_mapping: {{ normal_annual_cdd: {{ name: cdd_tmy }} }},
                     }},
                     !obj:eemeter.meter.RecentReadingMeter {{
-                        n_days: 360,
-                        input_mapping: {{ consumption_data: {{ name: consumption_data_no_estimated }} }},
-                        output_mapping: {{ recent_reading: {{ name: has_recent_reading }} }}
+                        input_mapping: {{
+                            consumption_data: {{ name: consumption_data_no_estimated }}
+                        }},
+                        output_mapping: {{ n_days: {{ name: n_days_since_reading }} }}
                     }},
                     !obj:eemeter.meter.TimeSpanMeter {{
                         input_mapping: {{ consumption_data: {{ name: consumption_data_no_estimated }} }},
@@ -228,6 +224,7 @@ class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(MeterBase):
                                     [time_span, ">", 1, 184, 0, spans_184_days],
                                     [total_hdd, ">", .5, hdd_tmy, 0, has_enough_total_hdd],
                                     [total_cdd, ">", .5, cdd_tmy, 0, has_enough_total_cdd],
+                                    [n_days_since_reading, "<", 1, 360, 0, has_recent_reading],
                                     [n_periods_high_hdd_per_day, ">=", 1, 1, 0, has_enough_periods_with_high_hdd_per_day],
                                     [n_periods_low_hdd_per_day, ">=", 1, 1, 0, has_enough_periods_with_low_hdd_per_day],
                                     [n_periods_high_cdd_per_day, ">=", 1, 1, 0, has_enough_periods_with_high_cdd_per_day],
@@ -240,6 +237,7 @@ class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(MeterBase):
                                     hdd_tmy: {{}},
                                     total_cdd: {{}},
                                     cdd_tmy: {{}},
+                                    n_days_since_reading: {{}},
                                     n_periods_high_hdd_per_day: {{}},
                                     n_periods_low_hdd_per_day: {{}},
                                     n_periods_high_cdd_per_day: {{}},
@@ -251,6 +249,7 @@ class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(MeterBase):
                                     spans_184_days: {{}},
                                     has_enough_total_hdd: {{}},
                                     has_enough_total_cdd: {{}},
+                                    has_recent_reading: {{}},
                                     has_enough_periods_with_high_hdd_per_day: {{}},
                                     has_enough_periods_with_low_hdd_per_day: {{}},
                                     has_enough_periods_with_high_cdd_per_day: {{}},
@@ -263,6 +262,7 @@ class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(MeterBase):
                                     [time_span, ">=", 1, 330, 0, spans_330_days],
                                     [time_span, ">", 1, 184, 0, spans_184_days],
                                     [total_hdd, ">", .5, hdd_tmy, 0, has_enough_total_hdd],
+                                    [n_days_since_reading, "<", 1, 360, 0, has_recent_reading],
                                     [n_periods_high_hdd_per_day, ">=", 1, 1, 0, has_enough_periods_with_high_hdd_per_day],
                                     [n_periods_low_hdd_per_day, ">=", 1, 1, 0, has_enough_periods_with_low_hdd_per_day],
                                     [cvrmse, "<=", 1, 20, 0, meets_cvrmse_limit],
@@ -271,6 +271,7 @@ class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(MeterBase):
                                     time_span: {{}},
                                     total_hdd: {{}},
                                     hdd_tmy: {{}},
+                                    n_days_since_reading: {{}},
                                     n_periods_high_hdd_per_day: {{}},
                                     n_periods_low_hdd_per_day: {{}},
                                     cvrmse: {{}},
@@ -285,6 +286,7 @@ class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(MeterBase):
                                     spans_184_days: {{}},
                                     has_enough_total_hdd: {{}},
                                     has_enough_total_cdd: {{}},
+                                    has_recent_reading: {{}},
                                     has_enough_periods_with_high_hdd_per_day: {{}},
                                     has_enough_periods_with_low_hdd_per_day: {{}},
                                     has_enough_periods_with_high_cdd_per_day: {{}},
@@ -604,7 +606,9 @@ class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(MeterBase):
               consumption data periods.
 
         """
-        return self.meter.evaluate(data_collection)
+        outputs = self.meter.evaluate(data_collection)
+        outputs.add_tags(self.tagspace)
+        return outputs
 
     def _get_child_inputs(self):
         return self.meter.get_inputs()

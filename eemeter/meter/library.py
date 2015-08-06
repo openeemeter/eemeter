@@ -8,6 +8,7 @@ import pytz
 
 from itertools import chain
 import numpy as np
+import pandas as pd
 
 class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
     """Optimizes temperature senstivity parameter choices.
@@ -527,21 +528,19 @@ class NPeriodsMeetingCDDPerDayThreshold(MeterBase):
         return {"n_periods": n_periods}
 
 class RecentReadingMeter(MeterBase):
-    """Evaluates whether or not there was a meter reading within the last n
-    days
+    """ Finds the number of days since the most recent reading.
 
     Parameters
     ----------
     n_days : int
         The target number of days since the most recent reading.
     """
-    def __init__(self, n_days, **kwargs):
+    def __init__(self, **kwargs):
         super(RecentReadingMeter, self).__init__(**kwargs)
-        self.n_days = n_days
 
-    def evaluate_raw(self, consumption_data, since_date=None, **kwargs):
-        """Evaluates the number of days since the last reading against the
-        threshold.
+    def evaluate_raw(self, consumption_data, **kwargs):
+        """Evaluates the number of days since the last non-estimated, non-null
+        reading against the threshold.
 
         Parameters
         ----------
@@ -556,11 +555,13 @@ class RecentReadingMeter(MeterBase):
             A dictionary containing a single item with the key "recent_reading"
             containing True if the most recent reading is within the threshold.
         """
-        if since_date is None:
-            since_date = datetime.now(pytz.utc)
-        dt_target = since_date - timedelta(days=self.n_days)
-        recent_reading = any(consumption_data.data.index > dt_target)
-        return {"recent_reading": recent_reading}
+        if consumption_data.data.shape[0] > 0:
+            reverse_data = consumption_data.data[::-1]
+            for i,val in reverse_data.iteritems():
+                if not pd.isnull(val) and not consumption_data.estimated[i]:
+                    n_days = (reverse_data.index[0] - i).days
+                    return {"n_days": n_days}
+        return {"n_days": np.inf }
 
 class AverageDailyUsage(MeterBase):
     """Computes average daily usage given consumption.

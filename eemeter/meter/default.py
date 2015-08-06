@@ -156,30 +156,17 @@ class DefaultResidentialMeter(MeterBase):
                             sequence: [
                                 !obj:eemeter.meter.BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria {{
                                     temperature_unit_str: {temp_unit},
-                                    input_mapping: {{
-                                        consumption_data: {{}},
-                                        weather_source: {{}},
-                                        weather_normal_source: {{}},
-                                    }},
-                                    output_mapping: {{
-                                        meets_model_calibration_utility_bill_criteria: {{ }},
-                                    }},
+                                    tagspace: ["bpi2400"],
                                 }},
                                 !obj:eemeter.meter.Condition {{
                                     condition: {{ name: meets_model_calibration_utility_bill_criteria }},
                                     success: !obj:eemeter.meter.Sequence {{
                                         sequence: [
-                                            !obj:eemeter.meter.ConsumptionDataAttributes {{
-                                                input_mapping: {{
-                                                    consumption_data: {{}},
-                                                }},
-                                                output_mapping: {{
-                                                    fuel_type: {{ }},
-                                                    unit_name: {{ name: energy_unit_str }},
-                                                }},
-                                            }},
                                             !obj:eemeter.meter.Switch {{
-                                                target: fuel_type,
+                                                target: {{
+                                                    name: fuel_type,
+                                                    tags: ["bpi2400"]
+                                                }},
                                                 cases: {{
                                                     electricity: !obj:eemeter.meter.Sequence {{
                                                         sequence: [
@@ -271,26 +258,26 @@ class DefaultResidentialMeter(MeterBase):
                                                     }},
                                                 }},
                                             }},
+                                            !obj:eemeter.meter.RMSE {{
+                                                input_mapping: {{
+                                                    y: {{ name: average_daily_usages }},
+                                                    y_hat: {{ name: estimated_average_daily_usages }},
+                                                }},
+                                                output_mapping: {{
+                                                    rmse: {{}},
+                                                }}
+                                            }},
+                                            !obj:eemeter.meter.RSquared {{
+                                                input_mapping: {{
+                                                    y: {{ name: average_daily_usages }},
+                                                    y_hat: {{ name: estimated_average_daily_usages }},
+                                                }},
+                                                output_mapping: {{
+                                                    r_squared: {{}},
+                                                }}
+                                            }},
                                         ],
                                     }},
-                                }},
-                                !obj:eemeter.meter.RMSE {{
-                                    input_mapping: {{
-                                        y: {{ name: average_daily_usages }},
-                                        y_hat: {{ name: estimated_average_daily_usages }},
-                                    }},
-                                    output_mapping: {{
-                                        rmse: {{}},
-                                    }}
-                                }},
-                                !obj:eemeter.meter.RSquared {{
-                                    input_mapping: {{
-                                        y: {{ name: average_daily_usages }},
-                                        y_hat: {{ name: estimated_average_daily_usages }},
-                                    }},
-                                    output_mapping: {{
-                                        r_squared: {{}},
-                                    }}
                                 }},
                             ]
                         }},
