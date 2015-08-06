@@ -69,10 +69,13 @@ class ConsumptionData(object):
         The value of a single pulse. Used for record_type="pulse".
     name : str, default None
         An identifier for this instance of Consumption Data.
+    data : str, default None
+        Pre-parsed consumption data. Please also set records=None.
     """
 
-    def __init__(self, records, fuel_type, unit_name, record_type="interval",
-            freq=None, pulse_value=None, name=None):
+    def __init__(self, records, fuel_type, unit_name,
+            record_type="interval", freq=None, pulse_value=None, name=None,
+            data=None, estimated=None):
 
         # verify and save unit name
         if unit_name not in ["kWh", "therm"]:
@@ -92,6 +95,40 @@ class ConsumptionData(object):
         self.freq = freq
         self.pulse_value = pulse_value
         self.name = name
+
+        # import data directly (skipping record parsing) if available.
+        if data is not None:
+            if not records is None:
+                message = "Please provide either data or records, but not both."
+                raise ValueError(message)
+            if estimated is None:
+                message = "Please provide the the `estimated` attribute," \
+                        " which contains boolean values indicating whether" \
+                        " or not the data is estimated. Should have the same" \
+                        " index as `data`"
+                raise ValueError(message)
+            self.data = data
+            self.estimated = estimated
+
+            # set frequency, if supplied.
+            if freq is None:
+                self.freq_timedelta = None
+            elif freq[-1] not in ["D","H","T","S"]:
+                # Improper configuration
+                message = 'Invalid frequency specification: "{}".'.format(freq)
+                raise ValueError(message)
+            else:
+                try:
+                    dummy_start_date = datetime(1970,1,1,tzinfo=pytz.utc)
+                    dummy_date_range = pd.date_range(dummy_start_date,
+                            periods=2, freq=freq)
+                    freq_timedelta = dummy_date_range[1] - dummy_date_range[0]
+                except ValueError:
+                    message = 'Invalid frequency specification: "{}".'\
+                            .format(freq)
+                    raise ValueError(message)
+                self.freq_timedelta = freq_timedelta
+            return
 
         # import records
         if "interval" == record_type:
@@ -397,14 +434,26 @@ class ConsumptionData(object):
 
     def filter_by_period(self, period):
         filtered_data = None
+        filtered_estimated = None
         if period.start is None and period.end is None:
             filtered_data = self.data.copy()
+            filtered_estimated = self.estimated.copy()
         elif period.start is None and period.end is not None:
             filtered_data = self.data[:period.end].copy()
+            filtered_estimated = self.estimated[:period.end].copy()
         elif period.start is not None and period.end is None:
             filtered_data = self.data[period.start:].copy()
+            filtered_estimated = self.estimated[period.start:].copy()
         else:
             filtered_data = self.data[period.start:period.end].copy()
+            filtered_estimated = self.data[period.start:period.end].copy()
         if self.freq is None and filtered_data.shape[0] > 0:
             filtered_data.iloc[-1] = np.nan
-        return filtered_data
+            filtered_estimated.iloc[-1] = np.nan
+        filtered_consumption_data = ConsumptionData(
+                records=None,
+                fuel_type=self.fuel_type,
+                unit_name=self.unit_name,
+                data=filtered_data,
+                estimated=filtered_estimated)
+        return filtered_consumption_data

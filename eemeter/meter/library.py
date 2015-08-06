@@ -1,5 +1,6 @@
 from .base import MeterBase
 
+from eemeter.consumption import ConsumptionData
 from datetime import datetime
 from datetime import timedelta
 from eemeter.evaluation import Period
@@ -673,7 +674,6 @@ class ConsumptionDataAttributes(MeterBase):
         }
         return attributes
 
-
 class ProjectAttributes(MeterBase):
     """ Outputs the attributes of the Project object passed in.
     """
@@ -729,12 +729,16 @@ class ProjectConsumptionDataBaselineReporting(MeterBase):
         consumption = []
 
         for c in project.consumption:
+            baseline_consumption_data = \
+                    c.filter_by_period(project.baseline_period)
             baseline_data = {
-                "value": c.filter_by_period(project.baseline_period),
+                "value": baseline_consumption_data,
                 "tags": [c.fuel_type, "baseline"]
             }
+            reporting_consumption_data = \
+                    c.filter_by_period(project.reporting_period)
             reporting_data = {
-                "value": c.filter_by_period(project.reporting_period),
+                "value": reporting_consumption_data,
                 "tags": [c.fuel_type, "reporting"]
             }
             consumption.append(baseline_data)

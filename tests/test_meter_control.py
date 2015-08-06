@@ -126,11 +126,14 @@ def test_switch():
 def test_for():
     meter_yaml = """
         !obj:eemeter.meter.For {
-            variable_name: value,
+            variable: {
+                name: value,
+            },
             iterable: {
                 name: iterable,
             },
             meter: !obj:eemeter.meter.DummyMeter {
+                input_mapping: { value: {} },
                 output_mapping: { result: {} },
             }
         }

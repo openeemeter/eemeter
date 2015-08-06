@@ -138,92 +138,161 @@ class DefaultResidentialMeter(MeterBase):
         meter_yaml = """
             !obj:eemeter.meter.Sequence {{
                 sequence: [
-                    !obj:eemeter.meter.BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria {{
-                        temperature_unit_str: {temp_unit}
+                    !obj:eemeter.meter.ProjectAttributes {{
+                        input_mapping: {{ project: {{}} }},
+                        output_mapping: {{
+                            weather_source: {{}},
+                            weather_normal_source: {{}},
+                        }},
                     }},
-                    !obj:eemeter.meter.ForEachFuelType {{
-                        fuel_types: [electricity, natural_gas],
-                        fuel_unit_strs: [kWh, therms],
-                        gathered_inputs: [
-                            meets_model_calibration_utility_bill_criteria,
-                        ],
-                        meter: !obj:eemeter.meter.Condition {{
-                            condition_parameter: meets_model_calibration_utility_bill_criteria_current_fuel,
-                            success: !obj:eemeter.meter.Sequence &core_meter {{
-                                sequence: [
-                                    !obj:eemeter.meter.Switch {{
-                                        target: fuel_type,
-                                        cases: {{
-                                            electricity: !obj:eemeter.meter.Sequence {{
-                                                sequence: [
-                                                    !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {{
-                                                        temperature_unit_str: {temp_unit},
-                                                        model: !obj:eemeter.models.TemperatureSensitivityModel &electricity_model {{
-                                                            cooling: True,
-                                                            heating: True,
-                                                            initial_params: {{
-                                                                base_consumption: 0,
-                                                                heating_slope: 0,
-                                                                cooling_slope: 0,
-                                                                heating_reference_temperature: {h_ref_x0},
-                                                                cooling_reference_temperature: {c_ref_x0},
-                                                            }},
-                                                            param_bounds: {{
-                                                                base_consumption: [-20,80],
-                                                                heating_slope: [0,{e_h_slope_h}],
-                                                                cooling_slope: [0,{e_c_slope_h}],
-                                                                heating_reference_temperature: [{h_ref_l},{h_ref_h}],
-                                                                cooling_reference_temperature: [{c_ref_l},{c_ref_h}],
-                                                            }},
-                                                        }},
-                                                    }},
-                                                    !obj:eemeter.meter.AnnualizedUsageMeter {{
-                                                        temperature_unit_str: {temp_unit},
-                                                        model: *electricity_model,
-                                                    }},
-                                                ]
+                    !obj:eemeter.meter.ProjectConsumptionDataBaselineReporting {{
+                        input_mapping: {{ project: {{}} }},
+                        output_mapping: {{ consumption: {{}} }}
+                    }},
+                    !obj:eemeter.meter.For {{
+                        variable: {{ name: consumption_data }},
+                        iterable: {{ name: consumption }},
+                        meter: !obj:eemeter.meter.Sequence {{
+                            sequence: [
+                                !obj:eemeter.meter.BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria {{
+                                    temperature_unit_str: {temp_unit},
+                                    input_mapping: {{
+                                        consumption_data: {{}},
+                                        weather_source: {{}},
+                                        weather_normal_source: {{}},
+                                    }},
+                                    output_mapping: {{
+                                        meets_model_calibration_utility_bill_criteria: {{ }},
+                                    }},
+                                }},
+                                !obj:eemeter.meter.Condition {{
+                                    condition: {{ name: meets_model_calibration_utility_bill_criteria }},
+                                    success: !obj:eemeter.meter.Sequence {{
+                                        sequence: [
+                                            !obj:eemeter.meter.ConsumptionDataAttributes {{
+                                                input_mapping: {{
+                                                    consumption_data: {{}},
+                                                }},
+                                                output_mapping: {{
+                                                    fuel_type: {{ }},
+                                                    unit_name: {{ name: energy_unit_str }},
+                                                }},
                                             }},
-                                            natural_gas: !obj:eemeter.meter.Sequence {{
-                                                sequence: [
-                                                    !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {{
-                                                        temperature_unit_str: {temp_unit},
-                                                        model: !obj:eemeter.models.TemperatureSensitivityModel &natural_gas_model {{
-                                                            cooling: False,
-                                                            heating: True,
-                                                            initial_params: {{
-                                                                base_consumption: 0,
-                                                                heating_slope: 0,
-                                                                heating_reference_temperature: {h_ref_x0},
+                                            !obj:eemeter.meter.Switch {{
+                                                target: fuel_type,
+                                                cases: {{
+                                                    electricity: !obj:eemeter.meter.Sequence {{
+                                                        sequence: [
+                                                            !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {{
+                                                                temperature_unit_str: {temp_unit},
+                                                                model: !obj:eemeter.models.TemperatureSensitivityModel &electricity_model {{
+                                                                    cooling: True,
+                                                                    heating: True,
+                                                                    initial_params: {{
+                                                                        base_consumption: 0,
+                                                                        heating_slope: 0,
+                                                                        cooling_slope: 0,
+                                                                        heating_reference_temperature: {h_ref_x0},
+                                                                        cooling_reference_temperature: {c_ref_x0},
+                                                                    }},
+                                                                    param_bounds: {{
+                                                                        base_consumption: [-20,80],
+                                                                        heating_slope: [0,{e_h_slope_h}],
+                                                                        cooling_slope: [0,{e_c_slope_h}],
+                                                                        heating_reference_temperature: [{h_ref_l},{h_ref_h}],
+                                                                        cooling_reference_temperature: [{c_ref_l},{c_ref_h}],
+                                                                    }},
+                                                                }},
+                                                                input_mapping: {{
+                                                                    consumption_data: {{}},
+                                                                    weather_source: {{}},
+                                                                    energy_unit_str: {{}},
+                                                                }},
+                                                                output_mapping: {{
+                                                                    temp_sensitivity_params: {{ name: model_params }},
+                                                                    average_daily_usages: {{}},
+                                                                    estimated_average_daily_usages: {{}},
+                                                                }},
                                                             }},
-                                                            param_bounds: {{
-                                                                base_consumption: [-20,80],
-                                                                heating_slope: [0,{n_g_h_slope_h}],
-                                                                heating_reference_temperature: [{h_ref_l},{h_ref_h}],
+                                                            !obj:eemeter.meter.AnnualizedUsageMeter {{
+                                                                temperature_unit_str: {temp_unit},
+                                                                model: *electricity_model,
+                                                                input_mapping: {{
+                                                                    model_params: {{}},
+                                                                    weather_normal_source: {{}},
+                                                                }},
+                                                                output_mapping: {{
+                                                                    annualized_usage: {{}},
+                                                                }},
                                                             }},
-                                                        }},
+                                                        ]
                                                     }},
-                                                    !obj:eemeter.meter.AnnualizedUsageMeter {{
-                                                        temperature_unit_str: {temp_unit},
-                                                        model: *natural_gas_model,
+                                                    natural_gas: !obj:eemeter.meter.Sequence {{
+                                                        sequence: [
+                                                            !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {{
+                                                                temperature_unit_str: {temp_unit},
+                                                                model: !obj:eemeter.models.TemperatureSensitivityModel &natural_gas_model {{
+                                                                    cooling: False,
+                                                                    heating: True,
+                                                                    initial_params: {{
+                                                                        base_consumption: 0,
+                                                                        heating_slope: 0,
+                                                                        heating_reference_temperature: {h_ref_x0},
+                                                                    }},
+                                                                    param_bounds: {{
+                                                                        base_consumption: [-20,80],
+                                                                        heating_slope: [0,{n_g_h_slope_h}],
+                                                                        heating_reference_temperature: [{h_ref_l},{h_ref_h}],
+                                                                    }},
+                                                                }},
+                                                                input_mapping: {{
+                                                                    consumption_data: {{}},
+                                                                    weather_source: {{}},
+                                                                    energy_unit_str: {{}},
+                                                                }},
+                                                                output_mapping: {{
+                                                                    temp_sensitivity_params: {{ name: model_params }},
+                                                                    average_daily_usages: {{}},
+                                                                    estimated_average_daily_usages: {{}},
+                                                                }},
+                                                            }},
+                                                            !obj:eemeter.meter.AnnualizedUsageMeter {{
+                                                                temperature_unit_str: {temp_unit},
+                                                                model: *natural_gas_model,
+                                                                input_mapping: {{
+                                                                    model_params: {{}},
+                                                                    weather_normal_source: {{}},
+                                                                }},
+                                                                output_mapping: {{
+                                                                    annualized_usage: {{}},
+                                                                }},
+                                                            }},
+                                                        ]
                                                     }},
-                                                ]
+                                                }},
                                             }},
-                                        }},
+                                        ],
                                     }},
-                                    !obj:eemeter.meter.RMSE {{
-                                        input_mapping: {{
-                                            average_daily_usages: y,
-                                            estimated_average_daily_usages: y_hat,
-                                        }}
+                                }},
+                                !obj:eemeter.meter.RMSE {{
+                                    input_mapping: {{
+                                        y: {{ name: average_daily_usages }},
+                                        y_hat: {{ name: estimated_average_daily_usages }},
                                     }},
-                                    !obj:eemeter.meter.RSquared {{
-                                        input_mapping: {{
-                                            average_daily_usages: y,
-                                            estimated_average_daily_usages: y_hat,
-                                        }}
+                                    output_mapping: {{
+                                        rmse: {{}},
+                                    }}
+                                }},
+                                !obj:eemeter.meter.RSquared {{
+                                    input_mapping: {{
+                                        y: {{ name: average_daily_usages }},
+                                        y_hat: {{ name: estimated_average_daily_usages }},
                                     }},
-                                ],
-                            }},
+                                    output_mapping: {{
+                                        r_squared: {{}},
+                                    }}
+                                }},
+                            ]
                         }},
                     }},
                 ]
@@ -241,7 +310,7 @@ class DefaultResidentialMeter(MeterBase):
                        )
         return meter_yaml
 
-    def evaluate_mapped_inputs(self,**kwargs):
+    def evaluate(self, data_collection):
         """PRISM-style evaluation of temperature sensitivity and
         weather-normalized annual consumption (NAC) at the single-project
         level.
@@ -522,7 +591,7 @@ class DefaultResidentialMeter(MeterBase):
               (degF or degC)]
 
         """
-        return self.meter.evaluate(**kwargs)
+        return self.meter.evaluate(data_collection)
 
     def _get_child_inputs(self):
         return self.meter.get_inputs()

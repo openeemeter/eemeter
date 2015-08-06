@@ -481,33 +481,33 @@ def test_consumption_data_total_period_arbitrary(
 def test_consumption_data_filter_by_period_arbitrary(
         consumption_data_kWh_arbitrary):
     period = Period(datetime(2015,1,1), datetime(2015,1,3))
-    filtered_data = consumption_data_kWh_arbitrary.filter_by_period(period)
+    filtered_data = consumption_data_kWh_arbitrary.filter_by_period(period).data
     assert_allclose(filtered_data, np.array([1,1,np.nan]),
             rtol=RTOL, atol=ATOL)
     assert filtered_data.index[0] == datetime(2015,1,1)
     assert filtered_data.index[2] == datetime(2015,1,3)
 
     period = Period(datetime(2014,1,1), datetime(2014,1,3,1))
-    filtered_data = consumption_data_kWh_arbitrary.filter_by_period(period)
+    filtered_data = consumption_data_kWh_arbitrary.filter_by_period(period).data
     assert_allclose(filtered_data, [],
             rtol=RTOL, atol=ATOL)
 
     period = Period(None, datetime(2015,1,3))
-    filtered_data = consumption_data_kWh_arbitrary.filter_by_period(period)
+    filtered_data = consumption_data_kWh_arbitrary.filter_by_period(period).data
     assert_allclose(filtered_data, np.array([1,1,np.nan]),
             rtol=RTOL, atol=ATOL)
     assert filtered_data.index[0] == datetime(2015,1,1)
     assert filtered_data.index[2] == datetime(2015,1,3)
 
     period = Period(datetime(2015,1,9),None)
-    filtered_data = consumption_data_kWh_arbitrary.filter_by_period(period)
+    filtered_data = consumption_data_kWh_arbitrary.filter_by_period(period).data
     assert_allclose(filtered_data, np.array([1,1,np.nan]),
             rtol=RTOL, atol=ATOL)
     assert filtered_data.index[0] == datetime(2015,1,9)
     assert filtered_data.index[2] == datetime(2015,1,11)
 
     period = Period(None,None)
-    filtered_data = consumption_data_kWh_arbitrary.filter_by_period(period)
+    filtered_data = consumption_data_kWh_arbitrary.filter_by_period(period).data
     assert_allclose(filtered_data, np.array([1,1,1,1,1,1,1,1,1,1,np.nan]),
             rtol=RTOL, atol=ATOL)
     assert filtered_data.index[0] == datetime(2015,1,1)
@@ -517,34 +517,81 @@ def test_consumption_data_filter_by_period_interval(
         consumption_data_kWh_interval):
 
     period = Period(datetime(2015,1,1), datetime(2015,1,3))
-    filtered_data = consumption_data_kWh_interval.filter_by_period(period)
+    filtered_data = consumption_data_kWh_interval.filter_by_period(period).data
     assert_allclose(filtered_data, np.array([1,1,1]),
             rtol=RTOL, atol=ATOL)
     assert filtered_data.index[0] == datetime(2015,1,1)
     assert filtered_data.index[2] == datetime(2015,1,3)
 
     period = Period(datetime(2014,1,1), datetime(2014,1,3,1))
-    filtered_data = consumption_data_kWh_interval.filter_by_period(period)
+    filtered_data = consumption_data_kWh_interval.filter_by_period(period).data
     assert_allclose(filtered_data, [],
             rtol=RTOL, atol=ATOL)
 
     period = Period(None, datetime(2015,1,3))
-    filtered_data = consumption_data_kWh_interval.filter_by_period(period)
+    filtered_data = consumption_data_kWh_interval.filter_by_period(period).data
     assert_allclose(filtered_data, np.array([1,1,1]),
             rtol=RTOL, atol=ATOL)
     assert filtered_data.index[0] == datetime(2015,1,1)
     assert filtered_data.index[2] == datetime(2015,1,3)
 
     period = Period(datetime(2015,1,9),None)
-    filtered_data = consumption_data_kWh_interval.filter_by_period(period)
+    filtered_data = consumption_data_kWh_interval.filter_by_period(period).data
     assert_allclose(filtered_data, np.array([1,1]),
             rtol=RTOL, atol=ATOL)
     assert filtered_data.index[0] == datetime(2015,1,9)
     assert filtered_data.index[1] == datetime(2015,1,10)
 
     period = Period(None,None)
-    filtered_data = consumption_data_kWh_interval.filter_by_period(period)
+    filtered_data = consumption_data_kWh_interval.filter_by_period(period).data
     assert_allclose(filtered_data, np.array([1,1,1,1,1,1,1,1,1,1]),
             rtol=RTOL, atol=ATOL)
     assert filtered_data.index[0] == datetime(2015,1,1)
     assert filtered_data.index[9] == datetime(2015,1,10)
+
+def test_consumption_data_init_from_interval_data(
+        consumption_data_kWh_interval):
+    cd = ConsumptionData(records=None,
+            fuel_type=consumption_data_kWh_interval.fuel_type,
+            unit_name=consumption_data_kWh_interval.unit_name,
+            data=consumption_data_kWh_interval.data,
+            estimated=consumption_data_kWh_interval.estimated,
+            freq=consumption_data_kWh_interval.freq)
+    cd.freq_timedelta is not None
+
+    with pytest.raises(ValueError):
+        cd = ConsumptionData(records=None,
+                fuel_type=consumption_data_kWh_interval.fuel_type,
+                unit_name=consumption_data_kWh_interval.unit_name,
+                data=consumption_data_kWh_interval.data,
+                freq=consumption_data_kWh_interval.freq)
+
+    with pytest.raises(ValueError):
+        cd = ConsumptionData(records=[],
+                fuel_type=consumption_data_kWh_interval.fuel_type,
+                unit_name=consumption_data_kWh_interval.unit_name,
+                data=consumption_data_kWh_interval.data,
+                estimated=consumption_data_kWh_interval.estimated,
+                freq=consumption_data_kWh_interval.freq)
+
+def test_consumption_data_init_from_arbitrary_data(
+        consumption_data_kWh_arbitrary):
+    cd = ConsumptionData(records=None,
+            fuel_type=consumption_data_kWh_arbitrary.fuel_type,
+            unit_name=consumption_data_kWh_arbitrary.unit_name,
+            data=consumption_data_kWh_arbitrary.data,
+            estimated=consumption_data_kWh_arbitrary.estimated)
+    cd.freq_timedelta is None
+
+    with pytest.raises(ValueError):
+        cd = ConsumptionData(records=None,
+                fuel_type=consumption_data_kWh_arbitrary.fuel_type,
+                unit_name=consumption_data_kWh_arbitrary.unit_name,
+                data=consumption_data_kWh_arbitrary.data)
+
+    with pytest.raises(ValueError):
+        cd = ConsumptionData(records=[],
+                fuel_type=consumption_data_kWh_arbitrary.fuel_type,
+                unit_name=consumption_data_kWh_arbitrary.unit_name,
+                data=consumption_data_kWh_arbitrary.data,
+                estimated=consumption_data_kWh_arbitrary.estimated)

@@ -1,4 +1,5 @@
 from eemeter.meter import DefaultResidentialMeter
+from eemeter.meter import DataCollection
 from eemeter.models import TemperatureSensitivityModel
 from eemeter.generator import MonthlyBillingConsumptionGenerator
 from eemeter.generator import generate_monthly_billing_datetimes
@@ -44,6 +45,7 @@ def default_residential_outputs_1(request, gsod_722880_2012_2014_weather_source)
         "cooling_slope": model_params[3],
         "cooling_reference_temperature": model_params[4]
     }
+
     period = Period(datetime(2012,1,1,tzinfo=pytz.utc),
             datetime(2014,12,31,tzinfo=pytz.utc))
     retrofit_start_date = datetime(2013,6,1,tzinfo=pytz.utc)
@@ -81,9 +83,13 @@ def test_default_residential_meter(default_residential_outputs_1,
     meter = DefaultResidentialMeter(temperature_unit_str=temp_unit)
 
     location = Location(station="722880")
-    project = Project(location, consumption_data)
+    baseline_period = Period(datetime(2012,1,1,tzinfo=pytz.utc),retrofit_start_date)
+    reporting_period = Period(retrofit_completion_date, datetime(2014,12,31,tzinfo=pytz.utc))
+    project = Project(location, consumption_data, baseline_period,
+            reporting_period)
 
-    result = meter.evaluate(project=project)
+    data_collection = DataCollection(project=project)
+    result = meter.evaluate(data_collection)
 
     assert_allclose(result['annualized_usage_electricity'], elec_annualized_usage, rtol=RTOL, atol=ATOL)
     assert_allclose(result['average_daily_usages_bpi2400_electricity'],average_daily_usages,rtol=RTOL,atol=ATOL)

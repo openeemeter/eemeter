@@ -11,6 +11,7 @@ __main__ module. (E.g. "!obj:__main__.MyMeter {...}").
 
 from .base import MeterBase
 from eemeter.meter import DataCollection
+from eemeter.meter import DataContainer
 
 class Sequence(MeterBase):
     """Collects and returns a series of meter object evaluation outputs in
@@ -148,9 +149,17 @@ class For(MeterBase):
 
     Parameters
     ----------
-    variable_name : str
+    variable : str
         Name for an object; will be appended to the auxiliary_inputs
         supplied to the meter on each iteration of the loop.
+
+        E.g.
+
+            variable = {
+                "name": "consumption_data",
+                "tags": ["tag1", "tag2"]
+            }
+
     iterable : dict
         Search criterion for an object over which to iterate. The iterable
         itself should be a list of dictionaries with the keys, "value" and
@@ -189,9 +198,9 @@ class For(MeterBase):
 
     """
 
-    def __init__(self, variable_name, iterable, meter, **kwargs):
+    def __init__(self, variable, iterable, meter, **kwargs):
         super(For, self).__init__(**kwargs)
-        self.variable_name = variable_name
+        self.variable = variable
         self.iterable = iterable
         self.meter = meter
 
@@ -205,14 +214,21 @@ class For(MeterBase):
             Contains the results of each meter run.
         """
 
-
         original_aux_inputs = self.meter.auxiliary_inputs
         output_data_collection = DataCollection()
         for i in data_collection.get_data(**self.iterable).value:
-            value = i.get("value")
-            self.meter.auxiliary_inputs = dict(original_aux_inputs.items() + [(self.variable_name, value)])
+            variable_name = self.variable["name"]
+            variable_value = i.get("value")
+            variable_tags = self.variable.get("tags",[])
+            data_container = DataContainer(
+                    name=variable_name,
+                    value=variable_value,
+                    tags=variable_tags)
 
-            outputs = self.meter.evaluate(data_collection)
+            input_data_collection = data_collection.copy()
+            input_data_collection.add_data(data_container)
+
+            outputs = self.meter.evaluate(input_data_collection)
 
             tags = i.get("tags", [])
             outputs.add_tags(tags)

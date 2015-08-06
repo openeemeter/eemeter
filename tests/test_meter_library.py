@@ -453,11 +453,11 @@ def test_project_consumption_baseline_reporting(generated_consumption_data_1):
     project = Project(location,[cd],baseline_period,reporting_period)
     meter = ProjectConsumptionDataBaselineReporting()
     result = meter.evaluate_raw(project=project)
-    assert result["consumption"][0]["value"].index[0] == datetime(2012,1,1)
-    assert result["consumption"][0]["value"].index[17] == datetime(2013,5,25)
+    assert result["consumption"][0]["value"].data.index[0] == datetime(2012,1,1)
+    assert result["consumption"][0]["value"].data.index[17] == datetime(2013,5,25)
     assert result["consumption"][0]["tags"][0] == "electricity"
     assert result["consumption"][0]["tags"][1] == "baseline"
-    assert result["consumption"][1]["value"].index[0] == datetime(2013,6,24)
-    assert result["consumption"][1]["value"].index[18] == datetime(2014,12,16)
+    assert result["consumption"][1]["value"].data.index[0] == datetime(2013,6,24)
+    assert result["consumption"][1]["value"].data.index[18] == datetime(2014,12,16)
     assert result["consumption"][1]["tags"][0] == "electricity"
     assert result["consumption"][1]["tags"][1] == "reporting"
