@@ -59,7 +59,7 @@ class Condition(MeterBase):
     condition : dict
         The search criteria for a parameter containing a boolean value.
 
-        E.g.
+        Example::
 
             {
                 "name": "input1",
@@ -106,7 +106,7 @@ class Switch(MeterBase):
     target : dict
         The search criteria for a parameter on which to switch.
 
-        E.g.
+        Example::
 
             {
                 "name": "input1",
@@ -156,9 +156,9 @@ class For(MeterBase):
         Name for an object; will be appended to the data collection
         supplied to the meter on each iteration of the loop.
 
-        E.g.
+        Example::
 
-            variable = {
+            {
                 "name": "consumption_data",
                 "tags": ["tag1", "tag2"]
             }
@@ -168,14 +168,14 @@ class For(MeterBase):
         itself should be a list of dictionaries with the keys, "value" and
         "tags". The "tags" should be unique for each value.
 
-        E.g.
+        Example::
 
-            iterable = {
+            {
                 "name": "consumption_data_all",
                 "tags": ["tag1", "tag2"]
             }
 
-        Which refers to an DataContainer like the following:
+        Which refers to an DataContainer structured like the following::
 
             {
                 "name": "consumption_data_all",

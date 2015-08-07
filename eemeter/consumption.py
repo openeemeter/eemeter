@@ -15,10 +15,10 @@ class ConsumptionData(object):
 
     Parameters
     ----------
-
     records : list of dicts
         List of records (sorted or unsorted). Each record is a dict
         with the keys "start", "end", "value", "pulse", or "estimated".
+
         - "start", "end", "start" and "end", or "pulse"
           (datetime.datetime) should define the time period.
           See the argument 'record_type' of this object for more
@@ -27,33 +27,185 @@ class ConsumptionData(object):
           the given time period.
         - "estimated" (boolean, optional) should indicate whether or
           not the bill (if relevant) was estimated.
+
+        See `record_type` for details.
+
     fuel_type : str, {"electricity", "natural_gas"}
         The fuel type of the consumption data.
     unit_name : str, {"kWh", "therm"}
         The name of the unit in which the consumption data is given.
     record_type : str, {'interval', 'arbitrary', 'pulse'}
+        The type of records used during initialization.
+
         - 'interval': data at regular time intervals. Records must
           all have the "start" key or must all have the "end" key.
+
+          For example::
+
+              records = [
+                  {
+                      "start": datetime(2014, 1, 1, 0, 0, 0, tzinfo=pytz.utc),
+                      "value": 132,
+                  },
+                  {
+                      "start": datetime(2014, 1, 1, 0, 15, 0,tzinfo=pytz.utc),
+                      "value": 11,
+                  },
+                  {
+                      "start": datetime(2014, 1, 1, 0, 30, 0,tzinfo=pytz.utc),
+                      "value": 28,
+                  },
+                  {
+                      "start": datetime(2014, 1, 1, 0, 45, 0,tzinfo=pytz.utc),
+                      "value": 140,
+                  },
+                  {
+                      "start": datetime(2014, 1, 1, 1, 0, 0,tzinfo=pytz.utc),
+                      "value": 24,
+                  },
+                  ...
+              ]
+
+          For this record type, the `freq` attribute must also be provided.
+
         - 'arbitrary': data at arbitrary non-overlapping intervals.
           Often used for montly billing data. Records must all have
-          the "start" key and the "end" key.
+          the "start" key and the "end" key. Overlaps are not allowed and
+          gaps will be filled with NaN.
+
+          For example::
+
+              records = [
+                  {
+                      "start": datetime(2013, 12, 30, tzinfo=pytz.utc),
+                      "end": datetime(2014, 1, 28, tzinfo=pytz.utc),
+                      "value": 1180,
+                  },
+                  {
+                      "start": datetime(2014, 1, 28, tzinfo=pytz.utc),
+                      "end": datetime(2014, 2, 27, tzinfo=pytz.utc),
+                      "value": 1211,
+                  },
+                  {
+                      "start": datetime(2014, 2, 27, tzinfo=pytz.utc),
+                      "end": datetime(2014, 3, 30, tzinfo=pytz.utc),
+                      "value": 985,
+                  },
+                  {
+                      "start": datetime(2014, 3, 30, tzinfo=pytz.utc),
+                      "end": datetime(2014, 4, 25, tzinfo=pytz.utc),
+                      "value": 848,
+                  },
+                  {
+                      "start": datetime(2014, 4, 25, tzinfo=pytz.utc),
+                      "end": datetime(2014, 5, 27, tzinfo=pytz.utc),
+                      "value": 533,
+                  },
+                  ...
+              ]
+
         - 'arbitrary_start': data at arbitrary non-overlapping intervals.
           Records must all have the "start" key. The last data point
           will be ignored unless an end date is provided for it.
-          This is useful for data dated
-          to future energy use, e.g. billing for delivered fuels.
+          This is useful for data dated to future energy use, e.g. billing for
+          delivered fuels.
+
+          For example::
+
+              records = [
+                  {
+                      "start": datetime(2013, 12, 30, tzinfo=pytz.utc),
+                      "value": 1180,
+                  },
+                  {
+                      "start": datetime(2014, 1, 28, tzinfo=pytz.utc),
+                      "value": 1211,
+                  },
+                  {
+                      "start": datetime(2014, 2, 27, tzinfo=pytz.utc),
+                      "value": 985,
+                  },
+                  {
+                      "start": datetime(2014, 3, 30, tzinfo=pytz.utc),
+                      "value": 848,
+                  },
+                  {
+                      "start": datetime(2014, 4, 25, tzinfo=pytz.utc),
+                      "value": 533,
+                  },
+                  ...
+              ]
+
         - 'arbitrary_end': data at arbitrary non-overlapping intervals.
           Records must all have the "end" key. The first data point
           will be ignored unless a start date is provided for it.
-          This is useful for data dated to past energy use,
-          e.g. electricity or natural gas bills.
+          This is useful for data dated to past energy use, e.g. electricity
+          or natural gas bills.
+
+          Example::
+
+              records = [
+                  {
+                      "end": datetime(2014, 1, 28, tzinfo=pytz.utc),
+                      "value": 1180,
+                  },
+                  {
+                      "end": datetime(2014, 2, 27, tzinfo=pytz.utc),
+                      "value": 1211,
+                  },
+                  {
+                      "end": datetime(2014, 3, 30, tzinfo=pytz.utc),
+                      "value": 985,
+                  },
+                  {
+                      "end": datetime(2014, 4, 25, tzinfo=pytz.utc),
+                      "value": 848,
+                  },
+                  {
+                      "end": datetime(2014, 5, 27, tzinfo=pytz.utc),
+                      "value": 533,
+                  },
+                  ...
+              ]
+
         - 'pulse': data at regular consumption intervals. Records
           must all have the "pulse" key.
+
+          Example::
+
+              records = [
+                  {
+                      "pulse": datetime(2014, 1, 1, 1, 0, 45, tzinfo=pytz.utc),
+                  },
+                  {
+                      "pulse": datetime(2014, 1, 1, 3, 6, 12, tzinfo=pytz.utc),
+                  },
+                  {
+                      "pulse": datetime(2014, 1, 1, 12, 1, 44, tzinfo=pytz.utc),
+                  },
+                  {
+                      "pulse": datetime(2014, 1, 1, 17, 1, 4, tzinfo=pytz.utc),
+                  },
+                  {
+                      "pulse": datetime(2014, 1, 1, 20, 1, 4, tzinfo=pytz.utc),
+                  },
+                  {
+                      "pulse": datetime(2014, 1, 2, 2, 1, 51, tzinfo=pytz.utc),
+                  },
+                  {
+                      "pulse": datetime(2014, 1, 2, 5, 1, 52, tzinfo=pytz.utc),
+                  },
+                  ...
+              ]
+
+          The value at each pulse (`pulse_value`) must also be provided.
+
         - 'billing': Alias for 'arbitrary'.
         - 'billing_start': Alias for 'arbitrary_start'.
         - 'billing_end': Alias for 'arbitrary_end'.
+
     freq : str
-        String representing the frequency of intervals; should be one
+        A string representing the frequency of intervals; should be one
         of the following pandas offset alias options.
         Used for record_type="interval".
 
@@ -70,7 +222,11 @@ class ConsumptionData(object):
     name : str, default None
         An identifier for this instance of Consumption Data.
     data : str, default None
-        Pre-parsed consumption data. Please also set records=None.
+        For initializing with pre-parsed consumption data. Please also set
+        records=None.
+    estimated : str, default None
+        For initializing with pre-parsed estimation data (boolean). Please also
+        set records=None.
     """
 
     def __init__(self, records, fuel_type, unit_name,
@@ -355,12 +511,33 @@ class ConsumptionData(object):
         estimated = pd.Series(estimateds, index=dt_index)
         return data, estimated
 
-    def to(self,unit_name):
+    def to(self, unit_name):
+        """ Converts quantities to a new unit.
+
+        Parameters
+        ----------
+        unit_name : str
+            String describing a unit of energy; uses the pint unit library.
+
+        Returns
+        -------
+        out : np.ndarray
+            Array of consumption values in the new unit.
+
+        """
         old_quantities = Q_(self.data.values, ureg[self.unit_name])
         new_quantities = old_quantities.to(unit_name)
         return new_quantities.magnitude
 
     def periods(self):
+        """ Converts DatetimeIndex (which is timestamp based) to an list of
+        Periods, which have associated start and endtimes.
+
+        Returns
+        -------
+        periods : list of eemeter.evaluation.Period
+            A list of consumption periods.
+        """
         if self.freq_timedelta is None:
             # ignore last period which is NaN and acting as an end point
             periods = [Period(start, end) for start, end in
@@ -372,6 +549,15 @@ class ConsumptionData(object):
             return periods
 
     def average_daily_consumptions(self):
+        """ Computes average daily consumptions.
+
+        Returns
+        -------
+        averages : np.ndarray
+            Array of average values in each period
+        days : np.ndarray
+            Array of number of days in each period
+        """
         if self.freq_timedelta is None:
             # ignore last period which is NaN and acting as an end point
             avgs, n_days = [], []
@@ -390,6 +576,13 @@ class ConsumptionData(object):
             return np.array(avgs), np.array(n_days)
 
     def total_period(self):
+        """ The total period over which consumption data is recorded.
+
+        Returns
+        -------
+        period : eemeter.evaluation.Period
+            The total time span covered by this ConsumptionData instance.
+        """
         if self.data.shape[0] < 1:
             return None
         start_date = self.data.index[0]
@@ -399,10 +592,30 @@ class ConsumptionData(object):
         return Period(start_date, end_date)
 
     def total_days(self):
+        """ The total days over which consumption data is recorded.
+
+        Returns
+        -------
+        total_days : float
+            The total days in the time span covered by this ConsumptionData
+            instance.
+        """
         tdelta = self.total_period().timedelta
         return tdelta.days + tdelta.seconds/8.64e4
 
     def records(self, record_type="arbitrary"):
+        """ Records representing this data (in the format of input records).
+
+        Parameters
+        ----------
+        record_type : str, { "interval", "arbitrary", "pulse", "billing", "arbitrary_start", "billing_start", "arbitrary_end", "billing_end" }
+            Way in which the data should be represented.
+
+        Returns
+        -------
+        records : list of dict
+            Records consistent with the record type.
+        """
         records = []
         if record_type == "interval":
             for i,v in self.data.iteritems():
@@ -433,6 +646,18 @@ class ConsumptionData(object):
         return records
 
     def filter_by_period(self, period):
+        """ Return a new ConsumptionData instance within the period.
+
+        Parameters
+        ----------
+        period : eemeter.evaluation.Period
+            Period within which to get ConsumptionData
+
+        Returns
+        -------
+        consumption_data : eemeter.consumption.ConsumptionData
+            ConsumptionData instance holding data within the requested period.
+        """
         filtered_data = None
         filtered_estimated = None
         if period.start is None and period.end is None:
