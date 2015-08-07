@@ -1,3 +1,5 @@
+.. _eemeter-meter-default:
+
 Default
 -------
 
@@ -33,6 +35,8 @@ Fitness Metrics
     :undoc-members:
     :inherited-members:
     :show-inheritance:
+
+.. _eemeter-meter-control:
 
 Control Flow
 ------------

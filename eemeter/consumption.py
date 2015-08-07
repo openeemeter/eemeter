@@ -682,3 +682,9 @@ class ConsumptionData(object):
                 data=filtered_data,
                 estimated=filtered_estimated)
         return filtered_consumption_data
+
+    def __repr__(self):
+        string = "ConsumptionData({}, {})\n".format(self.fuel_type,
+                self.unit_name)
+        string += self.data.__repr__()
+        return string
