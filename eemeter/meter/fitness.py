@@ -55,11 +55,11 @@ class RMSE(MeterBase):
         return {"rmse": rmse}
 
 class RSquared(MeterBase):
-    """Compute the r^2 metric (coefficient of determination) of observed
+    """Compute the :math:`r^2` metric (coefficient of determination) of observed
     samples and estimated values. Used to measure the fitness of a model.
     """
     def evaluate_raw(self, y, y_hat, **kwargs):
-        """Evaluates the r^2 fitness metric for particular samples
+        """Evaluates the :math:`r^2` fitness metric for particular samples
 
         Parameters
         ----------
@@ -71,7 +71,7 @@ class RSquared(MeterBase):
         Returns
         -------
         out : dict
-            - "r_squared" : the calculated r^2 fitness metric.
+            - "r_squared" : the calculated :math:`r^2` fitness metric.
         """
         y_bar = np.nanmean(y)
         ss_residual = np.nansum( (y - y_hat)**2 )
