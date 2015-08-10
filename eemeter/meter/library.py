@@ -104,7 +104,7 @@ class AnnualizedUsageMeter(MeterBase):
         -------
         out : dict
             - "annualized_usage": annualized usage given temperature
-            sensitivity parameters and weather normals.
+              sensitivity parameters and weather normals.
         """
         daily_temps = weather_normal_source.annual_daily_temperatures(
                 self.temperature_unit_str)
@@ -154,7 +154,6 @@ class GrossSavingsMeter(MeterBase):
         -------
         out : dict
             - "gross_savings": Total cumulative savings over reporting period.
-
         """
         consumption_periods = consumption_data_reporting.periods()
         consumption_reporting = consumption_data_reporting.to(energy_unit_str)[:-1]
@@ -209,7 +208,7 @@ class AnnualizedGrossSavingsMeter(MeterBase):
         -------
         out : dict
             - "annualized_gross_savings": Annualized savings over reporting
-            period.
+              period.
         """
 
         meter = AnnualizedUsageMeter(self.temperature_unit_str, self.model)
@@ -278,7 +277,7 @@ class TotalHDDMeter(MeterBase):
         -------
         out : dict
             - "total_hdd": total heating degree days observed during the time
-            span covered by the consumption_data instance.
+              span covered by the consumption_data instance.
         """
         consumption_periods = consumption_data.periods()
         hdd = weather_source.hdd(consumption_periods,
@@ -317,7 +316,7 @@ class TotalCDDMeter(MeterBase):
         -------
         out : dict
             - "total_cdd": total cooling degree days observed during the time
-            span covered by the consumption_data instance.
+              span covered by the consumption_data instance.
         """
         consumption_periods = consumption_data.periods()
         cdd = weather_source.cdd(consumption_periods,
@@ -353,7 +352,7 @@ class NormalAnnualHDD(MeterBase):
         -------
         out : dict
             - "normal_annual_hdd": the total heating degree days observed
-            during a typical meteorological year
+              during a typical meteorological year
         """
         # year of this annual period will be ignored
         annual_period = Period(datetime(2013,1,1), datetime(2014,1,1))
@@ -389,7 +388,7 @@ class NormalAnnualCDD(MeterBase):
         -------
         out : dict
             - "normal_annual_hdd": the total cooling degree days observed
-            during a typical meteorological year
+              during a typical meteorological year
         """
 
         annual_period = Period(datetime(2013,1,1), datetime(2014,1,1))
@@ -550,8 +549,8 @@ class RecentReadingMeter(MeterBase):
         -------
         out : dict
             - "n_days": The number of days, counted from the last date in the
-            consumption_data object, since a valid (non-null, not estimated)
-            meter reading.
+              consumption_data object, since a valid (non-null, not estimated)
+              meter reading.
         """
         if consumption_data.data.shape[0] > 0:
             reverse_data = consumption_data.data[::-1]
@@ -581,7 +580,7 @@ class AverageDailyUsage(MeterBase):
         -------
         out : dict
             - "average_daily_usages": an array of average usage values of the
-            same length as the consumption_data instance.
+              same length as the consumption_data instance.
         """
         average_daily_consumptions, _ = \
                 consumption_data.average_daily_consumptions()
