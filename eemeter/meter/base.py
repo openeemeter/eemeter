@@ -168,6 +168,8 @@ class MeterBase(object):
 
             def evaluate_raw(self, input_name1, input_name2):
                 ...
+                results = {"output_name1": output1, "output_name2": output2}
+                return results
 
         Behind the scenes, the data will be converted into a format like this
         for evaluation::
