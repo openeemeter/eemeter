@@ -1,6 +1,8 @@
 Open Energy Efficiency Meter
 ============================
 
+![Build status](https://travis-ci.org/impactlab/eemeter.svg?branch=develop)
+
 Documentation
 -------------
 
