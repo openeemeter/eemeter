@@ -302,34 +302,25 @@ class DefaultResidentialMeter(MeterBase):
         weather-normalized annual consumption (NAC) at the single-project
         level.
 
-        **Note:** In order to take advantage of input and output mappings, you
-        should call the method :code:`meter.evaluate(**kwargs)` instead of
-        this method.
-
         .. code-block:: python
 
-            meter.evaluate(consumption_history=consumption_history,
-                           weather_source=weather_source,
-                           weather_normal_source=weather_normal_source)
+            meter = DefaultResidentialMeter()
+            results = meter.evaluate(DataCollection(project=project))
+
 
         Parameters
         ----------
-        consumption_history : eemeter.consumption.ConsumptionHistory
-            All available consumption data for this project and reporting
-            period.
-        weather_source : eemeter.meter.WeatherSourceBase
-            A weather source with data available for at least the duration of
-            the reporting period.
-        weather_normal_source : eemeter.meter.WeatherSourceBase
-            A weather source which additionally provides the function
-            :code:`weather_source.annual_daily_temperatures(unit)`.
+        project : eemeter.project.Project
+            Container for single-project consumption data, baseline/reporting
+            period specifications (retrofit dates), and location data (for
+            matching with weather sources.
 
         Returns
         -------
         out : dict
             The following results are always available:
 
-            - *"average_daily_usages_bpi2400"* : Average usage per
+            - *"average_daily_usages"* : Average usage per
               day (kWh/day) for the consumption periods.
             - *"cdd_tmy"* : Total cooling degree days (base 65 degF or 18.33 degC)
               in a typical meteorological year (TMY3).
@@ -444,7 +435,7 @@ class DefaultResidentialMeter(MeterBase):
               degF or 18.33 degC) observed during the all consumption data
               periods.
 
-            The following results are only available if
+            The following results are only available for specific fuel types if
             :code:`meets_model_calibration_utility_bill_criteria`
             is :code:`True`:
 

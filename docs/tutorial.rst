@@ -157,9 +157,11 @@ the result.
 .. code-block:: python
 
     from eemeter.meter import DummyMeter
+    from eemeter.meter import DataCollection
 
     meter = DummyMeter()
-    result = meter.evaluate(value=10)
+    data_collection = DataCollection(value=10)
+    result = meter.evaluate(data_collection)
 
 .. code-block:: python
 
@@ -167,7 +169,8 @@ the result.
 
     meter_yaml = "!obj:eemeter.meter.DummyMeter {}"
     meter = load(meter_yaml)
-    result = meter.evaluate(value=10)
+    data_collection = DataCollection(value=10)
+    result = meter.evaluate(data_collection)
 
 In the example above, it's clearly more straightforward to directly declare the
 meter using python. However, since meters are so hierarchical, a specification
@@ -176,10 +179,10 @@ of control flow meters (see :ref:`eemeter-meter-control`) like :code:`Sequence`
 and :code:`Condition`, which allow for more flexible meter component
 definitions.
 
-Please see the default meter implementation for an example
-(:ref:`eemeter-meter-default`).
+Please see the default meter implementation for an example of YAML meter
+specification (:ref:`eemeter-meter-default`).
 
-Another benefit to using structured YAML for meter specification is that the
+One benefit to using structured YAML for meter specification is that the
 meter specifications can be stored externally as readable text files.
 
 Caching Weather Data
@@ -202,6 +205,7 @@ this, it is often easiest to extend the API by inheriting from the class
 :code:`eemeter.meter.WeatherSourceBase`. To do this, you need only define the
 method
 
+.. code-block:: python
 
     class MyWeatherSource(WeatherSourceBase):
 

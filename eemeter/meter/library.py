@@ -103,9 +103,8 @@ class AnnualizedUsageMeter(MeterBase):
         Returns
         -------
         out : dict
-            Dictionary with annualized usage given temperature sensitivity
-            parameters and weather normals keyed by the string
-            "annualized_usage"
+            - "annualized_usage": annualized usage given temperature
+            sensitivity parameters and weather normals.
         """
         daily_temps = weather_normal_source.annual_daily_temperatures(
                 self.temperature_unit_str)
@@ -154,7 +153,7 @@ class GrossSavingsMeter(MeterBase):
         Returns
         -------
         out : dict
-            Gross savings keyed by the string "gross_savings"
+            - "gross_savings": Total cumulative savings over reporting period.
 
         """
         consumption_periods = consumption_data_reporting.periods()
@@ -209,7 +208,8 @@ class AnnualizedGrossSavingsMeter(MeterBase):
         Returns
         -------
         out : dict
-            Annualized gross savings keyed by the string "annualized_gross_savings".
+            - "annualized_gross_savings": Annualized savings over reporting
+            period.
         """
 
         meter = AnnualizedUsageMeter(self.temperature_unit_str, self.model)
@@ -243,8 +243,7 @@ class TimeSpanMeter(MeterBase):
         Returns
         -------
         out : dict
-            Contains an item with the key "time_span" containing the number of
-            days covered by the consumption history.
+            - "time_span": the number of days covered by the consumption data.
         """
         return { "time_span": consumption_data.total_days() }
 
@@ -278,8 +277,8 @@ class TotalHDDMeter(MeterBase):
         Returns
         -------
         out : dict
-            Contains a single item with the key "total_hdd" containing the
-            total HDDs observed during the period
+            - "total_hdd": total heating degree days observed during the time
+            span covered by the consumption_data instance.
         """
         consumption_periods = consumption_data.periods()
         hdd = weather_source.hdd(consumption_periods,
@@ -317,8 +316,8 @@ class TotalCDDMeter(MeterBase):
         Returns
         -------
         out : dict
-            Contains a single item with the key "total_cdd" containing the
-            total CDDs observed during the period
+            - "total_cdd": total cooling degree days observed during the time
+            span covered by the consumption_data instance.
         """
         consumption_periods = consumption_data.periods()
         cdd = weather_source.cdd(consumption_periods,
@@ -353,8 +352,8 @@ class NormalAnnualHDD(MeterBase):
         Returns
         -------
         out : dict
-            Contains a single item with the key "normal_annual_hdd" containing the
-            total HDDs observed during the normal year
+            - "normal_annual_hdd": the total heating degree days observed
+            during a typical meteorological year
         """
         # year of this annual period will be ignored
         annual_period = Period(datetime(2013,1,1), datetime(2014,1,1))
@@ -389,8 +388,8 @@ class NormalAnnualCDD(MeterBase):
         Returns
         -------
         out : dict
-            Contains a single item with the key "normal_annual_cdd" containing the
-            total CDDs observed during the normal year
+            - "normal_annual_hdd": the total cooling degree days observed
+            during a typical meteorological year
         """
 
         annual_period = Period(datetime(2013,1,1), datetime(2014,1,1))
@@ -440,8 +439,7 @@ class NPeriodsMeetingHDDPerDayThreshold(MeterBase):
         Returns
         -------
         out : dict
-            A dictionary containing a single item keyed on "n_periods"
-            containing the number of periods meeting the threshold.
+            - "n_periods": the number of periods meeting the threshold.
         """
         n_periods = 0
         periods = consumption_data.periods()
@@ -505,8 +503,7 @@ class NPeriodsMeetingCDDPerDayThreshold(MeterBase):
         Returns
         -------
         out : dict
-            A dictionary containing a single item keyed on "n_periods"
-            containing the number of periods meeting the threshold.
+            - "n_periods": the number of periods meeting the threshold.
         """
         n_periods = 0
         periods = consumption_data.periods()
@@ -552,8 +549,9 @@ class RecentReadingMeter(MeterBase):
         Returns
         -------
         out : dict
-            A dictionary containing a single item with the key "recent_reading"
-            containing True if the most recent reading is within the threshold.
+            - "n_days": The number of days, counted from the last date in the
+            consumption_data object, since a valid (non-null, not estimated)
+            meter reading.
         """
         if consumption_data.data.shape[0] > 0:
             reverse_data = consumption_data.data[::-1]
@@ -582,8 +580,8 @@ class AverageDailyUsage(MeterBase):
         Returns
         -------
         out : dict
-            - "average_daily_usages": an array of average usage
-              values - one value for each consumption of the given fuel type.
+            - "average_daily_usages": an array of average usage values of the
+            same length as the consumption_data instance.
         """
         average_daily_consumptions, _ = \
                 consumption_data.average_daily_consumptions()
