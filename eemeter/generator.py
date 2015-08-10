@@ -218,7 +218,7 @@ def generate_monthly_billing_datetimes(period, dist=None):
         the period. Must be on a closed interval.
     dist : scipy.stats.rv_discrete, default None
         The distribution from which to draw samples of number of days between
-        monthly bills. Defaults to poisson(365/12.).
+        monthly bills. If `None`, defaults to `scipy.stats.poisson(365/12.)`.
 
     """
     # make sure period is closed
