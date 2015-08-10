@@ -1,7 +1,9 @@
-PRISM
------
+.. _eemeter-meter-default:
 
-.. automodule:: eemeter.meter.prism
+Default
+-------
+
+.. automodule:: eemeter.meter.default
     :members:
     :undoc-members:
     :inherited-members:
@@ -16,8 +18,8 @@ BPI2400
     :inherited-members:
     :show-inheritance:
 
-Components
-----------
+Library
+-------
 
 .. automodule:: eemeter.meter.library
     :members:
@@ -25,17 +27,37 @@ Components
     :inherited-members:
     :show-inheritance:
 
-Structural elements
--------------------
+Fitness Metrics
+---------------
 
-.. automodule:: eemeter.meter.components
+.. automodule:: eemeter.meter.fitness
     :members:
     :undoc-members:
     :inherited-members:
     :show-inheritance:
 
-Helpers
--------
+.. _eemeter-meter-control:
+
+Control Flow
+------------
+
+.. automodule:: eemeter.meter.control
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :show-inheritance:
+
+Boolean Helpers
+---------------
+
+.. automodule:: eemeter.meter.boolean
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :show-inheritance:
+
+General Helpers
+---------------
 
 .. automodule:: eemeter.meter.helpers
     :members:

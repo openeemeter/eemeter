@@ -6,15 +6,18 @@ Introduction
 
 The Open Energy Efficiency Meter is an engine for measurement and verification
 of energy savings across and between energy efficiency programs for both
-commercial and residential applications. At its core, this package is a
-framework for specifying how efficiency metrics should be calculated from raw
-consumption data. It is flexible enough to meet the needs of different program
-implementers without sacrificing the ability to standardize on particular
-models and methods, and adds the ability to generate realtime or near realtime
-reports on realized energy savings.
+commercial and residential applications, with a focus on computing energy
+savings using the IPMVP Option (C) Whole Facility option.
+
+At its core, this package is a framework for specifying how efficiency metrics
+should be calculated from building-level energy consumption data. It is
+flexible enough to meet the needs of different program implementers without
+sacrificing the ability to standardize on particular models and methods, and
+facilitates the growing need to generate realtime or near realtime reports
+on realized energy savings.
 
 The meter handles import of consumption data from various formats and
-data-stores, including Green Button, HPXML, and SEED. It handles downloading
+datastores, including Green Button and HPXML. It handles downloading
 and local caching of realtime or near realtime weather data and normals,
 including TMY3, GSOD, ISD, and wunderground.com.
 
@@ -55,217 +58,70 @@ For this tutorial, we'll use sample data, but please see below for a
 tutorial on connecting to a database, importing Green Button XML, or importing
 Home Performance XML.
 
-We will start by creating a portfolio by specifying distributions to draw
-parameters for simple temperature sensitivity models of electricity and
-natural gas consumption.
-
-The following parameter distributions are for generating fake data using
-a model which takes both heating degree days (HDD) and cooling degree
-days (CDD) into account. This is a suitable model for monthly electricity
-consumption.
+First, some imports.
 
 .. code-block:: python
 
-    from eemeter.models import TemperatureSensitivityModel
-    from scipy.stats import uniform
+    from eemeter.consumption import ConsumptionData
+    from eemeter.examples import get_example_project
+    from eemeter.meter import DefaultResidentialMeter
+    from eemeter.meter import DataCollection
 
-    electricity_consumption_model = TemperatureSensitivityModel(heating=True,cooling=True)
+All we'll need to get started is a project, which is an association building
+data, retrofit dates, and weather data.
 
-    electricity_param_distributions = {
-        "cooling_slope": uniform(loc=1, scale=.5), # consumption per CDD
-        "heating_slope": uniform(loc=1, scale=.5), # consumption per HDD
-        "base_consumption": uniform(loc=5, scale=5), # per day
-        "cooling_reference_temperature": uniform(loc=70, scale=5), # degF
-        "heating_reference_temperature": uniform(loc=60, scale=5) # degF
-    }
-    electricity_param_delta_distributions = {
-        "cooling_slope": uniform(loc=-.2, scale=.3), # change in HDD temperature sensitivity post retrofit
-        "heating_slope": uniform(loc=-.2, scale=.3), # change in HDD temperature sensitivity post retrofit
-        "base_consumption": uniform(loc=-2, scale=3), # change in base load post retrofit
-        "cooling_reference_temperature": uniform(loc=0, scale=0), # no change
-        "heating_reference_temperature": uniform(loc=0, scale=0) # no change
-    }
-
-The following parameter distributions are for generating fake data using
-a model which takes only heating degree days (HDD) into account. This is
-a suitable model for monthly natural gas consumption.
+We can initialize a sample by passing in a zipcode. I've chosen zipcode in the
+San Fransisco Bay Area (Sunnyvale!):
 
 .. code-block:: python
 
-    gas_consumption_model = TemperatureSensitivityModel(heating=True,cooling=False)
+    project = get_example_project("94087")
 
-    gas_param_distributions = {
-            "heating_slope": uniform(loc=1, scale=.5),
-            "base_consumption": uniform(loc=5, scale=5),
-            "heating_reference_temperature": uniform(loc=60, scale=5)
-    }
-    gas_param_delta_distributions = {
-            "heating_slope": uniform(loc=-.2, scale=.3),
-            "base_consumption": uniform(loc=-2, scale=3),
-            "heating_reference_temperature": uniform(loc=0, scale=0)
-    }
-
-With models and parameter distributions picked out, we can create a
-ProjectGenerator from which we can create portfolios of projects.
+This project contains location information, usage data from gas and electricity
+bills, and baseline and reporting periods. In this case, we imagine a
+retrofit to have happenend on Jan. 1, 2013. We have data from 2 years before
+and after this retrofit. By the way, we probably could have gotten by with just
+a year pre/post, but don't worry! - the default meter will make sure there's
+enough data for a statistically significant result and will flag the result if
+there's not.
 
 .. code-block:: python
 
-    from eemeter.generator import ProjectGenerator
+    meter = DefaultResidentialMeter()
 
-    generator = ProjectGenerator(electricity_consumption_model,
-                                 gas_consumption_model,
-                                 electricity_param_distributions,
-                                 electricity_param_delta_distributions,
-                                 gas_param_distributions,
-                                 gas_param_delta_distributions)
-
-To make this generator work, we must provide it with weather data and usage
-periods. Here, we create weather sources which automatically fetch data from
-O'Hare INTL Airport near Chicago, IL. Fetch data (which can and should be
-cached - see below) by providing the USAF weather station identifier
-corresponding to the station.
+To run the meter, we first embed our project into a DataCollection, which
+is used as input to the meter, then we pass the data collection to the meter!
+Here it is as a one-liner:
 
 .. code-block:: python
 
-    from eemeter.weather import GSODWeatherSource
-    from eemeter.weather import TMY3WeatherSource
+    results = meter.evaluate(DataCollection(project=project))
 
-    from datetime import datetime
-    import pytz
-
-    start_date = datetime(2010,1,1,tzinfo=pytz.utc)
-
-    ohare_weather_station_id = "725347" # Chicago O'Hare Intl Airport
-
-    weather_source = GSODWeatherSource(ohare_weather_station_id,start_date.year,datetime.now(pytz.utc).year)
-    weather_normal_source = TMY3WeatherSource(ohare_weather_station_id)
-
-With weather sources and weather normal sources, we are now equipped to
-generate some projects. We do this by picking sets of periods of time each
-approximately one month long, and using weather data to simulate usage data
-according to the models we picked above. (The project generator takes care of
-the details of this). The project generator also takes retrofit start and
-completion dates into account in order to simulate the effect of installing
-a set of energy efficiency measures. In this case, we generate a small set of
-10 projects.
+The meter results (there are many!) contain annualized usage metrics from
+before and after the retrofit, in the baseline and reporting periods. We can
+examine these results to obtain savings estimates.
 
 .. code-block:: python
 
-    from eemeter.consumption import ConsumptionHistory
-    from eemeter.generator import generate_periods
+    electricity_usage_pre = results.get_data("annualized_usage", ["electricity", "baseline"]).value
+    electricity_usage_post = results.get_data("annualized_usage", ["electricity", "reporting"]).value
+    natural_gas_usage_pre = results.get_data("annualized_usage", ["natural_gas", "baseline"]).value
+    natural_gas_usage_post = results.get_data("annualized_usage", ["natural_gas", "reporting"]).value
 
-    from datetime import timedelta
-    import random
+    electricity_savings = (electricity_usage_pre - electricity_usage_post) / electricity_usage_pre
+    natural_gas_savings = (natural_gas_usage_pre - natural_gas_usage_post) / natural_gas_usage_pre
 
-    n_projects = 10
-    n_days = (datetime.now(pytz.utc) - start_date).days
-
-    project_data = []
-    for _ in range(n_projects):
-
-        #generate random monthly periods to treat as billing periods
-        elec_periods = generate_periods(start_date,datetime.now(pytz.utc))
-        gas_periods = generate_periods(start_date,datetime.now(pytz.utc))
-
-        # pick retrofit dates somewhere in the right range
-        retrofit_start_date = start_date + timedelta(days=random.randint(365,n_days-365))
-        retrofit_completion_date = retrofit_start_date + timedelta(days=30)
-
-        # generate consumption data that mimics applying a measure and seeing a decrease in energy use
-        result = generator.generate(weather_source,
-                                    weather_normal_source,
-                                    elec_periods,
-                                    gas_periods,
-                                    retrofit_start_date,
-                                    retrofit_completion_date)
-
-        consumptions = result["electricity_consumptions"] + result["natural_gas_consumptions"]
-
-        data = {"consumption_history": ConsumptionHistory(consumptions),
-                "retrofit_start_date": retrofit_start_date,
-                "retrofit_completion_date":retrofit_completion_date,
-                "estimated_elec_savings": result["electricity_estimated_savings"],
-                "estimated_gas_savings": result["natural_gas_estimated_savings"]}
-        project_data.append(data)
-
-Phew! All of that was just to generate some projects so that we could learn how
-to use the core metering functions of the eemeter package.
-
-Running the energy efficiency meter is actually quite simple: First, a meter
-is instantitated; here we're using a simple PRISM implementation which requires
-no initialization parameters. Next, the efficiency meter is run by supplying
-the necessary inputs. Note that the function :code:`meter.get_inputs()` will
-expose the structure of the meter and the inputs needed to run it.
+Now we can happily inspect our results!
 
 .. code-block:: python
 
-    from eemeter.meter import PRISMMeter
-
-    meter = PRISMMeter()
-
-    for project in project_data:
-
-        ch = project["consumption_history"]
-        ch_pre = ch.before(project["retrofit_start_date"])
-        ch_post = ch.after(project["retrofit_completion_date"])
-
-        result_pre = meter.evaluate(consumption_history=ch_pre,
-                                weather_source=weather_source,
-                                weather_normal_source=weather_normal_source,
-                                since_date=project["retrofit_start_date"])
-
-        result_post = meter.evaluate(consumption_history=ch_post,
-                                weather_source=weather_source,
-                                weather_normal_source=weather_normal_source)
-
-
-        result_pre_e = result_pre.get("annualized_usage_electricity")
-        result_post_e = result_post.get("annualized_usage_electricity")
-        if result_pre_e is not None and result_post_e is not None:
-            actual_e = result_pre_e - result_post_e
-        else:
-            actual_e = float('nan')
-        predicted_e = project["estimated_elec_savings"]
-
-        result_pre_g = result_pre.get("annualized_usage_natural_gas")
-        result_post_g = result_post.get("annualized_usage_natural_gas")
-        if result_pre_g is not None and result_post_g is not None:
-            actual_g = result_pre_g - result_post_g
-        else:
-            actual_g = float('nan')
-        predicted_g = project["estimated_gas_savings"]
-
-        print("Electricity savings actual//predicted (# bills [pre]-[post]): {:.02f} // {:.02f} ({}-{})"
-                .format(actual_e,predicted_e,len(ch_pre.electricity),len(ch_post.electricity)))
-        print("Natural gas savings actual//predicted (# bills [pre]-[post]): {:.02f} // {:.02f} ({}-{})"
-                .format(actual_g,predicted_g,len(ch_pre.natural_gas),len(ch_post.natural_gas)))
-        print("")
-
-This will print something like the following::
-
-    Electricity savings actual//predicted (# bills [pre]-[post]): 1358.27 // 1358.27 (10-27)
-    Natural gas savings actual//predicted (# bills [pre]-[post]): 1625.46 // 1625.46 (10-28)
-
-    Electricity savings actual//predicted (# bills [pre]-[post]): 149.83 // 98.67 (13-22)
-    Natural gas savings actual//predicted (# bills [pre]-[post]): 517.03 // 517.03 (14-22)
-
-        :
-        :
-        :
-
-    Electricity savings actual//predicted (# bills [pre]-[post]): 563.16 // 563.16 (20-16)
-    Natural gas savings actual//predicted (# bills [pre]-[post]): -483.50 // -483.50 (20-16)
-
-That's it! The results from all meters are python dictionaries keyed by strings.
-Read on to learn how to load and stream your own data, or create your own
-meters.
+    >>> electricity_savings
+    0.50061411300996794
+    >>> natural_gas_savings
+    0.50139379943863116
 
 Loading consumption data
 ------------------------
-
-To load consumption data, you'll need to use the SEED importer, the
-HPXML importer, the Green Button XML importer, or initialize
-the objects yourself. See :ref:`eemeter-importers` for usage details.
 
 Consumption data consists of a quantity of energy (as defined by a magnitude a
 physical unit) of a particular fuel type consumed during a time period (as
@@ -273,43 +129,9 @@ defined by start and end datetime objects). Additionally, a consumption data
 point may also indicate that it was estimated, as some meters require this bit
 of information for additional accuracy.
 
-A collection of Consumption data related to a single project is grouped into a
-ConsumptionHistory object, which helps keep the data organized by time period
-and fuel type.
-
-Here's a simple example of creating Consumption data from scratch, given two
-lists of bills, one for electricity Jan-Dec 2014, one for natural gas Jan-Dec
-2014.
-
-.. code-block:: python
-
-    from eemeter.consumption import Consumption
-    from eemeter.consumption import ConsumptionHistory
-    from datetime import datetime
-    from calendar import monthrange
-
-    kwh_electricity = [123,412,523,238,239,908,986,786,256,463,102,122]
-    thm_natural_gas = [241,143,178,78,67,23,14,33,12,23,234,222]
-
-    consumptions = []
-    for i,(elec,gas) in enumerate(zip(kwh_electricity,thm_natural_gas)):
-        month = i + 1
-        start_datetime = datetime(2014,month,1)
-        end_datetime = datetime(2014,month,monthrange(2014,month)[1])
-        elec_consumption = Consumption(elec,"kWh","electricity",start_datetime,end_datetime,estimated=False)
-        gas_consumption = Consumption(gas,"therm","natural_gas",start_datetime,end_datetime,estimated=False)
-        consumptions.append(elec_consumption)
-        consumptions.append(gas_consumption)
-
-    consumption_history = ConsumptionHistory(consumptions)
-
-Consumption energy data is stored internally in Joules, so to access it, you
-must also supply the unit you are interested in.
-
-.. code-block:: python
-
-    >>> consumption_history.electricity[0].kWh
-    123.00000000000001
+To load consumption data, you'll need to either import from HPXML or
+Green Button (see :ref:`eemeter-importers`), or load objects yourself
+(see :ref:`eemeter-consumption`).
 
 Creating a custom meter
 -----------------------
@@ -335,9 +157,11 @@ the result.
 .. code-block:: python
 
     from eemeter.meter import DummyMeter
+    from eemeter.meter import DataCollection
 
     meter = DummyMeter()
-    result = meter.evaluate(value=10)
+    data_collection = DataCollection(value=10)
+    result = meter.evaluate(data_collection)
 
 .. code-block:: python
 
@@ -345,108 +169,20 @@ the result.
 
     meter_yaml = "!obj:eemeter.meter.DummyMeter {}"
     meter = load(meter_yaml)
-    result = meter.evaluate(value=10)
+    data_collection = DataCollection(value=10)
+    result = meter.evaluate(data_collection)
 
 In the example above, it's clearly more straightforward to directly declare the
 meter using python. However, since meters are so hierarchical, a specification
 like the following is usually more readable and straightforward. Note the usage
-of structural helper meters like :code:`Sequence` and
-:code:`Condition`, which allow for more flexible meter component
+of control flow meters (see :ref:`eemeter-meter-control`) like :code:`Sequence`
+and :code:`Condition`, which allow for more flexible meter component
 definitions.
 
-.. code-block:: python
+Please see the default meter implementation for an example of YAML meter
+specification (:ref:`eemeter-meter-default`).
 
-    prism_meter_yaml = """
-        !obj:eemeter.meter.Sequence {
-            sequence: [
-                !obj:eemeter.meter.FuelTypePresenceMeter {
-                    fuel_types: [electricity,natural_gas]
-                },
-                !obj:eemeter.meter.Condition {
-                    condition_parameter: electricity_presence,
-                    success: !obj:eemeter.meter.Sequence {
-                        sequence: [
-                            !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
-                                fuel_unit_str: "kWh",
-                                fuel_type: "electricity",
-                                temperature_unit_str: "degF",
-                                model: !obj:eemeter.models.TemperatureSensitivityModel &elec_model {
-                                    cooling: True,
-                                    heating: True,
-                                    initial_params: {
-                                        base_consumption: 0,
-                                        heating_slope: 0,
-                                        cooling_slope: 0,
-                                        heating_reference_temperature: 60,
-                                        cooling_reference_temperature: 70,
-                                    },
-                                    param_bounds: {
-                                        base_consumption: [-20,80],
-                                        heating_slope: [0,5],
-                                        cooling_slope: [0,5],
-                                        heating_reference_temperature: [58,66],
-                                        cooling_reference_temperature: [64,72],
-                                    },
-                                },
-                            },
-                            !obj:eemeter.meter.AnnualizedUsageMeter {
-                                fuel_type: "electricity",
-                                temperature_unit_str: "degF",
-                                model: *elec_model,
-                            },
-                        ],
-                        output_mapping: {
-                            temp_sensitivity_params: temp_sensitivity_params_electricity,
-                            annualized_usage: annualized_usage_electricity,
-                            daily_standard_error: daily_standard_error_electricity,
-                        },
-                    },
-                },
-                !obj:eemeter.meter.Conditionr {
-                    condition_parameter: natural_gas_presence,
-                    success: !obj:eemeter.meter.Sequence {
-                        sequence: [
-                            !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
-                                fuel_unit_str: "therms",
-                                fuel_type: "natural_gas",
-                                temperature_unit_str: "degF",
-                                model: !obj:eemeter.models.TemperatureSensitivityModel &gas_model {
-                                    cooling: False,
-                                    heating: True,
-                                    initial_params: {
-                                        base_consumption: 0,
-                                        heating_slope: 0,
-                                        heating_reference_temperature: 60,
-                                    },
-                                    param_bounds: {
-                                        base_consumption: [0,10],
-                                        heating_slope: [0,5],
-                                        heating_reference_temperature: [58,66],
-                                    },
-                                },
-                            },
-                            !obj:eemeter.meter.AnnualizedUsageMeter {
-                                fuel_type: "natural_gas",
-                                temperature_unit_str: "degF",
-                                model: *gas_model,
-                            },
-                        ],
-                        output_mapping: {
-                            temp_sensitivity_params: temp_sensitivity_params_natural_gas,
-                            annualized_usage: annualized_usage_natural_gas,
-                            daily_standard_error: daily_standard_error_natural_gas,
-                        },
-                    },
-                },
-            ]
-        }
-    """
-    meter = load(prism_meter_yaml)
-    result = meter.evaluate(consumption_history=...,
-                            weather_source=...,
-                            weather_normal_source=...)
-
-Another benefit to using structured YAML for meter specification is that the
+One benefit to using structured YAML for meter specification is that the
 meter specifications can be stored externally as readable text files.
 
 Caching Weather Data
@@ -469,6 +205,7 @@ this, it is often easiest to extend the API by inheriting from the class
 :code:`eemeter.meter.WeatherSourceBase`. To do this, you need only define the
 method
 
+.. code-block:: python
 
     class MyWeatherSource(WeatherSourceBase):
 

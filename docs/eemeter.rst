@@ -18,6 +18,8 @@ eemeter.models
     :inherited-members:
     :show-inheritance:
 
+.. _eemeter-consumption:
+
 eemeter.consumption
 -------------------
 

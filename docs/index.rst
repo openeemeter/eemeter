@@ -19,7 +19,7 @@ Description
 -----------
 
 This package makes it simple to build and maintain residential and commercial
-energy efficieny monitoring systems that operate at scale.
+energy efficiency monitoring systems that operate at scale.
 
 Usage
 -----
