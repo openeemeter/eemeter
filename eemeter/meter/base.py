@@ -57,7 +57,7 @@ class DataCollection:
 
         """
         self._name_index = defaultdict(list)
-        for k,v in kwargs.iteritems():
+        for k,v in kwargs.items():
             dc = DataContainer(name=k, value=v, tags=tags)
             self.add_data(dc)
 
@@ -113,7 +113,7 @@ class DataCollection:
     def iteritems(self):
         """ Iterate through values in the data collection.
         """
-        for name, data_containers in self._name_index.iteritems():
+        for name, data_containers in self._name_index.items():
             for data_container in data_containers:
                 yield data_container
 
@@ -265,13 +265,15 @@ class MeterBase(object):
                 data_collection)
 
         # combine auxiliary inputs with mapped inputs
-        all_inputs = dict(mapped_input_dict.items() + self.auxiliary_inputs.items())
+        all_inputs = mapped_input_dict.copy()
+        all_inputs.update(self.auxiliary_inputs)
 
         # evaluate meter
         outputs_dict = self.evaluate_raw(**all_inputs)
 
         # combine auxiliary outputs with raw outputs
-        all_outputs = dict(outputs_dict.items() + self.auxiliary_outputs.items())
+        all_outputs = outputs_dict.copy()
+        all_outputs.update(self.auxiliary_outputs)
 
 
         # map meter evaluations back to data_collection form
@@ -287,7 +289,7 @@ class MeterBase(object):
         """ Resolves a DataCollection to dict mapping.
         """
         data_dict = {}
-        for target_name, search_criteria in mapping.iteritems():
+        for target_name, search_criteria in mapping.items():
             search_name = search_criteria.get("name", target_name)
             search_tags = search_criteria.get("tags", [])
             target_data = data_collection.get_data(search_name, search_tags)
@@ -303,7 +305,7 @@ class MeterBase(object):
         """ Resolves a dict to DataCollection mapping.
         """
         data_collection = DataCollection()
-        for result_name, target_data in mapping.iteritems():
+        for result_name, target_data in mapping.items():
             target_name = target_data.get("name", result_name)
             target_tags = target_data.get("tags", [])
             target_value = data_dict.get(result_name)

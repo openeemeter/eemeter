@@ -113,7 +113,7 @@ def generated_consumption_data_pre_post_1(request,
     record_type = "arbitrary"
     pre_records = cd_pre.records(record_type)
     post_records = cd_post.records(record_type)
-    n_months_pre = len(pre_records) / 2
+    n_months_pre = int(len(pre_records) / 2)
     all_records = pre_records[:n_months_pre] + \
             post_records[n_months_pre:]
     consumption_data = ConsumptionData(all_records, cd_pre.fuel_type,
