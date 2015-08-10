@@ -126,8 +126,6 @@ def test_project_generator(gsod_722880_2012_2014_weather_source,tmy3_722880_weat
 
     assert len(elec_data) in range(9,16)
     assert len(gas_data) in range(9,16)
-    assert elec_data[0] > elec_data[5]
-    assert gas_data[0] > gas_data[5]
     assert elec_data[0] < 750 # could probably lower this upper bound
     assert gas_data[0] < 750 # could probably lower this upper bound
 
