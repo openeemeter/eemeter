@@ -14,7 +14,7 @@ before_install:
   - sudo rm -rf /dev/shm
   - sudo ln -s /run/shm /dev/shm
 install:
-  - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy dateutil pandas
+  - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy dateutil pandas lxml xlrd sqlalchemy
   - pip install .
   - pip install -r requirements.txt
 script:
