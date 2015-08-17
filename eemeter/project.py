@@ -52,8 +52,12 @@ class Project(object):
         self.weather_normal_source = weather_normal_source
 
     def all_periods(self):
-        periods = [self.baseline_period, self.reporting_period] + \
-                self.other_periods
+        periods = []
+        if self.baseline_period is not None:
+            periods.append(self.baseline_period)
+        if self.reporting_period is not None:
+            periods.append(self.reporting_period)
+        periods.extend(self.other_periods)
         return periods
 
     def _total_date_range(self):
@@ -69,11 +73,11 @@ class Project(object):
         else:
             start_date = min(period_starts)
 
-        period_ends = [ p.start for p in periods]
+        period_ends = [ p.end for p in periods]
         if None in period_ends:
             end_date = None
         else:
-            end_date = min(period_ends)
+            end_date = max(period_ends)
         return start_date, end_date
 
     def segmented_consumption_data(self):

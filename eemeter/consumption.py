@@ -30,7 +30,7 @@ class ConsumptionData(object):
 
         See `record_type` for details.
 
-    fuel_type : str, {"electricity", "natural_gas"}
+    fuel_type : str, {"electricity", "natural_gas", "fuel_oil", "propane", "liquid_propane", "kerosene", "diesel", "fuel_cell"}
         The fuel type of the consumption data.
     unit_name : str, {"kWh", "therm"}
         The name of the unit in which the consumption data is given.
@@ -234,14 +234,16 @@ class ConsumptionData(object):
             data=None, estimated=None):
 
         # verify and save unit name
-        if unit_name not in ["kWh", "therm"]:
+        if unit_name not in ["kWh", "therm", "Wh"]:
             message = 'Unsupported unit name: "{}".'.format(unit_name)
             raise ValueError(message)
         else:
             self.unit_name = unit_name
 
         # verify and save fuel type
-        if fuel_type not in ["electricity", "natural_gas"]:
+        if fuel_type not in ["electricity", "natural_gas", "fuel_oil",
+                "propane", "liquid_propane", "kerosene", "diesel",
+                "fuel_cell"]:
             message = 'Unsupported fuel type: "{}".'.format(fuel_type)
             raise ValueError(message)
         else:

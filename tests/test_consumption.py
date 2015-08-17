@@ -16,12 +16,20 @@ RTOL = 1e-3
 ATOL = 1e-3
 
 @pytest.fixture(params=["electricity",
-                        "natural_gas"])
+                        "natural_gas",
+                        "fuel_oil",
+                        "propane",
+                        "liquid_propane",
+                        "kerosene",
+                        "diesel",
+                        "fuel_cell",
+                        ])
 def fuel_type(request):
     return request.param
 
 @pytest.fixture(params=["kWh",
-                        "therm"])
+                        "therm",
+                        "Wh"])
 def unit_name(request):
     return request.param
 
