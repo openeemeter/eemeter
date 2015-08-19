@@ -138,6 +138,19 @@ class DataCollection:
 
     def search(self, string, tags=None):
         """ Returns any data containers matching the search criteria.
+
+        Parameters
+        ----------
+
+        string : str
+            Criteria for matching container names.
+        tags : list of str, default None
+            Matches only if one of the tags provided here also matches.
+
+        Returns
+        -------
+        items : list of eemeter.meter.DataContainer
+            Matching items; unordered.
         """
         items = []
         for item in self.iteritems():
