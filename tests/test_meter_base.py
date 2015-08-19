@@ -91,6 +91,16 @@ def test_data_collection_add_data_collection(data_collection):
 
     assert data_collection.get_data("name", tags=["tag1","tagspace"]).name == "name"
 
+def test_data_collection_search(data_collection):
+    assert len(data_collection.search("name")) == 1
+    assert len(data_collection.search("nom")) == 0
+    assert len(data_collection.search("nam")) == 1
+    assert len(data_collection.search("name", tags=[])) == 1
+    assert len(data_collection.search("name", tags=["tag"])) == 1
+    assert len(data_collection.search("name", tags=["dag"])) == 0
+    assert len(data_collection.search("name", tags=["tag", "dag"])) == 1
+
+
 def test_insufficient_query(data_collection):
     new_data = DataContainer("name", "new_data_value", ["tag1"])
     data_collection.add_data(new_data)

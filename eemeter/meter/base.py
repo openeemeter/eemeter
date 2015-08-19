@@ -136,6 +136,20 @@ class DataCollection:
             string += "\n  {:>30}  {:<30} tags={}".format(item.name, item.value, list(item.tags))
         return string
 
+    def search(self, string, tags=None):
+        """ Returns any data containers matching the search criteria.
+        """
+        items = []
+        for item in self.iteritems():
+            if string in item.name:
+                if tags is None or tags == []:
+                    items.append(item)
+                else:
+                    if any([tag in item.tags for tag in tags]):
+                        items.append(item)
+        return items
+
+
 class MeterBase(object):
     """Base class for all Meter objects. Takes care of structural tasks such as
     input and output mapping.
