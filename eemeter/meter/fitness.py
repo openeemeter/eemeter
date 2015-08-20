@@ -15,7 +15,7 @@ class CVRMSE(MeterBase):
             Observed values.
         y_hat : array_like
             Estimated values.
-        params : array_like
+        params : eemeter.models.parameters.ParameterType
             Model parameters (used only for counting the number of parameters).
 
         Returns
@@ -25,7 +25,7 @@ class CVRMSE(MeterBase):
         """
         y_bar = np.nanmean(y)
         n = len(y)
-        p = len(params)
+        p = len(params.to_list())
         cvrmse = 100 * (np.nansum((y - y_hat)**2) / (n - p) )**.5 / y_bar
         return {"cvrmse": cvrmse}
 

@@ -3,7 +3,7 @@ from eemeter.generator import ProjectGenerator
 from eemeter.generator import generate_monthly_billing_datetimes
 
 from eemeter.evaluation import Period
-from eemeter.models.temperature_sensitivity import TemperatureSensitivityModel
+from eemeter.models.temperature_sensitivity import AverageDailyTemperatureSensitivityModel
 from eemeter.location import Location
 
 from fixtures.weather import gsod_722880_2012_2014_weather_source
@@ -29,26 +29,27 @@ def monthly_datetimes_2012():
 
 @pytest.fixture
 def consumption_generator_no_base_load():
-    model = TemperatureSensitivityModel(cooling=True,heating=True)
+    model = AverageDailyTemperatureSensitivityModel(heating=True, cooling=True)
     params = {
-        "base_consumption": 0.0,
+        "base_daily_consumption": 0.0,
         "heating_slope": 1.0,
-        "heating_reference_temperature": 65.0,
+        "heating_balance_temperature": 65.0,
         "cooling_slope": 1.0,
-        "cooling_reference_temperature": 75.0 }
+        "cooling_balance_temperature": 75.0
+        }
     generator = MonthlyBillingConsumptionGenerator("electricity", "kWh", "degF",
             model, params)
     return generator
 
 @pytest.fixture
 def consumption_generator_with_base_load():
-    model = TemperatureSensitivityModel(cooling=True,heating=True)
+    model = AverageDailyTemperatureSensitivityModel(heating=True, cooling=True)
     params = {
-        "base_consumption": 1.0,
+        "base_daily_consumption": 1.0,
         "heating_slope": 1.0,
-        "heating_reference_temperature": 65.0,
+        "heating_balance_temperature": 65.0,
         "cooling_slope": 1.0,
-        "cooling_reference_temperature": 75.0 }
+        "cooling_balance_temperature": 75.0 }
     generator = MonthlyBillingConsumptionGenerator("electricity", "kWh", "degF",
             model, params)
     return generator
@@ -76,28 +77,28 @@ def test_consumption_generator_with_base_load(
 
 @pytest.mark.slow
 def test_project_generator(gsod_722880_2012_2014_weather_source,tmy3_722880_weather_source):
-    electricity_model = TemperatureSensitivityModel(cooling=True,heating=True)
-    gas_model = TemperatureSensitivityModel(cooling=False,heating=True)
+    electricity_model = AverageDailyTemperatureSensitivityModel(cooling=True, heating=True)
+    gas_model = AverageDailyTemperatureSensitivityModel(cooling=False, heating=True)
     electricity_param_distributions = {
             "cooling_slope": uniform(loc=1, scale=.5),
             "heating_slope": uniform(loc=1, scale=.5),
-            "base_consumption": uniform(loc=5, scale=5),
-            "cooling_reference_temperature": uniform(loc=70, scale=5),
-            "heating_reference_temperature": uniform(loc=60, scale=5)}
+            "base_daily_consumption": uniform(loc=5, scale=5),
+            "cooling_balance_temperature": uniform(loc=70, scale=5),
+            "heating_balance_temperature": uniform(loc=60, scale=5)}
     electricity_param_delta_distributions = {
             "cooling_slope": uniform(loc=-.2, scale=.3),
             "heating_slope": uniform(loc=-.2, scale=.3),
-            "base_consumption": uniform(loc=-2, scale=3),
-            "cooling_reference_temperature": uniform(loc=0, scale=0),
-            "heating_reference_temperature": uniform(loc=0, scale=0)}
+            "base_daily_consumption": uniform(loc=-2, scale=3),
+            "cooling_balance_temperature": uniform(loc=0, scale=0),
+            "heating_balance_temperature": uniform(loc=0, scale=0)}
     gas_param_distributions = {
             "heating_slope": uniform(loc=1, scale=.5),
-            "base_consumption": uniform(loc=5, scale=5),
-            "heating_reference_temperature": uniform(loc=60, scale=5)}
+            "base_daily_consumption": uniform(loc=5, scale=5),
+            "heating_balance_temperature": uniform(loc=60, scale=5)}
     gas_param_delta_distributions = {
             "heating_slope": uniform(loc=-.2, scale=.3),
-            "base_consumption": uniform(loc=-2, scale=3),
-            "heating_reference_temperature": uniform(loc=0, scale=0)}
+            "base_daily_consumption": uniform(loc=-2, scale=3),
+            "heating_balance_temperature": uniform(loc=0, scale=0)}
 
     generator = ProjectGenerator(electricity_model, gas_model,
                                 electricity_param_distributions,

@@ -4,7 +4,7 @@ from fixtures.weather import gsod_722880_2012_2014_weather_source
 
 from eemeter.meter import DataCollection
 
-from eemeter.models import TemperatureSensitivityModel
+from eemeter.models import AverageDailyTemperatureSensitivityModel
 from eemeter.generator import generate_monthly_billing_datetimes
 from eemeter.generator import MonthlyBillingConsumptionGenerator
 from eemeter.consumption import ConsumptionData
@@ -21,9 +21,9 @@ import pytz
 RTOL = 1e-2
 ATOL = 1e-2
 
-@pytest.fixture(params=[([10,2,58,1,72],[10,1,65],1248.4575,1578.5882,0,0,
+@pytest.fixture(params=[([10,58,2,72,1],[10,65,1],1248.4575,1578.5882,0,0,
                          [15,15,7,7,11,11,16,16],1080,4657.6997,3249.0001,"degF"),
-                        ([10,2,14.4,1,22.22],[10,1,18.33],693.5875,876.9934,0.0573,0,
+                        ([10,14.4,2,22.22,1],[10,18.33,1],693.5875,876.9934,0.0573,0,
                          [15,15,7,7,11,11,16,16],1080,2587.610,1805.0001,"degC")])
 def bpi_2400_1(request,gsod_722880_2012_2014_weather_source):
     elec_param_list, gas_param_list, normal_cdd, normal_hdd, \
@@ -31,24 +31,24 @@ def bpi_2400_1(request,gsod_722880_2012_2014_weather_source):
             total_cdd, total_hdd, temp_unit = request.param
 
     elec_params = {
-        "base_consumption": elec_param_list[0],
-        "heating_slope": elec_param_list[1],
-        "heating_reference_temperature": elec_param_list[2],
-        "cooling_slope": elec_param_list[3],
-        "cooling_reference_temperature": elec_param_list[4]
+        "base_daily_consumption": elec_param_list[0],
+        "heating_balance_temperature": elec_param_list[1],
+        "heating_slope": elec_param_list[2],
+        "cooling_balance_temperature": elec_param_list[3],
+        "cooling_slope": elec_param_list[4],
     }
 
     gas_params = {
-        "base_consumption": gas_param_list[0],
-        "heating_slope": gas_param_list[1],
-        "heating_reference_temperature": gas_param_list[2],
+        "base_daily_consumption": gas_param_list[0],
+        "heating_balance_temperature": gas_param_list[1],
+        "heating_slope": gas_param_list[2],
     }
 
     period = Period(datetime(2012, 1, 1, tzinfo=pytz.utc),
             datetime(2014, 12, 31, tzinfo=pytz.utc))
     datetimes = generate_monthly_billing_datetimes(period, randint(30,31))
-    elec_model = TemperatureSensitivityModel(cooling=True, heating=True)
-    gas_model = TemperatureSensitivityModel(cooling=False, heating=True)
+    elec_model = AverageDailyTemperatureSensitivityModel(cooling=True, heating=True)
+    gas_model = AverageDailyTemperatureSensitivityModel(cooling=False, heating=True)
     gen_elec = MonthlyBillingConsumptionGenerator("electricity", "kWh", temp_unit, elec_model, elec_params)
     gen_gas = MonthlyBillingConsumptionGenerator("natural_gas", "therm", temp_unit, gas_model, gas_params)
     elec_consumptions = gen_elec.generate(gsod_722880_2012_2014_weather_source, datetimes)
@@ -97,7 +97,7 @@ def test_bpi2400(bpi_2400_1,
                 rtol=RTOL, atol=ATOL)
         assert_allclose(result_elec.get_data('hdd_tmy').value, normal_hdd,
                 rtol=RTOL, atol=ATOL)
-        assert_allclose(result.get_data("temp_sensitivity_params_bpi2400").value,
+        assert_allclose(result.get_data("temp_sensitivity_params_bpi2400").value.to_list(),
                 params, rtol=RTOL,atol=ATOL)
         assert_allclose(result.get_data('average_daily_usages_bpi2400').value,
                 average_daily_usages, rtol=RTOL, atol=ATOL)

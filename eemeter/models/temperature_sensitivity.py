@@ -1,103 +1,201 @@
 import scipy.optimize as opt
 import numpy as np
+from .parameters import ParameterType
 
-class TemperatureSensitivityModel(object):
-    def __init__(self,cooling,heating,initial_params=None,param_bounds=None):
-        """Parameters (and bounds) are given in the following form. If bounds,
-        each value should be a tuple or list of length 2, with upper and lower
-        bounds; if initial params, each value should be an integer or a float.
-        `initial_params = {"base_consumption":...,
-                   "heating_slope":...,
-                   "heating_reference_temperature":...
-                   "cooling_slope":...
-                   "cooling_reference_temperature":...}`, in which:
-        - `base_consumption` is the daily non-temperature-related usage
-        - `heating_slope` is the reference temperature of the lower (hdd)
-          balance point
-        - `heating_reference_temperature` is the (generally positive)
-          temperature sensitivity (units: usage per hdd) beyond the lower
-          (hdd) balance point
-        - `cooling_slope` is the reference temperature of the higher (cdd)
-          balance point
-        - `cooling_reference_temperature` is the (generally positive)
-          temperature sensitivity (units: usage per cdd) beyond the upper
-          (cdd) balance point
-        """
-        self.cooling = cooling
-        self.heating = heating
-        self.initial_params = initial_params
-        self.param_bounds = param_bounds
+class BaseloadModelParameterType(ParameterType):
+    parameters = [
+        "base_daily_consumption"
+    ]
 
-    def parameter_optimization(self,average_daily_usages,observed_daily_temps,weights=None):
+class BaseloadHeatingModelParameterType(ParameterType):
+    parameters = [
+        "base_daily_consumption",
+        "heating_balance_temperature",
+        "heating_slope"
+    ]
+
+class BaseloadCoolingModelParameterType(ParameterType):
+    parameters = [
+        "base_daily_consumption",
+        "cooling_balance_temperature",
+        "cooling_slope"
+    ]
+
+class BaseloadHeatingCoolingModelParameterType(ParameterType):
+    parameters = [
+        "base_daily_consumption",
+        "heating_balance_temperature",
+        "heating_slope",
+        "cooling_balance_temperature",
+        "cooling_slope"
+    ]
+
+class Model(object):
+
+    def __init__(self, initial_params=None, param_bounds=None, *args, **kwargs):
+        if initial_params is None:
+            self.initial_params = None
+        else:
+            self.initial_params = self.param_type(initial_params)
+
+        if param_bounds is None:
+            self.param_bounds = None
+        else:
+            self.param_bounds = self.param_type(param_bounds)
+
+    def fit(self, X, y, weights=None):
         """Returns parameters which, according to an optimization routine in
         `scipy.optimize`, minimize the sum of squared errors between observed
         usages and the output of the a model which takes observed_daily_temps
         and returns usage estimates.
         """
-        # ignore nans
-        average_daily_usages = np.ma.masked_array(average_daily_usages,np.isnan(average_daily_usages))
+        if self.initial_params is None:
+            message = "must have initial_params defined for model fitting procedure."
+            raise ValueError(message)
+        else:
+            x0 = self.initial_params.to_list()
 
-        # precalculate temps
-        n_daily_temps = np.array([len(temps) for temps in observed_daily_temps])
+        if self.param_bounds is None:
+            bounds = None
+        else:
+            bounds = self.param_bounds.to_list()
+
+        # ignore nans
+        X = np.ma.masked_array(X, np.isnan(X))
 
         if weights is None:
-            weights = np.ones(len(average_daily_usages))
+            weights = 1
 
-        def objective_function(params):
-            usages_est = self.compute_usage_estimates(params,observed_daily_temps)
-            avg_usages_est = usages_est/n_daily_temps
-            return np.sum(((average_daily_usages - avg_usages_est)**2)*weights)
+        def objective_function(param_array):
+            y_est = self._transform(X, param_array)
+            return np.sum(((y - y_est)**2) * weights)
 
-        assert len(average_daily_usages) == len(observed_daily_temps)
-
-        x0 = self.param_dict_to_list(self.initial_params)
-        bounds = self.param_dict_to_list(self.param_bounds)
-        result = opt.minimize(objective_function,x0=x0,bounds=bounds)
+        result = opt.minimize(objective_function, x0=x0, bounds=bounds)
         params = result.x
-        return params
+        return self.param_type(params)
 
-    def param_dict_to_list(self,params):
-        """Return a list of parameters given a parameter dictionary
-        """
-        param_list = [params["base_consumption"]]
-        if self.heating:
-            param_list.append(params["heating_slope"])
-            param_list.append(params["heating_reference_temperature"])
-        if self.cooling:
-            param_list.append(params["cooling_slope"])
-            param_list.append(params["cooling_reference_temperature"])
-        return param_list
+    def transform(self, X, params):
+        return self._transform(X, params.to_array())
 
-    def compute_usage_estimates(self,params,observed_daily_temps):
-        """Returns usage estimates for a combined, dual balance point,
-        heating/cooling degree day model. Expects params to be of the form
-        created by `param_dict_to_list`.
-        """
-        # get parameters
-        base_consumption = params[0]
-        if self.heating:
-            heating_slope, heating_reference_temperature = params[1:3]
-        else:
-            heating_slope, heating_reference_temperature = None,None
-        
-        if self.cooling:
-            cooling_params = params[3:5] if self.heating else params[1:3]
-            cooling_slope, cooling_reference_temperature = cooling_params
-        else:
-            cooling_slope, cooling_reference_temperature = None,None
-        
-        usage_estimates = []
-        for interval_daily_temps in observed_daily_temps:
-            if not isinstance(interval_daily_temps, np.ndarray):
-                interval_daily_temps = np.array(interval_daily_temps)
-            if self.cooling:
-                cooling = np.maximum(interval_daily_temps - cooling_reference_temperature, 0)*cooling_slope
+    def _transform(self, X, param_array):
+        raise NotImplementedError
+
+class AverageDailyTemperatureSensitivityModel(Model):
+
+    def __init__(self, heating, cooling, *args, **kwargs):
+        if cooling:
+            if heating:
+                self.model = AverageDailyBaseloadHeatingCoolingConsumptionModel(*args, **kwargs)
             else:
-                cooling = 0
-            if self.heating:
-                heating = np.maximum(heating_reference_temperature - interval_daily_temps, 0)*heating_slope
+                self.model = AverageDailyBaseloadCoolingConsumptionModel(*args, **kwargs)
+        else:
+            if heating:
+                self.model = AverageDailyBaseloadHeatingConsumptionModel(*args, **kwargs)
             else:
-                heating = 0
-            total_usage = np.sum(cooling + heating) + base_consumption*interval_daily_temps.shape[0]
-            usage_estimates.append(total_usage)
-        return np.array(usage_estimates)
+                self.model = AverageDailyBaseloadConsumptionModel(*args, **kwargs)
+        self.param_type = self.model.param_type
+        self.initial_params = self.model.initial_params
+        self.param_bounds = self.model.param_bounds
+        self._transform = self.model._transform
+
+class AverageDailyBaseloadConsumptionModel(Model):
+
+    def __init__(self, *args, **kwargs):
+        self.param_type = BaseloadModelParameterType
+        super(AverageDailyBaseloadConsumptionModel, self).__init__(*args, **kwargs)
+
+    def _transform(self, X, param_array):
+        base_daily_consumption = param_array[0]
+
+        if not isinstance(X, np.ndarray):
+            observed_daily_temps = np.array(X)
+        else:
+            observed_daily_temps = X
+
+        return np.tile(base_daily_consumption, observed_daily_temps.shape[0])
+
+class AverageDailyBaseloadHeatingConsumptionModel(Model):
+
+    def __init__(self, *args, **kwargs):
+        self.param_type = BaseloadHeatingModelParameterType
+        super(AverageDailyBaseloadHeatingConsumptionModel, self).__init__(*args, **kwargs)
+
+    def _transform(self, X, param_array):
+        base_daily_consumption, heating_balance_temperature, heating_slope = \
+                param_array
+
+        if not isinstance(X, np.ndarray):
+            observed_daily_temps = np.array(X)
+        else:
+            observed_daily_temps = X
+
+        avg_daily_consumption_estimates = []
+        for period_daily_temps in observed_daily_temps:
+            if not isinstance(period_daily_temps, np.ndarray):
+                period_daily_temps = np.array(period_daily_temps)
+
+            daily_heating_demand = np.maximum(heating_balance_temperature - period_daily_temps, 0)
+            avg_daily_heating_consumption = np.nanmean(daily_heating_demand * heating_slope)
+
+            avg_daily_consumption_estimate = avg_daily_heating_consumption + base_daily_consumption
+            avg_daily_consumption_estimates.append(avg_daily_consumption_estimate)
+
+        return np.array(avg_daily_consumption_estimates)
+
+class AverageDailyBaseloadCoolingConsumptionModel(Model):
+
+    def __init__(self, *args, **kwargs):
+        self.param_type = BaseloadCoolingModelParameterType
+        super(AverageDailyBaseloadCoolingConsumptionModel, self).__init__(*args, **kwargs)
+
+    def _transform(self, X, param_array):
+        base_daily_consumption, cooling_balance_temperature, cooling_slope = \
+                param_array
+
+        if not isinstance(X, np.ndarray):
+            observed_daily_temps = np.array(X)
+        else:
+            observed_daily_temps = X
+
+        avg_daily_consumption_estimates = []
+        for period_daily_temps in observed_daily_temps:
+            if not isinstance(period_daily_temps, np.ndarray):
+                period_daily_temps = np.array(period_daily_temps)
+
+            daily_cooling_demand = np.maximum(period_daily_temps - cooling_balance_temperature, 0)
+            avg_daily_cooling_consumption = np.nanmean(daily_cooling_demand * cooling_slope)
+
+            avg_daily_consumption_estimate = avg_daily_cooling_consumption + base_daily_consumption
+            avg_daily_consumption_estimates.append(avg_daily_consumption_estimate)
+
+        return np.array(avg_daily_consumption_estimates)
+
+class AverageDailyBaseloadHeatingCoolingConsumptionModel(Model):
+
+    def __init__(self, *args, **kwargs):
+        self.param_type = BaseloadHeatingCoolingModelParameterType
+        super(AverageDailyBaseloadHeatingCoolingConsumptionModel, self).__init__(*args, **kwargs)
+
+    def _transform(self, X, param_array):
+        base_daily_consumption, heating_balance_temperature, heating_slope, \
+                cooling_balance_temperature, cooling_slope = param_array
+
+        if not isinstance(X, np.ndarray):
+            observed_daily_temps = np.array(X)
+        else:
+            observed_daily_temps = X
+
+        avg_daily_consumption_estimates = []
+        for period_daily_temps in observed_daily_temps:
+            if not isinstance(period_daily_temps, np.ndarray):
+                period_daily_temps = np.array(period_daily_temps)
+
+            daily_heating_demand = np.maximum(heating_balance_temperature - period_daily_temps, 0)
+            avg_daily_heating_consumption = np.nanmean(daily_heating_demand * heating_slope)
+
+            daily_cooling_demand = np.maximum(period_daily_temps - cooling_balance_temperature, 0)
+            avg_daily_cooling_consumption = np.nanmean(daily_cooling_demand * cooling_slope)
+
+            avg_daily_consumption_estimate = avg_daily_cooling_consumption + avg_daily_heating_consumption + base_daily_consumption
+            avg_daily_consumption_estimates.append(avg_daily_consumption_estimate)
+        return np.array(avg_daily_consumption_estimates)

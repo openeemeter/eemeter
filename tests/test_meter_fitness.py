@@ -1,6 +1,7 @@
 from eemeter.config.yaml_parser import load
 
 from eemeter.meter import DataCollection
+from eemeter.models import BaseloadHeatingModelParameterType
 
 from numpy.testing import assert_allclose
 import numpy as np
@@ -22,7 +23,7 @@ def test_cvrmse():
     data_collection = DataCollection(
             y=np.array([12,13,414,12,23,12,32,np.nan]),
             y_hat=np.array([32,12,322,21,22,41,32,np.nan]),
-            params=np.array([1,3,4]))
+            params=BaseloadHeatingModelParameterType([1,3,4]))
     result = meter.evaluate(data_collection)
 
     assert_allclose(result.get_data("cvrmse").value, 59.79,

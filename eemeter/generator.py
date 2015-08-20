@@ -25,7 +25,7 @@ class MonthlyBillingConsumptionGenerator:
         self.temperature_unit_name = temperature_unit_name
 
         self.model = model
-        self.params = self.model.param_dict_to_list(params)
+        self.params = self.model.param_type(params)
 
     def generate(self, weather_source, datetimes, daily_noise_dist=None):
         """Returns a ConsumptionData instance given a particular weather
@@ -50,14 +50,13 @@ class MonthlyBillingConsumptionGenerator:
         period_daily_temps = weather_source.daily_temperatures(periods,
                 self.temperature_unit_name)
 
-        usages = self.model.compute_usage_estimates(self.params,period_daily_temps)
+        period_average_daily_usages = self.model.transform(period_daily_temps,self.params)
 
-        for usage, period in zip(usages,periods):
+        for average_daily_usage, period in zip(period_average_daily_usages,periods):
+            n_days = period.timedelta.days
             if daily_noise_dist is not None:
-                n_days = period.timedelta.days
-                noises = daily_noise_dist.rvs(n_days)
-                usage += np.sum(noises)
-            cd.data[period.start] = usage
+                average_daily_usage += np.mean(daily_noise_dist.rvs(n_days))
+            cd.data[period.start] = average_daily_usage * n_days
 
         return cd
 
@@ -72,12 +71,12 @@ class ProjectGenerator:
             temperature_unit_name="degF"):
 
         self.electricity_model = electricity_model
-        self.elec_param_dists = electricity_param_distributions
-        self.elec_param_delta_dists = electricity_param_delta_distributions
+        self.elec_param_dists = electricity_model.param_type(electricity_param_distributions)
+        self.elec_param_delta_dists = electricity_model.param_type(electricity_param_delta_distributions)
 
         self.gas_model = gas_model
-        self.gas_param_dists = gas_param_distributions
-        self.gas_param_delta_dists = gas_param_delta_distributions
+        self.gas_param_dists = gas_model.param_type(gas_param_distributions)
+        self.gas_param_delta_dists = gas_model.param_type(gas_param_delta_distributions)
 
         self.temperature_unit_name = temperature_unit_name
 
@@ -151,22 +150,17 @@ class ProjectGenerator:
             param_delta_dists, noise, baseline_period, reporting_period,
             fuel_type, consumption_unit_name, temperature_unit_name):
 
-        baseline_params = {}
-        reporting_params = {}
-        for k,v in param_dists.items():
-            baseline_params[k] = v.rvs()
-            reporting_params[k] = baseline_params[k] + \
-                    param_delta_dists[k].rvs()
+        baseline_params = model.param_type([param.rvs() for param in param_dists.to_list()])
+        reporting_params = model.param_type([bl_param + param_delta.rvs()
+            for bl_param, param_delta in zip(baseline_params.to_list(), param_delta_dists.to_list())])
 
         annualized_usage_meter = AnnualizedUsageMeter(temperature_unit_name,
                 model)
-        baseline_param_list = model.param_dict_to_list(baseline_params)
         baseline_annualized_usage = annualized_usage_meter.evaluate_raw(
-                model_params=baseline_param_list,
+                model_params=baseline_params,
                 weather_normal_source=weather_normal_source)["annualized_usage"]
-        reporting_params_list = model.param_dict_to_list(reporting_params)
         reporting_annualized_usage = annualized_usage_meter.evaluate_raw(
-                model_params=reporting_params_list,
+                model_params=reporting_params,
                 weather_normal_source=weather_normal_source)["annualized_usage"]
         estimated_annualized_savings = baseline_annualized_usage - \
                 reporting_annualized_usage

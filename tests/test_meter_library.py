@@ -57,22 +57,22 @@ def test_temperature_sensitivity_parameter_optimization(
     meter_yaml = """
         !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
             temperature_unit_str: "degF",
-            model: !obj:eemeter.models.TemperatureSensitivityModel {
+            model: !obj:eemeter.models.AverageDailyTemperatureSensitivityModel {
                 cooling: True,
                 heating: True,
                 initial_params: {
-                    base_consumption: 0,
+                    base_daily_consumption: 0,
                     heating_slope: 0,
                     cooling_slope: 0,
-                    heating_reference_temperature: 60,
-                    cooling_reference_temperature: 70,
+                    heating_balance_temperature: 60,
+                    cooling_balance_temperature: 70,
                 },
                 param_bounds: {
-                    base_consumption: [0,2000],
+                    base_daily_consumption: [0,2000],
                     heating_slope: [0,200],
                     cooling_slope: [0,200],
-                    heating_reference_temperature: [55,65],
-                    cooling_reference_temperature: [65,75],
+                    heating_balance_temperature: [55,65],
+                    cooling_balance_temperature: [65,75],
                 },
             },
             input_mapping: {
@@ -99,7 +99,7 @@ def test_temperature_sensitivity_parameter_optimization(
 
     result = meter.evaluate(data_collection)
 
-    assert_allclose(result.get_data('temp_sensitivity_params').value, params,
+    assert_allclose(result.get_data('temp_sensitivity_params').value.to_list(), params.to_list(),
             rtol=RTOL, atol=ATOL)
     assert result.get_data('n_days') is not None
     assert result.get_data('average_daily_usages') is not None
@@ -116,22 +116,22 @@ def test_annualized_usage_meter(
             sequence: [
                 !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
                     temperature_unit_str: "degF",
-                    model: !obj:eemeter.models.TemperatureSensitivityModel &model {
+                    model: !obj:eemeter.models.AverageDailyTemperatureSensitivityModel &model {
                         cooling: True,
                         heating: True,
                         initial_params: {
-                            base_consumption: 0,
+                            base_daily_consumption: 0,
                             heating_slope: 0,
                             cooling_slope: 0,
-                            heating_reference_temperature: 60,
-                            cooling_reference_temperature: 70,
+                            heating_balance_temperature: 60,
+                            cooling_balance_temperature: 70,
                         },
                         param_bounds: {
-                            base_consumption: [0,2000],
+                            base_daily_consumption: [0,2000],
                             heating_slope: [0,200],
                             cooling_slope: [0,200],
-                            heating_reference_temperature: [55,65],
-                            cooling_reference_temperature: [65,75],
+                            heating_balance_temperature: [55,65],
+                            cooling_balance_temperature: [65,75],
                         },
                     },
                     input_mapping: {
@@ -169,7 +169,7 @@ def test_annualized_usage_meter(
             energy_unit_str="kWh")
     result = meter.evaluate(data_collection)
 
-    assert_allclose(result.get_data('model_params').value, params,
+    assert_allclose(result.get_data('model_params').value.to_list(), params.to_list(),
             rtol=RTOL, atol=ATOL)
     assert_allclose(result.get_data('annualized_usage').value,
             annualized_usage, rtol=RTOL, atol=ATOL)
@@ -183,22 +183,22 @@ def test_gross_savings_metric(generated_consumption_data_pre_post_with_gross_sav
             sequence: [
                 !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter &meter {
                     temperature_unit_str: "degF",
-                    model: !obj:eemeter.models.TemperatureSensitivityModel &model {
+                    model: !obj:eemeter.models.AverageDailyTemperatureSensitivityModel &model {
                         cooling: True,
                         heating: True,
                         initial_params: {
-                            base_consumption: 0,
+                            base_daily_consumption: 0,
                             heating_slope: 0,
                             cooling_slope: 0,
-                            heating_reference_temperature: 60,
-                            cooling_reference_temperature: 70,
+                            heating_balance_temperature: 60,
+                            cooling_balance_temperature: 70,
                         },
                         param_bounds: {
-                            base_consumption: [0,2000],
+                            base_daily_consumption: [0,2000],
                             heating_slope: [0,200],
                             cooling_slope: [0,200],
-                            heating_reference_temperature: [55,65],
-                            cooling_reference_temperature: [65,75],
+                            heating_balance_temperature: [55,65],
+                            cooling_balance_temperature: [65,75],
                         },
                     },
                     input_mapping: {
@@ -251,22 +251,22 @@ def test_annualized_gross_savings_metric(
             sequence: [
                 !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter &meter {
                     temperature_unit_str: "degF",
-                    model: !obj:eemeter.models.TemperatureSensitivityModel &model {
+                    model: !obj:eemeter.models.AverageDailyTemperatureSensitivityModel &model {
                         cooling: True,
                         heating: True,
                         initial_params: {
-                            base_consumption: 0,
+                            base_daily_consumption: 0,
                             heating_slope: 0,
                             cooling_slope: 0,
-                            heating_reference_temperature: 60,
-                            cooling_reference_temperature: 70,
+                            heating_balance_temperature: 60,
+                            cooling_balance_temperature: 70,
                         },
                         param_bounds: {
-                            base_consumption: [0,2000],
+                            base_daily_consumption: [0,2000],
                             heating_slope: [0,200],
                             cooling_slope: [0,200],
-                            heating_reference_temperature: [55,65],
-                            cooling_reference_temperature: [65,75],
+                            heating_balance_temperature: [55,65],
+                            cooling_balance_temperature: [65,75],
                         },
                     },
                     input_mapping: {
@@ -398,7 +398,7 @@ def test_estimated_average_daily_usage(generated_consumption_data_1,gsod_722880_
     meter_yaml = """
         !obj:eemeter.meter.EstimatedAverageDailyUsage {
             temperature_unit_str: "degF",
-            model: !obj:eemeter.models.TemperatureSensitivityModel {
+            model: !obj:eemeter.models.AverageDailyTemperatureSensitivityModel {
                 cooling: True,
                 heating: True,
             },
