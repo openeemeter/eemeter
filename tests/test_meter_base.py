@@ -92,14 +92,20 @@ def test_data_collection_add_data_collection(data_collection):
     assert data_collection.get_data("name", tags=["tag1","tagspace"]).name == "name"
 
 def test_data_collection_search(data_collection):
-    assert len(data_collection.search("name")) == 1
-    assert len(data_collection.search("nom")) == 0
-    assert len(data_collection.search("nam")) == 1
-    assert len(data_collection.search("name", tags=[])) == 1
-    assert len(data_collection.search("name", tags=["tag"])) == 1
-    assert len(data_collection.search("name", tags=["dag"])) == 0
-    assert len(data_collection.search("name", tags=["tag", "dag"])) == 1
+    assert data_collection.search("name").count() == 1
+    assert data_collection.search("nom").count() == 0
+    assert data_collection.search("nam").count() == 1
+    assert data_collection.search("name", tags=[]).count() == 1
+    assert data_collection.search("name", tags=["tag"]).count() == 1
+    assert data_collection.search("name", tags=["dag"]).count() == 0
+    assert data_collection.search("name", tags=["tag", "dag"]).count() == 1
 
+def test_data_collection_filter_by_tag(data_collection):
+    assert data_collection.filter_by_tag(["tag"]).count() == 1
+    assert data_collection.filter_by_tag(["tag","tag1"]).count() == 0
+    assert data_collection.filter_by_tag(["tag1"]).count() == 0
+    assert data_collection.filter_by_tag([]).count() == 1
+    assert data_collection.filter_by_tag(None).count() == 1
 
 def test_insufficient_query(data_collection):
     new_data = DataContainer("name", "new_data_value", ["tag1"])

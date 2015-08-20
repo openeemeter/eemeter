@@ -149,18 +149,39 @@ class DataCollection:
 
         Returns
         -------
-        items : list of eemeter.meter.DataContainer
+        data_collection : list of eemeter.meter.DataContainer
             Matching items; unordered.
         """
-        items = []
+        data_collection = DataCollection()
         for item in self.iteritems():
             if string in item.name:
                 if tags is None or tags == []:
-                    items.append(item)
+                    data_collection.add_data(item)
                 else:
                     if any([tag in item.tags for tag in tags]):
-                        items.append(item)
-        return items
+                        data_collection.add_data(item)
+        return data_collection
+
+    def filter_by_tag(self, tags):
+        """ Returns any data containers matching the filter criteria.
+
+        Parameters
+        ----------
+
+        tags : list of str, default None
+            Matches only if all of the tags provided here also match.
+
+        Returns
+        -------
+        data_collection : DataCollection
+            Matching items.
+        """
+        data_collection = DataCollection()
+        for item in self.iteritems():
+            if tags == [] or tags == None or all([tag in item.tags for tag in tags]):
+                data_collection.add_data(item)
+        return data_collection
+
 
 
 class MeterBase(object):
