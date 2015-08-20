@@ -149,22 +149,22 @@ class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(MeterBase):
                         cases: {{
                             electricity: !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {{
                                 temperature_unit_str: {temp_unit},
-                                model: !obj:eemeter.models.TemperatureSensitivityModel {{
+                                model: !obj:eemeter.models.AverageDailyTemperatureSensitivityModel {{
                                     cooling: True,
                                     heating: True,
                                     initial_params: {{
-                                        base_consumption: 0,
+                                        base_daily_consumption: 0,
                                         heating_slope: 0,
                                         cooling_slope: 0,
-                                        heating_reference_temperature: {h_ref_x0},
-                                        cooling_reference_temperature: {c_ref_x0},
+                                        heating_balance_temperature: {h_ref_x0},
+                                        cooling_balance_temperature: {c_ref_x0},
                                     }},
                                     param_bounds: {{
-                                        base_consumption: [-20,80],
+                                        base_daily_consumption: [-20,80],
                                         heating_slope: [0,{e_h_slope_h}],
                                         cooling_slope: [0,{e_c_slope_h}],
-                                        heating_reference_temperature: [{h_ref_l},{h_ref_h}],
-                                        cooling_reference_temperature: [{c_ref_l},{c_ref_h}],
+                                        heating_balance_temperature: [{h_ref_l},{h_ref_h}],
+                                        cooling_balance_temperature: [{c_ref_l},{c_ref_h}],
                                     }},
                                 }},
                                 input_mapping: {{
@@ -180,18 +180,18 @@ class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(MeterBase):
                             }},
                             natural_gas: !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {{
                                 temperature_unit_str: {temp_unit},
-                                model: !obj:eemeter.models.TemperatureSensitivityModel {{
+                                model: !obj:eemeter.models.AverageDailyTemperatureSensitivityModel {{
                                     cooling: False,
                                     heating: True,
                                     initial_params: {{
-                                        base_consumption: 0,
+                                        base_daily_consumption: 0,
                                         heating_slope: 0,
-                                        heating_reference_temperature: {h_ref_x0},
+                                        heating_balance_temperature: {h_ref_x0},
                                     }},
                                     param_bounds: {{
-                                        base_consumption: [-20,80],
+                                        base_daily_consumption: [-20,80],
                                         heating_slope: [0,{n_g_h_slope_h}],
-                                        heating_reference_temperature: [{h_ref_l},{h_ref_h}],
+                                        heating_balance_temperature: [{h_ref_l},{h_ref_h}],
                                     }},
                                 }},
                                 input_mapping: {{
@@ -506,13 +506,12 @@ class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(MeterBase):
               sensitivity parameters for HDD/CDD use model in an
               array of values with the following order:
 
-              For electricty: [base_consumption (kWh/day), heating_slope
-              (kWh/HDD), heating_reference_temperature (degF or degC),
-              cooling_slope (kWh/CDD), cooling_reference_temperature (degF or
-              degC)].
+              For electricty: [base_daily_consumption (kWh/day),
+              heating_balance_temperature (degF or degC), heating_slope (kWh/HDD),
+              cooling_balance_temperature (degF or degC), cooling_slope (kWh/CDD)].
 
-              For natural_gas: [base_consumption (kWh/day), heating_slope
-              (kWh/HDD), heating_reference_temperature (degF or degC)].
+              For natural_gas: [base_daily_consumption (kWh/day),
+              heating_balance_temperature (degF or degC), heating_slope (kWh/HDD)].
 
             - *"time_span"* : Number of days between earliest available
               data and latest available data.

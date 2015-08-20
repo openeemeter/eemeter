@@ -58,11 +58,9 @@ class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
         observed_daily_temps = weather_source.daily_temperatures(periods,
                 self.temperature_unit_str)
 
-        params = self.model.parameter_optimization(average_daily_usages,
-                observed_daily_temps, n_days)
+        params = self.model.fit(observed_daily_temps, average_daily_usages, weights=n_days)
 
-        estimated_daily_usages = self.model.compute_usage_estimates(params,
-                observed_daily_temps) / n_days
+        estimated_daily_usages = self.model.transform(observed_daily_temps, params)
 
         return {"temp_sensitivity_params": params,
                 "average_daily_usages": average_daily_usages,
@@ -77,7 +75,7 @@ class AnnualizedUsageMeter(MeterBase):
     ----------
     temperature_unit_str : str
         Unit of temperature, usually "degC" or "degF".
-    model : eemeter.model.TemperatureSensitivityModel
+    model : eemeter.model.AverageDailyTemperatureSensitivityModel
         Model of energy usage
     """
 
@@ -108,10 +106,9 @@ class AnnualizedUsageMeter(MeterBase):
         """
         daily_temps = weather_normal_source.annual_daily_temperatures(
                 self.temperature_unit_str)
-        usage_estimates = self.model.compute_usage_estimates(
-                model_params, daily_temps)
+        average_daily_usage_estimate = self.model.transform(daily_temps, model_params)
 
-        annualized_usage = np.nansum(usage_estimates)
+        annualized_usage = average_daily_usage_estimate * 365
         return {"annualized_usage": annualized_usage}
 
 class GrossSavingsMeter(MeterBase):
@@ -120,7 +117,7 @@ class GrossSavingsMeter(MeterBase):
 
     Parameters
     ----------
-    model : eemeter.model.TemperatureSensitivityModel
+    model : eemeter.model.AverageDailyTemperatureSensitivityModel
         Model of energy usage
     temperature_unit_str : str
         Unit of temperature, usually "degC" or "degF".
@@ -159,8 +156,8 @@ class GrossSavingsMeter(MeterBase):
         consumption_reporting = consumption_data_reporting.to(energy_unit_str)[:-1]
         observed_daily_temps = weather_source.daily_temperatures(
                 consumption_periods, self.temperature_unit_str)
-        consumption_estimates_baseline = self.model.compute_usage_estimates(
-                model_params_baseline, observed_daily_temps)
+        consumption_estimates_baseline = self.model.transform( observed_daily_temps, model_params_baseline)
+        consumption_estimates_baseline *= np.array([p.timedelta.days for p in consumption_periods])
         gross_savings = np.nansum(consumption_estimates_baseline -
                 consumption_reporting)
         return {"gross_savings": gross_savings}
@@ -172,7 +169,7 @@ class AnnualizedGrossSavingsMeter(MeterBase):
 
     Parameters
     ----------
-    model : eemeter.model.TemperatureSensitivityModel
+    model : eemeter.model.AverageDailyTemperatureSensitivityModel
         Model of energy usage
     temperature_unit_str : str
         Unit of temperature, usually "degC" or "degF".
@@ -594,7 +591,7 @@ class EstimatedAverageDailyUsage(MeterBase):
     ----------
     temperature_unit_str : str
         Unit of temperature, usually "degC" or "degF".
-    model : eemeter.model.TemperatureSensitivityModel
+    model : eemeter.model.AverageDailyTemperatureSensitivityModel
         Model of energy usage for which to optimize parameter choices.
     """
 
@@ -630,8 +627,7 @@ class EstimatedAverageDailyUsage(MeterBase):
                 self.temperature_unit_str)
         n_days = np.array([len(temps) for temps in observed_daily_temps])
         estimated_average_daily_usages = \
-                self.model.compute_usage_estimates(
-                        temp_sensitivity_params, observed_daily_temps) / n_days
+                self.model.transform( observed_daily_temps, temp_sensitivity_params)
         return {"estimated_average_daily_usages": estimated_average_daily_usages,
                 "n_days": n_days}
 

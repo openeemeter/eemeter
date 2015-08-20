@@ -21,33 +21,33 @@ def get_example_project(zipcode):
     weather_source = GSODWeatherSource(station,2011,2015)
 
     # model
-    model_e = TemperatureSensitivityModel(cooling=True, heating=True)
-    model_g = TemperatureSensitivityModel(cooling=False, heating=True)
+    model_e = AverageDailyTemperatureSensitivityModel(cooling=True, heating=True)
+    model_g = AverageDailyTemperatureSensitivityModel(cooling=False, heating=True)
 
     # model params
     params_e_b = {
         "cooling_slope": 1,
         "heating_slope": 1,
-        "base_consumption": 30,
-        "cooling_reference_temperature": 73,
-        "heating_reference_temperature": 68,
+        "base_daily_consumption": 30,
+        "cooling_balance_temperature": 73,
+        "heating_balance_temperature": 68,
     }
     params_e_r = {
         "cooling_slope": .5,
         "heating_slope": .5,
-        "base_consumption": 15,
-        "cooling_reference_temperature": 73,
-        "heating_reference_temperature": 68,
+        "base_daily_consumption": 15,
+        "cooling_balance_temperature": 73,
+        "heating_balance_temperature": 68,
     }
     params_g_b = {
         "heating_slope": .2,
-        "base_consumption": 2,
-        "heating_reference_temperature": 68,
+        "base_daily_consumption": 2,
+        "heating_balance_temperature": 68,
     }
     params_g_r = {
         "heating_slope": .1,
-        "base_consumption": 1,
-        "heating_reference_temperature": 68,
+        "base_daily_consumption": 1,
+        "heating_balance_temperature": 68,
     }
 
     #generators

@@ -1,6 +1,6 @@
 from eemeter.meter import DefaultResidentialMeter
 from eemeter.meter import DataCollection
-from eemeter.models import TemperatureSensitivityModel
+from eemeter.models import AverageDailyTemperatureSensitivityModel
 from eemeter.generator import MonthlyBillingConsumptionGenerator
 from eemeter.generator import generate_monthly_billing_datetimes
 from eemeter.consumption import ConsumptionData
@@ -23,13 +23,13 @@ ATOL = 1e-2
 
 import pytest
 
-@pytest.fixture(params=[([-1, 1,14.5,8,17.8],True,6119.297438069778,0,"degC",
+@pytest.fixture(params=[([-1, 14.5,1,17.8,8],True,6119.297438069778,0,"degC",
                           693.5875,876.9934,2587.6109,1805.0001,0,1,[0,0,15.55]),
-                        ([10,2,15.5,1,19.5],True,4927.478974253085,0,"degC",
+                        ([10,15.5,2,19.5,1],True,4927.478974253085,0,"degC",
                           693.5875,876.9934,2587.6109,1805.0001,0,1,[0,0,15.55]),
-                        ([0,2,18.8,7,22.2],True,3616.249477948155,0,"degC",
+                        ([0,18.8,2,22.2,7],True,3616.249477948155,0,"degC",
                           693.5875,876.9934,2587.6109,1805.0001,0,1,[0,0,15.55]),
-                        ([0,2,65,3,71],True,4700.226534599519,0,"degF",
+                        ([0,65,2,71,3],True,4700.226534599519,0,"degF",
                           1248.4575,1578.5882,4657.6997,3249.0002,0,1,[0,0,60]),
                         ])
 def default_residential_outputs_1(request, gsod_722880_2012_2014_weather_source):
@@ -37,13 +37,13 @@ def default_residential_outputs_1(request, gsod_722880_2012_2014_weather_source)
             temp_unit, cdd_tmy, hdd_tmy, total_cdd, total_hdd, \
             rmse_electricity, r_squared_electricity, gas_param_defaults \
             = request.param
-    model = TemperatureSensitivityModel(cooling=True,heating=True)
+    model = AverageDailyTemperatureSensitivityModel(cooling=True,heating=True)
     params = {
-        "base_consumption": model_params[0],
-        "heating_slope": model_params[1],
-        "heating_reference_temperature": model_params[2],
-        "cooling_slope": model_params[3],
-        "cooling_reference_temperature": model_params[4]
+        "base_daily_consumption": model_params[0],
+        "heating_balance_temperature": model_params[1],
+        "heating_slope": model_params[2],
+        "cooling_balance_temperature": model_params[3],
+        "cooling_slope": model_params[4],
     }
 
     period = Period(datetime(2012,1,1,tzinfo=pytz.utc),
@@ -58,7 +58,7 @@ def default_residential_outputs_1(request, gsod_722880_2012_2014_weather_source)
     consumption_kWh_per_day, consumption_n_days = \
             consumption_data.average_daily_consumptions()
 
-    elec_params = model.param_dict_to_list(params)
+    elec_params = model.param_type(params)
 
     fixture = consumption_data, elec_params, elec_presence, \
             elec_annualized_usage, elec_error, temp_unit, \
@@ -121,63 +121,6 @@ def test_default_residential_meter(default_residential_outputs_1,
     assert result.get_data('cvrmse',
             tags=['electricity', 'reporting']).value < 1e-2
 
-    # assert_allclose(result['estimated_average_daily_usages_bpi2400_electricity'],estimated_average_daily_usages,rtol=RTOL,atol=ATOL)
-    # assert_allclose(result['estimated_average_daily_usages_bpi2400_natural_gas'],[],rtol=RTOL,atol=ATOL)
-    # assert_allclose(result['estimated_average_daily_usages_electricity'],estimated_average_daily_usages,rtol=RTOL,atol=ATOL)
-    # assert result['has_enough_cdd_electricity'] == True
-    # assert result['has_enough_cdd_natural_gas'] == True
-    # assert result['has_enough_data_electricity'] == True
-    # assert result['has_enough_data_natural_gas'] == False
-    # assert result['has_enough_hdd_cdd_electricity'] == True
-    # assert result['has_enough_hdd_cdd_natural_gas'] == False
-    # assert result['has_enough_hdd_electricity'] == True
-    # assert result['has_enough_hdd_natural_gas'] == False
-    # assert result['has_enough_periods_with_high_cdd_per_day_electricity'] == True
-    # assert result['has_enough_periods_with_high_cdd_per_day_natural_gas'] == True
-    # assert result['has_enough_periods_with_high_hdd_per_day_electricity'] == True
-    # assert result['has_enough_periods_with_high_hdd_per_day_natural_gas'] == False
-    # assert result['has_enough_periods_with_low_cdd_per_day_electricity'] == True
-    # assert result['has_enough_periods_with_low_cdd_per_day_natural_gas'] == True
-    # assert result['has_enough_periods_with_low_hdd_per_day_electricity'] == True
-    # assert result['has_enough_periods_with_low_hdd_per_day_natural_gas'] == False
-    # assert result['has_enough_total_cdd_electricity'] == True
-    # assert result['has_enough_total_cdd_natural_gas'] == True
-    # assert result['has_enough_total_hdd_electricity'] == True
-    # assert result['has_enough_total_hdd_natural_gas'] == False
-    # assert result['has_recent_reading_electricity'] == True
-    # assert result['has_recent_reading_natural_gas'] == False
-    # assert_allclose(result['hdd_tmy'], hdd_tmy, rtol=RTOL, atol=ATOL)
-    # assert result['meets_cvrmse_limit_electricity'] == True
-    # assert result['meets_cvrmse_limit_natural_gas'] == False
-    # assert result['meets_model_calibration_utility_bill_criteria_electricity'] == True
-    # assert result['meets_model_calibration_utility_bill_criteria_natural_gas'] == False
-    # assert_allclose(result['n_days_electricity'],n_days,rtol=RTOL,atol=ATOL)
-    # assert result['n_periods_high_cdd_per_day_electricity'] > 0
-    # assert result['n_periods_high_hdd_per_day_electricity'] > 0
-    # assert result['n_periods_low_cdd_per_day_electricity'] > 0
-    # assert result['n_periods_low_hdd_per_day_electricity'] > 0
-    # assert result['n_periods_high_cdd_per_day_natural_gas'] == 0
-    # assert result['n_periods_high_hdd_per_day_natural_gas'] == 0
-    # assert result['n_periods_low_cdd_per_day_natural_gas'] == 0
-    # assert result['n_periods_low_hdd_per_day_natural_gas'] == 0
-    # assert result['natural_gas_presence'] == False
-    # assert_allclose(result['rmse_electricity'], rmse_electricity, rtol=RTOL, atol=ATOL)
-    # assert_allclose(result['r_squared_electricity'], r_squared_electricity, rtol=RTOL, atol=ATOL)
-    # assert result['spans_183_days_and_has_enough_hdd_cdd_electricity'] == True
-    # assert result['spans_183_days_and_has_enough_hdd_cdd_natural_gas'] == False
-    # assert result['spans_184_days_electricity'] == True
-    # assert result['spans_184_days_natural_gas'] == False
-    # assert result['spans_330_days_electricity'] == True
-    # assert result['spans_330_days_natural_gas'] == False
-    # assert_allclose(result['temp_sensitivity_params_bpi2400_electricity'], elec_params, rtol=RTOL, atol=ATOL)
-    # assert_allclose(result['temp_sensitivity_params_bpi2400_natural_gas'], gas_param_defaults, rtol=RTOL, atol=ATOL)
-    # assert_allclose(result['temp_sensitivity_params_electricity'], elec_params, rtol=RTOL, atol=ATOL)
-    # assert result['time_span_electricity'] == 1080
-    # assert result['time_span_natural_gas'] == 0
-    # assert_allclose(result['total_cdd_electricity'], total_cdd, rtol=RTOL, atol=ATOL)
-    # assert result['total_cdd_natural_gas'] == 0
-    # assert_allclose(result['total_hdd_electricity'], total_hdd, rtol=RTOL, atol=ATOL)
-    # assert result['total_hdd_natural_gas'] == 0
 
 def test_default_residential_meter_bad_inputs():
 

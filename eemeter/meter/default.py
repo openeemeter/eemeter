@@ -324,22 +324,22 @@ class DefaultResidentialMeter(MeterBase):
                                                     sequence: [
                                                         !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {{
                                                             temperature_unit_str: {temp_unit},
-                                                            model: !obj:eemeter.models.TemperatureSensitivityModel &electricity_model {{
+                                                            model: !obj:eemeter.models.AverageDailyTemperatureSensitivityModel &electricity_model {{
                                                                 cooling: True,
                                                                 heating: True,
                                                                 initial_params: {{
-                                                                    base_consumption: 0,
+                                                                    base_daily_consumption: 0,
                                                                     heating_slope: 0,
                                                                     cooling_slope: 0,
-                                                                    heating_reference_temperature: {h_ref_x0},
-                                                                    cooling_reference_temperature: {c_ref_x0},
+                                                                    heating_balance_temperature: {h_ref_x0},
+                                                                    cooling_balance_temperature: {c_ref_x0},
                                                                 }},
                                                                 param_bounds: {{
-                                                                    base_consumption: [{e_bl_l},{e_bl_h}],
+                                                                    base_daily_consumption: [{e_bl_l},{e_bl_h}],
                                                                     heating_slope: [{e_h_slope_l},{e_h_slope_h}],
                                                                     cooling_slope: [{e_c_slope_l},{e_c_slope_h}],
-                                                                    heating_reference_temperature: [{h_ref_l},{h_ref_h}],
-                                                                    cooling_reference_temperature: [{c_ref_l},{c_ref_h}],
+                                                                    heating_balance_temperature: [{h_ref_l},{h_ref_h}],
+                                                                    cooling_balance_temperature: [{c_ref_l},{c_ref_h}],
                                                                 }},
                                                             }},
                                                             input_mapping: {{
@@ -370,18 +370,18 @@ class DefaultResidentialMeter(MeterBase):
                                                     sequence: [
                                                         !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {{
                                                             temperature_unit_str: {temp_unit},
-                                                            model: !obj:eemeter.models.TemperatureSensitivityModel &natural_gas_model {{
+                                                            model: !obj:eemeter.models.AverageDailyTemperatureSensitivityModel &natural_gas_model {{
                                                                 cooling: False,
                                                                 heating: True,
                                                                 initial_params: {{
-                                                                    base_consumption: 0,
+                                                                    base_daily_consumption: 0,
                                                                     heating_slope: 0,
-                                                                    heating_reference_temperature: {h_ref_x0},
+                                                                    heating_balance_temperature: {h_ref_x0},
                                                                 }},
                                                                 param_bounds: {{
-                                                                    base_consumption: [{n_g_bl_l},{n_g_bl_h}],
+                                                                    base_daily_consumption: [{n_g_bl_l},{n_g_bl_h}],
                                                                     heating_slope: [{n_g_h_slope_l},{n_g_h_slope_h}],
-                                                                    heating_reference_temperature: [{h_ref_l},{h_ref_h}],
+                                                                    heating_balance_temperature: [{h_ref_l},{h_ref_h}],
                                                                 }},
                                                             }},
                                                             input_mapping: {{
@@ -584,13 +584,12 @@ class DefaultResidentialMeter(MeterBase):
               sensitivity parameters for HDD/CDD use model in an
               array of values with the following order:
 
-              For electricty: [base_consumption (kWh/day), heating_slope
-              (kWh/HDD), heating_reference_temperature (degF or degC),
-              cooling_slope (kWh/CDD), cooling_reference_temperature (degF or
-              degC)].
+              For electricty: [base_daily_consumption (kWh/day),
+              heating_balance_temperature (degF or degC), heating_slope (kWh/HDD),
+              cooling_balance_temperature (degF or degC), cooling_slope (kWh/CDD)].
 
-              For natural_gas: [base_consumption (kWh/day), heating_slope
-              (kWh/HDD), heating_reference_temperature (degF or degC)].
+              For natural_gas: [base_daily_consumption (kWh/day),
+              heating_balance_temperature (degF or degC), heating_slope (kWh/HDD)].
 
             - *"time_span"* : Number of days between earliest available
               data and latest available data.
@@ -622,14 +621,12 @@ class DefaultResidentialMeter(MeterBase):
               sensitivity parameters for HDD/CDD use model in an
               array of values with the following order:
 
-              For electricty: [base_consumption (kWh/day), heating_slope
-              (kWh/HDD), heating_reference_temperature (degF or degC),
-              cooling_slope (kWh/CDD), cooling_reference_temperature (degF or
-              degC)].
+              For electricty: [base_daily_consumption (kWh/day),
+              heating_balance_temperature (degF or degC), heating_slope (kWh/HDD),
+              cooling_balance_temperature (degF or degC), cooling_slope (kWh/CDD)].
 
-              For natural_gas: [base_consumption (kWh/day), heating_slope
-              (kWh/HDD), heating_reference_temperature (degF or degC)].
-
+              For natural_gas: [base_daily_consumption (kWh/day),
+              heating_balance_temperature (degF or degC), heating_slope (kWh/HDD)].
 
         """
         return self.meter.evaluate(data_collection)
