@@ -116,14 +116,14 @@ def generated_consumption_data_pre_post_1(request,
     n_months_pre = int(len(pre_records) / 2)
     all_records = pre_records[:n_months_pre] + \
             post_records[n_months_pre:]
-    consumption_data = ConsumptionData(all_records, cd_pre.fuel_type,
-            cd_post.unit_name, record_type="arbitrary")
+    consumption_data = ConsumptionData(all_records, cd_post.fuel_type,
+            cd_post.unit_name, record_type=record_type)
 
     retrofit_date = post_records[n_months_pre]["start"]
 
     return consumption_data, params_pre, params_post, retrofit_date
 
-@pytest.fixture(params=[-0.44])
+@pytest.fixture(params=[1350.65])
 def generated_consumption_data_pre_post_with_gross_savings_1(request,
         generated_consumption_data_pre_post_1):
     cd, params_pre, params_post, retrofit_date = \
@@ -131,14 +131,13 @@ def generated_consumption_data_pre_post_with_gross_savings_1(request,
     gross_savings = request.param
     return cd, params_pre, params_post, retrofit_date, gross_savings
 
-@pytest.fixture(params=[0.0])
+@pytest.fixture(params=[2039.18])
 def generated_consumption_data_pre_post_with_annualized_gross_savings_1(
         request, generated_consumption_data_pre_post_1):
     cd, params_pre, params_post, retrofit_date = \
             generated_consumption_data_pre_post_1
     annualized_gross_savings = request.param
-    return cd, params_pre, params_post, retrofit_date, \
-        annualized_gross_savings
+    return cd, params_pre, params_post, retrofit_date, annualized_gross_savings
 
 @pytest.fixture(params=[(Period(datetime(2012,1,1), datetime(2012,12,31)),360),
                         (Period(datetime(2012,1,1), datetime(2012,9,30)), 270),
