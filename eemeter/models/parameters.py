@@ -1,5 +1,6 @@
 import numpy as np
 from copy import copy
+import six
 
 class ParameterMeta(type):
     def __new__(cls, name, parents, dct):
@@ -7,8 +8,8 @@ class ParameterMeta(type):
         del dct["parameters"]
         return super(ParameterMeta, cls).__new__(cls, name, parents, dct)
 
+@six.add_metaclass(ParameterMeta)
 class ParameterType(object):
-    __metaclass__= ParameterMeta
 
     parameters = []
 

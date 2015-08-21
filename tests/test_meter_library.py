@@ -14,11 +14,15 @@ from eemeter.meter import NormalAnnualCDD
 from eemeter.meter import NPeriodsMeetingHDDPerDayThreshold
 from eemeter.meter import NPeriodsMeetingCDDPerDayThreshold
 from eemeter.meter import RecentReadingMeter
+from eemeter.meter import GrossSavingsMeter
+from eemeter.meter import AnnualizedGrossSavingsMeter
 from eemeter.meter import AverageDailyUsage
 from eemeter.meter import EstimatedAverageDailyUsage
 from eemeter.meter import ConsumptionDataAttributes
 from eemeter.meter import ProjectAttributes
 from eemeter.meter import ProjectConsumptionDataBaselineReporting
+
+from eemeter.models import AverageDailyTemperatureSensitivityModel
 
 from fixtures.weather import gsod_722880_2012_2014_weather_source
 from fixtures.weather import tmy3_722880_weather_source
@@ -178,67 +182,22 @@ def test_annualized_usage_meter(
 def test_gross_savings_metric(generated_consumption_data_pre_post_with_gross_savings_1,
                               gsod_722880_2012_2014_weather_source):
 
-    meter_yaml = """
-        !obj:eemeter.meter.Sequence {
-            sequence: [
-                !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter &meter {
-                    temperature_unit_str: "degF",
-                    model: !obj:eemeter.models.AverageDailyTemperatureSensitivityModel &model {
-                        cooling: True,
-                        heating: True,
-                        initial_params: {
-                            base_daily_consumption: 0,
-                            heating_slope: 0,
-                            cooling_slope: 0,
-                            heating_balance_temperature: 60,
-                            cooling_balance_temperature: 70,
-                        },
-                        param_bounds: {
-                            base_daily_consumption: [0,2000],
-                            heating_slope: [0,200],
-                            cooling_slope: [0,200],
-                            heating_balance_temperature: [55,65],
-                            cooling_balance_temperature: [65,75],
-                        },
-                    },
-                    input_mapping: {
-                        consumption_data: {},
-                        weather_source: {},
-                        energy_unit_str: {},
-                    },
-                    output_mapping: {
-                        temp_sensitivity_params: {name: model_params},
-                    },
-                },
-                !obj:eemeter.meter.GrossSavingsMeter {
-                    temperature_unit_str: "degF",
-                    model: *model,
-                    input_mapping: {
-                        model_params_baseline: {name: model_params},
-                        consumption_data_reporting: {name: consumption_data},
-                        weather_source: {},
-                        energy_unit_str: {},
-                    },
-                    output_mapping: {
-                        gross_savings: {},
-                    },
-                }
-            ]
-        }
-        """
-    meter = load(meter_yaml)
+    model = AverageDailyTemperatureSensitivityModel(heating=True, cooling=True)
+    meter = GrossSavingsMeter(temperature_unit_str="degF", model=model)
 
-    cd, _, _, retrofit, savings = \
+    cd, params_pre, params_post, retrofit_date, savings = \
             generated_consumption_data_pre_post_with_gross_savings_1
 
-    data_collection = DataCollection(
-            consumption_data=cd,
-            weather_source=gsod_722880_2012_2014_weather_source,
-            weather_normal_source=tmy3_722880_weather_source,
-            energy_unit_str="kWh")
-    result = meter.evaluate(data_collection)
+    reporting_period = Period(retrofit_date, datetime(2015,1,1))
 
-    assert_allclose(result.get_data("gross_savings").value, savings,
+
+    result = meter.evaluate_raw(
+            consumption_data_reporting=cd.filter_by_period(reporting_period),
+            model_params_baseline=params_pre,
+            weather_source=gsod_722880_2012_2014_weather_source,
+            energy_unit_str="kWh")
+
+    assert_allclose(result["gross_savings"], savings,
             rtol=RTOL, atol=ATOL)
 
 @pytest.mark.slow
@@ -246,69 +205,22 @@ def test_annualized_gross_savings_metric(
         generated_consumption_data_pre_post_with_annualized_gross_savings_1,
         gsod_722880_2012_2014_weather_source, tmy3_722880_weather_source):
 
-    meter_yaml = """
-        !obj:eemeter.meter.Sequence {
-            sequence: [
-                !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter &meter {
-                    temperature_unit_str: "degF",
-                    model: !obj:eemeter.models.AverageDailyTemperatureSensitivityModel &model {
-                        cooling: True,
-                        heating: True,
-                        initial_params: {
-                            base_daily_consumption: 0,
-                            heating_slope: 0,
-                            cooling_slope: 0,
-                            heating_balance_temperature: 60,
-                            cooling_balance_temperature: 70,
-                        },
-                        param_bounds: {
-                            base_daily_consumption: [0,2000],
-                            heating_slope: [0,200],
-                            cooling_slope: [0,200],
-                            heating_balance_temperature: [55,65],
-                            cooling_balance_temperature: [65,75],
-                        },
-                    },
-                    input_mapping: {
-                        consumption_data: {},
-                        weather_source: {},
-                        energy_unit_str: {},
-                    },
-                    output_mapping: {
-                        temp_sensitivity_params: {},
-                    },
-                },
-                !obj:eemeter.meter.AnnualizedGrossSavingsMeter {
-                    temperature_unit_str: "degF",
-                    model: *model,
-                    input_mapping: {
-                        model_params_baseline: {name: temp_sensitivity_params},
-                        model_params_reporting: {name: temp_sensitivity_params},
-                        consumption_data_reporting: {name: consumption_data},
-                        weather_normal_source: {},
-                    },
-                    output_mapping: {
-                        annualized_gross_savings: {},
-                    },
-                }
-            ]
-        }
-        """
-    meter = load(meter_yaml)
+    model = AverageDailyTemperatureSensitivityModel(heating=True, cooling=True)
+    meter = AnnualizedGrossSavingsMeter(temperature_unit_str="degF", model=model)
 
-    cd, _, _, retrofit, savings = \
+    cd, params_pre, params_post, retrofit_date, savings = \
             generated_consumption_data_pre_post_with_annualized_gross_savings_1
 
-    data_collection = DataCollection(
-            consumption_data=cd,
-            weather_source=gsod_722880_2012_2014_weather_source,
-            weather_normal_source=tmy3_722880_weather_source,
-            retrofit_start_date=retrofit,
-            retrofit_completion_date=retrofit,
-            energy_unit_str="kWh")
-    result = meter.evaluate(data_collection)
+    reporting_period = Period(retrofit_date, datetime(2015,1,1))
 
-    assert_allclose(result.get_data("annualized_gross_savings").value, savings,
+    result = meter.evaluate_raw(
+            model_params_baseline=params_pre,
+            model_params_reporting=params_post,
+            consumption_data_reporting=cd.filter_by_period(reporting_period),
+            weather_normal_source=tmy3_722880_weather_source,
+            energy_unit_str="kWh")
+
+    assert_allclose(result["annualized_gross_savings"], savings,
             rtol=RTOL, atol=ATOL)
 
 def test_time_span_meter(time_span_1):
