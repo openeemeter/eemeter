@@ -4,6 +4,7 @@ import yaml
 import tempfile
 import os
 from decimal import Decimal
+from eemeter.config.yaml_parser import Setting
 
 import pytest
 
@@ -29,3 +30,13 @@ def test_obj():
 def test_obj_formats(simple_yaml):
     loaded = load(simple_yaml)
     assert isinstance(loaded, Decimal)
+
+def test_setting():
+    settings = {"heating_config": 10}
+
+    loaded = load("a: !setting heating_config", settings=settings)
+    assert loaded['a'] == 10
+
+    # no settings provided
+    with pytest.raises(KeyError):
+        loaded = load("a: !setting heating_config")
