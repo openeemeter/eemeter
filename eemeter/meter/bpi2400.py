@@ -428,8 +428,8 @@ class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(YamlDefinedMeter):
             raise ValueError("Invalid temperature_unit_str: should be one of 'degF' or 'degC'.")
 
         self.temperature_unit_str = temperature_unit_str
-        settings = self.process_settings(settings)
-        self.meter = load(self.yaml, settings)
+        self.settings = self.process_settings(settings)
+        self.meter = load(self.yaml, self.settings)
 
     def default_settings(self):
 

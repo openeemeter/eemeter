@@ -456,4 +456,3 @@ class YamlDefinedMeter(MeterBase):
         outputs = self.meter.evaluate(data_collection)
         outputs.add_tags(self.tagspace)
         return outputs
-
