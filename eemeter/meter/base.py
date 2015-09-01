@@ -379,3 +379,80 @@ class MeterBase(object):
         and other meters.
         """
         raise NotImplementedError
+
+    def yaml_mapping(self):
+        args = inspect.getargspec(self.__init__).args[1:]
+        mapping = { arg: getattr(self,arg) for arg in args}
+        mapping["input_mapping"] = self.input_mapping
+        mapping["output_mapping"] = self.output_mapping
+        mapping["auxiliary_inputs"] = self.auxiliary_inputs
+        mapping["auxiliary_outputs"] = self.auxiliary_outputs
+        mapping["tagspace"] = self.tagspace
+        return mapping
+
+class YamlDefinedMeter(MeterBase):
+    """Meter type which uses yaml internally.
+    """
+
+    @property
+    def yaml(self):
+        """Should return a string with the raw yaml.
+        """
+        raise NotImplementedError
+
+    def process_settings(self, settings):
+        """ Processes settings by adding defaults where needed and eliminating
+        unused settings.
+
+        Parameters
+        ----------
+        settings : dict
+            Settings dict where each key-value pair is a name and a value.
+
+        Returns
+        -------
+        processed_settings : dict
+            Settings dict where each key-value pair is a name and a value;
+            defaults are provided where necessary. Contains exactly the keys
+            in the default settings dict.
+
+        """
+        default_settings = self.default_settings()
+
+        processed_settings = {}
+
+        for key, value in default_settings.items():
+            if key in settings:
+                processed_settings[key] = settings[key]
+            else:
+                processed_settings[key] = value
+
+        self.validate_settings(processed_settings)
+
+        return processed_settings
+
+    def default_settings(self, settings):
+        """Use this method to provide default settings.
+        """
+        return {}
+
+    def validate_settings(self, settings):
+        """Use this method to provide extra validation for settings.
+        Raise errors if the settings are not valid.
+        """
+        pass
+
+    def evaluate_raw(self):
+        """This method is not used in YamlDefinedMeters.
+        """
+        message = "Use the meter.evaluate(data_collection) method for" \
+                "YamlDefinedMeters."
+        raise NotImplementedError(message)
+
+    def evaluate(self, data_collection):
+        """Evaluates the meter defined by yaml. Requires that a meter
+        property exist on the meter after initialization.
+        """
+        outputs = self.meter.evaluate(data_collection)
+        outputs.add_tags(self.tagspace)
+        return outputs
