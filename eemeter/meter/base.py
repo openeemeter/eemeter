@@ -380,6 +380,16 @@ class MeterBase(object):
         """
         raise NotImplementedError
 
+    def yaml_mapping(self):
+        args = inspect.getargspec(self.__init__).args[1:]
+        mapping = { arg: getattr(self,arg) for arg in args}
+        mapping["input_mapping"] = self.input_mapping
+        mapping["output_mapping"] = self.output_mapping
+        mapping["auxiliary_inputs"] = self.auxiliary_inputs
+        mapping["auxiliary_outputs"] = self.auxiliary_outputs
+        mapping["tagspace"] = self.tagspace
+        return mapping
+
 class YamlDefinedMeter(MeterBase):
     """Meter type which uses yaml internally.
     """
@@ -446,4 +456,3 @@ class YamlDefinedMeter(MeterBase):
         outputs = self.meter.evaluate(data_collection)
         outputs.add_tags(self.tagspace)
         return outputs
-

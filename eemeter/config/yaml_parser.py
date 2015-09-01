@@ -82,8 +82,14 @@ def try_to_import(tag_suffix):
 def initialize():
     """Add constructors to yaml parser.
     """
+    from eemeter.meter.base import MeterBase
+    from eemeter.models.temperature_sensitivity import Model
+
     yaml.add_multi_constructor('!obj:', multi_constructor_obj)
     yaml.add_constructor('!setting', constructor_setting)
+    yaml.add_multi_representer(MeterBase, multi_representer_obj)
+    yaml.add_multi_representer(Model, multi_representer_obj)
+
     is_initialized = True
 
 def multi_constructor_obj(loader, tag_suffix, node):
@@ -111,3 +117,12 @@ def constructor_setting(loader, node):
     proxy = Proxy(callable=Setting, keywords={"name": value}, yaml_src=yaml_src)
 
     return proxy
+
+def multi_representer_obj(dumper, data):
+    meter_type_name = data.__module__ + "." + data.__class__.__name__
+    mapping = data.yaml_mapping()
+    node = dumper.represent_mapping(u'!obj:{}'.format(meter_type_name), mapping)
+    return node
+
+def dump(meter):
+    return yaml.dump(meter)

@@ -1,10 +1,13 @@
-from eemeter.config.yaml_parser import load_path,load
+from eemeter.config.yaml_parser import load_path,load,dump
 
 import yaml
 import tempfile
 import os
 from decimal import Decimal
 from eemeter.config.yaml_parser import Setting
+
+from eemeter.meter import BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria
+from eemeter.meter import DefaultResidentialMeter
 
 import pytest
 
@@ -40,3 +43,12 @@ def test_setting():
     # no settings provided
     with pytest.raises(KeyError):
         loaded = load("a: !setting heating_config")
+
+def test_dump_meter():
+    meter = BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria("degF")
+
+    # just make sure nothing has changed
+    assert len(dump(meter.meter)) == 11913
+    meter = DefaultResidentialMeter("degF")
+    assert len(dump(meter.meter)) == 6784
+
