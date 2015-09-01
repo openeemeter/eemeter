@@ -1,6 +1,7 @@
 import scipy.optimize as opt
 import numpy as np
 from .parameters import ParameterType
+import inspect
 
 class BaseloadModelParameterType(ParameterType):
     parameters = [
@@ -80,6 +81,12 @@ class Model(object):
     def _transform(self, X, param_array):
         raise NotImplementedError
 
+    def yaml_mapping(self):
+        args = inspect.getargspec(self.__init__).args[1:]
+        mapping = { arg: getattr(self,arg) for arg in args}
+        print mapping
+        return mapping
+
 class AverageDailyTemperatureSensitivityModel(Model):
 
     def __init__(self, heating, cooling, *args, **kwargs):
@@ -93,6 +100,8 @@ class AverageDailyTemperatureSensitivityModel(Model):
                 self.model = AverageDailyBaseloadHeatingConsumptionModel(*args, **kwargs)
             else:
                 self.model = AverageDailyBaseloadConsumptionModel(*args, **kwargs)
+        self.cooling = cooling
+        self.heating = heating
         self.param_type = self.model.param_type
         self.initial_params = self.model.initial_params
         self.param_bounds = self.model.param_bounds
