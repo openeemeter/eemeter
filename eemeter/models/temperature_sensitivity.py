@@ -84,7 +84,8 @@ class Model(object):
     def yaml_mapping(self):
         args = inspect.getargspec(self.__init__).args[1:]
         mapping = { arg: getattr(self,arg) for arg in args}
-        print mapping
+        mapping["initial_params"] = self.initial_params.to_dict()
+        mapping["param_bounds"] = self.param_bounds.to_dict()
         return mapping
 
 class AverageDailyTemperatureSensitivityModel(Model):

@@ -49,11 +49,6 @@ class Sequence(MeterBase):
             output_data_collection.add_data_collection(meter_result)
         return output_data_collection
 
-    def yaml_mapping(self):
-        mapping = super(Sequence,self).yaml_mapping()
-        mapping["sequence"] = self.sequence
-        return mapping
-
 class Condition(MeterBase):
     """Collects and returns a series of meter object evaluation outputs in
     sequence, making the outputs of each meter available to those that
@@ -103,13 +98,6 @@ class Condition(MeterBase):
         else:
             return meter.evaluate(data_collection)
 
-    def yaml_mapping(self):
-        mapping = super(Condition, self).yaml_mapping()
-        mapping["condition"] = self.condition
-        mapping["success"] = self.success
-        mapping["failure"] = self.failure
-        return mapping
-
 class Switch(MeterBase):
     """Switches between cases of values of a particular parameter.
 
@@ -157,13 +145,6 @@ class Switch(MeterBase):
             else:
                 meter = self.default
         return meter.evaluate(data_collection)
-
-    def yaml_mapping(self):
-        mapping = super(Switch, self).yaml_mapping()
-        mapping["target"] = self.target
-        mapping["cases"] = self.cases
-        mapping["default"] = self.default
-        return mapping
 
 class For(MeterBase):
     """ Operates like a python-style for loop, looping over parameters to feed
@@ -254,10 +235,3 @@ class For(MeterBase):
             outputs.add_tags(tags)
             output_data_collection.add_data_collection(outputs)
         return output_data_collection
-
-    def yaml_mapping(self):
-        mapping = super(For, self).yaml_mapping()
-        mapping["variable"] = self.variable
-        mapping["iterable"] = self.iterable
-        mapping["meter"] = self.meter
-        return mapping
