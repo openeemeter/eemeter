@@ -3,6 +3,12 @@ from eemeter.weather import TMY3WeatherSource
 
 class Project(object):
     """
+    Projects contain all of the elements which are needed for meters to be able
+    to calculate project savings. They contain cosumption data, location
+    information (for matching with weather and climate data sources),
+    consumption data, and baseline and reporting periods. Optionally, other
+    evaluation periods of interest can be included in the project.
+
     Parameters
     ----------
     location : eemeter.location.Location
@@ -12,11 +18,23 @@ class Project(object):
     consumption : list of eemeter.consumption.ConsumptionData objects
         All available consumption data for this project.
     baseline_period : eemeter.evaluation.Period
-        Date/time period for baselining.
+        Date/time period for baselining. The start date of the baseline period
+        should be the date of earliest available consumption data, and the end
+        date of the baseline period should be the latest known pre-retrofit
+        date. If multiple ECM retrofits occured over different time periods,
+        the baseline period end date should fall before the beginning of the
+        first retrofit for which savings are being claimed.
     reporting_period : eemeter.evaluation.Period
-        Date/time period for reporting.
+        Date/time period for reporting. The start date of the reporting period
+        should be the earliest known post-retrofit date, and the end date of
+        the reporting period should be the latest date for which consumption
+        data is available (or `None` to represent the present). If multiple
+        ECM retrofits occured over different time periods, the reporting period
+        start date should fall after the completion of the final retrofit for
+        which savings are being claimed.
     other_periods : list of eemeter.evaluation.Period objects
-        Other named date/time periods of interest, perhaps particular seasons or years of interest.
+        Other named date/time periods of interest (perhaps particular seasons
+        or years).
     weather_source : eemeter.weather.WeatherSourceBase
         Source of weather data.
     weather_normal_source : eemeter.weather.WeatherSourceBase
