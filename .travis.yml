@@ -16,7 +16,7 @@ before_install:
 install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy dateutil pandas lxml xlrd sqlalchemy
   - pip install .
-  - pip install -r requirements.txt
+  - pip install -r travis_requirements.txt
 script:
   - py.test --runslow
 
