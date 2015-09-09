@@ -4,7 +4,7 @@ from eemeter.weather import GSODWeatherSource
 from eemeter.generator import MonthlyBillingConsumptionGenerator
 from eemeter.generator import generate_monthly_billing_datetimes
 from eemeter.consumption import ConsumptionData
-from eemeter.models import TemperatureSensitivityModel
+from eemeter.models import AverageDailyTemperatureSensitivityModel
 from eemeter.project import Project
 
 from scipy.stats import randint
