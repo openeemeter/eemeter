@@ -107,7 +107,7 @@ default_residential_meter_yaml = """
                                     natural_gas: !obj:eemeter.meter.Sequence {
                                         sequence: [
                                             !obj:eemeter.meter.TemperatureSensitivityParameterOptimizationMeter {
-                                                temperature_unit_str: {temp_unit},
+                                                temperature_unit_str: !setting temperature_unit_str,
                                                 model: !obj:eemeter.models.AverageDailyTemperatureSensitivityModel &natural_gas_model {
                                                     cooling: False,
                                                     heating: True,

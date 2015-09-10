@@ -94,7 +94,7 @@ def test_data_collection_add_data_collection(data_collection):
 def test_data_collection_search(data_collection):
     assert data_collection.search("name").count() == 1
     assert data_collection.search("nom").count() == 0
-    assert data_collection.search("nam").count() == 1
+    assert data_collection.search("nam").count() == 0
     assert data_collection.search("name", tags=[]).count() == 1
     assert data_collection.search("name", tags=["tag"]).count() == 1
     assert data_collection.search("name", tags=["dag"]).count() == 0
