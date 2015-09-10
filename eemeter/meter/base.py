@@ -154,7 +154,7 @@ class DataCollection:
         """
         data_collection = DataCollection()
         for item in self.iteritems():
-            if string in item.name:
+            if string == item.name:
                 if tags is None or tags == []:
                     data_collection.add_data(item)
                 else:
@@ -181,8 +181,6 @@ class DataCollection:
             if tags == [] or tags == None or all([tag in item.tags for tag in tags]):
                 data_collection.add_data(item)
         return data_collection
-
-
 
 class MeterBase(object):
     """Base class for all Meter objects. Takes care of structural tasks such as

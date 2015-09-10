@@ -50,5 +50,5 @@ def test_dump_meter():
     # just make sure nothing has changed
     assert len(dump(meter.meter)) == 11913
     meter = DefaultResidentialMeter("degF")
-    assert len(dump(meter.meter)) == 6784
+    assert len(dump(meter.meter)) == 6771
 
