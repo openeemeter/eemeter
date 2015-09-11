@@ -23,18 +23,19 @@ ATOL = 1e-2
 
 import pytest
 
-@pytest.fixture(params=[([1, 14.5,1,17.8,8], [1, 14.5,1], 6849.29, 615.69,
+@pytest.fixture(params=[([1, 14.5,1,17.8,8], [1, 14.5,1], 6849.29, 615.69, 0, 0,
                             0, 0, 1, 1, "degC", 693.58, 877.00, 2587.61, 1805.00),
-                        ([3,15.5,2,19.5,1], [3,15.5,2], 2374.35, 1848.67,
+                        ([3,15.5,2,19.5,1], [3,15.5,2], 2374.35, 1848.67, 0, 0,
                             0, 0, 1, 1, "degC", 693.58, 877.00,2587.61, 1805.00),
-                        ([0,18.8,2,22.2,7], [0,18.8,2], 3616.24, 1954.77,
+                        ([0,18.8,2,22.2,7], [0,18.8,2], 3616.24, 1954.77, 0, 0,
                             0, 0, 1, 1, "degC", 693.58, 877.00, 2587.61, 1805.00),
-                        ([0,65,2,71,3], [0,65,2], 4700.22, 3157.17,
+                        ([0,65,2,71,3], [0,65,2], 4700.22, 3157.17, 0, 0,
                              0, 0, 1, 1, "degF", 1248.45, 1578.58, 4657.70, 3249.00),
                         ])
 def default_residential_outputs_1(request, gsod_722880_2012_2014_weather_source):
     elec_model_params, gas_model_params, \
             elec_annualized_usage, gas_annualized_usage, \
+            elec_gross_savings, gas_gross_savings, \
             elec_rmse, gas_rmse, elec_r_squared, gas_r_squared, \
             temp_unit, cdd_tmy, hdd_tmy, total_cdd, total_hdd \
             = request.param
@@ -79,6 +80,7 @@ def default_residential_outputs_1(request, gsod_722880_2012_2014_weather_source)
     fixture = elec_consumption_data, gas_consumption_data, \
             elec_params, gas_params, \
             elec_annualized_usage, gas_annualized_usage, \
+            elec_gross_savings, gas_gross_savings, \
             elec_rmse, gas_rmse, \
             elec_r_squared, gas_r_squared, \
             elec_consumption_kWh_per_day, gas_consumption_kWh_per_day, \
@@ -93,6 +95,7 @@ def test_default_residential_meter(default_residential_outputs_1,
     elec_consumption_data, gas_consumption_data, \
             elec_params, gas_params, \
             elec_annualized_usage, gas_annualized_usage, \
+            elec_gross_savings, gas_gross_savings, \
             elec_rmse, gas_rmse, \
             elec_r_squared, gas_r_squared, \
             elec_consumption_kWh_per_day, gas_consumption_kWh_per_day, \
@@ -127,6 +130,15 @@ def test_default_residential_meter(default_residential_outputs_1,
 
     assert_allclose(result.get_data('annualized_usage',
             tags=['natural_gas','reporting']).value, gas_annualized_usage,
+            rtol=RTOL, atol=ATOL)
+
+
+    assert_allclose(result.get_data('gross_savings',
+            tags=['electricity']).value, elec_gross_savings,
+            rtol=RTOL, atol=ATOL)
+
+    assert_allclose(result.get_data('gross_savings',
+            tags=['natural_gas']).value, gas_gross_savings,
             rtol=RTOL, atol=ATOL)
 
 

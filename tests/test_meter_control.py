@@ -12,8 +12,7 @@ def test_sequential_meter():
             sequence: [
                 !obj:eemeter.meter.DummyMeter {
                     input_mapping: { "value": {}, },
-                    output_mapping: { "result": {"name":"value1"}, },
-                },
+                    output_mapping: { "result": {"name":"value1"}, }, },
                 !obj:eemeter.meter.DummyMeter {
                     input_mapping: { "value": { "name": "value1"}, },
                     output_mapping: { "result": {}, },
@@ -150,3 +149,56 @@ def test_for():
 
     assert 1 == result.get_data("result", tags=["one"]).value
     assert 2 == result.get_data("result", tags=["two"]).value
+
+def test_tag_filter():
+    meter_yaml = """
+        !obj:eemeter.meter.TagFilter {
+            meter: !obj:eemeter.meter.DummyMeter {
+                input_mapping: { value: {} },
+                output_mapping: { result: {} },
+            }
+        }
+    """
+
+    meter = load(meter_yaml)
+    data_collection = DataCollection()
+
+    with pytest.raises(NotImplementedError):
+        meter.evaluate(data_collection)
+
+def test_fuel_type_tag_filter():
+    meter_yaml = """
+        !obj:eemeter.meter.FuelTypeTagFilter {
+            fuel_type_search_name: active_fuel_type,
+            input_mapping: {
+                active_fuel_type: {},
+            },
+            meter: !obj:eemeter.meter.Sequence {
+                sequence: [
+                    !obj:eemeter.meter.DummyMeter {
+                        input_mapping: {
+                            value: { name: active_fuel_type }
+                        },
+                        output_mapping: { result: { name: result1 } },
+                    },
+                    !obj:eemeter.meter.DummyMeter {
+                        input_mapping: {
+                            value: {}
+                        },
+                        output_mapping: { result: { name: result2 } },
+                    }
+                ]
+            }
+        }
+    """
+
+    meter = load(meter_yaml)
+    data_collection = DataCollection(active_fuel_type="electricity")
+    data_collection_include = DataCollection(value="value_include")
+    data_collection_exclude = DataCollection(value="value_exclude")
+    data_collection.add_data_collection(data_collection_include, tagspace=["electricity"])
+    data_collection.add_data_collection(data_collection_exclude, tagspace=["natural_gas"])
+
+    output_data_collection = meter.evaluate(data_collection)
+    assert output_data_collection.get_data("result1").value == "electricity"
+    assert output_data_collection.get_data("result2").value == "value_include"

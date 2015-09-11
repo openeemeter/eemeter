@@ -1,5 +1,6 @@
 import inspect
 from collections import defaultdict
+from six import string_types
 
 try:
     unicode = unicode
@@ -15,6 +16,11 @@ class DataContainer:
     def __init__(self, name, value, tags=None):
         self.name = name
         self.set_value(value)
+
+        if isinstance(tags, string_types):
+            message = "tags should be a list or None, got tags={}".format(tags)
+            raise TypeError(message)
+
         if tags is None:
             self.tags = frozenset()
         else:
@@ -33,6 +39,11 @@ class DataContainer:
     def add_tags(self, tags):
         """ Add tags to the container.
         """
+
+        if isinstance(tags, string_types):
+            message = "tags should be a list or None, got tags={}".format(tags)
+            raise TypeError(message)
+
         self.tags = self.tags.union(tags)
 
     def __repr__(self):
@@ -56,10 +67,15 @@ class DataCollection:
         python object.
 
         """
+
+        if isinstance(tags, string_types):
+            message = "tags should be a list or None, got tags={}".format(tags)
+            raise TypeError(message)
+
         self._name_index = defaultdict(list)
-        for k,v in kwargs.items():
-            dc = DataContainer(name=k, value=v, tags=tags)
-            self.add_data(dc)
+        for name, value in kwargs.items():
+            data_container = DataContainer(name=name, value=value, tags=tags)
+            self.add_data(data_container)
 
     def add_data(self, data_container):
         """ Add tagged, named data to the collection.
@@ -77,6 +93,10 @@ class DataCollection:
         """ Add an entire data collection to the data, optionally with a set of
         tags to apply before adding.
         """
+        if isinstance(tagspace, string_types):
+            message = "tagspace should be a list or None, got tags={}".format(tagspace)
+            raise TypeError(message)
+
         for item in data_collection.iteritems():
             new_item = DataContainer(item.name, item.value, item.tags | set(tagspace))
             self.add_data(new_item)
@@ -84,6 +104,11 @@ class DataCollection:
     def add_tags(self, tags):
         """ Add a set of tags to each object in the collection.
         """
+
+        if isinstance(tags, string_types):
+            message = "tags should be a list or None, got tags={}".format(tags)
+            raise TypeError(message)
+
         for item in self.iteritems():
             item.add_tags(tags)
 
@@ -91,6 +116,11 @@ class DataCollection:
         """ Retrieve a single item (or None, if none exists) matching the name
         and tag set supplied.
         """
+
+        if isinstance(tags, string_types):
+            message = "tags should be a list or None, got tags={}".format(tags)
+            raise TypeError(message)
+
         potential_matches = self._name_index[name]
         if tags is None:
             matches = potential_matches
@@ -152,6 +182,11 @@ class DataCollection:
         data_collection : list of eemeter.meter.DataContainer
             Matching items; unordered.
         """
+
+        if isinstance(tags, string_types):
+            message = "tags should be a list or None, got tags={}".format(tags)
+            raise TypeError(message)
+
         data_collection = DataCollection()
         for item in self.iteritems():
             if string == item.name:
@@ -176,6 +211,11 @@ class DataCollection:
         data_collection : DataCollection
             Matching items.
         """
+
+        if isinstance(tags, string_types):
+            message = "tags should be a list or None, got tags={}".format(tags)
+            raise TypeError(message)
+
         data_collection = DataCollection()
         for item in self.iteritems():
             if tags == [] or tags == None or all([tag in item.tags for tag in tags]):
@@ -352,16 +392,21 @@ class MeterBase(object):
         """
         data_collection = DataCollection()
         for result_name, target_data in mapping.items():
-            target_name = target_data.get("name", result_name)
-            target_tags = target_data.get("tags", [])
+
             target_value = data_dict.get(result_name)
             if target_value is None:
                 message = "Data not found during mapping: {}" \
                         .format(result_name)
                 raise ValueError(message)
-            else:
+
+            if type(target_data) is not list:
+                target_data = [target_data]
+            for td in target_data:
+                target_name = td.get("name", result_name)
+                target_tags = td.get("tags", [])
                 data = DataContainer(target_name, target_value, target_tags)
                 data_collection.add_data(data)
+
         return data_collection
 
     def evaluate_raw(self):

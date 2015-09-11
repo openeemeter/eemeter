@@ -144,7 +144,8 @@ class Switch(MeterBase):
                 return DataCollection()
             else:
                 meter = self.default
-        return meter.evaluate(data_collection)
+        output_data_collection = meter.evaluate(data_collection)
+        return output_data_collection
 
 class For(MeterBase):
     """ Operates like a python-style for loop, looping over parameters to feed
@@ -235,3 +236,87 @@ class For(MeterBase):
             outputs.add_tags(tags)
             output_data_collection.add_data_collection(outputs)
         return output_data_collection
+
+class TagFilter(MeterBase):
+    """ Filters input data to match tag criteria.
+
+    Parameters
+    ----------
+    meter: eemeter.meter.MeterBase
+        Meter to run on each iteration.
+    """
+
+    def __init__(self, meter, **kwargs):
+        super(TagFilter, self).__init__(**kwargs)
+        self.meter = meter
+
+    def get_tags(self, data_collection):
+        """
+        Should return a list of tags to be used in a filter_by_tag call
+        on the input data_collection.
+
+        Parameters
+        ----------
+        data_collection : eemeter.meter.DataCollection
+            Input data from which to pull the relevant tags.
+
+
+        Returns
+        -------
+
+        tags : list
+            Tags to filter by.
+        """
+        raise NotImplementedError
+
+    def evaluate(self, data_collection):
+        """Filter meter inputs according to some search criteria and execute
+        the meter provided during initialization.
+
+        Additional input data not satisfying the filter criteria may be
+        retained by adding it to the input_mapping.
+
+        Returns
+        -------
+        out : eemeter.meter.DataCollection
+            Contains the results of the meter run.
+        """
+
+        # prepare input data
+        data_filter = self.get_tags(data_collection)
+        input_data_collection = data_collection.filter_by_tag(data_filter)
+        mapped_input_dict = self._dict_from_data_collection(self.input_mapping,
+                data_collection)
+        for name, value in mapped_input_dict.items():
+            input_data_collection.add_data(DataContainer(name, value))
+
+        # execute the meter
+        output_data_collection = self.meter.evaluate(input_data_collection)
+
+        return output_data_collection
+
+class FuelTypeTagFilter(TagFilter):
+
+    def __init__(self, fuel_type_search_name, **kwargs):
+        super(FuelTypeTagFilter, self).__init__(**kwargs)
+        self.fuel_type_search_name = fuel_type_search_name
+
+    def get_tags(self, data_collection):
+        """
+        Should return the current fuel type, which will be used in a
+        filter_by_tag call on the input data_collection.
+
+        Parameters
+        ----------
+        data_collection : eemeter.meter.DataCollection
+            Input data from which to pull the relevant tags.
+
+        Returns
+        -------
+
+        tags : list
+            Tags to filter by.
+        """
+        tags = [data_collection.get_data(self.fuel_type_search_name).value]
+        return tags
+
