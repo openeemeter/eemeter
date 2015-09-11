@@ -740,3 +740,28 @@ class ProjectConsumptionDataBaselineReporting(MeterBase):
 
         return { "consumption": consumption }
 
+class ProjectFuelTypes(MeterBase):
+    """
+    Forms an iterator over all fuel_types within the project.
+    """
+
+    def evaluate_raw(self, project, **kwargs):
+        """ Creates a list of tagged ConsumptionData objects for each of this
+        project's fuel types in the baseline period and the reporting period.
+
+        Parameters
+        ----------
+        project : eemeter.project.Project
+            Project instance from which to get consumption data.
+
+        Returns
+        -------
+        out : dict
+            - "fuel_types": list of tagged strings
+        """
+        fuel_types = []
+        for c in project.consumption:
+            fuel_type = { "value": c.fuel_type, "tags": [ c.fuel_type ] }
+            fuel_types.append(fuel_type)
+
+        return { "fuel_types": fuel_types }

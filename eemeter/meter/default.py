@@ -13,7 +13,7 @@ default_residential_meter_yaml = """
         },
         !obj:eemeter.meter.ProjectConsumptionDataBaselineReporting {
             input_mapping: { project: {} },
-            output_mapping: { consumption: {} }
+            output_mapping: { consumption: {}, },
         },
         !obj:eemeter.meter.For {
             variable: { name: consumption_data },
@@ -169,6 +169,67 @@ default_residential_meter_yaml = """
                         ],
                     },
                 ]
+            },
+        },
+        !obj:eemeter.meter.ProjectFuelTypes {
+            input_mapping: { project: {} },
+            output_mapping: { fuel_types: {} },
+        },
+        !obj:eemeter.meter.For {
+            variable: { name: active_fuel_type },
+            iterable: { name: fuel_types },
+            meter: !obj:eemeter.meter.FuelTypeTagFilter {
+                fuel_type_search_name: active_fuel_type,
+                input_mapping: {
+                    weather_source: {},
+                    active_fuel_type: {},
+                },
+                meter: !obj:eemeter.meter.Switch {
+                    target: {
+                        name: active_fuel_type,
+                        tags: [],
+                    },
+                    cases: {
+                        electricity: !obj:eemeter.meter.GrossSavingsMeter {
+                            temperature_unit_str: !setting temperature_unit_str,
+                            model: *electricity_model,
+                            input_mapping: {
+                                model_params_baseline: {
+                                    name: model_params,
+                                    tags: [ baseline ]
+                                },
+                                consumption_data_reporting : {
+                                    name: consumption_data_no_estimated,
+                                    tags: [ reporting ]
+                                },
+                                weather_source: {},
+                                energy_unit_str : { tags: [ baseline ] },
+                            },
+                            output_mapping: {
+                                gross_savings: {},
+                            },
+                        },
+                        natural_gas: !obj:eemeter.meter.GrossSavingsMeter {
+                            temperature_unit_str: !setting temperature_unit_str,
+                            model: *natural_gas_model,
+                            input_mapping: {
+                                model_params_baseline: {
+                                    name: model_params,
+                                    tags: [ baseline ]
+                                },
+                                consumption_data_reporting : {
+                                    name: consumption_data_no_estimated,
+                                    tags: [ reporting ]
+                                },
+                                weather_source: {},
+                                energy_unit_str : { tags: [ baseline ] },
+                            },
+                            output_mapping: {
+                                gross_savings: {},
+                            },
+                        },
+                    },
+                },
             },
         },
     ]

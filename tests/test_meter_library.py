@@ -21,6 +21,7 @@ from eemeter.meter import EstimatedAverageDailyUsage
 from eemeter.meter import ConsumptionDataAttributes
 from eemeter.meter import ProjectAttributes
 from eemeter.meter import ProjectConsumptionDataBaselineReporting
+from eemeter.meter import ProjectFuelTypes
 
 from eemeter.models import AverageDailyTemperatureSensitivityModel
 
@@ -370,3 +371,16 @@ def test_project_consumption_baseline_reporting(generated_consumption_data_1):
     assert result["consumption"][1]["value"].data.index[18] == datetime(2014,12,16)
     assert result["consumption"][1]["tags"][0] == "electricity"
     assert result["consumption"][1]["tags"][1] == "reporting"
+
+def test_project_attributes(generated_consumption_data_1):
+    cd,params = generated_consumption_data_1
+    baseline_period = Period(datetime(2014,1,1),datetime(2014,1,1))
+    location = Location(zipcode="91104")
+    project = Project(location,[cd,cd],baseline_period,None)
+    meter = ProjectFuelTypes(project)
+    result = meter.evaluate_raw(project=project)
+    assert len(result["fuel_types"]) == 2
+    assert result["fuel_types"][0]["value"] == "electricity"
+    assert result["fuel_types"][0]["tags"] == ["electricity"]
+    assert result["fuel_types"][1]["value"] == "electricity"
+    assert result["fuel_types"][1]["tags"] == ["electricity"]

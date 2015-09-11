@@ -47,8 +47,8 @@ def test_setting():
 def test_dump_meter():
     meter = BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria("degF")
 
-    # just make sure nothing has changed
+    # just make sure nothing has changed unexpectedly
     assert len(dump(meter.meter)) == 11913
     meter = DefaultResidentialMeter("degF")
-    assert len(dump(meter.meter)) == 6771
+    assert len(dump(meter.meter)) == 7461
 
