@@ -547,7 +547,7 @@ class GSODWeatherSource(DailyAverageTemperatureCachedDataMixin,WeatherSourceBase
 
             self.get_weather_station()
             for fn in gz_filenames:
-                with open(fn, 'r') as f:
+                with open(fn, 'rb') as f:
                     gzf = gzip.GzipFile(fileobj=f)
                     self._add_file(gzf)
 
