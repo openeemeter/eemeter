@@ -8,6 +8,7 @@ from eemeter.weather import WeatherUndergroundWeatherSource
 from eemeter.consumption import ConsumptionData
 from eemeter.evaluation import Period
 
+from pkg_resources import resource_stream
 from datetime import datetime
 from datetime import timedelta
 import pytest
@@ -221,3 +222,15 @@ def test_generic_daily_weather_source_hdd_nan_handling():
     assert_allclose(ws.hdd(period,'degF',65),5487.034,rtol=RTOL,atol=ATOL)
     assert_allclose(ws.cdd(period,'degF',70),1190.235,rtol=RTOL,atol=ATOL)
 
+def test_init_gsod_from_gz_filenames():
+    filenames = [
+            '722880-23152-2011.op.gz',
+            '722880-23152-2012.op.gz',
+            '722880-23152-2013.op.gz',
+            '722880-23152-2014.op.gz']
+    gz_filenames = []
+    for fn in filenames:
+        with resource_stream('eemeter.resources', fn) as gzf:
+            gz_filenames.append(gzf.name)
+    ws = GSODWeatherSource(station_id="722880", gz_filenames=gz_filenames)
+    assert len(ws.data) == 1461

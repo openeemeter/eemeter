@@ -54,22 +54,19 @@ class Model(object):
             message = "must have initial_params defined for model fitting procedure."
             raise ValueError(message)
         else:
-            x0 = self.initial_params.to_list()
+            x0 = self.initial_params.to_array()
 
         if self.param_bounds is None:
             bounds = None
         else:
-            bounds = self.param_bounds.to_list()
-
-        # ignore nans
-        X = np.ma.masked_array(X, np.isnan(X))
+            bounds = self.param_bounds.to_array()
 
         if weights is None:
             weights = 1
 
         def objective_function(param_array):
             y_est = self._transform(X, param_array)
-            return np.sum(((y - y_est)**2) * weights)
+            return np.nansum(((y - y_est)**2) * weights)
 
         result = opt.minimize(objective_function, x0=x0, bounds=bounds)
         params = result.x

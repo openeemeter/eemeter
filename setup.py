@@ -26,5 +26,5 @@ setup(name='eemeter',
                       'pandas',
                       'requests',
                       'pytz'],
-    package_data={'': ['*.json']},
+    package_data={'': ['*.json','*.gz']},
 )
