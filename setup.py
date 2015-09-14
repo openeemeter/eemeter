@@ -18,6 +18,7 @@ class PyTest(Command):
         errno = subprocess.call([sys.executable, 'runtests.py', '--runslow', '--cov=eemeter'])
         raise SystemExit(errno)
 
+
 setup(name='eemeter',
     version=version,
     description='Open Energy Efficiency Meter',
