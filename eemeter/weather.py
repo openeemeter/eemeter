@@ -525,20 +525,31 @@ class DailyAverageTemperatureCachedDataMixin(CachedDataMixin):
         return "%Y%m%d"
 
 class GSODWeatherSource(DailyAverageTemperatureCachedDataMixin,WeatherSourceBase):
-    def __init__(self,station_id,start_year,end_year):
+    def __init__(self,station_id,start_year=None,end_year=None,gz_filenames=None):
         super(GSODWeatherSource,self).__init__()
         self.station_id = station_id[:6]
-        self.init_temperature_data() # load cached data
 
-        if self.data == {}:
-            for year in range(start_year,end_year + 1):
-                self._fetch_year(year)
-        else:
-            for year in range(start_year,end_year + 1):
-                one_week_ago = (datetime.now(pytz.utc) - timedelta(days=7)).strftime("%Y%m%d")
-                if (year == datetime.now(pytz.utc).year and not self.data.get(one_week_ago)) \
-                        or not self.has_cached_data_for_year(year):
+        if gz_filenames is None:
+            self.init_temperature_data() # load cached data
+            assert start_year is not None
+            assert end_year is not None
+
+            if self.data == {}:
+                for year in range(start_year,end_year + 1):
                     self._fetch_year(year)
+            else:
+                for year in range(start_year,end_year + 1):
+                    one_week_ago = (datetime.now(pytz.utc) - timedelta(days=7)).strftime("%Y%m%d")
+                    if (year == datetime.now(pytz.utc).year and not self.data.get(one_week_ago)) \
+                            or not self.has_cached_data_for_year(year):
+                        self._fetch_year(year)
+        else:
+
+            self.get_weather_station()
+            for fn in gz_filenames:
+                with open(fn, 'rb') as f:
+                    gzf = gzip.GzipFile(fileobj=f)
+                    self._add_file(gzf)
 
     def _fetch_year(self,year):
         if len(self.station_id) == 6:
@@ -551,8 +562,18 @@ class GSODWeatherSource(DailyAverageTemperatureCachedDataMixin,WeatherSourceBase
             # otherwise, just use the given id
             potential_station_ids = [self.station_id]
 
-        ftp = ftplib.FTP("ftp.ncdc.noaa.gov")
-        ftp.login()
+        n_tries = 3
+        for i in range(n_tries):
+            try:
+                ftp = ftplib.FTP("ftp.ncdc.noaa.gov")
+                ftp.login()
+                break
+            except EOFError:
+                ftp = None
+
+        # reraise the error
+        if ftp is None:
+            raise EOFError
 
         string = BytesIO()
 
