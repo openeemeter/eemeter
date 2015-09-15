@@ -210,6 +210,11 @@ def records_pulse(request):
     return records
 
 @pytest.fixture
+def consumption_data_blank():
+    return ConsumptionData([], "electricity", "kWh", "arbitrary_start")
+
+
+@pytest.fixture
 def consumption_data_kWh_interval():
     records = [{"start": datetime(2015,1,i+1), "value": 1} for i in range(10)]
     return ConsumptionData(records, "electricity", "kWh", freq="D")
@@ -480,11 +485,18 @@ def test_consumption_data_total_days_arbitrary(consumption_data_kWh_arbitrary):
     assert_allclose(n_days, 10,
             rtol=RTOL, atol=ATOL)
 
+def test_total_days_blank_consumption(consumption_data_blank):
+    consumption_data_blank = ConsumptionData([], "electricity", "kWh", "arbitrary_start")
+    assert consumption_data_blank.total_days() == 0
+
 def test_consumption_data_total_period_arbitrary(
         consumption_data_kWh_arbitrary):
     period = consumption_data_kWh_arbitrary.total_period()
     assert period.start == datetime(2015,1,1)
     assert period.end == datetime(2015,1,11)
+
+def test_total_period_blank_consumption(consumption_data_blank):
+    assert consumption_data_blank.total_period() == None
 
 def test_consumption_data_filter_by_period_arbitrary(
         consumption_data_kWh_arbitrary):
