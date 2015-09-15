@@ -21,4 +21,4 @@ install:
 script:
   - coverage run --source=eemeter setup.py test
 after_success:
-  - coveralls
+  - coveralls debug
