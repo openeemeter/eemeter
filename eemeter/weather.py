@@ -562,16 +562,18 @@ class GSODWeatherSource(DailyAverageTemperatureCachedDataMixin,WeatherSourceBase
             # otherwise, just use the given id
             potential_station_ids = [self.station_id]
 
-        try:
-            ftp = ftplib.FTP("ftp.ncdc.noaa.gov")
-            ftp.login()
-        except EOFError:
-            # try again, sometimes it fails the first time but not the first
-            # time. Unknown error.
-            ftp = ftplib.FTP("ftp.ncdc.noaa.gov")
-            ftp.login()
+        n_tries = 3
+        for i in range(n_tries):
+            try:
+                ftp = ftplib.FTP("ftp.ncdc.noaa.gov")
+                ftp.login()
+                break
+            except EOFError:
+                ftp = None
 
-
+        # reraise the error
+        if ftp is None:
+            raise EOFError
 
         string = BytesIO()
 
