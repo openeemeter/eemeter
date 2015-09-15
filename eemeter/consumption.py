@@ -602,8 +602,13 @@ class ConsumptionData(object):
             The total days in the time span covered by this ConsumptionData
             instance.
         """
-        tdelta = self.total_period().timedelta
-        return tdelta.days + tdelta.seconds/8.64e4
+        period = self.total_period()
+
+        if period is None:
+            return 0
+        else:
+            tdelta = period.timedelta
+            return tdelta.days + tdelta.seconds/8.64e4
 
     def records(self, record_type="arbitrary"):
         """ Records representing this data (in the format of input records).
