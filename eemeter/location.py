@@ -3,7 +3,6 @@ import numpy as np
 from pkg_resources import resource_stream
 
 station_to_lat_lng_index = None
-station_to_zipcode_index = None
 zipcode_to_lat_lng_index = None
 zipcode_to_station_index = None
 
@@ -39,7 +38,7 @@ def haversine(lat1,lng1,lat2,lng2):
     return c * r
 
 def lat_lng_to_station(lat,lng):
-    """Return the closest TMY3 weather station id (USAF) using latitude and
+    """Return the closest USAF station ID using latitude and
     longitude coordinates.
 
     Parameters
@@ -52,11 +51,11 @@ def lat_lng_to_station(lat,lng):
     Returns
     -------
     station : str
-        String representing a USAF Weather station ID
+        String representing a USAF weather station ID
     """
     global station_to_lat_lng_index
     if station_to_lat_lng_index is None:
-        with resource_stream('eemeter.resources','tmy3_to_lat_lng.json') as f:
+        with resource_stream('eemeter.resources','usaf_station_id_lat_long.json') as f:
             station_to_lat_lng_index = json.loads(f.read().decode("utf-8"))
     dists = []
     index_list = [i for i in station_to_lat_lng_index.items()]
@@ -83,7 +82,7 @@ def lat_lng_to_zipcode(lat,lng):
     """
     global zipcode_to_lat_lng_index
     if zipcode_to_lat_lng_index is None:
-        with resource_stream('eemeter.resources','zipcode_to_lat_lng.json') as f:
+        with resource_stream('eemeter.resources','zipcode_lat_long.json') as f:
             zipcode_to_lat_lng_index = json.loads(f.read().decode("utf-8"))
     dists = []
     index_list = [i for i in zipcode_to_lat_lng_index.items()]
@@ -107,7 +106,7 @@ def station_to_lat_lng(station):
     """
     global station_to_lat_lng_index
     if station_to_lat_lng_index is None:
-        with resource_stream('eemeter.resources','tmy3_to_lat_lng.json') as f:
+        with resource_stream('eemeter.resources','usaf_station_id_lat_long.json') as f:
             station_to_lat_lng_index = json.loads(f.read().decode("utf-8"))
     return station_to_lat_lng_index.get(station)
 
@@ -127,11 +126,7 @@ def station_to_zipcode(station):
         String representing a USPS ZIP code; e.g. "60642"
 
     """
-    global station_to_zipcode_index
-    if station_to_zipcode_index is None:
-        with resource_stream('eemeter.resources','tmy3_to_zipcode.json') as f:
-            station_to_zipcode_index = json.loads(f.read().decode("utf-8"))
-    return station_to_zipcode_index.get(station)
+    return lat_lng_to_zipcode(*station_to_lat_lng(station))
 
 def zipcode_to_lat_lng(zipcode):
     """Return the latitude and longitude centroid of a particular ZIP code.
@@ -149,7 +144,7 @@ def zipcode_to_lat_lng(zipcode):
     """
     global zipcode_to_lat_lng_index
     if zipcode_to_lat_lng_index is None:
-        with resource_stream('eemeter.resources','zipcode_to_lat_lng.json') as f:
+        with resource_stream('eemeter.resources','zipcode_lat_long.json') as f:
             zipcode_to_lat_lng_index = json.loads(f.read().decode("utf-8"))
     return zipcode_to_lat_lng_index.get(zipcode)
 
@@ -169,7 +164,7 @@ def zipcode_to_station(zipcode):
     """
     global zipcode_to_station_index
     if zipcode_to_station_index is None:
-        with resource_stream('eemeter.resources','zipcode_to_tmy3.json') as f:
+        with resource_stream('eemeter.resources','zipcode_station.json') as f:
             zipcode_to_station_index = json.loads(f.read().decode("utf-8"))
     return zipcode_to_station_index.get(zipcode)
 

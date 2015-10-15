@@ -28,10 +28,49 @@ def lat_lng_dist(request):
     return request.param
 
 @pytest.fixture(params=[
-    ((41.8955360374983,-87.6217660821178),"60611","725340","60638",(41.783,-87.75)),
-    ((34.1678563835543,-118.126220490392),"91104","722880","91504",(34.200,-118.35)),
-    ((42.3769095103979,-71.1247640734676),"02138","725090","02128",(42.367,-71.017)),
-    ((42.3594006437094,-87.8581578622419),"60085","725347","60087",(42.417,-87.867))
+    ('88312', (33.4,-105.6)),
+    ('30310', (33.7, -84.4)),
+    ('15210', (40.4, -80.0)),
+    ])
+def zipcode_lat_lng(request):
+    return request.param
+
+@pytest.fixture(params=[
+    ((47.6, -122.2), "98004"),
+    ((33.9, -117.9), "92835"),
+    ((43.4, -110.7), "83014"),
+    ])
+def lat_lng_zipcode(request):
+    return request.param
+
+@pytest.fixture(params=[
+    ((46.7, -92.1), "726427"),
+    ((41.2, -96.0), "720308"),
+    ((27.8, -97.4), "722510"),
+    ])
+def lat_lng_station(request):
+    return request.param
+
+@pytest.fixture(params=[
+    ('724345', (38.6, -90.6)),
+    ])
+def station_lat_lng(request):
+    return request.param
+
+@pytest.fixture(params=[
+    ('33145', '722020'),
+    ])
+def zipcode_station(request):
+    return request.param
+
+@pytest.fixture(params=[
+    ('725030', '11370'),
+    ])
+def station_zipcode(request):
+    return request.param
+
+@pytest.fixture(params=[
+    ((41.28, -72.88), '06512', '997284'),
     ])
 def lat_lng_zipcode_station(request):
     return request.param
@@ -39,50 +78,51 @@ def lat_lng_zipcode_station(request):
 ##### TESTS #####
 
 def test_haversine(lat_lng_dist):
-    lat1,lng1,lat2,lng2,dist = lat_lng_dist
-    assert_allclose(haversine(lat1,lng1,lat2,lng2),dist,rtol=RTOL,atol=ATOL)
+    lat1, lng1, lat2, lng2, dist = lat_lng_dist
+    haversine_dist = haversine(lat1, lng1, lat2, lng2)
+    assert_allclose(haversine_dist, dist, rtol=RTOL, atol=ATOL)
 
-def test_zipcode_to_lat_lng(lat_lng_zipcode_station):
-    (lat,lng),zipcode,station,station_zip,(st_lat,st_lng) = lat_lng_zipcode_station
-    assert lat,lng == zipcode_to_lat_lng(zipcode)
+def test_zipcode_to_lat_lng(zipcode_lat_lng):
+    zipcode, lat_lng = zipcode_lat_lng
+    z_lat_lng = zipcode_to_lat_lng(zipcode)
+    assert_allclose(z_lat_lng, lat_lng, rtol=RTOL, atol=ATOL)
 
-def test_lat_lng_to_zipcode(lat_lng_zipcode_station):
-    (lat,lng),zipcode,station,station_zip,(st_lat,st_lng) = lat_lng_zipcode_station
-    assert zipcode == lat_lng_to_zipcode(lat,lng)
+def test_lat_lng_to_zipcode(lat_lng_zipcode):
+    lat_lng, zipcode = lat_lng_zipcode
+    assert zipcode == lat_lng_to_zipcode(*lat_lng)
 
-def test_station_to_lat_lng(lat_lng_zipcode_station):
-    (lat,lng),zipcode,station,station_zip,(st_lat,st_lng) = lat_lng_zipcode_station
-    assert st_lat,st_lng == station_to_lat_lng(station)
+def test_station_to_lat_lng(station_lat_lng):
+    station, lat_lng = station_lat_lng
+    s_lat_lng = station_to_lat_lng(station)
+    assert_allclose(s_lat_lng, lat_lng, rtol=RTOL, atol=ATOL)
 
-def test_lat_lng_to_station(lat_lng_zipcode_station):
-    (lat,lng),zipcode,station,station_zip,(st_lat,st_lng) = lat_lng_zipcode_station
-    assert station == lat_lng_to_station(lat,lng)
+def test_lat_lng_to_station(lat_lng_station):
+    lat_lng, station = lat_lng_station
+    assert station == lat_lng_to_station(*lat_lng)
 
-def test_zipcode_to_station(lat_lng_zipcode_station):
-    (lat,lng),zipcode,station,station_zip,(st_lat,st_lng) = lat_lng_zipcode_station
+def test_zipcode_to_station(zipcode_station):
+    zipcode, station = zipcode_station
     assert station == zipcode_to_station(zipcode)
 
-def test_station_to_zipcode(lat_lng_zipcode_station):
-    (lat,lng),zipcode,station,station_zip,(st_lat,st_lng) = lat_lng_zipcode_station
-    assert station_zip == station_to_zipcode(station)
+def test_station_to_zipcode(station_zipcode):
+    station, zipcode = station_zipcode
+    assert zipcode == station_to_zipcode(station)
 
 def test_location_init(lat_lng_zipcode_station):
-    (lat,lng),zipcode,station,station_zip,(st_lat,st_lng) = lat_lng_zipcode_station
+    lat_lng, zipcode, station = lat_lng_zipcode_station
 
-    l = Location(lat_lng=(lat,lng))
-    assert lat == l.lat
-    assert lng == l.lng
+    l = Location(station=station)
+    assert_allclose(lat_lng, (l.lat, l.lng), rtol=RTOL, atol=ATOL)
+    assert station == l.station
+    assert zipcode == l.zipcode
+
+    l = Location(lat_lng=lat_lng)
+    assert_allclose(lat_lng, (l.lat, l.lng), rtol=RTOL, atol=ATOL)
     assert station == l.station
     assert zipcode == l.zipcode
 
     l = Location(zipcode=zipcode)
-    assert lat == l.lat
-    assert lng == l.lng
+    assert_allclose(lat_lng, (l.lat, l.lng), rtol=RTOL, atol=ATOL)
     assert station == l.station
     assert zipcode == l.zipcode
 
-    l = Location(station=station)
-    assert st_lat == l.lat
-    assert st_lng == l.lng
-    assert station == l.station
-    assert station_zip == l.zipcode
