@@ -15,7 +15,7 @@ climate_zone_to_zipcodes_index = None
 
 def _get_json_resource(filename):
     with resource_stream('eemeter.resources', filename) as f:
-        resource = json.load(f, encoding="utf-8")
+        resource = json.loads(f.read().decode('utf-8'))
     return resource
 
 
