@@ -1,100 +1,186 @@
-import ftplib
-from io import BytesIO
-import gzip
-import os
-import json
-from datetime import datetime
-from datetime import date
-from datetime import timedelta
-import pytz
-import warnings
-import numpy as np
-import requests
-from pkg_resources import resource_stream
-
 from eemeter.evaluation import Period
+from eemeter.location import _load_station_to_lat_lng_index, haversine
 
-try:
-    from sqlalchemy import create_engine
-    from sqlalchemy import Table, Column, MetaData, Integer, String, Float, Date, DateTime, ForeignKey
-    from sqlalchemy.sql import select
-    from sqlalchemy.orm.exc import NoResultFound
-    from sqlalchemy import extract
-    sqlalchemy_installed = True
-except ImportError:
-    sqlalchemy_installed = False
-    warnings.warn("Weather cache disabled. To use, please install sqlalchemy.")
+from datetime import datetime, date, timedelta
+import ftplib
+import gzip
+from io import BytesIO
+import json
+import os
+from pkg_resources import resource_stream
+import warnings
 
-conn = None
-weather_stations = None
-hourly_average_temperatures = None
-daily_average_temperatures = None
-hourly_temperature_normals = None
-daily_temperature_normals = None
+import numpy as np
+import pandas as pd
+from pandas.core.common import is_list_like
+import requests
 
-def initialize_cache():
-    if sqlalchemy_installed:
 
-        global weather_stations
-        global hourly_average_temperatures
-        global daily_average_temperatures
-        global hourly_temperature_normals
-        global daily_temperature_normals
+class NOAAClient(object):
 
-        metadata = MetaData()
+    def __init__(self, n_tries=3):
+        self.ftp = self._get_ftp_connection(n_tries)
+        self.station_index = self._load_station_index()
 
-        weather_stations = Table('weatherstation', metadata,
-            Column('id', Integer, primary_key=True),
-            Column('usaf_id', String(20)),
-        )
+    def _get_ftp_connection(self, n_tries=3):
+        for _ in range(n_tries):
+            try:
+                ftp = ftplib.FTP("ftp.ncdc.noaa.gov")
+                ftp.login()
+                return ftp
+            except EOFError:
+                pass
+        raise EOFError
 
-        hourly_average_temperatures = Table('hourlyaveragetemperature', metadata,
-            Column('id', Integer, primary_key=True),
-            Column('weatherstation_id', None, ForeignKey('weatherstation.id')),
-            Column('temp_C', Float),
-            Column('dt', DateTime),
-        )
+    def _load_station_index(self):
+        with resource_stream('eemeter.resources','GSOD-ISD_station_index.json') as f:
+            return json.loads(f.read().decode("utf-8"))
 
-        daily_average_temperatures = Table('dailyaveragetemperature', metadata,
-            Column('id', Integer, primary_key=True),
-            Column('weatherstation_id', None, ForeignKey('weatherstation.id')),
-            Column('temp_C', Float),
-            Column('dt', DateTime),
-        )
+    def _get_potential_station_ids(self, station):
+        if len(station) == 6:
+            potential_station_ids = self.station_index[station]
+        else:
+            potential_station_ids = [station]
+        return potential_station_ids
 
-        hourly_temperature_normals = Table('hourlytemperaturenormal', metadata,
-            Column('id', Integer, primary_key=True),
-            Column('weatherstation_id', None, ForeignKey('weatherstation.id')),
-            Column('temp_C', Float),
-            Column('dt', DateTime),
-        )
+    def _retreive_file_lines(self, filename_format, station, year):
+        string = BytesIO()
 
-        daily_temperature_normals = Table('dailytemperaturenormal', metadata,
-            Column('id', Integer, primary_key=True),
-            Column('weatherstation_id', None, ForeignKey('weatherstation.id')),
-            Column('temp_C', Float),
-            Column('dt', DateTime),
-        )
+        for station_id in self._get_potential_station_ids(station):
+            filename = filename_format.format(station=station_id, year=year)
+            try:
+                self.ftp.retrbinary('RETR {}'.format(filename), string.write)
+                break
+            except (IOError, ftplib.error_perm):
+                pass
+            except (ftplib.error_temp, EOFError): # Bad connection. attempt to reconnect.
+                self.ftp.close()
+                self.ftp = self._get_ftp_connection()
+                try:
+                    self.ftp.retrbinary('RETR {}'.format(filename), string.write)
+                    break
+                except IOError:
+                    pass
 
-    cache_db_url = os.environ.get("EEMETER_WEATHER_CACHE_DATABASE_URL")
-    if cache_db_url is None:
-        warnings.warn("Weather cache disabled. To use, please set the"\
-                " EEMETER_WEATHER_CACHE_DATABASE_URL environment variable.")
+        string.seek(0)
+        f = gzip.GzipFile(fileobj=string)
+        lines = f.readlines()
+        string.close()
+        return lines
+
+    def get_gsod_data(self, station, year):
+
+        filename_format = '/pub/data/gsod/{year}/{station}-{year}.op.gz'
+        lines = self._retreive_file_lines(filename_format, station, year)
+
+        days = []
+        for line in lines[1:]:
+            columns=line.split()
+            date_str = columns[2].decode('utf-8')
+            temp_F = float(columns[3])
+            temp_C = (5./9.) * (temp_F - 32.)
+            dt = datetime.strptime(date_str,"%Y%m%d").date()
+            days.append({"temp_C": temp_C, "date": dt})
+
+        return days
+
+    def get_isd_data(self, station, year):
+
+        filename_format = '/pub/data/noaa/{year}/{station}-{year}.gz'
+        lines = self._retreive_file_lines(filename_format, station, year)
+
+        hours = []
+        for line in lines:
+            if line[87:92].decode('utf-8') == "+9999":
+                temp_C = float("nan")
+            else:
+                temp_C = float(line[87:92]) / 10.
+            date_str = line[15:27].decode('utf-8')
+            dt = datetime.strptime(date_str, "%Y%m%d%H%M")
+            hours.append({"temp_C": temp_C, "datetime": dt})
+
+        return hours
+
+
+class TMY3Client(object):
+
+    def __init__(self):
+        self.stations = self._load_stations()
+        self.station_to_lat_lng = self._load_station_locations()
+
+    def _load_stations(self):
+        with resource_stream('eemeter.resources','tmy3_stations.json') as f:
+            return json.loads(f.read().decode("utf-8"))
+
+    def _load_station_locations(self):
+        return _load_station_to_lat_lng_index()
+
+    def _find_nearby_station(self, station):
+        lat, lng = self.station_to_lat_lng[station]
+        index_list = list(self.station_to_lat_lng.items())
+        dists = [haversine(lat, lng, stat_lat, stat_lng)
+                 for _, (stat_lat, stat_lng) in index_list]
+        for dist, (nearby_station, _) in zip(dists, index_list):
+            if nearby_station in self.stations:
+                warnings.warn("Using station {} instead".format(nearby_station))
+                return nearby_station
         return None
-    engine = create_engine(cache_db_url)
-    metadata.create_all(engine)
-    conn = engine.connect()
-    return conn
+
+    def get_tmy3_data(self, station, station_fallback=True):
+
+        if not station in self.stations:
+            warnings.warn("Station {} is not a TMY3 station. See self.stations for a complete list.".format(station))
+            if station_fallback:
+                station = self._find_nearby_station(station)
+            else:
+                return None
+
+        url = "http://rredc.nrel.gov/solar/old_data/nsrdb/1991-2005/data/tmy3/{}TYA.CSV".format(station)
+        r = requests.get(url)
+
+        if r.status_code == 200:
+            hours = []
+            for line in r.text.splitlines()[2:]:
+                row = line.split(",")
+                year = row[0][6:10]
+                month = row[0][0:2]
+                day = row[0][3:5]
+                hour = int(row[1][0:2]) - 1
+                date_string = "{}{}{}{:02d}".format(year, month, day, hour) # YYYYMMDDHH
+                dt = datetime.strptime(date_string,"%Y%m%d%H")
+                temp_C = float(row[31])
+                hours.append({"temp_C": temp_C, "dt": dt})
+            return hours
+        else:
+            warnings.warn("Station {} was not found. Tried url {}.".format(station, url))
+            return None
+
 
 class WeatherSourceBase(object):
 
-    def __init__(self,*args,**kwargs):
-        super(WeatherSourceBase, self).__init__(*args, **kwargs)
-        self.data = {}
-        self.station_id = None
-        self._internal_unit = "degF"
+    def __init__(self, station):
+        self.station = station
+        self.tempC = pd.Series()
 
-    def average_temperature(self,periods,unit):
+    @staticmethod
+    def _unit_convert(x, unit):
+        if unit is None or unit == "degC":
+            return x
+        elif unit == "degF":
+            return 1.8*x + 32
+        else:
+            message = "Unit not supported ({}). Use 'degF' or 'degC'".format(unit)
+            raise NotImplementedError(message)
+
+    def _fetch_period(self, period):
+        message = "Inheriting classes must override this method."
+        raise NotImplementedError(message)
+
+    def _fetch_datetime(self, dt):
+        message = "Inheriting classes must override this method."
+        raise NotImplementedError(message)
+
+    def average_temperature(self, periods, unit):
         """The average temperatures during each period as calculated by taking
         the mean of all available daily average temperatures during that
         period.
@@ -114,34 +200,14 @@ class WeatherSourceBase(object):
             single datetime period is given, a single temperature will be
             returned as a float.
         """
-        try:
-            temps = []
-            for period in periods:
-                temps.append(self._period_average_temperature(period,unit=None))
-            return self._unit_convert(np.array(temps),unit)
-        except TypeError:
-            return self._period_average_temperature(periods,unit)
 
-    def _period_average_temperature(self,period,unit):
-        """The average temperatures during the period as calculated by taking
-        the mean of all available daily average temperatures during the period.
+        if is_list_like(periods):
+            values = np.array([self._period_average_temperature(p, None) for p in periods])
+            return self._unit_convert(values, unit)
+        else:
+            return self._period_average_temperature(periods, unit)
 
-        Parameters
-        ----------
-        period : eemeter.evaluation.Period
-            Time period over which temperatures will be aggregated.
-        unit : {"degC", "degF"}
-            The unit in which average temperature should be returned.
-
-        Returns
-        -------
-        out : float
-            Average temperature observed during the period.
-        """
-        temps = self._period_daily_temperatures(period,unit)
-        return np.nanmean(temps)
-
-    def daily_temperatures(self,periods,unit):
+    def daily_temperatures(self, periods, unit):
         """The daily average temperatures for each period.
 
         Parameters
@@ -160,39 +226,61 @@ class WeatherSourceBase(object):
             single datetime period is given, a single numpy array of
             temperatures will be returned.
         """
-        try:
-            temps = []
-            for period in periods:
-                temps.append(self._period_daily_temperatures(period,unit=None))
-            if unit is None:
-                return np.array(temps)
-            else:
-                return self._unit_convert(np.array(temps),unit)
-        except TypeError:
-            return self._period_daily_temperatures(periods,unit)
 
-    def _period_daily_temperatures(self,period,unit):
-        """The daily average temperatures for a particular period.
+        if is_list_like(periods):
+            values = np.array([self._period_daily_temperatures(p, None) for p in periods])
+            return self._unit_convert(values, unit)
+        else:
+            return self._period_daily_temperatures(periods, unit)
+
+    def hourly_temperatures(self, periods, unit):
+        """The hourly observed temperatures for each period.
 
         Parameters
         ----------
-        period : eemeter.evaluation.Period
-            Time period over which temperatures will be aggregated.
+        periods : [list of] eemeter.evaluation.Period
+            Time periods over which temperatures will be collected. A single
+            datetime period may be given.
         unit : {"degC", "degF"}
-            The unit in which daily average temperatures should be returned.
+            The unit in which temperatures should be returned.
 
         Returns
         -------
         out : np.ndarray
-            Daily average temperatures observed during the period.
+            Array of arrays of observed_daily temperatures observed during each
+            period. Note: array is not guaranteed to be rectangular. If a
+            single datetime period is given, a single numpy array of
+            temperatures will be returned.
         """
+
+        if is_list_like(periods):
+            values = np.array([self._period_hourly_temperatures(p, None) for p in periods])
+            return self._unit_convert(values, unit)
+        else:
+            return self._period_hourly_temperatures(periods, unit)
+
+    def _period_average_temperature(self, period, unit):
+        self._fetch_period(period)
+        value = self.tempC[period.start:period.end - timedelta(seconds=1)].mean()
+        return self._unit_convert(value, unit)
+
+    def _period_daily_temperatures(self, period, unit):
+        self._fetch_period(period)
         temps = []
         for days in range(period.timedelta.days):
             dt = period.start + timedelta(days=days)
-            temps.append(self.datetime_average_temperature(dt,unit))
+            temps.append(self.datetime_average_temperature(dt, unit))
         return np.array(temps)
 
-    def datetime_average_temperature(self,dt,unit):
+    def _period_hourly_temperatures(self, period, unit):
+        self._fetch_period(period)
+        temps = []
+        for seconds in range(0, int(period.timedelta.total_seconds()), 3600):
+            dt = period.start + timedelta(seconds=seconds)
+            temps.append(self.datetime_hourly_temperature(dt, unit))
+        return np.array(temps)
+
+    def datetime_average_temperature(self, dt, unit):
         """The daily average temperatures for a particular period.
 
         Parameters
@@ -207,19 +295,50 @@ class WeatherSourceBase(object):
         out : np.ndarray
             Average temperature observed.
         """
-        internal_unit_temp = self.internal_unit_datetime_average_temperature(dt)
-        if unit is None:
-            return internal_unit_temp
-        else:
-            return self._unit_convert(internal_unit_temp,unit)
 
-    def internal_unit_datetime_average_temperature(self,dt):
-        """Should return the average temperature stored in the weather source's
-        internal units. Must be implemented by extending classes.
+        try:
+            value = self.tempC[dt.strftime("%Y-%m-%d")].mean()
+            return self._unit_convert(value, unit)
+        except KeyError:
+            try:
+                self._fetch_datetime(dt)
+                value = self.tempC[dt.strftime("%Y-%m-%d")].mean()
+                return self._unit_convert(value, unit)
+            except KeyError:
+                pass
+        return np.nan
+
+    def datetime_hourly_temperature(self, dt, unit):
+        """The hourly observed temperatures for each period.
+
+        Parameters
+        ----------
+        periods : [list of] eemeter.evaluation.Period
+            Time periods over which temperatures will be collected. A single
+            datetime period may be given.
+        unit : {"degC", "degF"}
+            The unit in which temperatures should be returned.
+
+        Returns
+        -------
+        out : np.ndarray
+            Array of arrays of observed_daily temperatures observed during each
+            period. Note: array is not guaranteed to be rectangular. If a
+            single datetime period is given, a single numpy array of
+            temperatures will be returned.
         """
-        raise NotImplementedError
 
-    def hdd(self,periods,unit,base,per_day=False):
+        try:
+            return self._unit_convert(self.tempC[dt], unit)
+        except KeyError:
+            try:
+                self._fetch_datetime(dt)
+                return self._unit_convert(self.tempC[dt], unit)
+            except KeyError:
+                pass
+        return np.nan
+
+    def hdd(self, periods, unit, base, per_day=False):
         """The total heating degree days observed during each time period.
 
         Parameters
@@ -240,16 +359,40 @@ class WeatherSourceBase(object):
         out : np.ndarray
             Array of heating degree days observed during each time period.
         """
-        try:
-            hdds = []
-            for period in periods:
-                hdds.append(self._period_hdd(period,unit,base,per_day))
-            return np.array(hdds)
-        except TypeError:
-            # periods is not iterable
-            return self._period_hdd(periods,unit,base,per_day)
 
-    def _period_hdd(self,period,unit,base,per_day):
+        if is_list_like(periods):
+            return np.array([self._period_hdd(p, unit, base, per_day) for p in periods])
+        else:
+            return self._period_hdd(periods, unit, base, per_day)
+
+    def cdd(self, periods, unit, base, per_day=False):
+        """The total cooling degree days observed during each time period.
+
+        Parameters
+        ----------
+        periods : list of eemeter.evaluation.Period objects
+            Time periods over which cooling degree days will be calculated and
+            collected. A single Period may be given.
+        unit : {"degC", "degF"}
+            The temperature unit to be used
+        base : int or float
+            The base of the cooling degree day
+        per_day : bool, default=False
+            If True, the total should be returned as an average instead of
+            a sum.
+
+        Returns
+        -------
+        out : np.ndarray
+            Array of cooling degree days observed during each time period.
+        """
+
+        if is_list_like(periods):
+            return np.array([self._period_cdd(p, unit, base, per_day) for p in periods])
+        else:
+            return self._period_cdd(periods, unit, base, per_day)
+
+    def _period_hdd(self, period, unit, base, per_day):
         """The total heating degree days observed during a particular
         time period.
 
@@ -270,8 +413,9 @@ class WeatherSourceBase(object):
         out : float
             Total heating degree days observed during the time period.
         """
+
         temps = self._period_daily_temperatures(period,unit)
-        masked_temps = np.ma.masked_array(temps,np.isnan(temps))
+        masked_temps = np.ma.masked_array(temps, np.isnan(temps))
         total_hdd = np.sum(np.maximum(base - masked_temps,0))
         if per_day:
             n_days = period.timedelta.days
@@ -279,37 +423,7 @@ class WeatherSourceBase(object):
         else:
             return total_hdd
 
-    def cdd(self,periods,unit,base,per_day=False):
-        """The total cooling degree days observed during each time period.
-
-        Parameters
-        ----------
-        periods : list of eemeter.evaluation.Period objects
-            Time periods over which cooling degree days will be calculated and
-            collected. A single Period may be given.
-        unit : {"degC", "degF"}
-            The temperature unit to be used
-        base : int or float
-            The base of the cooling degree day
-        per_day : bool
-            If True, the total should be returned as an average instead of
-            a sum.
-
-        Returns
-        -------
-        out : np.ndarray
-            Array of cooling degree days observed during each time period.
-        """
-        try:
-            cdds = []
-            for period in periods:
-                cdds.append(self._period_cdd(period,unit,base,per_day))
-            return np.array(cdds)
-        except TypeError:
-            # periods is not iterable
-            return self._period_cdd(periods,unit,base,per_day)
-
-    def _period_cdd(self,period,unit,base,per_day):
+    def _period_cdd(self, period, unit, base, per_day):
         """The total cooling degree days observed during a particular
         time period.
 
@@ -330,8 +444,9 @@ class WeatherSourceBase(object):
         out : float
             Total cooling degree days observed during the time period.
         """
+
         temps = self._period_daily_temperatures(period,unit)
-        masked_temps = np.ma.masked_array(temps,np.isnan(temps))
+        masked_temps = np.ma.masked_array(temps, np.isnan(temps))
         total_cdd = np.sum(np.maximum(masked_temps - base,0))
         if per_day:
             n_days = period.timedelta.days
@@ -339,338 +454,273 @@ class WeatherSourceBase(object):
         else:
             return total_cdd
 
-    def _unit_convert(self,temps_array,unit):
-        """Returns an array converted to the correct units.
-        """
-        if unit == self._internal_unit:
-            return temps_array
+
+class CachedWeatherSourceBase(WeatherSourceBase):
+
+    cache_date_format = None
+    cache_filename_format = None
+    freq = None
+
+    def __init__(self, station, cache_directory=None, cache_filename=None):
+        super(CachedWeatherSourceBase, self).__init__(station)
+
+        if cache_filename is None:
+            self.cache_filename = self.get_cache_filename(cache_directory)
         else:
-            if unit == "degC":
-                return self._degF_to_degC(temps_array)
-            elif unit == "degF":
-                return self._degC_to_degF(temps_array)
-            else:
-                message = "Unit not recognized ({}). Should be one of 'degC' or 'degF'".format(unit)
-                raise ValueError(message)
+            self.cache_filename = cache_filename
 
-    @staticmethod
-    def _degC_to_degF(temp_C):
-        """Returns temperature(s) in degrees Fahrenheit given a temperature (or
-        array of temperatures) in degrees Celsius.
+        self.load_from_cache()
+
+    def get_cache_filename(self, cache_directory=None):
+        if cache_directory is None:
+            cache_directory = self.get_cache_directory()
+        filename = self.cache_filename_format.format(self.station)
+        return os.path.join(cache_directory, filename)
+
+    def get_cache_directory(self):
+        """ Returns a directory to be used for caching.
         """
-        return 1.8*temp_C + 32.
+        directory = os.environ.get("EEMETER_WEATHER_CACHE_DIRECTORY", os.path.expanduser('~/.eemeter/cache'))
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        return directory
 
-    @staticmethod
-    def _degF_to_degC(temp_F):
-        """Returns temperature(s) in degrees Celsius given a temperature (or
-        array of temperatures) in degrees Fahrenheit.
+    def save_to_cache(self):
+        data = [[d.strftime(self.cache_date_format), t if pd.notnull(t) else None] for d,t in self.tempC.iteritems()]
+        with open(self.cache_filename, 'w') as f:
+            json.dump(data,f)
+
+    def load_from_cache(self):
+        try:
+            with open(self.cache_filename, 'r') as f:
+                data = json.load(f)
+        except IOError:
+            return
+        index = pd.to_datetime([d[0] for d in data], format=self.cache_date_format)
+        values = [d[1] for d in data]
+        self.tempC = pd.Series(values, index=index).sort_index().resample(self.freq)
+
+    def clear_cache(self):
+        try:
+            os.remove(self.cache_filename)
+        except OSError:
+            pass
+
+
+class NOAAWeatherSourceBase(CachedWeatherSourceBase):
+
+    year_existence_format = None
+    client = NOAAClient()
+
+    def __init__(self, station, start_year=None, end_year=None,
+            cache_directory=None, cache_filename=None):
+        super(NOAAWeatherSourceBase, self).__init__(station, cache_directory,
+                cache_filename)
+        self.station_id = station
+        if start_year is not None and end_year is not None:
+            self.add_year_range(start_year, end_year)
+        elif start_year is not None:
+            self.add_year_range(start_year, date.today().year)
+        elif end_year is not None:
+            self.add_year_range(date.today().year, end_year)
+        self._check_for_recent_data()
+
+    def add_year_range(self, start_year, end_year, force=False):
+        """Adds temperature data to internal pandas timeseries across a
+        range of years.
+
+        Parameters
+        ----------
+        start_year : {int, string}
+            The earliest year for which data should be fetched, e.g. "2010".
+        end_year : {int, string}
+            The latest year for which data should be fetched, e.g. "2013".
+        force : bool, default=False
+            If True, forces the fetch; if false, checks to see if year
+            has been added before actually fetching.
         """
-        return (5./9.) * (temp_F - 32.)
+        for year in range(start_year, end_year + 1):
+            self.add_year(year, force)
 
-class CachedDataMixin(object):
+    def add_year(self, year, force=False):
+        message = "Inheriting classes must override this method."
+        raise NotImplementedError(message)
 
-    def __init__(self,*args,**kwargs):
-        super(CachedDataMixin,self).__init__(*args,**kwargs)
-        global conn
-        if not conn:
-            try:
-                conn = initialize_cache()
-            except NameError:
-                conn = None
-
-        self.conn = conn
-
-    def init_temperature_data(self):
-        """Pulls all cached weather data into memory.
-        """
-        self.get_weather_station()
-        if self.weather_station_pk:
-            date_format = self.get_date_format()
-            for t in self.get_temperature_set():
-                temp_C = t.temp_C
-                if temp_C is None:
-                    temp_C = float('nan')
-                date_str = t.dt.strftime(date_format)
-                # only add if it won't overwrite an existing non-NaN temperature
-                if date_str not in self.data or np.isnan(self.data.get(date_str,float('nan'))):
-                    if self._internal_unit == "degC":
-                        self.data[date_str] = temp_C
-                    elif self._internal_unit == "degF":
-                        self.data[date_str] = self._degC_to_degF(temp_C)
-
-    def get_temperature_table(self):
-        """Returns the SQLAlchemy database class used for caching.
-
-        E.g. `return hourly_average_temperatures`
-        """
-        raise NotImplementedError
-
-    def get_temperature_set(self):
-        """Returns the set of all database temperature objects.
-        """
-        temperature_table = self.get_temperature_table()
-        s = select([temperature_table]).where(temperature_table.c.weatherstation_id == self.weather_station_pk)
-        result = self.conn.execute(s)
-        return result
-
-    def get_date_format(self):
-        """Returns the date format for fetching and storing temperature objects
-        in memory.
-
-        E.g. `return "%Y%m%d"`
-        """
-        raise NotImplementedError
-
-    def get_weather_station(self):
-        """Sets the weather_station_pk attribute using the db connection and
-        self.station_id, if available.
-        """
-        if self.conn:
-            s = select([weather_stations.c.id]).where(weather_stations.c.usaf_id == self.station_id)
-            result = self.conn.execute(s)
-            row = result.fetchone()
-            if row:
-                self.weather_station_pk = row['id']
-            else:
-                ins = weather_stations.insert().values(usaf_id=self.station_id)
-                result = self.conn.execute(ins)
-                self.weather_station_pk = result.inserted_primary_key[0]
-            result.close()
-        else:
-            self.weather_station_pk = None
-
-    def update_cache(self,records):
-        """If caching is enabled, update the cache for the given data.
-        """
-        # add current weather station to each temperature to be inserted.
-        for r in records:
-            r["weatherstation_id"] = self.weather_station_pk
-
-        # figure out which dates need to be overwritten
-        dates = set([d["dt"] for d in records])
-
-        if self.conn:
-            table = self.get_temperature_table()
-
-            # delete existing records (if necessary)
-            all_temps = self.get_temperature_set()
-            old_records = [t for t in all_temps if t["dt"] in dates]
-            for record in old_records:
-                self.conn.execute(table.delete().where(table.c.id == record.id))
-
-            # insert new records
-            self.conn.execute(table.insert(), records)
-
-    def has_cached_data_for_year(self,year):
-        """Return True if data for the given year is in the cache.
-        """
-        if self.conn:
-            temps = self.get_temperature_table()
-            s = select([temps.c.dt]).where(extract('year', temps.c.dt) == year)
-            result = self.conn.execute(s)
-            n_results = len(result.fetchall())
-            return n_results > 1000
+    def _year_in_series(self, year):
+        try:
+            if pd.notnull(self.tempC[self.year_existence_format.format(year)]):
+                return True
+        except KeyError:
+            pass
         return False
 
-class HourlyTemperatureNormalCachedDataMixin(CachedDataMixin):
+    def _check_for_recent_data(self):
+        yesterday = date.today() - timedelta(days=1)
+        if yesterday in self.tempC and pd.isnull(self.tempC[yesterday]):
+            self.add_year(yesterday.year, force=True)
 
-    def get_temperature_table(self):
-        """Returns the SQLAlchemy database table used for caching.
+    def _fetch_period(self, period):
+        years = []
+        if period.start is not None and period.end is not None:
+            self.add_year_range(period.start.year, period.end.year)
+        elif period.start is not None:
+            self.add_year(period.start.year)
+        elif period.end is not None:
+            self.add_year(period.end.year)
+
+    def _fetch_datetime(self, dt):
+        self.add_year(dt.year)
+
+
+class GSODWeatherSource(NOAAWeatherSourceBase):
+
+    cache_date_format = "%Y%m%d"
+    cache_filename_format = "GSOD-{}.json"
+    year_existence_format = "{}-01-01"
+    freq = "D"
+
+    def add_year(self, year, force=False):
+        """Adds temperature data to internal pandas timeseries
+
+        Parameters
+        ----------
+        year : {int, string}
+            The year for which data should be fetched, e.g. "2010".
+        force : bool, default=False
+            If True, forces the fetch; if false, checks to see if year
+            has been added before actually fetching.
         """
-        return hourly_temperature_normals
 
-    def get_date_format(self):
-        """Returns the date format for fetching and storing temperature objects
-        in memory.
+        if not force and self._year_in_series(year):
+            return
+
+        data = self.client.get_gsod_data(self.station, year)
+        dates = pd.date_range("{}-01-01".format(year),"{}-12-31".format(year), freq=self.freq)
+        new_series = pd.Series(None, index=dates)
+        for day in data:
+            if not pd.isnull(day["temp_C"]):
+                new_series[day["date"]] = day["temp_C"]
+        self.tempC = self.tempC.append(new_series).sort_index().resample(self.freq)
+        self.save_to_cache()
+
+
+class ISDWeatherSource(NOAAWeatherSourceBase):
+
+    cache_date_format = "%Y%m%d%H"
+    cache_filename_format = "ISD-{}.json"
+    year_existence_format = "{}-01-01 00"
+    freq = "H"
+
+    def add_year(self, year, force=False):
+        """Adds temperature data to internal pandas timeseries
+
+        Parameters
+        ----------
+        year : {int, string}
+            The year for which data should be fetched, e.g. "2010".
         """
-        return "%m%d%H"
+        if not force and self._year_in_series(year):
+            return
 
-class DailyTemperatureNormalCachedDataMixin(CachedDataMixin):
+        data = self.client.get_isd_data(self.station, year)
+        dates = pd.date_range("{}-01-01 00:00".format(year),"{}-01-01 00:00".format(int(year) + 1), freq='H')[:-1]
+        new_series = pd.Series(None, index=dates)
+        for hour in data:
+            if not pd.isnull(hour["temp_C"]):
+                dt = hour["datetime"]
+                new_series[datetime(dt.year, dt.month, dt.day, dt.hour)] = hour["temp_C"]
+        self.tempC = self.tempC.append(new_series).sort_index().resample('H')
+        self.save_to_cache()
 
-    def get_temperature_table(self):
-        """Returns the SQLAlchemy database table used for caching.
+
+class TMY3WeatherSource(CachedWeatherSourceBase):
+
+    cache_date_format = "%Y%m%d%H"
+    cache_filename_format = "TMY3-{}.json"
+    freq = "H"
+    client = TMY3Client()
+
+    def __init__(self, station, station_fallback=True):
+        super(TMY3WeatherSource, self).__init__(station)
+        self.station_id = station
+        self.station_fallback = station_fallback
+        if self.tempC.shape[0] != 365 * 24:
+            self._load_data()
+
+    def _load_data(self):
+        data = self.client.get_tmy3_data(self.station, self.station_fallback)
+        temps = [d["temp_C"] for d in data]
+        index = [datetime(1900, d["dt"].month, d["dt"].day, d["dt"].hour) for d in data]
+        self.tempC = pd.Series(temps, index).sort_index().resample('H')
+        self.save_to_cache()
+
+    def annual_daily_temperatures(self, unit):
+        """Returns a list of daily temperature normals for a typical
+        meteorological year.
+
+        Parameters
+        ----------
+        unit : {"degC", "degF"}
+            The unit in which temperatures should be returned.
+
+        Returns
+        -------
+        out : np.ndarray
+            List with single element which is an array of observed
+            daily temperatures.
+
         """
-        return daily_temperature_normals
 
-    def get_date_format(self):
-        """Returns the date format for fetching and storing temperature objects
-        in memory.
+        periods = [Period(start=datetime(1900,1,1), end=datetime(1901,1,1))]
+        return self.daily_temperatures(periods, unit)
+
+    def _fetch_period(self, period):
+        pass # loaded at init
+
+    def _fetch_datetime(self, dt):
+        pass # loaded at init
+
+    def _normalize_period(self, period):
+        start = self._normalize_datetime(period.start)
+        year_offset = period.end.year - period.start.year
+        end = self._normalize_datetime(period.end, year_offset)
+        return Period(start, end)
+
+    @staticmethod
+    def _normalize_datetime(dt, year_offset=0):
+        return datetime(1900 + year_offset, dt.month, dt.day, dt.hour, dt.minute, dt.second)
+
+    def _period_average_temperature(self, period, unit):
+        period = self._normalize_period(period)
+        return super(TMY3WeatherSource, self)._period_average_temperature(period, unit)
+
+    def _period_daily_temperatures(self, period, unit):
+        period = self._normalize_period(period)
+        return super(TMY3WeatherSource, self)._period_daily_temperatures(period, unit)
+
+    def _period_hourly_temperatures(self, period, unit):
+        period = self._normalize_period(period)
+        return super(TMY3WeatherSource, self)._period_hourly_temperatures(period, unit)
+
+    def datetime_average_temperature(self, dt, unit):
+        """The daily average temperatures for a particular period.
+
+        Parameters
+        ----------
+        dt : datetime.datetime or datetime.date
+            The date for which to find or calculate the average temperature.
+        unit : {"degC", "degF"}
+            The unit in which the daily average temperature should be returned.
+
+        Returns
+        -------
+        out : np.ndarray
+            Average temperature observed.
         """
-        return "%m%d"
+        dt = self._normalize_datetime(dt)
+        return super(TMY3WeatherSource, self).datetime_average_temperature(dt, unit)
 
-class HourlyAverageTemperatureCachedDataMixin(CachedDataMixin):
-
-    def get_temperature_table(self):
-        """Returns the SQLAlchemy database table used for caching.
-        """
-        return hourly_average_temperatures
-
-    def get_date_format(self):
-        """Returns the date format for fetching and storing temperature objects
-        in memory.
-        """
-        return "%Y%m%d%H"
-
-class DailyAverageTemperatureCachedDataMixin(CachedDataMixin):
-
-    def get_temperature_table(self):
-        """Returns the SQLAlchemy database table used for caching.
-        """
-        return daily_average_temperatures
-
-    def get_date_format(self):
-        """Returns the date format for fetching and storing temperature objects
-        in memory.
-        """
-        return "%Y%m%d"
-
-class GSODWeatherSource(DailyAverageTemperatureCachedDataMixin,WeatherSourceBase):
-    def __init__(self,station_id,start_year=None,end_year=None,gz_filenames=None):
-        super(GSODWeatherSource,self).__init__()
-        self.station_id = station_id[:6]
-
-        if gz_filenames is None:
-            self.init_temperature_data() # load cached data
-            assert start_year is not None
-            assert end_year is not None
-
-            if self.data == {}:
-                for year in range(start_year,end_year + 1):
-                    self._fetch_year(year)
-            else:
-                for year in range(start_year,end_year + 1):
-                    one_week_ago = (datetime.now(pytz.utc) - timedelta(days=7)).strftime("%Y%m%d")
-                    if (year == datetime.now(pytz.utc).year and not self.data.get(one_week_ago)) \
-                            or not self.has_cached_data_for_year(year):
-                        self._fetch_year(year)
-        else:
-
-            self.get_weather_station()
-            for fn in gz_filenames:
-                with open(fn, 'rb') as f:
-                    gzf = gzip.GzipFile(fileobj=f)
-                    self._add_file(gzf)
-
-    def _fetch_year(self,year):
-        if len(self.station_id) == 6:
-            # given station id is the six digit code, so need to get full name
-            with resource_stream('eemeter.resources','GSOD-ISD_station_index.json') as f:
-                station_index = json.loads(f.read().decode("utf-8"))
-            # take first station in list
-            potential_station_ids = station_index[self.station_id]
-        else:
-            # otherwise, just use the given id
-            potential_station_ids = [self.station_id]
-
-        n_tries = 3
-        for i in range(n_tries):
-            try:
-                ftp = ftplib.FTP("ftp.ncdc.noaa.gov")
-                ftp.login()
-                break
-            except EOFError:
-                ftp = None
-
-        # reraise the error
-        if ftp is None:
-            raise EOFError
-
-        string = BytesIO()
-
-        # not every station will be available in every year, so use the
-        # first one that works
-        for station_id in potential_station_ids:
-            try:
-                ftp.retrbinary('RETR /pub/data/gsod/{year}/{station_id}-{year}.op.gz'.format(station_id=station_id,year=year),string.write)
-                break
-            except (IOError,ftplib.error_perm):
-                pass
-        ftp.quit()
-
-        string.seek(0)
-        f = gzip.GzipFile(fileobj=string)
-        self._add_file(f)
-        string.close()
-        f.close()
-
-    def internal_unit_datetime_average_temperature(self,dt):
-        """Returns the average temperature on the given day. `dt` can be
-        either a python `date` or a python `datetime` instance. Temperature is
-        given in the units in which it is internally stored.
-        """
-        return self.data.get(dt.strftime("%Y%m%d"),float("nan"))
-
-    def _add_file(self,f):
-        records = []
-        for line in f.readlines()[1:]:
-            columns=line.split()
-            date_str = columns[2].decode('utf-8')
-            temp = float(columns[3])
-            self.data[date_str] = temp
-            temp_C = self._degF_to_degC(temp)
-            dt = datetime.strptime(date_str,"%Y%m%d").date()
-            records.append({"temp_C": temp_C, "dt": dt})
-        self.update_cache(records)
-
-class ISDWeatherSource(WeatherSourceBase,HourlyAverageTemperatureCachedDataMixin):
-    def __init__(self,station_id,start_year,end_year):
-        super(ISDWeatherSource,self).__init__()
-        self.station_id = station_id[:6]
-        self.init_temperature_data() # load cached data
-
-        if self.data == {}:
-            for year in range(start_year,end_year + 1):
-                self._fetch_year(year)
-        else:
-            for year in range(start_year,end_year + 1):
-                one_week_ago = (datetime.now(pytz.utc) - timedelta(days=7)).strftime("%Y%m%d") + "00"
-                if (year == datetime.now(pytz.utc).year and not self.data.get(one_week_ago))\
-                        or not self.has_cached_data_for_year(year):
-                    self._fetch_year(year)
-
-    def _fetch_year(self,year):
-        if len(self.station_id) == 6:
-            # given station id is the six digit code, so need to get full name
-            with resource_stream('eemeter.resources','GSOD-ISD_station_index.json') as f:
-                station_index = json.loads(f.read().decode("utf-8"))
-            # take first station in list
-            potential_station_ids = station_index[self.station_id]
-        else:
-            # otherwise, just use the given id
-            potential_station_ids = [self.station_id]
-        ftp = ftplib.FTP("ftp.ncdc.noaa.gov")
-        ftp.login()
-        string = BytesIO()
-        # not every station will be available in every year, so use the
-        # first one that works
-        for station_id in potential_station_ids:
-            try:
-                ftp.retrbinary('RETR /pub/data/noaa/{year}/{station_id}-{year}.gz'.format(station_id=station_id,year=year),string.write)
-                break
-            except (IOError,ftplib.error_perm):
-                pass
-        string.seek(0)
-        f = gzip.GzipFile(fileobj=string)
-        self._add_file(f)
-        string.close()
-        f.close()
-        ftp.quit()
-
-    def internal_unit_datetime_average_temperature(self,dt):
-        """Returns the average temperature on the given datetime. `dt` can be
-        either a python `date` or a python `datetime` instance. Calculated by
-        averaging hourly temperatures for the given day.
-        """
-        dt_str = dt.strftime("%Y%m%d")
-        avg_temps = []
-        for i in range(24):
-            hourly = self.data.get("{}{:02d}".format(dt_str,i),float("nan"))
-            avg_temps.append(hourly)
-        data = np.array(avg_temps)
-        masked_data = np.ma.masked_array(data,np.isnan(data))
-        return np.mean(masked_data)
-
-    def hourly_temperatures(self,periods,unit):
+    def datetime_hourly_temperature(self, dt, unit):
         """The hourly observed temperatures for each period.
 
         Parameters
@@ -689,156 +739,5 @@ class ISDWeatherSource(WeatherSourceBase,HourlyAverageTemperatureCachedDataMixin
             single datetime period is given, a single numpy array of
             temperatures will be returned.
         """
-        try:
-            temps = []
-            for period in periods:
-                temps.append(self._period_hourly_temperatures(period,unit=None))
-            if unit is None:
-                return np.array(temps)
-            else:
-                return self._unit_convert(np.array(temps),unit)
-        except TypeError:
-            return self._period_hourly_temperatures(periods,unit)
-
-    def _period_hourly_temperatures(self,period,unit):
-        temps = []
-        for seconds in range(0,int(period.timedelta.total_seconds()),3600):
-            dt = period.start + timedelta(seconds=seconds)
-            temps.append(self.datetime_hourly_temperature(dt,unit))
-        return np.array(temps)
-
-    def datetime_hourly_temperature(self,dt,unit):
-        internal_unit_temp = self.internal_unit_datetime_hourly_temperature(dt)
-        if unit is None:
-            return internal_unit_temp
-        else:
-            return self._unit_convert(internal_unit_temp,unit)
-
-    def internal_unit_datetime_hourly_temperature(self,dt):
-        """Returns the hourly temperature on the given datetime. `dt` can be
-        either a python `date` or a python `datetime` instance. Calculated by
-        averaging hourly temperatures for the given day.
-        """
-        dt_str = dt.strftime("%Y%m%d%H")
-        hourly_temp = self.data.get(dt_str,float("nan"))
-        return hourly_temp
-
-    def _add_file(self,f):
-        records = []
-        for line in f.readlines():
-            if line[87:92].decode('utf-8') == "+9999":
-                temp_C = float("nan")
-            else:
-                temp_C = float(line[87:92]) / 10
-            date_str = line[15:25].decode('utf-8')
-            if self.data.get(date_str) is None or np.isnan(self.data.get(date_str)):
-                self.data[date_str] = self._degC_to_degF(temp_C)
-            dt = datetime.strptime(date_str,"%Y%m%d%H")
-            records.append({"temp_C": temp_C, "dt": dt})
-        self.update_cache(records)
-
-class WeatherNormalMixin(object):
-    def annual_daily_temperatures(self,unit):
-        """Returns a list of daily temperature normals for a typical
-        meteorological year.
-        """
-        periods = [Period(start=datetime(2013,1,1),end=datetime(2014,1,1))]
-        return self.daily_temperatures(periods,unit)
-
-class TMY3WeatherSource(WeatherSourceBase,WeatherNormalMixin,HourlyTemperatureNormalCachedDataMixin):
-    def __init__(self,station_id):
-        super(TMY3WeatherSource,self).__init__()
-        self.station_id = station_id
-        self._internal_unit = "degC"
-        self.init_temperature_data() # load cached data
-
-        n_temp_normals = len(self.data.items())
-        if n_temp_normals < 364 * 24: #missing more than a day of data
-            self._fetch_data()
-
-    def _fetch_data(self):
-        r = requests.get("http://rredc.nrel.gov/solar/old_data/nsrdb/1991-2005/data/tmy3/{}TYA.CSV".format(self.station_id))
-
-        records = []
-        for line in r.text.splitlines()[3:]:
-            row = line.split(",")
-            date_string = "{}{}{}{:02d}".format(row[0][6:10], row[0][0:2],
-                                                row[0][3:5], int(row[1][0:2]) - 1) # YYYYMMDDHH
-            temp_C = float(row[31])
-            self.data[date_string[4:]] = temp_C # skip year in date string
-            dt = datetime.strptime(date_string,"%Y%m%d%H")
-            records.append({"temp_C": temp_C, "dt": dt})
-        self.update_cache(records)
-
-    def internal_unit_datetime_average_temperature(self,dt):
-        """Returns the temperature normal on the given datetime. `dt` can be
-        either a python `date` or a python `datetime` instance. Calculated by
-        averaging hourly temperatures for the given day.
-        """
-        dt_str = dt.strftime("%m%d")
-        avg_temps = []
-        for i in range(24):
-            hourly = self.data.get("{}{:02d}".format(dt_str,i),float('nan'))
-            avg_temps.append(hourly)
-        data = np.array(avg_temps)
-        masked_data = np.ma.masked_array(data,np.isnan(data))
-        return np.mean(masked_data)
-
-class CZ2010WeatherSource(WeatherSourceBase,WeatherNormalMixin):
-    def __init__(self,filepath):
-        super(CZ2010WeatherSource,self).__init__()
-        self.filepath = filepath
-
-        self._fetch_data()
-
-    def _fetch_data(self):
-        with open(self.filepath, 'r') as f:
-            text = f.read()
-            for line in text.splitlines()[2:]:
-                row = line.split(",")
-                date_string = "{}{}{}{:02d}".format(row[0][6:10],
-                                                    row[0][0:2],
-                                                    row[0][3:5],
-                                                    int(row[1][0:2]) - 1)
-                temp_C = float(row[31])
-                self.data[date_string[4:]] = self._degC_to_degF(temp_C) # skip year in date string
-
-    def internal_unit_datetime_average_temperature(self,dt):
-        """Returns the temperature normal on the given datetime. `dt` can be
-        either a python `date` or a python `datetime` instance. Calculated by
-        averaging hourly temperatures for the given day.
-        """
-        dt_str = dt.strftime("%m%d")
-        avg_temps = []
-        for i in range(24):
-            hourly = self.data.get("{}{:02d}".format(dt_str,i),float('nan'))
-            avg_temps.append(hourly)
-        data = np.array(avg_temps)
-        masked_data = np.ma.masked_array(data,np.isnan(data))
-        return np.mean(masked_data)
-
-class WeatherUndergroundWeatherSource(WeatherSourceBase):
-    def __init__(self,zipcode,start,end,api_key):
-        super(WeatherUndergroundWeatherSource,self).__init__()
-        assert end >= start
-        date_format = "%Y%m%d"
-        date_range_limit = 32
-        end_date_str = datetime.strftime(end, date_format)
-        for days in range(0, (end - start).days, date_range_limit):
-            start_date = start + timedelta(days=days)
-            start_date_str = datetime.strftime(start_date, date_format)
-            query = 'http://api.wunderground.com/api/{}/history_{}{}/q/{}.json'\
-                    .format(api_key,start_date_str,end_date_str,zipcode)
-            self._get_query_data(query)
-
-    def internal_unit_datetime_average_temperature(self,dt):
-        """Returns the average temperature on the given datetime. `dt` can be
-        either a python `date` or a python `datetime` instance.
-        """
-        return self.data.get(dt.strftime("%Y%m%d"),float('nan'))
-
-    def _get_query_data(self,query):
-        for day in requests.get(query).json()["history"]["dailysummary"]:
-            date_string = day["date"]["year"] + day["date"]["mon"] + \
-                    day["date"]["mday"]
-            self.data[date_string] = float(day["meantempi"])
+        dt = self._normalize_datetime(dt)
+        return super(TMY3WeatherSource, self).datetime_hourly_temperature(dt, unit)

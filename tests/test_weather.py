@@ -2,8 +2,6 @@ from eemeter.weather import WeatherSourceBase
 from eemeter.weather import GSODWeatherSource
 from eemeter.weather import ISDWeatherSource
 from eemeter.weather import TMY3WeatherSource
-from eemeter.weather import CZ2010WeatherSource
-from eemeter.weather import WeatherUndergroundWeatherSource
 
 from eemeter.consumption import ConsumptionData
 from eemeter.evaluation import Period
@@ -14,6 +12,7 @@ from datetime import timedelta
 import pytest
 import os
 import warnings
+import tempfile
 
 import numpy as np
 
@@ -74,15 +73,7 @@ def zipcode_to_station(request):
 
 ##### Tests #####
 
-def test_weather_source_base(periods):
-    weather_source = WeatherSourceBase()
-    with pytest.raises(NotImplementedError):
-        avg_temps = weather_source.average_temperature(periods, "degF")
-    with pytest.raises(NotImplementedError):
-        hdds = weather_source.hdd(periods, "degF", base=65)
-
 @pytest.mark.slow
-@pytest.mark.internet
 def test_gsod_weather_source(periods, gsod_weather_source):
     gsod_weather_source = GSODWeatherSource(*gsod_weather_source)
 
@@ -90,7 +81,7 @@ def test_gsod_weather_source(periods, gsod_weather_source):
     assert_allclose(avg_temps, [66.3833,67.803,74.445], rtol=RTOL,atol=ATOL)
 
     hdds = gsod_weather_source.hdd(periods,"degF",65)
-    assert_allclose(hdds, [0.7,20.4,0.0], rtol=RTOL,atol=ATOL)
+    assert_allclose(hdds, [0.7,17.,0.0], rtol=RTOL,atol=ATOL)
 
     cdds = gsod_weather_source.cdd(periods,"degF",65)
     assert_allclose(cdds, [42.2,107.3,292.8], rtol=RTOL,atol=ATOL)
@@ -102,30 +93,6 @@ def test_gsod_weather_source(periods, gsod_weather_source):
     assert_allclose(cdds_per_day, [1.406,3.461,9.445], rtol=RTOL,atol=ATOL)
 
 @pytest.mark.slow
-@pytest.mark.internet
-def test_weather_underground_weather_source(periods):
-    wunderground_api_key = os.environ.get('WEATHERUNDERGROUND_API_KEY')
-    if wunderground_api_key:
-        wu_weather_source = WeatherUndergroundWeatherSource('60605',
-                                                            datetime(2012,6,1),
-                                                            datetime(2012,10,1),
-                                                            wunderground_api_key)
-
-        avg_temps = wu_weather_source.average_temperature(periods,"degF")
-        assert_allclose(avg_temps, [74.433,82.677,75.451], rtol=RTOL,atol=ATOL)
-
-        hdds = wu_weather_source.hdd(periods,"degF",65)
-        assert_allclose(hdds, [14.0,0.0,0.0], rtol=RTOL,atol=ATOL)
-
-        cdds = wu_weather_source.cdd(periods,"degF",65)
-        assert_allclose(cdds, [297.0,548.0,324.0], rtol=RTOL,atol=ATOL)
-    else:
-        warnings.warn("Skipping WeatherUndergroundWeatherSource tests. "
-            "Please set the environment variable "
-            "WEATHERUNDERGOUND_API_KEY to run the tests.")
-
-@pytest.mark.slow
-@pytest.mark.internet
 def test_isd_weather_source(periods, isd_weather_source):
     isd_weather_source = ISDWeatherSource(*isd_weather_source)
 
@@ -133,7 +100,7 @@ def test_isd_weather_source(periods, isd_weather_source):
     assert_allclose(avg_temps, [66.576,68.047,74.697], rtol=RTOL,atol=ATOL)
 
     hdds = isd_weather_source.hdd(periods,"degF",65)
-    assert_allclose(hdds, [0.945,24.517,0.000], rtol=RTOL,atol=ATOL)
+    assert_allclose(hdds, [0.61,17.1,0.000], rtol=RTOL,atol=ATOL)
 
     cdds = isd_weather_source.cdd(periods,"degF",65)
     assert_allclose(cdds, [42.06,107.0925,292.46837], rtol=RTOL,atol=ATOL)
@@ -154,7 +121,6 @@ def test_isd_weather_source(periods, isd_weather_source):
     assert_allclose(avg_temp, 66.576, rtol=RTOL, atol=ATOL)
 
 @pytest.mark.slow
-@pytest.mark.internet
 def test_tmy3_weather_source(periods, tmy3_weather_source):
 
     avg_temps = tmy3_weather_source.average_temperature(periods,"degF")
@@ -173,64 +139,37 @@ def test_tmy3_weather_source(periods, tmy3_weather_source):
     assert_allclose(cdds, [58.63,138.775,160.433], rtol=RTOL,atol=ATOL)
 
 @pytest.mark.slow
-@pytest.mark.internet
-def test_cz2010_weather_source(periods):
-    cz2010_file = os.environ.get('EEMETER_PATH_TO_ALTURAS_725958_CZ2010_CSV')
-    if cz2010_file:
-        cz2010_weather_source = CZ2010WeatherSource(cz2010_file)
+def test_cache():
+    cache_dir = tempfile.mkdtemp()
+    ws = GSODWeatherSource('722880', cache_directory=cache_dir)
 
-        avg_temps = cz2010_weather_source.average_temperature(periods,"degF")
-        assert_allclose(avg_temps, [68.1822,73.05548,74.315], rtol=RTOL,atol=ATOL)
+    assert "GSOD" in ws.cache_filename
+    assert ".json" in ws.cache_filename
 
-        hdds = cz2010_weather_source.hdd(periods,"degF",65)
-        assert_allclose(hdds, [106.3725,0.,11.775 ], rtol=RTOL,atol=ATOL)
+    assert ws.tempC.shape == (0,)
 
-        cdds = cz2010_weather_source.cdd(periods,"degF",65)
-        assert_allclose(cdds, [51.7875,227.49,116.415], rtol=RTOL,atol=ATOL)
-    else:
-        warnings.warn("Skipping CZ2010WeatherSource tests. "
-            "Please set the environment variable "
-            "EEMETER_PATH_TO_ALTURAS_725958_CZ2010_CSV to run the tests.")
+    assert ws.tempC.shape == (0,)
 
-def test_generic_daily_weather_source_hdd_nan_handling():
-    class GenericDailyWeatherSource(WeatherSourceBase):
-        def __init__(self):
-            data = {}
-            offset = 4.2
-            temps = 55 + 30*np.sin(np.linspace(offset,offset+2*np.pi,365)) # degF, year
-            for t,dt in zip(temps,[datetime(2014,1,1) + timedelta(days=days) for days in range(365)]):
-                data[dt.strftime("%Y%m%d")] = t
-            self.data = data
-            self._internal_unit = "degF"
+    ws.add_year(2015)
+    assert ws.tempC.shape == (365,)
 
-        def internal_unit_datetime_average_temperature(self,dt):
-            return self.data.get(dt.strftime("%Y%m%d"),np.nan)
+    ws.add_year(2013)
+    assert ws.tempC.shape == (365*3,)
 
-    ws = GenericDailyWeatherSource()
-    period = Period(datetime(2014,1,1),datetime(2015,1,1))
+    ws.save_to_cache()
 
-    # verify that it works to begin with.
-    assert len(ws.data) == 365
-    assert_allclose(ws.hdd(period,'degF',65),5527.026,rtol=RTOL,atol=ATOL)
-    assert_allclose(ws.hdd(period,'degF',70),6691.383,rtol=RTOL,atol=ATOL)
-    assert_allclose(ws.cdd(period,'degF',65),1850.879,rtol=RTOL,atol=ATOL)
-    assert_allclose(ws.cdd(period,'degF',70),1190.235,rtol=RTOL,atol=ATOL)
+    # new instance, loaded from full cache
+    ws = GSODWeatherSource('722880', cache_directory=cache_dir)
+    assert ws.tempC.shape == (365*3,)
 
-    # now remove a random date, should be able to handle the nan.
-    del(ws.data["20140201"])
-    assert len(ws.data) == 364
-    assert_allclose(ws.hdd(period,'degF',65),5487.034,rtol=RTOL,atol=ATOL)
-    assert_allclose(ws.cdd(period,'degF',70),1190.235,rtol=RTOL,atol=ATOL)
+    ws.clear_cache()
 
-def test_init_gsod_from_gz_filenames():
-    filenames = [
-            '722880-23152-2011.op.gz',
-            '722880-23152-2012.op.gz',
-            '722880-23152-2013.op.gz',
-            '722880-23152-2014.op.gz']
-    gz_filenames = []
-    for fn in filenames:
-        with resource_stream('eemeter.resources', fn) as gzf:
-            gz_filenames.append(gzf.name)
-    ws = GSODWeatherSource(station_id="722880", gz_filenames=gz_filenames)
-    assert len(ws.data) == 1461
+    # new instance, loaded from empty cache
+    ws = GSODWeatherSource('722880', cache_directory=cache_dir)
+
+    assert ws.tempC.shape == (0,)
+
+    # cache still empty
+    ws.load_from_cache()
+
+    assert ws.tempC.shape == (0,)
