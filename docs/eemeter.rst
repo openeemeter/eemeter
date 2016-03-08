@@ -103,6 +103,15 @@ eemeter.examples
     :inherited-members:
     :show-inheritance:
 
+eemeter.uploader
+----------------
+
+.. automodule:: eemeter.uploader
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :show-inheritance:
+
 Other
 -----
 

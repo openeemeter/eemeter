@@ -16,6 +16,54 @@ __all__ = [
 
 
 def upload_dicts(project_dict, consumption_dict, url, access_token, project_owner, verbose=True):
+    """Uploads a set of formatted project and consumption data formatted as
+    dicts to a datastore instance.
+
+    Parameters
+    ----------
+    project_dict : list of dicts
+        List of dictionaries with contents something like the following::
+
+            [
+                {
+                    "project_id": "ID_1",
+                    "zipcode": "01234",
+                    "weather_station": "012345",
+                    "latitude": 89.0,
+                    "longitude": -42.0,
+                    "baseline_period_end": datetime(2015, 1, 1),
+                    "reporting_period_start": datetime(2015, 2, 1),
+                },
+                ...
+            ]
+
+        Extra columns will be treated as project attributes.
+
+    consumption_dict : list of dicts
+        List of dictionaries with contents something like the following::
+
+            [
+                {
+                    "project_id": "ID_1",
+                    "start": datetime(2015, 1, 1),
+                    "end": datetime(2015, 1, 2),
+                    "fuel_type": "electricity",
+                    "unit_name": "kWh",
+                    "value": 0,
+                    "estimated": True,
+                },
+                ...
+            ]
+
+    url : str
+        URL of the target datastore, e.g. `https://datastore.openeemeter.org`
+    access_token : str
+        Access token for the target datastore.
+    project_owner : int
+        Primary key of project_owner for datastore.
+    verbose : bool, default: True
+        Whether or not to output a log of progress.
+    """
 
     project_df, consumption_df = _dicts_to_dataframes(project_dict,
                                                       consumption_dict)
@@ -24,6 +72,30 @@ def upload_dicts(project_dict, consumption_dict, url, access_token, project_owne
 
 
 def upload_csvs(project_csv_file, consumption_csv_file, url, access_token, project_owner, verbose=True):
+    """Uploads a set of formatted project and consumption data formatted as
+    CSVs to a datastore instance.
+
+    Parameters
+    ----------
+    project_csv_file : file object
+        File pointer to a CSV with the following columns::
+
+            project_id,zipcode,weather_station,latitude,longitude,baseline_period_end,reporting_period_start
+
+        Extra columns will be treated as project attributes.
+
+    consumption_dict : file object
+        File pointer to a CSV with the following columns::
+
+            project_id,start,end,fuel_type,unit_name,value,estimated
+
+    access_token : str
+        Access token for the target datastore.
+    project_owner : int
+        Primary key of project_owner for datastore.
+    verbose : bool, default: True
+        Whether or not to output a log of progress.
+    """
 
     project_df, consumption_df = _csvs_to_dataframes(project_csv_file,
                                                      consumption_csv_file)
@@ -32,9 +104,29 @@ def upload_csvs(project_csv_file, consumption_csv_file, url, access_token, proje
 
 
 def upload_dataframes(project_df, consumption_df, url, access_token, project_owner, verbose=True):
-    """
-    Main entrypoint - takes in formatted project and consumption data and
-    uploads it to the given url.
+    """Uploads a set of formatted project and consumption data formatted as
+    CSVs to a datastore instance.
+
+    Parameters
+    ----------
+    project_df : pandas.DataFrame
+        File pointer to a CSV with the following columns::
+
+            project_id,zipcode,weather_station,latitude,longitude,baseline_period_end,reporting_period_start
+
+        Extra columns will be treated as project attributes.
+
+    consumption_dict : pandas.DataFrame
+        File pointer to a CSV with the following columns::
+
+            project_id,start,end,fuel_type,unit_name,value,estimated
+
+    access_token : str
+        Access token for the target datastore.
+    project_owner : int
+        Primary key of project_owner for datastore.
+    verbose : bool, default: True
+        Whether or not to output a log of progress.
     """
     requester = requester.Requester(url, access_token)
     project_attribute_key_uploader = uploaders.ProjectAttributeKeyUploader(requester, verbose)
