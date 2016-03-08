@@ -1,2 +1,2 @@
-from api import *
-from requester import Requester
+from .api import *
+from .requester import Requester
