@@ -1,4 +1,4 @@
-from eemeter.uploader import requester, uploaders, constants
+from eemeter.uploader import Requester, uploaders, constants
 from datetime import date, datetime
 from eemeter.location import Location
 from eemeter.evaluation import Period
@@ -128,7 +128,7 @@ def upload_dataframes(project_df, consumption_df, url, access_token, project_own
     verbose : bool, default: True
         Whether or not to output a log of progress.
     """
-    requester = requester.Requester(url, access_token)
+    requester = Requester(url, access_token)
     project_attribute_key_uploader = uploaders.ProjectAttributeKeyUploader(requester, verbose)
     project_uploader = uploaders.ProjectUploader(requester, verbose)
     project_attribute_uploader = uploaders.ProjectAttributeUploader(requester, verbose)
