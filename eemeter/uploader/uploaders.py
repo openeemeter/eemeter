@@ -1,23 +1,3 @@
-"""Uploaders
-
-Example
--------
-How to use an uploader class::
-
-    from oeem_uploader import Requester
-
-    requester = Requester("https://datastore.openeemeter.org/", "TOKEN")
-    uploader = ProjectUploader(requester)
-
-    data = {
-        "project_id": "MY_PROJECT_ID",
-        ...
-    }
-
-    uploader.sync(data)
-
-"""
-
 from . import constants
 
 
@@ -134,6 +114,25 @@ class BaseUploader(object):
 
 
 class ProjectAttributeKeyUploader(BaseUploader):
+    """Upload project attribute keys
+
+    Basic usage::
+
+        from eemeter.uploader import Requester
+        from eemeter.uploader import ProjectAttributeKeyUploader
+
+        requester = Requester("https://datastore.openeemeter.org", "MYACCESSTOKEN")
+        uploader = ProjectAttributeKeyUploader(requester)
+
+        data = {
+            "name": ..., # e.g. "project_cost"
+            "display_name": ..., # e.g. "Project Cost"
+            "data_type": ..., # one of "BOOLEAN", "CHAR", "FLOAT", "INTEGER", "DATE", "DATETIME"
+        }
+
+        uploader.sync(data)
+
+    """
 
     item_name = "ProjectAttributeKey"
 
@@ -151,6 +150,31 @@ class ProjectAttributeKeyUploader(BaseUploader):
 
 
 class ProjectUploader(BaseUploader):
+    """Upload projects
+
+    Basic usage::
+
+        from eemeter.uploader import Requester
+        from eemeter.uploader import ProjectUploader
+
+        requester = Requester("https://datastore.openeemeter.org", "MYACCESSTOKEN")
+        uploader = ProjectUploader(requester)
+
+        data = {
+            "project_id": ..., # Must be unique
+            "zipcode": ..., # 5 digit str, no ZIP+4
+            "weather_station": ..., # 6 digit USAF ID
+            "latitude": ...,
+            "longitude": ...,
+            "baseline_period_start": None, # Implied by consumption data range
+            "baseline_period_end": ..., # ISO 8601 Combined date and time with timezone, e.g. 2016-01-01T00:00:00Z
+            "reporting_period_start": ..., # ISO 8601 Combined date and time with timezone, e.g. 2016-01-01T00:00:00Z
+            "reporting_period_end": None, # Implied by consumption data range
+        }
+
+        uploader.sync(data)
+
+    """
 
     item_name = "Project"
 
@@ -165,6 +189,28 @@ class ProjectUploader(BaseUploader):
 
 
 class ProjectAttributeUploader(BaseUploader):
+    """Upload project attributes
+
+    Basic usage::
+
+        from eemeter.uploader import Requester
+        from eemeter.uploader import ProjectAttributeUploader
+
+        requester = Requester("https://datastore.openeemeter.org", "MYACCESSTOKEN")
+        uploader = ProjectAttributeUploader(requester)
+
+        data = {
+            "project": ..., # primary key or project
+            "key": ..., # primary key of project attribute key
+            "boolean_value": ..., # in addition to "boolean_value", you could also use
+                                  # "integer_value", "float_value", "date_value",
+                                  # "datetime_value", or "char_value"; however, it
+                                  # must match the "data_type" field of the project attribute key
+        }
+
+        uploader.sync(data)
+
+    """
 
     item_name = "ProjectAttribute"
 
@@ -182,6 +228,25 @@ class ProjectAttributeUploader(BaseUploader):
 
 
 class ConsumptionMetadataUploader(BaseUploader):
+    """Upload consumption metadata
+
+    Basic usage::
+
+        from eemeter.uploader import Requester
+        from eemeter.uploader import ConsumptionMetadataUploader
+
+        requester = Requester("https://datastore.openeemeter.org", "MYACCESSTOKEN")
+        uploader = ConsumptionMetadataUploader(requester)
+
+        data = {
+            "project": ..., # primary key of project
+            "fuel_type": ..., # one of "E" or "NG"
+            "energy_unit": ..., # one of "KWH" or "THM"
+        }
+
+        uploader.sync(data)
+
+    """
 
     item_name = "ConsumptionMetadata"
 
@@ -200,6 +265,29 @@ class ConsumptionMetadataUploader(BaseUploader):
 
 
 class ConsumptionRecordUploader(BaseUploader):
+    """Upload consumption records (bulk)
+
+    Basic usage::
+
+        from eemeter.uploader import Requester
+        from eemeter.uploader import ConsumptionRecordUploader
+
+        requester = Requester("https://datastore.openeemeter.org", "MYACCESSTOKEN")
+        uploader = ConsumptionRecordUploader(requester)
+
+        data = [
+            {
+                "metadata": ..., # primary key of consumption metadata object
+                "start": ..., # ISO 8601 Combined date and time with timezone, e.g. 2016-01-01T00:00:00Z
+                "value": ..., # consumption until next record in units matching the consumption metadata energy_unit field, or None, if there is no end date
+                "estimated": bool(estimated),
+            },
+            ... # more records
+        ]
+
+        uploader.sync(data)
+
+    """
 
     item_name = "ConsumptionRecord"
     many = True

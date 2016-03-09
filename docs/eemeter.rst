@@ -106,11 +106,17 @@ eemeter.examples
 eemeter.uploader
 ----------------
 
-.. automodule:: eemeter.uploader
+.. autofunction:: eemeter.uploader.upload_csvs
+
+.. autofunction:: eemeter.uploader.upload_dicts
+
+.. autofunction:: eemeter.uploader.upload_dataframes
+
+.. automodule:: eemeter.uploader.requester
     :members:
-    :undoc-members:
-    :inherited-members:
-    :show-inheritance:
+
+.. automodule:: eemeter.uploader.uploaders
+    :members:
 
 Other
 -----
