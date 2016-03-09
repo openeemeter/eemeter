@@ -72,6 +72,7 @@ def _load_climate_zone_to_stations_index():
 def haversine(lat1, lng1, lat2, lng2):
     """ Calculate the great circle distance between two points
     on the earth (specified in decimal degrees)
+
     Parameters
     ----------
     lat1 : float

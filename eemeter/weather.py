@@ -19,11 +19,12 @@ import requests
 class NOAAClient(object):
 
     def __init__(self, n_tries=3):
-        self.ftp = self._get_ftp_connection(n_tries)
-        self.station_index = self._load_station_index()
+        self.n_tries = n_tries
+        self.ftp = None # lazily load
+        self.station_index = None # lazily load
 
-    def _get_ftp_connection(self, n_tries=3):
-        for _ in range(n_tries):
+    def _get_ftp_connection(self):
+        for _ in range(self.n_tries):
             try:
                 ftp = ftplib.FTP("ftp.ncdc.noaa.gov")
                 ftp.login()
@@ -33,10 +34,13 @@ class NOAAClient(object):
         raise EOFError
 
     def _load_station_index(self):
-        with resource_stream('eemeter.resources','GSOD-ISD_station_index.json') as f:
+        with resource_stream('eemeter.resources', 'GSOD-ISD_station_index.json') as f:
             return json.loads(f.read().decode("utf-8"))
 
     def _get_potential_station_ids(self, station):
+        if self.station_index is None:
+            self.station_index = self._load_station_index()
+
         if len(station) == 6:
             potential_station_ids = self.station_index[station]
         else:
@@ -45,6 +49,9 @@ class NOAAClient(object):
 
     def _retreive_file_lines(self, filename_format, station, year):
         string = BytesIO()
+
+        if self.ftp is None:
+            self.ftp = self._get_ftp_connection()
 
         for station_id in self._get_potential_station_ids(station):
             filename = filename_format.format(station=station_id, year=year)
@@ -109,7 +116,7 @@ class TMY3Client(object):
         self.station_to_lat_lng = self._load_station_locations()
 
     def _load_stations(self):
-        with resource_stream('eemeter.resources','tmy3_stations.json') as f:
+        with resource_stream('eemeter.resources', 'tmy3_stations.json') as f:
             return json.loads(f.read().decode("utf-8"))
 
     def _load_station_locations(self):
