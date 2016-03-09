@@ -21,7 +21,7 @@ class NOAAClient(object):
     def __init__(self, n_tries=3):
         self.n_tries = n_tries
         self.ftp = None # lazily load
-        self.station_index = self._load_station_index()
+        self.station_index = None # lazily load
 
     def _get_ftp_connection(self):
         for _ in range(self.n_tries):
@@ -38,6 +38,9 @@ class NOAAClient(object):
             return json.loads(f.read().decode("utf-8"))
 
     def _get_potential_station_ids(self, station):
+        if self.station_index is None:
+            self.station_index = self._load_station_index()
+
         if len(station) == 6:
             potential_station_ids = self.station_index[station]
         else:
