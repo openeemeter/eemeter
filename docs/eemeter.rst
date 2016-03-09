@@ -47,7 +47,7 @@ eemeter.weather
 .. toctree::
    :maxdepth: 4
 
-.. weather
+   weather
 
 eemeter.project
 ----------------
@@ -106,17 +106,17 @@ eemeter.examples
 eemeter.uploader
 ----------------
 
-.. .. autofunction:: eemeter.uploader.upload_csvs
+.. autofunction:: eemeter.uploader.upload_csvs
 
-.. .. autofunction:: eemeter.uploader.upload_dicts
+.. autofunction:: eemeter.uploader.upload_dicts
 
-.. .. autofunction:: eemeter.uploader.upload_dataframes
+.. autofunction:: eemeter.uploader.upload_dataframes
 
-.. .. automodule:: eemeter.uploader.requester
-..    :members:
+.. automodule:: eemeter.uploader.requester
+   :members:
 
-.. .. automodule:: eemeter.uploader.uploaders
-..    :members:
+.. automodule:: eemeter.uploader.uploaders
+   :members:
 
 
 Other
