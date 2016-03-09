@@ -112,8 +112,8 @@ class NOAAClient(object):
 class TMY3Client(object):
 
     def __init__(self):
-        self.stations = self._load_stations()
-        self.station_to_lat_lng = self._load_station_locations()
+        self.stations = None # lazily load
+        self.station_to_lat_lng = None # lazily load
 
     def _load_stations(self):
         with resource_stream('eemeter.resources', 'tmy3_stations.json') as f:
@@ -123,10 +123,16 @@ class TMY3Client(object):
         return _load_station_to_lat_lng_index()
 
     def _find_nearby_station(self, station):
+        if self.stations is None:
+            self.stations = self._load_stations()
+        if self.station_to_lat_lng is None:
+            self.station_to_lat_lng = self._load_station_locations()
+
         lat, lng = self.station_to_lat_lng[station]
         index_list = list(self.station_to_lat_lng.items())
         dists = [haversine(lat, lng, stat_lat, stat_lng)
                  for _, (stat_lat, stat_lng) in index_list]
+
         for dist, (nearby_station, _) in zip(dists, index_list):
             if nearby_station in self.stations:
                 warnings.warn("Using station {} instead".format(nearby_station))
@@ -134,6 +140,9 @@ class TMY3Client(object):
         return None
 
     def get_tmy3_data(self, station, station_fallback=True):
+
+        if self.stations is None:
+            self.stations = self._load_stations()
 
         if not station in self.stations:
             warnings.warn("Station {} is not a TMY3 station. See self.stations for a complete list.".format(station))
