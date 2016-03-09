@@ -14,6 +14,7 @@ def test_parameter_type():
         assert tp.to_dict()["param1"] == 0
         assert tp.to_dict()["param2"] == 1
         assert len(tp.to_dict()) == 2
+        assert len(tp.json()) == 2
 
     check_vals(TestParameters([0,1]))
 

@@ -70,8 +70,7 @@ First, some imports.
 All we'll need to get started is a project, which is an association building
 data, retrofit dates, and weather data.
 
-We can initialize a sample by passing in a zipcode. I've chosen zipcode in the
-San Fransisco Bay Area (Sunnyvale!):
+We can initialize a sample by passing in a zipcode, e.g.:
 
 .. code-block:: python
 
@@ -111,7 +110,7 @@ examine these results to obtain savings estimates.
     electricity_savings = (electricity_usage_pre - electricity_usage_post) / electricity_usage_pre
     natural_gas_savings = (natural_gas_usage_pre - natural_gas_usage_post) / natural_gas_usage_pre
 
-Now we can happily inspect our results!
+Now we can inspect our results:
 
 .. code-block:: python
 
@@ -119,6 +118,12 @@ Now we can happily inspect our results!
     0.50061411300996794
     >>> natural_gas_savings
     0.50139379943863116
+
+If you prefer, you can also look serialized json data from your meter run:
+
+.. code_block:: python
+
+    json_data = results.json()
 
 Loading consumption data
 ------------------------

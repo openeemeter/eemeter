@@ -184,16 +184,20 @@ class For(MeterBase):
                     {
                         "value": consumption_data1,
                         "tags": ["electricity", "baseline"]
-                    }, {
+                    },
+                    {
                          "value": consumption_data2,
                          "tags": ["natural_gas", "baseline"]
-                    }, {
+                    },
+                    {
                          "value": consumption_data3,
                          "tags": ["electricity", "reporting"],
-                    }, {
+                    },
+                    {
                          "value": consumption_data4,
                          "tags": ["natural_gas", "reporting"]
-                    }],
+                    }
+                ],
                 "tags": ["tag1", "tag2"]
             }
 

@@ -8,6 +8,10 @@ from eemeter.meter import DummyMeter
 from eemeter.meter import Sequence
 from eemeter.meter import Condition
 
+import numpy as np
+import pandas as pd
+import json
+
 import pytest
 
 @pytest.fixture
@@ -155,6 +159,32 @@ def test_data_collection_creation_shortcut():
     assert dc.get_data("item1",tags=["tag"]).value == "item1_value"
     assert dc.get_data("item2",tags=["tag"]).name == "item2"
     assert dc.get_data("item2",tags=["tag"]).value == "item2_value"
+
+def test_data_container_json_value():
+    d1 = DataContainer(name="name", value="value")
+    d2 = DataContainer(name="name", value=np.array([0]))
+    d3 = DataContainer(name="name", value=pd.DataFrame([]))
+
+    assert "value" == d1.get_value()
+    assert "value" == d1.get_value(json_serializable=False)
+    assert "value" == d1.get_value(json_serializable=True)
+
+    assert d2.get_value()[0] == 0
+    assert d2.get_value(json_serializable=True)[0] == 0
+
+    assert type(d3.get_value()) == pd.DataFrame
+    with pytest.raises(TypeError):
+        d3.get_value(json_serializable=True)
+
+def test_data_collection_json():
+    dc1 = DataCollection(item1="item1_value", item2="item2_value", tags=["tag1"])
+    dc1.add_data_collection(DataCollection(item1="item1_value", item2="item2_value", tags=["tag2"]))
+    json_data = dc1.json()
+    json.dumps(json_data)
+    assert len(json_data["item1"]) == 2
+    assert len(json_data["item2"]) == 2
+    assert json_data["item1"][0]["value"] == "item1_value"
+    assert json_data["item1"][0]["tags"] in [["tag1"], ["tag2"]]
 
 def test_dummy_meter(data_collection):
     meter_yaml = """

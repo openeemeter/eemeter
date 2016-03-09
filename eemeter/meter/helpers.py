@@ -61,13 +61,13 @@ class MeetsThresholds(MeterBase):
             t = kwargs.get(t) if isinstance(t, basestring) else float(t)
             b = kwargs.get(b) if isinstance(b, basestring) else float(b)
             if i == "<":
-                result[n] = (value < p*t + b)
+                result[n] = bool(value < p*t + b)
             elif i == ">":
-                result[n] = (value > p*t + b)
+                result[n] = bool(value > p*t + b)
             elif i == "<=":
-                result[n] = (value <= p*t + b)
+                result[n] = bool(value <= p*t + b)
             elif i == ">=":
-                result[n] = (value >= p*t + b)
+                result[n] = bool(value >= p*t + b)
             else:
                 message = "Inequality not recognized: {}".format(i)
                 raise ValueError(message)

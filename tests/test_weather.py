@@ -92,6 +92,10 @@ def test_gsod_weather_source(periods, gsod_weather_source):
     cdds_per_day = gsod_weather_source.cdd(periods,"degF",65,per_day=True)
     assert_allclose(cdds_per_day, [1.406,3.461,9.445], rtol=RTOL,atol=ATOL)
 
+    json_data = gsod_weather_source.json()
+    assert "station" in json_data
+    assert type(json_data["records"][0]["datetime"]) == str
+
 @pytest.mark.slow
 def test_isd_weather_source(periods, isd_weather_source):
     isd_weather_source = ISDWeatherSource(*isd_weather_source)

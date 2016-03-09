@@ -470,6 +470,15 @@ class WeatherSourceBase(object):
         else:
             return total_cdd
 
+    def json(self):
+        return {
+            "station": self.station,
+            "records": [{
+                "datetime": d.strftime(self.cache_date_format),
+                "tempC": t if pd.notnull(t) else None,
+            } for d, t in self.tempC.iteritems()]
+        }
+
 
 class CachedWeatherSourceBase(WeatherSourceBase):
 

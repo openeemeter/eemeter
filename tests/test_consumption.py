@@ -372,10 +372,10 @@ def test_consumption_data_arbitrary_start(records_arbitrary_start,
 
     generated_records = cd.records(record_type=record_type_arbitrary_start)
     assert len(generated_records) == 5
-    assert generated_records[0] == {"start": datetime(2015,1,1), "value": 0}
+    assert generated_records[0] == {"start": datetime(2015,1,1), "value": 0, "estimated": False}
     assert generated_records[4]["start"] == datetime(2015,2,1)
     assert pd.isnull(generated_records[4]["value"])
-    assert len(generated_records[4].keys()) == 2
+    assert len(generated_records[4].keys()) == 3
 
 def test_consumption_data_arbitrary_end(records_arbitrary_end,
         fuel_type, unit_name, record_type_arbitrary_end):
@@ -391,8 +391,8 @@ def test_consumption_data_arbitrary_end(records_arbitrary_end,
 
     generated_records = cd.records(record_type=record_type_arbitrary_end)
     assert len(generated_records) == 6
-    assert generated_records[0] == {"end": datetime(2014,2,2),"value": np.nan}
-    assert generated_records[5] == {"end": datetime(2015,2,1),"value":0}
+    assert generated_records[0] == {"end": datetime(2014,2,2),"value": np.nan, "estimated": False}
+    assert generated_records[5] == {"end": datetime(2015,2,1),"value":0, "estimated": False}
 
 def test_consumption_data_pulse(records_pulse,
         fuel_type, unit_name):
