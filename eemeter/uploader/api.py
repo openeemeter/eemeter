@@ -1,4 +1,5 @@
-from eemeter.uploader import Requester, uploaders, constants
+from eemeter.uploader import uploaders, constants
+from eemeter.uploader.requester import Requester
 from datetime import date, datetime
 from eemeter.location import Location
 from eemeter.evaluation import Period
