@@ -24,22 +24,3 @@ TMY3WeatherSource
     :undoc-members:
     :inherited-members:
     :show-inheritance:
-
-CZ2010WeatherSource
--------------------
-
-.. autoclass:: eemeter.weather.CZ2010WeatherSource
-    :members:
-    :undoc-members:
-    :inherited-members:
-    :show-inheritance:
-
-
-WeatherUndergroundWeatherSource
--------------------------------
-
-.. autoclass:: eemeter.weather.WeatherUndergroundWeatherSource
-    :members:
-    :undoc-members:
-    :inherited-members:
-    :show-inheritance:
