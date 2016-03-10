@@ -45,3 +45,6 @@ class ParameterType(object):
 
     def to_dict(self):
         return {name:self._parameter_values[name] for name in self._parameter_names}
+
+    def json(self):
+        return self.to_dict()

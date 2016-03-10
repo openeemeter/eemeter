@@ -625,21 +625,45 @@ class ConsumptionData(object):
         """
         records = []
         if record_type == "interval":
-            for i,v in self.data.iteritems():
-                records.append({"start": i, "value": v})
+            for s, v, est in zip(self.data.index, self.data, self.estimated):
+                records.append({
+                    "start": s.to_datetime(),
+                    "value": v,
+                    "estimated": bool(est),
+                })
         elif record_type in ["arbitrary", "billing"]:
-            for v,s,e in zip(self.data,self.data.index,self.data.index[1:]):
-                records.append({"start": s,"end": e,"value": v})
+            for s, e, v, est in zip(self.data.index, self.data.index[1:], self.data, self.estimated):
+                records.append({
+                    "start": s.to_datetime(),
+                    "end": e.to_datetime(),
+                    "value": v,
+                    "estimated": bool(est),
+                })
         elif record_type in ["arbitrary_start", "billing_start"]:
-            for i,v in self.data.iteritems():
-                records.append({"start": i,"value": v})
+            for s, v, est in zip(self.data.index, self.data, self.estimated):
+                records.append({
+                    "start": s.to_datetime(),
+                    "value": v,
+                    "estimated": bool(est),
+                })
         elif record_type in ["arbitrary_end", "billing_end"]:
-            records.append({"end": self.data.index[0], "value": np.nan})
-            for v,e in zip(self.data,self.data.index[1:]):
-                records.append({"end": e,"value": v})
+            records.append({
+                "end": self.data.index[0].to_datetime(),
+                "value": np.nan,
+                "estimated": False,
+            })
+            for e, v, est in zip(self.data.index[1:], self.data, self.estimated):
+                records.append({
+                    "end": e.to_datetime(),
+                    "value": v,
+                    "estimated": bool(est),
+                })
         elif record_type == "pulse":
             for i in self.data.index:
-                records.append({"pulse": i})
+                records.append({
+                    "pulse": i.to_datetime(),
+                })
+
             shape = (self.data.values.shape[0] - 1,)
             if len(records) > 1 and not all(self.data.values[1:] == \
                     np.tile(self.data.values[1], shape)):
@@ -689,6 +713,18 @@ class ConsumptionData(object):
                 data=filtered_data,
                 estimated=filtered_estimated)
         return filtered_consumption_data
+
+    def json(self):
+        return {
+            "fuel_type": self.fuel_type,
+            "unit_name": self.unit_name,
+            "records": [{
+                "start": r["start"].isoformat(),
+                "end": r["end"].isoformat(),
+                "value": r["value"],
+                "estimated": r["estimated"],
+            } for r in self.records()],
+        }
 
     def __repr__(self):
         string = "ConsumptionData({}, {})\n".format(self.fuel_type,

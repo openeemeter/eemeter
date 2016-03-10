@@ -1,6 +1,8 @@
 import inspect
 from collections import defaultdict
 from six import string_types
+import json
+import numpy as np
 
 try:
     unicode = unicode
@@ -26,15 +28,38 @@ class DataContainer:
         else:
             self.tags = frozenset(tags)
 
+    def __repr__(self):
+        return "<{}:{} (tags={})>".format(self.name, self.value, list(self.tags))
+
     def set_value(self, value):
         """ Set the value.
         """
         self.value = value
 
-    def get_value(self):
+    def get_value(self, json_serializable=False):
         """ Retrieve the value
         """
-        return self.value
+        if json_serializable:
+            try:
+                json.dumps(self.value)
+                return self.value
+            except TypeError as e:
+                try:
+                    if type(self.value) == list: # for iterables
+                        return [{
+                            "value": v["value"].json(),
+                            "tags": v["tags"],
+                        } for v in self.value]
+                    else: # for values explicitly defining json method, e.g. parameters
+                        return self.value.json()
+                except AttributeError:
+                    try: # for numpy arrays
+                        return self.value.tolist()
+                    except AttributeError:
+                        raise e
+                    raise e
+        else:
+            return self.value
 
     def add_tags(self, tags):
         """ Add tags to the container.
@@ -46,8 +71,6 @@ class DataContainer:
 
         self.tags = self.tags.union(tags)
 
-    def __repr__(self):
-        return "<{}:{} (tags={})>".format(self.name, self.value, list(self.tags))
 
 class DataCollection:
     """ Stores and allows retrieval of multiple tagged and named data objects.
@@ -146,6 +169,28 @@ class DataCollection:
         for name, data_containers in self._name_index.items():
             for data_container in data_containers:
                 yield data_container
+
+    def json(self):
+        """Serializes data. Non-serializable outputs are replaced with
+        "NOT_SERIALIZABLE".
+        """
+        json_data = {}
+
+        for item in self.iteritems():
+            try:
+                value = item.get_value(json_serializable=True)
+            except TypeError:
+                value = "NOT_SERIALIZABLE"
+            item_data = {
+                "tags": list(item.tags),
+                "value": value,
+            }
+            if item.name in json_data:
+                json_data[item.name].append(item_data)
+            else:
+                json_data[item.name] = [item_data]
+
+        return json_data
 
     def copy(self):
         """ Create a new DataCollection containing the same objects and tags.
