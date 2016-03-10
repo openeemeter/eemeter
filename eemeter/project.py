@@ -60,9 +60,7 @@ class Project(object):
             self.other_periods = other_periods
 
         if weather_source is None:
-            start_date, end_date = self._total_date_range()
-            weather_source = GSODWeatherSource(location.station,
-                    start_date.year, end_date.year)
+            weather_source = GSODWeatherSource(location.station)
         self.weather_source = weather_source
 
         if weather_normal_source is None:

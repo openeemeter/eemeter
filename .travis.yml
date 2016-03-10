@@ -1,7 +1,9 @@
+sudo: false
 language: python
 python:
   - 2.7
   - 3.4
+  - 3.5
 notifications:
   email: false
 before_install:
@@ -10,9 +12,6 @@ before_install:
   - ./miniconda.sh -b
   - export PATH=/home/travis/miniconda2/bin:$PATH
   - conda update --yes conda
-  # The next couple lines fix a crash with multiprocessing on Travis and are not specific to using Miniconda
-  - sudo rm -rf /dev/shm
-  - sudo ln -s /run/shm /dev/shm
 install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy dateutil pandas lxml xlrd sqlalchemy
   - pip install .
