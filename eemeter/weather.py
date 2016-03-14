@@ -66,7 +66,7 @@ class NOAAClient(object):
                 try:
                     self.ftp.retrbinary('RETR {}'.format(filename), string.write)
                     break
-                except IOError:
+                except (IOError, ftplib.error_perm):
                     pass
 
         string.seek(0)
