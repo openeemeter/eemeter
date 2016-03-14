@@ -523,7 +523,9 @@ class CachedWeatherSourceBase(WeatherSourceBase):
             return
         index = pd.to_datetime([d[0] for d in data], format=self.cache_date_format)
         values = [d[1] for d in data]
-        self.tempC = pd.Series(values, index=index).sort_index().resample(self.freq)
+
+        # changed for pandas > 0.18
+        self.tempC = pd.Series(values, index=index).sort_index().resample(self.freq).mean()
 
     def clear_cache(self):
         try:
@@ -625,7 +627,9 @@ class GSODWeatherSource(NOAAWeatherSourceBase):
         for day in data:
             if not pd.isnull(day["temp_C"]):
                 new_series[day["date"]] = day["temp_C"]
-        self.tempC = self.tempC.append(new_series).sort_index().resample(self.freq)
+
+        # changed for pandas > 0.18
+        self.tempC = self.tempC.append(new_series).sort_index().resample(self.freq).mean()
         self.save_to_cache()
 
 
@@ -654,7 +658,9 @@ class ISDWeatherSource(NOAAWeatherSourceBase):
             if not pd.isnull(hour["temp_C"]):
                 dt = hour["datetime"]
                 new_series[datetime(dt.year, dt.month, dt.day, dt.hour)] = hour["temp_C"]
-        self.tempC = self.tempC.append(new_series).sort_index().resample('H')
+
+        # changed for pandas > 0.18
+        self.tempC = self.tempC.append(new_series).sort_index().resample('H').mean()
         self.save_to_cache()
 
 
@@ -676,7 +682,9 @@ class TMY3WeatherSource(CachedWeatherSourceBase):
         data = self.client.get_tmy3_data(self.station, self.station_fallback)
         temps = [d["temp_C"] for d in data]
         index = [datetime(1900, d["dt"].month, d["dt"].day, d["dt"].hour) for d in data]
-        self.tempC = pd.Series(temps, index).sort_index().resample('H')
+
+        # changed for pandas > 0.18
+        self.tempC = pd.Series(temps, index).sort_index().resample('H').mean()
         self.save_to_cache()
 
     def annual_daily_temperatures(self, unit):
