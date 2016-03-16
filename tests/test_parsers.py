@@ -1,6 +1,7 @@
 from eemeter.parsers import GreenButtonParser
 
 import pytest
+from numpy.testing import assert_allclose
 
 @pytest.fixture
 def natural_gas_xml(request):
@@ -196,3 +197,42 @@ def test_get_interval_block_entry_elements(natural_gas_parser):
     entry_elements = natural_gas_parser.get_interval_block_entry_elements()
     assert len(entry_elements) == 2
     assert entry_elements[0].tag == "{http://www.w3.org/2005/Atom}entry"
+
+def test_get_usage_summary_entry_elements(natural_gas_parser):
+    entry_elements = natural_gas_parser.get_usage_summary_entry_elements()
+    assert len(entry_elements) == 0
+
+def test_get_interval_block_data(natural_gas_parser):
+    data = natural_gas_parser.get_interval_block_data()
+    assert len(data) == 2
+    interval_block_data = data[0]
+    assert interval_block_data["interval"]["duration"].days == 1
+    assert interval_block_data["interval"]["start"].tzinfo.zone == "US/Pacific"
+    assert interval_block_data["reading_type"]["uom"] == "therm"
+
+    interval_reading_data = interval_block_data["interval_readings"][0]
+    assert interval_reading_data["duration"].days == 1
+    assert interval_reading_data["reading_quality"] == "validated"
+    assert interval_reading_data["value"] == 103659540
+    assert interval_reading_data["start"].tzinfo.zone == "US/Pacific"
+
+def test_get_consumption_records(natural_gas_parser):
+    records = natural_gas_parser.get_consumption_records()
+    assert len(records) == 2
+    record = records[0]
+
+    assert record['unit_name'] == 'therm'
+    assert record['end'].tzinfo.zone == 'US/Pacific'
+    assert record['start'].tzinfo.zone == 'US/Pacific'
+    assert record['fuel_type'] == 'natural_gas'
+    assert_allclose(record['value'], 1.0365954, rtol=1e-3, atol=1e-3)
+    assert record['estimated'] == False
+
+def test_get_consumption_data_objects(natural_gas_parser):
+    cds = natural_gas_parser.get_consumption_data_objects()
+    assert len(cds) == 1
+    cd = cds[0]
+    assert_allclose(cd.data[0], 1.0365954, rtol=1e-3, atol=1e-3)
+    assert_allclose(cd.estimated[0], False, rtol=1e-3, atol=1e-3)
+    assert cd.fuel_type == "natural_gas"
+    assert cd.unit_name == "therm"
