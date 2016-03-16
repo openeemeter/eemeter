@@ -10,8 +10,6 @@ def natural_gas_xml(request):
 	<ns1:title type="text" xmlns:ns1="http://www.w3.org/2005/Atom">Green Button Usage Feed</ns1:title>
 	<ns1:updated xmlns:ns1="http://www.w3.org/2005/Atom">2016-03-15T07:24:21.878Z</ns1:updated>
 	<ns1:link href="https://api.pge.com/GreenButtonConnect/espi/1_1/resource/Batch/Subscription/REDACTED/UsagePoint/REDACTED" rel="self" xmlns:ns1="http://www.w3.org/2005/Atom"/>
-
-
 	<ns1:entry xmlns:ns1="http://www.w3.org/2005/Atom">
 		<ns1:id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:idType">f7829ece-9aad-4b72-bbf7-920c585700bf</ns1:id>
 		<ns1:link href="https://api.pge.com/GreenButtonConnect/espi/1_1/resource/LocalTimeParameters" rel="up" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:linkType"/>
@@ -140,8 +138,607 @@ def natural_gas_xml(request):
     return xml
 
 @pytest.fixture
+def electricity_xml():
+    xml ="""
+<ns1:feed xmlns:ns0="http://naesb.org/espi" xmlns:ns1="http://www.w3.org/2005/Atom">
+	<ns1:id xmlns:ns1="http://www.w3.org/2005/Atom">bf2d574c-4f27-4c48-9a49-af418e6c0a7f</ns1:id>
+	<ns1:title type="text" xmlns:ns1="http://www.w3.org/2005/Atom">Green Button Usage Feed</ns1:title>
+	<ns1:updated xmlns:ns1="http://www.w3.org/2005/Atom">2016-03-15T07:24:56.097Z</ns1:updated>
+	<ns1:link href="https://api.pge.com/GreenButtonConnect/espi/1_1/resource/Batch/Subscription/REDACTED/UsagePoint/REDACTED" rel="self" xmlns:ns1="http://www.w3.org/2005/Atom"/>
+	<ns1:entry xmlns:ns1="http://www.w3.org/2005/Atom">
+		<ns1:id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:idType">1fb4f4e7-031a-40af-931f-4a71e858e7e0</ns1:id>
+		<ns1:link href="https://api.pge.com/GreenButtonConnect/espi/1_1/resource/LocalTimeParameters" rel="up" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:linkType"/>
+		<ns1:link href="https://api.pge.com/GreenButtonConnect/espi/1_1/resource/LocalTimeParameters/1" rel="self" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:linkType"/>
+		<ns1:title type="text" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:textType">DST FOR PACIFIC TIMEZONE</ns1:title>
+		<ns1:published xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:dateTimeType">2016-03-15T07:24:56.095Z</ns1:published>
+		<ns1:updated xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:dateTimeType">2016-03-15T07:24:56.096Z</ns1:updated>
+		<ns1:content xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:contentType">
+			<ns0:LocalTimeParameters xmlns:ns0="http://naesb.org/espi">
+				<ns0:dstEndRule>B40E2000</ns0:dstEndRule>
+				<ns0:dstOffset>3600</ns0:dstOffset>
+				<ns0:dstStartRule>360E2000</ns0:dstStartRule>
+				<ns0:tzOffset>-28800</ns0:tzOffset>
+			</ns0:LocalTimeParameters>
+		</ns1:content>
+	</ns1:entry>
+	<ns1:entry xmlns:ns1="http://www.w3.org/2005/Atom">
+		<ns1:id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:idType">80dd7c14-73bd-42bd-80b0-602d9d3339ac</ns1:id>
+		<ns1:link href="https://api.pge.com/GreenButtonConnect/espi/1_1/resource/ReadingType" rel="up" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:linkType"/>
+		<ns1:link href="https://api.pge.com/GreenButtonConnect/espi/1_1/resource/ReadingType/NzI6bnVsbDozNjAwOjE=" rel="self" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:linkType"/>
+		<ns1:title type="text" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:textType">Type of Meter Reading Data</ns1:title>
+		<ns1:published xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:dateTimeType">2016-03-15T07:24:56.098Z</ns1:published>
+		<ns1:updated xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:dateTimeType">2016-03-15T07:24:56.099Z</ns1:updated>
+		<ns1:content xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:contentType">
+			<ns0:ReadingType xmlns:ns0="http://naesb.org/espi">
+				<ns0:accumulationBehaviour>4</ns0:accumulationBehaviour>
+				<ns0:commodity>1</ns0:commodity>
+				<ns0:dataQualifier>12</ns0:dataQualifier>
+				<ns0:defaultQuality>17</ns0:defaultQuality>
+				<ns0:flowDirection>1</ns0:flowDirection>
+				<ns0:intervalLength>3600</ns0:intervalLength>
+				<ns0:kind>12</ns0:kind>
+				<ns0:powerOfTenMultiplier>-3</ns0:powerOfTenMultiplier>
+				<ns0:timeAttribute>0</ns0:timeAttribute>
+				<ns0:uom>72</ns0:uom>
+				<ns0:measuringPeriod>7</ns0:measuringPeriod>
+			</ns0:ReadingType>
+		</ns1:content>
+	</ns1:entry>
+	<ns1:entry xmlns:ns1="http://www.w3.org/2005/Atom">
+		<ns1:id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:idType">dce6e5b1-d0e3-4402-abbd-a2b833117ba9</ns1:id>
+		<ns1:link href="https://api.pge.com/GreenButtonConnect/espi/1_1/resource/Subscription/REDACTED/UsagePoint" rel="up" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:linkType"/>
+		<ns1:link href="https://api.pge.com/GreenButtonConnect/espi/1_1/resource/Subscription/REDACTED/UsagePoint/REDACTED" rel="self" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:linkType"/>
+		<ns1:link href="https://api.pge.com/GreenButtonConnect/espi/1_1/resource/Subscription/REDACTED/UsagePoint/REDACTED/MeterReading" rel="related" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:linkType"/>
+		<ns1:link href="https://api.pge.com/GreenButtonConnect/espi/1_1/resource/Subscription/REDACTED/UsagePoint/REDACTED/UsageSummary" rel="related" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:linkType"/>
+		<ns1:link href="https://api.pge.com/GreenButtonConnect/espi/1_1/resource/LocalTimeParameters/1" rel="related" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:linkType"/>
+		<ns1:title type="text" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:textType">Green Button Data File</ns1:title>
+		<ns1:published xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:dateTimeType">2016-03-15T07:24:56.308Z</ns1:published>
+		<ns1:updated xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:dateTimeType">2016-03-15T07:24:56.309Z</ns1:updated>
+		<ns1:content xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:contentType">
+			<ns0:UsagePoint xmlns:ns0="http://naesb.org/espi">
+				<ns0:ServiceCategory>
+					<ns0:kind>0</ns0:kind>
+				</ns0:ServiceCategory>
+			</ns0:UsagePoint>
+		</ns1:content>
+	</ns1:entry>
+	<ns1:entry xmlns:ns1="http://www.w3.org/2005/Atom">
+		<ns1:id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:idType">13d5f491-cdc4-4969-a7dd-801ffb317065</ns1:id>
+		<ns1:link href="https://api.pge.com/GreenButtonConnect/espi/1_1/resource/Subscription/REDACTED/UsagePoint/REDACTED/MeterReading" rel="up" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:linkType"/>
+		<ns1:link href="https://api.pge.com/GreenButtonConnect/espi/1_1/resource/Subscription/REDACTED/UsagePoint/REDACTED/MeterReading/REDACTED" rel="self" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:linkType"/>
+		<ns1:link href="https://api.pge.com/GreenButtonConnect/espi/1_1/resource/Subscription/REDACTED/UsagePoint/REDACTED/MeterReading/REDACTED/IntervalBlock" rel="related" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:linkType"/>
+		<ns1:link href="https://api.pge.com/GreenButtonConnect/espi/1_1/resource/ReadingType/NzI6bnVsbDozNjAwOjE=" rel="related" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:linkType"/>
+		<ns1:link href="https://api.pge.com/GreenButtonConnect/espi/1_1/resource/LocalTimeParameters/1" rel="related" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:linkType"/>
+		<ns1:title type="text" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:textType">Green Button Data File</ns1:title>
+		<ns1:published xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:dateTimeType">2016-03-15T07:24:56.311Z</ns1:published>
+		<ns1:updated xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:dateTimeType">2016-03-15T07:24:56.311Z</ns1:updated>
+		<ns1:content xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:contentType">
+			<ns0:MeterReading xmlns:ns0="http://naesb.org/espi"/>
+		</ns1:content>
+	</ns1:entry>
+	<ns1:entry xmlns:ns1="http://www.w3.org/2005/Atom">
+		<ns1:id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:idType">87364635-8071-4f2c-bbf4-6ff9fa8bd7ed</ns1:id>
+		<ns1:link href="https://api.pge.com/GreenButtonConnect/espi/1_1/resource/Subscription/REDACTED/UsagePoint/REDACTED/MeterReading/REDACTED/IntervalBlock" rel="up" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:linkType"/>
+		<ns1:link href="https://api.pge.com/GreenButtonConnect/espi/1_1/resource/Subscription/REDACTED/UsagePoint/REDACTED/MeterReading/REDACTED/IntervalBlock/1331794800" rel="self" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:linkType"/>
+		<ns1:title type="text" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:textType">IntervalBlock_1331794800</ns1:title>
+		<ns1:published xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:dateTimeType">2016-03-15T07:24:56.312Z</ns1:published>
+		<ns1:updated xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:dateTimeType">2016-03-15T07:24:56.313Z</ns1:updated>
+		<ns1:content xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:contentType">
+			<ns0:IntervalBlock xmlns:ns0="http://naesb.org/espi">
+				<ns0:interval>
+					<ns0:duration>86400</ns0:duration>
+					<ns0:start>1331794800</ns0:start>
+				</ns0:interval>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331794800</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>192200</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331798400</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>171100</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331802000</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>163500</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331805600</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>251900</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331809200</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>294000</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331812800</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>354600</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331816400</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>277900</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331820000</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>269300</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331823600</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>390200</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331827200</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>835600</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331830800</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>761100</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331834400</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>666400</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331838000</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>548800</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331841600</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>550200</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331845200</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>334600</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331848800</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>299400</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331852400</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>363500</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331856000</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>464500</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331859600</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>652900</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331863200</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>1441300</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331866800</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>2810700</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331870400</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>683400</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331874000</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>2251400</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331877600</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>173400</ns0:value>
+				</ns0:IntervalReading>
+			</ns0:IntervalBlock>
+		</ns1:content>
+	</ns1:entry>
+	<ns1:entry xmlns:ns1="http://www.w3.org/2005/Atom">
+		<ns1:id xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:idType">c1814f4a-6cf4-46a7-ba8a-f55f6cb8a32e</ns1:id>
+		<ns1:link href="https://api.pge.com/GreenButtonConnect/espi/1_1/resource/Subscription/REDACTED/UsagePoint/REDACTED/MeterReading/REDACTED/IntervalBlock" rel="up" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:linkType"/>
+		<ns1:link href="https://api.pge.com/GreenButtonConnect/espi/1_1/resource/Subscription/REDACTED/UsagePoint/REDACTED/MeterReading/REDACTED/IntervalBlock/1331881200" rel="self" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:linkType"/>
+		<ns1:title type="text" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:textType">IntervalBlock_1331881200</ns1:title>
+		<ns1:published xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:dateTimeType">2016-03-15T07:24:56.314Z</ns1:published>
+		<ns1:updated xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:dateTimeType">2016-03-15T07:24:56.315Z</ns1:updated>
+		<ns1:content xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:type="ns1:contentType">
+			<ns0:IntervalBlock xmlns:ns0="http://naesb.org/espi">
+				<ns0:interval>
+					<ns0:duration>86400</ns0:duration>
+					<ns0:start>1331881200</ns0:start>
+				</ns0:interval>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331881200</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>217000</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331884800</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>173800</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331888400</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>164100</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331892000</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>209600</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331895600</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>161100</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331899200</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>336300</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331902800</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>308800</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331906400</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>271600</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331910000</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>605000</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331913600</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>273300</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331917200</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>240500</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331920800</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>1196000</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331924400</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>3798400</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331928000</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>3276400</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331931600</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>2394800</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331935200</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>4589400</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331938800</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>392500</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331942400</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>420100</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331946000</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>222000</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331949600</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>327400</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331953200</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>343700</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331956800</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>323100</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331960400</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>266100</ns0:value>
+				</ns0:IntervalReading>
+				<ns0:IntervalReading>
+					<ns0:ReadingQuality>
+						<ns0:quality>19</ns0:quality>
+					</ns0:ReadingQuality>
+					<ns0:timePeriod>
+						<ns0:duration>3600</ns0:duration>
+						<ns0:start>1331964000</ns0:start>
+					</ns0:timePeriod>
+					<ns0:value>228000</ns0:value>
+				</ns0:IntervalReading>
+			</ns0:IntervalBlock>
+		</ns1:content>
+	</ns1:entry>
+</ns1:feed>"""
+
+    return xml
+
+@pytest.fixture
 def natural_gas_parser(natural_gas_xml):
     return GreenButtonParser(natural_gas_xml)
+
+@pytest.fixture
+def electricity_parser(electricity_xml):
+    return GreenButtonParser(electricity_xml)
 
 def test_green_button_parser_get_id_element(natural_gas_parser):
     id_element = natural_gas_parser.get_id_element()
@@ -236,3 +833,12 @@ def test_get_consumption_data_objects(natural_gas_parser):
     assert_allclose(cd.estimated[0], False, rtol=1e-3, atol=1e-3)
     assert cd.fuel_type == "natural_gas"
     assert cd.unit_name == "therm"
+
+def test_get_consumption_data_objects(electricity_parser):
+    cds = electricity_parser.get_consumption_data_objects()
+    assert len(cds) == 1
+    cd = cds[0]
+    assert_allclose(cd.data[0], 192.2, rtol=1e-3, atol=1e-3)
+    assert_allclose(cd.estimated[0], False, rtol=1e-3, atol=1e-3)
+    assert cd.fuel_type == "electricity"
+    assert cd.unit_name == "Wh"
