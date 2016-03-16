@@ -591,7 +591,7 @@ class GreenButtonParser(object):
         interval_start = datetime.fromtimestamp(int(interval_start_element.text), tz=timezone)
 
         # grab first reading_type
-        reading_type_element = parser.get_reading_type_entry_elements()[0]
+        reading_type_element = self.get_reading_type_entry_elements()[0]
         reading_type = self.parse_reading_type_entry(reading_type_element)
 
 
@@ -626,8 +626,8 @@ class GreenButtonParser(object):
         return data
 
     def get_interval_block_data(self):
-        entries = parser.get_interval_block_entry_elements()
-        data = parser.parse_interval_block_entries(entries)
+        entries = self.get_interval_block_entry_elements()
+        data = self.parse_interval_block_entries(entries)
         return data
 
     def get_consumption_records(self):

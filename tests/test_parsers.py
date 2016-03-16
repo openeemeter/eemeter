@@ -183,3 +183,16 @@ def test_reading_types(natural_gas_parser):
     assert reading_type_data["power_of_ten_multiplier"] == -8
     assert reading_type_data["default_quality"] == "validated"
     assert reading_type_data["uom"] == "therm"
+
+def test_get_usage_point_entry_element(natural_gas_parser):
+    usage_point_entry_element = natural_gas_parser.get_usage_point_entry_element()
+    assert usage_point_entry_element.tag == "{http://www.w3.org/2005/Atom}entry"
+
+def test_get_meter_reading_entry_element(natural_gas_parser):
+    meter_reading_entry_element = natural_gas_parser.get_meter_reading_entry_element()
+    assert meter_reading_entry_element.tag == "{http://www.w3.org/2005/Atom}entry"
+
+def test_get_interval_block_entry_elements(natural_gas_parser):
+    entry_elements = natural_gas_parser.get_interval_block_entry_elements()
+    assert len(entry_elements) == 2
+    assert entry_elements[0].tag == "{http://www.w3.org/2005/Atom}entry"
