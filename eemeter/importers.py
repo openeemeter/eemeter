@@ -12,6 +12,9 @@ from sqlalchemy import create_engine
 from sqlalchemy import Table, Column, Integer, Float, Numeric, String, MetaData, ForeignKey, TIMESTAMP
 from sqlalchemy.sql import select
 
+
+### TODO: DEPRECATE THESE --->> replacing in eemeter.parsers
+
 def import_hpxml(filename):
     """Import from HPXML 2.0.
 
