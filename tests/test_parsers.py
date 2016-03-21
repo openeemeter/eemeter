@@ -4,6 +4,7 @@ import pytest
 from numpy.testing import assert_allclose
 import tempfile
 import os
+import six
 
 @pytest.fixture
 def natural_gas_xml(request):
@@ -744,7 +745,7 @@ def electricity_parser(electricity_xml):
 
 def test_init(natural_gas_xml):
     fd, filepath = tempfile.mkstemp()
-    os.write(fd, bytes(natural_gas_xml, 'UTF-8')
+    os.write(fd, six.b(natural_gas_xml))
     os.close(fd)
 
     # read from file-like object
