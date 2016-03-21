@@ -121,7 +121,7 @@ Now we can inspect our results:
 
 If you prefer, you can also look serialized json data from your meter run:
 
-.. code_block:: python
+.. code-block:: python
 
     json_data = results.json()
 
@@ -135,9 +135,9 @@ defined by start and end datetime objects). Additionally, a consumption data
 point may also indicate that it was estimated, as some meters require this bit
 of information for additional accuracy.
 
-To load consumption data, you'll need to either import from HPXML or
-Green Button (see :ref:`eemeter-importers`), or load objects yourself
-(see :ref:`eemeter-consumption`).
+To load consumption data, you'll need to
+import from Green Button XML (see :ref:`eemeter-parsers`),
+or load objects yourself (see :ref:`eemeter-consumption`).
 
 Creating a custom meter
 -----------------------

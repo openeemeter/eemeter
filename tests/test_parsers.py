@@ -744,8 +744,7 @@ def electricity_parser(electricity_xml):
 
 def test_init(natural_gas_xml):
     fd, filepath = tempfile.mkstemp()
-
-    os.write(fd, natural_gas_xml)
+    os.write(fd, bytes(natural_gas_xml, 'UTF-8')
     os.close(fd)
 
     # read from file-like object

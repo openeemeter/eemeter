@@ -8,6 +8,13 @@ import six
 from eemeter.consumption import ConsumptionData
 
 class GreenButtonParser(object):
+    """ Parse GreenButton XML files.
+
+    Parameters
+    ----------
+    xml : str, filepath, file buffer
+        XML data to parse
+    """
 
     SERVICE_KIND = {
         '0': 'electricity',
@@ -446,31 +453,60 @@ class GreenButtonParser(object):
 
     @staticmethod
     def pprint(element):
+        """ Pretty prints the given element
+
+        Parameters
+        ----------
+        element : etree.Element
+            The element to pretty print.
+        """
         print(etree.tostring(element, pretty_print=True))
 
     def get_usage_point_entry_element(self):
+        """ Gets an entry element with a UsagePoint child
+
+        Returns
+        -------
+        meter_reading_entry_element : etree.Element
+            UsagePoint entry element
+        """
         return self.root.find('.//{http://naesb.org/espi}UsagePoint').getparent().getparent()
 
     def get_meter_reading_entry_element(self):
+        """ Gets an entry element with a MeterReading nhild
+
+        Returns
+        -------
+        meter_reading_entry_element : etree.Element
+            MeterReading entry elements
+        """
         return self.root.find('.//{http://naesb.org/espi}MeterReading').getparent().getparent()
 
     def get_usage_summary_entry_elements(self):
+        """ Gets entry elements which have a UsageSummary child
+
+        Returns
+        -------
+        usage_summary_entry_elements : etree.Element
+            UsageSummary entry elements
+        """
         usage_summaries = self.root.findall('.//{http://naesb.org/espi}UsageSummary')
         return [e.getparent().getparent() for e in usage_summaries]
 
     def _normalize_fuel_type(self, uom):
+        ''' Convert ESPI fuel type codes to eemeter fuel type codes.
         '''
-        Convert ESPI fuel type codes to eemeter fuel type codes.
-        '''
-        fuel_types = {"naturalGas": "natural_gas",
-                      "electricity SecondaryMetered": "electricity"}
+        fuel_types = {
+            "naturalGas": "natural_gas",
+            "electricity SecondaryMetered": "electricity"
+        }
         try:
             return fuel_types[uom]
         except KeyError:
             return uom
 
     def _tz_offset_to_timezone(self, tz_offset):
-        '''Convert ESPI timezone offset code to python timezone object.'''
+        ''' Convert ESPI timezone offset code to python timezone object.'''
         if tz_offset == "-28800":
             return pytz.timezone("US/Pacific")
         elif tz_offset == "-25200":
@@ -483,9 +519,13 @@ class GreenButtonParser(object):
             raise ValueError("Timezone not supported")
 
     def get_timezone(self):
-        '''
-        Fetch the timezone the interval readings are in, from
+        ''' Fetch the timezone the interval readings are in, from
         the ESPI LocalTimeParameters object.
+
+        Returns
+        -------
+        timezone : datetime tzinfo
+            Timezone info as recognized by python datetime objects.
         '''
         local_time_parameters = self.root.find('.//{http://naesb.org/espi}LocalTimeParameters')
         # Parse Daylight Savings Time elements.
@@ -507,9 +547,16 @@ class GreenButtonParser(object):
         return self._tz_offset_to_timezone(tz_offset)
 
     class ChildElementGetter(object):
-        '''
-        Helper class that gets child (or really descendant) elements
+        ''' Helper class that gets child (or really descendant) elements
         of given element, extract their text values, and parses them.
+
+        Parameters
+        ----------
+        element : etree.element
+            Element within which to find child elements
+        value_parsers : dict of callable
+            Callables keyed by element name that take element text and return
+            an object representing the element's value.
         '''
         def __init__(self, element, value_parsers):
             self.element = element
@@ -517,7 +564,20 @@ class GreenButtonParser(object):
             self.VALUE_PARSERS = value_parsers
 
         def child_element_value(self, child_element_name):
-            '''Return parsed text value of child element.'''
+            '''Return parsed text value of child element.
+
+            Parameters
+            ----------
+            child_element_name : str
+                name of child element for which to find the value.
+                E.g. '{http://naesb.org/espi}kind'
+
+            Returns
+            -------
+            child_element_value : object
+                Value of child element as parsed by the known set of value
+                parsers.
+            '''
             child_element = self.element.find(child_element_name)
             if child_element is not None:
                 try:
@@ -528,9 +588,13 @@ class GreenButtonParser(object):
                     raise NotImplementedError(msg)
 
     def get_reading_type(self):
-        '''
-        Get and parse the first ReadingType element. Use to describe all interval readings
-        in the XML file.
+        ''' Get and parse the first ReadingType element. Used to describe all
+        interval readings in the XML file.
+
+        Returns
+        -------
+        data : dict
+            Data in the ReadingType element.
         '''
         # Grab the first reading element you run into.
         # Note: this assumes that ReadingType is the same for all IntervalBlocks.
@@ -561,6 +625,16 @@ class GreenButtonParser(object):
 
         This method uses document-level timezone attribute to
         correctly parse interval start times into tz-aware datetimes.
+
+        Parameters
+        ----------
+        interval_reading : etree.Element
+            IntervalReading element for which to get data.
+
+        Returns
+        -------
+        data : dict
+            Data in the IntervalReading element.
         '''
         reading_quality_element = interval_reading.find("{http://naesb.org/espi}ReadingQuality/{http://naesb.org/espi}quality")
         reading_quality = self.QUALITY_OF_READING[reading_quality_element.text]
@@ -587,6 +661,16 @@ class GreenButtonParser(object):
         In addition interval readings, return the start and duration of the
         block, and a sibling ReadingType element which describes the block's
         readings.
+
+        Parameters
+        ----------
+        interval_block : etree.Element
+            IntervalBlock element for which to get data.
+
+        Returns
+        -------
+        data : dict
+            Data in the IntervalBlock element.
         '''
         # Capture start and duration of the interval block.
         interval_duration_element = interval_block.find("{http://naesb.org/espi}interval/{http://naesb.org/espi}duration")
@@ -607,18 +691,26 @@ class GreenButtonParser(object):
                 "interval_readings": interval_readings}
 
     def get_interval_blocks(self):
-        '''
-        Return all interval blocks in ESPI Energy Usage XML.
+        ''' Return all interval blocks in ESPI Energy Usage XML.
         Each interval block contains a set of interval readings.
+
+        Yields
+        ------
+        interval_block : dict
+            IntervalBlock data
         '''
         interval_block_tags = self.root.findall('.//{http://naesb.org/espi}IntervalBlock')
         for interval_block_tag in interval_block_tags:
             yield self.parse_interval_block(interval_block_tag)
 
     def get_consumption_records(self):
-        '''
-        Return all consumption records, across all interval blocks,
+        ''' Return all consumption records, across all IntervalBlocks,
         stored in ESPI Energy Usage XML.
+
+        Yields
+        ------
+        interval_reading : dict
+            IntervalReading data
         '''
         for interval_block in self.get_interval_blocks():
             fuel_type = self._normalize_fuel_type(interval_block["reading_type"]["commodity"])
@@ -635,12 +727,16 @@ class GreenButtonParser(object):
                        "unit_name": unit_name}
 
     def get_consumption_data_objects(self):
-        '''
-        Retrieve all consumption records stored as Interval Reading elements
+        ''' Retrieve all consumption records stored as IntervalReading elements
         in  the given ESPI Energy Usage XML.
 
         Consumption records are grouped by fuel type and returned in
         ConsumptionData objects.
+
+        Yields
+        ------
+        ConsumptionData : eemeter.consumption.ConsumptionData
+            Consumption data grouped by fuel type.
         '''
         # Get all consumption records, group by fuel type.
         fuel_type_records = defaultdict(list)
