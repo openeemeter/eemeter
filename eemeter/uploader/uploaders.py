@@ -116,6 +116,9 @@ class BaseUploader(object):
     def get_create_url(self, data):
         raise NotImplementedError
 
+    def get_sync_url(self, data):
+        raise NotImplementedError
+
 
     def should_update(self, data, response_data):
         """
@@ -165,6 +168,9 @@ class ProjectAttributeKeyUploader(BaseUploader):
     def get_create_url(self, data):
         return constants.PROJECT_ATTRIBUTE_KEY_URL
 
+    def get_sync_url(self, data):
+        return constants.CONSUMPTION_RECORD_SYNC_URL
+
 
 class ProjectUploader(BaseUploader):
     """Upload projects
@@ -203,6 +209,9 @@ class ProjectUploader(BaseUploader):
 
     def get_create_url(self, data):
         return constants.PROJECT_URL
+
+    def get_sync_url(self, data):
+        return constants.CONSUMPTION_RECORD_SYNC_URL
 
 
 class ProjectAttributeUploader(BaseUploader):
@@ -243,6 +252,9 @@ class ProjectAttributeUploader(BaseUploader):
     def get_create_url(self, data):
         return constants.PROJECT_ATTRIBUTE_URL
 
+    def get_sync_url(self, data):
+        return constants.CONSUMPTION_RECORD_SYNC_URL
+
 
 class ConsumptionMetadataUploader(BaseUploader):
     """Upload consumption metadata
@@ -279,6 +291,9 @@ class ConsumptionMetadataUploader(BaseUploader):
 
     def get_create_url(self, data):
         return constants.CONSUMPTION_METADATA_URL + "?summary=True"
+
+    def get_sync_url(self, data):
+        return constants.CONSUMPTION_RECORD_SYNC_URL
 
 
 class ConsumptionRecordUploader(BaseUploader):
