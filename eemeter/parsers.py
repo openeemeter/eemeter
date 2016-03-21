@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from lxml import etree
 import os
 import pytz
+import six
 
 from eemeter.consumption import ConsumptionData
 
@@ -436,7 +437,11 @@ class GreenButtonParser(object):
                      '{http://naesb.org/espi}measuringPeriod': TIME_ATTRIBUTE_KIND.get}
 
     def __init__(self, xml):
-        self.root = etree.fromstring(xml)
+        try:
+            self.root = etree.parse(xml) # xml is file path or file object
+        except IOError:
+            if isinstance(xml, six.string_types):
+                self.root = etree.fromstring(xml) # xml is a string.
         self.timezone = self.get_timezone()
 
     @staticmethod

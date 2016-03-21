@@ -2,6 +2,8 @@ from eemeter.parsers import GreenButtonParser
 
 import pytest
 from numpy.testing import assert_allclose
+import tempfile
+import os
 
 @pytest.fixture
 def natural_gas_xml(request):
@@ -740,26 +742,20 @@ def natural_gas_parser(natural_gas_xml):
 def electricity_parser(electricity_xml):
     return GreenButtonParser(electricity_xml)
 
-# def test_green_button_parser_get_id_element(natural_gas_parser):
-#     id_element = natural_gas_parser.get_id_element()
-#     assert id_element.text == "b3671f5d-447f-4cf5-abc2-87c321c3ac31"
-#
-# def test_green_button_parser_get_title_element(natural_gas_parser):
-#     title_element = natural_gas_parser.get_title_element()
-#     assert title_element.text == "Green Button Usage Feed"
-#
-# def test_green_button_parser_get_updated_element(natural_gas_parser):
-#     updated_element = natural_gas_parser.get_updated_element()
-#     assert updated_element.text == "2016-03-15T07:24:21.878Z"
-#
-# def test_green_button_parser_get_link_element(natural_gas_parser):
-#     link_element = natural_gas_parser.get_link_element()
-#     assert link_element.get("href") == "https://api.pge.com/GreenButtonConnect/espi/1_1/resource/Batch/Subscription/REDACTED/UsagePoint/REDACTED"
-#
-# def test_green_button_parser_get_entry_elements(natural_gas_parser):
-#     entry_elements = natural_gas_parser.get_entry_elements()
-#     assert len(entry_elements) == 6
-#     assert entry_elements[0].tag == "{http://www.w3.org/2005/Atom}entry"
+def test_init(natural_gas_xml):
+    fd, filepath = tempfile.mkstemp()
+
+    os.write(fd, natural_gas_xml)
+    os.close(fd)
+
+    # read from file-like object
+    with open(filepath, 'r') as f:
+        natural_gas_parser = GreenButtonParser(f)
+        timezone = natural_gas_parser.get_timezone()
+
+    # read from filepath
+    natural_gas_parser = GreenButtonParser(filepath)
+    timezone = natural_gas_parser.get_timezone()
 
 def test_local_time_parameters(natural_gas_parser):
     timezone = natural_gas_parser.get_timezone()
