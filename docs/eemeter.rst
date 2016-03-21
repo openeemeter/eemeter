@@ -29,18 +29,6 @@ eemeter.consumption
     :inherited-members:
     :show-inheritance:
 
-.. _eemeter-importers:
-
-eemeter.importers
------------------
-
-.. automodule:: eemeter.importers
-    :members:
-    :undoc-members:
-    :inherited-members:
-    :show-inheritance:
-    :exclude-members: select
-
 eemeter.weather
 ---------------
 
@@ -117,6 +105,18 @@ eemeter.uploader
 
 .. automodule:: eemeter.uploader.uploaders
    :members:
+
+
+.. _eemeter-parsers:
+
+eemeter.parsers
+---------------
+
+.. autoclass:: eemeter.parsers.GreenButtonParser
+    :members:
+    :undoc-members:
+    :inherited-members:
+    :show-inheritance:
 
 
 Other

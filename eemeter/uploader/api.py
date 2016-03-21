@@ -103,6 +103,93 @@ def upload_csvs(project_csv_file, consumption_csv_file, url, access_token, proje
 
     upload_dataframes(project_df, consumption_df, url, access_token, project_owner, verbose)
 
+def upload_dataframes2(project_df, consumption_df, url, access_token, project_owner, verbose=True):
+    """Uploads a set of formatted project and consumption data formatted as
+    CSVs to a datastore instance.
+
+    Parameters
+    ----------
+    project_df : pandas.DataFrame
+        File pointer to a CSV with the following columns::
+
+            project_id,zipcode,weather_station,latitude,longitude,baseline_period_end,reporting_period_start
+
+        Extra columns will be treated as project attributes.
+
+    consumption_dict : pandas.DataFrame
+        File pointer to a CSV with the following columns::
+
+            project_id,start,end,fuel_type,unit_name,value,estimated
+
+    access_token : str
+        Access token for the target datastore.
+    project_owner : int
+        Primary key of project_owner for datastore.
+    verbose : bool, default: True
+        Whether or not to output a log of progress.
+    """
+    requester = Requester(url, access_token)
+    project_attribute_key_uploader = uploaders.ProjectAttributeKeyUploader(requester, verbose)
+    project_uploader = uploaders.ProjectUploader(requester, verbose)
+    project_attribute_uploader = uploaders.ProjectAttributeUploader(requester, verbose)
+    consumption_metadata_uploader = uploaders.ConsumptionMetadataUploader(requester, verbose)
+    consumption_record_uploader = uploaders.ConsumptionRecordUploader(requester, verbose)
+
+    # project attribute keys
+    project_attribute_keys_data = _get_project_attribute_keys_data(project_df)
+    for data in project_attribute_keys_data:
+
+        # sync the project attribute keys
+        response_data = project_attribute_key_uploader.sync(data)
+
+        data.update(response_data) # adds the "id" field
+
+    project_ids = {}
+    for project_data, project_attributes_data in \
+            _get_project_data(project_df, project_attribute_keys_data):
+
+        # upload project
+        project_data["project_owner"] = project_owner
+        project_response_data = project_uploader.sync(project_data)
+
+        # store project_id to speed things up a bit in the consumption data uploading
+        project_id = project_response_data["project_id"]
+        project_pk = project_response_data["id"]
+        project_ids[project_pk] = project_id
+
+        for project_attribute_data in project_attributes_data:
+
+            # add the project pk to the project attribute data
+            project_attribute_data["project"] = project_pk
+
+            # sync the project attribute
+            project_attribute_data = project_attribute_uploader.sync(project_attribute_data)
+
+    for consumption_metadata_data, consumption_records_data in \
+            _get_consumption_data(consumption_df):
+
+        project_id = consumption_metadata_data.pop("project_id")
+
+        # find the project pk
+        if project_id in project_ids:
+            consumption_metadata_data["id"] = project_ids[project_id]
+        else:
+            project_data = {
+                "project_id": project_id,
+                "project_owner": project_owner,
+            }
+            project_response_data = project_uploader.sync(project_data)
+            consumption_metadata_data["project"] = project_response_data["id"]
+
+
+        consumption_metadata_response_data = consumption_metadata_uploader.sync(consumption_metadata_data)
+        consumption_metadata_id = consumption_metadata_response_data["id"]
+
+        for consumption_record_data in consumption_records_data:
+            consumption_record_data["metadata"] = consumption_metadata_id
+
+        consumption_records_response_data = consumption_record_uploader.bulk_sync(consumption_records_data)
+
 
 def upload_dataframes(project_df, consumption_df, url, access_token, project_owner, verbose=True):
     """Uploads a set of formatted project and consumption data formatted as

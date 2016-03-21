@@ -10,6 +10,22 @@ class BaseUploader(object):
         self.requester = requester
         self.verbose = verbose
 
+    def bulk_sync(self, items):
+        # descriptor = self.get_descriptor(data)
+        url = self.get_urls(items)['sync']
+
+        read_response = self.requester.post(url, items)
+
+        if read_response.status_code != 200:
+            message = "Read error GET ({}): {}\n{}".format(
+                    read_response.status_code, url, read_response.text)
+            raise ValueError(message)
+
+        for item_status in read_response.json():
+            print(item_status)
+
+
+
     def sync(self, data):
         response_data, created = self.get_or_create(data)
 
@@ -91,12 +107,16 @@ class BaseUploader(object):
         return {
             "create": self.get_create_url(data),
             "read": self.get_read_url(data),
+            "sync": self.get_sync_url(data),
         }
 
     def get_read_url(self, data):
         raise NotImplementedError
 
     def get_create_url(self, data):
+        raise NotImplementedError
+
+    def get_sync_url(self, data):
         raise NotImplementedError
 
 
@@ -148,6 +168,9 @@ class ProjectAttributeKeyUploader(BaseUploader):
     def get_create_url(self, data):
         return constants.PROJECT_ATTRIBUTE_KEY_URL
 
+    def get_sync_url(self, data):
+        return constants.CONSUMPTION_RECORD_SYNC_URL
+
 
 class ProjectUploader(BaseUploader):
     """Upload projects
@@ -186,6 +209,9 @@ class ProjectUploader(BaseUploader):
 
     def get_create_url(self, data):
         return constants.PROJECT_URL
+
+    def get_sync_url(self, data):
+        return constants.CONSUMPTION_RECORD_SYNC_URL
 
 
 class ProjectAttributeUploader(BaseUploader):
@@ -226,6 +252,9 @@ class ProjectAttributeUploader(BaseUploader):
     def get_create_url(self, data):
         return constants.PROJECT_ATTRIBUTE_URL
 
+    def get_sync_url(self, data):
+        return constants.CONSUMPTION_RECORD_SYNC_URL
+
 
 class ConsumptionMetadataUploader(BaseUploader):
     """Upload consumption metadata
@@ -262,6 +291,9 @@ class ConsumptionMetadataUploader(BaseUploader):
 
     def get_create_url(self, data):
         return constants.CONSUMPTION_METADATA_URL + "?summary=True"
+
+    def get_sync_url(self, data):
+        return constants.CONSUMPTION_RECORD_SYNC_URL
 
 
 class ConsumptionRecordUploader(BaseUploader):
@@ -304,3 +336,6 @@ class ConsumptionRecordUploader(BaseUploader):
 
     def get_create_url(self, data):
         return constants.CONSUMPTION_RECORD_URL
+
+    def get_sync_url(self, data):
+        return constants.CONSUMPTION_RECORD_SYNC_URL

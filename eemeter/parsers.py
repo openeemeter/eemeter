@@ -3,10 +3,18 @@ from datetime import datetime, timedelta
 from lxml import etree
 import os
 import pytz
+import six
 
 from eemeter.consumption import ConsumptionData
 
 class GreenButtonParser(object):
+    """ Parse GreenButton XML files.
+
+    Parameters
+    ----------
+    xml : str, filepath, file buffer
+        XML data to parse
+    """
 
     SERVICE_KIND = {
         '0': 'electricity',
@@ -423,43 +431,82 @@ class GreenButtonParser(object):
         "168": "WPerW",
     }
 
+    VALUE_PARSERS = {'{http://naesb.org/espi}accumulationBehaviour': ACCUMULATION_KIND.get,
+                     '{http://naesb.org/espi}commodity': COMMODITY_KIND.get,
+                     '{http://naesb.org/espi}dataQualifier': DATA_QUALIFIER_KIND.get,
+                     '{http://naesb.org/espi}defaultQuality': QUALITY_OF_READING.get,
+                     '{http://naesb.org/espi}flowDirection': FLOW_DIRECTION_KIND.get,
+                     '{http://naesb.org/espi}intervalLength': lambda x: timedelta(seconds=int(x)),
+                     '{http://naesb.org/espi}kind': MEASUREMENT_KIND.get,
+                     '{http://naesb.org/espi}powerOfTenMultiplier': lambda x: int(x),
+                     '{http://naesb.org/espi}timeAttribute': TIME_ATTRIBUTE_KIND.get,
+                     '{http://naesb.org/espi}uom': UNIT_SYMBOL_KIND.get,
+                     '{http://naesb.org/espi}measuringPeriod': TIME_ATTRIBUTE_KIND.get}
+
     def __init__(self, xml):
-        self.root = etree.fromstring(xml)
+        try:
+            self.root = etree.parse(xml) # xml is file path or file object
+        except IOError:
+            if isinstance(xml, six.string_types):
+                self.root = etree.fromstring(xml) # xml is a string.
+        self.timezone = self.get_timezone()
 
     @staticmethod
     def pprint(element):
+        """ Pretty prints the given element
+
+        Parameters
+        ----------
+        element : etree.Element
+            The element to pretty print.
+        """
         print(etree.tostring(element, pretty_print=True))
 
-    def get_id_element(self):
-        return self.root.find('ns1:id', namespaces=self.root.nsmap)
+    def get_usage_point_entry_element(self):
+        """ Gets an entry element with a UsagePoint child
 
-    def get_title_element(self):
-        return self.root.find('ns1:title', namespaces=self.root.nsmap)
+        Returns
+        -------
+        meter_reading_entry_element : etree.Element
+            UsagePoint entry element
+        """
+        return self.root.find('.//{http://naesb.org/espi}UsagePoint').getparent().getparent()
 
-    def get_updated_element(self):
-        return self.root.find('ns1:updated', namespaces=self.root.nsmap)
+    def get_meter_reading_entry_element(self):
+        """ Gets an entry element with a MeterReading nhild
 
-    def get_link_element(self):
-        return self.root.find('ns1:link', namespaces=self.root.nsmap)
+        Returns
+        -------
+        meter_reading_entry_element : etree.Element
+            MeterReading entry elements
+        """
+        return self.root.find('.//{http://naesb.org/espi}MeterReading').getparent().getparent()
 
-    def get_entry_elements(self):
-        return self.root.findall('ns1:entry', namespaces=self.root.nsmap)
+    def get_usage_summary_entry_elements(self):
+        """ Gets entry elements which have a UsageSummary child
 
-    def get_local_time_parameters_entry_element(self):
-        return self.root.find('.//ns0:LocalTimeParameters', namespaces=self.root.nsmap).getparent().getparent()
+        Returns
+        -------
+        usage_summary_entry_elements : etree.Element
+            UsageSummary entry elements
+        """
+        usage_summaries = self.root.findall('.//{http://naesb.org/espi}UsageSummary')
+        return [e.getparent().getparent() for e in usage_summaries]
 
-    def parse_local_time_parameters_entry(self, entry):
-        local_time_parameters = entry.find('ns1:content/ns0:LocalTimeParameters', namespaces=entry.nsmap)
+    def _normalize_fuel_type(self, uom):
+        ''' Convert ESPI fuel type codes to eemeter fuel type codes.
+        '''
+        fuel_types = {
+            "naturalGas": "natural_gas",
+            "electricity SecondaryMetered": "electricity"
+        }
+        try:
+            return fuel_types[uom]
+        except KeyError:
+            return uom
 
-        dst_start_rule = local_time_parameters.find('ns0:dstStartRule', namespaces=local_time_parameters.nsmap).text
-        dst_end_rule = local_time_parameters.find('ns0:dstEndRule', namespaces=local_time_parameters.nsmap).text
-        dst_offset = local_time_parameters.find('ns0:dstOffset', namespaces=local_time_parameters.nsmap).text
-        assert dst_start_rule == "360E2000"
-        assert dst_end_rule == "B40E2000"
-        assert dst_offset == "3600"
-
-        tz_offset = local_time_parameters.find('ns0:tzOffset', namespaces=local_time_parameters.nsmap).text
-
+    def _tz_offset_to_timezone(self, tz_offset):
+        ''' Convert ESPI timezone offset code to python timezone object.'''
         if tz_offset == "-28800":
             return pytz.timezone("US/Pacific")
         elif tz_offset == "-25200":
@@ -471,202 +518,232 @@ class GreenButtonParser(object):
         else:
             raise ValueError("Timezone not supported")
 
-    def get_reading_type_entry_elements(self):
-        reading_types = self.root.findall('.//ns0:ReadingType', namespaces=self.root.nsmap)
-        return [e.getparent().getparent() for e in reading_types]
+    def get_timezone(self):
+        ''' Fetch the timezone the interval readings are in, from
+        the ESPI LocalTimeParameters object.
 
-    def parse_reading_type_entry(self, entry):
-        reading_type = entry.find('ns1:content/ns0:ReadingType', namespaces=entry.nsmap)
+        Returns
+        -------
+        timezone : datetime tzinfo
+            Timezone info as recognized by python datetime objects.
+        '''
+        local_time_parameters = self.root.find('.//{http://naesb.org/espi}LocalTimeParameters')
+        # Parse Daylight Savings Time elements.
+        # The start rule and end rule are weird encoded ways of saying when
+        # DST should be in effect, and the offset is the actual effect.
+        dst_start_rule = local_time_parameters.find('{http://naesb.org/espi}dstStartRule').text
+        dst_end_rule = local_time_parameters.find('{http://naesb.org/espi}dstEndRule').text
+        dst_offset = local_time_parameters.find('{http://naesb.org/espi}dstOffset').text
+        # Check that timezone is a standard timezone.
+        # Non-standard timezones might not have DST attributes,
+        # break loudly if you encounter them.
+        assert dst_start_rule == "360E2000"
+        assert dst_end_rule == "B40E2000"
+        assert dst_offset == "3600"
 
-        accumulation_behavior_element = reading_type.find('ns0:accumulationBehaviour', namespaces=reading_type.nsmap)
-        if accumulation_behavior_element is not None:
-            accumulation_behavior = self.ACCUMULATION_KIND.get(accumulation_behavior_element.text)
-        else:
-            accumulation_behavior = None
+        # Find the ESPI timezone offset code, and convert it to
+        # a python timezone object.
+        tz_offset = local_time_parameters.find('{http://naesb.org/espi}tzOffset').text
+        return self._tz_offset_to_timezone(tz_offset)
 
-        commodity_element = reading_type.find('ns0:commodity', namespaces=reading_type.nsmap)
-        if commodity_element is not None:
-            commodity = self.COMMODITY_KIND.get(commodity_element.text)
-        else:
-            commodity = None
+    class ChildElementGetter(object):
+        ''' Helper class that gets child (or really descendant) elements
+        of given element, extract their text values, and parses them.
 
-        data_qualifier_element = reading_type.find('ns0:dataQualifier', namespaces=reading_type.nsmap)
-        if data_qualifier_element is not None:
-            data_qualifier = self.DATA_QUALIFIER_KIND.get(data_qualifier_element.text)
-        else:
-            data_qualifier = None
+        Parameters
+        ----------
+        element : etree.element
+            Element within which to find child elements
+        value_parsers : dict of callable
+            Callables keyed by element name that take element text and return
+            an object representing the element's value.
+        '''
+        def __init__(self, element, value_parsers):
+            self.element = element
+            # Different child elements have different value parsing functions.
+            self.VALUE_PARSERS = value_parsers
 
-        default_quality_element = reading_type.find('ns0:defaultQuality', namespaces=reading_type.nsmap)
-        if default_quality_element is not None:
-            default_quality = self.QUALITY_OF_READING.get(default_quality_element.text)
-        else:
-            default_quality = None
+        def child_element_value(self, child_element_name):
+            '''Return parsed text value of child element.
 
-        flow_direction_element = reading_type.find('ns0:flowDirection', namespaces=reading_type.nsmap)
-        if flow_direction_element is not None:
-            flow_direction = self.FLOW_DIRECTION_KIND.get(flow_direction_element.text)
-        else:
-            flow_direction = None
+            Parameters
+            ----------
+            child_element_name : str
+                name of child element for which to find the value.
+                E.g. '{http://naesb.org/espi}kind'
 
-        interval_length_element = reading_type.find('ns0:intervalLength', namespaces=reading_type.nsmap)
-        if interval_length_element is not None:
-            interval_length = timedelta(seconds=int(interval_length_element.text))
-        else:
-            interval_length = None
+            Returns
+            -------
+            child_element_value : object
+                Value of child element as parsed by the known set of value
+                parsers.
+            '''
+            child_element = self.element.find(child_element_name)
+            if child_element is not None:
+                try:
+                    return self.VALUE_PARSERS[child_element_name](child_element.text)
+                except KeyError:
+                    msg = 'No parsing function defined for text value of \
+                           element %s' % child_element_name
+                    raise NotImplementedError(msg)
 
-        kind_element = reading_type.find('ns0:kind', namespaces=reading_type.nsmap)
-        if kind_element is not None:
-            kind = self.MEASUREMENT_KIND.get(kind_element.text)
-        else:
-            kind = None
+    def get_reading_type(self):
+        ''' Get and parse the first ReadingType element. Used to describe all
+        interval readings in the XML file.
 
-        power_of_ten_multiplier_element = reading_type.find('ns0:powerOfTenMultiplier', namespaces=reading_type.nsmap)
-        if power_of_ten_multiplier_element is not None:
-            power_of_ten_multiplier = int(power_of_ten_multiplier_element.text)
-        else:
-            power_of_ten_multiplier = None
+        Returns
+        -------
+        data : dict
+            Data in the ReadingType element.
+        '''
+        # Grab the first reading element you run into.
+        # Note: this assumes that ReadingType is the same for all IntervalBlocks.
+        reading_type_element = self.root.findall('.//{http://naesb.org/espi}ReadingType')[0]
 
-        time_attribute_element = reading_type.find('ns0:timeAttribute', namespaces=reading_type.nsmap)
-        if time_attribute_element is not None:
-            time_attribute = self.TIME_ATTRIBUTE_KIND.get(time_attribute_element.text)
-        else:
-            time_attribute = None
+        # Initialize Getter class for reading type element, to make getting and parsing
+        # the values of child elements easier.
+        reading_type = self.ChildElementGetter(reading_type_element, self.VALUE_PARSERS)
 
-        uom_element = reading_type.find('ns0:uom', namespaces=reading_type.nsmap)
-        if uom_element is not None:
-            uom = self.UNIT_SYMBOL_KIND.get(uom_element.text)
-        else:
-            uom = None
+        return {'accumulation_behavior': reading_type.child_element_value('{http://naesb.org/espi}accumulationBehaviour'),
+                'commodity': reading_type.child_element_value('{http://naesb.org/espi}commodity'),
+                'data_qualifier': reading_type.child_element_value('{http://naesb.org/espi}dataQualifier'),
+                'default_quality': reading_type.child_element_value('{http://naesb.org/espi}defaultQuality'),
+                'flow_direction': reading_type.child_element_value('{http://naesb.org/espi}flowDirection'),
+                'interval_length': reading_type.child_element_value('{http://naesb.org/espi}intervalLength'),
+                'kind': reading_type.child_element_value('{http://naesb.org/espi}kind'),
+                'power_of_ten_multiplier': reading_type.child_element_value('{http://naesb.org/espi}powerOfTenMultiplier'),
+                'time_attribute': reading_type.child_element_value('{http://naesb.org/espi}timeAttribute'),
+                'uom': reading_type.child_element_value('{http://naesb.org/espi}uom'),
+                'measuring_period': reading_type.child_element_value('{http://naesb.org/espi}measuringPeriod')}
 
-        measuring_period_element = reading_type.find('ns0:measuringPeriod', namespaces=reading_type.nsmap)
-        if measuring_period_element is not None:
-            measuring_period = self.TIME_ATTRIBUTE_KIND.get(measuring_period_element.text)
-        else:
-            measuring_period = None
+    def parse_interval_reading(self, interval_reading):
+        '''
+        Parse ESPI IntervalReading element into dict.
 
-        data = {
-            "accumulation_behavior": accumulation_behavior,
-            "commodity": commodity,
-            "data_qualifier": data_qualifier,
-            "default_quality": default_quality,
-            "flow_direction": flow_direction,
-            "interval_length": interval_length,
-            "kind": kind,
-            "power_of_ten_multiplier": power_of_ten_multiplier,
-            "time_attribute": time_attribute,
-            "uom": uom,
-            "measuring_period": measuring_period,
-        }
-        return data
+        IntervalReadings contain the core data observations that
+        drive the eemeter: interval energy use measurements.
 
-    def get_usage_point_entry_element(self):
-        return self.root.find('.//ns0:UsagePoint', namespaces=self.root.nsmap).getparent().getparent()
+        This method uses document-level timezone attribute to
+        correctly parse interval start times into tz-aware datetimes.
 
-    def get_meter_reading_entry_element(self):
-        return self.root.find('.//ns0:MeterReading', namespaces=self.root.nsmap).getparent().getparent()
+        Parameters
+        ----------
+        interval_reading : etree.Element
+            IntervalReading element for which to get data.
 
-    def get_interval_block_entry_elements(self):
-        interval_blocks = self.root.findall('.//ns0:IntervalBlock', namespaces=self.root.nsmap)
-        return [e.getparent().getparent() for e in interval_blocks]
-
-    def get_usage_summary_entry_elements(self):
-        usage_summaries = self.root.findall('.//ns0:UsageSummary', namespaces=self.root.nsmap)
-        return [e.getparent().getparent() for e in usage_summaries]
-
-    def parse_interval_block_entries(self, entries):
-        data = []
-        local_time_parameters_entry = self.get_local_time_parameters_entry_element()
-        timezone = self.parse_local_time_parameters_entry(local_time_parameters_entry)
-        for entry in entries:
-            interval_block = entry.find('ns1:content/ns0:IntervalBlock', namespaces=entry.nsmap)
-            parsed = self.parse_interval_block(interval_block, timezone)
-            data.append(parsed)
-        return data
-
-    def parse_interval_block(self, interval_block, timezone):
-
-        interval_duration_element = interval_block.find("ns0:interval/ns0:duration", namespaces=interval_block.nsmap)
-        interval_start_element = interval_block.find("ns0:interval/ns0:start", namespaces=interval_block.nsmap)
-        interval_duration = timedelta(seconds=int(interval_duration_element.text))
-        interval_start = datetime.fromtimestamp(int(interval_start_element.text), tz=timezone)
-
-        # grab first reading_type
-        reading_type_element = self.get_reading_type_entry_elements()[0]
-        reading_type = self.parse_reading_type_entry(reading_type_element)
-
-
-        interval_readings = []
-        for interval_reading in interval_block.findall("ns0:IntervalReading", namespaces=interval_block.nsmap):
-            interval_readings.append(self.parse_interval_reading(interval_reading, timezone))
-
-        data = {
-            "reading_type": reading_type,
-            "interval": {
-                "duration": interval_duration,
-                "start": interval_start,
-            },
-            "interval_readings": interval_readings,
-        }
-        return data
-
-    def parse_interval_reading(self, interval_reading, timezone):
-        reading_quality_element = interval_reading.find("ns0:ReadingQuality/ns0:quality", namespaces=interval_reading.nsmap)
+        Returns
+        -------
+        data : dict
+            Data in the IntervalReading element.
+        '''
+        reading_quality_element = interval_reading.find("{http://naesb.org/espi}ReadingQuality/{http://naesb.org/espi}quality")
         reading_quality = self.QUALITY_OF_READING[reading_quality_element.text]
-        duration_element = interval_reading.find("ns0:timePeriod/ns0:duration", namespaces=interval_reading.nsmap)
-        start_element = interval_reading.find("ns0:timePeriod/ns0:start", namespaces=interval_reading.nsmap)
-        duration = timedelta(seconds=int(duration_element.text))
-        start = datetime.fromtimestamp(int(start_element.text), tz=timezone)
-        value = int(interval_reading.find("ns0:value", namespaces=interval_reading.nsmap).text)
-        data = {
-            "reading_quality": reading_quality,
-            "duration": duration,
-            "start": start,
-            "value": value,
-        }
-        return data
 
-    def get_interval_block_data(self):
-        entries = self.get_interval_block_entry_elements()
-        data = self.parse_interval_block_entries(entries)
-        return data
+        duration_element = interval_reading.find("{http://naesb.org/espi}timePeriod/{http://naesb.org/espi}duration")
+        duration = timedelta(seconds=int(duration_element.text))
+
+        start_element = interval_reading.find("{http://naesb.org/espi}timePeriod/{http://naesb.org/espi}start")
+        start = datetime.fromtimestamp(int(start_element.text), tz=self.timezone)
+
+        value = int(interval_reading.find("{http://naesb.org/espi}value").text)
+
+        return {"reading_quality": reading_quality,
+                "duration": duration,
+                "start": start,
+                "value": value}
+
+    def parse_interval_block(self, interval_block):
+        '''
+        Parse ESPI IntervalBlock element - and child IntervalReadings
+        elements - into dict.
+
+        IntervalBlocks typically hold 24-hours worth of IntervalReadings.
+        In addition interval readings, return the start and duration of the
+        block, and a sibling ReadingType element which describes the block's
+        readings.
+
+        Parameters
+        ----------
+        interval_block : etree.Element
+            IntervalBlock element for which to get data.
+
+        Returns
+        -------
+        data : dict
+            Data in the IntervalBlock element.
+        '''
+        # Capture start and duration of the interval block.
+        interval_duration_element = interval_block.find("{http://naesb.org/espi}interval/{http://naesb.org/espi}duration")
+        interval_start_element = interval_block.find("{http://naesb.org/espi}interval/{http://naesb.org/espi}start")
+        interval_duration = timedelta(seconds=int(interval_duration_element.text))
+        interval_start = datetime.fromtimestamp(int(interval_start_element.text), tz=self.timezone)
+
+        # Fetch sibling ReadingType for block.
+        reading_type = self.get_reading_type()
+
+        # Collect and parse all interval readings for the block.
+        interval_readings = [self.parse_interval_reading(reading) for reading
+                             in interval_block.findall("{http://naesb.org/espi}IntervalReading")]
+
+        return {"interval": {"duration": interval_duration,
+                             "start": interval_start},
+                "reading_type": reading_type,
+                "interval_readings": interval_readings}
+
+    def get_interval_blocks(self):
+        ''' Return all interval blocks in ESPI Energy Usage XML.
+        Each interval block contains a set of interval readings.
+
+        Yields
+        ------
+        interval_block : dict
+            IntervalBlock data
+        '''
+        interval_block_tags = self.root.findall('.//{http://naesb.org/espi}IntervalBlock')
+        for interval_block_tag in interval_block_tags:
+            yield self.parse_interval_block(interval_block_tag)
 
     def get_consumption_records(self):
-        data = self.get_interval_block_data()
-        records = []
-        for interval_block in data:
-            multiplier = 10 ** interval_block["reading_type"]["power_of_ten_multiplier"]
+        ''' Return all consumption records, across all IntervalBlocks,
+        stored in ESPI Energy Usage XML.
+
+        Yields
+        ------
+        interval_reading : dict
+            IntervalReading data
+        '''
+        for interval_block in self.get_interval_blocks():
             fuel_type = self._normalize_fuel_type(interval_block["reading_type"]["commodity"])
+            # Values must be adjusted with interval-block level multiplier.
+            multiplier = 10 ** interval_block["reading_type"]["power_of_ten_multiplier"]
             unit_name = interval_block["reading_type"]["uom"]
+            # Package block readings with adjusted units and block fuel type.
             for interval_reading in interval_block["interval_readings"]:
-                record = {
-                    "start": interval_reading["start"],
-                    "end": interval_reading["start"] + interval_reading["duration"],
-                    "value": interval_reading["value"] * multiplier,
-                    "estimated": "estimated" in interval_reading["reading_quality"],
-                    "fuel_type": fuel_type,
-                    "unit_name": unit_name,
-                }
-                records.append(record)
-        return records
+                yield {"start": interval_reading["start"],
+                       "end": interval_reading["start"] + interval_reading["duration"],
+                       "value": interval_reading["value"] * multiplier,
+                       "estimated": "estimated" in interval_reading["reading_quality"],
+                       "fuel_type": fuel_type,
+                       "unit_name": unit_name}
 
     def get_consumption_data_objects(self):
-        records = self.get_consumption_records()
+        ''' Retrieve all consumption records stored as IntervalReading elements
+        in  the given ESPI Energy Usage XML.
+
+        Consumption records are grouped by fuel type and returned in
+        ConsumptionData objects.
+
+        Yields
+        ------
+        ConsumptionData : eemeter.consumption.ConsumptionData
+            Consumption data grouped by fuel type.
+        '''
+        # Get all consumption records, group by fuel type.
         fuel_type_records = defaultdict(list)
-        for record in records:
+        for record in self.get_consumption_records():
             fuel_type_records[record["fuel_type"]].append(record)
-        cds = []
+        # Wrap records in ConsumptionData objects.
         for fuel_type, records in fuel_type_records.items():
-            cd = ConsumptionData(records, fuel_type, records[0]["unit_name"], record_type='arbitrary')
-            cds.append(cd)
-        return cds
-
-    def _normalize_fuel_type(self, uom):
-        fuel_types = {
-            "naturalGas": "natural_gas",
-            "electricity SecondaryMetered": "electricity",
-        }
-
-        try:
-            return fuel_types[uom]
-        except KeyError:
-            return uom
+            yield ConsumptionData(records, fuel_type,
+                                  records[0]["unit_name"],
+                                  record_type='arbitrary')
