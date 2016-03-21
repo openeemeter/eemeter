@@ -423,17 +423,17 @@ class GreenButtonParser(object):
         "168": "WPerW",
     }
 
-    VALUE_PARSERS = {'ns0:accumulationBehaviour': ACCUMULATION_KIND.get,
-                     'ns0:commodity': COMMODITY_KIND.get,
-                     'ns0:dataQualifier': DATA_QUALIFIER_KIND.get,
-                     'ns0:defaultQuality': QUALITY_OF_READING.get,
-                     'ns0:flowDirection': FLOW_DIRECTION_KIND.get,
-                     'ns0:intervalLength': lambda element: timedelta(seconds=int(element.text)),
-                     'ns0:kind': MEASUREMENT_KIND.get,
-                     'ns0:powerOfTenMultiplier': lambda element: int(element.text),
-                     'ns0:timeAttribute': TIME_ATTRIBUTE_KIND.get,
-                     'ns0:uom': UNIT_SYMBOL_KIND.get,
-                     'ns0:measuringPeriod': TIME_ATTRIBUTE_KIND.get}
+    VALUE_PARSERS = {'{http://naesb.org/espi}accumulationBehaviour': ACCUMULATION_KIND.get,
+                     '{http://naesb.org/espi}commodity': COMMODITY_KIND.get,
+                     '{http://naesb.org/espi}dataQualifier': DATA_QUALIFIER_KIND.get,
+                     '{http://naesb.org/espi}defaultQuality': QUALITY_OF_READING.get,
+                     '{http://naesb.org/espi}flowDirection': FLOW_DIRECTION_KIND.get,
+                     '{http://naesb.org/espi}intervalLength': lambda x: timedelta(seconds=int(x)),
+                     '{http://naesb.org/espi}kind': MEASUREMENT_KIND.get,
+                     '{http://naesb.org/espi}powerOfTenMultiplier': lambda x: int(x),
+                     '{http://naesb.org/espi}timeAttribute': TIME_ATTRIBUTE_KIND.get,
+                     '{http://naesb.org/espi}uom': UNIT_SYMBOL_KIND.get,
+                     '{http://naesb.org/espi}measuringPeriod': TIME_ATTRIBUTE_KIND.get}
 
     def __init__(self, xml):
         self.root = etree.fromstring(xml)
@@ -444,13 +444,13 @@ class GreenButtonParser(object):
         print(etree.tostring(element, pretty_print=True))
 
     def get_usage_point_entry_element(self):
-        return self.root.find('.//ns0:UsagePoint', namespaces=self.root.nsmap).getparent().getparent()
+        return self.root.find('.//{http://naesb.org/espi}UsagePoint').getparent().getparent()
 
     def get_meter_reading_entry_element(self):
-        return self.root.find('.//ns0:MeterReading', namespaces=self.root.nsmap).getparent().getparent()
+        return self.root.find('.//{http://naesb.org/espi}MeterReading').getparent().getparent()
 
     def get_usage_summary_entry_elements(self):
-        usage_summaries = self.root.findall('.//ns0:UsageSummary', namespaces=self.root.nsmap)
+        usage_summaries = self.root.findall('.//{http://naesb.org/espi}UsageSummary')
         return [e.getparent().getparent() for e in usage_summaries]
 
     def _normalize_fuel_type(self, uom):
@@ -464,7 +464,7 @@ class GreenButtonParser(object):
         except KeyError:
             return uom
 
-    def tz_offset_to_timezone(self, tz_offset):
+    def _tz_offset_to_timezone(self, tz_offset):
         '''Convert ESPI timezone offset code to python timezone object.'''
         if tz_offset == "-28800":
             return pytz.timezone("US/Pacific")
@@ -482,18 +482,13 @@ class GreenButtonParser(object):
         Fetch the timezone the interval readings are in, from
         the ESPI LocalTimeParameters object.
         '''
-        local_time_parameters = self.root.find('.//ns0:LocalTimeParameters',
-                                               namespaces=self.root.nsmap)
-        time_ns = local_time_parameters.nsmap
+        local_time_parameters = self.root.find('.//{http://naesb.org/espi}LocalTimeParameters')
         # Parse Daylight Savings Time elements.
         # The start rule and end rule are weird encoded ways of saying when
         # DST should be in effect, and the offset is the actual effect.
-        dst_start_rule = local_time_parameters.find('ns0:dstStartRule',
-                                                    namespaces=time_ns).text
-        dst_end_rule = local_time_parameters.find('ns0:dstEndRule',
-                                                  namespaces=time_ns).text
-        dst_offset = local_time_parameters.find('ns0:dstOffset',
-                                                namespaces=time_ns).text
+        dst_start_rule = local_time_parameters.find('{http://naesb.org/espi}dstStartRule').text
+        dst_end_rule = local_time_parameters.find('{http://naesb.org/espi}dstEndRule').text
+        dst_offset = local_time_parameters.find('{http://naesb.org/espi}dstOffset').text
         # Check that timezone is a standard timezone.
         # Non-standard timezones might not have DST attributes,
         # break loudly if you encounter them.
@@ -503,25 +498,22 @@ class GreenButtonParser(object):
 
         # Find the ESPI timezone offset code, and convert it to
         # a python timezone object.
-        tz_offset = local_time_parameters.find('ns0:tzOffset',
-                                               namespaces=time_ns).text
-        return self.tz_offset_to_timezone(tz_offset)
+        tz_offset = local_time_parameters.find('{http://naesb.org/espi}tzOffset').text
+        return self._tz_offset_to_timezone(tz_offset)
 
-    class ChildElementGetter():
+    class ChildElementGetter(object):
         '''
         Helper class that gets child (or really descendant) elements
         of given element, extract their text values, and parses them.
         '''
         def __init__(self, element, value_parsers):
             self.element = element
-            self.namespace = element.nsmap
             # Different child elements have different value parsing functions.
             self.VALUE_PARSERS = value_parsers
 
         def child_element_value(self, child_element_name):
             '''Return parsed text value of child element.'''
-            child_element = self.element.find(child_element_name,
-                                              namespaces=self.namespace)
+            child_element = self.element.find(child_element_name)
             if child_element is not None:
                 try:
                     return self.VALUE_PARSERS[child_element_name](child_element.text)
@@ -530,29 +522,6 @@ class GreenButtonParser(object):
                            element %s' % child_element_name
                     raise NotImplementedError(msg)
 
-    def get_reading_type2(self):
-        '''
-        Get and parse the first ReadingType element. Use to describe all interval readings
-        in the XML file.
-        '''
-        # Grab the first reading element you run into.
-        # Note: this assumes that ReadingType is the same for all IntervalBlocks.
-        reading_type_element = self.root.findall('.//ns0:ReadingType', namespaces=self.root.nsmap)[0]
-        # Initialize Getter class for reading type element, to make getting and parsing
-        # the values of child elements easier.
-        reading_type = self.ChildElementGetter(reading_type_element, self.VALUE_PARSERS),
-        return {'accumulation_behavior': reading_type.child_element_value('ns0:accumulationBehaviour'),
-                'commodity': reading_type.child_element_value('ns0:commodity'),
-                'data_qualifier': reading_type.child_element_value('ns0:dataQualifier'),
-                'default_quality': reading_type.child_element_value('ns0:defaultQuality'),
-                'flow_direction': reading_type.child_element_value('ns0:flowDirection'),
-                'interval_length': reading_type.child_element_value('ns0:intervalLength'),
-                'kind': reading_type.child_element_value('ns0:kind'),
-                'power_of_ten_multiplier': reading_type.child_element_value('ns0:powerOfTenMultiplier'),
-                'time_attribute': reading_type.child_element_value('ns0:timeAttribute'),
-                'uom': reading_type.child_element_value('ns0:uom'),
-                'measuring_period': reading_type.child_element_value('ns0:measuringPeriod')}
-
     def get_reading_type(self):
         '''
         Get and parse the first ReadingType element. Use to describe all interval readings
@@ -560,85 +529,23 @@ class GreenButtonParser(object):
         '''
         # Grab the first reading element you run into.
         # Note: this assumes that ReadingType is the same for all IntervalBlocks.
-        reading_type = self.root.findall('.//ns0:ReadingType', namespaces=self.root.nsmap)[0]
+        reading_type_element = self.root.findall('.//{http://naesb.org/espi}ReadingType')[0]
 
-        accumulation_behavior_element = reading_type.find('ns0:accumulationBehaviour', namespaces=reading_type.nsmap)
-        if accumulation_behavior_element is not None:
-            accumulation_behavior = self.ACCUMULATION_KIND.get(accumulation_behavior_element.text)
-        else:
-            accumulation_behavior = None
+        # Initialize Getter class for reading type element, to make getting and parsing
+        # the values of child elements easier.
+        reading_type = self.ChildElementGetter(reading_type_element, self.VALUE_PARSERS)
 
-        commodity_element = reading_type.find('ns0:commodity', namespaces=reading_type.nsmap)
-        if commodity_element is not None:
-            commodity = self.COMMODITY_KIND.get(commodity_element.text)
-        else:
-            commodity = None
-
-        data_qualifier_element = reading_type.find('ns0:dataQualifier', namespaces=reading_type.nsmap)
-        if data_qualifier_element is not None:
-            data_qualifier = self.DATA_QUALIFIER_KIND.get(data_qualifier_element.text)
-        else:
-            data_qualifier = None
-
-        default_quality_element = reading_type.find('ns0:defaultQuality', namespaces=reading_type.nsmap)
-        if default_quality_element is not None:
-            default_quality = self.QUALITY_OF_READING.get(default_quality_element.text)
-        else:
-            default_quality = None
-
-        flow_direction_element = reading_type.find('ns0:flowDirection', namespaces=reading_type.nsmap)
-        if flow_direction_element is not None:
-            flow_direction = self.FLOW_DIRECTION_KIND.get(flow_direction_element.text)
-        else:
-            flow_direction = None
-
-        interval_length_element = reading_type.find('ns0:intervalLength', namespaces=reading_type.nsmap)
-        if interval_length_element is not None:
-            interval_length = timedelta(seconds=int(interval_length_element.text))
-        else:
-            interval_length = None
-
-        kind_element = reading_type.find('ns0:kind', namespaces=reading_type.nsmap)
-        if kind_element is not None:
-            kind = self.MEASUREMENT_KIND.get(kind_element.text)
-        else:
-            kind = None
-
-        power_of_ten_multiplier_element = reading_type.find('ns0:powerOfTenMultiplier', namespaces=reading_type.nsmap)
-        if power_of_ten_multiplier_element is not None:
-            power_of_ten_multiplier = int(power_of_ten_multiplier_element.text)
-        else:
-            power_of_ten_multiplier = None
-
-        time_attribute_element = reading_type.find('ns0:timeAttribute', namespaces=reading_type.nsmap)
-        if time_attribute_element is not None:
-            time_attribute = self.TIME_ATTRIBUTE_KIND.get(time_attribute_element.text)
-        else:
-            time_attribute = None
-
-        uom_element = reading_type.find('ns0:uom', namespaces=reading_type.nsmap)
-        if uom_element is not None:
-            uom = self.UNIT_SYMBOL_KIND.get(uom_element.text)
-        else:
-            uom = None
-
-        measuring_period_element = reading_type.find('ns0:measuringPeriod', namespaces=reading_type.nsmap)
-        if measuring_period_element is not None:
-            measuring_period = self.TIME_ATTRIBUTE_KIND.get(measuring_period_element.text)
-        else:
-            measuring_period = None
-
-        return {"accumulation_behavior": accumulation_behavior,
-                "commodity": commodity,
-                "data_qualifier": data_qualifier,
-                "default_quality": default_quality,
-                "flow_direction": flow_direction,
-                "interval_length": interval_length,
-                "kind": kind,
-                "power_of_ten_multiplier": power_of_ten_multiplier,
-                "time_attribute": time_attribute,
-                "uom": uom,
-                "measuring_period": measuring_period}
+        return {'accumulation_behavior': reading_type.child_element_value('{http://naesb.org/espi}accumulationBehaviour'),
+                'commodity': reading_type.child_element_value('{http://naesb.org/espi}commodity'),
+                'data_qualifier': reading_type.child_element_value('{http://naesb.org/espi}dataQualifier'),
+                'default_quality': reading_type.child_element_value('{http://naesb.org/espi}defaultQuality'),
+                'flow_direction': reading_type.child_element_value('{http://naesb.org/espi}flowDirection'),
+                'interval_length': reading_type.child_element_value('{http://naesb.org/espi}intervalLength'),
+                'kind': reading_type.child_element_value('{http://naesb.org/espi}kind'),
+                'power_of_ten_multiplier': reading_type.child_element_value('{http://naesb.org/espi}powerOfTenMultiplier'),
+                'time_attribute': reading_type.child_element_value('{http://naesb.org/espi}timeAttribute'),
+                'uom': reading_type.child_element_value('{http://naesb.org/espi}uom'),
+                'measuring_period': reading_type.child_element_value('{http://naesb.org/espi}measuringPeriod')}
 
     def parse_interval_reading(self, interval_reading):
         '''
@@ -650,18 +557,16 @@ class GreenButtonParser(object):
         This method uses document-level timezone attribute to
         correctly parse interval start times into tz-aware datetimes.
         '''
-        read_ns = interval_reading.nsmap  # For brevity.
-
-        reading_quality_element = interval_reading.find("ns0:ReadingQuality/ns0:quality", namespaces=read_ns)
+        reading_quality_element = interval_reading.find("{http://naesb.org/espi}ReadingQuality/{http://naesb.org/espi}quality")
         reading_quality = self.QUALITY_OF_READING[reading_quality_element.text]
 
-        duration_element = interval_reading.find("ns0:timePeriod/ns0:duration", namespaces=read_ns)
+        duration_element = interval_reading.find("{http://naesb.org/espi}timePeriod/{http://naesb.org/espi}duration")
         duration = timedelta(seconds=int(duration_element.text))
 
-        start_element = interval_reading.find("ns0:timePeriod/ns0:start", namespaces=read_ns)
+        start_element = interval_reading.find("{http://naesb.org/espi}timePeriod/{http://naesb.org/espi}start")
         start = datetime.fromtimestamp(int(start_element.text), tz=self.timezone)
 
-        value = int(interval_reading.find("ns0:value", namespaces=read_ns).text)
+        value = int(interval_reading.find("{http://naesb.org/espi}value").text)
 
         return {"reading_quality": reading_quality,
                 "duration": duration,
@@ -678,11 +583,9 @@ class GreenButtonParser(object):
         block, and a sibling ReadingType element which describes the block's
         readings.
         '''
-        ib_ns = interval_block.nsmap  # For brevity.
-
         # Capture start and duration of the interval block.
-        interval_duration_element = interval_block.find("ns0:interval/ns0:duration", namespaces=ib_ns)
-        interval_start_element = interval_block.find("ns0:interval/ns0:start", namespaces=ib_ns)
+        interval_duration_element = interval_block.find("{http://naesb.org/espi}interval/{http://naesb.org/espi}duration")
+        interval_start_element = interval_block.find("{http://naesb.org/espi}interval/{http://naesb.org/espi}start")
         interval_duration = timedelta(seconds=int(interval_duration_element.text))
         interval_start = datetime.fromtimestamp(int(interval_start_element.text), tz=self.timezone)
 
@@ -691,7 +594,7 @@ class GreenButtonParser(object):
 
         # Collect and parse all interval readings for the block.
         interval_readings = [self.parse_interval_reading(reading) for reading
-                             in interval_block.findall("ns0:IntervalReading", namespaces=ib_ns)]
+                             in interval_block.findall("{http://naesb.org/espi}IntervalReading")]
 
         return {"interval": {"duration": interval_duration,
                              "start": interval_start},
@@ -703,8 +606,7 @@ class GreenButtonParser(object):
         Return all interval blocks in ESPI Energy Usage XML.
         Each interval block contains a set of interval readings.
         '''
-        interval_block_tags = self.root.findall('.//ns0:IntervalBlock',
-                                                namespaces=self.root.nsmap)
+        interval_block_tags = self.root.findall('.//{http://naesb.org/espi}IntervalBlock')
         for interval_block_tag in interval_block_tags:
             yield self.parse_interval_block(interval_block_tag)
 

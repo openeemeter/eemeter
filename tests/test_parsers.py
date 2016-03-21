@@ -740,36 +740,33 @@ def natural_gas_parser(natural_gas_xml):
 def electricity_parser(electricity_xml):
     return GreenButtonParser(electricity_xml)
 
-def test_green_button_parser_get_id_element(natural_gas_parser):
-    id_element = natural_gas_parser.get_id_element()
-    assert id_element.text == "b3671f5d-447f-4cf5-abc2-87c321c3ac31"
-
-def test_green_button_parser_get_title_element(natural_gas_parser):
-    title_element = natural_gas_parser.get_title_element()
-    assert title_element.text == "Green Button Usage Feed"
-
-def test_green_button_parser_get_updated_element(natural_gas_parser):
-    updated_element = natural_gas_parser.get_updated_element()
-    assert updated_element.text == "2016-03-15T07:24:21.878Z"
-
-def test_green_button_parser_get_link_element(natural_gas_parser):
-    link_element = natural_gas_parser.get_link_element()
-    assert link_element.get("href") == "https://api.pge.com/GreenButtonConnect/espi/1_1/resource/Batch/Subscription/REDACTED/UsagePoint/REDACTED"
-
-def test_green_button_parser_get_entry_elements(natural_gas_parser):
-    entry_elements = natural_gas_parser.get_entry_elements()
-    assert len(entry_elements) == 6
-    assert entry_elements[0].tag == "{http://www.w3.org/2005/Atom}entry"
+# def test_green_button_parser_get_id_element(natural_gas_parser):
+#     id_element = natural_gas_parser.get_id_element()
+#     assert id_element.text == "b3671f5d-447f-4cf5-abc2-87c321c3ac31"
+#
+# def test_green_button_parser_get_title_element(natural_gas_parser):
+#     title_element = natural_gas_parser.get_title_element()
+#     assert title_element.text == "Green Button Usage Feed"
+#
+# def test_green_button_parser_get_updated_element(natural_gas_parser):
+#     updated_element = natural_gas_parser.get_updated_element()
+#     assert updated_element.text == "2016-03-15T07:24:21.878Z"
+#
+# def test_green_button_parser_get_link_element(natural_gas_parser):
+#     link_element = natural_gas_parser.get_link_element()
+#     assert link_element.get("href") == "https://api.pge.com/GreenButtonConnect/espi/1_1/resource/Batch/Subscription/REDACTED/UsagePoint/REDACTED"
+#
+# def test_green_button_parser_get_entry_elements(natural_gas_parser):
+#     entry_elements = natural_gas_parser.get_entry_elements()
+#     assert len(entry_elements) == 6
+#     assert entry_elements[0].tag == "{http://www.w3.org/2005/Atom}entry"
 
 def test_local_time_parameters(natural_gas_parser):
-    local_time_parameters_entry_element = natural_gas_parser.get_local_time_parameters_entry_element()
-    timezone = natural_gas_parser.parse_local_time_parameters_entry(local_time_parameters_entry_element)
+    timezone = natural_gas_parser.get_timezone()
     assert timezone.zone == "US/Pacific"
 
-def test_reading_types(natural_gas_parser):
-    reading_type_entry_elements = natural_gas_parser.get_reading_type_entry_elements()
-    reading_type_entry_element = reading_type_entry_elements[0]
-    reading_type_data = natural_gas_parser.parse_reading_type_entry(reading_type_entry_element)
+def test_get_reading_types(natural_gas_parser):
+    reading_type_data = natural_gas_parser.get_reading_type()
     assert reading_type_data["accumulation_behavior"] == "deltaData"
     assert reading_type_data["data_qualifier"] == "normal"
     assert reading_type_data["interval_length"].days == 1
@@ -790,17 +787,12 @@ def test_get_meter_reading_entry_element(natural_gas_parser):
     meter_reading_entry_element = natural_gas_parser.get_meter_reading_entry_element()
     assert meter_reading_entry_element.tag == "{http://www.w3.org/2005/Atom}entry"
 
-def test_get_interval_block_entry_elements(natural_gas_parser):
-    entry_elements = natural_gas_parser.get_interval_block_entry_elements()
-    assert len(entry_elements) == 2
-    assert entry_elements[0].tag == "{http://www.w3.org/2005/Atom}entry"
-
 def test_get_usage_summary_entry_elements(natural_gas_parser):
     entry_elements = natural_gas_parser.get_usage_summary_entry_elements()
     assert len(entry_elements) == 0
 
-def test_get_interval_block_data(natural_gas_parser):
-    data = natural_gas_parser.get_interval_block_data()
+def test_get_interval_blocks(natural_gas_parser):
+    data = [ib for ib in natural_gas_parser.get_interval_blocks()]
     assert len(data) == 2
     interval_block_data = data[0]
     assert interval_block_data["interval"]["duration"].days == 1
@@ -814,7 +806,7 @@ def test_get_interval_block_data(natural_gas_parser):
     assert interval_reading_data["start"].tzinfo.zone == "US/Pacific"
 
 def test_get_consumption_records(natural_gas_parser):
-    records = natural_gas_parser.get_consumption_records()
+    records = [r for r in natural_gas_parser.get_consumption_records()]
     assert len(records) == 2
     record = records[0]
 
@@ -826,7 +818,7 @@ def test_get_consumption_records(natural_gas_parser):
     assert record['estimated'] == False
 
 def test_get_consumption_data_objects(natural_gas_parser):
-    cds = natural_gas_parser.get_consumption_data_objects()
+    cds = [cd for cd in natural_gas_parser.get_consumption_data_objects()]
     assert len(cds) == 1
     cd = cds[0]
     assert_allclose(cd.data[0], 1.0365954, rtol=1e-3, atol=1e-3)
@@ -835,7 +827,7 @@ def test_get_consumption_data_objects(natural_gas_parser):
     assert cd.unit_name == "therm"
 
 def test_get_consumption_data_objects(electricity_parser):
-    cds = electricity_parser.get_consumption_data_objects()
+    cds = [cd for cd in electricity_parser.get_consumption_data_objects()]
     assert len(cds) == 1
     cd = cds[0]
     assert_allclose(cd.data[0], 192.2, rtol=1e-3, atol=1e-3)
