@@ -1,4 +1,4 @@
-from eemeter.parsers import GreenButtonParser
+from eemeter.parsers import ESPIUsageParser
 
 import pytest
 from numpy.testing import assert_allclose
@@ -737,11 +737,11 @@ def electricity_xml():
 
 @pytest.fixture
 def natural_gas_parser(natural_gas_xml):
-    return GreenButtonParser(natural_gas_xml)
+    return ESPIUsageParser(natural_gas_xml)
 
 @pytest.fixture
 def electricity_parser(electricity_xml):
-    return GreenButtonParser(electricity_xml)
+    return ESPIUsageParser(electricity_xml)
 
 def test_init(natural_gas_xml):
     fd, filepath = tempfile.mkstemp()
@@ -750,11 +750,11 @@ def test_init(natural_gas_xml):
 
     # read from file-like object
     with open(filepath, 'r') as f:
-        natural_gas_parser = GreenButtonParser(f)
+        natural_gas_parser = ESPIUsageParser(f)
         timezone = natural_gas_parser.get_timezone()
 
     # read from filepath
-    natural_gas_parser = GreenButtonParser(filepath)
+    natural_gas_parser = ESPIUsageParser(filepath)
     timezone = natural_gas_parser.get_timezone()
 
 def test_local_time_parameters(natural_gas_parser):
@@ -826,7 +826,7 @@ def test_get_consumption_data_objects(electricity_parser):
     cds = [cd for cd in electricity_parser.get_consumption_data_objects()]
     assert len(cds) == 1
     cd = cds[0]
-    assert_allclose(cd.data[0], 192.2, rtol=1e-3, atol=1e-3)
+    assert_allclose(cd.data[0], 0.192, rtol=1e-3, atol=1e-3)
     assert_allclose(cd.estimated[0], False, rtol=1e-3, atol=1e-3)
     assert cd.fuel_type == "electricity"
-    assert cd.unit_name == "Wh"
+    assert cd.unit_name == "kWh"

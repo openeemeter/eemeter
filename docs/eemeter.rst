@@ -112,7 +112,7 @@ eemeter.uploader
 eemeter.parsers
 ---------------
 
-.. autoclass:: eemeter.parsers.GreenButtonParser
+.. autoclass:: eemeter.parsers.ESPIUsageParser
     :members:
     :undoc-members:
     :inherited-members:

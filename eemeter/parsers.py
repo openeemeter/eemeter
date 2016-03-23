@@ -7,8 +7,8 @@ import six
 
 from eemeter.consumption import ConsumptionData
 
-class GreenButtonParser(object):
-    """ Parse GreenButton XML files.
+class ESPIUsageParser(object):
+    """ Parse ESPI XML files.
 
     Parameters
     ----------

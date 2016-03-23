@@ -1,5 +1,4 @@
 from eemeter.meter.base import YamlDefinedMeter
-from eemeter.config.yaml_parser import load
 
 default_residential_meter_yaml = """
 !obj:eemeter.meter.Sequence {
@@ -16,10 +15,15 @@ default_residential_meter_yaml = """
             output_mapping: { consumption: {}, },
         },
         !obj:eemeter.meter.For {
-            variable: { name: consumption_data },
+            variable: { name: consumption_data_raw },
             iterable: { name: consumption },
             meter: !obj:eemeter.meter.Sequence {
                 sequence: [
+                    !obj:eemeter.meter.ResampleConsumption {
+                        freq: 'D',
+                        input_mapping: { consumption_data: {name: consumption_data_raw} },
+                        output_mapping: { consumption_resampled: {name: consumption_data}, },
+                    },
                     !obj:eemeter.meter.BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria {
                         temperature_unit_str: !setting temperature_unit_str,
                         settings: {
@@ -317,15 +321,14 @@ class DefaultResidentialMeter(YamlDefinedMeter):
           defaults to 75 degF
     """
 
-    def __init__(self, temperature_unit_str="degC", settings={}, **kwargs):
-        super(DefaultResidentialMeter, self).__init__(**kwargs)
+    def __init__(self, temperature_unit_str="degC", **kwargs):
 
         if temperature_unit_str not in ["degF","degC"]:
             raise ValueError("Invalid temperature_unit_str: should be one of 'degF' or 'degC'.")
 
         self.temperature_unit_str = temperature_unit_str
-        self.settings = self.process_settings(settings)
-        self.meter = load(self.yaml, self.settings)
+
+        super(DefaultResidentialMeter, self).__init__(**kwargs)
 
     def default_settings(self):
 

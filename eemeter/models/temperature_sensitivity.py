@@ -2,6 +2,7 @@ import scipy.optimize as opt
 import numpy as np
 from .parameters import ParameterType
 import inspect
+import warnings
 
 class BaseloadModelParameterType(ParameterType):
     parameters = [
@@ -68,7 +69,11 @@ class Model(object):
             y_est = self._transform(X, param_array)
             return np.nansum(((y - y_est)**2) * weights)
 
-        result = opt.minimize(objective_function, x0=x0, bounds=bounds)
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+
+            result = opt.minimize(objective_function, x0=x0, bounds=bounds)
         params = result.x
         return self.param_type(params)
 
