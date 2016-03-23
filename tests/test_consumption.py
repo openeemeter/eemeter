@@ -28,8 +28,7 @@ def fuel_type(request):
     return request.param
 
 @pytest.fixture(params=["kWh",
-                        "therm",
-                        "Wh"])
+                        "therm"])
 def unit_name(request):
     return request.param
 
@@ -615,3 +614,27 @@ def test_consumption_data_init_from_arbitrary_data(
                 unit_name=consumption_data_kWh_arbitrary.unit_name,
                 data=consumption_data_kWh_arbitrary.data,
                 estimated=consumption_data_kWh_arbitrary.estimated)
+
+
+def test_unit_conversion():
+    records = [{
+        "start": datetime(2015, 1, i+1),
+        "end": datetime(2015, 1, i+2),
+        "value": 1
+    } for i in range(3)]
+
+    cd_Wh = ConsumptionData(records, "electricity", "Wh", record_type="arbitrary")
+    cd_kWh = ConsumptionData(records, "electricity", "kWh", record_type="arbitrary")
+    cd_kwh = ConsumptionData(records, "electricity", "kwh", record_type="arbitrary")
+    cd_therm = ConsumptionData(records, "electricity", "therm", record_type="arbitrary")
+    cd_therms = ConsumptionData(records, "electricity", "therms", record_type="arbitrary")
+    assert_allclose(cd_Wh.data.values, [0.001, 0.001, 0.001, np.nan])
+    assert_allclose(cd_kWh.data.values, [1, 1, 1, np.nan])
+    assert_allclose(cd_kwh.data.values, [1, 1, 1, np.nan])
+    assert_allclose(cd_therm.data.values, [1, 1, 1, np.nan])
+    assert_allclose(cd_therms.data.values, [1, 1, 1, np.nan])
+    assert cd_Wh.unit_name == "kWh"
+    assert cd_kWh.unit_name == "kWh"
+    assert cd_kwh.unit_name == "kWh"
+    assert cd_therm.unit_name == "therm"
+    assert cd_therms.unit_name == "therm"

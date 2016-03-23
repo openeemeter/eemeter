@@ -1,5 +1,4 @@
 from eemeter.meter.base import YamlDefinedMeter
-from eemeter.config.yaml_parser import load
 from datetime import datetime
 import pytz
 
@@ -421,15 +420,14 @@ class BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria(YamlDefinedMeter):
           defaults to 65 degF
     """
 
-    def __init__(self, temperature_unit_str, settings={}, **kwargs):
-        super(BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria, self).__init__(**kwargs)
+    def __init__(self, temperature_unit_str, **kwargs):
 
         if temperature_unit_str not in ["degF","degC"]:
             raise ValueError("Invalid temperature_unit_str: should be one of 'degF' or 'degC'.")
 
         self.temperature_unit_str = temperature_unit_str
-        self.settings = self.process_settings(settings)
-        self.meter = load(self.yaml, self.settings)
+
+        super(BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria, self).__init__(**kwargs)
 
     def default_settings(self):
 

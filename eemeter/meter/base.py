@@ -3,6 +3,7 @@ from collections import defaultdict
 from six import string_types
 import json
 import numpy as np
+from eemeter.config.yaml_parser import load
 
 try:
     unicode = unicode
@@ -470,7 +471,7 @@ class MeterBase(object):
 
     def yaml_mapping(self):
         args = inspect.getargspec(self.__init__).args[1:]
-        mapping = { arg: getattr(self,arg) for arg in args}
+        mapping = { arg: getattr(self, arg) for arg in args}
         mapping["input_mapping"] = self.input_mapping
         mapping["output_mapping"] = self.output_mapping
         mapping["auxiliary_inputs"] = self.auxiliary_inputs
@@ -481,6 +482,11 @@ class MeterBase(object):
 class YamlDefinedMeter(MeterBase):
     """Meter type which uses yaml internally.
     """
+
+    def __init__(self, settings={}, **kwargs):
+        super(YamlDefinedMeter, self).__init__(**kwargs)
+        self.settings = self.process_settings(settings)
+        self.meter = load(self.yaml, self.settings)
 
     @property
     def yaml(self):
@@ -544,3 +550,8 @@ class YamlDefinedMeter(MeterBase):
         outputs = self.meter.evaluate(data_collection)
         outputs.add_tags(self.tagspace)
         return outputs
+
+    def yaml_mapping(self):
+        mapping = super(YamlDefinedMeter, self).yaml_mapping()
+        mapping["meter"] = self.meter
+        return mapping

@@ -229,16 +229,72 @@ class ConsumptionData(object):
         set records=None.
     """
 
+    # target_unit must be one of "kWh" or "therm"
+    UNITS = {
+        "kwh": {
+            "target_unit": "kWh",
+            "multiplier": 1.0,
+        },
+        "kWh": {
+            "target_unit": "kWh",
+            "multiplier": 1.0,
+        },
+        "KWH": {
+            "target_unit": "kWh",
+            "multiplier": 1.0,
+        },
+        "therm": {
+            "target_unit": "therm",
+            "multiplier": 1.0,
+        },
+        "therms": {
+            "target_unit": "therm",
+            "multiplier": 1.0,
+        },
+        "thm": {
+            "target_unit": "therm",
+            "multiplier": 1.0,
+        },
+        "THERM": {
+            "target_unit": "therm",
+            "multiplier": 1.0,
+        },
+        "THERMS": {
+            "target_unit": "therm",
+            "multiplier": 1.0,
+        },
+        "THM": {
+            "target_unit": "therm",
+            "multiplier": 1.0,
+        },
+        "wh": {
+            "target_unit": "kWh",
+            "multiplier": 0.001,
+        },
+        "Wh": {
+            "target_unit": "kWh",
+            "multiplier": 0.001,
+        },
+        "WH": {
+            "target_unit": "kWh",
+            "multiplier": 0.001,
+        },
+    }
+
     def __init__(self, records, fuel_type, unit_name,
             record_type="interval", freq=None, pulse_value=None, name=None,
             data=None, estimated=None):
 
         # verify and save unit name
-        if unit_name not in ["kWh", "therm", "Wh"]:
+        if unit_name in self.UNITS:
+            self.unit_name = self.UNITS[unit_name]["target_unit"]
+
+            # we'll need this later to convert to the proper units.
+            multiplier = self.UNITS[unit_name]["multiplier"]
+        else:
             message = 'Unsupported unit name: "{}".'.format(unit_name)
             raise ValueError(message)
-        else:
-            self.unit_name = unit_name
+
 
         # verify and save fuel type
         if fuel_type not in ["electricity", "natural_gas", "fuel_oil",
@@ -326,6 +382,9 @@ class ConsumptionData(object):
         else:
             message('Invalid record_type: "{}".'.format(record_type))
             raise ValueError
+
+        # convert units, as necessary
+        self.data *= multiplier
 
     def _import_interval(self, records):
         if records == []:

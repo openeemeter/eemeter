@@ -45,10 +45,11 @@ def test_setting():
         loaded = load("a: !setting heating_config")
 
 def test_dump_meter():
-    meter = BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria("degF")
 
     # just make sure nothing has changed unexpectedly
+    meter = BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria("degF")
     assert len(dump(meter.meter)) == 11913
+
     meter = DefaultResidentialMeter("degF")
-    assert len(dump(meter.meter)) == 7461
+    assert len(dump(meter.meter)) == 21655
 

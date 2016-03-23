@@ -765,3 +765,48 @@ class ProjectFuelTypes(MeterBase):
             fuel_types.append(fuel_type)
 
         return { "fuel_types": fuel_types }
+
+
+class ResampleConsumption(MeterBase):
+    """
+    Resamples Consumption data to specified frequency
+    """
+
+    def __init__(self, freq, **kwargs):
+        self.freq = freq
+        super(ResampleConsumption, self).__init__(**kwargs)
+
+    def evaluate_raw(self, consumption_data, **kwargs):
+        """ Creates a list of tagged ConsumptionData objects for each of this
+        project's fuel types in the baseline period and the reporting period.
+
+        Parameters
+        ----------
+        project : eemeter.project.Project
+            Project instance from which to get consumption data.
+
+        Returns
+        -------
+        out : dict
+            - "fuel_types": list of tagged strings
+        """
+
+        rng = pd.date_range('2011-01-01', periods=2, freq=self.freq)
+        max_period = rng[1] - rng[0]
+
+        index_series = pd.Series(consumption_data.data.index.tz_convert(pytz.UTC))
+
+        n = 5
+        if index_series.shape[0] > n:
+            timedeltas = (index_series - index_series.shift()).iloc[1:(n + 1)]
+
+            for timedelta in timedeltas:
+                if timedelta > max_period:
+                    return { "consumption_resampled": consumption_data }
+
+        consumption_resampled = ConsumptionData([],
+                consumption_data.fuel_type, consumption_data.unit_name,
+                record_type="arbitrary")
+        consumption_resampled.data = consumption_data.data.resample(self.freq).sum()
+
+        return { "consumption_resampled": consumption_resampled }
