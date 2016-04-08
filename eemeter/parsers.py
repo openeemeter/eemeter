@@ -493,7 +493,7 @@ class ESPIUsageParser(object):
         usage_summaries = self.root.findall('.//{http://naesb.org/espi}UsageSummary')
         return [e.getparent().getparent() for e in usage_summaries]
 
-    def _normalize_fuel_type(self, uom):
+    def _normalize_fuel_type(self, commodity):
         ''' Convert ESPI fuel type codes to eemeter fuel type codes.
         '''
         fuel_types = {
@@ -501,9 +501,9 @@ class ESPIUsageParser(object):
             "electricity SecondaryMetered": "electricity"
         }
         try:
-            return fuel_types[uom]
+            return fuel_types[commodity]
         except KeyError:
-            return uom
+            return commodity
 
     def _tz_offset_to_timezone(self, tz_offset):
         ''' Convert ESPI timezone offset code to python timezone object.'''
@@ -528,18 +528,24 @@ class ESPIUsageParser(object):
             Timezone info as recognized by python datetime objects.
         '''
         local_time_parameters = self.root.find('.//{http://naesb.org/espi}LocalTimeParameters')
-        # Parse Daylight Savings Time elements.
-        # The start rule and end rule are weird encoded ways of saying when
-        # DST should be in effect, and the offset is the actual effect.
-        dst_start_rule = local_time_parameters.find('{http://naesb.org/espi}dstStartRule').text
-        dst_end_rule = local_time_parameters.find('{http://naesb.org/espi}dstEndRule').text
-        dst_offset = local_time_parameters.find('{http://naesb.org/espi}dstOffset').text
-        # Check that timezone is a standard timezone.
-        # Non-standard timezones might not have DST attributes,
-        # break loudly if you encounter them.
-        assert dst_start_rule == "360E2000"
-        assert dst_end_rule == "B40E2000"
-        assert dst_offset == "3600"
+
+        try:
+            # Parse Daylight Savings Time elements.
+            #   The start rule and end rule are weird encoded ways of saying when
+            #   DST should be in effect, and the offset is the actual effect.
+            dst_start_rule = local_time_parameters.find('{http://naesb.org/espi}dstStartRule').text
+            dst_end_rule = local_time_parameters.find('{http://naesb.org/espi}dstEndRule').text
+            dst_offset = local_time_parameters.find('{http://naesb.org/espi}dstOffset').text
+        except AttributeError:
+            # one or more of these was not found - assume UTC.
+            return pytz.UTC
+        else:
+            # Check that timezone is a standard timezone.
+            #   Non-standard timezones might not have DST attributes,
+            #   break loudly if you encounter them.
+            assert dst_start_rule == "360E2000"
+            assert dst_end_rule == "B40E2000"
+            assert dst_offset == "3600"
 
         # Find the ESPI timezone offset code, and convert it to
         # a python timezone object.
@@ -637,7 +643,10 @@ class ESPIUsageParser(object):
             Data in the IntervalReading element.
         '''
         reading_quality_element = interval_reading.find("{http://naesb.org/espi}ReadingQuality/{http://naesb.org/espi}quality")
-        reading_quality = self.QUALITY_OF_READING[reading_quality_element.text]
+        try:
+            reading_quality = self.QUALITY_OF_READING[reading_quality_element.text]
+        except AttributeError:
+            reading_quality = None
 
         duration_element = interval_reading.find("{http://naesb.org/espi}timePeriod/{http://naesb.org/espi}duration")
         duration = timedelta(seconds=int(duration_element.text))
@@ -719,19 +728,29 @@ class ESPIUsageParser(object):
             unit_name = interval_block["reading_type"]["uom"]
             # Package block readings with adjusted units and block fuel type.
             for interval_reading in interval_block["interval_readings"]:
+                if interval_reading["reading_quality"] is None:
+                    estimated = False # assume not estimated
+                else:
+                    estimated = "estimated" in interval_reading["reading_quality"]
                 yield {"start": interval_reading["start"],
                        "end": interval_reading["start"] + interval_reading["duration"],
                        "value": interval_reading["value"] * multiplier,
-                       "estimated": "estimated" in interval_reading["reading_quality"],
+                       "estimated": estimated,
                        "fuel_type": fuel_type,
                        "unit_name": unit_name}
 
-    def get_consumption_data_objects(self):
+    def get_consumption_data_objects(self, fuel_type_default="electricity"):
         ''' Retrieve all consumption records stored as IntervalReading elements
         in  the given ESPI Energy Usage XML.
 
         Consumption records are grouped by fuel type and returned in
         ConsumptionData objects.
+
+        Parameters
+        ----------
+        fuel_type_default : str
+            Default fuel type to use in parser if ReadingType/commodity field
+            is missing.
 
         Yields
         ------
@@ -744,6 +763,8 @@ class ESPIUsageParser(object):
             fuel_type_records[record["fuel_type"]].append(record)
         # Wrap records in ConsumptionData objects.
         for fuel_type, records in fuel_type_records.items():
+            if fuel_type is None:
+                fuel_type = fuel_type_default
             yield ConsumptionData(records, fuel_type,
                                   records[0]["unit_name"],
                                   record_type='arbitrary')
