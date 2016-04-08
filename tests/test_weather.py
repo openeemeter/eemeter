@@ -184,3 +184,12 @@ def test_cache():
     ws.load_from_cache()
 
     assert ws.tempC.shape == (0,)
+
+    # write an all-null cache file
+    with open(ws.cache_filename, 'w') as f:
+        f.write('[["20110101", null]]')
+
+    # new instance, loaded from empty cache
+    ws = GSODWeatherSource('722880', cache_directory=cache_dir)
+
+    assert ws.tempC.shape == (1,)

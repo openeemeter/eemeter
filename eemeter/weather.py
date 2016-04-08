@@ -176,7 +176,7 @@ class WeatherSourceBase(object):
 
     def __init__(self, station):
         self.station = station
-        self.tempC = pd.Series()
+        self.tempC = pd.Series(dtype=float)
 
     @staticmethod
     def _unit_convert(x, unit):
@@ -528,7 +528,7 @@ class CachedWeatherSourceBase(WeatherSourceBase):
         values = [d[1] for d in data]
 
         # changed for pandas > 0.18
-        self.tempC = pd.Series(values, index=index).sort_index().resample(self.freq).mean()
+        self.tempC = pd.Series(values, index=index, dtype=float).sort_index().resample(self.freq).mean()
 
     def clear_cache(self):
         try:
@@ -626,7 +626,7 @@ class GSODWeatherSource(NOAAWeatherSourceBase):
 
         data = self.client.get_gsod_data(self.station, year)
         dates = pd.date_range("{}-01-01".format(year),"{}-12-31".format(year), freq=self.freq)
-        new_series = pd.Series(None, index=dates)
+        new_series = pd.Series(None, index=dates, dtype=float)
         for day in data:
             if not pd.isnull(day["temp_C"]):
                 new_series[day["date"]] = day["temp_C"]
@@ -656,7 +656,7 @@ class ISDWeatherSource(NOAAWeatherSourceBase):
 
         data = self.client.get_isd_data(self.station, year)
         dates = pd.date_range("{}-01-01 00:00".format(year),"{}-01-01 00:00".format(int(year) + 1), freq='H')[:-1]
-        new_series = pd.Series(None, index=dates)
+        new_series = pd.Series(None, index=dates, dtype=float)
         for hour in data:
             if not pd.isnull(hour["temp_C"]):
                 dt = hour["datetime"]
@@ -687,7 +687,7 @@ class TMY3WeatherSource(CachedWeatherSourceBase):
         index = [datetime(1900, d["dt"].month, d["dt"].day, d["dt"].hour) for d in data]
 
         # changed for pandas > 0.18
-        self.tempC = pd.Series(temps, index).sort_index().resample('H').mean()
+        self.tempC = pd.Series(temps, index=index, dtype=float).sort_index().resample('H').mean()
         self.save_to_cache()
 
     def annual_daily_temperatures(self, unit):
