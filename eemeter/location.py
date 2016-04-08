@@ -159,7 +159,10 @@ def station_to_lat_lng(station):
         Latitude and longitude coordinates.
 
     """
-    return _load_station_to_lat_lng_index().get(station)
+    lat_lng = _load_station_to_lat_lng_index().get(station)
+    if lat_lng is None:
+        return None, None
+    return lat_lng
 
 def station_to_zipcodes(station):
     """Return the zipcodes that map to this station.
@@ -207,7 +210,10 @@ def zipcode_to_lat_lng(zipcode):
         Latitude and longitude coordinates.
 
     """
-    return _load_zipcode_to_lat_lng_index().get(zipcode)
+    lat_lng = _load_zipcode_to_lat_lng_index().get(zipcode)
+    if lat_lng is None:
+        return None, None
+    return lat_lng
 
 def zipcode_to_station(zipcode):
     """Return the nearest USAF station (by latitude and longitude centroid) of

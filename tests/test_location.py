@@ -149,6 +149,10 @@ def test_station_to_lat_lng(station_lat_lng):
     s_lat_lng = station_to_lat_lng(station)
     assert_allclose(s_lat_lng, lat_lng, rtol=RTOL, atol=ATOL)
 
+def test_station_to_lat_lng_null():
+    lat, lng = station_to_lat_lng("NotValid")
+    assert lat is None and lng is None
+
 def test_station_to_zipcodes(station_zipcode):
     station, zipcode, n = station_zipcode
     zipcodes = station_to_zipcodes(station)
@@ -164,6 +168,10 @@ def test_zipcode_to_lat_lng(zipcode_lat_lng):
     zipcode, lat_lng = zipcode_lat_lng
     z_lat_lng = zipcode_to_lat_lng(zipcode)
     assert_allclose(z_lat_lng, lat_lng, rtol=RTOL, atol=ATOL)
+
+def test_zipcode_to_lat_lng_null():
+    lat, lng = zipcode_to_lat_lng("NotValid")
+    assert lat is None and lng is None
 
 def test_zipcode_to_station(zipcode_station):
     zipcode, station = zipcode_station
