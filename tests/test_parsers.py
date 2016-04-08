@@ -737,7 +737,7 @@ def electricity_xml():
 
 @pytest.fixture
 def electricity_xml_2():
-    xml = """<?xml version='1.0' encoding='UTF-8'?>
+    xml = """<?xml version='1.0'?>
 <feed xmlns="http://www.w3.org/2005/Atom" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://naesb.org/espi espi.xsd">
   <id>urn:uuid:5762c9e8-4e65-3b0c-83b3-7874683f3dbe</id>
   <link href="/v1/espi_third_party_batch_feed" rel="self">
