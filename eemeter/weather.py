@@ -521,7 +521,7 @@ class CachedWeatherSourceBase(WeatherSourceBase):
                 data = json.load(f)
         except IOError:
             return
-        except ValueError:
+        except ValueError: # Corrupted json file
             self.clear_cache()
             return
         index = pd.to_datetime([d[0] for d in data], format=self.cache_date_format)
