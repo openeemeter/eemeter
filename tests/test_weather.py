@@ -166,7 +166,14 @@ def test_cache():
     ws = GSODWeatherSource('722880', cache_directory=cache_dir)
     assert ws.tempC.shape == (365*3,)
 
-    ws.clear_cache()
+    # corrupt the cache
+    with open(ws.cache_filename, 'w') as f:
+        f.seek(1000)
+        f.write("0#2]]]],,,sd,f,\\sf\\f\s34")
+
+    # shouldn't fail - should just clear the cache
+    ws = GSODWeatherSource('722880', cache_directory=cache_dir)
+    assert ws.tempC.shape == (0,)
 
     # new instance, loaded from empty cache
     ws = GSODWeatherSource('722880', cache_directory=cache_dir)
@@ -177,3 +184,12 @@ def test_cache():
     ws.load_from_cache()
 
     assert ws.tempC.shape == (0,)
+
+    # write an all-null cache file
+    with open(ws.cache_filename, 'w') as f:
+        f.write('[["20110101", null]]')
+
+    # new instance, loaded from empty cache
+    ws = GSODWeatherSource('722880', cache_directory=cache_dir)
+
+    assert ws.tempC.shape == (1,)

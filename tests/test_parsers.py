@@ -8,7 +8,7 @@ import six
 
 @pytest.fixture
 def natural_gas_xml(request):
-    xml = """ <ns1:feed xmlns:ns0="http://naesb.org/espi" xmlns:ns1="http://www.w3.org/2005/Atom">
+    xml = """<ns1:feed xmlns:ns0="http://naesb.org/espi" xmlns:ns1="http://www.w3.org/2005/Atom">
 	<ns1:id xmlns:ns1="http://www.w3.org/2005/Atom">b3671f5d-447f-4cf5-abc2-87c321c3ac31</ns1:id>
 	<ns1:title type="text" xmlns:ns1="http://www.w3.org/2005/Atom">Green Button Usage Feed</ns1:title>
 	<ns1:updated xmlns:ns1="http://www.w3.org/2005/Atom">2016-03-15T07:24:21.878Z</ns1:updated>
@@ -142,8 +142,7 @@ def natural_gas_xml(request):
 
 @pytest.fixture
 def electricity_xml():
-    xml ="""
-<ns1:feed xmlns:ns0="http://naesb.org/espi" xmlns:ns1="http://www.w3.org/2005/Atom">
+    xml ="""<ns1:feed xmlns:ns0="http://naesb.org/espi" xmlns:ns1="http://www.w3.org/2005/Atom">
 	<ns1:id xmlns:ns1="http://www.w3.org/2005/Atom">bf2d574c-4f27-4c48-9a49-af418e6c0a7f</ns1:id>
 	<ns1:title type="text" xmlns:ns1="http://www.w3.org/2005/Atom">Green Button Usage Feed</ns1:title>
 	<ns1:updated xmlns:ns1="http://www.w3.org/2005/Atom">2016-03-15T07:24:56.097Z</ns1:updated>
@@ -735,6 +734,111 @@ def electricity_xml():
 
     return xml
 
+
+@pytest.fixture
+def electricity_xml_2():
+    xml = """<?xml version='1.0'?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://naesb.org/espi espi.xsd">
+  <id>urn:uuid:5762c9e8-4e65-3b0c-83b3-7874683f3dbe</id>
+  <link href="/v1/espi_third_party_batch_feed" rel="self">
+  </link>
+  <title type="text">Opower ESPI Third Party Batch Feed v1</title>
+  <updated>2016-03-09T17:15:58.363Z</updated>
+  <entry>
+    <id>urn:uuid:a6254fe3-2e6b-39b0-bf0a-7f66b9664575</id>
+    <link href="/v1/User/REDACTED/UsagePoint/REDACTED" rel="self">
+    </link>
+    <link href="/v1/User/REDACTED/UsagePoint/REDACTED/MeterReading/REDACTED" rel="related">
+    </link>
+    <title type="text">REDACTED</title>
+    <updated>2016-03-09T17:15:58.363Z</updated>
+    <published>2011-11-30T12:00:00.000Z</published>
+    <content type="xml">
+      <UsagePoint xmlns="http://naesb.org/espi">
+        <ServiceCategory>
+          <kind>0</kind>
+        </ServiceCategory>
+      </UsagePoint>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:ad092963-c430-3107-a1f8-f5cbf1c7a4e9</id>
+    <link href="/v1/User/REDACTED/UsagePoint/REDACTED/MeterReading/REDACTED" rel="self">
+    </link>
+    <link href="/v1/ReadingType/1" rel="related">
+    </link>
+    <link href="/v1/User/REDACTED/UsagePoint/REDACTED/MeterReading/REDACTED/IntervalBlock/REDACTED" rel="related">
+    </link>
+    <updated>2016-03-09T17:15:58.363Z</updated>
+    <published>2011-11-30T12:00:00.000Z</published>
+    <content type="xml">
+      <MeterReading xmlns="http://naesb.org/espi">
+      </MeterReading>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:4e1226d5-5172-3fdf-adf6-4001aee94849</id>
+    <link href="/v1/ReadingType/REDACTED" rel="self">
+    </link>
+    <updated>2016-03-09T17:15:58.363Z</updated>
+    <published>2011-11-30T12:00:00.000Z</published>
+    <content type="xml">
+      <ReadingType xmlns="http://naesb.org/espi">
+        <currency>840</currency>
+        <powerOfTenMultiplier>0</powerOfTenMultiplier>
+        <uom>72</uom>
+      </ReadingType>
+    </content>
+  </entry>
+  <entry>
+    <id>urn:uuid:04505c10-c02c-3afa-b983-c472ca1fad93</id>
+    <link href="/v1/User/REDACTED/UsagePoint/REDACTED/MeterReading/REDACTED/IntervalBlock/REDACTED" rel="self">
+    </link>
+    <content type="xml">
+      <IntervalBlock xmlns="http://naesb.org/espi">
+        <interval>
+          <duration>86835600</duration>
+          <start>1370070000</start>
+        </interval>
+        <IntervalReading>
+          <cost>7528</cost>
+          <timePeriod>
+            <duration>900</duration>
+            <start>1370070000</start>
+          </timePeriod>
+          <value>214</value>
+        </IntervalReading>
+        <IntervalReading>
+          <cost>19481</cost>
+          <timePeriod>
+            <duration>900</duration>
+            <start>1370070900</start>
+          </timePeriod>
+          <value>555</value>
+        </IntervalReading>
+        <IntervalReading>
+          <cost>6921</cost>
+          <timePeriod>
+            <duration>900</duration>
+            <start>1370071800</start>
+          </timePeriod>
+          <value>197</value>
+        </IntervalReading>
+        <IntervalReading>
+          <cost>7581</cost>
+          <timePeriod>
+            <duration>900</duration>
+            <start>1370072700</start>
+          </timePeriod>
+          <value>216</value>
+        </IntervalReading>
+      </IntervalBlock>
+    </content>
+  </entry>
+</feed>"""
+
+    return xml
+
 @pytest.fixture
 def natural_gas_parser(natural_gas_xml):
     return ESPIUsageParser(natural_gas_xml)
@@ -742,6 +846,10 @@ def natural_gas_parser(natural_gas_xml):
 @pytest.fixture
 def electricity_parser(electricity_xml):
     return ESPIUsageParser(electricity_xml)
+
+@pytest.fixture
+def electricity_parser_2(electricity_xml_2):
+    return ESPIUsageParser(electricity_xml_2)
 
 def test_init(natural_gas_xml):
     fd, filepath = tempfile.mkstemp()
@@ -827,6 +935,15 @@ def test_get_consumption_data_objects(electricity_parser):
     assert len(cds) == 1
     cd = cds[0]
     assert_allclose(cd.data[0], 0.192, rtol=1e-3, atol=1e-3)
+    assert_allclose(cd.estimated[0], False, rtol=1e-3, atol=1e-3)
+    assert cd.fuel_type == "electricity"
+    assert cd.unit_name == "kWh"
+
+def test_get_consumption_data_objects(electricity_parser_2):
+    cds = [cd for cd in electricity_parser_2.get_consumption_data_objects()]
+    assert len(cds) == 1
+    cd = cds[0]
+    assert_allclose(cd.data[0], 0.214, rtol=1e-3, atol=1e-3)
     assert_allclose(cd.estimated[0], False, rtol=1e-3, atol=1e-3)
     assert cd.fuel_type == "electricity"
     assert cd.unit_name == "kWh"
