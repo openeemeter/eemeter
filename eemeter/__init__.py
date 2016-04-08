@@ -1,5 +1,5 @@
 # Version
-VERSION = (0, 3, 11)
+VERSION = (0, 3, 12)
 
 def get_version():
     return '{}.{}.{}'.format(VERSION[0], VERSION[1], VERSION[2])
