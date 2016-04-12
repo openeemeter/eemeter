@@ -113,9 +113,11 @@ def lat_lng_to_station(lat, lng):
 
     Returns
     -------
-    station : str
-        String representing a USAF weather station ID
+    station : str, None
+        String representing a USAF weather station ID or None, if none was found.
     """
+    if lat is None or lng is None:
+        return None
     station_to_lat_lng_index = _load_station_to_lat_lng_index()
     index_list = list(station_to_lat_lng_index.items())
     dists = [haversine(lat, lng, stat_lat, stat_lng)
@@ -135,10 +137,13 @@ def lat_lng_to_zipcode(lat, lng):
 
     Returns
     -------
-    zipcode : str
-        String representing a USPS ZIP code.
+    zipcode : str, None
+        String representing a USPS ZIP code, or None, if none was found.
 
     """
+
+    if lat is None or lng is None:
+        return None
     zipcode_to_lat_lng_index = _load_zipcode_to_lat_lng_index()
     index_list = list(zipcode_to_lat_lng_index.items())
     dists = [haversine(lat, lng, zip_lat, zip_lng)
@@ -299,7 +304,7 @@ class Location(object):
         elif zipcode is not None:
             self.lat, self.lng = zipcode_to_lat_lng(zipcode)
             self.zipcode = zipcode
-            self.station = lat_lng_to_station(self.lat, self.lng)
+            self.station = zipcode_to_station(zipcode)
         elif station is not None:
             self.lat, self.lng = station_to_lat_lng(station)
             self.zipcode = lat_lng_to_zipcode(self.lat, self.lng)
