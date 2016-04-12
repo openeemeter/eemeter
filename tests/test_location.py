@@ -135,9 +135,19 @@ def test_lat_lng_to_station(lat_lng_station):
     lat_lng, station = lat_lng_station
     assert station == lat_lng_to_station(*lat_lng)
 
+def test_lat_lng_to_station_null():
+    assert None is lat_lng_to_station(None,1)
+    assert None is lat_lng_to_station(1, None)
+    assert None is lat_lng_to_station(None, None)
+
 def test_lat_lng_to_zipcode(lat_lng_zipcode):
     lat_lng, zipcode = lat_lng_zipcode
     assert zipcode == lat_lng_to_zipcode(*lat_lng)
+
+def test_lat_lng_to_zipcode_null():
+    assert None is lat_lng_to_zipcode(None,1)
+    assert None is lat_lng_to_zipcode(1, None)
+    assert None is lat_lng_to_zipcode(None, None)
 
 
 def test_station_to_climate_zone(station_climate_zone):
@@ -196,3 +206,9 @@ def test_location_init(lat_lng_zipcode_station):
     assert station == l.station
     assert zipcode == l.zipcode
 
+def test_location_init_null():
+    l = Location(zipcode="Invalid")
+    assert l.lat is None
+    assert l.lng is None
+    assert l.station is None
+    assert l.zipcode == "Invalid"
