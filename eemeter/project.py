@@ -59,6 +59,12 @@ class Project(object):
         else:
             self.other_periods = other_periods
 
+        if location.station is None:
+            message = (
+                "Unable to create project; no valid weather station was found."
+            )
+            raise ValueError(message)
+
         if weather_source is None:
             weather_source = GSODWeatherSource(location.station)
         self.weather_source = weather_source

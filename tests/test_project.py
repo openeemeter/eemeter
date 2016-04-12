@@ -29,6 +29,20 @@ def test_project():
     assert project._total_date_range()[1] == datetime(2015,1,1)
     assert len(project.segmented_consumption_data()) == 0
 
+def test_project_null_station():
+    location = Location(zipcode="INVALID")
+
+    with pytest.raises(ValueError):
+        baseline_period = Period(datetime(2014,1,1), datetime(2015,1,1))
+        reporting_period = None
+        project = Project(location, consumption=[],
+                baseline_period=baseline_period,
+                reporting_period=reporting_period,
+                other_periods=[],
+                weather_source=None,
+                weather_normal_source=None)
+
+
 def test_project_partial_period():
     location = Location(zipcode="60604")
     baseline_period = Period(None, datetime(2015,1,1))
