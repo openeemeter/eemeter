@@ -128,10 +128,18 @@ class TMY3Client(object):
         if self.station_to_lat_lng is None:
             self.station_to_lat_lng = self._load_station_locations()
 
-        lat, lng = self.station_to_lat_lng[station]
-        index_list = list(self.station_to_lat_lng.items())
-        dists = [haversine(lat, lng, stat_lat, stat_lng)
-                 for _, (stat_lat, stat_lng) in index_list]
+        try:
+            lat, lng = self.station_to_lat_lng[station]
+        except KeyError:
+            warnings.warn(
+                "Could not locate station {}; "
+                "nearby station look-up failed".format(station)
+            )
+            return None
+        else:
+            index_list = list(self.station_to_lat_lng.items())
+            dists = [haversine(lat, lng, stat_lat, stat_lng)
+                     for _, (stat_lat, stat_lng) in index_list]
 
         for dist, (nearby_station, _) in zip(dists, index_list):
             if nearby_station in self.stations:
@@ -145,11 +153,17 @@ class TMY3Client(object):
             self.stations = self._load_stations()
 
         if not station in self.stations:
-            warnings.warn("Station {} is not a TMY3 station. See self.stations for a complete list.".format(station))
+            warnings.warn(
+                "Station {} is not a TMY3 station. "
+                "See self.stations for a complete list.".format(station)
+                )
             if station_fallback:
                 station = self._find_nearby_station(station)
             else:
-                return None
+                station = None
+
+        if station is None:
+            return None
 
         url = "http://rredc.nrel.gov/solar/old_data/nsrdb/1991-2005/data/tmy3/{}TYA.CSV".format(station)
         r = requests.get(url)
@@ -683,8 +697,12 @@ class TMY3WeatherSource(CachedWeatherSourceBase):
 
     def _load_data(self):
         data = self.client.get_tmy3_data(self.station, self.station_fallback)
-        temps = [d["temp_C"] for d in data]
-        index = [datetime(1900, d["dt"].month, d["dt"].day, d["dt"].hour) for d in data]
+        if data is None:
+            temps = [np.nan for _ in range(365 * 24)]
+            index = [datetime(1900, 1, 1) + timedelta(seconds=i*3600) for i in range(365 * 24)]
+        else:
+            temps = [d["temp_C"] for d in data]
+            index = [datetime(1900, d["dt"].month, d["dt"].day, d["dt"].hour) for d in data]
 
         # changed for pandas > 0.18
         self.tempC = pd.Series(temps, index=index, dtype=float).sort_index().resample('H').mean()
