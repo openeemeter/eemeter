@@ -142,6 +142,10 @@ def test_tmy3_weather_source(periods, tmy3_weather_source):
     cdds = tmy3_weather_source.cdd(periods,"degC",18.33)
     assert_allclose(cdds, [58.63,138.775,160.433], rtol=RTOL,atol=ATOL)
 
+def test_tmy3_weather_source_null():
+    ws = TMY3WeatherSource("INVALID")
+    assert_allclose(ws.tempC.values, np.zeros((365*24,)) * np.nan)
+
 @pytest.mark.slow
 def test_cache():
     cache_dir = tempfile.mkdtemp()
