@@ -560,13 +560,18 @@ class NOAAWeatherSourceBase(CachedWeatherSourceBase):
             cache_directory=None, cache_filename=None):
         super(NOAAWeatherSourceBase, self).__init__(station, cache_directory,
                 cache_filename)
+
+        self._year_fetches_attempted = set()
+
         self.station_id = station
+
         if start_year is not None and end_year is not None:
             self.add_year_range(start_year, end_year)
         elif start_year is not None:
             self.add_year_range(start_year, date.today().year)
         elif end_year is not None:
             self.add_year_range(date.today().year, end_year)
+
         self._check_for_recent_data()
 
     def add_year_range(self, start_year, end_year, force=False):
@@ -590,13 +595,11 @@ class NOAAWeatherSourceBase(CachedWeatherSourceBase):
         message = "Inheriting classes must override this method."
         raise NotImplementedError(message)
 
+    def _year_fetch_attempted(self, year):
+        return year in self._year_fetches_attempted
+
     def _year_in_series(self, year):
-        try:
-            if pd.notnull(self.tempC[self.year_existence_format.format(year)]):
-                return True
-        except KeyError:
-            pass
-        return False
+        return self.year_existence_format.format(year) in self.tempC
 
     def _check_for_recent_data(self):
         yesterday = date.today() - timedelta(days=1)
@@ -635,8 +638,15 @@ class GSODWeatherSource(NOAAWeatherSourceBase):
             has been added before actually fetching.
         """
 
-        if not force and self._year_in_series(year):
-            return
+        if not force and self._year_fetch_attempted(year):
+            if self._year_in_series(year):
+                return
+            else:
+                dates = pd.date_range("{}-01-01".format(year),"{}-12-31".format(year), freq=self.freq)
+                new_series = pd.Series(None, index=dates, dtype=float)
+                self.tempC = self.tempC.append(new_series).sort_index().resample(self.freq).mean()
+                self.save_to_cache()
+                return
 
         data = self.client.get_gsod_data(self.station, year)
         dates = pd.date_range("{}-01-01".format(year),"{}-12-31".format(year), freq=self.freq)
@@ -648,6 +658,7 @@ class GSODWeatherSource(NOAAWeatherSourceBase):
         # changed for pandas > 0.18
         self.tempC = self.tempC.append(new_series).sort_index().resample(self.freq).mean()
         self.save_to_cache()
+        self._year_fetches_attempted.add(year)
 
 
 class ISDWeatherSource(NOAAWeatherSourceBase):
@@ -665,11 +676,18 @@ class ISDWeatherSource(NOAAWeatherSourceBase):
         year : {int, string}
             The year for which data should be fetched, e.g. "2010".
         """
-        if not force and self._year_in_series(year):
-            return
+        if not force and self._year_fetch_attempted(year):
+            if self._year_in_series(year):
+                return
+            else:
+                dates = pd.date_range("{}-01-01 00:00".format(year),"{}-01-01 00:00".format(int(year) + 1), freq=self.freq)[:-1]
+                new_series = pd.Series(None, index=dates, dtype=float)
+                self.tempC = self.tempC.append(new_series).sort_index().resample(self.freq).mean()
+                self.save_to_cache()
+                return
 
         data = self.client.get_isd_data(self.station, year)
-        dates = pd.date_range("{}-01-01 00:00".format(year),"{}-01-01 00:00".format(int(year) + 1), freq='H')[:-1]
+        dates = pd.date_range("{}-01-01 00:00".format(year),"{}-01-01 00:00".format(int(year) + 1), freq=self.freq)[:-1]
         new_series = pd.Series(None, index=dates, dtype=float)
         for hour in data:
             if not pd.isnull(hour["temp_C"]):
@@ -677,8 +695,9 @@ class ISDWeatherSource(NOAAWeatherSourceBase):
                 new_series[datetime(dt.year, dt.month, dt.day, dt.hour)] = hour["temp_C"]
 
         # changed for pandas > 0.18
-        self.tempC = self.tempC.append(new_series).sort_index().resample('H').mean()
+        self.tempC = self.tempC.append(new_series).sort_index().resample(self.freq).mean()
         self.save_to_cache()
+        self._year_fetches_attempted.add(year)
 
 
 class TMY3WeatherSource(CachedWeatherSourceBase):
