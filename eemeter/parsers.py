@@ -6,6 +6,7 @@ import pytz
 import six
 
 from eemeter.consumption import ConsumptionData
+import warnings
 
 class ESPIUsageParser(object):
     """ Parse ESPI XML files.
@@ -593,34 +594,87 @@ class ESPIUsageParser(object):
                            element %s' % child_element_name
                     raise NotImplementedError(msg)
 
-    def get_reading_type(self):
-        ''' Get and parse the first ReadingType element. Used to describe all
-        interval readings in the XML file.
+    def parse_reading_type(self, reading_type_element):
+        """ Parses a single reading type element.
+
+        Parameters
+        ----------
+        reading_type_element : etree.Element
+            ReadingType element for which to get data.
 
         Returns
         -------
         data : dict
             Data in the ReadingType element.
-        '''
-        # Grab the first reading element you run into.
-        # Note: this assumes that ReadingType is the same for all IntervalBlocks.
-        reading_type_element = self.root.findall('.//{http://naesb.org/espi}ReadingType')[0]
+        """
 
         # Initialize Getter class for reading type element, to make getting and parsing
         # the values of child elements easier.
         reading_type = self.ChildElementGetter(reading_type_element, self.VALUE_PARSERS)
 
-        return {'accumulation_behavior': reading_type.child_element_value('{http://naesb.org/espi}accumulationBehaviour'),
-                'commodity': reading_type.child_element_value('{http://naesb.org/espi}commodity'),
-                'data_qualifier': reading_type.child_element_value('{http://naesb.org/espi}dataQualifier'),
-                'default_quality': reading_type.child_element_value('{http://naesb.org/espi}defaultQuality'),
-                'flow_direction': reading_type.child_element_value('{http://naesb.org/espi}flowDirection'),
-                'interval_length': reading_type.child_element_value('{http://naesb.org/espi}intervalLength'),
-                'kind': reading_type.child_element_value('{http://naesb.org/espi}kind'),
-                'power_of_ten_multiplier': reading_type.child_element_value('{http://naesb.org/espi}powerOfTenMultiplier'),
-                'time_attribute': reading_type.child_element_value('{http://naesb.org/espi}timeAttribute'),
-                'uom': reading_type.child_element_value('{http://naesb.org/espi}uom'),
-                'measuring_period': reading_type.child_element_value('{http://naesb.org/espi}measuringPeriod')}
+        data_spec = [
+            ('accumulation_behavior','{http://naesb.org/espi}accumulationBehaviour'),
+            ('commodity', '{http://naesb.org/espi}commodity'),
+            ('data_qualifier', '{http://naesb.org/espi}dataQualifier'),
+            ('default_quality', '{http://naesb.org/espi}defaultQuality'),
+            ('flow_direction', '{http://naesb.org/espi}flowDirection'),
+            ('interval_length', '{http://naesb.org/espi}intervalLength'),
+            ('kind', '{http://naesb.org/espi}kind'),
+            ('power_of_ten_multiplier', '{http://naesb.org/espi}powerOfTenMultiplier'),
+            ('time_attribute', '{http://naesb.org/espi}timeAttribute'),
+            ('uom', '{http://naesb.org/espi}uom'),
+            ('measuring_period', '{http://naesb.org/espi}measuringPeriod'),
+        ]
+
+        return {name: reading_type.child_element_value(path) for name, path in data_spec}
+
+    def get_reading_type_interval_block_groups(self):
+        """ Yields reading type elements and their associated interval blocks.
+
+        Parameters
+        ----------
+        reading_type_element : etree.Element
+            ReadingType element for which to get data.
+
+        Yields
+        -------
+        data : dict
+            JSON-like representation of interval blocks.
+
+        """
+
+        entry_elements = self.root.findall('./{http://www.w3.org/2005/Atom}entry')
+
+        def _reading_type_element(entry):
+            return entry.find(".//{http://naesb.org/espi}ReadingType")
+
+        def _interval_block_element(entry):
+            return entry.find(".//{http://naesb.org/espi}IntervalBlock")
+
+        group = None
+
+        for entry in entry_elements:
+
+            reading_type_element = _reading_type_element(entry)
+            interval_block_element = _interval_block_element(entry)
+
+            if reading_type_element is not None:
+                if group is not None:
+                    yield self.parse_interval_block_group(group)
+                group = {"reading_type": reading_type_element, "interval_blocks": []}
+            elif interval_block_element is not None:
+                if group is not None:
+                    group["interval_blocks"].append(interval_block_element)
+                else:
+                    message = "Unusually formatted green button data - interval block before reading type."
+                    raise ValueError(message)
+            else:
+                pass # ignore other types for now
+
+        # yield last remaining group, if any
+        if group is not None:
+            yield self.parse_interval_block_group(group)
+
 
     def parse_interval_reading(self, interval_reading):
         '''
@@ -664,20 +718,57 @@ class ESPIUsageParser(object):
                 "start": start,
                 "value": value}
 
-    def parse_interval_block(self, interval_block):
+    def parse_interval_block_group(self, interval_block_group):
         '''
-        Parse ESPI IntervalBlock element - and child IntervalReadings
-        elements - into dict.
+        Parse IntervalBlocks (and child IntervalReadings) grouped by
+        ReadingType into dict.
 
-        IntervalBlocks typically hold 24-hours worth of IntervalReadings.
+        IntervalBlocks typically hold 24-hours worth of IntervalReadings,
+        except at start and end points of the series, and at timezone
+        transitions such as Daylight Savings time, during which 24-hour periods
+        will be broken up. Some providers group all IntervalReadings into a
+        single IntervalBlock.
+
         In addition interval readings, return the start and duration of the
         block, and a sibling ReadingType element which describes the block's
         readings.
 
         Parameters
         ----------
-        interval_block : etree.Element
-            IntervalBlock element for which to get data.
+        interval_block_group : dict
+            IntervalBlock elements, and associated ReadingType, e.g.::
+
+                {
+                    'reading_type': <Element {http://naesb.org/espi}ReadingType at 0x112350f50>},
+                    'interval_blocks': [
+                        <Element {http://naesb.org/espi}IntervalBlock at 0x112236e10>,
+                        <Element {http://naesb.org/espi}IntervalBlock at 0x112350d20>,
+                        <Element {http://naesb.org/espi}IntervalBlock at 0x1123de050>,
+                        ...
+                    ]
+                }
+
+        Returns
+        -------
+        data : dict
+            Data in the group of IntervalBlock elements
+        '''
+        reading_type = self.parse_reading_type(interval_block_group["reading_type"])
+
+        interval_blocks = interval_block_group["interval_blocks"]
+
+        return {
+            "reading_type": reading_type,
+            "interval_blocks": [self.parse_interval_block(interval_block)
+                for interval_block in interval_blocks],
+        }
+
+    def parse_interval_block(self, interval_block):
+        '''
+        Parameters
+        ----------
+        interval_block : dict
+            IntervalBlock element to parse
 
         Returns
         -------
@@ -688,32 +779,75 @@ class ESPIUsageParser(object):
         interval_duration_element = interval_block.find("{http://naesb.org/espi}interval/{http://naesb.org/espi}duration")
         interval_start_element = interval_block.find("{http://naesb.org/espi}interval/{http://naesb.org/espi}start")
         interval_duration = timedelta(seconds=int(interval_duration_element.text))
-        interval_start = datetime.fromtimestamp(int(interval_start_element.text), tz=self.timezone)
-
-        # Fetch sibling ReadingType for block.
-        reading_type = self.get_reading_type()
+        interval_start = datetime.fromtimestamp(int(interval_start_element.text), tz=pytz.UTC)
 
         # Collect and parse all interval readings for the block.
         interval_readings = [self.parse_interval_reading(reading) for reading
                              in interval_block.findall("{http://naesb.org/espi}IntervalReading")]
 
-        return {"interval": {"duration": interval_duration,
-                             "start": interval_start},
-                "reading_type": reading_type,
-                "interval_readings": interval_readings}
+        data = {
+            "interval": {
+                "duration": interval_duration,
+                "start": interval_start
+            },
+            "interval_readings": interval_readings
+        }
 
-    def get_interval_blocks(self):
-        ''' Return all interval blocks in ESPI Energy Usage XML.
+        return data
+
+    def get_interval_block_group_consumption_records(self, interval_block_group):
+        ''' Return all  in ESPI Energy Usage XML.
         Each interval block contains a set of interval readings.
 
         Yields
         ------
-        interval_block : dict
-            IntervalBlock data
+        record : dict
+            IntervalBlock record with start and end dates, e.g.::
+
+                data = {
+                    "start": datetime(2012, 1, 1, 0, 0, 0, tzinfo=pytz.UTC),
+                    "end": datetime(2012, 1, 1, 0, 15, 0, tzinfo=pytz.UTC),
+                    "value": 0.0,
+                    "estimated": True,
+                    "fuel_type": "electricity",
+                    "unit_name": "kWh",
+                }
         '''
-        interval_block_tags = self.root.findall('.//{http://naesb.org/espi}IntervalBlock')
-        for interval_block_tag in interval_block_tags:
-            yield self.parse_interval_block(interval_block_tag)
+
+        # Values must be adjusted with interval-block level multiplier.
+        # Package block readings with adjusted units and block fuel type.
+        fuel_type = self._normalize_fuel_type(interval_block_group["reading_type"]["commodity"])
+        multiplier = 10 ** interval_block_group["reading_type"]["power_of_ten_multiplier"]
+        unit_name = interval_block_group["reading_type"]["uom"]
+
+        for interval_block in interval_block_group["interval_blocks"]:
+
+            # For validation - see below
+            total_duration = interval_block["interval"]["duration"].total_seconds()
+            summed_durations = 0
+
+            for interval_reading in interval_block["interval_readings"]:
+
+                if interval_reading["reading_quality"] is None:
+                    estimated = False # assume not estimated
+                else:
+                    estimated = "estimated" in interval_reading["reading_quality"]
+
+                duration = interval_reading["duration"]
+                summed_durations += duration.total_seconds()
+                data = {
+                    "start": interval_reading["start"],
+                    "end": interval_reading["start"] + duration,
+                    "value": interval_reading["value"] * multiplier,
+                    "estimated": estimated,
+                    "fuel_type": fuel_type,
+                    "unit_name": unit_name
+                }
+                yield data
+
+            # Validates that total interval block duration matches sum of
+            # interval reading durations
+            assert total_duration == summed_durations
 
     def get_consumption_records(self):
         ''' Return all consumption records, across all IntervalBlocks,
@@ -724,27 +858,82 @@ class ESPIUsageParser(object):
         interval_reading : dict
             IntervalReading data
         '''
-        for interval_block in self.get_interval_blocks():
-            fuel_type = self._normalize_fuel_type(interval_block["reading_type"]["commodity"])
-            # Values must be adjusted with interval-block level multiplier.
-            multiplier = 10 ** interval_block["reading_type"]["power_of_ten_multiplier"]
-            unit_name = interval_block["reading_type"]["uom"]
-            # Package block readings with adjusted units and block fuel type.
-            for interval_reading in interval_block["interval_readings"]:
-                if interval_reading["reading_quality"] is None:
-                    estimated = False # assume not estimated
+
+        forward_records = None
+        reverse_records = None
+
+        for group in self.get_reading_type_interval_block_groups():
+            flow_direction = group["reading_type"]["flow_direction"]
+            records = list(self.get_interval_block_group_consumption_records(group))
+
+            if len(records) > 0:
+
+                if flow_direction == "forward":
+
+                    # should only be one group of forward records
+                    assert forward_records == None
+
+                    forward_records = records
+
+                elif flow_direction == "reverse":
+
+                    # should only be one group of reverse records
+                    assert reverse_records == None
+
+                    reverse_records = records
+
+                elif flow_direction == None:
+                    # Assume "forward" flow direction
+
+                    # should only be one group of forward records
+                    assert forward_records == None
+
+                    forward_records = records
+
                 else:
-                    estimated = "estimated" in interval_reading["reading_quality"]
-                yield {"start": interval_reading["start"],
-                       "end": interval_reading["start"] + interval_reading["duration"],
-                       "value": interval_reading["value"] * multiplier,
-                       "estimated": estimated,
-                       "fuel_type": fuel_type,
-                       "unit_name": unit_name}
+                    message = (
+                        "Ignoring unsupported flow_direction {}"
+                        .format(flow_direction)
+                    )
+                    warnings.warn(message)
+
+        if forward_records is None and reverse_records is None:
+            return []
+        elif forward_records is not None and reverse_records is None:
+            return forward_records
+        elif forward_records is not None and reverse_records is not None:
+            # Expect these records to match up perfectly, so sort first then
+            # compare and combine, throwing an error if anything doesn't align.
+
+            records = []
+            forward_records = sorted(forward_records, key=lambda r: r["start"])
+            reverse_records = sorted(reverse_records, key=lambda r: r["start"])
+
+            for forward, reverse in zip(forward_records, reverse_records):
+                # make sure record dates match
+                if forward["start"] == reverse["start"] \
+                        and forward["end"] == reverse["end"] \
+                        and forward["fuel_type"] == reverse["fuel_type"] \
+                        and forward["unit_name"] == reverse["unit_name"]:
+                    records.append({
+                        "start": forward["start"],
+                        "end": forward["end"],
+                        "fuel_type": forward["fuel_type"],
+                        "unit_name": forward["unit_name"],
+                        "estimated": forward["estimated"] or reverse["estimated"],
+                        "value": forward["value"] - reverse["value"],
+                    })
+                else:
+                    raise ValueError("Records don't align")
+
+            return records
+        else:
+            raise ValueError("Reverse records without forward records - odd")
+
 
     def get_consumption_data_objects(self, fuel_type_default="electricity"):
         ''' Retrieve all consumption records stored as IntervalReading elements
-        in  the given ESPI Energy Usage XML.
+        in the given ESPI Energy Usage XML.
 
         Consumption records are grouped by fuel type and returned in
         ConsumptionData objects.
@@ -760,10 +949,12 @@ class ESPIUsageParser(object):
         ConsumptionData : eemeter.consumption.ConsumptionData
             Consumption data grouped by fuel type.
         '''
+
         # Get all consumption records, group by fuel type.
         fuel_type_records = defaultdict(list)
         for record in self.get_consumption_records():
             fuel_type_records[record["fuel_type"]].append(record)
+
         # Wrap records in ConsumptionData objects.
         for fuel_type, records in fuel_type_records.items():
             if fuel_type is None:
