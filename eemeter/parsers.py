@@ -860,7 +860,14 @@ class ESPIUsageParser(object):
 
             # Validates that total interval block duration matches sum of
             # interval reading durations
-            assert total_duration == summed_durations
+            if not total_duration == summed_durations:
+                message = (
+                    "Total IntervalBlock duration != "
+                    "  sum of component IntervalReading durations\n"
+                    "  {}s != {}s"
+                    .format(total_duration, summed_durations)
+                )
+                warnings.warn(message)
 
     def get_consumption_records(self):
         ''' Return all consumption records, across all IntervalBlocks,
