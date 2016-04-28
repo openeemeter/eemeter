@@ -1478,3 +1478,7 @@ def test_get_consumption_data_objects_2(electricity_parser_2):
     assert_allclose(cd.estimated[0], False, rtol=1e-3, atol=1e-3)
     assert cd.fuel_type == "electricity"
     assert cd.unit_name == "kWh"
+
+def test_has_solar(electricity_parser, electricity_parser_2):
+    assert electricity_parser.has_solar()
+    assert not electricity_parser_2.has_solar()

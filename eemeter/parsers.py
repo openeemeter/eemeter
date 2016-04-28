@@ -463,6 +463,19 @@ class ESPIUsageParser(object):
         """
         print(etree.tostring(element, pretty_print=True))
 
+    def has_solar(self):
+        """ Returns True if there is a "reverse" flow direction in this file,
+        indicating presence of solar photo voltaics.
+
+        TODO: Verify that this is the correct way to determine this - are there
+        false positives or false negatives? Is there a more straightforward
+        flag to use somewhere else?
+        """
+        reading_type_elements = self.root.findall('.//{http://naesb.org/espi}ReadingType')
+        reading_types = [self.parse_reading_type(e) for e in reading_type_elements]
+        flow_directions = [rt["flow_direction"] for rt in reading_types]
+        return "reverse" in flow_directions
+
     def get_usage_point_entry_element(self):
         """ Gets an entry element with a UsagePoint child
 
