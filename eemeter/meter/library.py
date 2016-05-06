@@ -34,7 +34,7 @@ class TemperatureSensitivityParameterOptimizationMeter(MeterBase):
 
         Parameters
         ----------
-        consumption_data : eemeter.consumption.ConsumptionHistory
+        consumption_data : eemeter.consumption.ConsumptionData
             Consumption history to use as basis of model.
         weather_source : eemeter.weather.WeatherSourceBase
             Weather data source containing data covering at least the duration
@@ -228,7 +228,7 @@ class TimeSpanMeter(MeterBase):
         super(TimeSpanMeter, self).__init__(**kwargs)
 
     def evaluate_raw(self, consumption_data, **kwargs):
-        """Evaluates a ConsumptionHistory instance to determine the number of
+        """Evaluates a ConsumptionData instance to determine the number of
         unique days covered by consumption periods
 
         Parameters
@@ -245,7 +245,7 @@ class TimeSpanMeter(MeterBase):
 
 class TotalHDDMeter(MeterBase):
     """Sums the total heating degree days observed over the course of a
-    ConsumptionHistory instance
+    ConsumptionData instance
 
     Parameters
     ----------
@@ -283,7 +283,7 @@ class TotalHDDMeter(MeterBase):
 
 class TotalCDDMeter(MeterBase):
     """Sums the total cooling degree days observed over the course of a
-    ConsumptionHistory instance
+    ConsumptionData instance
 
     Parameters
     ----------
@@ -767,46 +767,36 @@ class ProjectFuelTypes(MeterBase):
         return { "fuel_types": fuel_types }
 
 
-class ResampleConsumption(MeterBase):
+class DownsampleConsumption(MeterBase):
     """
-    Resamples Consumption data to specified frequency
+    Downsamples Consumption data to specified frequency (if specified frequency
+    is lower than consumption data frequency; otherwise returns a copy
+    of itself.
+
+    Parameters
+    ----------
+    freq : str
+        Frequency to downsample to. Use a pandas offset alias (e.g. 'D').
     """
 
     def __init__(self, freq, **kwargs):
         self.freq = freq
-        super(ResampleConsumption, self).__init__(**kwargs)
+        super(DownsampleConsumption, self).__init__(**kwargs)
 
     def evaluate_raw(self, consumption_data, **kwargs):
-        """ Creates a list of tagged ConsumptionData objects for each of this
-        project's fuel types in the baseline period and the reporting period.
+        """ Downsamples given consumption data object.
 
         Parameters
         ----------
-        project : eemeter.project.Project
-            Project instance from which to get consumption data.
+        consumption_data : eemeter.meter.ConsumptionData
+            The consumption data to downsample.
 
         Returns
         -------
-        out : dict
-            - "fuel_types": list of tagged strings
+        out : eemeter.meter.ConsumptionData
+            Downsampled consumption data.
         """
 
-        rng = pd.date_range('2011-01-01', periods=2, freq=self.freq)
-        max_period = rng[1] - rng[0]
+        consumption_downsampled = consumption_data.downsample(self.freq)
 
-        index_series = pd.Series(consumption_data.data.index.tz_convert(pytz.UTC))
-
-        n = 5
-        if index_series.shape[0] > n:
-            timedeltas = (index_series - index_series.shift()).iloc[1:(n + 1)]
-
-            for timedelta in timedeltas:
-                if timedelta > max_period:
-                    return { "consumption_resampled": consumption_data }
-
-        consumption_resampled = ConsumptionData([],
-                consumption_data.fuel_type, consumption_data.unit_name,
-                record_type="arbitrary")
-        consumption_resampled.data = consumption_data.data.resample(self.freq).sum()
-
-        return { "consumption_resampled": consumption_resampled }
+        return { "consumption_downsampled": consumption_downsampled }
