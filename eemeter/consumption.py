@@ -5,7 +5,6 @@ import pandas as pd
 import numpy as np
 from warnings import warn
 import pytz
-import copy
 
 from eemeter.evaluation import Period
 
@@ -791,34 +790,3 @@ class ConsumptionData(object):
                 self.unit_name)
         string += self.data.__repr__()
         return string
-
-    def downsample(self, freq):
-
-        # empty case
-        if self.data.shape[0] == 0:
-            return copy.deepcopy(self)
-
-        rng = pd.date_range('2011-01-01', periods=2, freq=freq)
-        target_period = rng[1] - rng[0]
-
-        index_series = pd.Series(self.data.index.tz_convert(pytz.UTC))
-
-        # are there any periods that would require a downsample?
-        if index_series.shape[0] > 2:
-            timedeltas = (index_series - index_series.shift())
-
-            for timedelta in timedeltas:
-                if timedelta < target_period:
-
-                    # Found a short period. Need to resample.
-                    consumption_resampled = ConsumptionData([],
-                            self.fuel_type, self.unit_name,
-                            record_type="arbitrary")
-                    consumption_resampled.data = self.data.resample(freq).sum()
-                    consumption_resampled.estimated = self.estimated.resample(freq).median().astype(bool)
-                    return consumption_resampled
-
-        # Periods are all greater than or equal to downsample target, so just
-        # return copy of self.
-        return copy.deepcopy(self)
-

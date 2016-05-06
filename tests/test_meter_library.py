@@ -22,7 +22,6 @@ from eemeter.meter import ConsumptionDataAttributes
 from eemeter.meter import ProjectAttributes
 from eemeter.meter import ProjectConsumptionDataBaselineReporting
 from eemeter.meter import ProjectFuelTypes
-from eemeter.meter import DownsampleConsumption
 
 from eemeter.models import AverageDailyTemperatureSensitivityModel
 
@@ -38,7 +37,6 @@ from fixtures.consumption import generated_consumption_data_with_annualized_usag
 from fixtures.consumption import generated_consumption_data_pre_post_with_gross_savings_1
 from fixtures.consumption import generated_consumption_data_pre_post_with_annualized_gross_savings_1
 from fixtures.consumption import consumption_data_1
-from fixtures.consumption import consumption_data_15min
 from fixtures.consumption import time_span_1
 from fixtures.consumption import generated_consumption_data_with_hdd_1
 from fixtures.consumption import generated_consumption_data_with_cdd_1
@@ -331,34 +329,6 @@ def test_estimated_average_daily_usage(generated_consumption_data_1,gsod_722880_
     assert result["estimated_average_daily_usages"] is not None
     assert result["n_days"] is not None
 
-def test_downsample_consumption_data(generated_consumption_data_1, consumption_data_15min):
-    cd, params = generated_consumption_data_1
-
-    meter = DownsampleConsumption(freq="D")
-
-    # monthly frequency - so this won't downsample
-    result = meter.evaluate_raw(consumption_data=cd)
-    cd_down = result["consumption_downsampled"]
-    assert_allclose(cd.data, cd_down.data)
-    assert_allclose(cd.estimated, cd_down.estimated)
-
-
-    # 15min freq - should downsample
-    meter = DownsampleConsumption(freq="H")
-    result = meter.evaluate_raw(consumption_data=consumption_data_15min)
-    cd_down = result["consumption_downsampled"]
-
-    assert consumption_data_15min.data.shape == (10000,)
-    assert consumption_data_15min.estimated.shape == (10000,)
-
-    assert_allclose(cd_down.data["2015-01-01 00:00"], 0.3)
-    assert_allclose(cd_down.data["2015-01-01 01:00"], 0.4)
-    assert cd_down.data.shape == (2500,)
-
-    assert cd_down.estimated["2015-01-01 00:00"] == True
-    assert cd_down.estimated["2015-01-01 01:00"] == False
-    assert cd_down.estimated.shape == (2500,)
-
 def test_consumption_data_attributes(generated_consumption_data_1):
     cd,params = generated_consumption_data_1
     meter = ConsumptionDataAttributes()
@@ -393,12 +363,12 @@ def test_project_consumption_baseline_reporting(generated_consumption_data_1):
     project = Project(location,[cd],baseline_period,reporting_period)
     meter = ProjectConsumptionDataBaselineReporting()
     result = meter.evaluate_raw(project=project)
-    assert result["consumption"][0]["value"].data.index[0] == datetime(2012,1,1, tzinfo=pytz.UTC)
-    assert result["consumption"][0]["value"].data.index[17] == datetime(2013,5,25, tzinfo=pytz.UTC)
+    assert result["consumption"][0]["value"].data.index[0] == datetime(2012,1,1)
+    assert result["consumption"][0]["value"].data.index[17] == datetime(2013,5,25)
     assert result["consumption"][0]["tags"][0] == "electricity"
     assert result["consumption"][0]["tags"][1] == "baseline"
-    assert result["consumption"][1]["value"].data.index[0] == datetime(2013,6,24, tzinfo=pytz.UTC)
-    assert result["consumption"][1]["value"].data.index[18] == datetime(2014,12,16, tzinfo=pytz.UTC)
+    assert result["consumption"][1]["value"].data.index[0] == datetime(2013,6,24)
+    assert result["consumption"][1]["value"].data.index[18] == datetime(2014,12,16)
     assert result["consumption"][1]["tags"][0] == "electricity"
     assert result["consumption"][1]["tags"][1] == "reporting"
 

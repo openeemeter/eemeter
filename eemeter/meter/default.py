@@ -19,10 +19,10 @@ default_residential_meter_yaml = """
             iterable: { name: consumption },
             meter: !obj:eemeter.meter.Sequence {
                 sequence: [
-                    !obj:eemeter.meter.DownsampleConsumption {
+                    !obj:eemeter.meter.ResampleConsumption {
                         freq: 'D',
                         input_mapping: { consumption_data: {name: consumption_data_raw} },
-                        output_mapping: { consumption_downsampled: {name: consumption_data}, },
+                        output_mapping: { consumption_resampled: {name: consumption_data}, },
                     },
                     !obj:eemeter.meter.BPI_2400_S_2012_ModelCalibrationUtilityBillCriteria {
                         temperature_unit_str: !setting temperature_unit_str,

@@ -208,27 +208,8 @@ class DataCollection:
 
     def __repr__(self):
         string = "DataCollection ({} items)".format(self.count())
-
-        # collect raw strings
-        item_names, item_values, item_tags = [], [], []
         for item in self.iteritems():
-            item_names.append( item.name)
-            item_values.append("\n".join([
-                "    {}".format(l)
-                for l in "{!s}".format(item.value).splitlines()
-            ]))
-            item_tags.append("{}".format(sorted(list(item.tags))))
-
-        # length of longest name will be used for padding
-        max_len = max([len(i) for i in item_names])
-
-        # construct total string
-        for name, value, tags in zip(item_names, item_values, item_tags):
-            line = (
-                "\n{name:-<{padding}}{tags}\n\n{value}\n"
-                .format(name=name, tags=tags, value=value, padding=max_len + 3)
-            )
-            string += line
+            string += "\n  {:>30}  {:<30} tags={}".format(item.name, item.value, list(item.tags))
         return string
 
     def search(self, string, tags=None):
