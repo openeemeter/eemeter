@@ -46,7 +46,7 @@ Make sure you have the latest version:
 .. code-block:: python
 
     >>> import eemeter; eemeter.get_version()
-    '0.3.18'
+    '0.3.19'
 
 Using an existing meter
 -----------------------
