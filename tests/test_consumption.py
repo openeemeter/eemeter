@@ -7,6 +7,7 @@ import numpy as np
 from numpy.testing import assert_allclose
 import pandas as pd
 import warnings
+import pytz
 
 from pint.unit import UndefinedUnitError
 
@@ -638,3 +639,99 @@ def test_unit_conversion():
     assert cd_kwh.unit_name == "kWh"
     assert cd_therm.unit_name == "therm"
     assert cd_therms.unit_name == "therm"
+
+def test_downsample_fifteen_min():
+
+    records = [{
+        "start": datetime(2015, 1, 1, tzinfo=pytz.UTC) + timedelta(seconds=i*900),
+        "value": np.nan if i % 30 == 0 or 1000 < i < 2000 else 0.1,
+        "estimated": i % 3 == 0 or 2000 < i < 3000,
+    } for i in range(10000)]
+
+    cd = ConsumptionData(records, "electricity", "kWh", record_type="arbitrary_start")
+
+    cd_down = cd.downsample('D')
+
+    assert np.isnan(cd.data["2015-01-01 00:00:00"])
+    assert_allclose(cd.data["2015-01-01 00:15:00"], 0.1)
+    assert cd.data.shape == (10000,)
+
+    assert cd.estimated["2015-01-01 00:00:00"] == True
+    assert cd.estimated["2015-01-01 00:15:00"] == False
+    assert cd.estimated.shape == (10000,)
+
+    assert_allclose(cd_down.data["2015-01-01"], 9.2)
+    assert_allclose(cd_down.data["2015-01-02"], 9.3)
+    assert_allclose(cd_down.data["2015-01-11"], 3.9)
+    assert cd_down.data.shape == (105,)
+    assert np.isnan(cd_down.data["2015-01-12"])
+
+    assert cd_down.estimated["2015-01-02"] == False
+    assert cd_down.estimated["2015-01-24"] == True
+    assert cd_down.estimated.shape == (105,)
+
+
+def test_downsample_two_day():
+    records = [{
+        "start": datetime(2015, 1, 1, tzinfo=pytz.UTC) + timedelta(days=2*i),
+        "value": 1.0,
+        "estimated": False,
+    } for i in range(100)]
+
+    cd = ConsumptionData(records, "electricity", "kWh", record_type="arbitrary_start")
+
+    cd_down = cd.downsample('D')
+
+    assert_allclose(cd.data, cd_down.data)
+    assert_allclose(cd.estimated, cd_down.estimated)
+
+def test_downsample_empty():
+    records = []
+
+    cd = ConsumptionData(records, "electricity", "kWh", record_type="arbitrary_start")
+
+    cd_down = cd.downsample('D')
+
+    assert_allclose(cd.data, cd_down.data)
+    assert_allclose(cd.estimated, cd_down.estimated)
+
+def test_downsample_single_record():
+    records = [{
+        "start": datetime(2015, 1, 1, tzinfo=pytz.UTC),
+        "value": 0,
+        "estimated": False
+    }]
+
+    cd = ConsumptionData(records, "electricity", "kWh", record_type="arbitrary_start")
+
+    cd_down = cd.downsample('D')
+
+    assert_allclose(cd.data, cd_down.data)
+    assert_allclose(cd.estimated, cd_down.estimated)
+
+def test_downsample_hourly_frequency():
+    records = [{
+        "start": datetime(2015, 1, 1, tzinfo=pytz.UTC) + timedelta(seconds=i*900),
+        "value": np.nan if i % 30 == 0 or 1000 < i < 2000 else 0.1,
+        "estimated": i % 3 == 0 or 2000 < i < 3000,
+    } for i in range(10000)]
+
+    cd = ConsumptionData(records, "electricity", "kWh", record_type="arbitrary_start")
+
+    cd_down = cd.downsample('H')
+
+    assert np.isnan(cd.data["2015-01-01 00:00:00"])
+    assert_allclose(cd.data["2015-01-01 00:15:00"], 0.1)
+    assert cd.data.shape == (10000,)
+
+    assert cd.estimated["2015-01-01 00:00:00"] == True
+    assert cd.estimated["2015-01-01 00:15:00"] == False
+    assert cd.estimated.shape == (10000,)
+
+    assert_allclose(cd_down.data["2015-01-01 00:00"], 0.3)
+    assert_allclose(cd_down.data["2015-01-01 01:00"], 0.4)
+    assert cd_down.data.shape == (2500,)
+
+    assert cd_down.estimated["2015-01-01 00:00"] == True
+    assert cd_down.estimated["2015-01-01 01:00"] == False
+    assert cd_down.estimated.shape == (2500,)

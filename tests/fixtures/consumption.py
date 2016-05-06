@@ -10,7 +10,9 @@ from .weather import gsod_722880_2012_2014_weather_source
 
 from scipy.stats import randint
 
-from datetime import datetime
+from datetime import datetime, timedelta
+import numpy as np
+import pytz
 
 @pytest.fixture
 def consumption_data_1():
@@ -42,6 +44,17 @@ def consumption_data_1():
                 "value": 451}]
     return ConsumptionData(records, "electricity", "kWh",
             record_type="arbitrary_start")
+
+@pytest.fixture
+def consumption_data_15min():
+    records = [{
+        "start": datetime(2015, 1, 1, tzinfo=pytz.UTC) + timedelta(seconds=i*900),
+        "value": np.nan if i % 30 == 0 or 1000 < i < 2000 else 0.1,
+        "estimated": i % 3 == 0 or 2000 < i < 3000,
+    } for i in range(10000)]
+
+    return ConsumptionData(records, "electricity", "kWh", record_type="arbitrary_start")
+
 
 @pytest.fixture(params=[([10, 2, 61, 1, 73], "electricity", "kWh", "degF")])
 def consumption_generator_1(request):
@@ -77,7 +90,7 @@ def consumption_generator_2(request):
     params = model.param_type(params)
     return generator, params
 
-@pytest.fixture(params=[(Period(datetime(2012,1,1),datetime(2014,12,31)),
+@pytest.fixture(params=[(Period(datetime(2012,1,1, tzinfo=pytz.UTC),datetime(2014,12,31, tzinfo=pytz.UTC)),
     randint(30,31))])
 def generated_consumption_data_1(request,
         gsod_722880_2012_2014_weather_source, consumption_generator_1):
@@ -88,7 +101,7 @@ def generated_consumption_data_1(request,
             gsod_722880_2012_2014_weather_source, datetimes)
     return consumption_data, params
 
-@pytest.fixture(params=[(Period(datetime(2012,1,1),datetime(2014,12,31)),randint(30,31))])
+@pytest.fixture(params=[(Period(datetime(2012,1,1, tzinfo=pytz.UTC),datetime(2014,12,31, tzinfo=pytz.UTC)),randint(30,31))])
 def generated_consumption_data_2(request,
         gsod_722880_2012_2014_weather_source, consumption_generator_2):
     period, dist = request.param
