@@ -14,7 +14,9 @@ import numpy as np
 import pandas as pd
 from pandas.core.common import is_list_like
 import requests
+import logging
 
+logger = logging.getLogger(__name__)
 
 class NOAAClient(object):
 
@@ -27,11 +29,15 @@ class NOAAClient(object):
         for _ in range(self.n_tries):
             try:
                 ftp = ftplib.FTP("ftp.ncdc.noaa.gov")
-                ftp.login()
-                return ftp
-            except EOFError:
-                pass
-        raise EOFError
+            except ftplib.all_errors as e:
+                logger.warn("FTP connection issue: %s", e)
+            else:
+                try:
+                    ftp.login()
+                    return ftp
+                except ftplib.all_errors as e:
+                    logger.warn("FTP login issue: %s", e)
+        raise RuntimeError("Couldn't establish an FTP connection.")
 
     def _load_station_index(self):
         with resource_stream('eemeter.resources', 'GSOD-ISD_station_index.json') as f:
@@ -58,16 +64,17 @@ class NOAAClient(object):
             try:
                 self.ftp.retrbinary('RETR {}'.format(filename), string.write)
                 break
-            except (IOError, ftplib.error_perm):
-                pass
-            except (ftplib.error_temp, EOFError): # Bad connection. attempt to reconnect.
+            except (IOError, ftplib.error_perm) as e1:
+                logger.warn("Failed FTP RETR for station %s: %s", station_id, e1)
+            except (ftplib.error_temp, EOFError) as e2: # Bad connection. attempt to reconnect.
+                logger.warn("Failed FTP RETR for station %s: %s. Attempting reconnect.", station_id, e2)
                 self.ftp.close()
                 self.ftp = self._get_ftp_connection()
                 try:
                     self.ftp.retrbinary('RETR {}'.format(filename), string.write)
                     break
-                except (IOError, ftplib.error_perm):
-                    pass
+                except (IOError, ftplib.error_perm) as e3:
+                    logger.warn("Failed FTP RETR for station %s: %s.", station_id, e3)
 
         string.seek(0)
         f = gzip.GzipFile(fileobj=string)
