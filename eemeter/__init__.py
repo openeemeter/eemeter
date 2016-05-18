@@ -1,3 +1,8 @@
+import logging
+import sys
+
+logging.basicConfig(stream=sys.stdout, level=logging.WARN)
+
 # Version
 VERSION = (0, 3, 20)
 
