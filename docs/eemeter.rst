@@ -91,22 +91,6 @@ eemeter.examples
     :inherited-members:
     :show-inheritance:
 
-eemeter.uploader
-----------------
-
-.. autofunction:: eemeter.uploader.upload_csvs
-
-.. autofunction:: eemeter.uploader.upload_dicts
-
-.. autofunction:: eemeter.uploader.upload_dataframes
-
-.. automodule:: eemeter.uploader.requester
-   :members:
-
-.. automodule:: eemeter.uploader.uploaders
-   :members:
-
-
 .. _eemeter-parsers:
 
 eemeter.parsers
