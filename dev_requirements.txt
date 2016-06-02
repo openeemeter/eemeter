@@ -1,4 +1,8 @@
-pytest==2.9.1
 lxml==3.6.0
+mock==2.0.0
+numpydoc==0.6.0
+pytest==2.9.1
+sphinx==1.4.2
+sphinx-rtd-theme==0.1.9
 SQLAlchemy==1.0.12
 xlrd==0.9.4
