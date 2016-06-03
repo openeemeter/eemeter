@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
+import pytz
 
 class TMY3WeatherSource(CachedWeatherSourceBase):
 
@@ -25,10 +26,18 @@ class TMY3WeatherSource(CachedWeatherSourceBase):
         data = self.client.get_tmy3_data(self.station, self.station_fallback)
         if data is None:
             temps = [np.nan for _ in range(365 * 24)]
-            index = [datetime(1900, 1, 1) + timedelta(seconds=i*3600) for i in range(365 * 24)]
+            index = [
+                datetime(1900, 1, 1, tzinfo=pytz.UTC)
+                + timedelta(seconds=i*3600)
+                for i in range(365 * 24)
+            ]
         else:
             temps = [d["temp_C"] for d in data]
-            index = [datetime(1900, d["dt"].month, d["dt"].day, d["dt"].hour) for d in data]
+            index = [
+                datetime(1900, d["dt"].month, d["dt"].day, d["dt"].hour,
+                         tzinfo=pytz.UTC)
+                for d in data
+            ]
 
         # changed for pandas > 0.18
         self.tempC = pd.Series(temps, index=index, dtype=float).sort_index().resample('H').mean()
@@ -51,8 +60,9 @@ class TMY3WeatherSource(CachedWeatherSourceBase):
 
         """
 
-        periods = [Period(start=datetime(1900,1,1), end=datetime(1901,1,1))]
-        return self.daily_temperatures(periods, unit)
+        period = Period(start=datetime(1900,1,1, tzinfo=pytz.UTC),
+                        end=datetime(1901,1,1, tzinfo=pytz.UTC))
+        return self.daily_temperatures([period], unit)
 
     def _fetch_period(self, period):
         pass # loaded at init
@@ -68,7 +78,7 @@ class TMY3WeatherSource(CachedWeatherSourceBase):
 
     @staticmethod
     def _normalize_datetime(dt, year_offset=0):
-        return datetime(1900 + year_offset, dt.month, dt.day, dt.hour, dt.minute, dt.second)
+        return datetime(1900 + year_offset, dt.month, dt.day, dt.hour, dt.minute, dt.second, tzinfo=pytz.UTC)
 
     def _period_average_temperature(self, period, unit):
         period = self._normalize_period(period)

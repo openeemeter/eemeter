@@ -4,6 +4,7 @@ from .clients import NOAAClient
 from datetime import datetime, date, timedelta
 
 import pandas as pd
+import pytz
 
 class NOAAWeatherSourceBase(CachedWeatherSourceBase):
 
@@ -80,6 +81,12 @@ class GSODWeatherSource(NOAAWeatherSourceBase):
     year_existence_format = "{}-01-01"
     freq = "D"
 
+    def _empty_series(self, year):
+        dates = pd.date_range("{}-01-01".format(year),
+                              "{}-12-31".format(year),
+                              freq=self.freq, tz=pytz.UTC)
+        return pd.Series(None, index=dates, dtype=float)
+
     def add_year(self, year, force=False):
         """Adds temperature data to internal pandas timeseries
 
@@ -96,15 +103,13 @@ class GSODWeatherSource(NOAAWeatherSourceBase):
             if self._year_in_series(year):
                 return
             else:
-                dates = pd.date_range("{}-01-01".format(year),"{}-12-31".format(year), freq=self.freq)
-                new_series = pd.Series(None, index=dates, dtype=float)
+                new_series = self._empty_series(year)
                 self.tempC = self.tempC.append(new_series).sort_index().resample(self.freq).mean()
                 self.save_to_cache()
                 return
 
         data = self.client.get_gsod_data(self.station, year)
-        dates = pd.date_range("{}-01-01".format(year),"{}-12-31".format(year), freq=self.freq)
-        new_series = pd.Series(None, index=dates, dtype=float)
+        new_series = self._empty_series(year)
         for day in data:
             if not pd.isnull(day["temp_C"]):
                 new_series[day["date"]] = day["temp_C"]
@@ -122,6 +127,12 @@ class ISDWeatherSource(NOAAWeatherSourceBase):
     year_existence_format = "{}-01-01 00"
     freq = "H"
 
+    def _empty_series(self, year):
+        dates = pd.date_range("{}-01-01 00:00".format(year),
+                              "{}-01-01 00:00".format(int(year) + 1),
+                              freq=self.freq, tz=pytz.UTC)[:-1]
+        return pd.Series(None, index=dates, dtype=float)
+
     def add_year(self, year, force=False):
         """Adds temperature data to internal pandas timeseries
 
@@ -134,15 +145,13 @@ class ISDWeatherSource(NOAAWeatherSourceBase):
             if self._year_in_series(year):
                 return
             else:
-                dates = pd.date_range("{}-01-01 00:00".format(year),"{}-01-01 00:00".format(int(year) + 1), freq=self.freq)[:-1]
-                new_series = pd.Series(None, index=dates, dtype=float)
+                new_series = self._empty_series(year)
                 self.tempC = self.tempC.append(new_series).sort_index().resample(self.freq).mean()
                 self.save_to_cache()
                 return
 
         data = self.client.get_isd_data(self.station, year)
-        dates = pd.date_range("{}-01-01 00:00".format(year),"{}-01-01 00:00".format(int(year) + 1), freq=self.freq)[:-1]
-        new_series = pd.Series(None, index=dates, dtype=float)
+        new_series = self._empty_series(year)
         for hour in data:
             if not pd.isnull(hour["temp_C"]):
                 dt = hour["datetime"]
