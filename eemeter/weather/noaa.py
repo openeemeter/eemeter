@@ -122,7 +122,7 @@ class GSODWeatherSource(NOAAWeatherSourceBase):
 
 class ISDWeatherSource(NOAAWeatherSourceBase):
 
-    cache_date_format = "%Y%m%d%H%z"
+    cache_date_format = "%Y%m%d%H"
     cache_filename_format = "ISD-{}.json"
     year_existence_format = "{}-01-01 00"
     freq = "H"
