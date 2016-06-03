@@ -101,12 +101,13 @@ class EstimatedReadingConsolidationMeter(MeterBase):
 
         new_records = []
         record_waitlist = []
-        for i, v, e in zip(index,values,estimated):
-            record_waitlist.append({"start": i,"value": v})
+        for i, v, e in zip(index, values, estimated):
+            record_waitlist.append({"start": i, "value": v})
             if not e:
                 new_records.append(combine_records(record_waitlist))
                 record_waitlist = []
-        cd_no_est = ConsumptionData(new_records,consumption_data.fuel_type,
+
+        cd_no_est = ConsumptionData(new_records, consumption_data.fuel_type,
                 consumption_data.unit_name, record_type="arbitrary_start")
         return {"consumption_data_no_estimated": cd_no_est}
 

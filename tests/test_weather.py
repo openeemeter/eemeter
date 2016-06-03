@@ -13,6 +13,7 @@ import pytest
 import os
 import warnings
 import tempfile
+import pytz
 
 import numpy as np
 
@@ -25,9 +26,9 @@ ATOL = 1e-1
 
 @pytest.fixture
 def consumption_data_one_summer_electricity():
-    records = [{"value": 0, "start": datetime(2012,6,1), "end": datetime(2012,7,1)},
-               {"value": 0, "start": datetime(2012,7,1), "end": datetime(2012,8,1)},
-               {"value": 0, "start": datetime(2012,8,1), "end": datetime(2012,9,1)}]
+    records = [{"value": 0, "start": datetime(2012,6,1, tzinfo=pytz.UTC), "end": datetime(2012,7,1, tzinfo=pytz.UTC)},
+               {"value": 0, "start": datetime(2012,7,1, tzinfo=pytz.UTC), "end": datetime(2012,8,1, tzinfo=pytz.UTC)},
+               {"value": 0, "start": datetime(2012,8,1, tzinfo=pytz.UTC), "end": datetime(2012,9,1, tzinfo=pytz.UTC)}]
     return ConsumptionData(records,"electricity", "kWh", record_type="arbitrary")
 
 @pytest.fixture

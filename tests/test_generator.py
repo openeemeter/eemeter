@@ -17,14 +17,15 @@ import numpy as np
 from numpy.testing import assert_allclose
 from scipy.stats import uniform
 from scipy.stats import randint
+import pytz
 
 RTOL=1e-2
 ATOL=1e-2
 
 @pytest.fixture
 def monthly_datetimes_2012():
-    datetimes = [datetime(2012,i,1) for i in range(1,13)]
-    datetimes.append(datetime(2013,1,1))
+    datetimes = [datetime(2012,i,1, tzinfo=pytz.UTC) for i in range(1,13)]
+    datetimes.append(datetime(2013,1,1, tzinfo=pytz.UTC))
     return datetimes
 
 @pytest.fixture
@@ -107,9 +108,9 @@ def test_project_generator(gsod_722880_2012_2014_weather_source,tmy3_722880_weat
                                 gas_param_delta_distributions)
 
     location = Location(station="722880")
-    period = Period(datetime(2012,1,1),datetime(2013,1,1))
-    baseline_period = Period(datetime(2012,1,1),datetime(2012,4,1))
-    reporting_period = Period(datetime(2012,5,1),datetime(2013,1,1))
+    period = Period(datetime(2012,1,1, tzinfo=pytz.UTC),datetime(2013,1,1, tzinfo=pytz.UTC))
+    baseline_period = Period(datetime(2012,1,1, tzinfo=pytz.UTC),datetime(2012,4,1, tzinfo=pytz.UTC))
+    reporting_period = Period(datetime(2012,5,1, tzinfo=pytz.UTC),datetime(2013,1,1, tzinfo=pytz.UTC))
 
     results = generator.generate(location, period, period,
                                baseline_period, reporting_period)
@@ -127,20 +128,20 @@ def test_project_generator(gsod_722880_2012_2014_weather_source,tmy3_722880_weat
 
     assert len(elec_data) in range(9,16)
     assert len(gas_data) in range(9,16)
-    assert elec_data[0] < 750 # could probably lower this upper bound
-    assert gas_data[0] < 750 # could probably lower this upper bound
+    assert isinstance(elec_data[0], float)
+    assert isinstance(gas_data[0], float)
 
 def test_generate_monthly_billing_datetimes():
-    period = Period(datetime(2012,1,1),datetime(2013,1,1))
+    period = Period(datetime(2012,1,1, tzinfo=pytz.UTC),datetime(2013,1,1, tzinfo=pytz.UTC))
     datetimes_30d = generate_monthly_billing_datetimes(period,
             randint(30,31))
-    assert datetimes_30d[0] == datetime(2012,1,1)
-    assert datetimes_30d[1] == datetime(2012,1,31)
-    assert datetimes_30d[11] == datetime(2012,11,26)
-    assert datetimes_30d[12] == datetime(2012,12,26)
+    assert datetimes_30d[0] == datetime(2012,1,1, tzinfo=pytz.UTC)
+    assert datetimes_30d[1] == datetime(2012,1,31, tzinfo=pytz.UTC)
+    assert datetimes_30d[11] == datetime(2012,11,26, tzinfo=pytz.UTC)
+    assert datetimes_30d[12] == datetime(2012,12,26, tzinfo=pytz.UTC)
 
     datetimes_1d = generate_monthly_billing_datetimes(period, randint(1,2))
-    assert datetimes_1d[0] == datetime(2012,1,1)
-    assert datetimes_1d[1] == datetime(2012,1,2)
-    assert datetimes_1d[330] == datetime(2012,11,26)
-    assert datetimes_1d[331] == datetime(2012,11,27)
+    assert datetimes_1d[0] == datetime(2012,1,1, tzinfo=pytz.UTC)
+    assert datetimes_1d[1] == datetime(2012,1,2, tzinfo=pytz.UTC)
+    assert datetimes_1d[330] == datetime(2012,11,26, tzinfo=pytz.UTC)
+    assert datetimes_1d[331] == datetime(2012,11,27, tzinfo=pytz.UTC)

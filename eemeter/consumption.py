@@ -3,11 +3,178 @@ from . import ureg, Q_
 from datetime import datetime
 import pandas as pd
 import numpy as np
-from warnings import warn
+import warnings
 import pytz
 import copy
 
 from eemeter.evaluation import Period
+
+class BaseConsumptionSerializer(object):
+
+    sort_key = None
+    required_fields = []
+    datetime_fields = []
+
+    def _sort_records(self, records):
+        if self.sort_key is None:
+            message = (
+                "Must supply cls.sort_key in class definition."
+            )
+            raise AttributeError(message)
+
+        try:
+            sorted_records = sorted(records, key=lambda x: x[self.sort_key])
+        except KeyError:
+            message = (
+                'Sorting failed due to missing key {} in record.'
+                .format(self.sort_key)
+            )
+            raise KeyError(message)
+
+        return sorted_records
+
+    def _validated_tuples_to_dataframe(self, validated_tuples):
+
+        if validated_tuples == []:
+            dts, values, estimateds = [], [], []
+        else:
+            dts, values, estimateds = zip(*validated_tuples)
+
+        df = pd.DataFrame(
+            {"value": values, "estimated": estimateds},
+            index=pd.DatetimeIndex(dts),
+            columns=["value", "estimated"],
+        )
+        df.value = df.value.astype(float)
+        df.estimated = df.estimated.astype(bool)
+        return df
+
+    def to_dataframe(self, records):
+        """
+        Returns a dataframe of records.
+        """
+        sorted_records = self._sort_records(records)
+        validated_tuples = list(self.validate_records(sorted_records))
+        return self._validated_tuples_to_dataframe(validated_tuples)
+
+    def validate_records(self, sorted_records):
+        """
+        Yields validated (start (datetime), value (float), estimated (bool))
+        tuples of data.
+        """
+        raise NotImplementedError('`validate_records()` must be implemented.')
+
+    def validate_record(self, record):
+
+        # make sure required fields are available
+        for field in self.required_fields:
+            if field not in record:
+                message = (
+                    'Record missing "{}" field:\n{}'
+                    .format(field, record)
+                )
+                raise ValueError(message)
+
+        # make sure dates/datetimes are tz aware
+        for field in self.datetime_fields:
+            dt = record[field]
+            if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
+                message = (
+                    'Record field ("{}": {}) is not timezone aware:\n{}'
+                    .format(field, dt, record)
+                )
+                raise ValueError(message)
+
+    def to_records(self, consumption_data):
+        raise NotImplementedError('`to_records()` must be implemented.')
+
+class ArbitraryConsumptionSerializer(BaseConsumptionSerializer):
+
+    sort_key = "start"
+    required_fields = ["start", "end", "value"]
+    datetime_fields = ["start", "end"]
+
+    def validate_record(self, record):
+        super(ArbitraryConsumptionSerializer, self)\
+            .validate_record(record)
+
+        if record["start"] >= record["end"]:
+            message = 'Record "start" must be earlier than record "end":\n{}'\
+                    '{} >= {}.'.format(record)
+            raise ValueError(message)
+
+    def validate_records(self, sorted_records):
+
+        previous_end_datetime = None
+
+        for record in sorted_records:
+
+            self.validate_record(record)
+
+            start = record["start"]
+            end = record["end"]
+            value = record["value"]
+            estimated = record.get("estimated", False)
+
+            if previous_end_datetime is None or start == previous_end_datetime:
+
+                # normal record
+                yield (start, value, estimated)
+                previous_end_datetime = end
+
+            elif start > previous_end_datetime:
+
+                # blank record
+                yield (previous_end_datetime, np.nan, False)
+
+                # normal record
+                yield (start, value, estimated)
+                previous_end_datetime = end
+
+            else: # start < previous_end_datetime
+                message = 'Skipping overlapping record: '\
+                        'start ({}) < previous end ({})'\
+                        .format(start, previous_end_datetime)
+                warnings.warn(message)
+
+        # final record carries last datetime, but only if there was a record
+        if previous_end_datetime is not None:
+            yield (previous_end_datetime, np.nan, False)
+
+class ArbitraryStartConsumptionSerializer(
+        BaseConsumptionSerializer):
+
+    sort_key = "start"
+    required_fields = ["start", "value"]
+    datetime_fields = ["start", ]
+
+    def validate_records(self, sorted_records):
+
+        n = len(sorted_records)
+        for i, record in enumerate(sorted_records):
+
+            self.validate_record(record)
+
+            start = record["start"]
+            value = record["value"]
+            estimated = record.get("estimated", False)
+
+            if i < n - 1: # all except last record
+                yield (start, value, estimated)
+            else: # last record
+                end = record.get("end", None)
+                if end is None:
+                    # can't use the value of this record, no end date
+                    yield (start, np.nan, False)
+                else:
+                    # provide an end date cap
+                    if pd.notnull(value):
+                        yield (start, value, estimated)
+                        yield (end, np.nan, False)
+                    else:
+                        yield (start, np.nan, False)
+
+
 
 class ConsumptionData(object):
     """ Container for consumption data initialized from records.
@@ -434,7 +601,7 @@ class ConsumptionData(object):
             if current_value is None:
                 message = "Ignoring misaligned data point:"\
                     " (data[{}] = {})".format(dt,value)
-                warn(message)
+                warnings.warn(message)
             elif pd.isnull(current_value):
                 data[dt] = value
                 if est:
@@ -442,94 +609,18 @@ class ConsumptionData(object):
             else:
                 message = "Ignoring overlapping data point:"\
                     " (data[{}] = {})".format(dt,value)
-                warn(message)
+                warnings.warn(message)
         return data, estimated
 
     def _import_arbitrary(self, records):
-        if records == []:
-            return pd.Series([]), pd.Series([])
-        try:
-            sorted_records = sorted(records, key=lambda x: x["start"])
-        except KeyError:
-            message = 'Records must all have a "start" key and an'\
-                    ' "end" key.'
-            raise ValueError(message)
-        start_datetimes = []
-        values = []
-        estimateds = []
-        previous_end_datetime = None
-        for record in sorted_records:
-            start = record.get("start")
-            end = record.get("end")
-            value = record.get("value")
-            estimated = record.get("estimated")
-            if start is None or end is None:
-                message = 'Records must all have a "start" key and an'\
-                        ' "end" key.'
-                raise ValueError(message)
-            else:
-                if start >= end:
-                    message = 'Record start must be earlier than end:'\
-                            '{} >= {}.'.format(start,end)
-                    raise ValueError(message)
-            if previous_end_datetime is None or\
-                    start == previous_end_datetime:
-                start_datetimes.append(start)
-                values.append(value)
-                previous_end_datetime = end
-                estimateds.append(bool(estimated))
-            elif start < previous_end_datetime:
-                message = 'Skipping overlapping record: '\
-                        'start ({}) < previous end ({})'\
-                        .format(start,previous_end_datetime)
-                warn(message)
-            else: # start > previous_end_datetime:
-                start_datetimes.append(previous_end_datetime)
-                values.append(np.nan)
-                estimateds.append(False)
-                start_datetimes.append(start)
-                values.append(value)
-                previous_end_datetime = end
-                estimateds.append(bool(estimated))
-        # append a NaN to represent the end date of the last one.
-        start_datetimes.append(previous_end_datetime)
-        values.append(np.nan)
-        estimateds.append(False)
-        dt_index = pd.DatetimeIndex(start_datetimes)
-        data = pd.Series(values, index=dt_index)
-        estimated = pd.Series(estimateds, index=dt_index)
-        return data, estimated
+        serializer = ArbitraryConsumptionSerializer()
+        df = serializer.to_dataframe(records)
+        return df.value, df.estimated
 
     def _import_arbitrary_start(self, records):
-        if records == []:
-            return pd.Series([]), pd.Series([])
-        try:
-            sorted_records = sorted(records, key=lambda x: x["start"])
-        except KeyError:
-            message = 'Records must all have a "start" key.'
-            raise ValueError(message)
-        start_datetimes = []
-        values = []
-        estimateds = []
-        for record in sorted_records:
-            start = record["start"]
-            value = record.get("value")
-            estimated = record.get("estimated")
-            start_datetimes.append(start)
-            values.append(value)
-            estimateds.append(bool(estimated))
-        # append an element if the last record has an end date.
-        last_end = sorted_records[-1].get("end")
-        if last_end is None:
-            values[-1] = np.nan
-        else:
-            start_datetimes.append(last_end)
-            values.append(np.nan)
-            estimateds.append(False)
-        dt_index = pd.DatetimeIndex(start_datetimes)
-        data = pd.Series(values, index=dt_index)
-        estimated = pd.Series(estimateds, index=dt_index)
-        return data, estimated
+        serializer = ArbitraryStartConsumptionSerializer()
+        df = serializer.to_dataframe(records)
+        return df.value, df.estimated
 
     def _import_arbitrary_end(self, records):
         if records == []:
@@ -730,7 +821,7 @@ class ConsumptionData(object):
                 message = 'record_type="pulse" implies that all values' \
                         ' should be the same, but they are not: {}'\
                         .format(self.data.values)
-                warn(message)
+                warnings.warn(message)
         else:
             message = "Unsupported record_type: {}".format(record_type)
             raise ValueError(message)

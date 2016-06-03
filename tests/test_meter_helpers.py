@@ -12,6 +12,7 @@ from fixtures.weather import tmy3_722880_weather_source
 
 from datetime import datetime
 from datetime import timedelta
+import pytz
 
 from numpy.testing import assert_allclose
 import numpy as np
@@ -22,37 +23,26 @@ ATOL=1e-2
 import pytest
 
 @pytest.fixture(params=[
-    [{"start": datetime(2012,1,1),"value": 0},
-     {"start": datetime(2012,1,2), "value": 0, "estimated": True},
-     {"start": datetime(2012,1,3), "value": 0},
-     {"start": datetime(2012,1,4), "value": 0},
-     {"start": datetime(2012,1,5), "value": np.nan}],
-    [{"start": datetime(2012,1,1),"value": 0},
-     {"start": datetime(2012,1,2), "value": 0},
-     {"start": datetime(2012,1,4), "value": 0},
-     {"start": datetime(2012,1,5), "value": np.nan}],
-    [{"start": datetime(2012,1,1),"value": 0},
-     {"start": datetime(2012,1,2), "value": 0},
-     {"start": datetime(2012,1,4), "value": 0},
-     {"start": datetime(2012,1,5), "value": np.nan},
-     {"start": datetime(2012,1,6), "value": np.nan, "estimated": True}],
-    [{"start": datetime(2012,1,1),"value": 0},
-     {"start": datetime(2012,1,2), "value": 0},
-     {"start": datetime(2012,1,4), "value": 0},
-     {"start": datetime(2012,1,5), "value": np.nan},
-     {"start": datetime(2012,1,6), "value": np.nan, "estimated": True},
-     {"start": datetime(2012,1,7), "value": np.nan, "estimated": True}],
-    [{"start": datetime(2012,1,1),"value": 0},
-     {"start": datetime(2012,2,1), "value": 0, "estimated": True},
-     {"start": datetime(2012,2,10), "value": 0, "estimated": True},
-     {"start": datetime(2012,3,1), "value": 0},
-     {"start": datetime(2012,4,1), "value": 0},
-     {"start": datetime(2012,5,1), "value": np.nan}],
-    [{"start": datetime(2012,1,1),"value": 0, "estimated": True},
-     {"start": datetime(2012,1,10), "value": 0},
-     {"start": datetime(2012,2,1), "value": 0},
-     {"start": datetime(2012,4,1), "value": 0},
-     {"start": datetime(2012,5,1), "value": np.nan}],
+    [{"start": datetime(2012,1,1, tzinfo=pytz.UTC),"value": 0},
+     {"start": datetime(2012,1,2, tzinfo=pytz.UTC), "value": 0, "estimated": True},
+     {"start": datetime(2012,1,3, tzinfo=pytz.UTC), "value": 0},
+     {"start": datetime(2012,1,4, tzinfo=pytz.UTC), "value": 0},
+     {"start": datetime(2012,1,5, tzinfo=pytz.UTC), "value": np.nan}],
+    [{"start": datetime(2012,1,1, tzinfo=pytz.UTC),"value": 0},
+     {"start": datetime(2012,1,2, tzinfo=pytz.UTC), "value": 0},
+     {"start": datetime(2012,1,4, tzinfo=pytz.UTC), "value": 0},
+     {"start": datetime(2012,1,5, tzinfo=pytz.UTC), "value": np.nan}],
+    [{"start": datetime(2012,1,1, tzinfo=pytz.UTC),"value": 0},
+     {"start": datetime(2012,2,1, tzinfo=pytz.UTC), "value": 0, "estimated": True},
+     {"start": datetime(2012,2,10, tzinfo=pytz.UTC), "value": 0, "estimated": True},
+     {"start": datetime(2012,3,1, tzinfo=pytz.UTC), "value": 0},
+     {"start": datetime(2012,4,1, tzinfo=pytz.UTC), "value": 0},
+     {"start": datetime(2012,5,1, tzinfo=pytz.UTC), "value": np.nan}],
+    [{"start": datetime(2012,1,1, tzinfo=pytz.UTC),"value": 0, "estimated": True},
+     {"start": datetime(2012,1,10, tzinfo=pytz.UTC), "value": 0},
+     {"start": datetime(2012,2,1, tzinfo=pytz.UTC), "value": 0},
+     {"start": datetime(2012,4,1, tzinfo=pytz.UTC), "value": 0},
+     {"start": datetime(2012,5,1, tzinfo=pytz.UTC), "value": np.nan}],
     ])
 def consumption_data(request):
     return ConsumptionData(request.param, "electricity", "kWh", record_type="arbitrary_start")

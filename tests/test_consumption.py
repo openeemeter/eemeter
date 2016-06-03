@@ -49,41 +49,41 @@ def record_type_arbitrary_end(request):
     return request.param
 
 @pytest.fixture(params=[
-        [{"start": datetime(2015,1,5,0,0,0), "value": 5},
-         {"start": datetime(2015,1,4,0,0,0), "value": 4},
-         {"start": datetime(2015,1,3,0,0,0), "value": 3},
-         {"start": datetime(2015,1,2,0,0,0), "value": 2},
-         {"start": datetime(2015,1,1,0,0,0), "value": 1, "estimated": True}],
-        [{"start": datetime(2015,1,1,0,0,0), "value": 1, "estimated": True},
-         {"start": datetime(2015,1,2,0,0,0), "value": 2},
-         {"start": datetime(2015,1,3,0,0,0), "value": 3},
-         {"start": datetime(2015,1,4,0,0,0), "value": 4},
-         {"start": datetime(2015,1,5,0,0,0), "value": 5, "estimated": False}],
-        [{"start": datetime(2015,1,2,0,0,0), "value": 2},
-            {"start": datetime(2015,1,1,0,0,0), "value": 1, "estimated": True},
-         {"start": datetime(2015,1,4,0,0,0), "value": 4},
-         {"start": datetime(2015,1,5,0,0,0), "value": 5},
-         {"start": datetime(2015,1,3,0,0,0), "value": 3}],
+        [{"start": datetime(2015,1,5,0,0,0, tzinfo=pytz.UTC), "value": 5},
+         {"start": datetime(2015,1,4,0,0,0, tzinfo=pytz.UTC), "value": 4},
+         {"start": datetime(2015,1,3,0,0,0, tzinfo=pytz.UTC), "value": 3},
+         {"start": datetime(2015,1,2,0,0,0, tzinfo=pytz.UTC), "value": 2},
+         {"start": datetime(2015,1,1,0,0,0, tzinfo=pytz.UTC), "value": 1, "estimated": True}],
+        [{"start": datetime(2015,1,1,0,0,0, tzinfo=pytz.UTC), "value": 1, "estimated": True},
+         {"start": datetime(2015,1,2,0,0,0, tzinfo=pytz.UTC), "value": 2},
+         {"start": datetime(2015,1,3,0,0,0, tzinfo=pytz.UTC), "value": 3},
+         {"start": datetime(2015,1,4,0,0,0, tzinfo=pytz.UTC), "value": 4},
+         {"start": datetime(2015,1,5,0,0,0, tzinfo=pytz.UTC), "value": 5, "estimated": False}],
+        [{"start": datetime(2015,1,2,0,0,0, tzinfo=pytz.UTC), "value": 2},
+            {"start": datetime(2015,1,1,0,0,0, tzinfo=pytz.UTC), "value": 1, "estimated": True},
+         {"start": datetime(2015,1,4,0,0,0, tzinfo=pytz.UTC), "value": 4},
+         {"start": datetime(2015,1,5,0,0,0, tzinfo=pytz.UTC), "value": 5},
+         {"start": datetime(2015,1,3,0,0,0, tzinfo=pytz.UTC), "value": 3}],
         ])
 def records_interval_start_daily_all(request):
     return request.param
 
 @pytest.fixture(params=[
-        [{"end": datetime(2015,1,5,0,0,0), "value": 5},
-         {"end": datetime(2015,1,4,0,0,0), "value": 4},
-         {"end": datetime(2015,1,3,0,0,0), "value": 3},
-         {"end": datetime(2015,1,2,0,0,0), "value": 2},
-         {"end": datetime(2015,1,1,0,0,0), "value": 1}],
-        [{"end": datetime(2015,1,1,0,0,0), "value": 1},
-         {"end": datetime(2015,1,2,0,0,0), "value": 2},
-         {"end": datetime(2015,1,3,0,0,0), "value": 3},
-         {"end": datetime(2015,1,4,0,0,0), "value": 4},
-         {"end": datetime(2015,1,5,0,0,0), "value": 5}],
-        [{"end": datetime(2015,1,2,0,0,0), "value": 2},
-         {"end": datetime(2015,1,1,0,0,0), "value": 1},
-         {"end": datetime(2015,1,4,0,0,0), "value": 4},
-         {"end": datetime(2015,1,5,0,0,0), "value": 5},
-         {"end": datetime(2015,1,3,0,0,0), "value": 3}],
+        [{"end": datetime(2015,1,5,0,0,0, tzinfo=pytz.UTC), "value": 5},
+         {"end": datetime(2015,1,4,0,0,0, tzinfo=pytz.UTC), "value": 4},
+         {"end": datetime(2015,1,3,0,0,0, tzinfo=pytz.UTC), "value": 3},
+         {"end": datetime(2015,1,2,0,0,0, tzinfo=pytz.UTC), "value": 2},
+         {"end": datetime(2015,1,1,0,0,0, tzinfo=pytz.UTC), "value": 1}],
+        [{"end": datetime(2015,1,1,0,0,0, tzinfo=pytz.UTC), "value": 1},
+         {"end": datetime(2015,1,2,0,0,0, tzinfo=pytz.UTC), "value": 2},
+         {"end": datetime(2015,1,3,0,0,0, tzinfo=pytz.UTC), "value": 3},
+         {"end": datetime(2015,1,4,0,0,0, tzinfo=pytz.UTC), "value": 4},
+         {"end": datetime(2015,1,5,0,0,0, tzinfo=pytz.UTC), "value": 5}],
+        [{"end": datetime(2015,1,2,0,0,0, tzinfo=pytz.UTC), "value": 2},
+         {"end": datetime(2015,1,1,0,0,0, tzinfo=pytz.UTC), "value": 1},
+         {"end": datetime(2015,1,4,0,0,0, tzinfo=pytz.UTC), "value": 4},
+         {"end": datetime(2015,1,5,0,0,0, tzinfo=pytz.UTC), "value": 5},
+         {"end": datetime(2015,1,3,0,0,0, tzinfo=pytz.UTC), "value": 3}],
         ])
 def records_interval_end_daily_all(request):
     return request.param
@@ -91,110 +91,108 @@ def records_interval_end_daily_all(request):
 @pytest.fixture
 def records_interval_start_daily_missing_date(request):
     records = [
-        {"start": datetime(2015,1,1,0,0,0), "value": 1},
-        {"start": datetime(2015,1,2,0,0,0), "value": 2},
-        {"start": datetime(2015,1,4,0,0,0), "value": 4},
-        {"start": datetime(2015,1,5,0,0,0), "value": 5}]
+        {"start": datetime(2015,1,1,0,0,0, tzinfo=pytz.UTC), "value": 1},
+        {"start": datetime(2015,1,2,0,0,0, tzinfo=pytz.UTC), "value": 2},
+        {"start": datetime(2015,1,4,0,0,0, tzinfo=pytz.UTC), "value": 4},
+        {"start": datetime(2015,1,5,0,0,0, tzinfo=pytz.UTC), "value": 5}]
     return records
 
 @pytest.fixture
 def records_interval_start_daily_misaligned_date(request):
     records = [
-        {"start": datetime(2015,1,1,0,0,0), "value": 1},
-        {"start": datetime(2015,1,2,0,0,0), "value": 2},
-        {"start": datetime(2015,1,3,0,0,1), "value": 3},
-        {"start": datetime(2015,1,4,0,0,0), "value": 4},
-        {"start": datetime(2015,1,5,0,0,0), "value": 5}]
+        {"start": datetime(2015,1,1,0,0,0, tzinfo=pytz.UTC), "value": 1},
+        {"start": datetime(2015,1,2,0,0,0, tzinfo=pytz.UTC), "value": 2},
+        {"start": datetime(2015,1,3,0,0,1, tzinfo=pytz.UTC), "value": 3},
+        {"start": datetime(2015,1,4,0,0,0, tzinfo=pytz.UTC), "value": 4},
+        {"start": datetime(2015,1,5,0,0,0, tzinfo=pytz.UTC), "value": 5}]
     return records
 
 @pytest.fixture
 def records_interval_start_daily_overlapping_date(request):
     records = [
-        {"start": datetime(2015,1,1,0,0,0), "value": 1},
-        {"start": datetime(2015,1,2,0,0,0), "value": 2},
-        {"start": datetime(2015,1,3,0,0,0), "value": 3},
-        {"start": datetime(2015,1,3,0,0,0), "value": 3},
-        {"start": datetime(2015,1,4,0,0,0), "value": 4},
-        {"start": datetime(2015,1,5,0,0,0), "value": 5}]
+        {"start": datetime(2015,1,1,0,0,0, tzinfo=pytz.UTC), "value": 1},
+        {"start": datetime(2015,1,2,0,0,0, tzinfo=pytz.UTC), "value": 2},
+        {"start": datetime(2015,1,3,0,0,0, tzinfo=pytz.UTC), "value": 3},
+        {"start": datetime(2015,1,3,0,0,0, tzinfo=pytz.UTC), "value": 3},
+        {"start": datetime(2015,1,4,0,0,0, tzinfo=pytz.UTC), "value": 4},
+        {"start": datetime(2015,1,5,0,0,0, tzinfo=pytz.UTC), "value": 5}]
     return records
 
 @pytest.fixture
 def records_interval_start_daily_missing_value(request):
     records = [
-        {"start": datetime(2015,1,1,0,0,0), "value": 1},
-        {"start": datetime(2015,1,2,0,0,0), "value": 2},
-        {"start": datetime(2015,1,3,0,0,0)},
-        {"start": datetime(2015,1,4,0,0,0), "value": 4},
-        {"start": datetime(2015,1,5,0,0,0), "value": 5}]
+        {"start": datetime(2015,1,1,0,0,0, tzinfo=pytz.UTC), "value": 1},
+        {"start": datetime(2015,1,2,0,0,0, tzinfo=pytz.UTC), "value": 2},
+        {"start": datetime(2015,1,3,0,0,0, tzinfo=pytz.UTC)},
+        {"start": datetime(2015,1,4,0,0,0, tzinfo=pytz.UTC), "value": 4},
+        {"start": datetime(2015,1,5,0,0,0, tzinfo=pytz.UTC), "value": 5}]
     return records
 
 @pytest.fixture
 def records_interval_start_daily_missing_start_key(request):
     records = [
-        {"start": datetime(2015,1,1,0,0,0), "value": 1},
-        {"end": datetime(2015,1,2,0,0,0), "value": 2},
-        {"start": datetime(2015,1,3,0,0,0), "value": 3},
-        {"start": datetime(2015,1,4,0,0,0), "value": 4},
-        {"start": datetime(2015,1,5,0,0,0), "value": 5}]
+        {"start": datetime(2015,1,1,0,0,0, tzinfo=pytz.UTC), "value": 1},
+        {"end": datetime(2015,1,2,0,0,0, tzinfo=pytz.UTC), "value": 2},
+        {"start": datetime(2015,1,3,0,0,0, tzinfo=pytz.UTC), "value": 3},
+        {"start": datetime(2015,1,4,0,0,0, tzinfo=pytz.UTC), "value": 4},
+        {"start": datetime(2015,1,5,0,0,0, tzinfo=pytz.UTC), "value": 5}]
     return records
 
 @pytest.fixture
 def records_interval_start_15min(request):
     records = [
-        {"start": datetime(2015,1,1,0,0,0), "value": 1},
-        {"start": datetime(2015,1,1,0,15,0), "value": 2},
-        {"start": datetime(2015,1,1,0,30,0), "value": 3},
-        {"start": datetime(2015,1,1,0,45,0), "value": 4},
-        {"start": datetime(2015,1,1,1,0,0), "value": 5},
-        {"start": datetime(2015,1,1,1,15,0), "value": 6}]
+        {"start": datetime(2015,1,1,0,0,0, tzinfo=pytz.UTC), "value": 1},
+        {"start": datetime(2015,1,1,0,15,0, tzinfo=pytz.UTC), "value": 2},
+        {"start": datetime(2015,1,1,0,30,0, tzinfo=pytz.UTC), "value": 3},
+        {"start": datetime(2015,1,1,0,45,0, tzinfo=pytz.UTC), "value": 4},
+        {"start": datetime(2015,1,1,1,0,0, tzinfo=pytz.UTC), "value": 5},
+        {"start": datetime(2015,1,1,1,15,0, tzinfo=pytz.UTC), "value": 6}]
     return records
 
 @pytest.fixture
 def records_arbitrary_basic(request):
     records = [
-        {"start": datetime(2015,2,1,0,0,0), "end": datetime(2015,2,28), "value": 0},
-        {"start": datetime(2015,1,2,0,0,0), "end": datetime(2015,2,1), "value": 0},
-        {"start": datetime(2015,1,1,1,4,5), "end": datetime(2015,1,1,2,4,5), "value": 1},
-        {"start": datetime(2015,1,1,0,4,5), "end": datetime(2015,1,1,1,4,5), "value": np.nan},
-        {"start": datetime(2015,1,1,0,0,0), "end": datetime(2015,1,1,0,4,5), }]
+        {"start": datetime(2015,2,1,0,0,0, tzinfo=pytz.UTC), "end": datetime(2015,2,28, tzinfo=pytz.UTC), "value": 0},
+        {"start": datetime(2015,1,2,0,0,0, tzinfo=pytz.UTC), "end": datetime(2015,2,1, tzinfo=pytz.UTC), "value": 0},
+        {"start": datetime(2015,1,1,1,4,5, tzinfo=pytz.UTC), "end": datetime(2015,1,1,2,4,5, tzinfo=pytz.UTC), "value": 1},
+        {"start": datetime(2015,1,1,0,4,5, tzinfo=pytz.UTC), "end": datetime(2015,1,1,1,4,5, tzinfo=pytz.UTC), "value": np.nan}]
     return records
 
 @pytest.fixture
 def records_arbitrary_overlap(request):
     records = [
-        {"start": datetime(2015,1,20,0,0,0), "end": datetime(2015,2,28), "value": 0},
-        {"start": datetime(2015,1,2,0,0,0), "end": datetime(2015,2,1), "value": 0},
-        {"start": datetime(2015,1,1,1,4,5), "end": datetime(2015,1,1,2,4,5), "value": 1},
-        {"start": datetime(2015,1,1,0,4,5), "end": datetime(2015,1,1,1,4,5), "value": np.nan},
-        {"start": datetime(2015,1,1,0,0,0), "end": datetime(2015,1,1,0,4,5), }]
+        {"start": datetime(2015,1,20,0,0,0, tzinfo=pytz.UTC), "end": datetime(2015,2,28, tzinfo=pytz.UTC), "value": 0},
+        {"start": datetime(2015,1,2,0,0,0, tzinfo=pytz.UTC), "end": datetime(2015,2,1, tzinfo=pytz.UTC), "value": 0},
+        {"start": datetime(2015,1,1,1,4,5, tzinfo=pytz.UTC), "end": datetime(2015,1,1,2,4,5, tzinfo=pytz.UTC), "value": 1},
+        {"start": datetime(2015,1,1,0,4,5, tzinfo=pytz.UTC), "end": datetime(2015,1,1,1,4,5, tzinfo=pytz.UTC), "value": np.nan}]
     return records
 
 @pytest.fixture(params=[
-        [{"start": datetime(2015,2,1),"value":0},
-         {"start": datetime(2015,1,2,0,0,0), "value":1},
-         {"start": datetime(2015,1,1,1,4,5), "value":0},
-         {"start": datetime(2015,1,1,0,4,5), "value":0},
-         {"start": datetime(2015,1,1,0,0,0), "value":0}],
-        [{"start": datetime(2015,1,2,0,0,0), "end": datetime(2015,2,1), "value":1},
-         {"start": datetime(2015,1,1,1,4,5), "value":0},
-         {"start": datetime(2015,1,1,0,4,5), "value":0},
-         {"start": datetime(2015,1,1,0,0,0), "value":0}],
+        [{"start": datetime(2015,2,1, tzinfo=pytz.UTC),"value":0},
+         {"start": datetime(2015,1,2,0,0,0, tzinfo=pytz.UTC), "value":1},
+         {"start": datetime(2015,1,1,1,4,5, tzinfo=pytz.UTC), "value":0},
+         {"start": datetime(2015,1,1,0,4,5, tzinfo=pytz.UTC), "value":0},
+         {"start": datetime(2015,1,1,0,0,0, tzinfo=pytz.UTC), "value":0}],
+        [{"start": datetime(2015,1,2,0,0,0, tzinfo=pytz.UTC), "end": datetime(2015,2,1, tzinfo=pytz.UTC), "value":1},
+         {"start": datetime(2015,1,1,1,4,5, tzinfo=pytz.UTC), "value":0},
+         {"start": datetime(2015,1,1,0,4,5, tzinfo=pytz.UTC), "value":0},
+         {"start": datetime(2015,1,1,0,0,0, tzinfo=pytz.UTC), "value":0}],
         ])
 def records_arbitrary_start(request):
     return request.param
 
 @pytest.fixture(params=[
-        [{"end": datetime(2015,2,1), "value":0},
-         {"end": datetime(2015,1,2,0,0,0), "value":1},
-         {"end": datetime(2015,1,1,1,4,5), "value":0},
-         {"end": datetime(2015,1,1,0,4,5), "value":0},
-         {"end": datetime(2015,1,1,0,0,0),  "start": datetime(2014,2,2), "value":0}],
-        [{"end": datetime(2015,2,1), "value":0},
-         {"end": datetime(2015,1,2,0,0,0), "value":1},
-         {"end": datetime(2015,1,1,1,4,5), "value":0},
-         {"end": datetime(2015,1,1,0,4,5), "value":0},
-         {"end": datetime(2015,1,1,0,0,0),  "value":0},
-         {"end": datetime(2014,2,2,0,0,0),  "value":0}]
+        [{"end": datetime(2015,2,1, tzinfo=pytz.UTC), "value":0},
+         {"end": datetime(2015,1,2,0,0,0, tzinfo=pytz.UTC), "value":1},
+         {"end": datetime(2015,1,1,1,4,5, tzinfo=pytz.UTC), "value":0},
+         {"end": datetime(2015,1,1,0,4,5, tzinfo=pytz.UTC), "value":0},
+         {"end": datetime(2015,1,1,0,0,0, tzinfo=pytz.UTC),  "start": datetime(2014,2,2, tzinfo=pytz.UTC), "value":0}],
+        [{"end": datetime(2015,2,1, tzinfo=pytz.UTC), "value":0},
+         {"end": datetime(2015,1,2,0,0,0, tzinfo=pytz.UTC), "value":1},
+         {"end": datetime(2015,1,1,1,4,5, tzinfo=pytz.UTC), "value":0},
+         {"end": datetime(2015,1,1,0,4,5, tzinfo=pytz.UTC), "value":0},
+         {"end": datetime(2015,1,1,0,0,0, tzinfo=pytz.UTC),  "value":0},
+         {"end": datetime(2014,2,2,0,0,0, tzinfo=pytz.UTC),  "value":0}]
         ])
 def records_arbitrary_end(request):
     return request.param
@@ -202,11 +200,11 @@ def records_arbitrary_end(request):
 @pytest.fixture
 def records_pulse(request):
     records = [
-        {"pulse": datetime(2015,2,1)},
-        {"pulse": datetime(2015,1,2,0,0,0)},
-        {"pulse": datetime(2015,1,1,1,4,5)},
-        {"pulse": datetime(2015,1,1,0,4,5)},
-        {"pulse": datetime(2015,1,1,0,0,0)}]
+        {"pulse": datetime(2015,2,1, tzinfo=pytz.UTC)},
+        {"pulse": datetime(2015,1,2,0,0,0, tzinfo=pytz.UTC)},
+        {"pulse": datetime(2015,1,1,1,4,5, tzinfo=pytz.UTC)},
+        {"pulse": datetime(2015,1,1,0,4,5, tzinfo=pytz.UTC)},
+        {"pulse": datetime(2015,1,1,0,0,0, tzinfo=pytz.UTC)}]
     return records
 
 @pytest.fixture
@@ -216,12 +214,12 @@ def consumption_data_blank():
 
 @pytest.fixture
 def consumption_data_kWh_interval():
-    records = [{"start": datetime(2015,1,i+1), "value": 1} for i in range(10)]
+    records = [{"start": datetime(2015,1,i+1, tzinfo=pytz.UTC), "value": 1} for i in range(10)]
     return ConsumptionData(records, "electricity", "kWh", freq="D")
 
 @pytest.fixture
 def consumption_data_kWh_arbitrary():
-    records = [{"start": datetime(2015,1,i+1), "end": datetime(2015,1,i+2),
+    records = [{"start": datetime(2015,1,i+1, tzinfo=pytz.UTC), "end": datetime(2015,1,i+2, tzinfo=pytz.UTC),
         "value": 1} for i in range(10)]
     return ConsumptionData(records, "electricity", "kWh", record_type="arbitrary")
 
@@ -258,7 +256,7 @@ def test_consumption_data_interval_start_daily_all_freq_D(
             fuel_type, unit_name, freq="D")
     assert cd.freq_timedelta == timedelta(days=1)
     assert_allclose(cd.data.values,[1,2,3,4,5], rtol=RTOL, atol=ATOL)
-    assert cd.data.index[0] == datetime(2015,1,1)
+    assert cd.data.index[0] == datetime(2015,1,1, tzinfo=pytz.UTC)
     assert_allclose(cd.estimated,[True,False,False,False,False], rtol=RTOL, atol=ATOL)
 
 def test_consumption_data_interval_end_daily_all_freq_D(
@@ -267,7 +265,7 @@ def test_consumption_data_interval_end_daily_all_freq_D(
             fuel_type, unit_name, freq="D")
     assert cd.freq_timedelta == timedelta(days=1)
     assert_allclose(cd.data.values,[1,2,3,4,5], rtol=RTOL, atol=ATOL)
-    assert cd.data.index[0] == datetime(2014,12,31)
+    assert cd.data.index[0] == datetime(2014,12,31, tzinfo=pytz.UTC)
 
 def test_consumption_data_interval_end_daily_all_freq_2D(
         records_interval_end_daily_all, fuel_type, unit_name):
@@ -275,7 +273,7 @@ def test_consumption_data_interval_end_daily_all_freq_2D(
             fuel_type, unit_name, freq="2D")
     assert cd.freq_timedelta == timedelta(days=2)
     assert_allclose(cd.data.values,[1,3,5], rtol=RTOL, atol=ATOL)
-    assert cd.data.index[0] == datetime(2014,12,30)
+    assert cd.data.index[0] == datetime(2014,12,30, tzinfo=pytz.UTC)
 
 def test_consumption_data_interval_end_daily_all_freq_12H(
         records_interval_end_daily_all, fuel_type, unit_name):
@@ -284,7 +282,7 @@ def test_consumption_data_interval_end_daily_all_freq_12H(
     assert cd.freq_timedelta == timedelta(seconds=60*60*12)
     assert_allclose(cd.data.values,[1,np.nan,2,np.nan,3,np.nan,4,np.nan,5],
             rtol=RTOL, atol=ATOL)
-    assert cd.data.index[0] == datetime(2014,12,31,12)
+    assert cd.data.index[0] == datetime(2014,12,31,12, tzinfo=pytz.UTC)
 
 def test_consumption_data_interval_start_daily_missing_start_key_freq_D(
         records_interval_start_daily_missing_start_key, fuel_type, unit_name):
@@ -298,7 +296,7 @@ def test_consumption_data_interval_start_daily_missing_date_freq_D(
             fuel_type, unit_name, freq="D")
     assert cd.freq_timedelta == timedelta(days=1)
     assert_allclose(cd.data.values,[1,2,np.nan,4,5], rtol=RTOL, atol=ATOL)
-    assert cd.data.index[0] == datetime(2015,1,1)
+    assert cd.data.index[0] == datetime(2015,1,1, tzinfo=pytz.UTC)
 
 def test_consumption_data_interval_start_daily_misaligned_date_freq_D(
         records_interval_start_daily_misaligned_date, recwarn):
@@ -306,7 +304,7 @@ def test_consumption_data_interval_start_daily_misaligned_date_freq_D(
             "electricity", "kWh", freq="D")
     assert cd.freq_timedelta == timedelta(days=1)
     assert_allclose(cd.data.values,[1,2,np.nan,4,5], rtol=RTOL, atol=ATOL)
-    assert cd.data.index[0] == datetime(2015,1,1)
+    assert cd.data.index[0] == datetime(2015,1,1, tzinfo=pytz.UTC)
     w = recwarn.pop(UserWarning)
     assert issubclass(w.category, UserWarning)
 
@@ -316,7 +314,7 @@ def test_consumption_data_interval_start_daily_overlapping_date_freq_D(
             "electricity", "kWh", freq="D")
     assert cd.freq_timedelta == timedelta(days=1)
     assert_allclose(cd.data.values,[1,2,3,4,5], rtol=RTOL, atol=ATOL)
-    assert cd.data.index[0] == datetime(2015,1,1)
+    assert cd.data.index[0] == datetime(2015,1,1, tzinfo=pytz.UTC)
     w = recwarn.pop(UserWarning)
     assert issubclass(w.category, UserWarning)
 
@@ -326,7 +324,7 @@ def test_consumption_data_interval_start_daily_missing_value_freq_D(
             "electricity", "kWh", freq="D")
     assert cd.freq_timedelta == timedelta(days=1)
     assert_allclose(cd.data.values,[1,2,np.nan,4,5], rtol=RTOL, atol=ATOL)
-    assert cd.data.index[0] == datetime(2015,1,1)
+    assert cd.data.index[0] == datetime(2015,1,1, tzinfo=pytz.UTC)
 
 def test_consumption_data_interval_start_15min(
         records_interval_start_15min, fuel_type, unit_name):
@@ -334,7 +332,7 @@ def test_consumption_data_interval_start_15min(
             fuel_type, unit_name, freq="15T")
     assert cd.freq_timedelta == timedelta(seconds=60*15)
     assert_allclose(cd.data.values,[1,2,3,4,5,6], rtol=RTOL, atol=ATOL)
-    assert cd.data.index[0] == datetime(2015,1,1)
+    assert cd.data.index[0] == datetime(2015,1,1, tzinfo=pytz.UTC)
     assert cd.pulse_value is None
 
 def test_consumption_data_arbitrary_basic(records_arbitrary_basic,
@@ -344,17 +342,17 @@ def test_consumption_data_arbitrary_basic(records_arbitrary_basic,
     assert cd.freq is None
     assert cd.freq_timedelta is None
     assert cd.pulse_value is None
-    assert_allclose(cd.data.values,[np.nan,np.nan,1,np.nan,0,0,np.nan],
+    assert_allclose(cd.data.values,[np.nan,1,np.nan,0,0,np.nan],
             rtol=RTOL, atol=ATOL)
-    assert cd.data.index[0] == datetime(2015,1,1)
+    assert cd.data.index[0].to_datetime() == datetime(2015,1,1,0,4,5, tzinfo=pytz.UTC)
 
 def test_consumtion_data_arbitrary_overlap(records_arbitrary_overlap, recwarn):
     cd = ConsumptionData(records_arbitrary_overlap,
             "electricity", "kWh", record_type="arbitrary")
-    assert_allclose(cd.data.values,[np.nan,np.nan,1,np.nan,0,np.nan],
+    assert_allclose(cd.data.values,[np.nan,1,np.nan,0,np.nan],
             rtol=RTOL, atol=ATOL)
-    assert cd.data.index[0] == datetime(2015,1,1)
-    assert cd.data.index[5] == datetime(2015,2,1)
+    assert cd.data.index[0].to_datetime() == datetime(2015,1,1,0,4,5, tzinfo=pytz.UTC)
+    assert cd.data.index[4] == datetime(2015,2,1, tzinfo=pytz.UTC)
     w = recwarn.pop(UserWarning)
     assert issubclass(w.category, UserWarning)
 
@@ -364,16 +362,16 @@ def test_consumption_data_arbitrary_start(records_arbitrary_start,
             fuel_type, unit_name, record_type=record_type_arbitrary_start)
     assert_allclose(cd.data.values,[0,0,0,1,np.nan],
             rtol=RTOL, atol=ATOL)
-    assert cd.data.index[0] == datetime(2015,1,1)
-    assert cd.data.index[4] == datetime(2015,2,1)
+    assert cd.data.index[0] == datetime(2015,1,1, tzinfo=pytz.UTC)
+    assert cd.data.index[4] == datetime(2015,2,1, tzinfo=pytz.UTC)
     assert cd.freq is None
     assert cd.freq_timedelta is None
     assert cd.pulse_value is None
 
     generated_records = cd.records(record_type=record_type_arbitrary_start)
     assert len(generated_records) == 5
-    assert generated_records[0] == {"start": datetime(2015,1,1), "value": 0, "estimated": False}
-    assert generated_records[4]["start"] == datetime(2015,2,1)
+    assert generated_records[0] == {"start": datetime(2015,1,1, tzinfo=pytz.UTC), "value": 0, "estimated": False}
+    assert generated_records[4]["start"] == datetime(2015,2,1, tzinfo=pytz.UTC)
     assert pd.isnull(generated_records[4]["value"])
     assert len(generated_records[4].keys()) == 3
 
@@ -383,16 +381,16 @@ def test_consumption_data_arbitrary_end(records_arbitrary_end,
             fuel_type, unit_name, record_type=record_type_arbitrary_end)
     assert_allclose(cd.data.values,[0,0,0,1,0,np.nan],
             rtol=RTOL, atol=ATOL)
-    assert cd.data.index[0] == datetime(2014,2,2)
-    assert cd.data.index[5] == datetime(2015,2,1)
+    assert cd.data.index[0] == datetime(2014,2,2, tzinfo=pytz.UTC)
+    assert cd.data.index[5] == datetime(2015,2,1, tzinfo=pytz.UTC)
     assert cd.freq is None
     assert cd.freq_timedelta is None
     assert cd.pulse_value is None
 
     generated_records = cd.records(record_type=record_type_arbitrary_end)
     assert len(generated_records) == 6
-    assert generated_records[0] == {"end": datetime(2014,2,2),"value": np.nan, "estimated": False}
-    assert generated_records[5] == {"end": datetime(2015,2,1),"value":0, "estimated": False}
+    assert generated_records[0] == {"end": datetime(2014,2,2, tzinfo=pytz.UTC),"value": np.nan, "estimated": False}
+    assert generated_records[5] == {"end": datetime(2015,2,1, tzinfo=pytz.UTC),"value":0, "estimated": False}
 
 def test_consumption_data_pulse(records_pulse,
         fuel_type, unit_name):
@@ -410,8 +408,8 @@ def test_consumption_data_pulse(records_pulse,
     assert cd.pulse_value == 1
     assert_allclose(cd.data.values,[np.nan,1,1,1,1],
             rtol=RTOL, atol=ATOL)
-    assert cd.data.index[0] == datetime(2015,1,1)
-    assert cd.data.index[4] == datetime(2015,2,1)
+    assert cd.data.index[0] == datetime(2015,1,1, tzinfo=pytz.UTC)
+    assert cd.data.index[4] == datetime(2015,2,1, tzinfo=pytz.UTC)
     assert cd.freq is None
     assert cd.freq_timedelta is None
     assert cd.pulse_value == 1
@@ -451,14 +449,14 @@ def test_consumption_units(consumption_data_kWh_interval):
 
 def test_consumption_periods_interval(consumption_data_kWh_interval):
     periods = consumption_data_kWh_interval.periods()
-    assert periods[0].start == datetime(2015,1,1)
-    assert periods[9].end == datetime(2015,1,11)
+    assert periods[0].start == datetime(2015,1,1, tzinfo=pytz.UTC)
+    assert periods[9].end == datetime(2015,1,11, tzinfo=pytz.UTC)
     assert len(periods) == 10
 
 def test_consumption_periods_arbitrary(consumption_data_kWh_arbitrary):
     periods = consumption_data_kWh_arbitrary.periods()
-    assert periods[0].start == datetime(2015,1,1)
-    assert periods[9].end == datetime(2015,1,11)
+    assert periods[0].start == datetime(2015,1,1, tzinfo=pytz.UTC)
+    assert periods[9].end == datetime(2015,1,11, tzinfo=pytz.UTC)
     assert len(periods) == 10
 
 def test_consumption_data_average_daily_consumtions_interval(consumption_data_kWh_interval):
@@ -492,82 +490,82 @@ def test_total_days_blank_consumption(consumption_data_blank):
 def test_consumption_data_total_period_arbitrary(
         consumption_data_kWh_arbitrary):
     period = consumption_data_kWh_arbitrary.total_period()
-    assert period.start == datetime(2015,1,1)
-    assert period.end == datetime(2015,1,11)
+    assert period.start == datetime(2015,1,1, tzinfo=pytz.UTC)
+    assert period.end == datetime(2015,1,11, tzinfo=pytz.UTC)
 
 def test_total_period_blank_consumption(consumption_data_blank):
     assert consumption_data_blank.total_period() == None
 
 def test_consumption_data_filter_by_period_arbitrary(
         consumption_data_kWh_arbitrary):
-    period = Period(datetime(2015,1,1), datetime(2015,1,3))
+    period = Period(datetime(2015,1,1, tzinfo=pytz.UTC), datetime(2015,1,3, tzinfo=pytz.UTC))
     filtered_data = consumption_data_kWh_arbitrary.filter_by_period(period).data
     assert_allclose(filtered_data, np.array([1,1,np.nan]),
             rtol=RTOL, atol=ATOL)
-    assert filtered_data.index[0] == datetime(2015,1,1)
-    assert filtered_data.index[2] == datetime(2015,1,3)
+    assert filtered_data.index[0] == datetime(2015,1,1, tzinfo=pytz.UTC)
+    assert filtered_data.index[2] == datetime(2015,1,3, tzinfo=pytz.UTC)
 
-    period = Period(datetime(2014,1,1), datetime(2014,1,3,1))
+    period = Period(datetime(2014,1,1, tzinfo=pytz.UTC), datetime(2014,1,3,1, tzinfo=pytz.UTC))
     filtered_data = consumption_data_kWh_arbitrary.filter_by_period(period).data
     assert_allclose(filtered_data, [],
             rtol=RTOL, atol=ATOL)
 
-    period = Period(None, datetime(2015,1,3))
+    period = Period(None, datetime(2015,1,3, tzinfo=pytz.UTC))
     filtered_data = consumption_data_kWh_arbitrary.filter_by_period(period).data
     assert_allclose(filtered_data, np.array([1,1,np.nan]),
             rtol=RTOL, atol=ATOL)
-    assert filtered_data.index[0] == datetime(2015,1,1)
-    assert filtered_data.index[2] == datetime(2015,1,3)
+    assert filtered_data.index[0] == datetime(2015,1,1, tzinfo=pytz.UTC)
+    assert filtered_data.index[2] == datetime(2015,1,3, tzinfo=pytz.UTC)
 
-    period = Period(datetime(2015,1,9),None)
+    period = Period(datetime(2015,1,9, tzinfo=pytz.UTC),None)
     filtered_data = consumption_data_kWh_arbitrary.filter_by_period(period).data
     assert_allclose(filtered_data, np.array([1,1,np.nan]),
             rtol=RTOL, atol=ATOL)
-    assert filtered_data.index[0] == datetime(2015,1,9)
-    assert filtered_data.index[2] == datetime(2015,1,11)
+    assert filtered_data.index[0] == datetime(2015,1,9, tzinfo=pytz.UTC)
+    assert filtered_data.index[2] == datetime(2015,1,11, tzinfo=pytz.UTC)
 
     period = Period(None,None)
     filtered_data = consumption_data_kWh_arbitrary.filter_by_period(period).data
     assert_allclose(filtered_data, np.array([1,1,1,1,1,1,1,1,1,1,np.nan]),
             rtol=RTOL, atol=ATOL)
-    assert filtered_data.index[0] == datetime(2015,1,1)
-    assert filtered_data.index[10] == datetime(2015,1,11)
+    assert filtered_data.index[0] == datetime(2015,1,1, tzinfo=pytz.UTC)
+    assert filtered_data.index[10] == datetime(2015,1,11, tzinfo=pytz.UTC)
 
 def test_consumption_data_filter_by_period_interval(
         consumption_data_kWh_interval):
 
-    period = Period(datetime(2015,1,1), datetime(2015,1,3))
+    period = Period(datetime(2015,1,1, tzinfo=pytz.UTC), datetime(2015,1,3, tzinfo=pytz.UTC))
     filtered_data = consumption_data_kWh_interval.filter_by_period(period).data
     assert_allclose(filtered_data, np.array([1,1,1]),
             rtol=RTOL, atol=ATOL)
-    assert filtered_data.index[0] == datetime(2015,1,1)
-    assert filtered_data.index[2] == datetime(2015,1,3)
+    assert filtered_data.index[0] == datetime(2015,1,1, tzinfo=pytz.UTC)
+    assert filtered_data.index[2] == datetime(2015,1,3, tzinfo=pytz.UTC)
 
-    period = Period(datetime(2014,1,1), datetime(2014,1,3,1))
+    period = Period(datetime(2014,1,1, tzinfo=pytz.UTC), datetime(2014,1,3,1, tzinfo=pytz.UTC))
     filtered_data = consumption_data_kWh_interval.filter_by_period(period).data
     assert_allclose(filtered_data, [],
             rtol=RTOL, atol=ATOL)
 
-    period = Period(None, datetime(2015,1,3))
+    period = Period(None, datetime(2015,1,3, tzinfo=pytz.UTC))
     filtered_data = consumption_data_kWh_interval.filter_by_period(period).data
     assert_allclose(filtered_data, np.array([1,1,1]),
             rtol=RTOL, atol=ATOL)
-    assert filtered_data.index[0] == datetime(2015,1,1)
-    assert filtered_data.index[2] == datetime(2015,1,3)
+    assert filtered_data.index[0] == datetime(2015,1,1, tzinfo=pytz.UTC)
+    assert filtered_data.index[2] == datetime(2015,1,3, tzinfo=pytz.UTC)
 
-    period = Period(datetime(2015,1,9),None)
+    period = Period(datetime(2015,1,9, tzinfo=pytz.UTC),None)
     filtered_data = consumption_data_kWh_interval.filter_by_period(period).data
     assert_allclose(filtered_data, np.array([1,1]),
             rtol=RTOL, atol=ATOL)
-    assert filtered_data.index[0] == datetime(2015,1,9)
-    assert filtered_data.index[1] == datetime(2015,1,10)
+    assert filtered_data.index[0] == datetime(2015,1,9, tzinfo=pytz.UTC)
+    assert filtered_data.index[1] == datetime(2015,1,10, tzinfo=pytz.UTC)
 
     period = Period(None,None)
     filtered_data = consumption_data_kWh_interval.filter_by_period(period).data
     assert_allclose(filtered_data, np.array([1,1,1,1,1,1,1,1,1,1]),
             rtol=RTOL, atol=ATOL)
-    assert filtered_data.index[0] == datetime(2015,1,1)
-    assert filtered_data.index[9] == datetime(2015,1,10)
+    assert filtered_data.index[0] == datetime(2015,1,1, tzinfo=pytz.UTC)
+    assert filtered_data.index[9] == datetime(2015,1,10, tzinfo=pytz.UTC)
 
 def test_consumption_data_init_from_interval_data(
         consumption_data_kWh_interval):
@@ -619,8 +617,8 @@ def test_consumption_data_init_from_arbitrary_data(
 
 def test_unit_conversion():
     records = [{
-        "start": datetime(2015, 1, i+1),
-        "end": datetime(2015, 1, i+2),
+        "start": datetime(2015, 1, i+1, tzinfo=pytz.UTC),
+        "end": datetime(2015, 1, i+2, tzinfo=pytz.UTC),
         "value": 1
     } for i in range(3)]
 
