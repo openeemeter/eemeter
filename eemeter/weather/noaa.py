@@ -82,8 +82,8 @@ class GSODWeatherSource(NOAAWeatherSourceBase):
     freq = "D"
 
     def _empty_series(self, year):
-        dates = pd.date_range("{}-01-01".format(year),
-                              "{}-12-31".format(year),
+        dates = pd.date_range("{}-01-01 00:00".format(year),
+                              "{}-12-31 00:00".format(year),
                               freq=self.freq, tz=pytz.UTC)
         return pd.Series(None, index=dates, dtype=float)
 
@@ -122,7 +122,7 @@ class GSODWeatherSource(NOAAWeatherSourceBase):
 
 class ISDWeatherSource(NOAAWeatherSourceBase):
 
-    cache_date_format = "%Y%m%d%H"
+    cache_date_format = "%Y%m%d%H%z"
     cache_filename_format = "ISD-{}.json"
     year_existence_format = "{}-01-01 00"
     freq = "H"

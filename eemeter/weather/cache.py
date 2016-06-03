@@ -37,7 +37,13 @@ class CachedWeatherSourceBase(WeatherSourceBase):
         return directory
 
     def save_to_cache(self):
-        data = [[d.strftime(self.cache_date_format), t if pd.notnull(t) else None] for d,t in self.tempC.iteritems()]
+        data = [
+            [
+                d.strftime(self.cache_date_format), t
+                if pd.notnull(t) else None
+            ]
+            for d, t in self.tempC.iteritems()
+        ]
         with open(self.cache_filename, 'w') as f:
             json.dump(data,f)
 
@@ -50,11 +56,13 @@ class CachedWeatherSourceBase(WeatherSourceBase):
         except ValueError: # Corrupted json file
             self.clear_cache()
             return
-        index = pd.to_datetime([d[0] for d in data], format=self.cache_date_format)
+        index = pd.to_datetime([d[0] for d in data],
+                format=self.cache_date_format, utc=True)
         values = [d[1] for d in data]
 
         # changed for pandas > 0.18
-        self.tempC = pd.Series(values, index=index, dtype=float).sort_index().resample(self.freq).mean()
+        self.tempC = pd.Series(values, index=index, dtype=float)\
+                .sort_index().resample(self.freq).mean()
 
     def clear_cache(self):
         try:
