@@ -110,4 +110,3 @@ class Project(object):
         views = [ c.filter_by_period(p) for c in self.consumption
                  for p in periods]
         return views
-
