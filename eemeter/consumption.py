@@ -54,15 +54,15 @@ class BaseSerializer(object):
         Returns a dataframe of records.
         """
         sorted_records = self._sort_records(records)
-        validated_tuples = list(self.validate_records(sorted_records))
+        validated_tuples = list(self.yield_records(sorted_records))
         return self._validated_tuples_to_dataframe(validated_tuples)
 
-    def validate_records(self, sorted_records):
+    def yield_records(self, sorted_records):
         """
         Yields validated (start (datetime), value (float), estimated (bool))
         tuples of data.
         """
-        raise NotImplementedError('`validate_records()` must be implemented.')
+        raise NotImplementedError('`yield_records()` must be implemented.')
 
     def validate_record(self, record):
 
@@ -141,7 +141,7 @@ class ArbitrarySerializer(BaseSerializer):
                     '{} >= {}.'.format(record)
             raise ValueError(message)
 
-    def validate_records(self, sorted_records):
+    def yield_records(self, sorted_records):
 
         previous_end_datetime = None
 
@@ -231,7 +231,7 @@ class ArbitraryStartSerializer(BaseSerializer):
     required_fields = ["start", "value"]
     datetime_fields = ["start"]
 
-    def validate_records(self, sorted_records):
+    def yield_records(self, sorted_records):
 
         n = len(sorted_records)
         for i, record in enumerate(sorted_records):
@@ -310,7 +310,7 @@ class ArbitraryEndSerializer(BaseSerializer):
     required_fields = ["end", "value"]
     datetime_fields = ["end"]
 
-    def validate_records(self, sorted_records):
+    def yield_records(self, sorted_records):
 
         previous_end_datetime = None
 
