@@ -501,7 +501,7 @@ class EnergyTimeSeries(object):
             raise ValueError(message)
 
     def _set_interpretation(self, interpretation):
-        if interpretation in self.INTERPRETATION:
+        if interpretation in self.INTERPRETATIONS:
             self.interpretation = interpretation
         else:
             message = 'Unsupported interpretation: "{}".'.format(fuel)
@@ -527,6 +527,18 @@ class EnergyTimeSeries(object):
             else:
                 message = 'Cannot have `placeholder=True` if data is supplied'
                 raise ValueError(message)
+
+    def __repr__(self):
+        if self.placeholder:
+            return (
+                "EnergyTimeSeries({}, {})\n  PLACEHOLDER"
+                .format(self.fuel, self.interpretation)
+            )
+        else:
+            return (
+                "EnergyTimeSeries({}, {})\n{}"
+                .format(self.fuel, self.interpretation, self.data)
+            )
 
     # def periods(self):
     #     """ Converts DatetimeIndex (which is timestamp based) to an list of
@@ -656,12 +668,6 @@ class EnergyTimeSeries(object):
     #             "estimated": r["estimated"],
     #         } for r in self.records()],
     #     }
-
-    # def __repr__(self):
-    #     string = "ConsumptionData({}, {})\n".format(self.fuel_type,
-    #             self.unit_name)
-    #     string += self.data.__repr__()
-    #     return string
 
     # def downsample(self, freq):
     #
