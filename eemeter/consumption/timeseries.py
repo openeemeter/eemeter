@@ -1,6 +1,6 @@
 
 
-class EnergyTimeSeries(object):
+class EnergyTrace(object):
     """ Container for energy time series data.
 
     Parameters
@@ -28,6 +28,8 @@ class EnergyTimeSeries(object):
           consumed on site.
         - `ON_SITE_GENERATION_UNCONSUMED`: Amount of excess locally generated
           energy fed back into the grid or sold back a utility.
+        - `CIRCUIT`: Amount of energy consumed by a single circuit or plug
+          load.
 
     data : pandas.DataFrame, default None
         Pandas DataFrame with two columns and a timezone-aware DatetimeIndex.
@@ -118,11 +120,11 @@ class EnergyTimeSeries(object):
         "ON_SITE_GENERATION_TOTAL",
         "ON_SITE_GENERATION_CONSUMED",
         "ON_SITE_GENERATION_UNCONSUMED",
+        "CIRCUIT",
     ]
 
-    def __init__(self, label, fuel, interpretation, data=None, unit=None, placeholder=False, serializer=None):
+    def __init__(self, fuel, interpretation, data=None, unit=None, placeholder=False, serializer=None):
 
-        self.label = label
         self._set_fuel(fuel)
         self._set_interpretation(interpretation)
         self._set_data(data, unit, placeholder, serializer)
@@ -173,12 +175,12 @@ class EnergyTimeSeries(object):
     def __repr__(self):
         if self.placeholder:
             return (
-                "EnergyTimeSeries({}, {})\n  PLACEHOLDER"
+                "EnergyTrace({}, {})\n  PLACEHOLDER"
                 .format(self.fuel, self.interpretation)
             )
         else:
             return (
-                "EnergyTimeSeries({}, {})\n{}"
+                "EnergyTrace({}, {})\n{}"
                 .format(self.fuel, self.interpretation, self.data)
             )
 

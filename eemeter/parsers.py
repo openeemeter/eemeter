@@ -4,9 +4,12 @@ from lxml import etree
 import os
 import pytz
 import six
-
-from eemeter.consumption import ConsumptionData
 import warnings
+
+from eemeter.consumption import (
+    EnergyTrace,
+    ArbitrarySerializer,
+)
 
 class ESPIUsageParser(object):
     """ Parse ESPI XML files.
@@ -836,15 +839,17 @@ class ESPIUsageParser(object):
         for interval_block in interval_block_group["interval_blocks"]:
 
             # For validation - see below
-            total_duration = interval_block["interval"]["duration"].total_seconds()
+            total_duration = interval_block["interval"]["duration"]
+            total_duration_s = total_duration.total_seconds()
             summed_durations = 0
 
             for interval_reading in interval_block["interval_readings"]:
 
-                if interval_reading["reading_quality"] is None:
+                reading_quality = interval_reading["reading_quality"]
+                if reading_quality is None:
                     estimated = False # assume not estimated
                 else:
-                    estimated = "estimated" in interval_reading["reading_quality"]
+                    estimated = "estimated" in reading_quality
 
                 duration = interval_reading["duration"]
                 summed_durations += duration.total_seconds()
@@ -860,18 +865,18 @@ class ESPIUsageParser(object):
 
             # Validates that total interval block duration matches sum of
             # interval reading durations
-            if not total_duration == summed_durations:
+            if not total_duration_s == summed_durations:
                 message = (
                     "Total IntervalBlock duration != "
                     "  sum of component IntervalReading durations\n"
                     "  {}s != {}s"
-                    .format(total_duration, summed_durations)
+                    .format(total_duration_s, summed_durations)
                 )
                 warnings.warn(message)
 
-    def get_consumption_records(self):
+    def get_consumption_record_groups(self):
         ''' Return all consumption records, across all IntervalBlocks,
-        stored in ESPI Energy Usage XML.
+        stored in ESPI Energy Usage XML, grouped by flow direction.
 
         Yields
         ------
@@ -879,77 +884,11 @@ class ESPIUsageParser(object):
             IntervalReading data
         '''
 
-        forward_records = None
-        reverse_records = None
-
         for group in self.get_reading_type_interval_block_groups():
             flow_direction = group["reading_type"]["flow_direction"]
-            records = list(self.get_interval_block_group_consumption_records(group))
-
-            if len(records) > 0:
-
-                if flow_direction == "forward":
-
-                    # should only be one group of forward records
-                    assert forward_records == None
-
-                    forward_records = records
-
-                elif flow_direction == "reverse":
-
-                    # should only be one group of reverse records
-                    assert reverse_records == None
-
-                    reverse_records = records
-
-                elif flow_direction == None:
-                    # Assume "forward" flow direction
-
-                    # should only be one group of forward records
-                    assert forward_records == None
-
-                    forward_records = records
-
-                else:
-                    message = (
-                        "Ignoring unsupported flow_direction {}"
-                        .format(flow_direction)
-                    )
-                    warnings.warn(message)
-
-        if forward_records is None and reverse_records is None:
-            return []
-        elif forward_records is not None and reverse_records is None:
-            return forward_records
-        elif forward_records is not None and reverse_records is not None:
-            # Expect these records to match up perfectly, so sort first then
-            # compare and combine, throwing an error if anything doesn't align.
-
-            records = []
-            forward_records = sorted(forward_records, key=lambda r: r["start"])
-            reverse_records = sorted(reverse_records, key=lambda r: r["start"])
-
-            for forward, reverse in zip(forward_records, reverse_records):
-                # make sure record dates match
-                if forward["start"] == reverse["start"] \
-                        and forward["end"] == reverse["end"] \
-                        and forward["fuel_type"] == reverse["fuel_type"] \
-                        and forward["unit_name"] == reverse["unit_name"]:
-                    records.append({
-                        "start": forward["start"],
-                        "end": forward["end"],
-                        "fuel_type": forward["fuel_type"],
-                        "unit_name": forward["unit_name"],
-                        "estimated": forward["estimated"] or reverse["estimated"],
-                        "value": forward["value"] - reverse["value"],
-                    })
-                else:
-                    raise ValueError("Records don't align")
-
-            return records
-        else:
-            raise ValueError("Reverse records without forward records - odd")
-
+            records = list(
+                    self.get_interval_block_group_consumption_records(group))
+            yield flow_direction, sorted(records, key=lambda x: x["start"])
 
     def get_consumption_data_objects(self, fuel_type_default="electricity"):
         ''' Retrieve all consumption records stored as IntervalReading elements
@@ -970,15 +909,25 @@ class ESPIUsageParser(object):
             Consumption data grouped by fuel type.
         '''
 
-        # Get all consumption records, group by fuel type.
-        fuel_type_records = defaultdict(list)
-        for record in self.get_consumption_records():
-            fuel_type_records[record["fuel_type"]].append(record)
+        INTERPRETATION_MAPPING = {
+            "forward": "CONSUMPTION_SUPPLIED",
+            "reverse": "ON_SITE_GENERATION_UNCONSUMED",
+            "net": "CONSUMPTION_NET",
+        }
 
-        # Wrap records in ConsumptionData objects.
-        for fuel_type, records in fuel_type_records.items():
-            if fuel_type is None:
-                fuel_type = fuel_type_default
-            yield ConsumptionData(records, fuel_type,
-                                  records[0]["unit_name"],
-                                  record_type='arbitrary')
+        # Get all consumption records, group by fuel type.
+        for flow_direction, records in self.get_consumption_record_groups():
+
+            if len(records) > 0:
+                fuel_type_records = defaultdict(list)
+                for record in records:
+                    fuel_type_records[record["fuel_type"]].append(record)
+
+                # Wrap records in EnergyTrace objects, by fuel type.
+                for fuel_type, records in fuel_type_records.items():
+                    if fuel_type is None:
+                        fuel_type = fuel_type_default
+                    interpretation = INTERPRETATION_MAPPING[flow_direction]
+                    yield EnergyTrace(fuel_type, interpretation, records,
+                                      records[0]["unit_name"],
+                                      serializer=ArbitrarySerializer())

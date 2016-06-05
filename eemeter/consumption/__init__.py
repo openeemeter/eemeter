@@ -1,4 +1,4 @@
-from .timeseries import EnergyTimeSeries
+from .timeseries import EnergyTrace
 from .serializers import (
     ArbitrarySerializer,
     ArbitraryStartSerializer,
