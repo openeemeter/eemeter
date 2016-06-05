@@ -1,12 +1,10 @@
-
+import numpy as np
 
 class EnergyTrace(object):
     """ Container for energy time series data.
 
     Parameters
     ----------
-    label : str
-        An arbitrary identifier for this instance.
     fuel : str, {"electricity", "natural_gas"}
         The fuel type of the energy time series.
     interpretation : str
@@ -184,6 +182,34 @@ class EnergyTrace(object):
                 .format(self.fuel, self.interpretation, self.data)
             )
 
+    def filter_by_modeling_period(self, modeling_period):
+
+        start = modeling_period.start_date
+        end = modeling_period.end_date
+
+        if start is None:
+            if end is None:
+                filtered_df = self.data.copy()
+            else:
+                filtered_df = self.data[:end].copy()
+        else:
+            if end is None:
+                filtered_df = self.data[start:].copy()
+            else:
+                filtered_df = self.data[start:end].copy()
+
+        # require NaN last data point as cap
+        if filtered_df.shape[0] > 0:
+            filtered_df.value.iloc[-1] = np.nan
+            filtered_df.estimated.iloc[-1] = False
+
+        return EnergyTrace(
+            fuel=self.fuel,
+            interpretation=self.interpretation,
+            data=filtered_df,
+            unit=self.unit
+        )
+
     # def periods(self):
     #     """ Converts DatetimeIndex (which is timestamp based) to an list of
     #     Periods, which have associated start and endtimes.
@@ -262,44 +288,6 @@ class EnergyTrace(object):
     #     else:
     #         tdelta = period.timedelta
     #         return tdelta.days + tdelta.seconds/8.64e4
-
-    # def filter_by_period(self, period):
-    #     """ Return a new ConsumptionData instance within the period.
-    #
-    #     Parameters
-    #     ----------
-    #     period : eemeter.evaluation.Period
-    #         Period within which to get ConsumptionData
-    #
-    #     Returns
-    #     -------
-    #     consumption_data : eemeter.consumption.ConsumptionData
-    #         ConsumptionData instance holding data within the requested period.
-    #     """
-    #     filtered_data = None
-    #     filtered_estimated = None
-    #     if period.start is None and period.end is None:
-    #         filtered_data = self.data.copy()
-    #         filtered_estimated = self.estimated.copy()
-    #     elif period.start is None and period.end is not None:
-    #         filtered_data = self.data[:period.end].copy()
-    #         filtered_estimated = self.estimated[:period.end].copy()
-    #     elif period.start is not None and period.end is None:
-    #         filtered_data = self.data[period.start:].copy()
-    #         filtered_estimated = self.estimated[period.start:].copy()
-    #     else:
-    #         filtered_data = self.data[period.start:period.end].copy()
-    #         filtered_estimated = self.estimated[period.start:period.end].copy()
-    #     if self.freq is None and filtered_data.shape[0] > 0:
-    #         filtered_data.iloc[-1] = np.nan
-    #         filtered_estimated.iloc[-1] = np.nan
-    #     filtered_consumption_data = ConsumptionData(
-    #             records=None,
-    #             fuel_type=self.fuel_type,
-    #             unit_name=self.unit_name,
-    #             data=filtered_data,
-    #             estimated=filtered_estimated)
-    #     return filtered_consumption_data
 
     # def json(self):
     #     return {
