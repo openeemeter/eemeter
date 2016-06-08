@@ -70,6 +70,9 @@ class TMY3WeatherSource(CachedWeatherSourceBase):
     def _fetch_datetime(self, dt):
         pass # loaded at init
 
+    def _fetch_year(self, year):
+        pass # loaded at init
+
     def _normalize_period(self, period):
         start = self._normalize_datetime(period.start)
         year_offset = period.end.year - period.start.year
@@ -131,3 +134,31 @@ class TMY3WeatherSource(CachedWeatherSourceBase):
         """
         dt = self._normalize_datetime(dt)
         return super(TMY3WeatherSource, self).datetime_hourly_temperature(dt, unit)
+
+    def indexed_temperatures(self, datetime_index, unit):
+
+        if datetime_index.freq == 'D':
+            return self._daily_indexed_temperatures(datetime_index, unit)
+        elif datetime_index.freq == 'H':
+            return self._hourly_indexed_temperatures(datetime_index, unit)
+        else:
+            message = (
+                'DatetimeIndex frequency "{}" not supported, please resample.'
+                .format(datetime_index.freq)
+            )
+            raise ValueError(message)
+
+    def _daily_indexed_temperatures(self, datetime_index, unit):
+        normalized_index = self._normalize_index(datetime_index)
+        tempC = self.tempC.resample('D').mean()[normalized_index]
+        tempC.index = datetime_index
+        return self._unit_convert(tempC, unit)
+
+    def _hourly_indexed_temperatures(self, datetime_index, unit):
+        normalized_index = self._normalize_index(datetime_index)
+        tempC = self.tempC.resample('H').mean()[normalized_index]
+        tempC.index = datetime_index
+        return self._unit_convert(tempC, unit)
+
+    def _normalize_index(self, index):
+        return pd.DatetimeIndex([self._normalize_datetime(dt) for dt in index])

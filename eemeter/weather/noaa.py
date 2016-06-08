@@ -73,6 +73,42 @@ class NOAAWeatherSourceBase(CachedWeatherSourceBase):
     def _fetch_datetime(self, dt):
         self.add_year(dt.year)
 
+    def _fetch_year(self, year):
+        self.add_year(year)
+
+    def indexed_temperatures(self, datetime_index, unit):
+        self._verify_index_presence(datetime_index)
+
+        if datetime_index.freq == 'D':
+            return self._daily_indexed_temperatures(datetime_index, unit)
+        elif datetime_index.freq == 'H':
+            return self._hourly_indexed_temperatures(datetime_index, unit)
+        else:
+            message = (
+                'DatetimeIndex frequency "{}" not supported, please resample.'
+                .format(datetime_index.freq)
+            )
+            raise ValueError(message)
+
+    def _daily_indexed_temperatures(self, datetime_index, unit):
+        tempC = self.tempC.resample('D').mean()[datetime_index]
+        return self._unit_convert(tempC, unit)
+
+    def _hourly_indexed_temperatures(self, datetime_index, unit):
+        message = (
+            'DatetimeIndex frequency "H" not supported,'
+            ' please resample to at least daily frequency ("D").'
+            .format(datetime_index.freq)
+        )
+        raise NotImplementedError(message)
+
+    def _verify_index_presence(self, datetime_index):
+        if datetime_index.shape == (0,):
+            return # don't need to fetch anything.
+        years = datetime_index.groupby(datetime_index.year).keys()
+        for year in years:
+            self._fetch_year(year)
+
 
 class GSODWeatherSource(NOAAWeatherSourceBase):
 
@@ -161,3 +197,7 @@ class ISDWeatherSource(NOAAWeatherSourceBase):
         self.tempC = self.tempC.append(new_series).sort_index().resample(self.freq).mean()
         self.save_to_cache()
         self._year_fetches_attempted.add(year)
+
+    def _hourly_indexed_temperatures(self, datetime_index, unit):
+        tempC = self.tempC.resample('H').mean()[datetime_index]
+        return self._unit_convert(tempC, unit)

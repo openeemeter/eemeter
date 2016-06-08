@@ -28,6 +28,10 @@ class WeatherSourceBase(object):
         message = "Inheriting classes must override this method."
         raise NotImplementedError(message)
 
+    def _fetch_datetime(self, dt):
+        message = "Inheriting classes must override this method."
+        raise NotImplementedError(message)
+
     def average_temperature(self, periods, unit):
         """The average temperatures during each period as calculated by taking
         the mean of all available daily average temperatures during that
@@ -310,4 +314,3 @@ class WeatherSourceBase(object):
                 "tempC": t if pd.notnull(t) else None,
             } for d, t in self.tempC.iteritems()]
         }
-
