@@ -659,6 +659,8 @@ class ESPIUsageParser(object):
 
         """
 
+        # Want to be able to pick off a MeterReading element out of sequence
+        # when we hit a ReadingType, so use an iterator,
         entry_elements = self.root.findall('./{http://www.w3.org/2005/Atom}entry')
 
         def _reading_type_element(entry):
@@ -667,30 +669,51 @@ class ESPIUsageParser(object):
         def _interval_block_element(entry):
             return entry.find(".//{http://naesb.org/espi}IntervalBlock")
 
-        group = None
+        def _meter_reading_element(entry):
+            return entry.find(".//{http://naesb.org/espi}MeterReading")
+
+        reading_types = {}
+
+        recent_reading_type = None
 
         for entry in entry_elements:
 
-            reading_type_element = _reading_type_element(entry)
             interval_block_element = _interval_block_element(entry)
 
-            if reading_type_element is not None:
-                if group is not None:
-                    yield self.parse_interval_block_group(group)
-                group = {"reading_type": reading_type_element, "interval_blocks": []}
-            elif interval_block_element is not None:
-                if group is not None:
-                    group["interval_blocks"].append(interval_block_element)
+            if interval_block_element is None:
+                reading_type_element = _reading_type_element(entry)
+                meter_reading_element = _meter_reading_element(entry)
+                if reading_type_element is not None:
+                    recent_reading_type = reading_type_element
+                elif meter_reading_element is not None:
+                    if recent_reading_type is not None:
+                        # why doesn't reading type have this id?
+                        meter_reading_id = entry.getchildren()[2].attrib["href"].split('/')[-1]
+                        reading_types[meter_reading_id] = {
+                            "reading_type": recent_reading_type,
+                            "interval_blocks": [],
+                        }
+                        recent_reading_type = None
                 else:
-                    message = "Unusually formatted green button data - interval block before reading type."
-                    raise ValueError(message)
+                    pass # ignore other types, like UsagePoint, which contain reduntant info
             else:
-                pass # ignore other types for now
+                try:
+                    meter_reading_id = entry.getchildren()[1].attrib["href"].split('/')[-2]
+                except:
+                    pass
+                else:
+                    reading_types[meter_reading_id]["interval_blocks"].append(interval_block_element)
+                    continue
 
-        # yield last remaining group, if any
-        if group is not None:
+                if meter_reading_id not in reading_types:
+                    message = (
+                        "Could not find the ReadingType for the IntervalBlock element {}"
+                        " using the MeterReading ID {}.".format(etree.tostring(entry), meter_reading_id)
+                    )
+                    warnings.warn(message)
+
+        for group in reading_types.values():
             yield self.parse_interval_block_group(group)
-
 
     def parse_interval_reading(self, interval_reading):
         '''
