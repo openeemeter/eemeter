@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class EnergyTrace(object):
+class Trace(object):
     """ Container for energy time series data.
 
     Parameters
