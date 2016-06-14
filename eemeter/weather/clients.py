@@ -18,8 +18,8 @@ class NOAAClient(object):
 
     def __init__(self, n_tries=3):
         self.n_tries = n_tries
-        self.ftp = None # lazily load
-        self.station_index = None # lazily load
+        self.ftp = None  # lazily load
+        self.station_index = None  # lazily load
 
     def _get_ftp_connection(self):
         for _ in range(self.n_tries):
@@ -36,7 +36,8 @@ class NOAAClient(object):
         raise RuntimeError("Couldn't establish an FTP connection.")
 
     def _load_station_index(self):
-        with resource_stream('eemeter.resources', 'GSOD-ISD_station_index.json') as f:
+        with resource_stream('eemeter.resources',
+                             'GSOD-ISD_station_index.json') as f:
             return json.loads(f.read().decode("utf-8"))
 
     def _get_potential_station_ids(self, station):
@@ -61,16 +62,32 @@ class NOAAClient(object):
                 self.ftp.retrbinary('RETR {}'.format(filename), string.write)
                 break
             except (IOError, ftplib.error_perm) as e1:
-                logger.warn("Failed FTP RETR for station %s: %s", station_id, e1)
-            except (ftplib.error_temp, EOFError) as e2: # Bad connection. attempt to reconnect.
-                logger.warn("Failed FTP RETR for station %s: %s. Attempting reconnect.", station_id, e2)
+                message = (
+                    "Failed FTP RETR for station {}: {}"
+                    .format(station_id, e1)
+                )
+                logger.warn(message)
+            except (ftplib.error_temp, EOFError) as e2:
+                # Bad connection. attempt to reconnect.
+                message = (
+                    "Failed FTP RETR for station {}: {}."
+                    " Attempting reconnect."
+                    .format(station_id, e2)
+                )
+                logger.warn(message)
                 self.ftp.close()
                 self.ftp = self._get_ftp_connection()
                 try:
-                    self.ftp.retrbinary('RETR {}'.format(filename), string.write)
+                    self.ftp.retrbinary('RETR {}'.format(filename),
+                                        string.write)
                     break
                 except (IOError, ftplib.error_perm) as e3:
-                    logger.warn("Failed FTP RETR for station %s: %s.", station_id, e3)
+                    message = (
+                        "Failed FTP RETR for station {}: {}."
+                        " Attempting reconnect."
+                        .format(station_id, e3)
+                    )
+                    logger.warn(message)
 
         string.seek(0)
         f = gzip.GzipFile(fileobj=string)
@@ -115,8 +132,8 @@ class NOAAClient(object):
 class TMY3Client(object):
 
     def __init__(self):
-        self.stations = None # lazily load
-        self.station_to_lat_lng = None # lazily load
+        self.stations = None  # lazily load
+        self.station_to_lat_lng = None  # lazily load
 
     def _load_stations(self):
         with resource_stream('eemeter.resources', 'tmy3_stations.json') as f:
@@ -146,7 +163,10 @@ class TMY3Client(object):
 
         for dist, (nearby_station, _) in zip(dists, index_list):
             if nearby_station in self.stations:
-                warnings.warn("Using station {} instead".format(nearby_station))
+                message = (
+                    "Using station {} instead.".format(nearby_station)
+                )
+                warnings.warn(message)
                 return nearby_station
         return None
 
@@ -155,7 +175,7 @@ class TMY3Client(object):
         if self.stations is None:
             self.stations = self._load_stations()
 
-        if not station in self.stations:
+        if station not in self.stations:
             warnings.warn(
                 "Station {} is not a TMY3 station. "
                 "See self.stations for a complete list.".format(station)
@@ -168,7 +188,10 @@ class TMY3Client(object):
         if station is None:
             return None
 
-        url = "http://rredc.nrel.gov/solar/old_data/nsrdb/1991-2005/data/tmy3/{}TYA.CSV".format(station)
+        url = (
+            "http://rredc.nrel.gov/solar/old_data/nsrdb/"
+            "1991-2005/data/tmy3/{}TYA.CSV".format(station)
+        )
         r = requests.get(url)
 
         if r.status_code == 200:
@@ -179,12 +202,18 @@ class TMY3Client(object):
                 month = row[0][0:2]
                 day = row[0][3:5]
                 hour = int(row[1][0:2]) - 1
-                date_string = "{}{}{}{:02d}".format(year, month, day, hour) # YYYYMMDDHH
-                dt = datetime.strptime(date_string,"%Y%m%d%H")
+
+                # YYYYMMDDHH
+                date_string = "{}{}{}{:02d}".format(year, month, day, hour)
+
+                dt = datetime.strptime(date_string, "%Y%m%d%H")
                 temp_C = float(row[31])
+
                 hours.append({"temp_C": temp_C, "dt": dt})
             return hours
         else:
-            warnings.warn("Station {} was not found. Tried url {}.".format(station, url))
+            message = (
+                "Station {} was not found. Tried url {}.".format(station, url)
+            )
+            warnings.warn(message)
             return None
-

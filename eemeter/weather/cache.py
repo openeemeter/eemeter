@@ -31,7 +31,8 @@ class CachedWeatherSourceBase(WeatherSourceBase):
     def get_cache_directory(self):
         """ Returns a directory to be used for caching.
         """
-        directory = os.environ.get("EEMETER_WEATHER_CACHE_DIRECTORY", os.path.expanduser('~/.eemeter/cache'))
+        directory = os.environ.get("EEMETER_WEATHER_CACHE_DIRECTORY",
+                                   os.path.expanduser('~/.eemeter/cache'))
         if not os.path.exists(directory):
             os.makedirs(directory)
         return directory
@@ -45,7 +46,7 @@ class CachedWeatherSourceBase(WeatherSourceBase):
             for d, t in self.tempC.iteritems()
         ]
         with open(self.cache_filename, 'w') as f:
-            json.dump(data,f)
+            json.dump(data, f)
 
     def load_from_cache(self):
         try:
@@ -53,20 +54,19 @@ class CachedWeatherSourceBase(WeatherSourceBase):
                 data = json.load(f)
         except IOError:
             return
-        except ValueError: # Corrupted json file
+        except ValueError:  # Corrupted json file
             self.clear_cache()
             return
         index = pd.to_datetime([d[0] for d in data],
-                format=self.cache_date_format, utc=True)
+                               format=self.cache_date_format, utc=True)
         values = [d[1] for d in data]
 
         # changed for pandas > 0.18
-        self.tempC = pd.Series(values, index=index, dtype=float)\
-                .sort_index().resample(self.freq).mean()
+        self.tempC = pd.Series(values, index=index, dtype=float) \
+            .sort_index().resample(self.freq).mean()
 
     def clear_cache(self):
         try:
             os.remove(self.cache_filename)
         except OSError:
             pass
-

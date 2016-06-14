@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from pandas.core.common import is_list_like
 
+
 class WeatherSourceBase(object):
 
     def __init__(self, station):
@@ -17,14 +18,13 @@ class WeatherSourceBase(object):
         elif unit == "degF":
             return 1.8*x + 32
         else:
-            message = "Unit not supported ({}). Use 'degF' or 'degC'".format(unit)
+            message = (
+                "Unit not supported ({}). Use 'degF' or 'degC'"
+                .format(unit)
+            )
             raise NotImplementedError(message)
 
     def _fetch_period(self, period):
-        message = "Inheriting classes must override this method."
-        raise NotImplementedError(message)
-
-    def _fetch_datetime(self, dt):
         message = "Inheriting classes must override this method."
         raise NotImplementedError(message)
 
@@ -54,7 +54,8 @@ class WeatherSourceBase(object):
         """
 
         if is_list_like(periods):
-            values = np.array([self._period_average_temperature(p, None) for p in periods])
+            values = np.array([self._period_average_temperature(p, None)
+                               for p in periods])
             return self._unit_convert(values, unit)
         else:
             return self._period_average_temperature(periods, unit)
@@ -80,7 +81,8 @@ class WeatherSourceBase(object):
         """
 
         if is_list_like(periods):
-            values = np.array([self._period_daily_temperatures(p, None) for p in periods])
+            values = np.array([self._period_daily_temperatures(p, None)
+                               for p in periods])
             return self._unit_convert(values, unit)
         else:
             return self._period_daily_temperatures(periods, unit)
@@ -106,14 +108,16 @@ class WeatherSourceBase(object):
         """
 
         if is_list_like(periods):
-            values = np.array([self._period_hourly_temperatures(p, None) for p in periods])
+            values = np.array([self._period_hourly_temperatures(p, None)
+                               for p in periods])
             return self._unit_convert(values, unit)
         else:
             return self._period_hourly_temperatures(periods, unit)
 
     def _period_average_temperature(self, period, unit):
         self._fetch_period(period)
-        value = self.tempC[period.start:period.end - timedelta(seconds=1)].mean()
+        start, end = period.start, period.end - timedelta(seconds=1)
+        value = self.tempC[start:end].mean()
         return self._unit_convert(value, unit)
 
     def _period_daily_temperatures(self, period, unit):
@@ -213,7 +217,8 @@ class WeatherSourceBase(object):
         """
 
         if is_list_like(periods):
-            return np.array([self._period_hdd(p, unit, base, per_day) for p in periods])
+            return np.array([self._period_hdd(p, unit, base, per_day)
+                             for p in periods])
         else:
             return self._period_hdd(periods, unit, base, per_day)
 
@@ -240,7 +245,8 @@ class WeatherSourceBase(object):
         """
 
         if is_list_like(periods):
-            return np.array([self._period_cdd(p, unit, base, per_day) for p in periods])
+            return np.array([self._period_cdd(p, unit, base, per_day)
+                             for p in periods])
         else:
             return self._period_cdd(periods, unit, base, per_day)
 
@@ -266,9 +272,9 @@ class WeatherSourceBase(object):
             Total heating degree days observed during the time period.
         """
 
-        temps = self._period_daily_temperatures(period,unit)
+        temps = self._period_daily_temperatures(period, unit)
         masked_temps = np.ma.masked_array(temps, np.isnan(temps))
-        total_hdd = np.sum(np.maximum(base - masked_temps,0))
+        total_hdd = np.sum(np.maximum(base - masked_temps, 0))
         if per_day:
             n_days = period.timedelta.days
             return total_hdd / n_days
@@ -297,9 +303,9 @@ class WeatherSourceBase(object):
             Total cooling degree days observed during the time period.
         """
 
-        temps = self._period_daily_temperatures(period,unit)
+        temps = self._period_daily_temperatures(period, unit)
         masked_temps = np.ma.masked_array(temps, np.isnan(temps))
-        total_cdd = np.sum(np.maximum(masked_temps - base,0))
+        total_cdd = np.sum(np.maximum(masked_temps - base, 0))
         if per_day:
             n_days = period.timedelta.days
             return total_cdd / n_days

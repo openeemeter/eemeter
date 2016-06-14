@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import pytz
 
+
 class TMY3WeatherSource(CachedWeatherSourceBase):
 
     cache_date_format = "%Y%m%d%H"
@@ -26,9 +27,9 @@ class TMY3WeatherSource(CachedWeatherSourceBase):
         data = self.client.get_tmy3_data(self.station, self.station_fallback)
         if data is None:
             temps = [np.nan for _ in range(365 * 24)]
+            start_date = datetime(1900, 1, 1, tzinfo=pytz.UTC)
             index = [
-                datetime(1900, 1, 1, tzinfo=pytz.UTC)
-                + timedelta(seconds=i*3600)
+                start_date + timedelta(seconds=i*3600)
                 for i in range(365 * 24)
             ]
         else:
@@ -40,7 +41,8 @@ class TMY3WeatherSource(CachedWeatherSourceBase):
             ]
 
         # changed for pandas > 0.18
-        self.tempC = pd.Series(temps, index=index, dtype=float).sort_index().resample('H').mean()
+        self.tempC = pd.Series(temps, index=index, dtype=float) \
+            .sort_index().resample('H').mean()
         self.save_to_cache()
 
     def annual_daily_temperatures(self, unit):
@@ -60,18 +62,18 @@ class TMY3WeatherSource(CachedWeatherSourceBase):
 
         """
 
-        period = Period(start=datetime(1900,1,1, tzinfo=pytz.UTC),
-                        end=datetime(1901,1,1, tzinfo=pytz.UTC))
+        period = Period(start=datetime(1900, 1, 1, tzinfo=pytz.UTC),
+                        end=datetime(1901, 1, 1, tzinfo=pytz.UTC))
         return self.daily_temperatures([period], unit)
 
     def _fetch_period(self, period):
-        pass # loaded at init
+        pass  # loaded at init
 
     def _fetch_datetime(self, dt):
-        pass # loaded at init
+        pass  # loaded at init
 
     def _fetch_year(self, year):
-        pass # loaded at init
+        pass  # loaded at init
 
     def _normalize_period(self, period):
         start = self._normalize_datetime(period.start)
@@ -81,19 +83,23 @@ class TMY3WeatherSource(CachedWeatherSourceBase):
 
     @staticmethod
     def _normalize_datetime(dt, year_offset=0):
-        return datetime(1900 + year_offset, dt.month, dt.day, dt.hour, dt.minute, dt.second, tzinfo=pytz.UTC)
+        return datetime(1900 + year_offset, dt.month, dt.day, dt.hour,
+                        dt.minute, dt.second, tzinfo=pytz.UTC)
 
     def _period_average_temperature(self, period, unit):
         period = self._normalize_period(period)
-        return super(TMY3WeatherSource, self)._period_average_temperature(period, unit)
+        return super(TMY3WeatherSource, self)._period_average_temperature(
+                period, unit)
 
     def _period_daily_temperatures(self, period, unit):
         period = self._normalize_period(period)
-        return super(TMY3WeatherSource, self)._period_daily_temperatures(period, unit)
+        return super(TMY3WeatherSource, self)._period_daily_temperatures(
+                period, unit)
 
     def _period_hourly_temperatures(self, period, unit):
         period = self._normalize_period(period)
-        return super(TMY3WeatherSource, self)._period_hourly_temperatures(period, unit)
+        return super(TMY3WeatherSource, self)._period_hourly_temperatures(
+                period, unit)
 
     def datetime_average_temperature(self, dt, unit):
         """The daily average temperatures for a particular period.
@@ -111,7 +117,8 @@ class TMY3WeatherSource(CachedWeatherSourceBase):
             Average temperature observed.
         """
         dt = self._normalize_datetime(dt)
-        return super(TMY3WeatherSource, self).datetime_average_temperature(dt, unit)
+        return super(TMY3WeatherSource, self).datetime_average_temperature(
+                dt, unit)
 
     def datetime_hourly_temperature(self, dt, unit):
         """The hourly observed temperatures for each period.
@@ -133,7 +140,8 @@ class TMY3WeatherSource(CachedWeatherSourceBase):
             temperatures will be returned.
         """
         dt = self._normalize_datetime(dt)
-        return super(TMY3WeatherSource, self).datetime_hourly_temperature(dt, unit)
+        return super(TMY3WeatherSource, self).datetime_hourly_temperature(
+                dt, unit)
 
     def indexed_temperatures(self, datetime_index, unit):
 

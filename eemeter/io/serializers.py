@@ -164,7 +164,7 @@ class ArbitrarySerializer(BaseSerializer):
                 yield (start, value, estimated)
                 previous_end_datetime = end
 
-            else: # start < previous_end_datetime
+            else:  # start < previous_end_datetime
                 message = 'Skipping overlapping record: '\
                         'start ({}) < previous end ({})'\
                         .format(start, previous_end_datetime)
@@ -176,7 +176,8 @@ class ArbitrarySerializer(BaseSerializer):
 
     def to_records(self, df):
         records = []
-        for s, e, v, est in zip(df.index, df.index[1:], df.value, df.estimated):
+        for s, e, v, est in zip(df.index, df.index[1:],
+                                df.value, df.estimated):
             records.append({
                 "start": s.to_datetime(),
                 "end": e.to_datetime(),
@@ -237,9 +238,9 @@ class ArbitraryStartSerializer(BaseSerializer):
             value = record["value"]
             estimated = record.get("estimated", False)
 
-            if i < n - 1: # all except last record
+            if i < n - 1:  # all except last record
                 yield (start, value, estimated)
-            else: # last record
+            else:  # last record
                 end = record.get("end", None)
                 if end is None:
                     # can't use the value of this record, no end date
@@ -251,7 +252,6 @@ class ArbitraryStartSerializer(BaseSerializer):
                         yield (end, np.nan, False)
                     else:
                         yield (start, np.nan, False)
-
 
     def to_records(self, df):
         records = []

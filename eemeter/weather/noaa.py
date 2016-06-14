@@ -6,15 +6,16 @@ from datetime import datetime, date, timedelta
 import pandas as pd
 import pytz
 
+
 class NOAAWeatherSourceBase(CachedWeatherSourceBase):
 
     year_existence_format = None
     client = NOAAClient()
 
     def __init__(self, station, start_year=None, end_year=None,
-            cache_directory=None, cache_filename=None):
-        super(NOAAWeatherSourceBase, self).__init__(station, cache_directory,
-                cache_filename)
+                 cache_directory=None, cache_filename=None):
+        super(NOAAWeatherSourceBase, self).__init__(
+                station, cache_directory, cache_filename)
 
         self._year_fetches_attempted = set()
 
@@ -62,7 +63,6 @@ class NOAAWeatherSourceBase(CachedWeatherSourceBase):
             self.add_year(yesterday.year, force=True)
 
     def _fetch_period(self, period):
-        years = []
         if period.start is not None and period.end is not None:
             self.add_year_range(period.start.year, period.end.year)
         elif period.start is not None:
@@ -104,7 +104,7 @@ class NOAAWeatherSourceBase(CachedWeatherSourceBase):
 
     def _verify_index_presence(self, datetime_index):
         if datetime_index.shape == (0,):
-            return # don't need to fetch anything.
+            return  # don't need to fetch anything.
         years = datetime_index.groupby(datetime_index.year).keys()
         for year in years:
             self._fetch_year(year)
@@ -140,7 +140,8 @@ class GSODWeatherSource(NOAAWeatherSourceBase):
                 return
             else:
                 new_series = self._empty_series(year)
-                self.tempC = self.tempC.append(new_series).sort_index().resample(self.freq).mean()
+                self.tempC = self.tempC.append(new_series) \
+                    .sort_index().resample(self.freq).mean()
                 self.save_to_cache()
                 return
 
@@ -151,7 +152,8 @@ class GSODWeatherSource(NOAAWeatherSourceBase):
                 new_series[day["date"]] = day["temp_C"]
 
         # changed for pandas > 0.18
-        self.tempC = self.tempC.append(new_series).sort_index().resample(self.freq).mean()
+        self.tempC = self.tempC.append(new_series) \
+            .sort_index().resample(self.freq).mean()
         self.save_to_cache()
         self._year_fetches_attempted.add(year)
 
@@ -182,7 +184,8 @@ class ISDWeatherSource(NOAAWeatherSourceBase):
                 return
             else:
                 new_series = self._empty_series(year)
-                self.tempC = self.tempC.append(new_series).sort_index().resample(self.freq).mean()
+                self.tempC = self.tempC.append(new_series) \
+                    .sort_index().resample(self.freq).mean()
                 self.save_to_cache()
                 return
 
@@ -191,10 +194,12 @@ class ISDWeatherSource(NOAAWeatherSourceBase):
         for hour in data:
             if not pd.isnull(hour["temp_C"]):
                 dt = hour["datetime"]
-                new_series[datetime(dt.year, dt.month, dt.day, dt.hour)] = hour["temp_C"]
+                new_dt = datetime(dt.year, dt.month, dt.day, dt.hour)
+                new_series[new_dt] = hour["temp_C"]
 
         # changed for pandas > 0.18
-        self.tempC = self.tempC.append(new_series).sort_index().resample(self.freq).mean()
+        self.tempC = self.tempC.append(new_series) \
+            .sort_index().resample(self.freq).mean()
         self.save_to_cache()
         self._year_fetches_attempted.add(year)
 

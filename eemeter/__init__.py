@@ -3,12 +3,6 @@ import sys
 
 logging.basicConfig(stream=sys.stdout, level=logging.WARN)
 
-# Version
-VERSION = (0, 3, 20)
-
-def get_version():
-    return '{}.{}.{}'.format(VERSION[0], VERSION[1], VERSION[2])
-
 # Units
 try:
     from pint import UnitRegistry
@@ -19,3 +13,10 @@ except ImportError:
     warnings.warn("Skipping pint to get version for setuptools.")
     ureg = None
     Q_ = None
+
+# Version
+VERSION = (0, 3, 20)
+
+
+def get_version():
+    return '{}.{}.{}'.format(VERSION[0], VERSION[1], VERSION[2])

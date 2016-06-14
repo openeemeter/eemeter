@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class EnergyTrace(object):
     """ Container for energy time series data.
 
@@ -121,7 +122,8 @@ class EnergyTrace(object):
         "CIRCUIT",
     ]
 
-    def __init__(self, fuel, interpretation, data=None, unit=None, placeholder=False, serializer=None):
+    def __init__(self, fuel, interpretation, data=None, unit=None,
+                 placeholder=False, serializer=None):
 
         self._set_fuel(fuel)
         self._set_interpretation(interpretation)
@@ -146,7 +148,10 @@ class EnergyTrace(object):
         if interpretation in self.INTERPRETATIONS:
             self.interpretation = interpretation
         else:
-            message = 'Unsupported interpretation: "{}".'.format(fuel)
+            message = (
+                'Unsupported interpretation: "{}".'
+                .format(interpretation)
+            )
             raise ValueError(message)
 
     def _set_data(self, data, unit, placeholder, serializer):
@@ -203,130 +208,31 @@ class EnergyTrace(object):
             filtered_df.value.iloc[-1] = np.nan
             filtered_df.estimated.iloc[-1] = False
 
-        return EnergyTrace(
-            fuel=self.fuel,
-            interpretation=self.interpretation,
-            data=filtered_df,
-            unit=self.unit
-        )
 
-    # def periods(self):
-    #     """ Converts DatetimeIndex (which is timestamp based) to an list of
-    #     Periods, which have associated start and endtimes.
-    #
-    #     Returns
-    #     -------
-    #     periods : list of eemeter.evaluation.Period
-    #         A list of consumption periods.
-    #     """
-    #     if self.freq_timedelta is None:
-    #         # ignore last period which is NaN and acting as an end point
-    #         periods = [Period(start, end) for start, end in
-    #                    zip(self.data.index,self.data.index[1:])]
-    #         return periods
-    #     else:
-    #         periods = [Period(dt, dt + self.freq_timedelta)
-    #                    for dt in self.data.index]
-    #         return periods
+class TraceSet(object):
 
-    # def average_daily_consumptions(self):
-    #     """ Computes average daily consumptions.
-    #
-    #     Returns
-    #     -------
-    #     averages : np.ndarray
-    #         Array of average values in each period
-    #     days : np.ndarray
-    #         Array of number of days in each period
-    #     """
-    #     if self.freq_timedelta is None:
-    #         # ignore last period which is NaN and acting as an end point
-    #         avgs, n_days = [], []
-    #         for v, ns in zip(self.data,np.diff(self.data.index)):
-    #             # nanoseconds to days
-    #             days = ns.astype('d')/8.64e13
-    #             avgs.append(v/days)
-    #             n_days.append(days)
-    #         return np.array(avgs), np.array(n_days)
-    #     else:
-    #         days = self.freq_timedelta.days + self.freq_timedelta.seconds/8.64e4
-    #         avgs, n_days = [], []
-    #         for v in self.data:
-    #             avgs.append(v/days)
-    #             n_days.append(days)
-    #         return np.array(avgs), np.array(n_days)
+    def __init__(self, traces, labels=None):
 
-    # def total_period(self):
-    #     """ The total period over which consumption data is recorded.
-    #
-    #     Returns
-    #     -------
-    #     period : eemeter.evaluation.Period
-    #         The total time span covered by this ConsumptionData instance.
-    #     """
-    #     if self.data.shape[0] < 1:
-    #         return None
-    #     start_date = self.data.index[0]
-    #     end_date = self.data.index[-1]
-    #     if self.freq_timedelta is not None:
-    #         end_date += self.freq_timedelta
-    #     return Period(start_date, end_date)
+        if labels is None:
+            labels = self._generate_default_labels(traces)
 
-    # def total_days(self):
-    #     """ The total days over which consumption data is recorded.
-    #
-    #     Returns
-    #     -------
-    #     total_days : float
-    #         The total days in the time span covered by this ConsumptionData
-    #         instance.
-    #     """
-    #     period = self.total_period()
-    #
-    #     if period is None:
-    #         return 0
-    #     else:
-    #         tdelta = period.timedelta
-    #         return tdelta.days + tdelta.seconds/8.64e4
+        self._validate_lengths(traces, labels)
 
-    # def json(self):
-    #     return {
-    #         "fuel_type": self.fuel_type,
-    #         "unit_name": self.unit_name,
-    #         "records": [{
-    #             "start": r["start"].isoformat(),
-    #             "end": r["end"].isoformat(),
-    #             "value": r["value"],
-    #             "estimated": r["estimated"],
-    #         } for r in self.records()],
-    #     }
+        self.traces = {label: trace for label, trace in zip(labels, traces)}
 
-    # def downsample(self, freq):
-    #
-    #     # empty case
-    #     if self.data.shape[0] == 0:
-    #         return copy.deepcopy(self)
-    #
-    #     rng = pd.date_range('2011-01-01', periods=2, freq=freq)
-    #     target_period = rng[1] - rng[0]
-    #
-    #     index_series = pd.Series(self.data.index.tz_convert(pytz.UTC))
-    #
-    #     # are there any periods that would require a downsample?
-    #     if index_series.shape[0] > 2:
-    #         timedeltas = (index_series - index_series.shift())
-    #
-    #         for timedelta in timedeltas:
-    #             if timedelta < target_period:
-    #
-    #                 # Found a short period. Need to resample.
-    #                 consumption_resampled = ConsumptionData([],
-    #                         self.fuel_type, self.unit_name,
-    #                         record_type="arbitrary")
-    #                 consumption_resampled.data = self.data.resample(freq).sum()
-    #                 consumption_resampled.estimated = self.estimated.resample(freq).median().astype(bool)
-    #                 return consumption_resampled
-    #
-    #     # Periods are all greater than or equal to downsample target, so just
-    #     # return copy of self.
-    #     return copy.deepcopy(self)
+    def _generate_default_labels(self, traces):
+        return [str(i) for i, _ in enumerate(traces)]
+
+    def _validate_lengths(self, traces, labels):
+        # make sure zip doesn't miss any
+        if len(traces) != len(labels):
+            message = (
+                'Should be the same number of labels as traces,'
+                ' but got {} labels for {} traces.'
+                .format(len(labels), len(traces))
+            )
+            raise ValueError(message)
+
+    def get_traces(self):
+        for label, trace in self.traces.items():
+            yield label, trace
