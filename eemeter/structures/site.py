@@ -1,8 +1,8 @@
 import re
 
 
-class ZIPCodeLocation(object):
-    ''' ZIP-code-based location marker.
+class ZIPCodeSite(object):
+    ''' ZIP-code-based site location descriptor.
 
     Parameters
     ----------
