@@ -19,7 +19,7 @@ class Project(object):
         The site of this project.
     '''
 
-    def __init__(self, trace_set, interventions, site):
-        self.trace_set = trace_set
+    def __init__(self, energy_trace_set, interventions, site):
+        self.energy_trace_set = energy_trace_set
         self.interventions = interventions
         self.site = site
