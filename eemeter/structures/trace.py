@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 
 class EnergyTrace(object):
@@ -169,45 +170,56 @@ class EnergyTrace(object):
             raise ValueError(message)
 
     def _set_data(self, data, records, unit, placeholder, serializer):
-        if data is None and records is None:
-            if placeholder:
-                self.data = None
-                self.unit = None
-                self.placeholder = True
-            else:
+        if (placeholder and data is None and records is None
+                and serializer is None):
+            # placeholder initialization option.
+            self.data = None
+            self.unit = None
+            self.placeholder = True
+            return
+        elif (records is not None and serializer is not None
+                and data is None and not placeholder):
+            self._set_unit(unit)
+            data = serializer.to_dataframe(records)
+        elif (data is not None and records is None and serializer is None
+                and not placeholder):
+            self._set_unit(unit)
+
+            if not isinstance(data.index, pd.DatetimeIndex):
                 message = (
-                    'Supply `data` or `records` or set `placeholder=True`.'
+                    'Must index the pandas.DataFrame supplied in with a'
+                    ' pandas.DatetimeIndex.'
+                )
+                raise ValueError(message)
+
+            if not all(data.columns == ['value', 'estimated']):
+                message = (
+                    'The pandas.DataFrame supplied in `data` must have the'
+                    ' columns `[\'value\', and \'estimated\']`.'
                 )
                 raise ValueError(message)
         else:
-            self._set_unit(unit)
-            if placeholder:
-                message = (
-                    'Cannot have `placeholder=True` if `data` or `records` and'
-                    ' `serializer` given.'
-                )
-                raise ValueError(message)
-            else:
-                if data is None:
-                    if records is None or serializer is None:
-                        message = (
-                            'Supply either `data`, or both `records` and'
-                            ' `serializer`.'
-                        )
-                        raise ValueError(message)
-                    else:
-                        data = serializer.to_dataframe(records)
-                else:
-                    if records is not None or serializer is not None:
-                        message = (
-                            'Cannot give `records` or `serializer` when `data`'
-                            'is given.'
-                        )
-                        raise ValueError(message)
+            message = (
+                'EnergyTrace objects must be initialized in one of the'
+                ' following ways, with unused attributes left at their default'
+                ' values:\n\n'
+                '  1) by suppling a pandas DatetimeIndex\'ed DataFrame with'
+                ' the columns `[\'value\', \'estimated\']` using `data`'
+                ' argument,\n'
+                '  2) by suppling `records` and a `serializer` class that'
+                ' can read those records and turn them into a pandas'
+                ' DatetimeIndex\'ed DataFrame, or\n'
+                '  3) by setting `placeholder=True`.\n\n'
+                'However, you supplied `data={}`, `records={}`, '
+                '`serializer={}`, and `placeholder={}`, which fits none of'
+                ' these options.'
+                .format(data, records, serializer, placeholder)
+            )
+            raise ValueError(message)
 
-                self.data = data
-                self.data.value = data.value * self.unit_multiplier
-                self.placeholder = False
+        self.data = data
+        self.data.value = data.value * self.unit_multiplier
+        self.placeholder = False
 
     def _set_unit(self, unit):
         if unit in self.UNIT_NORMALIZATION:

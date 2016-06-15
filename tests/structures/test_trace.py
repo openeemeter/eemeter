@@ -122,3 +122,24 @@ def test_serializer(interpretation, records, unit, serializer):
 
     assert et.data.value.iloc[0] == records[0]['value']
     assert et.data.estimated.iloc[0] == False
+
+def test_non_timeseries_data(interpretation, unit):
+
+    data = {"value": [1, np.nan], "estimated": [False, False]}
+    columns = ["value", "estimated"]
+
+    df = pd.DataFrame(data, columns=columns)
+
+    with pytest.raises(ValueError):
+        et = EnergyTrace(interpretation=interpretation, data=df, unit=unit)
+
+def test_bad_column_name_data(interpretation, unit):
+
+    data = {"energy": [1, np.nan], "estimated": [False, False]}
+    columns = ["energy", "estimated"]
+    index = pd.date_range('2000-01-01', periods=2, freq='D')
+
+    df = pd.DataFrame(data, index=index, columns=columns)
+
+    with pytest.raises(ValueError):
+        et = EnergyTrace(interpretation=interpretation, data=df, unit=unit)
