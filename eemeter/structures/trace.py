@@ -62,7 +62,7 @@ class EnergyTrace(object):
 
         - :code:`value`: Amount of energy between this index and the next.
         - :code:`estimated`: Whether or not the value was estimated.
-        Particularly relevant for monthly billing data.
+          Particularly relevant for monthly billing data.
 
         If :code:`serializer` instance is provided, this should instead be
         records in the format expected by the serializer.
