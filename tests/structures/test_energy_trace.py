@@ -12,14 +12,17 @@ import pytest
 def interpretation():
     return 'ELECTRICITY_CONSUMPTION_SUPPLIED'
 
+
 def test_no_data_no_placeholder(interpretation):
     with pytest.raises(ValueError):
-        et = EnergyTrace(interpretation=interpretation)
+        EnergyTrace(interpretation=interpretation)
+
 
 def test_data_and_placeholder(interpretation):
     with pytest.raises(ValueError):
-        et = EnergyTrace(interpretation=interpretation, data=pd.DataFrame(),
-                         placeholder=True)
+        EnergyTrace(interpretation=interpretation, data=pd.DataFrame(),
+                    placeholder=True)
+
 
 def test_placeholder_valid(interpretation):
     et = EnergyTrace(interpretation=interpretation, placeholder=True)
@@ -27,11 +30,13 @@ def test_placeholder_valid(interpretation):
     assert et.interpretation == interpretation
     assert et.data is None
     assert et.unit is None
-    assert et.placeholder == True
+    assert et.placeholder
+
 
 def test_invalid_interpretation():
     with pytest.raises(ValueError):
-        et = EnergyTrace(interpretation="INVALID", placeholder=True)
+        EnergyTrace(interpretation="INVALID", placeholder=True)
+
 
 @pytest.fixture(params=[
     'ELECTRICITY_CONSUMPTION_SUPPLIED',
@@ -45,23 +50,28 @@ def test_invalid_interpretation():
 def valid_interpretation(request):
     return request.param
 
+
 def test_valid_interpretation(valid_interpretation):
     et = EnergyTrace(interpretation=valid_interpretation, placeholder=True)
 
     assert et.interpretation == valid_interpretation
 
+
 def test_data_but_no_unit(interpretation):
     with pytest.raises(ValueError):
-        et = EnergyTrace(interpretation=interpretation, data=pd.DataFrame())
+        EnergyTrace(interpretation=interpretation, data=pd.DataFrame())
+
 
 def test_data_but_invalid_unit(interpretation):
     with pytest.raises(ValueError):
-        et = EnergyTrace(interpretation=interpretation, data=pd.DataFrame(),
-                         unit="INVALID")
+        EnergyTrace(interpretation=interpretation, data=pd.DataFrame(),
+                    unit="INVALID")
+
 
 @pytest.fixture
 def unit():
     return "KWH"
+
 
 @pytest.fixture(params=[
     ('wh', 'KWH', 0.001),
@@ -80,12 +90,14 @@ def unit():
 def unnormalized_unit_with_target_unit(request):
     return request.param
 
+
 @pytest.fixture
 def unit_timeseries():
     data = {"value": [1, np.nan], "estimated": [False, False]}
     columns = ["value", "estimated"]
     index = pd.date_range('2000-01-01', periods=2, freq='D')
     return pd.DataFrame(data, index=index, columns=columns)
+
 
 def test_data_and_valid_unit(
         interpretation, unnormalized_unit_with_target_unit, unit_timeseries):
@@ -100,12 +112,14 @@ def test_data_and_valid_unit(
     np.testing.assert_allclose(
             et.data.value.iloc[0], (unit_timeseries.value * mult).iloc[0],
             rtol=1e-3, atol=1e-3)
-    assert et.data.estimated.iloc[0] == False
-    assert et.placeholder == False
+    assert not et.data.estimated.iloc[0]
+    assert not et.placeholder
+
 
 @pytest.fixture
 def serializer():
     return ArbitrarySerializer()
+
 
 @pytest.fixture
 def records():
@@ -115,13 +129,15 @@ def records():
         'value': 1,
     }]
 
+
 def test_serializer(interpretation, records, unit, serializer):
 
     et = EnergyTrace(interpretation=interpretation, records=records, unit=unit,
                      serializer=serializer)
 
     assert et.data.value.iloc[0] == records[0]['value']
-    assert et.data.estimated.iloc[0] == False
+    assert not et.data.estimated.iloc[0]
+
 
 def test_non_timeseries_data(interpretation, unit):
 
@@ -131,7 +147,8 @@ def test_non_timeseries_data(interpretation, unit):
     df = pd.DataFrame(data, columns=columns)
 
     with pytest.raises(ValueError):
-        et = EnergyTrace(interpretation=interpretation, data=df, unit=unit)
+        EnergyTrace(interpretation=interpretation, data=df, unit=unit)
+
 
 def test_bad_column_name_data(interpretation, unit):
 
@@ -142,7 +159,8 @@ def test_bad_column_name_data(interpretation, unit):
     df = pd.DataFrame(data, index=index, columns=columns)
 
     with pytest.raises(ValueError):
-        et = EnergyTrace(interpretation=interpretation, data=df, unit=unit)
+        EnergyTrace(interpretation=interpretation, data=df, unit=unit)
+
 
 def test_repr(interpretation):
     et = EnergyTrace(interpretation=interpretation, placeholder=True)

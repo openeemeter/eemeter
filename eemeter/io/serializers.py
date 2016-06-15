@@ -23,7 +23,7 @@ class BaseSerializer(object):
                 'Sorting failed due to missing key {} in record.'
                 .format(self.sort_key)
             )
-            raise KeyError(message)
+            raise ValueError(message)
 
         return sorted_records
 
@@ -132,8 +132,10 @@ class ArbitrarySerializer(BaseSerializer):
             .validate_record(record)
 
         if record["start"] >= record["end"]:
-            message = 'Record "start" must be earlier than record "end":\n{}'\
-                    '{} >= {}.'.format(record)
+            message = (
+                'Record "start" must be earlier than record "end": {}\n'
+                '{} >= {}.'.format(record, record["start"], record["end"])
+            )
             raise ValueError(message)
 
     def yield_records(self, sorted_records):

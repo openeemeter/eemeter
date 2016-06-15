@@ -6,19 +6,19 @@ import pytz
 
 def test_naive_start_date():
     with pytest.raises(ValueError):
-        intervention = Intervention(datetime(2000, 1, 1))
+        Intervention(datetime(2000, 1, 1))
 
 
 def test_naive_end_date():
     with pytest.raises(ValueError):
-        intervention = Intervention(datetime(2000, 1, 1, tzinfo=pytz.UTC),
-                                    datetime(2000, 1, 2))
+        Intervention(datetime(2000, 1, 1, tzinfo=pytz.UTC),
+                     datetime(2000, 1, 2))
 
 
 def test_dates_wrong_order():
     with pytest.warns(UserWarning):
-        intervention = Intervention(datetime(2000, 1, 2, tzinfo=pytz.UTC),
-                                    datetime(2000, 1, 1, tzinfo=pytz.UTC))
+        Intervention(datetime(2000, 1, 2, tzinfo=pytz.UTC),
+                     datetime(2000, 1, 1, tzinfo=pytz.UTC))
 
 
 def test_ok_start_only():

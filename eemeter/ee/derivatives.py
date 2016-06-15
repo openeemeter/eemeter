@@ -1,3 +1,6 @@
+import pandas as pd
+from functools import wraps
+
 
 # decorator that returns values as dicts
 def derivative(output_name):
