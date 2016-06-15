@@ -9,10 +9,12 @@ import pytest
 def serializer():
     return ArbitraryEndSerializer()
 
+
 def test_no_records(serializer):
     df = serializer.to_dataframe([])
     assert df.empty
     assert all(df.columns == ["value", "estimated"])
+
 
 def test_single_valid_record(serializer):
     records = [

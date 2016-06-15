@@ -70,6 +70,7 @@ def test_record_no_start(serializer):
     with pytest.raises(ValueError):
         serializer.to_dataframe(records)
 
+
 def test_record_no_value(serializer):
     records = [
         {
