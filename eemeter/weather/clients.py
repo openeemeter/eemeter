@@ -1,4 +1,4 @@
-from eemeter.location import _load_station_to_lat_lng_index, haversine
+from eemeter.weather.location import _load_station_to_lat_lng_index, haversine
 
 import ftplib
 import gzip
