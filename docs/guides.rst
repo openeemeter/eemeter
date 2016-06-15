@@ -25,3 +25,8 @@ Guides
    :maxdepth: 2
 
    weather_caching
+
+.. toctree::
+   :maxdepth: 2
+
+   developer
