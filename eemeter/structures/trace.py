@@ -152,11 +152,11 @@ class EnergyTrace(object):
         'NATURAL_GAS_CONSUMPTION_SUPPLIED',
     ]
 
-    def __init__(self, interpretation, data=None, unit=None,
+    def __init__(self, interpretation, data=None, records=None, unit=None,
                  placeholder=False, serializer=None):
 
         self._set_interpretation(interpretation)
-        self._set_data(data, unit, placeholder, serializer)
+        self._set_data(data, records, unit, placeholder, serializer)
 
     def _set_interpretation(self, interpretation):
         if interpretation in self.INTERPRETATIONS:
@@ -168,25 +168,46 @@ class EnergyTrace(object):
             )
             raise ValueError(message)
 
-    def _set_data(self, data, unit, placeholder, serializer):
-        if data is None:
+    def _set_data(self, data, records, unit, placeholder, serializer):
+        if data is None and records is None:
             if placeholder:
                 self.data = None
                 self.unit = None
                 self.placeholder = True
             else:
-                message = 'Supply `data` or set `placeholder=True`'
+                message = (
+                    'Supply `data` or `records` or set `placeholder=True`.'
+                )
                 raise ValueError(message)
         else:
             self._set_unit(unit)
-            if not placeholder:
-                if serializer is not None:
-                    data = serializer.to_dataframe(data)
-                self.data = data * self.unit_multiplier
-                self.placeholder = False
-            else:
-                message = 'Cannot have `placeholder=True` if data is supplied'
+            if placeholder:
+                message = (
+                    'Cannot have `placeholder=True` if `data` or `records` and'
+                    ' `serializer` given.'
+                )
                 raise ValueError(message)
+            else:
+                if data is None:
+                    if records is None or serializer is None:
+                        message = (
+                            'Supply either `data`, or both `records` and'
+                            ' `serializer`.'
+                        )
+                        raise ValueError(message)
+                    else:
+                        data = serializer.to_dataframe(records)
+                else:
+                    if records is not None or serializer is not None:
+                        message = (
+                            'Cannot give `records` or `serializer` when `data`'
+                            'is given.'
+                        )
+                        raise ValueError(message)
+
+                self.data = data
+                self.data.value = data.value * self.unit_multiplier
+                self.placeholder = False
 
     def _set_unit(self, unit):
         if unit in self.UNIT_NORMALIZATION:

@@ -1,6 +1,10 @@
 from eemeter.structures import EnergyTrace
+from eemeter.io.serializers import ArbitrarySerializer
 import pandas as pd
 import numpy as np
+from datetime import datetime
+import pytz
+
 import pytest
 
 
@@ -78,8 +82,8 @@ def unnormalized_unit_with_target_unit(request):
 
 @pytest.fixture
 def unit_timeseries():
-    data = {"energy": [1, np.nan], "estimated": [False, False]}
-    columns = ["energy", "estimated"]
+    data = {"value": [1, np.nan], "estimated": [False, False]}
+    columns = ["value", "estimated"]
     index = pd.date_range('2000-01-01', periods=2, freq='D')
     return pd.DataFrame(data, index=index, columns=columns)
 
@@ -91,5 +95,30 @@ def test_data_and_valid_unit(
 
     et = EnergyTrace(interpretation=interpretation, data=unit_timeseries,
                      unit=unnormalized_unit)
+    assert et.interpretation == interpretation
     assert et.unit == normalized_unit
-    assert et.data.energy.iloc[0] == (unit_timeseries.energy * mult).iloc[0]
+    np.testing.assert_allclose(
+            et.data.value.iloc[0], (unit_timeseries.value * mult).iloc[0],
+            rtol=1e-3, atol=1e-3)
+    assert et.data.estimated.iloc[0] == False
+    assert et.placeholder == False
+
+@pytest.fixture
+def serializer():
+    return ArbitrarySerializer()
+
+@pytest.fixture
+def records():
+    return [{
+        'start': datetime(2000, 1, 1, tzinfo=pytz.UTC),
+        'end': datetime(2000, 1, 2, tzinfo=pytz.UTC),
+        'value': 1,
+    }]
+
+def test_serializer(interpretation, records, unit, serializer):
+
+    et = EnergyTrace(interpretation=interpretation, records=records, unit=unit,
+                     serializer=serializer)
+
+    assert et.data.value.iloc[0] == records[0]['value']
+    assert et.data.estimated.iloc[0] == False
