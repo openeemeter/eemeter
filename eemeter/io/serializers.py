@@ -43,6 +43,14 @@ class BaseSerializer(object):
         df.estimated = df.estimated.astype(bool)
         return df
 
+    def _validate_record_start_end(self, record, start, end):
+        if start >= end:
+            message = (
+                'Record "start" must be earlier than record "end": {}\n'
+                '{} >= {}.'.format(record, start, end)
+            )
+            raise ValueError(message)
+
     def to_dataframe(self, records):
         """
         Returns a dataframe of records.
@@ -131,12 +139,7 @@ class ArbitrarySerializer(BaseSerializer):
         super(ArbitrarySerializer, self)\
             .validate_record(record)
 
-        if record["start"] >= record["end"]:
-            message = (
-                'Record "start" must be earlier than record "end": {}\n'
-                '{} >= {}.'.format(record, record["start"], record["end"])
-            )
-            raise ValueError(message)
+        self._validate_record_start_end(record, record["start"], record["end"])
 
     def yield_records(self, sorted_records):
 
@@ -248,6 +251,9 @@ class ArbitraryStartSerializer(BaseSerializer):
                     # can't use the value of this record, no end date
                     yield (start, np.nan, False)
                 else:
+
+                    self._validate_record_start_end(record, start, end)
+
                     # provide an end date cap
                     if pd.notnull(value):
                         yield (start, value, estimated)
@@ -326,6 +332,7 @@ class ArbitraryEndSerializer(BaseSerializer):
                 start = record.get("start", None)
 
                 if start is not None:
+                    self._validate_record_start_end(record, start, end)
                     yield (start, value, estimated)
             else:
                 yield (previous_end_datetime, value, estimated)
@@ -333,7 +340,7 @@ class ArbitraryEndSerializer(BaseSerializer):
             previous_end_datetime = end
 
         if previous_end_datetime is not None:
-            yield (previous_end_datetime, np.nan, estimated)
+            yield (previous_end_datetime, np.nan, False)
 
     def to_records(self, df):
         records = []
