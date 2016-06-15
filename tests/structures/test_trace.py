@@ -143,3 +143,7 @@ def test_bad_column_name_data(interpretation, unit):
 
     with pytest.raises(ValueError):
         et = EnergyTrace(interpretation=interpretation, data=df, unit=unit)
+
+def test_repr(interpretation):
+    et = EnergyTrace(interpretation=interpretation, placeholder=True)
+    assert 'EnergyTrace' in str(et)
