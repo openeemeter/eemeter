@@ -1,6 +1,7 @@
 from eemeter.io.serializers import ArbitraryEndSerializer
 from datetime import datetime
 import pandas as pd
+import numpy as np
 import pytz
 import pytest
 
@@ -110,3 +111,21 @@ def test_record_end_before_start(serializer):
     ]
     with pytest.raises(ValueError):
         serializer.to_dataframe(records)
+
+
+def test_to_records(serializer):
+
+    data = {"value": [1, np.nan], "estimated": [True, False]}
+    columns = ["value", "estimated"]
+    index = pd.date_range('2000-01-01', periods=2, freq='D')
+    df = pd.DataFrame(data, index=index, columns=columns)
+
+    records = serializer.to_records(df)
+    assert len(records) == 2
+    assert records[0]["end"] == datetime(2000, 1, 1, tzinfo=pytz.UTC)
+    assert pd.isnull(records[0]["value"])
+    assert not records[0]["estimated"]
+
+    assert records[1]["end"] == datetime(2000, 1, 2, tzinfo=pytz.UTC)
+    assert records[1]["value"] == 1
+    assert records[1]["estimated"]
