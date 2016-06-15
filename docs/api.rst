@@ -6,9 +6,16 @@ eemeter.structures
 
 .. automodule:: eemeter.structures
     :members:
-    :undoc-members:
-    :inherited-members:
-    :show-inheritance:
+
+
+eemeter.io
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   io
+
 
 eemeter.weather
 ---------------

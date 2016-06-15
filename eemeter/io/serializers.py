@@ -99,37 +99,39 @@ class ArbitrarySerializer(BaseSerializer):
     the "start" key and the "end" key. Overlaps are not allowed and
     gaps will be filled with NaN.
 
-    For example::
+    For example:
 
-        records = [
-            {
-                "start": datetime(2013, 12, 30, tzinfo=pytz.utc),
-                "end": datetime(2014, 1, 28, tzinfo=pytz.utc),
-                "value": 1180,
-            },
-            {
-                "start": datetime(2014, 1, 28, tzinfo=pytz.utc),
-                "end": datetime(2014, 2, 27, tzinfo=pytz.utc),
-                "value": 1211,
-                "estimated": True,
-            },
-            {
-                "start": datetime(2014, 2, 27, tzinfo=pytz.utc),
-                "end": datetime(2014, 3, 30, tzinfo=pytz.utc),
-                "value": 985,
-            },
-            {
-                "start": datetime(2014, 3, 30, tzinfo=pytz.utc),
-                "end": datetime(2014, 4, 25, tzinfo=pytz.utc),
-                "value": 848,
-            },
-            {
-                "start": datetime(2014, 4, 25, tzinfo=pytz.utc),
-                "end": datetime(2014, 5, 27, tzinfo=pytz.utc),
-                "value": 533,
-            },
-            ...
-        ]
+    .. code-block:: python
+
+        >>> records = [
+        ...     {
+        ...         "start": datetime(2013, 12, 30, tzinfo=pytz.utc),
+        ...         "end": datetime(2014, 1, 28, tzinfo=pytz.utc),
+        ...         "value": 1180,
+        ...     },
+        ...     {
+        ...         "start": datetime(2014, 1, 28, tzinfo=pytz.utc),
+        ...         "end": datetime(2014, 2, 27, tzinfo=pytz.utc),
+        ...         "value": 1211,
+        ...         "estimated": True,
+        ...     },
+        ...     {
+        ...         "start": datetime(2014, 2, 28, tzinfo=pytz.utc),
+        ...         "end": datetime(2014, 3, 30, tzinfo=pytz.utc),
+        ...         "value": 985,
+        ...     },
+        ... ]
+        ...
+        >>> serializer = ArbitrarySerializer()
+        >>> df = serializer.to_dataframe(records)
+        >>> df
+                                    value estimated
+        2013-12-30 00:00:00+00:00  1180.0     False
+        2014-01-28 00:00:00+00:00  1211.0      True
+        2014-02-27 00:00:00+00:00     NaN     False
+        2014-02-28 00:00:00+00:00   985.0     False
+        2014-03-30 00:00:00+00:00     NaN     False
+
     '''
 
     sort_key = "start"
@@ -201,31 +203,33 @@ class ArbitraryStartSerializer(BaseSerializer):
     This is useful for data dated to future energy use, e.g. billing for
     delivered fuels.
 
-    For example::
+    For example:
 
-        records = [
-            {
-                "start": datetime(2013, 12, 30, tzinfo=pytz.utc),
-                "value": 1180,
-            },
-            {
-                "start": datetime(2014, 1, 28, tzinfo=pytz.utc),
-                "value": 1211,
-            },
-            {
-                "start": datetime(2014, 2, 27, tzinfo=pytz.utc),
-                "value": 985,
-            },
-            {
-                "start": datetime(2014, 3, 30, tzinfo=pytz.utc),
-                "value": 848,
-            },
-            {
-                "start": datetime(2014, 4, 25, tzinfo=pytz.utc),
-                "value": 533,
-            },
-            ...
-        ]
+    .. code-block:: python
+
+        >>> records = [
+        ...     {
+        ...         "start": datetime(2013, 12, 30, tzinfo=pytz.utc),
+        ...         "value": 1180,
+        ...     },
+        ...     {
+        ...         "start": datetime(2014, 1, 28, tzinfo=pytz.utc),
+        ...         "value": 1211,
+        ...         "estimated": True,
+        ...     },
+        ...     {
+        ...         "start": datetime(2014, 2, 28, tzinfo=pytz.utc),
+        ...         "value": 985,
+        ...     },
+        ... ]
+        ...
+        >>> serializer = ArbitrarySerializer()
+        >>> df = serializer.to_dataframe(records)
+        >>> df
+                                    value estimated
+        2013-12-30 00:00:00+00:00  1180.0     False
+        2014-01-28 00:00:00+00:00  1211.0      True
+        2014-02-28 00:00:00+00:00     NaN     False
 
     '''
 
@@ -282,32 +286,33 @@ class ArbitraryEndSerializer(BaseSerializer):
     This is useful for data dated to past energy use, e.g. electricity
     or natural gas bills.
 
-    Example::
+    For example:
 
-        records = [
-            {
-                "end": datetime(2014, 1, 28, tzinfo=pytz.utc),
-                "value": 1180,
-            },
-            {
-                "end": datetime(2014, 2, 27, tzinfo=pytz.utc),
-                "value": 1211,
-            },
-            {
-                "end": datetime(2014, 3, 30, tzinfo=pytz.utc),
-                "value": 985,
-                "estimated": False,
-            },
-            {
-                "end": datetime(2014, 4, 25, tzinfo=pytz.utc),
-                "value": 848,
-            },
-            {
-                "end": datetime(2014, 5, 27, tzinfo=pytz.utc),
-                "value": 533,
-            },
-            ...
-        ]
+    .. code-block:: python
+
+        >>> records = [
+        ...     {
+        ...         "end": datetime(2013, 12, 30, tzinfo=pytz.utc),
+        ...         "value": 1180,
+        ...     },
+        ...     {
+        ...         "end": datetime(2014, 1, 28, tzinfo=pytz.utc),
+        ...         "value": 1211,
+        ...         "estimated": True,
+        ...     },
+        ...     {
+        ...         "end": datetime(2014, 2, 28, tzinfo=pytz.utc),
+        ...         "value": 985,
+        ...     },
+        ... ]
+        ...
+        >>> serializer = ArbitrarySerializer()
+        >>> df = serializer.to_dataframe(records)
+        >>> df
+                                    value estimated
+        2013-12-30 00:00:00+00:00  1211.0      True
+        2014-01-28 00:00:00+00:00   985.0     False
+        2014-02-28 00:00:00+00:00     NaN     False
 
     '''
 

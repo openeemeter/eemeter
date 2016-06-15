@@ -5,10 +5,8 @@ import pytz
 import six
 import warnings
 
-from eemeter.consumption import (
-    EnergyTrace,
-    ArbitrarySerializer,
-)
+from eemeter.structures import EnergyTrace
+from eemeter.io.serializers import ArbitrarySerializer
 
 
 class ESPIUsageParser(object):
@@ -969,12 +967,12 @@ class ESPIUsageParser(object):
                     self.get_interval_block_group_consumption_records(group))
             yield flow_direction, sorted(records, key=lambda x: x["start"])
 
-    def get_consumption_data_objects(self, fuel_type_default="electricity"):
-        ''' Retrieve all consumption records stored as IntervalReading elements
+    def get_energy_trace_objects(self, service_kind_default="electricity"):
+        ''' Retrieve all energy trace records stored as IntervalReading elements
         in the given ESPI Energy Usage XML.
 
-        Consumption records are grouped by fuel type and returned in
-        ConsumptionData objects.
+        Energy records are grouped by interpretation and returned in
+        EnergyTrace objects.
 
         Parameters
         ----------
@@ -984,14 +982,15 @@ class ESPIUsageParser(object):
 
         Yields
         ------
-        ConsumptionData : eemeter.consumption.ConsumptionData
+        energy_trace : eemeter.structures.EnergyTrace
             Consumption data grouped by fuel type.
         '''
 
         INTERPRETATION_MAPPING = {
-            "forward": "CONSUMPTION_SUPPLIED",
-            "reverse": "ON_SITE_GENERATION_UNCONSUMED",
-            "net": "CONSUMPTION_NET",
+            ("electricity", "forward"): "ELECTRICITY_CONSUMPTION_SUPPLIED",
+            ("natural_gas", "forward"): "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+            ("electricity", "reverse"): "ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED",
+            ("electriicty", "net"): "ELECTRICITY_CONSUMPTION_NET",
         }
 
         # Get all consumption records, group by fuel type.
@@ -1006,7 +1005,8 @@ class ESPIUsageParser(object):
                 for fuel_type, records in fuel_type_records.items():
                     if fuel_type is None:
                         fuel_type = fuel_type_default
-                    interpretation = INTERPRETATION_MAPPING[flow_direction]
-                    yield EnergyTrace(fuel_type, interpretation, records,
-                                      records[0]["unit_name"],
+                    selector = (fuel_type, flow_direction)
+                    interpretation = INTERPRETATION_MAPPING[selector]
+                    yield EnergyTrace(interpretation, records=records,
+                                      unit=records[0]["unit_name"],
                                       serializer=ArbitrarySerializer())
