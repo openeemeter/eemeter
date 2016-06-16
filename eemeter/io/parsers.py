@@ -968,15 +968,15 @@ class ESPIUsageParser(object):
             yield flow_direction, sorted(records, key=lambda x: x["start"])
 
     def get_energy_trace_objects(self, service_kind_default="electricity"):
-        ''' Retrieve all energy trace records stored as IntervalReading elements
-        in the given ESPI Energy Usage XML.
+        ''' Retrieve all energy trace records stored as IntervalReading
+        elements in the given ESPI Energy Usage XML.
 
         Energy records are grouped by interpretation and returned in
         EnergyTrace objects.
 
         Parameters
         ----------
-        fuel_type_default : str
+        service_kind_default : str
             Default fuel type to use in parser if ReadingType/commodity field
             is missing.
 
@@ -989,7 +989,8 @@ class ESPIUsageParser(object):
         INTERPRETATION_MAPPING = {
             ("electricity", "forward"): "ELECTRICITY_CONSUMPTION_SUPPLIED",
             ("natural_gas", "forward"): "NATURAL_GAS_CONSUMPTION_SUPPLIED",
-            ("electricity", "reverse"): "ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED",
+            ("electricity", "reverse"):
+                "ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED",
             ("electriicty", "net"): "ELECTRICITY_CONSUMPTION_NET",
         }
 
@@ -1004,7 +1005,7 @@ class ESPIUsageParser(object):
                 # Wrap records in EnergyTrace objects, by fuel type.
                 for fuel_type, records in fuel_type_records.items():
                     if fuel_type is None:
-                        fuel_type = fuel_type_default
+                        fuel_type = service_kind_default
                     selector = (fuel_type, flow_direction)
                     interpretation = INTERPRETATION_MAPPING[selector]
                     yield EnergyTrace(interpretation, records=records,

@@ -1,36 +1,16 @@
-from .base import WeatherSourceBase
-
 import os
 import json
+import sqlite3
 
-import pandas as pd
 
+class SqliteJSONStore(object):
 
-class CachedWeatherSourceBase(WeatherSourceBase):
+    def __init__(self, directory=None):
 
-    def __init__(self, station, **kwargs):
-        super(CachedWeatherSourceBase, self).__init__(station)
+        # creates the self.conn attribute
+        self._prepare_db(directory)
 
-        self.prepare_cache(**kwargs)
-        self.load_from_cache()
-
-    def prepare_cache(self, **kwargs):
-        message = 'The `prepare_cache()` method must be implemented'
-        raise NotImplementedError(message)
-
-    def save_to_cache(self):
-        message = 'The `save_to_cache()` method must be implemented'
-        raise NotImplementedError(message)
-
-    def load_from_cache(self):
-        message = 'The `load_from_cache()` method must be implemented'
-        raise NotImplementedError(message)
-
-    def clear_cache(self):
-        message = 'The `clear_cache()` method must be implemented'
-        raise NotImplementedError(message)
-
-    def _get_cache_directory(self):
+    def _get_directory(self):
         """ Returns a directory to be used for caching.
         """
         directory = os.environ.get("EEMETER_WEATHER_CACHE_DIRECTORY",
@@ -39,55 +19,59 @@ class CachedWeatherSourceBase(WeatherSourceBase):
             os.makedirs(directory)
         return directory
 
+    def _prepare_db(self, directory=None):
 
-class FileCachedWeatherSourceBase(CachedWeatherSourceBase):
+        if directory is None:
+            directory = self._get_directory()
 
-    cache_date_format = None
-    cache_filename_format = None
-    freq = None
+        self.db_filename = os.path.join(directory, "weather_cache.db")
 
-    def prepare_cache(self, cache_directory=None, cache_filename=None):
-        if cache_filename is None:
-            self.cache_filename = self._get_cache_filename(cache_directory)
+        exists = os.path.exists(self.db_filename)
+        conn = sqlite3.connect(self.db_filename)
+
+        if not exists:
+            conn.execute(
+                'CREATE TABLE IF NOT EXISTS items('
+                'id INTEGER PRIMARY KEY AUTOINCREMENT, '
+                'data TEXT, '
+                'key TEXT UNIQUE);'
+            )
+            conn.commit()
+
+        self.conn = conn
+
+    def key_exists(self, key):
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT key FROM items WHERE key=?;', (key,))
+        key = cursor.fetchone()
+        return key is not None
+
+    def save_json(self, key, data):
+        data = json.dumps(data)
+
+        if self.key_exists(key):
+            sql = (
+                'UPDATE items'
+                ' data=?'
+                ' WHERE key=?'
+            )
         else:
-            self.cache_filename = cache_filename
+            sql = (
+                'INSERT INTO items'
+                ' (data, key)'
+                ' VALUES(?, ?);'
+            )
+        self.conn.execute(sql, (data, key))
+        self.conn.commit()
 
-    def _get_cache_filename(self, cache_directory=None):
-        if cache_directory is None:
-            cache_directory = self._get_cache_directory()
-        filename = self.cache_filename_format.format(self.station)
-        return os.path.join(cache_directory, filename)
+    def retrieve_json(self, key):
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT data FROM items WHERE key=?;', (key,))
+        data = cursor.fetchone()
+        if data is None:
+            return None
+        return json.loads(data[0])
 
-    def save_to_cache(self):
-        data = [
-            [
-                d.strftime(self.cache_date_format), t
-                if pd.notnull(t) else None
-            ]
-            for d, t in self.tempC.iteritems()
-        ]
-        with open(self.cache_filename, 'w') as f:
-            json.dump(data, f)
-
-    def load_from_cache(self):
-        try:
-            with open(self.cache_filename, 'r') as f:
-                data = json.load(f)
-        except IOError:
-            return
-        except ValueError:  # Corrupted json file
-            self.clear_cache()
-            return
-        index = pd.to_datetime([d[0] for d in data],
-                               format=self.cache_date_format, utc=True)
-        values = [d[1] for d in data]
-
-        # changed for pandas > 0.18
-        self.tempC = pd.Series(values, index=index, dtype=float) \
-            .sort_index().resample(self.freq).mean()
-
-    def clear_cache(self):
-        try:
-            os.remove(self.cache_filename)
-        except OSError:
-            pass
+    def clear(self):
+        self.conn.execute('DELETE FROM items;')
+        self.conn.commit()

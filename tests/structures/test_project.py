@@ -1,11 +1,8 @@
 from eemeter.structures import (
     Project,
     ZIPCodeSite,
-    Intervention,
     EnergyTraceSet,
 )
-from datetime import datetime
-import pytz
 import pytest
 
 
@@ -17,6 +14,7 @@ def energy_trace_set():
 @pytest.fixture
 def interventions():
     return []
+
 
 @pytest.fixture
 def site():

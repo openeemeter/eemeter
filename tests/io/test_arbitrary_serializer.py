@@ -145,6 +145,7 @@ def test_multiple_records_with_gap(serializer):
     assert pd.isnull(df.value[datetime(2000, 1, 4, tzinfo=pytz.UTC)])
     assert not df.estimated[datetime(2000, 1, 4, tzinfo=pytz.UTC)]
 
+
 def test_to_records(serializer):
 
     data = {"value": [1, np.nan], "estimated": [True, False]}

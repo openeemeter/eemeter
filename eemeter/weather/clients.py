@@ -8,7 +8,9 @@ import logging
 from pkg_resources import resource_stream
 import warnings
 from datetime import datetime
+import pytz
 
+import pandas as pd
 import requests
 
 logger = logging.getLogger(__name__)
@@ -100,33 +102,41 @@ class NOAAClient(object):
         filename_format = '/pub/data/gsod/{year}/{station}-{year}.op.gz'
         lines = self._retreive_file_lines(filename_format, station, year)
 
-        days = []
+        dates = pd.date_range("{}-01-01 00:00".format(year),
+                              "{}-12-31 00:00".format(year),
+                              freq='D', tz=pytz.UTC)
+        series = pd.Series(None, index=dates, dtype=float)
+
         for line in lines[1:]:
             columns = line.split()
             date_str = columns[2].decode('utf-8')
             temp_F = float(columns[3])
             temp_C = (5./9.) * (temp_F - 32.)
-            dt = datetime.strptime(date_str, "%Y%m%d").date()
-            days.append({"temp_C": temp_C, "date": dt})
+            dt = pytz.UTC.localize(datetime.strptime(date_str, "%Y%m%d"))
+            series[dt] = temp_C
 
-        return days
+        return series
 
     def get_isd_data(self, station, year):
 
         filename_format = '/pub/data/noaa/{year}/{station}-{year}.gz'
         lines = self._retreive_file_lines(filename_format, station, year)
 
-        hours = []
+        dates = pd.date_range("{}-01-01 00:00".format(year),
+                              "{}-01-01 00:00".format(int(year) + 1),
+                              freq='H', tz=pytz.UTC)[:-1]
+        series = pd.Series(None, index=dates, dtype=float)
+
         for line in lines:
             if line[87:92].decode('utf-8') == "+9999":
                 temp_C = float("nan")
             else:
                 temp_C = float(line[87:92]) / 10.
             date_str = line[15:27].decode('utf-8')
-            dt = datetime.strptime(date_str, "%Y%m%d%H%M")
-            hours.append({"temp_C": temp_C, "datetime": dt})
+            dt = pytz.UTC.localize(datetime.strptime(date_str, "%Y%m%d%H%M"))
+            series[dt] = temp_C
 
-        return hours
+        return series
 
 
 class TMY3Client(object):
@@ -194,26 +204,30 @@ class TMY3Client(object):
         )
         r = requests.get(url)
 
+        index = pd.date_range("1900-01-01 00:00", "1900-12-31 23:00",
+                              freq='H', tz=pytz.UTC)
+        series = pd.Series(None, index=index, dtype=float)
+
         if r.status_code == 200:
-            hours = []
+
             for line in r.text.splitlines()[2:]:
                 row = line.split(",")
-                year = row[0][6:10]
                 month = row[0][0:2]
                 day = row[0][3:5]
                 hour = int(row[1][0:2]) - 1
 
                 # YYYYMMDDHH
-                date_string = "{}{}{}{:02d}".format(year, month, day, hour)
+                date_string = "1900{}{}{:02d}".format(month, day, hour)
 
-                dt = datetime.strptime(date_string, "%Y%m%d%H")
+                dt = pytz.UTC.localize(
+                        datetime.strptime(date_string, "%Y%m%d%H"))
                 temp_C = float(row[31])
+                series[dt] = temp_C
 
-                hours.append({"temp_C": temp_C, "dt": dt})
-            return hours
         else:
             message = (
                 "Station {} was not found. Tried url {}.".format(station, url)
             )
             warnings.warn(message)
-            return None
+
+        return series

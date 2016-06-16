@@ -1,8 +1,4 @@
-from datetime import timedelta
-
-import numpy as np
 import pandas as pd
-from pandas.core.common import is_list_like
 
 
 class WeatherSourceBase(object):

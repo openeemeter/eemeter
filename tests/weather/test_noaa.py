@@ -10,6 +10,7 @@ def test_gsod_index_hourly():
     with pytest.raises(ValueError):
         ws.indexed_temperatures(index, 'degF')
 
+
 def test_gsod_index_daily():
     ws = GSODWeatherSource("722880")
     index = pd.date_range('2011-01-01 00:00:00Z', periods=2, freq='D')
@@ -18,6 +19,7 @@ def test_gsod_index_daily():
     assert all(temps.index == index)
     assert temps.shape == (2,)
     assert_allclose(temps.values, [45.7, 46.9])
+
 
 def test_isd_index_hourly():
     ws = ISDWeatherSource("722880")
@@ -28,6 +30,7 @@ def test_isd_index_hourly():
     assert temps.shape == (2,)
     assert_allclose(temps.values, [50., 50.])
 
+
 def test_isd_index_daily():
     ws = ISDWeatherSource("722880")
     index = pd.date_range('2011-01-01 00:00:00Z', periods=2, freq='D')
@@ -35,4 +38,4 @@ def test_isd_index_daily():
     assert all(temps.index == index)
     assert all(temps.index == index)
     assert temps.shape == (2,)
-    assert_allclose(temps.values, [45.7175, 46.88])
+    assert_allclose(temps.values, [45.7175, 46.8725])

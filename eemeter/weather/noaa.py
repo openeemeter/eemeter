@@ -1,37 +1,28 @@
-from .cache import FileCachedWeatherSourceBase
+from .base import WeatherSourceBase
 from .clients import NOAAClient
+from .cache import SqliteJSONStore
 
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
 
 import pandas as pd
-import pytz
 
 
-class NOAAWeatherSourceBase(FileCachedWeatherSourceBase):
+class NOAAWeatherSourceBase(WeatherSourceBase):
 
-    year_existence_format = None
     client = NOAAClient()
 
-    def __init__(self, station, start_year=None, end_year=None,
-                 cache_directory=None, cache_filename=None):
-        super(NOAAWeatherSourceBase, self).__init__(
-                station, cache_directory=cache_directory,
-                cache_filename=cache_filename)
+    def __init__(self, station, cache_directory=None):
+        super(NOAAWeatherSourceBase, self).__init__(station)
 
-        self._year_fetches_attempted = set()
-
-        self.station_id = station
-
-        if start_year is not None and end_year is not None:
-            self.add_year_range(start_year, end_year)
-        elif start_year is not None:
-            self.add_year_range(start_year, date.today().year)
-        elif end_year is not None:
-            self.add_year_range(date.today().year, end_year)
-
+        self.json_store = SqliteJSONStore(cache_directory)
         self._check_for_recent_data()
 
-    def add_year_range(self, start_year, end_year, force=False):
+    def _check_for_recent_data(self, days_ago=1):
+        target_date = date.today() - timedelta(days=days_ago)
+        if target_date in self.tempC and pd.isnull(self.tempC[target_date]):
+            self.add_year(target_date.year, force_fetch=True)
+
+    def add_year_range(self, start_year, end_year, force_fetch=False):
         """Adds temperature data to internal pandas timeseries across a
         range of years.
 
@@ -41,27 +32,53 @@ class NOAAWeatherSourceBase(FileCachedWeatherSourceBase):
             The earliest year for which data should be fetched, e.g. "2010".
         end_year : {int, string}
             The latest year for which data should be fetched, e.g. "2013".
-        force : bool, default=False
+        force_fetch : bool, default=False
             If True, forces the fetch; if false, checks to see if year
             has been added before actually fetching.
         """
         for year in range(start_year, end_year + 1):
-            self.add_year(year, force)
+            self.add_year(year, force_fetch)
 
-    def add_year(self, year, force=False):
-        message = "Inheriting classes must override this method."
+    def add_year(self, year, force_fetch=False):
+        """Adds temperature data to internal pandas timeseries
+
+        Parameters
+        ----------
+        year : {int, string}
+            The year for which data should be fetched, e.g. "2010".
+        force_fetch : bool, default=False
+            If :code:`True`, forces the fetch; if :code:`False`, checks to see
+            if locally available before actually fetching.
+        """
+        is_loaded = self._year_in_series(year)
+        if is_loaded:
+            if force_fetch:  # it's loaded, but fetch anyway
+                new_series = self.fetch_year(year)
+                self.save_series(year, new_series)
+                self.tempC.update(new_series)
+            else:  # ignore request to add year since it's already added.
+                pass
+        else:
+            if self._year_saved(year):  # saved locally, no need to fetch
+                new_series = self.load_series(year)
+            else:  # not saved locally, need to fetch
+                new_series = self.fetch_year(year)
+                self.save_series(year, new_series)
+            self.tempC = self._merge_series(self.tempC, new_series)
+
+    def get_cache_key(self, year):
+        return self.cache_key_format.format(self.station, year)
+
+    def fetch_year(self, year):
+        # get year from remote source
+        message = "The `fetch_year()` method must be implemented."
         raise NotImplementedError(message)
 
-    def _year_fetch_attempted(self, year):
-        return year in self._year_fetches_attempted
+    def _year_saved(self, year):
+        return self.json_store.key_exists(self.get_cache_key(year))
 
     def _year_in_series(self, year):
         return self.year_existence_format.format(year) in self.tempC
-
-    def _check_for_recent_data(self):
-        yesterday = date.today() - timedelta(days=1)
-        if yesterday in self.tempC and pd.isnull(self.tempC[yesterday]):
-            self.add_year(yesterday.year, force=True)
 
     def indexed_temperatures(self, index, unit):
         ''' Return average temperatures over the given index.
@@ -112,100 +129,56 @@ class NOAAWeatherSourceBase(FileCachedWeatherSourceBase):
         for year in years:
             self.add_year(year)
 
+    def save_series(self, year, series):
+        key = self.get_cache_key(year)
+        data = [
+            [
+                d.strftime(self.cache_date_format), t
+                if pd.notnull(t) else None
+            ]
+            for d, t in series.iteritems()
+        ]
+        self.json_store.save_json(key, data)
+
+    def load_series(self, year):
+        key = self.get_cache_key(year)
+        data = self.json_store.retrieve_json(key)
+        if data is None:
+            raise KeyError("Key `{}` not found in cache.".format(key))
+
+        index = pd.to_datetime([d[0] for d in data],
+                               format=self.cache_date_format, utc=True)
+        values = [d[1] for d in data]
+
+        # changed for pandas > 0.18
+        return pd.Series(values, index=index, dtype=float) \
+            .sort_index().resample(self.freq).mean()
+
+    def _merge_series(self, a, b):
+        return a.append(b).sort_index().resample(self.freq).mean()
+
 
 class GSODWeatherSource(NOAAWeatherSourceBase):
 
     cache_date_format = "%Y%m%d"
-    cache_filename_format = "GSOD-{}.json"
+    cache_key_format = "GSOD-{}-{}.json"
     year_existence_format = "{}-01-01"
     freq = "D"
 
-    def _empty_series(self, year):
-        dates = pd.date_range("{}-01-01 00:00".format(year),
-                              "{}-12-31 00:00".format(year),
-                              freq=self.freq, tz=pytz.UTC)
-        return pd.Series(None, index=dates, dtype=float)
-
-    def add_year(self, year, force=False):
-        """Adds temperature data to internal pandas timeseries
-
-        Parameters
-        ----------
-        year : {int, string}
-            The year for which data should be fetched, e.g. "2010".
-        force : bool, default=False
-            If True, forces the fetch; if false, checks to see if year
-            has been added before actually fetching.
-        """
-
-        if not force and self._year_fetch_attempted(year):
-            if self._year_in_series(year):
-                return
-            else:
-                new_series = self._empty_series(year)
-                self.tempC = self.tempC.append(new_series) \
-                    .sort_index().resample(self.freq).mean()
-                self.save_to_cache()
-                return
-
-        data = self.client.get_gsod_data(self.station, year)
-        new_series = self._empty_series(year)
-        for day in data:
-            if not pd.isnull(day["temp_C"]):
-                new_series[day["date"]] = day["temp_C"]
-
-        # changed for pandas > 0.18
-        self.tempC = self.tempC.append(new_series) \
-            .sort_index().resample(self.freq).mean()
-        self.save_to_cache()
-        self._year_fetches_attempted.add(year)
+    def fetch_year(self, year):
+        return self.client.get_gsod_data(self.station, year)
 
 
 class ISDWeatherSource(NOAAWeatherSourceBase):
 
     cache_date_format = "%Y%m%d%H"
-    cache_filename_format = "ISD-{}.json"
+    cache_key_format = "ISD-{}-{}.json"
     year_existence_format = "{}-01-01 00"
     freq = "H"
 
-    def _empty_series(self, year):
-        dates = pd.date_range("{}-01-01 00:00".format(year),
-                              "{}-01-01 00:00".format(int(year) + 1),
-                              freq=self.freq, tz=pytz.UTC)[:-1]
-        return pd.Series(None, index=dates, dtype=float)
-
-    def add_year(self, year, force=False):
-        """Adds temperature data to internal pandas timeseries
-
-        Parameters
-        ----------
-        year : {int, string}
-            The year for which data should be fetched, e.g. "2010".
-        """
-        if not force and self._year_fetch_attempted(year):
-            if self._year_in_series(year):
-                return
-            else:
-                new_series = self._empty_series(year)
-                self.tempC = self.tempC.append(new_series) \
-                    .sort_index().resample(self.freq).mean()
-                self.save_to_cache()
-                return
-
-        data = self.client.get_isd_data(self.station, year)
-        new_series = self._empty_series(year)
-        for hour in data:
-            if not pd.isnull(hour["temp_C"]):
-                dt = hour["datetime"]
-                new_dt = datetime(dt.year, dt.month, dt.day, dt.hour)
-                new_series[new_dt] = hour["temp_C"]
-
-        # changed for pandas > 0.18
-        self.tempC = self.tempC.append(new_series) \
-            .sort_index().resample(self.freq).mean()
-        self.save_to_cache()
-        self._year_fetches_attempted.add(year)
+    def fetch_year(self, year):
+        return self.client.get_isd_data(self.station, year)
 
     def _hourly_indexed_temperatures(self, index, unit):
-        tempC = self.tempC.resample('H').mean()[index]
+        tempC = self.tempC.resample(self.freq).mean()[index]
         return self._unit_convert(tempC, unit)

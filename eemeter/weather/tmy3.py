@@ -1,48 +1,60 @@
-from .cache import FileCachedWeatherSourceBase
+from .base import WeatherSourceBase
 from .clients import TMY3Client
+from .cache import SqliteJSONStore
 
-from datetime import datetime, timedelta, date, time
+from datetime import datetime, date
 
-import numpy as np
 import pandas as pd
 import pytz
 
 
-class TMY3WeatherSource(FileCachedWeatherSourceBase):
+class TMY3WeatherSource(WeatherSourceBase):
 
     cache_date_format = "%Y%m%d%H"
-    cache_filename_format = "TMY3-{}.json"
+    cache_key_format = "TMY3-{}.json"
     freq = "H"
     client = TMY3Client()
 
-    def __init__(self, station, station_fallback=True):
+    def __init__(self, station, station_fallback=True, cache_directory=None):
         super(TMY3WeatherSource, self).__init__(station)
-        self.station_id = station
-        self.station_fallback = station_fallback
-        if self.tempC.shape[0] != 365 * 24:
-            self._load_data()
 
-    def _load_data(self):
-        data = self.client.get_tmy3_data(self.station, self.station_fallback)
-        if data is None:
-            temps = [np.nan for _ in range(365 * 24)]
-            start_date = datetime(1900, 1, 1, tzinfo=pytz.UTC)
-            index = [
-                start_date + timedelta(seconds=i*3600)
-                for i in range(365 * 24)
-            ]
-        else:
-            temps = [d["temp_C"] for d in data]
-            index = [
-                datetime(1900, d["dt"].month, d["dt"].day, d["dt"].hour,
-                         tzinfo=pytz.UTC)
-                for d in data
-            ]
+        self.station = station
+        self.station_fallback = station_fallback
+        self.json_store = SqliteJSONStore(cache_directory)
+
+        self._load_data()
+
+    def load_cached_series(self):
+        data = self.json_store.retrieve_json(self.get_cache_key())
+
+        index = pd.to_datetime([d[0] for d in data],
+                               format=self.cache_date_format, utc=True)
+        values = [d[1] for d in data]
 
         # changed for pandas > 0.18
-        self.tempC = pd.Series(temps, index=index, dtype=float) \
-            .sort_index().resample('H').mean()
-        self.save_to_cache()
+        return pd.Series(values, index=index, dtype=float) \
+            .sort_index().resample(self.freq).mean()
+
+    def _load_data(self):
+        if self.json_store.key_exists(self.get_cache_key()):
+            self.tempC = self.load_cached_series()
+        else:
+            self.tempC = self.client.get_tmy3_data(
+                    self.station, self.station_fallback)
+            self.save_series(self.tempC)
+
+    def save_series(self, series):
+        data = [
+            [
+                d.strftime(self.cache_date_format), t
+                if pd.notnull(t) else None
+            ]
+            for d, t in series.iteritems()
+        ]
+        self.json_store.save_json(self.get_cache_key(), data)
+
+    def get_cache_key(self):
+        return self.cache_key_format.format(self.station)
 
     @staticmethod
     def _normalize_datetime(dt, year_offset=0):
