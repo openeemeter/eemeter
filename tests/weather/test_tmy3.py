@@ -19,7 +19,7 @@ def test_daily_by_index():
     assert all(temps.index == index)
     assert all(temps.index == index)
     assert temps.shape == (2,)
-    assert_allclose(temps.values, [31.7525,  30.1175])
+    assert_allclose(temps.values, [31.7525, 30.1175])
 
 def test_cross_year_boundary():
     ws = TMY3WeatherSource("722890")
@@ -28,4 +28,4 @@ def test_cross_year_boundary():
     assert all(temps.index == index)
     assert all(temps.index == index)
     assert temps.shape == (2,)
-    assert_allclose(temps.values, [32.5925,  31.7525])
+    assert_allclose(temps.values, [32.5925, 31.7525])

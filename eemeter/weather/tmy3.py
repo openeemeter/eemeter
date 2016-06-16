@@ -44,15 +44,6 @@ class TMY3WeatherSource(CachedWeatherSourceBase):
             .sort_index().resample('H').mean()
         self.save_to_cache()
 
-    def _fetch_period(self, period):
-        pass  # loaded at init
-
-    def _fetch_datetime(self, dt):
-        pass  # loaded at init
-
-    def _fetch_year(self, year):
-        pass  # loaded at init
-
     @staticmethod
     def _normalize_datetime(dt, year_offset=0):
         return datetime(1900 + year_offset, dt.month, dt.day, dt.hour,
@@ -63,32 +54,48 @@ class TMY3WeatherSource(CachedWeatherSourceBase):
         t = timestamp.time()
         return datetime.combine(date(1, 1, 1), t) - datetime(1, 1, 1, 0, 0, 0)
 
-    def indexed_temperatures(self, datetime_index, unit):
+    def _normalize_index(self, index):
+        return pd.DatetimeIndex([self._normalize_datetime(dt) for dt in index])
 
-        if datetime_index.freq == 'D':
-            return self._daily_indexed_temperatures(datetime_index, unit)
-        elif datetime_index.freq == 'H':
-            return self._hourly_indexed_temperatures(datetime_index, unit)
+    def indexed_temperatures(self, index, unit):
+        ''' Return average temperatures over the given index.
+
+        Parameters
+        ----------
+        index : pandas.DatetimeIndex
+            Index over which to supply average temperatures.
+            The :code:`index` should be given as either an hourly ('H') or
+            daily ('D') frequency.
+        unit : str, {"degF", "degC"}
+            Target temperature unit for returned temperature series.
+
+        Returns
+        -------
+        temperatures : pandas.Series with DatetimeIndex
+            Average temperatures over series indexed by :code:`index`.
+        '''
+
+        if index.freq == 'D':
+            return self._daily_indexed_temperatures(index, unit)
+        elif index.freq == 'H':
+            return self._hourly_indexed_temperatures(index, unit)
         else:
             message = (
                 'DatetimeIndex frequency "{}" not supported, please resample.'
-                .format(datetime_index.freq)
+                .format(index.freq)
             )
             raise ValueError(message)
 
-    def _daily_indexed_temperatures(self, datetime_index, unit):
-        normalized_index = self._normalize_index(datetime_index)
+    def _daily_indexed_temperatures(self, index, unit):
+        normalized_index = self._normalize_index(index)
         loffset = self._get_loffset(normalized_index[0])
         tempC = self.tempC.resample('D', loffset=loffset) \
             .mean()[normalized_index]
-        tempC.index = datetime_index
+        tempC.index = index
         return self._unit_convert(tempC, unit)
 
-    def _hourly_indexed_temperatures(self, datetime_index, unit):
-        normalized_index = self._normalize_index(datetime_index)
+    def _hourly_indexed_temperatures(self, index, unit):
+        normalized_index = self._normalize_index(index)
         tempC = self.tempC.resample('H').mean()[normalized_index]
-        tempC.index = datetime_index
+        tempC.index = index
         return self._unit_convert(tempC, unit)
-
-    def _normalize_index(self, index):
-        return pd.DatetimeIndex([self._normalize_datetime(dt) for dt in index])
