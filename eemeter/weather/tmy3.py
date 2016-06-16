@@ -1,7 +1,7 @@
 from .cache import CachedWeatherSourceBase
 from .clients import TMY3Client
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date, time
 
 import numpy as np
 import pandas as pd
@@ -53,6 +53,16 @@ class TMY3WeatherSource(CachedWeatherSourceBase):
     def _fetch_year(self, year):
         pass  # loaded at init
 
+    @staticmethod
+    def _normalize_datetime(dt, year_offset=0):
+        return datetime(1900 + year_offset, dt.month, dt.day, dt.hour,
+                        dt.minute, dt.second, tzinfo=pytz.UTC)
+
+    @staticmethod
+    def _get_loffset(timestamp):
+        t = timestamp.time()
+        return datetime.combine(date(1, 1, 1), t) - datetime(1, 1, 1, 0, 0, 0)
+
     def indexed_temperatures(self, datetime_index, unit):
 
         if datetime_index.freq == 'D':
@@ -68,7 +78,9 @@ class TMY3WeatherSource(CachedWeatherSourceBase):
 
     def _daily_indexed_temperatures(self, datetime_index, unit):
         normalized_index = self._normalize_index(datetime_index)
-        tempC = self.tempC.resample('D').mean()[normalized_index]
+        loffset = self._get_loffset(normalized_index[0])
+        tempC = self.tempC.resample('D', loffset=loffset) \
+            .mean()[normalized_index]
         tempC.index = datetime_index
         return self._unit_convert(tempC, unit)
 
