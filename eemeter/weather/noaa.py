@@ -1,4 +1,4 @@
-from .cache import CachedWeatherSourceBase
+from .cache import FileCachedWeatherSourceBase
 from .clients import NOAAClient
 
 from datetime import datetime, date, timedelta
@@ -7,7 +7,7 @@ import pandas as pd
 import pytz
 
 
-class NOAAWeatherSourceBase(CachedWeatherSourceBase):
+class NOAAWeatherSourceBase(FileCachedWeatherSourceBase):
 
     year_existence_format = None
     client = NOAAClient()
@@ -15,7 +15,8 @@ class NOAAWeatherSourceBase(CachedWeatherSourceBase):
     def __init__(self, station, start_year=None, end_year=None,
                  cache_directory=None, cache_filename=None):
         super(NOAAWeatherSourceBase, self).__init__(
-                station, cache_directory, cache_filename)
+                station, cache_directory=cache_directory,
+                cache_filename=cache_filename)
 
         self._year_fetches_attempted = set()
 

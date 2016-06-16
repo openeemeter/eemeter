@@ -1,4 +1,4 @@
-from .cache import CachedWeatherSourceBase
+from .cache import FileCachedWeatherSourceBase
 from .clients import TMY3Client
 
 from datetime import datetime, timedelta, date, time
@@ -8,7 +8,7 @@ import pandas as pd
 import pytz
 
 
-class TMY3WeatherSource(CachedWeatherSourceBase):
+class TMY3WeatherSource(FileCachedWeatherSourceBase):
 
     cache_date_format = "%Y%m%d%H"
     cache_filename_format = "TMY3-{}.json"
