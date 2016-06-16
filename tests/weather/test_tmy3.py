@@ -2,6 +2,7 @@ from eemeter.weather import TMY3WeatherSource
 import pandas as pd
 from numpy.testing import assert_allclose
 import pytest
+import tempfile
 
 def test_hourly_by_index():
     ws = TMY3WeatherSource("724838")
@@ -29,3 +30,14 @@ def test_cross_year_boundary():
     assert all(temps.index == index)
     assert temps.shape == (2,)
     assert_allclose(temps.values, [46.775, 45.95])
+
+
+def test_cache():
+    tmp_dir = tempfile.mkdtemp()
+    ws = TMY3WeatherSource("724838", tmp_dir)
+    index = pd.date_range('2000-01-01 00:00:00Z', periods=2, freq='D')
+    temps = ws.indexed_temperatures(index, 'degF')
+    assert all(temps.index == index)
+    assert all(temps.index == index)
+    assert temps.shape == (2,)
+    assert_allclose(temps.values, [45.95, 45.2])
