@@ -15,11 +15,10 @@ class TMY3WeatherSource(WeatherSourceBase):
     freq = "H"
     client = TMY3Client()
 
-    def __init__(self, station, station_fallback=True, cache_directory=None):
+    def __init__(self, station, cache_directory=None):
         super(TMY3WeatherSource, self).__init__(station)
 
         self.station = station
-        self.station_fallback = station_fallback
         self.json_store = SqliteJSONStore(cache_directory)
 
         self._load_data()
@@ -39,8 +38,7 @@ class TMY3WeatherSource(WeatherSourceBase):
         if self.json_store.key_exists(self.get_cache_key()):
             self.tempC = self.load_cached_series()
         else:
-            self.tempC = self.client.get_tmy3_data(
-                    self.station, self.station_fallback)
+            self.tempC = self.client.get_tmy3_data(self.station)
             self.save_series(self.tempC)
 
     def save_series(self, series):

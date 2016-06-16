@@ -152,51 +152,19 @@ class TMY3Client(object):
     def _load_station_locations(self):
         return _load_station_to_lat_lng_index()
 
-    def _find_nearby_station(self, station):
-        if self.stations is None:
-            self.stations = self._load_stations()
-        if self.station_to_lat_lng is None:
-            self.station_to_lat_lng = self._load_station_locations()
-
-        try:
-            lat, lng = self.station_to_lat_lng[station]
-        except KeyError:
-            warnings.warn(
-                "Could not locate station {}; "
-                "nearby station look-up failed".format(station)
-            )
-            return None
-        else:
-            index_list = list(self.station_to_lat_lng.items())
-            dists = [haversine(lat, lng, stat_lat, stat_lng)
-                     for _, (stat_lat, stat_lng) in index_list]
-
-        for dist, (nearby_station, _) in zip(dists, index_list):
-            if nearby_station in self.stations:
-                message = (
-                    "Using station {} instead.".format(nearby_station)
-                )
-                warnings.warn(message)
-                return nearby_station
-        return None
-
-    def get_tmy3_data(self, station, station_fallback=True):
+    def get_tmy3_data(self, station):
 
         if self.stations is None:
             self.stations = self._load_stations()
 
         if station not in self.stations:
-            warnings.warn(
-                "Station {} is not a TMY3 station. "
-                "See self.stations for a complete list.".format(station)
-                )
-            if station_fallback:
-                station = self._find_nearby_station(station)
-            else:
-                station = None
-
-        if station is None:
-            return None
+            message = (
+                "Station {} is not a TMY3 station."
+                " See eemeter/resources/tmy3_stations.json for a complete"
+                " list of stations."
+                .format(station)
+            )
+            raise KeyError(message)
 
         url = (
             "http://rredc.nrel.gov/solar/old_data/nsrdb/"
