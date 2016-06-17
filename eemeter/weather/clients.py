@@ -7,7 +7,7 @@ import json
 import logging
 from pkg_resources import resource_stream
 import warnings
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 
 import pandas as pd
@@ -180,7 +180,12 @@ class TMY3Client(object):
 
         if r.status_code == 200:
 
-            for line in r.text.splitlines()[2:]:
+            lines = r.text.splitlines()
+
+            utc_offset_str = lines[0].split(',')[3]
+            utc_offset = timedelta(seconds=3600 * float(utc_offset_str))
+
+            for line in lines[2:]:
                 row = line.split(",")
                 month = row[0][0:2]
                 day = row[0][3:5]
@@ -189,9 +194,13 @@ class TMY3Client(object):
                 # YYYYMMDDHH
                 date_string = "1900{}{}{:02d}".format(month, day, hour)
 
-                dt = pytz.UTC.localize(
-                        datetime.strptime(date_string, "%Y%m%d%H"))
+                dt = datetime.strptime(date_string, "%Y%m%d%H") - utc_offset
+
+                # Only a little redundant to make year 1900 again - matters for
+                # first or last few hours of the year depending UTC on offset
+                dt = pytz.UTC.localize(dt.replace(year=1900))
                 temp_C = float(row[31])
+
                 series[dt] = temp_C
 
         else:

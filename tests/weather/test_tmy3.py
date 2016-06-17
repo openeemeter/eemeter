@@ -12,7 +12,7 @@ def test_hourly_by_index():
     assert all(temps.index == index)
     assert all(temps.index == index)
     assert temps.shape == (2,)
-    assert_allclose(temps.values, [44.6, 44.6])
+    assert_allclose(temps.values, [46.4, 46.4])
 
 
 def test_daily_by_index():
@@ -22,7 +22,7 @@ def test_daily_by_index():
     assert all(temps.index == index)
     assert all(temps.index == index)
     assert temps.shape == (2,)
-    assert_allclose(temps.values, [45.95, 45.2])
+    assert_allclose(temps.values, [46.175, 45.5])
 
 
 def test_cross_year_boundary():
@@ -32,7 +32,7 @@ def test_cross_year_boundary():
     assert all(temps.index == index)
     assert all(temps.index == index)
     assert temps.shape == (2,)
-    assert_allclose(temps.values, [46.775, 45.95])
+    assert_allclose(temps.values, [47.15, 46.175])
 
 
 def test_bad_isd_station():
@@ -48,4 +48,4 @@ def test_cache():
     assert all(temps.index == index)
     assert all(temps.index == index)
     assert temps.shape == (2,)
-    assert_allclose(temps.values, [45.95, 45.2])
+    assert_allclose(temps.values, [46.175, 45.5])
