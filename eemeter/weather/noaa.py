@@ -35,6 +35,11 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
         """Adds temperature data to internal pandas timeseries across a
         range of years.
 
+        .. note::
+
+            This method is called automatically internally to keep data
+            updated in response to calls to `.indexed_temperatures()`
+
         Parameters
         ----------
         start_year : {int, string}
@@ -51,6 +56,11 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
     def add_year(self, year, force_fetch=False):
         """Adds temperature data to internal pandas timeseries
 
+        .. note::
+
+            This method is called automatically internally to keep data
+            updated in response to calls to `.indexed_temperatures()`
+
         Parameters
         ----------
         year : {int, string}
@@ -62,7 +72,7 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
         is_loaded = self._year_in_series(year)
         if is_loaded:
             if force_fetch:  # it's loaded, but fetch anyway
-                new_series = self.fetch_year(year)
+                new_series = self._fetch_year(year)
                 self.save_series(year, new_series)
                 self.tempC.update(new_series)
             else:  # ignore request to add year since it's already added.
@@ -71,20 +81,20 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
             if self._year_saved(year):  # saved locally, no need to fetch
                 new_series = self.load_series(year)
             else:  # not saved locally, need to fetch
-                new_series = self.fetch_year(year)
+                new_series = self._fetch_year(year)
                 self.save_series(year, new_series)
             self.tempC = self._merge_series(self.tempC, new_series)
 
-    def get_cache_key(self, year):
+    def _get_cache_key(self, year):
         return self.cache_key_format.format(self.station, year)
 
-    def fetch_year(self, year):
+    def _fetch_year(self, year):
         # get year from remote source
-        message = "The `fetch_year()` method must be implemented."
+        message = "The `_fetch_year()` method must be implemented."
         raise NotImplementedError(message)
 
     def _year_saved(self, year):
-        return self.json_store.key_exists(self.get_cache_key(year))
+        return self.json_store.key_exists(self._get_cache_key(year))
 
     def _year_in_series(self, year):
         return self.year_existence_format.format(year) in self.tempC
@@ -139,7 +149,7 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
             self.add_year(year)
 
     def save_series(self, year, series):
-        key = self.get_cache_key(year)
+        key = self._get_cache_key(year)
         data = [
             [
                 d.strftime(self.cache_date_format), t
@@ -150,7 +160,7 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
         self.json_store.save_json(key, data)
 
     def load_series(self, year):
-        key = self.get_cache_key(year)
+        key = self._get_cache_key(year)
         data = self.json_store.retrieve_json(key)
         if data is None:
             raise KeyError("Key `{}` not found in cache.".format(key))
@@ -212,7 +222,7 @@ class GSODWeatherSource(NOAAWeatherSourceBase):
     year_existence_format = "{}-01-01"
     freq = "D"
 
-    def fetch_year(self, year):
+    def _fetch_year(self, year):
         return self.client.get_gsod_data(self.station, year)
 
 
@@ -272,7 +282,7 @@ class ISDWeatherSource(NOAAWeatherSourceBase):
     year_existence_format = "{}-01-01 00"
     freq = "H"
 
-    def fetch_year(self, year):
+    def _fetch_year(self, year):
         return self.client.get_isd_data(self.station, year)
 
     def _hourly_indexed_temperatures(self, index, unit):
