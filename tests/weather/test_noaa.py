@@ -22,6 +22,11 @@ def test_gsod_index_daily():
     assert_allclose(temps.values, [45.7, 46.9])
 
 
+def test_bad_gsod_station():
+    with pytest.raises(ValueError):
+        GSODWeatherSource("INVALID")
+
+
 def test_gsod_cache():
     tmp_dir = tempfile.mkdtemp()
     ws = GSODWeatherSource("722880", tmp_dir)
@@ -51,6 +56,11 @@ def test_isd_index_daily():
     assert all(temps.index == index)
     assert temps.shape == (2,)
     assert_allclose(temps.values, [45.7175, 46.8725])
+
+
+def test_bad_isd_station():
+    with pytest.raises(ValueError):
+        ISDWeatherSource("INVALID")
 
 
 def test_isd_cache():

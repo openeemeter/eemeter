@@ -15,7 +15,16 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
         super(NOAAWeatherSourceBase, self).__init__(station)
 
         self.json_store = SqliteJSONStore(cache_directory)
+        self._check_station(station)
         self._check_for_recent_data()
+
+    def _check_station(self, station):
+        index = self.client._load_station_index()
+        if station not in index:
+            message = (
+                "`{}` not recognized as valid USAF weather station identifier."
+            )
+            raise ValueError(message)
 
     def _check_for_recent_data(self, days_ago=1):
         target_date = date.today() - timedelta(days=days_ago)
@@ -159,6 +168,44 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
 
 
 class GSODWeatherSource(NOAAWeatherSourceBase):
+    ''' The :code:`GSODWeatherSource` draws weather data from the NOAA
+    Global Summary of the Day FTP site. It stores fetched data locally by
+    default in a SQLite database at :code:`~/eemeter/cache/weather_cache.db`,
+    unless you use set the following environment variable to something
+    different:
+
+    .. code-block:: bash
+
+        $ export EEMETER_WEATHER_CACHE_DIRECTORY=/path/to/custom/directory
+
+    Basic usage is as follows:
+
+    .. code-block:: python
+
+        >>> from eemeter.weather import GSODWeatherSource
+        >>> ws = GSODWeatherSource("722880")  # or another 6-digit USAF station
+
+    This object can be used to fetch weather data as follows, using an daily
+    frequency time-zone aware pandas DatetimeIndex covering any stretch
+    of time.
+
+    .. code-block:: python
+
+        >>> import pandas as pd
+        >>> import pytz
+        >>> index = pd.date_range('2015-01-01', periods=365,
+        ...     freq='D', tz=pytz.UTC)
+        >>> ws.indexed_temperatures(index, "degF")
+        2015-01-01 00:00:00+00:00    43.6
+        2015-01-02 00:00:00+00:00    45.0
+        2015-01-03 00:00:00+00:00    47.3
+                                     ...
+        2015-12-29 00:00:00+00:00    48.0
+        2015-12-30 00:00:00+00:00    46.4
+        2015-12-31 00:00:00+00:00    47.6
+        Freq: D, dtype: float64
+
+    '''
 
     cache_date_format = "%Y%m%d"
     cache_key_format = "GSOD-{}-{}.json"
@@ -170,6 +217,42 @@ class GSODWeatherSource(NOAAWeatherSourceBase):
 
 
 class ISDWeatherSource(NOAAWeatherSourceBase):
+    ''' The :code:`ISDWeatherSource` draws weather data from the NOAA
+    FTP site. It stores fetched hourly data locally by
+    default in a SQLite database at :code:`~/eemeter/cache/weather_cache.db`,
+    unless you use set the following environment variable to something
+    different:
+
+    .. code-block:: bash
+
+        $ export EEMETER_WEATHER_CACHE_DIRECTORY=/path/to/custom/directory
+
+    Basic usage is as follows:
+
+    .. code-block:: python
+
+        >>> from eemeter.weather import ISDWeatherSource
+        >>> ws = ISDWeatherSource("722880")  # or another 6-digit USAF station
+
+    This object can be used to fetch weather data as follows, using an hourly
+    or daily frequency time-zone aware pandas DatetimeIndex covering any
+    stretch of time.
+
+    .. code-block:: python
+
+        >>> import pandas as pd
+        >>> import pytz
+        >>> index = pd.date_range('2015-01-01', periods=365*24, freq='H', tz=pytz.UTC)
+        >>> ws.indexed_temperatures(index, "degF")
+        2015-01-01 00:00:00+00:00    51.98
+        2015-01-01 01:00:00+00:00    50.00
+        2015-01-01 02:00:00+00:00    48.02
+                                     ...
+        2015-12-31 21:00:00+00:00    62.06
+        2015-12-31 22:00:00+00:00    62.06
+        2015-12-31 23:00:00+00:00    62.06
+
+    '''
 
     cache_date_format = "%Y%m%d%H"
     cache_key_format = "ISD-{}-{}.json"

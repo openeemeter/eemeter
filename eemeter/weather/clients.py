@@ -1,4 +1,4 @@
-from eemeter.weather.location import _load_station_to_lat_lng_index, haversine
+from eemeter.weather.location import _load_station_to_lat_lng_index
 
 import ftplib
 import gzip
@@ -38,16 +38,18 @@ class NOAAClient(object):
         raise RuntimeError("Couldn't establish an FTP connection.")
 
     def _load_station_index(self):
-        with resource_stream('eemeter.resources',
-                             'GSOD-ISD_station_index.json') as f:
-            return json.loads(f.read().decode("utf-8"))
+        if self.station_index is None:
+            with resource_stream('eemeter.resources',
+                                 'GSOD-ISD_station_index.json') as f:
+                return json.loads(f.read().decode("utf-8"))
+        else:
+            return self.station_index
 
     def _get_potential_station_ids(self, station):
-        if self.station_index is None:
-            self.station_index = self._load_station_index()
+        station_index = self._load_station_index()
 
         if len(station) == 6:
-            potential_station_ids = self.station_index[station]
+            potential_station_ids = station_index[station]
         else:
             potential_station_ids = [station]
         return potential_station_ids
@@ -164,7 +166,7 @@ class TMY3Client(object):
                 " list of stations."
                 .format(station)
             )
-            raise KeyError(message)
+            raise ValueError(message)
 
         url = (
             "http://rredc.nrel.gov/solar/old_data/nsrdb/"

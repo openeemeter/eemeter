@@ -1,6 +1,8 @@
 class ModelingPeriod(object):
+    '''
+    '''
 
-    INTERPRETATIONS = [
+    VALID_INTERPRETATIONS = [
         "BASELINE",
         "REPORTING",
     ]
@@ -10,15 +12,39 @@ class ModelingPeriod(object):
         self.start_date = start_date
         self.end_date = end_date
 
+        if start_date is not None:
+            self._validate_tz_aware(start_date)
+
+        if end_date is not None:
+            self._validate_tz_aware(end_date)
+
+        if start_date is not None and end_date is not None:
+            self._validate_date_order(start_date, end_date)
+
     def _validated_interpretation(self, interpretation):
-        if interpretation not in self.INTERPRETATIONS:
+        if interpretation not in self.VALID_INTERPRETATIONS:
             message = (
-                'Interpretation "{}" not recognized, use on of: {}'
-                .format(interpretation, self.INTERPRETATIONS)
+                'Interpretation "{}" not recognized, use one of these: {}'
+                .format(interpretation, self.VALID_INTERPRETATIONS)
             )
             raise ValueError(message)
         else:
             return interpretation
+
+    def _validate_date_order(self, start_date, end_date):
+        if start_date > end_date:
+            message = (
+                'Invalid dates: start_date({}) > end_date({}).'
+                .format(start_date, end_date)
+            )
+            raise ValueError(message)
+
+    def _validate_tz_aware(self, dt):
+        if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
+            message = (
+                "Date must be timezone aware: {}".format(dt)
+            )
+            raise ValueError(message)
 
     def __repr__(self):
         return (
@@ -28,6 +54,8 @@ class ModelingPeriod(object):
 
 
 class ModelingPeriodSet(object):
+    '''
+    '''
 
     def __init__(self, modeling_periods, groupings):
         self.modeling_periods = modeling_periods
@@ -45,7 +73,7 @@ class ModelingPeriodSet(object):
         if label not in self.modeling_periods:
             message = (
                 "Key {} in `groupings` not found in"
-                "  `modeling_periods` dict. Available"
+                " `modeling_periods` dict. Available"
                 " keys are {}."
                 .format(label, list(self.modeling_periods.keys()))
             )

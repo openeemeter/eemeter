@@ -1,6 +1,5 @@
 from eemeter.weather.cache import SqliteJSONStore
 import tempfile
-import pytest
 
 
 def test_basic_usage():

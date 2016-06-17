@@ -1,13 +1,20 @@
+from eemeter.processors.dispatchers import EnergyModelerDispatcher
+from eemeter.processors.location import WeatherSourceMatcher
+from eemeter.processors.interventions import EEInterventionModelingPeriodProcessor
+
+
 class EnergyEfficiencyMeter(object):
 
-    def __init__(self, settings={}):
+    def __init__(self, settings=None):
+        if settings is None:
+            self.settings = {}
         self.settings = settings
 
     def get_modeling_period_processor(self):
         return EEInterventionModelingPeriodProcessor()
 
-    def get_climate_data_matcher(self):
-        return ClimateDataMatcher()
+    def get_weather_source_matcher(self):
+        return WeatherSourceMatcher()
 
     def get_energy_modeler_dispatcher(self):
         return EnergyModelerDispatcher()
