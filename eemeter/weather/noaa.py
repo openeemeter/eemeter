@@ -242,8 +242,20 @@ class ISDWeatherSource(NOAAWeatherSourceBase):
 
         >>> import pandas as pd
         >>> import pytz
-        >>> index = pd.date_range('2015-01-01', periods=365*24, freq='H', tz=pytz.UTC)
-        >>> ws.indexed_temperatures(index, "degF")
+        >>> daily_index = pd.date_range('2015-01-01', periods=365,
+        ...     freq='D', tz=pytz.UTC)
+        >>> ws.indexed_temperatures(daily_index, "degF")
+        2015-01-01 00:00:00+00:00    43.550000
+        2015-01-02 00:00:00+00:00    45.042500
+        2015-01-03 00:00:00+00:00    47.307500
+                                       ...
+        2015-12-29 00:00:00+00:00    47.982500
+        2015-12-30 00:00:00+00:00    46.415000
+        2015-12-31 00:00:00+00:00    47.645000
+        Freq: D, dtype: float64
+        >>> hourly_index = pd.date_range('2015-01-01', periods=365*24,
+        ...     freq='H', tz=pytz.UTC)
+        >>> ws.indexed_temperatures(hourly_index, "degF")
         2015-01-01 00:00:00+00:00    51.98
         2015-01-01 01:00:00+00:00    50.00
         2015-01-01 02:00:00+00:00    48.02
@@ -251,6 +263,7 @@ class ISDWeatherSource(NOAAWeatherSourceBase):
         2015-12-31 21:00:00+00:00    62.06
         2015-12-31 22:00:00+00:00    62.06
         2015-12-31 23:00:00+00:00    62.06
+        Freq: H, dtype: float64
 
     '''
 

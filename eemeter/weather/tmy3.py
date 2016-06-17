@@ -9,6 +9,55 @@ import pytz
 
 
 class TMY3WeatherSource(WeatherSourceBase):
+    ''' The :code:`TMY3WeatherSource` draws weather data from the NREL's
+    Typical Meteorological Year 3 database. It stores fetched data locally by
+    default in a SQLite database at :code:`~/eemeter/cache/weather_cache.db`,
+    unless you use set the following environment variable to something
+    different:
+
+    .. code-block:: bash
+
+        $ export EEMETER_WEATHER_CACHE_DIRECTORY=/path/to/custom/directory
+
+    Basic usage is as follows:
+
+    .. code-block:: python
+
+        >>> from eemeter.weather import TMY3WeatherSource
+        >>> ws = TMY3WeatherSource("724830")  # or another 6-digit USAF station
+
+    This object can be used to fetch weather data as follows, using an daily
+    frequency time-zone aware pandas DatetimeIndex covering any stretch
+    of time.
+
+    .. code-block:: python
+
+        >>> import pandas as pd
+        >>> import pytz
+        >>> daily_index = pd.date_range('2015-01-01', periods=365,
+        ...     freq='D', tz=pytz.UTC)
+        >>> ws.indexed_temperatures(daily_index, "degF")
+        2015-01-01 00:00:00+00:00    36.1100
+        2015-01-02 00:00:00+00:00    41.8625
+        2015-01-03 00:00:00+00:00    43.8050
+                                      ...
+        2015-12-29 00:00:00+00:00    43.7000
+        2015-12-30 00:00:00+00:00    45.2750
+        2015-12-31 00:00:00+00:00    46.4750
+        Freq: D, dtype: float64
+        >>> hourly_index = pd.date_range('2015-01-01', periods=365*24,
+        ...     freq='H', tz=pytz.UTC)
+        >>> ws.indexed_temperatures(hourly_index, "degF")
+        2015-01-01 00:00:00+00:00    32.00
+        2015-01-01 01:00:00+00:00    30.92
+        2015-01-01 02:00:00+00:00    30.92
+                                     ...
+        2015-12-31 21:00:00+00:00    44.60
+        2015-12-31 22:00:00+00:00    42.80
+        2015-12-31 23:00:00+00:00    39.20
+        Freq: H, dtype: float64
+
+    '''
 
     cache_date_format = "%Y%m%d%H"
     cache_key_format = "TMY3-{}.json"
