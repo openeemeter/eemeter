@@ -40,26 +40,34 @@ def test_tz_unaware(interpretation):
         ModelingPeriod(interpretation, start_date, end_date)
 
 
-def test_tz_both_dates_blank(interpretation):
-    mp = ModelingPeriod(interpretation)
-    assert mp.start_date is None
-    assert mp.end_date is None
-
-
-def test_tz_start_date_blank(interpretation):
+def test_end_date_blank_reporting_ok(interpretation):
     start_date = datetime(2000, 1, 2, tzinfo=pytz.UTC)
-    mp = ModelingPeriod(interpretation, start_date=start_date)
+    mp = ModelingPeriod("REPORTING", start_date=start_date)
     assert mp.start_date == start_date
     assert mp.end_date is None
 
 
-def test_tz_end_date_blank(interpretation):
+def test_start_date_blank_reporting_not_ok(interpretation):
     end_date = datetime(2000, 1, 2, tzinfo=pytz.UTC)
-    mp = ModelingPeriod(interpretation, end_date=end_date)
+    with pytest.raises(ValueError):
+        ModelingPeriod("REPORTING", end_date=end_date)
+
+
+def test_end_date_blank_baseline_not_ok(interpretation):
+    start_date = datetime(2000, 1, 2, tzinfo=pytz.UTC)
+    with pytest.raises(ValueError):
+        ModelingPeriod("BASELINE", start_date=start_date)
+
+
+def test_start_date_blank_baseline_ok(interpretation):
+    end_date = datetime(2000, 1, 2, tzinfo=pytz.UTC)
+    mp = ModelingPeriod("BASELINE", end_date=end_date)
     assert mp.start_date is None
     assert mp.end_date == end_date
 
 
 def test_repr(interpretation):
-    mp = ModelingPeriod(interpretation)
+    start_date = datetime(2000, 1, 1, tzinfo=pytz.UTC)
+    end_date = datetime(2000, 1, 2, tzinfo=pytz.UTC)
+    mp = ModelingPeriod(interpretation, start_date, end_date)
     assert str(mp).startswith("ModelingPeriod")

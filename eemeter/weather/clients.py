@@ -1,5 +1,3 @@
-from eemeter.weather.location import _load_station_to_lat_lng_index
-
 import ftplib
 import gzip
 from io import BytesIO
@@ -8,8 +6,8 @@ import logging
 from pkg_resources import resource_stream
 import warnings
 from datetime import datetime, timedelta
-import pytz
 
+import pytz
 import pandas as pd
 import requests
 

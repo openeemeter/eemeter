@@ -21,4 +21,3 @@ class MockWeatherClient(object):
                               "1900-12-31 23:00",
                               freq='H', tz=pytz.UTC)
         return pd.Series(0, index=index, dtype=float)
-
