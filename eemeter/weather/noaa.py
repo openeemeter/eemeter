@@ -218,10 +218,10 @@ class GSODWeatherSource(NOAAWeatherSourceBase):
 
 class ISDWeatherSource(NOAAWeatherSourceBase):
     ''' The :code:`ISDWeatherSource` draws weather data from the NOAA
-    FTP site. It stores fetched hourly data locally by
-    default in a SQLite database at :code:`~/eemeter/cache/weather_cache.db`,
-    unless you use set the following environment variable to something
-    different:
+    Integrated Surface Database (ISD) FTP site. It stores fetched hourly data
+    locally by default in a SQLite database at
+    :code:`~/eemeter/cache/weather_cache.db`, unless you use set the following
+    environment variable to something different:
 
     .. code-block:: bash
 
