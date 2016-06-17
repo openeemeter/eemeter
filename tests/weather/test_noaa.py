@@ -1,25 +1,42 @@
-from eemeter.weather import GSODWeatherSource, ISDWeatherSource
-import pandas as pd
-import pytest
-from numpy.testing import assert_allclose
 import tempfile
 
+from numpy.testing import assert_allclose
+import pandas as pd
+import pytest
 
-def test_gsod_index_hourly():
-    ws = GSODWeatherSource("722890")
+from eemeter.weather import GSODWeatherSource, ISDWeatherSource
+from eemeter.testing import MockWeatherClient
+
+
+@pytest.fixture
+def mock_gsod_weather_source():
+    tmp_dir = tempfile.mkdtemp()
+    ws = GSODWeatherSource("722880", tmp_dir)
+    ws.client = MockWeatherClient()
+    return ws
+
+
+@pytest.fixture
+def mock_isd_weather_source():
+    tmp_dir = tempfile.mkdtemp()
+    ws = ISDWeatherSource("722880", tmp_dir)
+    ws.client = MockWeatherClient()
+    return ws
+
+
+def test_gsod_index_hourly(mock_gsod_weather_source):
     index = pd.date_range('2011-01-01 00:00:00Z', periods=2, freq='H')
     with pytest.raises(ValueError):
-        ws.indexed_temperatures(index, 'degF')
+        mock_gsod_weather_source.indexed_temperatures(index, 'degF')
 
 
-def test_gsod_index_daily():
-    ws = GSODWeatherSource("722880")
+def test_gsod_index_daily(mock_gsod_weather_source):
     index = pd.date_range('2011-01-01 00:00:00Z', periods=2, freq='D')
-    temps = ws.indexed_temperatures(index, 'degF')
+    temps = mock_gsod_weather_source.indexed_temperatures(index, 'degF')
     assert all(temps.index == index)
     assert all(temps.index == index)
     assert temps.shape == (2,)
-    assert_allclose(temps.values, [45.7, 46.9])
+    assert_allclose(temps.values, [32, 32])
 
 
 def test_bad_gsod_station():
@@ -27,48 +44,24 @@ def test_bad_gsod_station():
         GSODWeatherSource("INVALID")
 
 
-def test_gsod_cache():
-    tmp_dir = tempfile.mkdtemp()
-    ws = GSODWeatherSource("722880", tmp_dir)
-    index = pd.date_range('2011-01-01 00:00:00Z', periods=2, freq='D')
-    temps = ws.indexed_temperatures(index, 'degF')
-    assert all(temps.index == index)
-    assert all(temps.index == index)
-    assert temps.shape == (2,)
-    assert_allclose(temps.values, [45.7, 46.9])
-
-
-def test_isd_index_hourly():
-    ws = ISDWeatherSource("722880")
+def test_isd_index_hourly(mock_isd_weather_source):
     index = pd.date_range('2011-01-01 00:00:00Z', periods=2, freq='H')
-    temps = ws.indexed_temperatures(index, 'degF')
+    temps = mock_isd_weather_source.indexed_temperatures(index, 'degF')
     assert all(temps.index == index)
     assert all(temps.index == index)
     assert temps.shape == (2,)
-    assert_allclose(temps.values, [50., 50.])
+    assert_allclose(temps.values, [32, 32])
 
 
-def test_isd_index_daily():
-    ws = ISDWeatherSource("722880")
+def test_isd_index_daily(mock_isd_weather_source):
     index = pd.date_range('2011-01-01 00:00:00Z', periods=2, freq='D')
-    temps = ws.indexed_temperatures(index, 'degF')
+    temps = mock_isd_weather_source.indexed_temperatures(index, 'degF')
     assert all(temps.index == index)
     assert all(temps.index == index)
     assert temps.shape == (2,)
-    assert_allclose(temps.values, [45.7175, 46.8725])
+    assert_allclose(temps.values, [32, 32])
 
 
 def test_bad_isd_station():
     with pytest.raises(ValueError):
         ISDWeatherSource("INVALID")
-
-
-def test_isd_cache():
-    tmp_dir = tempfile.mkdtemp()
-    ws = ISDWeatherSource("722880", tmp_dir)
-    index = pd.date_range('2011-01-01 00:00:00Z', periods=2, freq='D')
-    temps = ws.indexed_temperatures(index, 'degF')
-    assert all(temps.index == index)
-    assert all(temps.index == index)
-    assert temps.shape == (2,)
-    assert_allclose(temps.values, [45.7175, 46.8725])

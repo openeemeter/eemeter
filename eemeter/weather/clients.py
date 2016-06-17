@@ -41,15 +41,14 @@ class NOAAClient(object):
         if self.station_index is None:
             with resource_stream('eemeter.resources',
                                  'GSOD-ISD_station_index.json') as f:
-                return json.loads(f.read().decode("utf-8"))
-        else:
-            return self.station_index
+                self.station_index = json.loads(f.read().decode("utf-8"))
+        return self.station_index
 
     def _get_potential_station_ids(self, station):
-        station_index = self._load_station_index()
+        self._load_station_index()
 
         if len(station) == 6:
-            potential_station_ids = station_index[station]
+            potential_station_ids = self.station_index[station]
         else:
             potential_station_ids = [station]
         return potential_station_ids
@@ -125,8 +124,8 @@ class NOAAClient(object):
         lines = self._retreive_file_lines(filename_format, station, year)
 
         dates = pd.date_range("{}-01-01 00:00".format(year),
-                              "{}-01-01 00:00".format(int(year) + 1),
-                              freq='H', tz=pytz.UTC)[:-1]
+                              "{}-12-31 23:00".format(int(year) + 1),
+                              freq='H', tz=pytz.UTC)
         series = pd.Series(None, index=dates, dtype=float)
 
         for line in lines:
@@ -144,20 +143,18 @@ class NOAAClient(object):
 class TMY3Client(object):
 
     def __init__(self):
-        self.stations = None  # lazily load
-        self.station_to_lat_lng = None  # lazily load
+        self.station_index = None  # lazily load
 
-    def _load_stations(self):
-        with resource_stream('eemeter.resources', 'tmy3_stations.json') as f:
-            return json.loads(f.read().decode("utf-8"))
-
-    def _load_station_locations(self):
-        return _load_station_to_lat_lng_index()
+    def _load_station_index(self):
+        if self.station_index is None:
+            with resource_stream('eemeter.resources',
+                                 'GSOD-ISD_station_index.json') as f:
+                self.station_index = json.loads(f.read().decode("utf-8"))
+        return self.station_index
 
     def get_tmy3_data(self, station):
 
-        if self.stations is None:
-            self.stations = self._load_stations()
+        self._load_station_index()
 
         if station not in self.stations:
             message = (

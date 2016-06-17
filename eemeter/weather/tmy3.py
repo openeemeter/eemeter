@@ -1,11 +1,11 @@
-from .base import WeatherSourceBase
-from .clients import TMY3Client
-from .cache import SqliteJSONStore
-
 from datetime import datetime, date
 
 import pandas as pd
 import pytz
+
+from .base import WeatherSourceBase
+from .clients import TMY3Client
+from .cache import SqliteJSONStore
 
 
 class TMY3WeatherSource(WeatherSourceBase):
@@ -64,16 +64,34 @@ class TMY3WeatherSource(WeatherSourceBase):
     freq = "H"
     client = TMY3Client()
 
-    def __init__(self, station, cache_directory=None):
+    def __init__(self, station, cache_directory=None, preload=True):
         super(TMY3WeatherSource, self).__init__(station)
 
         self.station = station
         self.json_store = SqliteJSONStore(cache_directory)
 
-        self._load_data()
+        self._check_station(station)
 
-    def load_cached_series(self):
-        data = self.json_store.retrieve_json(self.get_cache_key())
+        if preload:
+            self._load_data()
+
+    def _check_station(self, station):
+        index = self.client._load_station_index()
+        if station not in index:
+            message = (
+                "`{}` not recognized as valid TMY3 weather station identifier."
+            )
+            raise ValueError(message)
+
+    def _load_data(self):
+        if self.json_store.key_exists(self._get_cache_key()):
+            self.tempC = self._load_cached_series()
+        else:
+            self.tempC = self.client.get_tmy3_data(self.station)
+            self._save_series(self.tempC)
+
+    def _load_cached_series(self):
+        data = self.json_store.retrieve_json(self._get_cache_key())
 
         index = pd.to_datetime([d[0] for d in data],
                                format=self.cache_date_format, utc=True)
@@ -83,14 +101,7 @@ class TMY3WeatherSource(WeatherSourceBase):
         return pd.Series(values, index=index, dtype=float) \
             .sort_index().resample(self.freq).mean()
 
-    def _load_data(self):
-        if self.json_store.key_exists(self.get_cache_key()):
-            self.tempC = self.load_cached_series()
-        else:
-            self.tempC = self.client.get_tmy3_data(self.station)
-            self.save_series(self.tempC)
-
-    def save_series(self, series):
+    def _save_series(self, series):
         data = [
             [
                 d.strftime(self.cache_date_format), t
@@ -98,9 +109,9 @@ class TMY3WeatherSource(WeatherSourceBase):
             ]
             for d, t in series.iteritems()
         ]
-        self.json_store.save_json(self.get_cache_key(), data)
+        self.json_store.save_json(self._get_cache_key(), data)
 
-    def get_cache_key(self):
+    def _get_cache_key(self):
         return self.cache_key_format.format(self.station)
 
     @staticmethod
