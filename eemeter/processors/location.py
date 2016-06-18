@@ -1,6 +1,6 @@
 from eemeter.weather.location import zipcode_to_station
 from eemeter.weather.noaa import ISDWeatherSource
-from eemeter.weather.tmy import TMY3WeatherSource
+from eemeter.weather.tmy3 import TMY3WeatherSource
 
 
 class WeatherSourceProcessor(object):

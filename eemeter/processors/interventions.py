@@ -1,5 +1,7 @@
-from eemeter.containers import ModelingPeriod
-from eemeter.containers import ModelingPeriodSet
+from eemeter.structures import (
+    ModelingPeriod,
+    ModelingPeriodSet,
+)
 
 
 class EEModelingPeriodProcessor(object):
@@ -21,10 +23,14 @@ class EEModelingPeriodProcessor(object):
             reporting_period_start = baseline_period_end
 
         modeling_periods = {
-            "baseline": ModelingPeriod("BASELINE",
-                                       end_date=baseline_period_end),
-            "reporting": ModelingPeriod("REPORTING",
-                                        start_date=reporting_period_start),
+            "baseline": ModelingPeriod(
+                "BASELINE",
+                end_date=baseline_period_end
+            ),
+            "reporting": ModelingPeriod(
+                "REPORTING",
+                start_date=reporting_period_start
+            ),
         }
 
         groupings = [("baseline", "reporting")]
