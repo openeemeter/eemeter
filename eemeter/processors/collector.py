@@ -14,13 +14,12 @@ class Collector(object):
         self.items[key] = new_items
 
 
-def collects(keys):
+def collects():
     def collects_decorator(func):
         @wraps(func)
         def func_wrapper(collector, *args, **kwargs):
             result, collectables = func(*args, **kwargs)
-            for key, collectable in zip(keys, collectables):
-                collector[key] = collectable
+            collector.update(collectables)
             return result
         return func_wrapper
     return collects_decorator

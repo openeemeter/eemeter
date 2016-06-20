@@ -4,9 +4,9 @@ from eemeter.processors.collector import collects
 
 def test_basic_usage():
 
-    @collects(["thing_done"])
+    @collects()
     def do_thing(returnme):
-        return returnme, ("abc",)
+        return returnme, {"thing_done": "abc"}
 
     collector = Collector()
     with collector.collect("key") as c:
