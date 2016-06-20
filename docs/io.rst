@@ -13,5 +13,5 @@ eemeter.io.serializers
 eemeter.io.parsers
 ------------------
 
-.. automodule:: eemeter.io.parsers
+.. autoclass:: eemeter.io.parsers.ESPIUsageParser
     :members:

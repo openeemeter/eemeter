@@ -12,6 +12,15 @@ from eemeter.io.serializers import ArbitrarySerializer
 class ESPIUsageParser(object):
     """ Parse ESPI XML files.
 
+    Basic usage:
+
+    .. code-block:: python
+
+        >>> from eemeter.io.parsers import ESPIUsageParser
+        >>> with open("/path/to/example.xml") as f:
+        ...     parser = ESPIUsageParser(f)
+        >>> energy_traces = list(parser.get_energy_trace_objects())
+
     Parameters
     ----------
     xml : str, filepath, file buffer
@@ -452,20 +461,9 @@ class ESPIUsageParser(object):
         try:
             self.root = etree.parse(xml)  # xml is file path or file object
         except IOError:
-            if isinstance(xml, six.string_types):
+            if isinstance(xml, six.string_types + (six.binary_type,)):
                 self.root = etree.fromstring(xml)  # xml is a string.
-        self.timezone = self.get_timezone()
-
-    @staticmethod
-    def pprint(element):
-        """ Pretty prints the given element
-
-        Parameters
-        ----------
-        element : etree.Element
-            The element to pretty print.
-        """
-        print(etree.tostring(element, pretty_print=True))
+        self.timezone = self._get_timezone()
 
     def has_solar(self):
         """ Returns True if there is a "reverse" flow direction in this file,
@@ -478,45 +476,11 @@ class ESPIUsageParser(object):
         reading_type_elements = \
             self.root.findall('.//{http://naesb.org/espi}ReadingType')
         reading_types = [
-            self.parse_reading_type(e)
+            self._parse_reading_type(e)
             for e in reading_type_elements
         ]
         flow_directions = [rt["flow_direction"] for rt in reading_types]
         return "reverse" in flow_directions
-
-    def get_usage_point_entry_element(self):
-        """ Gets an entry element with a UsagePoint child
-
-        Returns
-        -------
-        meter_reading_entry_element : etree.Element
-            UsagePoint entry element
-        """
-        return self.root.find('.//{http://naesb.org/espi}UsagePoint') \
-            .getparent().getparent()
-
-    def get_meter_reading_entry_element(self):
-        """ Gets an entry element with a MeterReading nhild
-
-        Returns
-        -------
-        meter_reading_entry_element : etree.Element
-            MeterReading entry elements
-        """
-        return self.root.find('.//{http://naesb.org/espi}MeterReading') \
-            .getparent().getparent()
-
-    def get_usage_summary_entry_elements(self):
-        """ Gets entry elements which have a UsageSummary child
-
-        Returns
-        -------
-        usage_summary_entry_elements : etree.Element
-            UsageSummary entry elements
-        """
-        usage_summaries = \
-            self.root.findall('.//{http://naesb.org/espi}UsageSummary')
-        return [e.getparent().getparent() for e in usage_summaries]
 
     def _normalize_fuel_type(self, commodity):
         ''' Convert ESPI fuel type codes to eemeter fuel type codes.
@@ -543,7 +507,7 @@ class ESPIUsageParser(object):
         else:
             raise ValueError("Timezone not supported")
 
-    def get_timezone(self):
+    def _get_timezone(self):
         ''' Fetch the timezone the interval readings are in, from
         the ESPI LocalTimeParameters object.
 
@@ -583,7 +547,7 @@ class ESPIUsageParser(object):
                 '{http://naesb.org/espi}tzOffset').text
         return self._tz_offset_to_timezone(tz_offset)
 
-    class ChildElementGetter(object):
+    class _ChildElementGetter(object):
         ''' Helper class that gets child (or really descendant) elements
         of given element, extract their text values, and parses them.
 
@@ -625,7 +589,7 @@ class ESPIUsageParser(object):
                            element %s' % child_element_name
                     raise NotImplementedError(msg)
 
-    def parse_reading_type(self, reading_type_element):
+    def _parse_reading_type(self, reading_type_element):
         """ Parses a single reading type element.
 
         Parameters
@@ -641,7 +605,7 @@ class ESPIUsageParser(object):
 
         # Initialize Getter class for reading type element, to make getting
         # and parsing the values of child elements easier.
-        reading_type = self.ChildElementGetter(
+        reading_type = self._ChildElementGetter(
                 reading_type_element, self.VALUE_PARSERS)
 
         data_spec = [
@@ -663,7 +627,7 @@ class ESPIUsageParser(object):
         return {name: reading_type.child_element_value(path)
                 for name, path in data_spec}
 
-    def get_reading_type_interval_block_groups(self):
+    def _get_reading_type_interval_block_groups(self):
         """ Yields reading type elements and their associated interval blocks.
 
         Parameters
@@ -743,9 +707,9 @@ class ESPIUsageParser(object):
                     warnings.warn(message)
 
         for group in reading_types.values():
-            yield self.parse_interval_block_group(group)
+            yield self._parse_interval_block_group(group)
 
-    def parse_interval_reading(self, interval_reading):
+    def _parse_interval_reading(self, interval_reading):
         '''
         Parse ESPI IntervalReading element into dict.
 
@@ -795,7 +759,7 @@ class ESPIUsageParser(object):
                 "start": start,
                 "value": value}
 
-    def parse_interval_block_group(self, interval_block_group):
+    def _parse_interval_block_group(self, interval_block_group):
         '''
         Parse IntervalBlocks (and child IntervalReadings) grouped by
         ReadingType into dict.
@@ -830,7 +794,7 @@ class ESPIUsageParser(object):
         data : dict
             Data in the group of IntervalBlock elements
         '''
-        reading_type = self.parse_reading_type(
+        reading_type = self._parse_reading_type(
                 interval_block_group["reading_type"])
 
         interval_blocks = interval_block_group["interval_blocks"]
@@ -838,12 +802,12 @@ class ESPIUsageParser(object):
         return {
             "reading_type": reading_type,
             "interval_blocks": [
-                self.parse_interval_block(interval_block)
+                self._parse_interval_block(interval_block)
                 for interval_block in interval_blocks
             ],
         }
 
-    def parse_interval_block(self, interval_block):
+    def _parse_interval_block(self, interval_block):
         '''
         Parameters
         ----------
@@ -871,7 +835,7 @@ class ESPIUsageParser(object):
         interval_reading_elements = interval_block.findall(
                 "{http://naesb.org/espi}IntervalReading")
         interval_readings = [
-            self.parse_interval_reading(reading)
+            self._parse_interval_reading(reading)
             for reading in interval_reading_elements
         ]
 
@@ -885,7 +849,7 @@ class ESPIUsageParser(object):
 
         return data
 
-    def get_interval_block_group_consumption_records(self,
+    def _get_interval_block_group_consumption_records(self,
                                                      interval_block_group):
         ''' Return all  in ESPI Energy Usage XML.
         Each interval block contains a set of interval readings.
@@ -951,7 +915,7 @@ class ESPIUsageParser(object):
                 )
                 warnings.warn(message)
 
-    def get_consumption_record_groups(self):
+    def _get_consumption_record_groups(self):
         ''' Return all consumption records, across all IntervalBlocks,
         stored in ESPI Energy Usage XML, grouped by flow direction.
 
@@ -961,10 +925,10 @@ class ESPIUsageParser(object):
             IntervalReading data
         '''
 
-        for group in self.get_reading_type_interval_block_groups():
+        for group in self._get_reading_type_interval_block_groups():
             flow_direction = group["reading_type"]["flow_direction"]
             records = list(
-                    self.get_interval_block_group_consumption_records(group))
+                    self._get_interval_block_group_consumption_records(group))
             yield flow_direction, sorted(records, key=lambda x: x["start"])
 
     def get_energy_trace_objects(self, service_kind_default="electricity"):
@@ -995,7 +959,7 @@ class ESPIUsageParser(object):
         }
 
         # Get all consumption records, group by fuel type.
-        for flow_direction, records in self.get_consumption_record_groups():
+        for flow_direction, records in self._get_consumption_record_groups():
 
             if len(records) > 0:
                 fuel_type_records = defaultdict(list)

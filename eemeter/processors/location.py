@@ -5,9 +5,9 @@ from eemeter.processors.collector import collects
 
 
 @collects()
-def site_to_weather_source(site):
+def get_weather_source(project):
 
-    zipcode = site.zipcode
+    zipcode = project.site.zipcode
 
     logs = {}
 
@@ -15,9 +15,7 @@ def site_to_weather_source(site):
         station = zipcode_to_station(zipcode)
     except KeyError:
         message = "Could not find station for zipcode {}." .format(zipcode)
-    else:
-        message = "Matched zipcode {} to station {}.".format(zipcode, station)
-    logs["zipcode_to_ISD_station"] = message
+    logs["ISD_station_id"] = station
 
     try:
         weather_source = ISDWeatherSource(station)
