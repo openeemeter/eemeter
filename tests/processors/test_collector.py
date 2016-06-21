@@ -1,16 +1,16 @@
-from eemeter.processors.collector import Collector
-from eemeter.processors.collector import collects
+from eemeter.processors.collector import LogCollector
 
 
 def test_basic_usage():
 
-    @collects()
-    def do_thing(returnme):
-        return returnme, {"thing_done": "abc"}
+    def do_thing(logger, returnme):
+        logger.debug("TEST")
+        return returnme
 
-    collector = Collector()
-    with collector.collect("key") as c:
-        result = do_thing(c, "returnme")
+    collector = LogCollector()
+    with collector.collect_logs("key") as logger:
+        result = do_thing(logger, "returnme")
 
-    assert collector.items["key"]["thing_done"] == "abc"
+    assert collector.items["key"].endswith("TEST\n")
+    assert "DEBUG" in collector.items["key"]
     assert result == "returnme"

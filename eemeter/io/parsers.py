@@ -19,7 +19,7 @@ class ESPIUsageParser(object):
         >>> from eemeter.io.parsers import ESPIUsageParser
         >>> with open("/path/to/example.xml") as f:
         ...     parser = ESPIUsageParser(f)
-        >>> energy_traces = list(parser.get_energy_trace_objects())
+        >>> energy_traces = list(parser.get_energy_traces())
 
     Parameters
     ----------
@@ -931,7 +931,7 @@ class ESPIUsageParser(object):
                     self._get_interval_block_group_consumption_records(group))
             yield flow_direction, sorted(records, key=lambda x: x["start"])
 
-    def get_energy_trace_objects(self, service_kind_default="electricity"):
+    def get_energy_traces(self, service_kind_default="electricity"):
         ''' Retrieve all energy trace records stored as IntervalReading
         elements in the given ESPI Energy Usage XML.
 
@@ -947,7 +947,7 @@ class ESPIUsageParser(object):
         Yields
         ------
         energy_trace : eemeter.structures.EnergyTrace
-            Consumption data grouped by fuel type.
+            Energy data traces as described in the xml file.
         '''
 
         INTERPRETATION_MAPPING = {

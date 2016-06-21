@@ -11,7 +11,7 @@ setup(
         "Standard methods for calculating energy efficiency savings."
     ),
     url='https://github.com/impactlab/eemeter/',
-    author='Matt Gee, Phil Ngo',
+    author='Matt Gee, Phil Ngo, Brandon Willard',
     license='MIT',
     classifiers=[
         'Development Status :: 3 - Alpha',

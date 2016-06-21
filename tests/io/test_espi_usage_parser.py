@@ -25,7 +25,7 @@ def espi_natural_gas_xml():
 
 def test_electricity(espi_electricity_xml):
     parser = ESPIUsageParser(espi_electricity_xml)
-    ets = sorted(list(parser.get_energy_trace_objects()),
+    ets = sorted(list(parser.get_energy_traces()),
                  key=lambda x: x.interpretation)
 
     assert len(ets) == 2
@@ -45,7 +45,7 @@ def test_electricity(espi_electricity_xml):
 
 def test_natural_gas(espi_natural_gas_xml):
     parser = ESPIUsageParser(espi_natural_gas_xml)
-    ets = sorted(list(parser.get_energy_trace_objects()),
+    ets = sorted(list(parser.get_energy_traces()),
                  key=lambda x: x.interpretation)
 
     assert len(ets) == 1
