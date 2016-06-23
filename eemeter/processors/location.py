@@ -7,9 +7,9 @@ def get_weather_source(logger, project):
 
     zipcode = project.site.zipcode
 
-    try:
-        station = zipcode_to_station(zipcode)
-    except KeyError:
+    station = zipcode_to_station(zipcode)
+
+    if station is None:
         logger.error(
             "Could not find ISD station for zipcode {}."
             .format(zipcode)
@@ -41,11 +41,11 @@ def get_weather_normal_source(logger, project):
 
     logs = {}
 
-    try:
-        station = zipcode_to_station(zipcode)
-    except KeyError:
+    station = zipcode_to_station(zipcode)
+
+    if station is None:
         logger.error(
-            "Could not find TMY3 station for zipcode {}."
+            "Could not find appropriate TMY3 station for zipcode {}."
             .format(zipcode)
         )
         return None

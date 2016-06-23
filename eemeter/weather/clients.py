@@ -154,7 +154,7 @@ class TMY3Client(object):
 
         self._load_station_index()
 
-        if station not in self.stations:
+        if station not in self.station_index:
             message = (
                 "Station {} is not a TMY3 station."
                 " See eemeter/resources/tmy3_stations.json for a complete"
