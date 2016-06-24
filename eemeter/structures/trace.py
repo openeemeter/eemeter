@@ -255,27 +255,6 @@ class EnergyTrace(object):
                 .format(self.interpretation, self.data)
             )
 
-    def filter_by_modeling_period(self, modeling_period):
-
-        start = modeling_period.start_date
-        end = modeling_period.end_date
-
-        if start is None:
-            if end is None:
-                filtered_df = self.data.copy()
-            else:
-                filtered_df = self.data[:end].copy()
-        else:
-            if end is None:
-                filtered_df = self.data[start:].copy()
-            else:
-                filtered_df = self.data[start:end].copy()
-
-        # require NaN last data point as cap
-        if filtered_df.shape[0] > 0:
-            filtered_df.value.iloc[-1] = np.nan
-            filtered_df.estimated.iloc[-1] = False
-
 
 class EnergyTraceSet(object):
     ''' A container for energy traces which ensures that each is labeled.

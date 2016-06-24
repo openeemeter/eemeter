@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from sklearn import linear_model
@@ -165,6 +164,12 @@ class SeasonalElasticNetCVModel(object):
         return predicted
 
     def plot(self):
+
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:
+            warnings.warn("Cannot plot - no matplotlib.")
+            return None
 
         plt.title("actual v. estimated w/ 95% confidence")
 

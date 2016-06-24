@@ -7,7 +7,6 @@ from eemeter.processors.collector import LogCollector
 
 
 def test_empty():
-
     lc = LogCollector()
 
     with lc.collect_logs("modeling_period_set") as logger:
