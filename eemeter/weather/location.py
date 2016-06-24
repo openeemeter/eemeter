@@ -2,17 +2,7 @@ import json
 import numpy as np
 from pkg_resources import resource_stream
 
-station_to_lat_lng_index = None
-station_to_zipcodes_index = None
-station_to_climate_zone_index = None
-
-zipcode_to_lat_lng_index = None
-zipcode_to_station_index = None
-zipcode_to_climate_zone_index = None
-
-climate_zone_to_stations_index = None
-climate_zone_to_zipcodes_index = None
-
+resources = {}
 
 def _get_json_resource(filename):
     with resource_stream('eemeter.resources', filename) as f:
@@ -20,68 +10,96 @@ def _get_json_resource(filename):
     return resource
 
 
-def _load_station_to_lat_lng_index():
-    global station_to_lat_lng_index
-    if station_to_lat_lng_index is None:
-        station_to_lat_lng_index = \
-                _get_json_resource('usaf_station_lat_long.json')
-    return station_to_lat_lng_index
+def _load_resource(name, filename):
+    global resources
+    if resources.get(name, None) is None:
+        resources[name] = _get_json_resource(filename)
+    return resources[name]
 
 
-def _load_station_to_zipcodes_index():
-    global station_to_zipcodes_index
-    if station_to_zipcodes_index is None:
-        station_to_zipcodes_index = \
-                _get_json_resource('usaf_station_zipcodes.json')
-    return station_to_zipcodes_index
+def _load_usaf_station_to_lat_lng_index():
+    return _load_resource('usaf_station_to_lat_lng_index',
+                          'usaf_station_lat_lngs.json')
 
 
-def _load_station_to_climate_zone_index():
-    global station_to_climate_zone_index
-    if station_to_climate_zone_index is None:
-        station_to_climate_zone_index = \
-                _get_json_resource('usaf_station_climate_zone.json')
-    return station_to_climate_zone_index
+def _load_usaf_station_to_zipcodes_index():
+    return _load_resource('usaf_station_to_zipcodes_index',
+                          'usaf_station_zipcodes.json')
+
+
+def _load_usaf_station_to_climate_zone_index():
+    return _load_resource('usaf_station_to_climate_zone_index',
+                          'usaf_station_climate_zone.json')
+
+
+def _load_tmy3_station_to_lat_lng_index():
+    return _load_resource('tmy3_station_to_lat_lng_index',
+                          'tmy3_station_lat_lngs.json')
+
+
+def _load_tmy3_station_to_zipcodes_index():
+    return _load_resource('tmy3_station_to_zipcodes_index',
+                          'tmy3_station_zipcodes.json')
+
+
+def _load_tmy3_station_to_climate_zone_index():
+    return _load_resource('tmy3_station_to_climate_zone_index',
+                          'tmy3_station_climate_zone.json')
 
 
 def _load_zipcode_to_lat_lng_index():
-    global zipcode_to_lat_lng_index
-    if zipcode_to_lat_lng_index is None:
-        zipcode_to_lat_lng_index = \
-                _get_json_resource('zipcode_centroid_lat_long.json')
-    return zipcode_to_lat_lng_index
+    return _load_resource('zipcode_to_lat_lng_index',
+                          'zipcode_centroid_lat_lngs.json')
 
 
-def _load_zipcode_to_station_index():
-    global zipcode_to_station_index
-    if zipcode_to_station_index is None:
-        zipcode_to_station_index = \
-                _get_json_resource('zipcode_usaf_station.json')
-    return zipcode_to_station_index
+def _load_zipcode_to_usaf_station_index():
+    return _load_resource('zipcode_to_usaf_station_index',
+                          'zipcode_usaf_station.json')
+
+
+def _load_zipcode_to_tmy3_station_index():
+    return _load_resource('zipcode_to_tmy3_station_index',
+                          'zipcode_tmy3_station.json')
 
 
 def _load_zipcode_to_climate_zone_index():
-    global zipcode_to_climate_zone_index
-    if zipcode_to_climate_zone_index is None:
-        zipcode_to_climate_zone_index = \
-                _get_json_resource('zipcode_climate_zone.json')
-    return zipcode_to_climate_zone_index
+    return _load_resource('zipcode_to_climate_zone_index',
+                          'zipcode_climate_zone.json')
 
 
 def _load_climate_zone_to_zipcodes_index():
-    global climate_zone_to_zipcodes_index
-    if climate_zone_to_zipcodes_index is None:
-        climate_zone_to_zipcodes_index = \
-                _get_json_resource('climate_zone_zipcodes.json')
-    return climate_zone_to_zipcodes_index
+    return _load_resource('climate_zone_to_zipcodes_index',
+                          'climate_zone_zipcodes.json')
 
 
-def _load_climate_zone_to_stations_index():
-    global climate_zone_to_stations_index
-    if climate_zone_to_stations_index is None:
-        climate_zone_to_stations_index = \
-                _get_json_resource('climate_zone_usaf_stations.json')
-    return climate_zone_to_stations_index
+def _load_climate_zone_to_usaf_stations_index():
+    return _load_resource('climate_zone_to_usaf_stations_index',
+                          'climate_zone_usaf_stations.json')
+
+
+def _load_climate_zone_to_tmy3_stations_index():
+    return _load_resource('climate_zone_to_tmy3_stations_index',
+                          'climate_zone_tmy3_stations.json')
+
+
+def _load_supported_zipcodes_index():
+    return _load_resource('supported_zipcodes_index',
+                          'supported_zipcodes.json')
+
+
+def _load_supported_tmy3_stations_index():
+    return _load_resource('supported_tmy3_stations_index',
+                          'supported_tmy3_stations.json')
+
+
+def _load_supported_usaf_stations_index():
+    return _load_resource('supported_usaf_stations_index',
+                          'supported_usaf_stations.json')
+
+
+def _load_supported_climate_zones_index():
+    return _load_resource('supported_climate_zones_index',
+                          'supported_climate_zones.json')
 
 
 def haversine(lat1, lng1, lat2, lng2):
@@ -116,7 +134,7 @@ def haversine(lat1, lng1, lat2, lng2):
     return c * r
 
 
-def lat_lng_to_station(lat, lng):
+def lat_lng_to_usaf_station(lat, lng):
     """Return the closest USAF station ID using latitude and
     longitude coordinates.
 
@@ -135,8 +153,34 @@ def lat_lng_to_station(lat, lng):
     """
     if lat is None or lng is None:
         return None
-    station_to_lat_lng_index = _load_station_to_lat_lng_index()
-    index_list = list(station_to_lat_lng_index.items())
+    usaf_station_to_lat_lng_index = _load_usaf_station_to_lat_lng_index()
+    index_list = list(usaf_station_to_lat_lng_index.items())
+    dists = [haversine(lat, lng, stat_lat, stat_lng)
+             for _, (stat_lat, stat_lng) in index_list]
+    return index_list[np.argmin(dists)][0]
+
+
+def lat_lng_to_tmy3_station(lat, lng):
+    """Return the closest TMY3 station ID using latitude and
+    longitude coordinates.
+
+    Parameters
+    ----------
+    lat : float
+        Latitude coordinate.
+    lng : float
+        Longitude coordinate.
+
+    Returns
+    -------
+    station : str, None
+        String representing a TMY3 weather station ID or None, if none was
+        found.
+    """
+    if lat is None or lng is None:
+        return None
+    tmy3_station_to_lat_lng_index = _load_tmy3_station_to_lat_lng_index()
+    index_list = list(tmy3_station_to_lat_lng_index.items())
     dists = [haversine(lat, lng, stat_lat, stat_lng)
              for _, (stat_lat, stat_lng) in index_list]
     return index_list[np.argmin(dists)][0]
@@ -169,8 +213,30 @@ def lat_lng_to_zipcode(lat, lng):
     return index_list[np.argmin(dists)][0]
 
 
-def station_to_lat_lng(station):
-    """Return the latitude and longitude coordinates of the given station.
+def lat_lng_to_climate_zone(lat, lng):
+    """Return the closest ZIP code using latitude and
+    longitude coordinates.
+
+    Parameters
+    ----------
+    lat : float
+        Latitude coordinate.
+    lng : float
+        Longitude coordinate.
+
+    Returns
+    -------
+    climate_zone : str, None
+        String representing a climate zone.
+
+    """
+    zipcode = lat_lng_to_zipcode(lat, lng)
+    zipcode_to_climate_zone_index = _load_zipcode_to_climate_zone_index()
+    return zipcode_to_climate_zone_index.get(zipcode, None)
+
+
+def usaf_station_to_lat_lng(station):
+    """Return the latitude and longitude coordinates of the given USAF station.
 
     Parameters
     ----------
@@ -183,13 +249,67 @@ def station_to_lat_lng(station):
         Latitude and longitude coordinates.
 
     """
-    lat_lng = _load_station_to_lat_lng_index().get(station)
+    lat_lng = _load_usaf_station_to_lat_lng_index().get(station, None)
     if lat_lng is None:
         return None, None
     return lat_lng
 
 
-def station_to_zipcodes(station):
+def usaf_station_to_zipcodes(station):
+    """Return the zipcodes that map to this USAF station.
+
+    Parameters
+    ----------
+    station : str
+        String representing a USAF Weather station ID
+
+    Returns
+    -------
+    zipcodes : list of str
+        Strings representing a USPS ZIP code mapped to from this station.
+
+    """
+    return _load_usaf_station_to_zipcodes_index().get(station, None)
+
+
+def usaf_station_to_climate_zone(station):
+    """Return the climate zone of the station.
+
+    Parameters
+    ----------
+    station : str
+        String representing a USAF Weather station ID
+
+    Returns
+    -------
+    climate_zone : str
+        String representing a climate zone
+
+    """
+    return _load_usaf_station_to_climate_zone_index().get(station, None)
+
+
+def tmy3_station_to_lat_lng(station):
+    """Return the latitude and longitude coordinates of the given station.
+
+    Parameters
+    ----------
+    station : str
+        String representing a TMY3 USAF Weather station ID
+
+    Returns
+    -------
+    lat_lng : tuple of float
+        Latitude and longitude coordinates.
+
+    """
+    lat_lng = _load_tmy3_station_to_lat_lng_index().get(station, None)
+    if lat_lng is None:
+        return None, None
+    return lat_lng
+
+
+def tmy3_station_to_zipcodes(station):
     """Return the zipcodes that map to this station.
 
     Parameters
@@ -203,11 +323,11 @@ def station_to_zipcodes(station):
         String representing a USPS ZIP code.
 
     """
-    return _load_station_to_zipcodes_index().get(station)
+    return _load_tmy3_station_to_zipcodes_index().get(station, None)
 
 
-def station_to_climate_zone(station):
-    """Return the climate_zone of the station.
+def tmy3_station_to_climate_zone(station):
+    """Return the climate zone of the station.
 
     Parameters
     ----------
@@ -217,10 +337,10 @@ def station_to_climate_zone(station):
     Returns
     -------
     climate_zone : str
-        String representing a USPS ZIP code.
+        String representing a climate zone.
 
     """
-    return _load_station_to_climate_zone_index().get(station)
+    return _load_tmy3_station_to_climate_zone_index().get(station, None)
 
 
 def zipcode_to_lat_lng(zipcode):
@@ -237,13 +357,13 @@ def zipcode_to_lat_lng(zipcode):
         Latitude and longitude coordinates.
 
     """
-    lat_lng = _load_zipcode_to_lat_lng_index().get(zipcode)
+    lat_lng = _load_zipcode_to_lat_lng_index().get(zipcode, None)
     if lat_lng is None:
         return None, None
     return lat_lng
 
 
-def zipcode_to_station(zipcode):
+def zipcode_to_usaf_station(zipcode):
     """Return the nearest USAF station (by latitude and longitude centroid) of
     the ZIP code.
 
@@ -255,9 +375,26 @@ def zipcode_to_station(zipcode):
     Returns
     -------
     station : str
-        String representing a USAF Weather station ID
+        String representing a USAF weather station ID
     """
-    return _load_zipcode_to_station_index().get(zipcode)
+    return _load_zipcode_to_usaf_station_index().get(zipcode, None)
+
+
+def zipcode_to_tmy3_station(zipcode):
+    """Return the nearest TMY3 station (by latitude and longitude centroid) of
+    the ZIP code.
+
+    Parameters
+    ----------
+    zipcode : str
+        String representing a USPS ZIP code.
+
+    Returns
+    -------
+    station : str
+        String representing a TMY3 Weather station (USAF ID).
+    """
+    return _load_zipcode_to_usaf_station_index().get(zipcode, None)
 
 
 def zipcode_to_climate_zone(zipcode):
@@ -274,7 +411,7 @@ def zipcode_to_climate_zone(zipcode):
     climate_zone : str
         String representing a climate zone
     """
-    return _load_zipcode_to_climate_zone_index().get(zipcode)
+    return _load_zipcode_to_climate_zone_index().get(zipcode, None)
 
 
 def climate_zone_to_zipcodes(climate_zone):
@@ -290,11 +427,11 @@ def climate_zone_to_zipcodes(climate_zone):
     zipcodes : list of str
         Strings representing USPS ZIP codes.
     """
-    return _load_climate_zone_to_zipcodes_index().get(climate_zone)
+    return _load_climate_zone_to_zipcodes_index().get(climate_zone, None)
 
 
-def climate_zone_to_stations(climate_zone):
-    """Return weather stations falling within in the given climate zone.
+def climate_zone_to_usaf_stations(climate_zone):
+    """Return USAF weather stations falling within in the given climate zone.
 
     Parameters
     ----------
@@ -306,4 +443,84 @@ def climate_zone_to_stations(climate_zone):
     stations : list of str
         Strings representing USAF station ids.
     """
-    return _load_climate_zone_to_stations_index().get(climate_zone)
+    return _load_climate_zone_to_usaf_stations_index().get(climate_zone, None)
+
+
+def climate_zone_to_tmy3_stations(climate_zone):
+    """Return TMY3 weather stations falling within in the given climate zone.
+
+    Parameters
+    ----------
+    climate_zone : str
+        String representing a climate zone.
+
+    Returns
+    -------
+    stations : list of str
+        Strings representing TMY3 station ids.
+    """
+    return _load_climate_zone_to_tmy3_stations_index().get(climate_zone, None)
+
+
+def zipcode_is_supported(zipcode):
+    """True if given ZIP Code is supported. ZCTA only.
+
+    Parameters
+    ----------
+    zipcode : str
+        5-digit string representing a zipcode.
+
+    Returns
+    -------
+    supported : bool
+        `True` if supported, otherwise `False`.
+    """
+    return zipcode in _load_supported_zipcodes_index()
+
+
+def usaf_station_is_supported(station):
+    """True if given USAF weather station is supported. USAF IDs.
+
+    Parameters
+    ----------
+    station : str
+        6-digit string representing a weather station.
+
+    Returns
+    -------
+    supported : bool
+        `True` if supported, otherwise `False`.
+    """
+    return station in _load_supported_usaf_stations_index()
+
+
+def tmy3_station_is_supported(station):
+    """True if given TMY3 weather station is supported. USAF IDs.
+
+    Parameters
+    ----------
+    station : str
+        6-digit string representing a weather station.
+
+    Returns
+    -------
+    supported : bool
+        `True` if supported, otherwise `False`.
+    """
+    return station in _load_supported_tmy3_stations_index()
+
+
+def climate_zone_is_supported(climate_zone):
+    """True if given Climate Zone is supported.
+
+    Parameters
+    ----------
+    climate_zone : str
+        String representing a climate_zone.
+
+    Returns
+    -------
+    supported : bool
+        `True` if supported, otherwise `False`.
+    """
+    return climate_zone in _load_supported_climate_zones_index()
