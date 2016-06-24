@@ -5,7 +5,7 @@ import pytest
 import numpy as np
 import pandas as pd
 
-from eemeter.processors.dispatchers import dispatch_energy_modelers
+from eemeter.processors.dispatchers import get_energy_modeling_dispatches
 from eemeter.processors.collector import LogCollector
 from eemeter.structures import (
     ModelingPeriod,
@@ -55,24 +55,60 @@ def trace_set():
     return EnergyTraceSet([trace], ["trace"])
 
 
+@pytest.fixture
+def placeholder_trace_set():
+    trace = EnergyTrace("ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED",
+                        placeholder=True)
+
+    return EnergyTraceSet([trace], ["trace"])
+
+
 def test_basic_usage(modeling_period_set, trace_set):
     lc = LogCollector()
 
-    with lc.collect_logs("dispatch_energy_modelers") as logger:
-        dispatches = list(dispatch_energy_modelers(
-            logger, modeling_period_set, trace_set))
+    with lc.collect_logs("get_energy_modeling_dispatches") as logger:
+        dispatches = get_energy_modeling_dispatches(
+                logger, modeling_period_set, trace_set)
 
     assert len(dispatches) == 2
-    assert isinstance(dispatches[0][0][0], ModelDataFormatter)
-    assert isinstance(dispatches[0][0][1], SeasonalElasticNetCVModel)
-    assert isinstance(dispatches[0][0][2], ModelingPeriod)
-    assert isinstance(dispatches[0][0][3], EnergyTrace)
-    assert dispatches[0][1] == "modeling_period_1"
-    assert dispatches[0][2] == "trace"
+    dispatch1 = dispatches[("modeling_period_1", "trace")]
+    assert isinstance(dispatch1["formatter"], ModelDataFormatter)
+    assert isinstance(dispatch1["model"], SeasonalElasticNetCVModel)
+    assert isinstance(dispatch1["filtered_trace"], EnergyTrace)
 
-    assert isinstance(dispatches[1][0][0], ModelDataFormatter)
-    assert isinstance(dispatches[1][0][1], SeasonalElasticNetCVModel)
-    assert isinstance(dispatches[1][0][2], ModelingPeriod)
-    assert isinstance(dispatches[1][0][3], EnergyTrace)
-    assert dispatches[1][1] == "modeling_period_2"
-    assert dispatches[1][2] == "trace"
+    dispatch2 = dispatches[("modeling_period_2", "trace")]
+    assert isinstance(dispatch2["formatter"], ModelDataFormatter)
+    assert isinstance(dispatch2["model"], SeasonalElasticNetCVModel)
+    assert isinstance(dispatch2["filtered_trace"], EnergyTrace)
+
+    logs = lc.items["get_energy_modeling_dispatches"].splitlines()
+    print(logs)
+    assert "INFO - Determined frequency of 'D' for EnergyTrace 'trace'." \
+        in logs[0]
+    assert "INFO - Determined frequency of 'D' for EnergyTrace 'trace'." \
+        in logs[1]
+
+
+def test_placeholder_trace(modeling_period_set, placeholder_trace_set):
+    lc = LogCollector()
+
+    with lc.collect_logs("get_energy_modeling_dispatches") as logger:
+        dispatches = get_energy_modeling_dispatches(
+                logger, modeling_period_set, placeholder_trace_set)
+
+    assert len(dispatches) == 2
+    dispatch1 = dispatches[("modeling_period_1", "trace")]
+    assert dispatch1["formatter"] is None
+    assert dispatch1["model"] is None
+    assert dispatch1["filtered_trace"] is None
+
+    dispatch2 = dispatches[("modeling_period_2", "trace")]
+    assert dispatch2["formatter"] is None
+    assert dispatch2["model"] is None
+    assert dispatch2["filtered_trace"] is None
+
+    logs = lc.items["get_energy_modeling_dispatches"].splitlines()
+    assert (
+        "INFO - Could not determine frequency:"
+        " EnergyTrace 'trace' is placeholder instance."
+    ) in logs[0]

@@ -57,46 +57,57 @@ ENERGY_MODEL_CLASS_MAPPING = {
 }
 
 
-def dispatch_energy_modelers(logger, modeling_period_set, trace_set):
+def get_energy_modeling_dispatches(logger, modeling_period_set, trace_set):
 
-    for period_label, modeling_period in \
+    dispatches = {}
+    for mp_label, modeling_period in \
             modeling_period_set.get_modeling_periods():
-        for trace_label, trace in trace_set.itertraces():
+        for t_label, trace in trace_set.itertraces():
 
-            energy_modeler = _get_energy_modeler(
-                logger, period_label, modeling_period, trace, trace_label)
+            frequency = _get_approximate_frequency(
+                    logger, trace.data, t_label)
 
-            yield (energy_modeler, period_label, trace_label)
+            model_class_selector = (trace.interpretation, frequency)
+
+            formatter, model, filtered_trace = _dispatch(
+                logger, model_class_selector, modeling_period, trace,
+                mp_label, t_label)
+
+            dispatches[(mp_label, t_label)] = {
+                "formatter": formatter,
+                "model": model,
+                "filtered_trace": filtered_trace,
+            }
+
+    return dispatches
 
 
-def _get_energy_modeler(logger, period_label, modeling_period, trace,
-                        trace_label):
+def _dispatch(logger, model_class_selector, modeling_period, trace,
+              modeling_period_label, trace_label):
+
     if trace.placeholder:
         logger.info("Skipping modeling for placeholder trace")
-        return None
-
-    filtered_data = _filter_by_modeling_period(trace, modeling_period)
-    frequency = _get_approximate_frequency(logger, filtered_data, trace_label)
-    model_class_selector = (trace.interpretation, frequency)
+        return (None, None, None)
 
     try:
         formatter_class, formatter_settings, model_class, model_settings = \
             ENERGY_MODEL_CLASS_MAPPING[model_class_selector]
     except KeyError:
-        message = (
+        logger.error(
             'Could not dispatch EnergyModeler/Model for'
             ' ModelingPeriod "{}" ({}) and trace "{}" ({}).'
-            .format(period_label, modeling_period, trace_label,
+            .format(modeling_period_label, modeling_period, trace_label,
                     trace.interpretation)
         )
-        logger.error(message)
-        return None
+        return (None, None, None)
 
     formatter = formatter_class(**formatter_settings)
     model = model_class(**model_settings)
+
+    filtered_data = _filter_by_modeling_period(trace, modeling_period)
     filtered_trace = EnergyTrace(trace.interpretation, data=filtered_data,
                                  unit=trace.unit)
-    return formatter, model, modeling_period, filtered_trace
+    return formatter, model, filtered_trace
 
 
 def _filter_by_modeling_period(trace, modeling_period):
@@ -124,17 +135,29 @@ def _filter_by_modeling_period(trace, modeling_period):
 
 
 def _get_approximate_frequency(logger, data, trace_label):
+
+    if data is None:
+        logger.info(
+            "Could not determine frequency:"
+            " EnergyTrace '{}' is placeholder instance."
+            .format(trace_label)
+        )
+        return None
+
+    def _log_success(freq):
+        logger.info(
+            "Determined frequency of '{}' for EnergyTrace '{}'."
+            .format(freq, trace_label)
+        )
+
     try:
         freq = pd.infer_freq(data.index)
     except ValueError:  # too few data points
-        logger.error("Could not determine freqency - too few points.")
+        logger.error("Could not determine frequency - too few points.")
         return None
     else:
         if freq is not None:
-            logger.info(
-                "Determined frequency of {} for {}."
-                .format(freq, trace_label)
-            )
+            _log_success(freq)
             return freq
 
     # freq is None - maybe because of a DST change (23/25 hours)?
@@ -146,6 +169,8 @@ def _get_approximate_frequency(logger, data, trace_label):
             pass
         else:
             if freq is not None:
+                _log_success(freq)
                 return freq
 
+    logger.error("Could not determine frequency - no dominant frequency.")
     return None

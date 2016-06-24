@@ -272,7 +272,7 @@ class EnergyTraceSet(object):
             if labels is not None:
                 message = (
                     'Ignoring supplied `labels` since `traces` was given as'
-                    'a dict.'
+                    ' a dict.'
                 )
                 warnings.warn(message)
 
