@@ -4,53 +4,54 @@ from eemeter.structures import (
 )
 
 
-class EEModelingPeriodProcessor(object):
+def get_modeling_period_set(logger, interventions):
 
-    def get_modeling_period_set(self, interventions):
+    # don't attempt modeling where there are no interventions
+    if len(interventions) == 0:
+        logger.info("No interventions, so no modeling period set.")
+        return None
 
-        # don't attempt modeling where there are no interventions
-        if len(interventions) == 0:
-            return []
+    baseline_period_end = _get_earliest_intervention_start_date(
+            interventions)
+    reporting_period_start = _get_latest_intervention_end_date(
+            interventions)
 
-        baseline_period_end = self._get_earliest_intervention_start_date(
-                interventions)
-        reporting_period_start = self._get_latest_intervention_end_date(
-                interventions)
+    if reporting_period_start is None:
+        # fall back to baseline_period_end - interventions are still
+        # ongoing.
+        reporting_period_start = baseline_period_end
 
-        if reporting_period_start is None:
-            # fall back to baseline_period_end - interventions are still
-            # ongoing.
-            reporting_period_start = baseline_period_end
+    modeling_periods = {
+        "baseline": ModelingPeriod(
+            "BASELINE",
+            end_date=baseline_period_end
+        ),
+        "reporting": ModelingPeriod(
+            "REPORTING",
+            start_date=reporting_period_start
+        ),
+    }
 
-        modeling_periods = {
-            "baseline": ModelingPeriod(
-                "BASELINE",
-                end_date=baseline_period_end
-            ),
-            "reporting": ModelingPeriod(
-                "REPORTING",
-                start_date=reporting_period_start
-            ),
-        }
+    groupings = [("baseline", "reporting")]
 
-        groupings = [("baseline", "reporting")]
+    modeling_period_set = ModelingPeriodSet(modeling_periods, groupings)
 
-        modeling_period_set = ModelingPeriodSet(modeling_periods, groupings)
+    logger.info("Created one modeling period group.")
 
-        validation_errors = []
+    return modeling_period_set
 
-        return modeling_period_set, validation_errors
 
-    def _get_earliest_intervention_start_date(self, interventions):
-        return min([i.start_date for i in interventions])
+def _get_earliest_intervention_start_date(interventions):
+    return min([i.start_date for i in interventions])
 
-    def _get_latest_intervention_end_date(self, interventions):
 
-        non_null_end_dates = [
-            i.end_date for i in interventions if i.end_date is not None
-        ]
+def _get_latest_intervention_end_date(interventions):
 
-        if len(non_null_end_dates) > 0:
-            return max([d for d in non_null_end_dates])
-        else:
-            return None
+    non_null_end_dates = [
+        i.end_date for i in interventions if i.end_date is not None
+    ]
+
+    if len(non_null_end_dates) > 0:
+        return max([d for d in non_null_end_dates])
+    else:
+        return None
