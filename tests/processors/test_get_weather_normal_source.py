@@ -42,7 +42,6 @@ def test_basic_usage(project):
     assert "INFO - Created TMY3WeatherSource using station 722880" in logs[1]
 
 
-
 def test_bad_zip(project_bad_zip):
 
     lc = LogCollector()

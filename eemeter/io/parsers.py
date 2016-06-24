@@ -850,7 +850,7 @@ class ESPIUsageParser(object):
         return data
 
     def _get_interval_block_group_consumption_records(self,
-                                                     interval_block_group):
+                                                      interval_block_group):
         ''' Return all  in ESPI Energy Usage XML.
         Each interval block contains a set of interval readings.
 

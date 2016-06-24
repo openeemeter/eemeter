@@ -11,14 +11,16 @@ from eemeter.io.parsers import ESPIUsageParser
 
 @pytest.fixture
 def espi_electricity_xml():
-    with resource_stream('eemeter.testing.resources', 'espi_electricity.xml.gz') as f:
+    with resource_stream('eemeter.testing.resources',
+                         'espi_electricity.xml.gz') as f:
         xml = gzip.GzipFile(fileobj=f).read()
     return xml
 
 
 @pytest.fixture
 def espi_natural_gas_xml():
-    with resource_stream('eemeter.testing.resources', 'espi_natural_gas.xml.gz') as f:
+    with resource_stream('eemeter.testing.resources',
+                         'espi_natural_gas.xml.gz') as f:
         xml = gzip.GzipFile(fileobj=f).read()
     return xml
 
@@ -52,6 +54,7 @@ def test_natural_gas(espi_natural_gas_xml):
 
     assert ets[0].data.shape == (3, 2)
     assert ets[0].interpretation == "NATURAL_GAS_CONSUMPTION_SUPPLIED"
-    assert ets[0].data.index[0] == datetime(2012, 5, 2, 7, 0, 1, tzinfo=pytz.UTC)
+    assert ets[0].data.index[0] == \
+        datetime(2012, 5, 2, 7, 0, 1, tzinfo=pytz.UTC)
     assert_allclose(ets[0].data.value.iloc[0], 0.0)
     assert bool(ets[0].data.estimated.iloc[0]) is False

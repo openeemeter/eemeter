@@ -9,7 +9,6 @@ from eemeter.weather.tmy3 import TMY3WeatherSource
 def get_weather_source(logger, project):
 
     zipcode = project.site.zipcode
-
     station = zipcode_to_usaf_station(zipcode)
 
     if station is None:
@@ -41,9 +40,6 @@ def get_weather_source(logger, project):
 def get_weather_normal_source(logger, project):
 
     zipcode = project.site.zipcode
-
-    logs = {}
-
     station = zipcode_to_tmy3_station(zipcode)
 
     if station is None:

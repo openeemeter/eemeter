@@ -25,8 +25,9 @@ from eemeter.weather.location import (
     climate_zone_is_supported,
 )
 
+
 def test_haversine():
-    assert_allclose(haversine(0,0,20,20), 3112.445040)
+    assert_allclose(haversine(0, 0, 20, 20), 3112.445040)
 
 
 def test_lat_lng_to_usaf_station():

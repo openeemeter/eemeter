@@ -2,7 +2,9 @@ import json
 import numpy as np
 from pkg_resources import resource_stream
 
+
 resources = {}
+
 
 def _get_json_resource(filename):
     with resource_stream('eemeter.resources', filename) as f:
