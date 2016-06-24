@@ -1,4 +1,5 @@
 import pandas as pd
+from pandas.tseries.frequencies import to_offset
 
 
 class ModelDataFormatter(object):
@@ -49,6 +50,13 @@ class ModelDataFormatter(object):
             Predictably formatted input data. This data should be directly
             usable as input to applicable model.predict() methods.
         '''
+        if (trace.data.index.freq is not None and
+                to_offset(trace.data.index.freq) > to_offset(self.freq_str)):
+            raise ValueError(
+                "Will not upsample '{}' to '{}'"
+                .format(trace.data.index.freq, self.freq_str)
+            )
+
         energy = trace.data.value.resample(self.freq_str).sum()
         tempF = weather_source.indexed_temperatures(energy.index, "degF")
         return pd.DataFrame({"energy": energy, "tempF": tempF},
