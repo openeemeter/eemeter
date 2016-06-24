@@ -62,7 +62,7 @@ class ModelDataFormatter(object):
         return pd.DataFrame({"energy": energy, "tempF": tempF},
                             columns=["energy", "tempF"])
 
-    def create_demand_fixture(self, index, weather_fixture_source):
+    def create_demand_fixture(self, index, weather_source):
         '''Creates a :code:`DatetimeIndex`ed dataframe containing formatted
         demand fixture data.
 
@@ -70,7 +70,7 @@ class ModelDataFormatter(object):
         ----------
         index : pandas.DatetimeIndex
             The desired index for demand fixture data.
-        weather_fixture_source : eemeter.weather.WeatherSourceBase
+        weather_source : eemeter.weather.WeatherSourceBase
             The source of weather fixture data.
 
         Returns
@@ -79,5 +79,5 @@ class ModelDataFormatter(object):
             Predictably formatted input data. This data should be directly
             usable as input to applicable model.predict() methods.
         '''
-        tempF = weather_fixture_source.indexed_temperatures(index, "degF")
+        tempF = weather_source.indexed_temperatures(index, "degF")
         return pd.DataFrame({"tempF": tempF})

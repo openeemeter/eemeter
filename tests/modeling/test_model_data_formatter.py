@@ -43,8 +43,8 @@ def test_basic_daily(daily_trace, mock_isd_weather_source):
     mdf = ModelDataFormatter("D")
 
     df = mdf.create_input(daily_trace, mock_isd_weather_source)
-    assert all(df.columns == ["energy", "tempF"])
 
+    assert all(df.columns == ["energy", "tempF"])
     assert df.index[0] == datetime(2000, 1, 1, tzinfo=pytz.UTC)
     assert df.index[2] == datetime(2000, 1, 3, tzinfo=pytz.UTC)
     assert df.index.freq == 'D'
@@ -56,8 +56,8 @@ def test_basic_hourly(hourly_trace, mock_isd_weather_source):
     mdf = ModelDataFormatter("H")
 
     df = mdf.create_input(hourly_trace, mock_isd_weather_source)
-    assert all(df.columns == ["energy", "tempF"])
 
+    assert all(df.columns == ["energy", "tempF"])
     assert df.index[0] == datetime(2000, 1, 1, 0, tzinfo=pytz.UTC)
     assert df.index[2] == datetime(2000, 1, 1, 2, tzinfo=pytz.UTC)
     assert df.index.freq == 'H'
@@ -69,8 +69,8 @@ def test_basic_hourly_to_daily(hourly_trace, mock_isd_weather_source):
     mdf = ModelDataFormatter("D")
 
     df = mdf.create_input(hourly_trace, mock_isd_weather_source)
-    assert all(df.columns == ["energy", "tempF"])
 
+    assert all(df.columns == ["energy", "tempF"])
     assert df.index[0] == datetime(2000, 1, 1, 0, tzinfo=pytz.UTC)
     assert df.index.freq == 'D'
     assert_allclose(df.energy, [2])
@@ -82,3 +82,27 @@ def test_daily_to_hourly_fails(daily_trace, mock_isd_weather_source):
 
     with pytest.raises(ValueError):
         mdf.create_input(daily_trace, mock_isd_weather_source)
+
+def test_daily_demand_fixture(daily_trace, mock_isd_weather_source):
+    mdf = ModelDataFormatter("D")
+
+    df = mdf.create_demand_fixture(daily_trace.data.index,
+                                   mock_isd_weather_source)
+
+    assert all(df.columns == ["tempF"])
+    assert df.index[0] == datetime(2000, 1, 1, 0, tzinfo=pytz.UTC)
+    assert df.index[2] == datetime(2000, 1, 3, tzinfo=pytz.UTC)
+    assert df.index.freq == 'D'
+    assert_allclose(df.tempF, [32., 32., 32.])
+
+def test_hourly_demand_fixture(hourly_trace, mock_isd_weather_source):
+    mdf = ModelDataFormatter("H")
+
+    df = mdf.create_demand_fixture(hourly_trace.data.index,
+                                   mock_isd_weather_source)
+
+    assert all(df.columns == ["tempF"])
+    assert df.index[0] == datetime(2000, 1, 1, 0, tzinfo=pytz.UTC)
+    assert df.index[2] == datetime(2000, 1, 1, 2, tzinfo=pytz.UTC)
+    assert df.index.freq == 'H'
+    assert_allclose(df.tempF, [32., 32., 32.])
