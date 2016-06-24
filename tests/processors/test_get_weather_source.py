@@ -53,7 +53,4 @@ def test_bad_zip(project_bad_zip):
     assert ws is None
 
     logs = lc.items["get_weather_source"].splitlines()
-    assert "INFO - Mapped ZIP code 00000 to ISD station None" in logs[0]
-    assert (
-        "ERROR - Could not create ISDWeatherSource for station None" in logs[1]
-    )
+    assert "ERROR - Could not find ISD station for zipcode 00000" in logs[0]

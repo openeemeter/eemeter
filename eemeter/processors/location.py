@@ -56,7 +56,7 @@ def get_weather_normal_source(logger, project):
     )
 
     try:
-        weather_source = TMY3WeatherSource(station)
+        weather_normal_source = TMY3WeatherSource(station)
     except ValueError:
         logger.error(
             "Could not create TMY3WeatherSource for station {}."
@@ -64,6 +64,6 @@ def get_weather_normal_source(logger, project):
         )
         return None
 
-    logger.info("Created ISDWeatherSource using station {}".format(station))
+    logger.info("Created TMY3WeatherSource using station {}".format(station))
 
     return weather_normal_source
