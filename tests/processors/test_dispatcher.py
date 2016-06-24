@@ -50,7 +50,7 @@ def trace_set():
     data = pd.DataFrame(columns, index=index, columns=column_names)
 
     trace = EnergyTrace("ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED", data=data,
-                         unit="KWH")
+                        unit="KWH")
 
     return EnergyTraceSet([trace], ["trace"])
 

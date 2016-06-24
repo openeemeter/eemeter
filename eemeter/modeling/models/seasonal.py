@@ -4,6 +4,7 @@ from sklearn import linear_model
 from scipy.stats import chi2
 import holidays
 import patsy
+import warnings
 
 
 class SeasonalElasticNetCVModel(object):

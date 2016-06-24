@@ -10,6 +10,7 @@ default_formatter_settings = {
     'freq_str': 'D',
 }
 
+
 default_seasonal_settings = {
     'cooling_base_temp': 65,
     'heating_base_temp': 65,
@@ -120,6 +121,7 @@ def _filter_by_modeling_period(trace, modeling_period):
         filtered_df.estimated.iloc[-1] = False
 
     return filtered_df
+
 
 def _get_approximate_frequency(logger, data, trace_label):
     try:
