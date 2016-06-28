@@ -13,6 +13,9 @@ class ZIPCodeSite(object):
     def __init__(self, zipcode):
         self.zipcode = self._validate(zipcode)
 
+    def __repr__(self):
+        return 'ZIPCodeSite("{}")'.format(self.zipcode)
+
     def _validate(self, zipcode):
 
         zipcode_str = str(zipcode)

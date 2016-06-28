@@ -105,3 +105,29 @@ def test_grouping_wrong_length():
 
     with pytest.raises(ValueError):
         ModelingPeriodSet(modeling_periods, grouping)
+
+
+def test_repr():
+
+    modeling_period_1 = ModelingPeriod(
+        "BASELINE",
+        end_date=datetime(2000, 1, 1, tzinfo=pytz.UTC),
+    )
+    modeling_period_2 = ModelingPeriod(
+        "REPORTING",
+        start_date=datetime(2000, 1, 1, tzinfo=pytz.UTC),
+    )
+    modeling_periods = {
+        "modeling_period_1": modeling_period_1,
+        "modeling_period_2": modeling_period_2,
+    }
+
+    grouping = [
+        ("modeling_period_1", "modeling_period_2"),
+    ]
+
+    mps = ModelingPeriodSet(modeling_periods, grouping)
+
+    assert str(mps).startswith('ModelingPeriodSet(modeling_periods={')
+    assert str(mps).endswith(
+        ', groupings=[(\'modeling_period_1\', \'modeling_period_2\')])')

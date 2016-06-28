@@ -75,6 +75,9 @@ class TMY3WeatherSource(WeatherSourceBase):
         if preload:
             self._load_data()
 
+    def __repr__(self):
+        return 'TMY3WeatherSource("{}")'.format(self.station)
+
     def _check_station(self, station):
         index = self.client._load_station_index()
         if station not in index:

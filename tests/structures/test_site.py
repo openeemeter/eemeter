@@ -27,3 +27,8 @@ def test_invalid_str():
 
     with pytest.raises(ValueError):
         ZIPCodeSite("01234-0123")
+
+
+def test_repr():
+    site = ZIPCodeSite(91104)
+    assert str(site) == 'ZIPCodeSite("91104")'

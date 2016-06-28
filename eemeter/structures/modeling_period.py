@@ -94,7 +94,7 @@ class ModelingPeriod(object):
 
     def __repr__(self):
         return (
-            'ModelingPeriod("{}", {} <-> {})'
+            'ModelingPeriod("{}", start_date={}, end_date={})'
             .format(self.interpretation, self.start_date, self.end_date)
         )
 
@@ -137,6 +137,12 @@ class ModelingPeriodSet(object):
         self.modeling_periods = modeling_periods
         self.groupings = groupings
         self._validate()
+
+    def __repr__(self):
+        return (
+            'ModelingPeriodSet(modeling_periods={}, groupings={})'
+            .format(self.modeling_periods, self.groupings)
+        )
 
     def _validate(self):
         for grouping in self.groupings:

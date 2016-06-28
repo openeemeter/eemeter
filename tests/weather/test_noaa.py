@@ -65,3 +65,11 @@ def test_isd_index_daily(mock_isd_weather_source):
 def test_bad_isd_station():
     with pytest.raises(ValueError):
         ISDWeatherSource("INVALID")
+
+
+def test_gsod_repr(mock_gsod_weather_source):
+    assert str(mock_gsod_weather_source) == 'GSODWeatherSource("722880")'
+
+
+def test_isd_repr(mock_isd_weather_source):
+    assert str(mock_isd_weather_source) == 'ISDWeatherSource("722880")'

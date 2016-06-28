@@ -15,8 +15,13 @@ class Intervention(object):
 
     def __init__(self, start_date, end_date=None):
         self.start_date = self._validate_start_date(start_date)
-
         self.end_date = self._validate_end_date(end_date)
+
+    def __repr__(self):
+        return (
+            "Intervention(start_date={}, end_date={})"
+            .format(self.start_date, self.end_date)
+        )
 
     def _validate_start_date(self, dt):
         if not self._is_tz_aware(dt):

@@ -47,3 +47,7 @@ def test_cross_year_boundary(mock_tmy3_weather_source):
 def test_bad_station():
     with pytest.raises(ValueError):
         TMY3WeatherSource("INVALID")
+
+
+def test_repr(mock_tmy3_weather_source):
+    assert 'TMY3WeatherSource("724838")' == str(mock_tmy3_weather_source)

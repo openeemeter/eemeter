@@ -222,6 +222,9 @@ class GSODWeatherSource(NOAAWeatherSourceBase):
     year_existence_format = "{}-01-01"
     freq = "D"
 
+    def __repr__(self):
+        return 'GSODWeatherSource("{}")'.format(self.station)
+
     def _fetch_year(self, year):
         return self.client.get_gsod_data(self.station, year)
 
@@ -281,6 +284,9 @@ class ISDWeatherSource(NOAAWeatherSourceBase):
     cache_key_format = "ISD-{}-{}.json"
     year_existence_format = "{}-01-01 00"
     freq = "H"
+
+    def __repr__(self):
+        return 'ISDWeatherSource("{}")'.format(self.station)
 
     def _fetch_year(self, year):
         return self.client.get_isd_data(self.station, year)

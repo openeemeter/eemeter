@@ -172,6 +172,18 @@ class EnergyTrace(object):
         self._set_interpretation(interpretation)
         self._set_data(data, records, unit, placeholder, serializer)
 
+    def __repr__(self):
+        if self.placeholder:
+            return (
+                "EnergyTrace(interpretation={}, placeholder=True)"
+                .format(self.interpretation)
+            )
+        else:
+            return (
+                "EnergyTrace(interpretation={}, unit={}, data={})"
+                .format(self.interpretation, self.data, self.unit)
+            )
+
     def _set_interpretation(self, interpretation):
         if interpretation in self.INTERPRETATIONS:
             self.interpretation = interpretation
@@ -242,18 +254,6 @@ class EnergyTrace(object):
             message = 'Unsupported unit: "{}".'.format(unit)
             raise ValueError(message)
 
-    def __repr__(self):
-        if self.placeholder:
-            return (
-                "EnergyTrace({})\n  PLACEHOLDER"
-                .format(self.interpretation)
-            )
-        else:
-            return (
-                "EnergyTrace({})\n{}"
-                .format(self.interpretation, self.data)
-            )
-
 
 class EnergyTraceSet(object):
     ''' A container for energy traces which ensures that each is labeled.
@@ -286,6 +286,9 @@ class EnergyTraceSet(object):
         self._validate_uniqueness(labels)
 
         self.traces = {label: trace for label, trace in zip(labels, traces)}
+
+    def __repr__(self):
+        return "EnergyTraceSet(traces={})".format(self.traces)
 
     def _generate_default_labels(self, traces):
         return [str(i) for i, _ in enumerate(traces)]

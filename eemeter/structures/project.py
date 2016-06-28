@@ -23,3 +23,9 @@ class Project(object):
         self.energy_trace_set = energy_trace_set
         self.interventions = interventions
         self.site = site
+
+    def __repr__(self):
+        return (
+            "Project(energy_trace_set={}, interventions={}, site={})"
+            .format(self.energy_trace_set, self.interventions, self.site)
+        )

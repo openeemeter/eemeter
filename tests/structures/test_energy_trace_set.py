@@ -79,3 +79,10 @@ def test_create_list_no_labels(trace1, trace2):
     assert len(list(ets.itertraces())) == 2
     assert list(ets.itertraces())[0][0] in ['0', '1']
     assert list(ets.itertraces())[1][0] in ['0', '1']
+
+
+def test_repr(trace1, trace2):
+    traces = [trace1, trace2]
+    ets = EnergyTraceSet(traces)
+    assert str(ets).startswith("EnergyTraceSet(traces={")
+    assert str(ets).endswith("})")

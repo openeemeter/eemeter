@@ -32,3 +32,10 @@ def test_ok_start_and_end():
                                 datetime(2000, 1, 2, tzinfo=pytz.UTC))
     assert intervention.start_date == datetime(2000, 1, 1, tzinfo=pytz.UTC)
     assert intervention.end_date == datetime(2000, 1, 2, tzinfo=pytz.UTC)
+
+
+def test_repr():
+    intervention = Intervention(datetime(2000, 1, 1, tzinfo=pytz.UTC),
+                                datetime(2000, 1, 2, tzinfo=pytz.UTC))
+    assert str(intervention).startswith("Intervention(start_date=")
+    assert str(intervention).endswith(")")
