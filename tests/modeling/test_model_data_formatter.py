@@ -83,6 +83,7 @@ def test_daily_to_hourly_fails(daily_trace, mock_isd_weather_source):
     with pytest.raises(ValueError):
         mdf.create_input(daily_trace, mock_isd_weather_source)
 
+
 def test_daily_demand_fixture(daily_trace, mock_isd_weather_source):
     mdf = ModelDataFormatter("D")
 
@@ -94,6 +95,7 @@ def test_daily_demand_fixture(daily_trace, mock_isd_weather_source):
     assert df.index[2] == datetime(2000, 1, 3, tzinfo=pytz.UTC)
     assert df.index.freq == 'D'
     assert_allclose(df.tempF, [32., 32., 32.])
+
 
 def test_hourly_demand_fixture(hourly_trace, mock_isd_weather_source):
     mdf = ModelDataFormatter("H")

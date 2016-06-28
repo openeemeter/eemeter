@@ -20,6 +20,7 @@ def mock_tmy3_weather_source():
 def test_basic_usage(mock_tmy3_weather_source):
     formatter = ModelDataFormatter("D")
     model = MockModel()
-    output = annualized_weather_normal(formatter, model, mock_tmy3_weather_source)
+    output = annualized_weather_normal(
+        formatter, model, mock_tmy3_weather_source)
 
     assert output['annualized_weather_normal'] == (365, 1.0, 1.0, 1)

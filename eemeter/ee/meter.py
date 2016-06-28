@@ -145,38 +145,34 @@ class EnergyEfficiencyMeter(object):
                     "annualized_weather_normal")
 
                 both_available = (
-                    baseline_annualized is not None
-                    and reporting_annualized is not None
+                    baseline_annualized is not None and
+                    reporting_annualized is not None
                 )
 
                 has_valid_baseline_electricity_consumption = (
-                    both_available
-                    and trace.interpretation ==
-                    "ELECTRICITY_CONSUMPTION_SUPPLIED"
+                    both_available and
+                    trace.interpretation == "ELECTRICITY_CONSUMPTION_SUPPLIED"
                 )
                 has_valid_reporting_electricity_consumption = (
-                    both_available
-                    and trace.interpretation ==
-                    "ELECTRICITY_CONSUMPTION_SUPPLIED"
+                    both_available and
+                    trace.interpretation == "ELECTRICITY_CONSUMPTION_SUPPLIED"
                 )
                 has_valid_baseline_natural_gas_consumption = (
-                    both_available
-                    and trace.interpretation ==
-                    "NATURAL_GAS_CONSUMPTION_SUPPLIED"
+                    both_available and
+                    trace.interpretation == "NATURAL_GAS_CONSUMPTION_SUPPLIED"
                 )
                 has_valid_reporting_natural_gas_consumption = (
-                    both_available
-                    and trace.interpretation ==
-                    "NATURAL_GAS_CONSUMPTION_SUPPLIED"
+                    both_available and
+                    trace.interpretation == "NATURAL_GAS_CONSUMPTION_SUPPLIED"
                 )
                 has_valid_baseline_generation = (
-                    baseline_annualized is not None
-                    and trace.interpretation ==
+                    baseline_annualized is not None and
+                    trace.interpretation ==
                     "ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED"
                 )
                 has_valid_reporting_generation = (
-                    reporting_annualized is not None
-                    and trace.interpretation ==
+                    reporting_annualized is not None and
+                    trace.interpretation ==
                     "ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED"
                 )
 
@@ -219,7 +215,7 @@ class EnergyEfficiencyMeter(object):
                                              baseline_annualized)
 
                 if has_valid_baseline_natural_gas_consumption:
-                    baseline_annualized_kWh = (
+                    baseline_annualized_kwh = (
                         baseline_annualized[0]*29.3001,
                         baseline_annualized[1]*29.3001,
                         baseline_annualized[2]*29.3001,
@@ -237,7 +233,7 @@ class EnergyEfficiencyMeter(object):
                                              reporting_annualized)
 
                 if has_valid_reporting_natural_gas_consumption:
-                    reporting_annualized_kWh = (
+                    reporting_annualized_kwh = (
                         reporting_annualized[0]*29.3001,
                         reporting_annualized[1]*29.3001,
                         reporting_annualized[2]*29.3001,

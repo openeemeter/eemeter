@@ -69,16 +69,26 @@ def test_basic_usage(project, mock_tmy3_weather_source):
                              weather_normal_source=mock_tmy3_weather_source)
 
     project_results = results['project']
-    assert project_results['modeling_period_groups'] == [('baseline', 'reporting')]
+    assert project_results['modeling_period_groups'] == \
+        [('baseline', 'reporting')]
     assert ('baseline', '0') in project_results['modeled_trace_selectors']
     assert ('reporting', '0') in project_results['modeled_trace_selectors']
-    assert project_results['trace_interpretations'] == {'0': 'ELECTRICITY_CONSUMPTION_SUPPLIED'}
+    assert project_results['trace_interpretations'] == \
+        {'0': 'ELECTRICITY_CONSUMPTION_SUPPLIED'}
     assert project_results['modeling_periods'][0] == 'baseline'
     assert project_results['modeling_periods'][1] == 'reporting'
-    assert_allclose(project_results['total_baseline_normal_annual_electricity_consumption_kWh'], (382.19101612438885, 0.81276553768081106, 0.94003875546720261, 364))
-    assert_allclose(project_results['total_reporting_normal_annual_electricity_consumption_kWh'], (371.23619030314296, 0.76467319157901015, 0.89010406371110273, 334))
-    assert_allclose(project_results['total_baseline_normal_annual_fuel_consumption_kWh'], (382.19101612438885, 0.81276553768081106, 0.94003875546720261, 364))
-    assert_allclose(project_results['total_reporting_normal_annual_fuel_consumption_kWh'], (371.23619030314296, 0.76467319157901015, 0.89010406371110273, 334))
+    assert_allclose(project_results[
+        'total_baseline_normal_annual_electricity_consumption_kWh'],
+        (382.191016124, 0.8127655376, 0.9400387554, 364))
+    assert_allclose(project_results[
+        'total_reporting_normal_annual_electricity_consumption_kWh'],
+        (371.236190303, 0.7646731915, 0.8901040637, 334))
+    assert_allclose(project_results[
+        'total_baseline_normal_annual_fuel_consumption_kWh'],
+        (382.191016124, 0.8127655376, 0.9400387554, 364))
+    assert_allclose(project_results[
+        'total_reporting_normal_annual_fuel_consumption_kWh'],
+        (371.236190303, 0.7646731915, 0.8901040637, 334))
 
     trace_results = results['traces']
     trace1 = trace_results[('baseline', '0')]
