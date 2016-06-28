@@ -37,7 +37,7 @@ def test_basic_usage(project):
 
     assert ws.station == '722880'
 
-    logs = lc.items["weather_normal_source"].splitlines()
+    logs = lc.items["weather_normal_source"]
     assert "INFO - Mapped ZIP code 91104 to TMY3 station 722880" in logs[0]
     assert "INFO - Created TMY3WeatherSource using station 722880" in logs[1]
 
@@ -51,7 +51,7 @@ def test_bad_zip(project_bad_zip):
 
     assert ws is None
 
-    logs = lc.items["weather_normal_source"].splitlines()
+    logs = lc.items["weather_normal_source"]
     assert (
         "Could not find appropriate TMY3 station for zipcode 00000." in logs[0]
     )

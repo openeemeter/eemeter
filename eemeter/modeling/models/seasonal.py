@@ -27,6 +27,18 @@ class SeasonalElasticNetCVModel(object):
         self.cvrmse = None
         self.n = None
 
+    def _holidays_indexed(self, dt_index):
+        def clean_holiday_name(dt):
+            raw_name = self.holidays.get(dt, "none")
+            if raw_name.endswith(" (Observed)"):
+                return raw_name[:-11]
+            else:
+                return raw_name
+
+        holiday_names = pd.Series(dt_index.map(clean_holiday_name),
+                                  index=dt_index)
+        return holiday_names
+
     def fit(self, df):
         # convert to daily
         model_data = df.resample(self.model_freq).agg(
@@ -60,11 +72,9 @@ class SeasonalElasticNetCVModel(object):
             + C(tempF.index.weekday)\
             '''
 
-        holiday_names = pd.Series(map(lambda x:  self.holidays.get(x, "none"),
-                                      model_data.index),
-                                  index=model_data.index)
+        holiday_names = self._holidays_indexed(model_data.index)
 
-        if len(np.unique(holiday_names)) >= 13:
+        if len(np.unique(holiday_names)) == 10:
             model_data.loc[:, 'holiday_name'] = holiday_names
             formula += " + C(holiday_name)"
 
@@ -125,7 +135,17 @@ class SeasonalElasticNetCVModel(object):
             "X_design_info": X.design_info,
             "formula": formula,
         }
-        return self.params, self.r2, self.cvrmse
+
+        output = {
+            "r2": self.r2,
+            "model_params": self.params,
+            "rmse": self.rmse,
+            "cvrmse": self.cvrmse,
+            "upper": self.upper,
+            "lower": self.lower,
+            "n": self.n
+        }
+        return output
 
     def predict(self, df, params=None):
         # needs only tempF
@@ -139,9 +159,7 @@ class SeasonalElasticNetCVModel(object):
         model_data.loc[:, 'HDD'] = np.maximum(self.heating_base_temp -
                                               model_data.tempF, 0.)
 
-        holiday_names = pd.Series(map(lambda x:  self.holidays.get(x, "none"),
-                                      model_data.index),
-                                  index=model_data.index)
+        holiday_names = self._holidays_indexed(model_data.index)
 
         model_data.loc[:, 'holiday_name'] = holiday_names
 

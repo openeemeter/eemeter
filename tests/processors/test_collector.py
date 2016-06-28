@@ -11,6 +11,7 @@ def test_basic_usage():
     with collector.collect_logs("key") as logger:
         result = do_thing(logger, "returnme")
 
-    assert collector.items["key"].endswith("TEST\n")
-    assert "DEBUG" in collector.items["key"]
+    assert len(collector.items["key"]) == 1
+    assert collector.items["key"][0].endswith("TEST")
+    assert "DEBUG" in collector.items["key"][0]
     assert result == "returnme"

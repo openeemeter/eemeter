@@ -86,7 +86,10 @@ def _dispatch(logger, model_class_selector, modeling_period, trace,
               modeling_period_label, trace_label):
 
     if trace.placeholder:
-        logger.info("Skipping modeling for placeholder trace")
+        logger.info(
+            'Skipping modeling for placeholder trace "{}" ({}).'
+            .format(trace_label, trace.interpretation)
+        )
         return (None, None, None)
 
     try:
@@ -107,6 +110,12 @@ def _dispatch(logger, model_class_selector, modeling_period, trace,
     filtered_data = _filter_by_modeling_period(trace, modeling_period)
     filtered_trace = EnergyTrace(trace.interpretation, data=filtered_data,
                                  unit=trace.unit)
+    logger.info(
+        'Successfully dispatched formatter {} and model {} for'
+        ' ModelingPeriod "{}" ({}) and trace "{}" ({}).'
+        .format(formatter, model, modeling_period_label, modeling_period,
+                trace_label, trace.interpretation)
+    )
     return formatter, model, filtered_trace
 
 

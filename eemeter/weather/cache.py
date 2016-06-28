@@ -72,6 +72,10 @@ class SqliteJSONStore(object):
             return None
         return json.loads(data[0])
 
-    def clear(self):
-        self.conn.execute('DELETE FROM items;')
-        self.conn.commit()
+    def clear(self, key=None):
+        if key is None:
+            self.conn.execute('DELETE FROM items;')
+            self.conn.commit()
+        else:
+            self.conn.execute('DELETE FROM items WHERE key=?;', (key,))
+            self.conn.commit()

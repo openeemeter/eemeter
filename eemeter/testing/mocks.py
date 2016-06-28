@@ -21,3 +21,17 @@ class MockWeatherClient(object):
                               "1900-12-31 23:00",
                               freq='H', tz=pytz.UTC)
         return pd.Series(0, index=index, dtype=float)
+
+
+class MockModel(object):
+
+    def __init__(self):
+        self.n = 1
+        self.upper = 1
+        self.lower = 1
+
+    def fit(self, df):
+        return {}
+
+    def predict(self, df, params=None):
+        return pd.Series(1, index=df.index)

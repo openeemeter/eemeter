@@ -80,6 +80,7 @@ class TMY3WeatherSource(WeatherSourceBase):
         if station not in index:
             message = (
                 "`{}` not recognized as valid TMY3 weather station identifier."
+                .format(station)
             )
             raise ValueError(message)
 

@@ -51,14 +51,15 @@ def test_basic(input_df):
     assert m.rmse is None
     assert m.y is None
 
-    params, r2, rmse = m.fit(input_df)
+    output = m.fit(input_df)
 
-    assert 'formula' in params
-    assert 'X_design_info' in params
-    assert 'intercept' in params
-    assert 'coefficients' in params
-    assert m.r2 == r2
-    assert_allclose(m.rmse, rmse)
+    assert "r2" in output
+    assert "rmse" in output
+    assert "cvrmse" in output
+    assert "model_params" in output
+    assert "upper" in output
+    assert "lower" in output
+    assert "n" in output
 
     assert len(m.holidays) > 0
     assert m.n == 365
@@ -72,7 +73,8 @@ def test_basic(input_df):
 
     predict = m.predict(input_df)
 
-    assert predict is None
+    assert predict.shape == (365,)
+    assert_allclose(predict[datetime(2000, 1, 1, tzinfo=pytz.UTC)], 0.9989697)
 
     assert len(m.holidays) > 0
     assert m.n == 365

@@ -29,4 +29,4 @@ class LogCollector(object):
 
             handler.flush()
 
-            self.items[key] = log_stream.getvalue()
+            self.items[key] = log_stream.getvalue().splitlines()

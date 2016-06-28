@@ -81,12 +81,14 @@ def test_basic_usage(modeling_period_set, trace_set):
     assert isinstance(dispatch2["model"], SeasonalElasticNetCVModel)
     assert isinstance(dispatch2["filtered_trace"], EnergyTrace)
 
-    logs = lc.items["get_energy_modeling_dispatches"].splitlines()
+    logs = lc.items["get_energy_modeling_dispatches"]
     print(logs)
     assert "INFO - Determined frequency of 'D' for EnergyTrace 'trace'." \
         in logs[0]
-    assert "INFO - Determined frequency of 'D' for EnergyTrace 'trace'." \
+    assert "INFO - Successfully dispatched formatter" \
         in logs[1]
+    assert "INFO - Determined frequency of 'D' for EnergyTrace 'trace'." \
+        in logs[2]
 
 
 def test_placeholder_trace(modeling_period_set, placeholder_trace_set):
@@ -107,7 +109,7 @@ def test_placeholder_trace(modeling_period_set, placeholder_trace_set):
     assert dispatch2["model"] is None
     assert dispatch2["filtered_trace"] is None
 
-    logs = lc.items["get_energy_modeling_dispatches"].splitlines()
+    logs = lc.items["get_energy_modeling_dispatches"]
     assert (
         "INFO - Could not determine frequency:"
         " EnergyTrace 'trace' is placeholder instance."

@@ -13,7 +13,7 @@ def test_empty():
         mps = get_modeling_period_set(logger, [])
     assert mps is None
 
-    logs = lc.items["modeling_period_set"].splitlines()
+    logs = lc.items["modeling_period_set"]
     assert "INFO - No interventions, so no modeling period set" in logs[0]
 
 
@@ -39,5 +39,5 @@ def test_basic_usage():
     modeling_periods = list(mps.get_modeling_periods())
     assert len(modeling_periods) == 2
 
-    logs = lc.items["modeling_period_set"].splitlines()
+    logs = lc.items["modeling_period_set"]
     assert "INFO - Created one modeling period group." in logs[0]
