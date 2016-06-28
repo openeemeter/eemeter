@@ -181,7 +181,7 @@ class EnergyTrace(object):
         else:
             return (
                 "EnergyTrace(interpretation={}, unit={}, data={})"
-                .format(self.interpretation, self.data, self.unit)
+                .format(self.interpretation, self.unit, self.data)
             )
 
     def _set_interpretation(self, interpretation):

@@ -9,6 +9,10 @@ class SqliteJSONStore(object):
 
         # creates the self.conn attribute
         self._prepare_db(directory)
+        self.directory = directory
+
+    def __repr__(self):
+        return 'SqliteJSONStore("{}")'.format(self.directory)
 
     def _get_directory(self):
         """ Returns a directory to be used for caching.

@@ -20,3 +20,4 @@ def test_basic_usage():
 
     s.clear()
     assert s.key_exists("a") is False
+    assert str(s) == 'SqliteJSONStore("{}")'.format(tmpdir)
