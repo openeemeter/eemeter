@@ -28,11 +28,18 @@ class NOAAClient(object):
             except ftplib.all_errors as e:
                 logger.warn("FTP connection issue: %s", e)
             else:
+                logger.info(
+                    "Successfully established connection to ftp.ncdc.noaa.gov."
+                )
                 try:
                     ftp.login()
-                    return ftp
                 except ftplib.all_errors as e:
                     logger.warn("FTP login issue: %s", e)
+                else:
+                    logger.info(
+                        "Successfully logged in to ftp.ncdc.noaa.gov."
+                    )
+                    return ftp
         raise RuntimeError("Couldn't establish an FTP connection.")
 
     def _load_station_index(self):
@@ -61,34 +68,38 @@ class NOAAClient(object):
             filename = filename_format.format(station=station_id, year=year)
             try:
                 self.ftp.retrbinary('RETR {}'.format(filename), string.write)
-                break
             except (IOError, ftplib.error_perm) as e1:
-                message = (
-                    "Failed FTP RETR for station {}: {}"
+                logger.warn(
+                    "Failed FTP RETR for station {}: {}."
+                    " Not attempting reconnect."
                     .format(station_id, e1)
                 )
-                logger.warn(message)
             except (ftplib.error_temp, EOFError) as e2:
                 # Bad connection. attempt to reconnect.
-                message = (
+                logger.warn(
                     "Failed FTP RETR for station {}: {}."
                     " Attempting reconnect."
                     .format(station_id, e2)
                 )
-                logger.warn(message)
                 self.ftp.close()
                 self.ftp = self._get_ftp_connection()
                 try:
                     self.ftp.retrbinary('RETR {}'.format(filename),
                                         string.write)
-                    break
                 except (IOError, ftplib.error_perm) as e3:
-                    message = (
+                    logger.warn(
                         "Failed FTP RETR for station {}: {}."
-                        " Attempting reconnect."
+                        " Trying another station id."
                         .format(station_id, e3)
                     )
-                    logger.warn(message)
+                else:
+                    break
+            else:
+                break
+
+        logger.info(
+            "Successfully retrieved file: {}".format(filename)
+        )
 
         string.seek(0)
         f = gzip.GzipFile(fileobj=string)
@@ -146,8 +157,8 @@ class TMY3Client(object):
     def _load_station_index(self):
         if self.station_index is None:
             with resource_stream('eemeter.resources',
-                                 'GSOD-ISD_station_index.json') as f:
-                self.station_index = json.loads(f.read().decode("utf-8"))
+                                 'supported_tmy3_stations.json') as f:
+                self.station_index = set(json.loads(f.read().decode("utf-8")))
         return self.station_index
 
     def get_tmy3_data(self, station):
@@ -157,8 +168,8 @@ class TMY3Client(object):
         if station not in self.station_index:
             message = (
                 "Station {} is not a TMY3 station."
-                " See eemeter/resources/tmy3_stations.json for a complete"
-                " list of stations."
+                " See eemeter/resources/supported_tmy3_stations.json for a"
+                " complete list of stations."
                 .format(station)
             )
             raise ValueError(message)

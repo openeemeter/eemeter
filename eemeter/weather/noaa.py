@@ -1,10 +1,13 @@
+from datetime import datetime, timedelta
+import logging
+
+import pandas as pd
+
 from .base import WeatherSourceBase
 from .clients import NOAAClient
 from .cache import SqliteJSONStore
 
-from datetime import date, timedelta
-
-import pandas as pd
+logger = logging.getLogger(__name__)
 
 
 class NOAAWeatherSourceBase(WeatherSourceBase):
@@ -15,7 +18,12 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
         super(NOAAWeatherSourceBase, self).__init__(station)
 
         self.json_store = SqliteJSONStore(cache_directory)
+        self.loaded_years = set()
         self._check_station(station)
+        logger.info(
+            "Created {} using cache: {}"
+            .format(self, self.json_store)
+        )
         self._check_for_recent_data()
 
     def _check_station(self, station):
@@ -27,9 +35,37 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
             raise ValueError(message)
 
     def _check_for_recent_data(self, days_ago=1):
-        target_date = date.today() - timedelta(days=days_ago)
-        if target_date in self.tempC and pd.isnull(self.tempC[target_date]):
-            self.add_year(target_date.year, force_fetch=True)
+        target = datetime.now() - timedelta(days=days_ago)
+        most_recent_fetch = self.json_store.retrieve_datetime(
+            self._get_cache_key(target.year))
+        if most_recent_fetch is not None:
+
+            if target > most_recent_fetch:
+                logger.info(
+                    "{} will update {} data because the most recent fetch"
+                    " of that data occurred on {}, but the target date for"
+                    " getting recent data is {}."
+                    .format(self, target.year,
+                            most_recent_fetch.strftime("%Y-%m-%d"),
+                            target.strftime("%Y-%m-%d"))
+                )
+                self.add_year(target.year, force_fetch=True)
+            else:
+                logger.info(
+                    "{} will not update {} data because the most recent"
+                    " fetch of that data occurred on {}, which is more recent"
+                    " than the target date {}."
+                    .format(self, target.year,
+                            most_recent_fetch.strftime("%Y-%m-%d"),
+                            target.strftime("%Y-%m-%d"))
+                )
+        else:
+            logger.info(
+                "{self} will not update {year} data because {year} data is"
+                " not cached."
+                .format(self=self, year=target.year)
+            )
+
 
     def add_year_range(self, start_year, end_year, force_fetch=False):
         """Adds temperature data to internal pandas timeseries across a
@@ -69,20 +105,45 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
             If :code:`True`, forces the fetch; if :code:`False`, checks to see
             if locally available before actually fetching.
         """
-        is_loaded = self._year_in_series(year)
+        is_loaded = year in self.loaded_years
+        self.loaded_years.add(year)
         if is_loaded:
             if force_fetch:  # it's loaded, but fetch anyway
                 new_series = self._fetch_year(year)
                 self.save_series(year, new_series)
                 self.tempC.update(new_series)
+                logger.info(
+                    "{} forced refetch of loaded {} data."
+                    .format(self, year)
+                )
             else:  # ignore request to add year since it's already added.
-                pass
+                logger.info(
+                    "{} ignored request to load {} data because it had"
+                    " already been loaded."
+                    .format(self, year)
+                )
         else:
-            if self._year_saved(year):  # saved locally, no need to fetch
+            if self._year_saved(year) and not force_fetch:
+                # saved locally, no need to fetch
                 new_series = self.load_series(year)
+                logger.info(
+                    "{} loaded cached {} data."
+                    .format(self, year)
+                )
             else:  # not saved locally, need to fetch
                 new_series = self._fetch_year(year)
                 self.save_series(year, new_series)
+                if force_fetch:
+                    logger.info(
+                        "{} forced refetch of cached {} data."
+                        .format(self, year)
+                    )
+                else:
+                    logger.info(
+                        "{} performed initial fetch/cache of {} data."
+                        .format(self, year)
+                    )
+
             self.tempC = self._merge_series(self.tempC, new_series)
 
     def _get_cache_key(self, year):
@@ -95,9 +156,6 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
 
     def _year_saved(self, year):
         return self.json_store.key_exists(self._get_cache_key(year))
-
-    def _year_in_series(self, year):
-        return self.year_existence_format.format(year) in self.tempC
 
     def indexed_temperatures(self, index, unit):
         ''' Return average temperatures over the given index.
@@ -145,7 +203,7 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
         if index.shape == (0,):
             return  # don't need to fetch anything.
         years = index.groupby(index.year).keys()
-        for year in years:
+        for year in sorted(years):  # sorted for logging aesthetics
             self.add_year(year)
 
     def save_series(self, year, series):

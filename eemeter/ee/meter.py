@@ -94,7 +94,7 @@ class EnergyEfficiencyMeter(object):
                     modeling_period_set.get_modeling_period_groups()
                 ]
             },
-            "traces": derivatives,
+            "modeled_traces": derivatives,
             "logs": log_collector.items
         }
 

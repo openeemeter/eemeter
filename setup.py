@@ -22,9 +22,8 @@ setup(
     keywords='open energy efficiency meter',
     packages=find_packages(),
     install_requires=[
-        'pint',
-        'pyyaml',
         'scipy',
+        'scikit-learn',
         'lxml',
         'numpy',
         'pandas >= 0.18',

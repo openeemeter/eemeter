@@ -9,7 +9,6 @@ class SqliteJSONStore(object):
 
         # creates the self.conn attribute
         self._prepare_db(directory)
-        self.directory = directory
 
     def __repr__(self):
         return 'SqliteJSONStore("{}")'.format(self.directory)
@@ -28,17 +27,21 @@ class SqliteJSONStore(object):
         if directory is None:
             directory = self._get_directory()
 
+        self.directory = directory
+
         self.db_filename = os.path.join(directory, "weather_cache.db")
 
         exists = os.path.exists(self.db_filename)
-        conn = sqlite3.connect(self.db_filename)
+        conn = sqlite3.connect(self.db_filename,
+                               detect_types=sqlite3.PARSE_DECLTYPES)
 
         if not exists:
             conn.execute(
                 'CREATE TABLE IF NOT EXISTS items('
-                'id INTEGER PRIMARY KEY AUTOINCREMENT, '
-                'data TEXT, '
-                'key TEXT UNIQUE);'
+                'id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, '
+                'data TEXT NOT NULL, '
+                'key TEXT UNIQUE NOT NULL, '
+                'dt TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL);'
             )
             conn.commit()
 
@@ -55,15 +58,16 @@ class SqliteJSONStore(object):
 
         if self.key_exists(key):
             sql = (
-                'UPDATE items'
-                ' data=?'
+                'UPDATE items SET'
+                ' data=?,'
+                ' dt=datetime(\'now\')'
                 ' WHERE key=?'
             )
         else:
             sql = (
                 'INSERT INTO items'
                 ' (data, key)'
-                ' VALUES(?, ?);'
+                ' VALUES (?, ?)'
             )
         self.conn.execute(sql, (data, key))
         self.conn.commit()
@@ -75,6 +79,14 @@ class SqliteJSONStore(object):
         if data is None:
             return None
         return json.loads(data[0])
+
+    def retrieve_datetime(self, key):
+        cursor = self.conn.cursor()
+        cursor.execute('SELECT dt FROM items WHERE key=?;', (key,))
+        data = cursor.fetchone()
+        if data is None:
+            return None
+        return data[0]
 
     def clear(self, key=None):
         if key is None:
