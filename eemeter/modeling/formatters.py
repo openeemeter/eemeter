@@ -33,6 +33,9 @@ class ModelDataFormatter(object):
     def __init__(self, freq_str):
         self.freq_str = freq_str
 
+    def __repr__(self):
+        return 'ModelDataFormatter("{}")'.format(self.freq_str)
+
     def create_input(self, trace, weather_source):
         '''Creates a :code:`DatetimeIndex`ed dataframe containing formatted
         model input data formatted as follows.

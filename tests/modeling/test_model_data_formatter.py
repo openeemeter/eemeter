@@ -108,3 +108,8 @@ def test_hourly_demand_fixture(hourly_trace, mock_isd_weather_source):
     assert df.index[2] == datetime(2000, 1, 1, 2, tzinfo=pytz.UTC)
     assert df.index.freq == 'H'
     assert_allclose(df.tempF, [32., 32., 32.])
+
+
+def test_repr():
+    mdf = ModelDataFormatter("H")
+    assert str(mdf) == 'ModelDataFormatter("H")'
