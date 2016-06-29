@@ -396,7 +396,7 @@ def zipcode_to_tmy3_station(zipcode):
     station : str
         String representing a TMY3 Weather station (USAF ID).
     """
-    return _load_zipcode_to_usaf_station_index().get(zipcode, None)
+    return _load_zipcode_to_tmy3_station_index().get(zipcode, None)
 
 
 def zipcode_to_climate_zone(zipcode):

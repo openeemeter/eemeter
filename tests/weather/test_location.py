@@ -76,10 +76,12 @@ def test_zipcode_to_lat_lng():
 
 def test_zipcode_to_usaf_station():
     assert zipcode_to_usaf_station('82440') == '726700'
+    assert zipcode_to_usaf_station('94403') == '994041'
 
 
 def test_zipcode_to_tmy3_station():
-    assert zipcode_to_tmy3_station('19975') == '745946'
+    assert zipcode_to_tmy3_station('19975') == '745966'
+    assert zipcode_to_tmy3_station('94403') == '724940'
 
 
 def test_zipcode_to_climate_zone():
