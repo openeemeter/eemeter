@@ -42,6 +42,7 @@ def input_df(mock_isd_weather_source, daily_trace):
 
 def test_basic(input_df):
     m = SeasonalElasticNetCVModel(65, 65)
+    assert str(m).startswith("SeasonalElasticNetCVModel(")
     assert m.cooling_base_temp == 65
     assert m.heating_base_temp == 65
     assert m.model_freq.name == 'D'

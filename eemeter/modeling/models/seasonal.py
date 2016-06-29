@@ -27,6 +27,13 @@ class SeasonalElasticNetCVModel(object):
         self.cvrmse = None
         self.n = None
 
+    def __repr__(self):
+        return (
+            'SeasonalElasticNetCVModel(cooling_base_temp={},'
+            ' heating_base_temp={})'
+            .format(self.cooling_base_temp, self.heating_base_temp)
+        )
+
     def _holidays_indexed(self, dt_index):
         def clean_holiday_name(dt):
             raw_name = self.holidays.get(dt, "none")
