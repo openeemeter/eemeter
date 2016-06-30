@@ -34,22 +34,22 @@ class EnergyEfficiencyMeter(object):
 
         with log_collector.collect_logs("get_weather_normal_source") as logger:
             if weather_normal_source is None:
-                weather_normal_source = get_weather_normal_source(logger,
-                                                                  project)
+                weather_normal_source = get_weather_normal_source(
+                    logger, project)
             else:
                 logger.info("Using supplied weather_normal_source")
 
-        with log_collector.collect_logs("get_energy_modeling_dispatches") \
-                as logger:
+        with log_collector.collect_logs(
+                "get_energy_modeling_dispatches") as logger:
             dispatches = get_energy_modeling_dispatches(
                 logger, modeling_period_set, project.energy_trace_set)
 
         with log_collector.collect_logs("handle_dispatches") as logger:
 
-            derivatives = {}
+            dispatch_outputs = {}
             for key, dispatch in dispatches.items():
 
-                derivatives[key] = {}
+                dispatch_outputs[key] = {}
 
                 formatter = dispatch["formatter"]
                 model = dispatch["model"]
@@ -57,25 +57,45 @@ class EnergyEfficiencyMeter(object):
 
                 if (formatter is None or model is None or
                         filtered_trace is None):
-                    logger.info('Dispatch skipped for "{}"'.format(key))
+                    logger.info(
+                        'Modeling skipped for "{}" because of empty'
+                        ' dispatch:\n'
+                        '  formatter={}\n'
+                        '  model={}\n'
+                        '  filtered_trace={}'
+                        .format(key, formatter, model, filtered_trace)
+                    )
                     continue
 
                 input_df = formatter.create_input(
                     filtered_trace, weather_source)
 
-                output = model.fit(input_df)
+                try:
+                    output = model.fit(input_df)
+                except:
+                    logger.warn(
+                        'For "{}", {} was not able to fit using input data: {}'
+                        .format(key, model, input_df)
+                    )
+                    dispatch_outputs[key]["status"] = "FAILURE"
+                else:
+                    logger.info(
+                        'Successfully fitted {} to formatted input data for'
+                        ' {}.'
+                        .format(model, key)
+                    )
+                    dispatch_outputs[key].update(output)
 
-                annualized = annualized_weather_normal(formatter, model,
-                                                       weather_normal_source)
-
-                derivatives[key].update(output)
-                derivatives[key].update(annualized)
+                    annualized = annualized_weather_normal(
+                        formatter, model, weather_normal_source)
+                    dispatch_outputs[key].update(annualized)
+                    dispatch_outputs[key]["status"] = "SUCCESS"
 
         project_derivatives = self._get_project_derivatives(
             modeling_period_set,
             project.energy_trace_set,
             dispatches,
-            derivatives)
+            dispatch_outputs)
 
         output_data = {
             "project": {
@@ -94,7 +114,7 @@ class EnergyEfficiencyMeter(object):
                     modeling_period_set.get_modeling_period_groups()
                 ]
             },
-            "modeled_traces": derivatives,
+            "modeled_traces": dispatch_outputs,
             "logs": log_collector.items
         }
 
@@ -104,7 +124,7 @@ class EnergyEfficiencyMeter(object):
         return output_data
 
     def _get_project_derivatives(self, modeling_period_set, energy_trace_set,
-                                 dispatches, derivatives):
+                                 dispatches, dispatch_outputs):
 
         project_derivatives = defaultdict(lambda: (0, 0, 0, 0))
 
@@ -116,17 +136,17 @@ class EnergyEfficiencyMeter(object):
 
                 # baseline model
                 def _get_baseline(label):
-                    baseline_model_derivatives = \
-                        derivatives.get((baseline_label, trace_label), None)
-                    if baseline_model_derivatives is not None:
-                        return baseline_model_derivatives.get(label, None)
+                    baseline_model_dispatch_outputs = \
+                        dispatch_outputs.get((baseline_label, trace_label), None)
+                    if baseline_model_dispatch_outputs is not None:
+                        return baseline_model_dispatch_outputs.get(label, None)
 
                 # reporting model
                 def _get_reporting(label):
-                    reporting_model_derivatives = \
-                        derivatives.get((reporting_label, trace_label), None)
-                    if reporting_model_derivatives is not None:
-                        return reporting_model_derivatives.get(label, None)
+                    reporting_model_dispatch_outputs = \
+                        dispatch_outputs.get((reporting_label, trace_label), None)
+                    if reporting_model_dispatch_outputs is not None:
+                        return reporting_model_dispatch_outputs.get(label, None)
 
                 def _add_errors(errors1, errors2):
                     # TODO add autocorrelation correction
