@@ -1,5 +1,5 @@
-Developer
----------
+Development
+-----------
 
 .. toctree::
    :maxdepth: 2
