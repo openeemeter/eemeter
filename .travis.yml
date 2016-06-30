@@ -5,21 +5,12 @@ language: python
 python:
   - 2.7
   - 3.4
+  - 3.5
 
 notifications:
   email: false
 
-# before_install:
-#   - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
-#   - chmod +x miniconda.sh
-#   - ./miniconda.sh -b
-#   - export PATH=/home/travis/miniconda2/bin:$PATH
-#   - conda update --yes conda
-
 install:
-  # - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy dateutil pandas lxml xlrd sqlalchemy
-  # - pip install .
-  # - pip install -r travis_requirements.txt
   - pip install tox-travis
 
 script:
