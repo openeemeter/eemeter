@@ -98,7 +98,8 @@ class NOAAClient(object):
                 break
 
         logger.info(
-            "Successfully retrieved file: {}".format(filename)
+            'Successfully retrieved ftp://ftp.ncdc.noaa.gov{}'
+            .format(filename)
         )
 
         string.seek(0)

@@ -174,7 +174,11 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
         temperatures : pandas.Series with DatetimeIndex
             Average temperatures over series indexed by :code:`index`.
         '''
+        if index.shape == (0,):
+            return pd.Series([], index=index, dtype=float)
+
         self._verify_index_presence(index)
+
 
         if index.freq == 'D':
             return self._daily_indexed_temperatures(index, unit)
@@ -200,8 +204,6 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
         raise ValueError(message)
 
     def _verify_index_presence(self, index):
-        if index.shape == (0,):
-            return  # don't need to fetch anything.
         years = index.groupby(index.year).keys()
         for year in sorted(years):  # sorted for logging aesthetics
             self.add_year(year)

@@ -81,7 +81,7 @@ class SeasonalElasticNetCVModel(object):
 
         holiday_names = self._holidays_indexed(model_data.index)
 
-        if len(np.unique(holiday_names)) == 10:
+        if len(np.unique(holiday_names)) == 11:
             model_data.loc[:, 'holiday_name'] = holiday_names
             formula += " + C(holiday_name)"
 
