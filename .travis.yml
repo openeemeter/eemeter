@@ -20,7 +20,7 @@ install:
   - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy dateutil pandas lxml xlrd sqlalchemy
   - pip install .
   - pip install -r travis_requirements.txt
-  - pip install tox
+  - pip install tox-travis
 
 script:
   - tox
