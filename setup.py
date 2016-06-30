@@ -22,13 +22,15 @@ setup(
     keywords='open energy efficiency meter',
     packages=find_packages(),
     install_requires=[
-        'scipy',
-        'scikit-learn',
+        'holidays',
         'lxml',
         'numpy',
         'pandas >= 0.18',
+        'patsy',
+        'pytz',
         'requests',
-        'pytz'
+        'scipy',
+        'scikit-learn',
     ],
     package_data={'': ['*.json', '*.gz']},
     setup_requires=['pytest-runner'],

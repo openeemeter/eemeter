@@ -17,43 +17,30 @@ default_seasonal_settings = {
 }
 
 
+default_dispatch = (
+    ModelDataFormatter,
+    default_formatter_settings,
+    SeasonalElasticNetCVModel,
+    default_seasonal_settings,
+)
+
+
 ENERGY_MODEL_CLASS_MAPPING = {
-    ('NATURAL_GAS_CONSUMPTION_SUPPLIED', 'H'): (
-        ModelDataFormatter,
-        default_formatter_settings,
-        SeasonalElasticNetCVModel,
-        default_seasonal_settings,
-    ),
-    ('ELECTRICITY_CONSUMPTION_SUPPLIED', 'H'): (
-        ModelDataFormatter,
-        default_formatter_settings,
-        SeasonalElasticNetCVModel,
-        default_seasonal_settings,
-    ),
-    ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', 'H'): (
-        ModelDataFormatter,
-        default_formatter_settings,
-        SeasonalElasticNetCVModel,
-        default_seasonal_settings,
-    ),
-    ('NATURAL_GAS_CONSUMPTION_SUPPLIED', 'D'): (
-        ModelDataFormatter,
-        default_formatter_settings,
-        SeasonalElasticNetCVModel,
-        default_seasonal_settings,
-    ),
-    ('ELECTRICITY_CONSUMPTION_SUPPLIED', 'D'): (
-        ModelDataFormatter,
-        default_formatter_settings,
-        SeasonalElasticNetCVModel,
-        default_seasonal_settings,
-    ),
-    ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', 'D'): (
-        ModelDataFormatter,
-        default_formatter_settings,
-        SeasonalElasticNetCVModel,
-        default_seasonal_settings,
-    ),
+    ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '15T'): default_dispatch,
+    ('ELECTRICITY_CONSUMPTION_SUPPLIED', '15T'): default_dispatch,
+    ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', '15T'): default_dispatch,
+
+    ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '30T'): default_dispatch,
+    ('ELECTRICITY_CONSUMPTION_SUPPLIED', '30T'): default_dispatch,
+    ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', '30T'): default_dispatch,
+
+    ('NATURAL_GAS_CONSUMPTION_SUPPLIED', 'H'): default_dispatch,
+    ('ELECTRICITY_CONSUMPTION_SUPPLIED', 'H'): default_dispatch,
+    ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', 'H'): default_dispatch,
+
+    ('NATURAL_GAS_CONSUMPTION_SUPPLIED', 'D'): default_dispatch,
+    ('ELECTRICITY_CONSUMPTION_SUPPLIED', 'D'): default_dispatch,
+    ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', 'D'): default_dispatch,
 }
 
 
@@ -97,10 +84,11 @@ def _dispatch(logger, model_class_selector, modeling_period, trace,
             ENERGY_MODEL_CLASS_MAPPING[model_class_selector]
     except KeyError:
         logger.error(
-            'Could not dispatch EnergyModeler/Model for'
-            ' ModelingPeriod "{}" ({}) and trace "{}" ({}).'
+            'Could not dispatch formatter/model for'
+            ' ModelingPeriod "{}" ({}) and trace "{}" ({}) using model class'
+            ' selector {}.'
             .format(modeling_period_label, modeling_period, trace_label,
-                    trace.interpretation)
+                    trace.interpretation, model_class_selector)
         )
         return (None, None, None)
 
@@ -112,9 +100,10 @@ def _dispatch(logger, model_class_selector, modeling_period, trace,
                                  unit=trace.unit)
     logger.info(
         'Successfully dispatched formatter {} and model {} for'
-        ' ModelingPeriod "{}" ({}) and trace "{}" ({}).'
+        ' ModelingPeriod "{}" ({}) and trace "{}" ({}) using model class'
+        ' selector {}.'
         .format(formatter, model, modeling_period_label, modeling_period,
-                trace_label, trace.interpretation)
+                trace_label, trace.interpretation, model_class_selector)
     )
     return formatter, model, filtered_trace
 

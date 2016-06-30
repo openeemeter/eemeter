@@ -66,7 +66,6 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
                 .format(self=self, year=target.year)
             )
 
-
     def add_year_range(self, start_year, end_year, force_fetch=False):
         """Adds temperature data to internal pandas timeseries across a
         range of years.
@@ -178,7 +177,6 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
             return pd.Series([], index=index, dtype=float)
 
         self._verify_index_presence(index)
-
 
         if index.freq == 'D':
             return self._daily_indexed_temperatures(index, unit)

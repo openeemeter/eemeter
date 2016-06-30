@@ -137,16 +137,16 @@ class EnergyEfficiencyMeter(object):
                 # baseline model
                 def _get_baseline(label):
                     baseline_model_dispatch_outputs = \
-                        dispatch_outputs.get((baseline_label, trace_label), None)
+                        dispatch_outputs.get((baseline_label, trace_label))
                     if baseline_model_dispatch_outputs is not None:
-                        return baseline_model_dispatch_outputs.get(label, None)
+                        return baseline_model_dispatch_outputs.get(label)
 
                 # reporting model
                 def _get_reporting(label):
                     reporting_model_dispatch_outputs = \
-                        dispatch_outputs.get((reporting_label, trace_label), None)
+                        dispatch_outputs.get((reporting_label, trace_label))
                     if reporting_model_dispatch_outputs is not None:
-                        return reporting_model_dispatch_outputs.get(label, None)
+                        return reporting_model_dispatch_outputs.get(label)
 
                 def _add_errors(errors1, errors2):
                     # TODO add autocorrelation correction

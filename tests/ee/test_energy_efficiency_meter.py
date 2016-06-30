@@ -79,18 +79,18 @@ def test_basic_usage(project, mock_tmy3_weather_source):
     assert project_results['modeling_periods'][1] == 'reporting'
     assert_allclose(project_results[
         'total_baseline_normal_annual_electricity_consumption_kWh'],
-        (382.191016124, 0.8127655376, 0.9400387554, 364))
+        (378.01305934627737, 1.4456346634559814, 1.6021521363635194, 728))
     assert_allclose(project_results[
         'total_reporting_normal_annual_electricity_consumption_kWh'],
-        (371.236190303, 0.7646731915, 0.8901040637, 334))
+        (374.651655365946, 1.4141494579046852, 1.5715270409819984, 691))
     assert_allclose(project_results[
         'total_baseline_normal_annual_fuel_consumption_kWh'],
-        (382.191016124, 0.8127655376, 0.9400387554, 364))
+        (378.01305934627737, 1.4456346634559814, 1.6021521363635194, 728))
     assert_allclose(project_results[
         'total_reporting_normal_annual_fuel_consumption_kWh'],
-        (371.236190303, 0.7646731915, 0.8901040637, 334))
+        (374.651655365946, 1.4141494579046852, 1.5715270409819984, 691))
 
-    trace_results = results['traces']
+    trace_results = results['modeled_traces']
     trace1 = trace_results[('baseline', '0')]
     assert 'cvrmse' in trace1
     assert 'n' in trace1
@@ -115,4 +115,4 @@ def test_basic_usage(project, mock_tmy3_weather_source):
     assert len(logs['get_weather_normal_source']) == 1
     assert len(logs['get_modeling_period_set']) == 1
     assert len(logs['get_energy_modeling_dispatches']) == 4
-    assert len(logs['handle_dispatches']) == 0
+    assert len(logs['handle_dispatches']) == 2
