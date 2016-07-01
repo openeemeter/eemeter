@@ -1,5 +1,6 @@
 import tempfile
 from datetime import datetime
+import pytz
 
 from eemeter.weather.cache import SqliteJSONStore
 
@@ -21,9 +22,9 @@ def test_basic_usage():
     assert data["b"][1] == "two"
     assert data["b"][2] == 3.0
 
-    dt1 = s.retrieve_datetime("a")
+    dt1 = pytz.UTC.localize(s.retrieve_datetime("a"))
     # assertion might fail if midnight dec 31
-    assert dt1.date() == datetime.now().date()
+    assert dt1.date() == datetime.utcnow().date()
 
     # update
     s.save_json("a", ["updated"])
