@@ -23,4 +23,4 @@ script:
   - tox
 
 after_script:
-  - coveralls --verbose
+  - coveralls
