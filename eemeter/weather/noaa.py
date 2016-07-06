@@ -250,7 +250,6 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
                 else:
                     period_start = period_end
                     period_end = next(periods, None)
-
         return pd.MultiIndex.from_tuples(list(_yield_index_tuples()),
                                          names=names)
 
