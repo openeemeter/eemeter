@@ -2,26 +2,34 @@ import pandas as pd
 import numpy as np
 
 from eemeter.modeling.models.seasonal import SeasonalElasticNetCVModel
-from eemeter.modeling.formatters import ModelDataFormatter
+from eemeter.modeling.models.billing import BillingElasticNetCVModel
+from eemeter.modeling.formatters import (
+    ModelDataFormatter,
+    ModelDataBillingFormatter,
+)
 from eemeter.structures import EnergyTrace
-
-
-default_formatter_settings = {
-    'freq_str': 'D',
-}
-
-
-default_seasonal_settings = {
-    'cooling_base_temp': 65,
-    'heating_base_temp': 65,
-}
 
 
 default_dispatch = (
     ModelDataFormatter,
-    default_formatter_settings,
+    {
+        'freq_str': 'D'
+    },
     SeasonalElasticNetCVModel,
-    default_seasonal_settings,
+    {
+        'cooling_base_temp': 65,
+        'heating_base_temp': 65,
+    },
+)
+
+billing_dispatch = (
+    ModelDataBillingFormatter,
+    {},
+    BillingElasticNetCVModel,
+    {
+        'cooling_base_temp': 65,
+        'heating_base_temp': 65,
+    },
 )
 
 
@@ -41,10 +49,15 @@ ENERGY_MODEL_CLASS_MAPPING = {
     ('NATURAL_GAS_CONSUMPTION_SUPPLIED', 'D'): default_dispatch,
     ('ELECTRICITY_CONSUMPTION_SUPPLIED', 'D'): default_dispatch,
     ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', 'D'): default_dispatch,
+
+    ('NATURAL_GAS_CONSUMPTION_SUPPLIED', None): billing_dispatch,
+    ('ELECTRICITY_CONSUMPTION_SUPPLIED', None): billing_dispatch,
 }
 
 
 def get_energy_modeling_dispatches(logger, modeling_period_set, trace_set):
+    '''
+    '''
 
     dispatches = {}
     for mp_label, modeling_period in \

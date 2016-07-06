@@ -67,15 +67,15 @@ class EnergyEfficiencyMeter(object):
                     )
                     continue
 
-                input_df = formatter.create_input(
+                input_data = formatter.create_input(
                     filtered_trace, weather_source)
 
                 try:
-                    output = model.fit(input_df)
+                    output = model.fit(input_data)
                 except:
                     logger.warn(
                         'For "{}", {} was not able to fit using input data: {}'
-                        .format(key, model, input_df)
+                        .format(key, model, input_data)
                     )
                     dispatch_outputs[key]["status"] = "FAILURE"
                 else:

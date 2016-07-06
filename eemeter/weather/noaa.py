@@ -156,7 +156,7 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
     def _year_saved(self, year):
         return self.json_store.key_exists(self._get_cache_key(year))
 
-    def indexed_temperatures(self, index, unit):
+    def indexed_temperatures(self, index, unit, allow_mixed_frequency=False):
         ''' Return average temperatures over the given index.
 
         Parameters
@@ -182,11 +182,10 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
             return self._daily_indexed_temperatures(index, unit)
         elif index.freq == 'H':
             return self._hourly_indexed_temperatures(index, unit)
+        elif allow_mixed_frequency:
+            return self._mixed_frequency_indexed_temperatures(index, unit)
         else:
-            message = (
-                'DatetimeIndex frequency "{}" not supported, please resample.'
-                .format(index.freq)
-            )
+            message = 'DatetimeIndex with mixed frequency not supported.'
             raise ValueError(message)
 
     def _daily_indexed_temperatures(self, index, unit):
@@ -200,6 +199,66 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
             .format(index.freq)
         )
         raise ValueError(message)
+
+    def _mixed_frequency_indexed_temperatures(self, index, unit):
+        min_period = self._get_min_period(index)
+        min_acceptable_period = self._get_min_acceptable_period()
+
+        if min_period < min_acceptable_period:
+            message = (
+                'DatetimeIndex with a period below "{}" (found: {}) not'
+                ' supported.'
+                .format(min_acceptable_period, min_period)
+            )
+            raise ValueError(message)
+
+        index_ = self._partitioned_multiindex(self.tempC.index, index)
+        level = index_.names[1]
+        index_.get_level_values(level)
+        values = self.tempC.reindex(index_.get_level_values(level)).values
+        tempC = pd.DataFrame(values, index=index_)
+        return self._unit_convert(tempC, unit)
+
+    def _partitioned_multiindex(self, index_parts, index_periods, names=None):
+        if names is None:
+            if index_parts.freq == 'H':
+                names = ["period", "hourly"]
+            elif index_parts.freq == 'D':
+                names = ["period", "daily"]
+            else:
+                message = (
+                    'Unexpected temperature frequency "{}".'
+                    .format(index_parts.freq)
+                )
+                raise ValueError(message)
+
+        parts = iter(index_parts)
+        periods = iter(index_periods)
+
+        def _yield_index_tuples():
+            part = next(parts, None)
+            period_start = next(periods, None)
+            period_end = next(periods, None)
+            while part is not None:
+                if period_start is None or period_end is None:
+                    break
+                if part < period_start:
+                    part = next(parts, None)
+                elif period_start <= part < period_end:
+                    yield (period_start, part)
+                    part = next(parts, None)
+                else:
+                    period_start = period_end
+                    period_end = next(periods, None)
+
+        return pd.MultiIndex.from_tuples(list(_yield_index_tuples()),
+                                         names=names)
+
+    def _get_min_period(self, index):
+        return index.to_series().diff().dropna().min()
+
+    def _get_min_acceptable_period(self):
+        return pd.Timedelta('1 days')
 
     def _verify_index_presence(self, index):
         years = index.groupby(index.year).keys()
@@ -352,3 +411,6 @@ class ISDWeatherSource(NOAAWeatherSourceBase):
     def _hourly_indexed_temperatures(self, index, unit):
         tempC = self.tempC.resample(self.freq).mean()[index]
         return self._unit_convert(tempC, unit)
+
+    def _get_min_acceptable_period(self):
+        return pd.Timedelta('1 hours')

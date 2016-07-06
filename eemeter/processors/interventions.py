@@ -5,6 +5,8 @@ from eemeter.structures import (
 
 
 def get_modeling_period_set(logger, interventions):
+    '''
+    '''
 
     # don't attempt modeling where there are no interventions
     if len(interventions) == 0:

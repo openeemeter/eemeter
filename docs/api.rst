@@ -1,12 +1,13 @@
 API
 ===
 
-eemeter.structures
-------------------
+eemeter.ee
+----------
 
-.. automodule:: eemeter.structures
-    :members:
+.. toctree::
+   :maxdepth: 4
 
+   ee
 
 eemeter.io
 ----------
@@ -16,6 +17,27 @@ eemeter.io
 
    io
 
+eemeter.modeling
+----------------
+
+.. toctree::
+   :maxdepth: 4
+
+   modeling
+
+eemeter.processors
+------------------
+
+.. toctree::
+   :maxdepth: 4
+
+   processors
+
+eemeter.structures
+------------------
+
+.. automodule:: eemeter.structures
+    :members:
 
 eemeter.weather
 ---------------

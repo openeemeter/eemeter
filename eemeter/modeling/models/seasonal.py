@@ -46,9 +46,9 @@ class SeasonalElasticNetCVModel(object):
                                   index=dt_index)
         return holiday_names
 
-    def fit(self, df):
+    def fit(self, input_data):
         # convert to daily
-        model_data = df.resample(self.model_freq).agg(
+        model_data = input_data.resample(self.model_freq).agg(
                 {'energy': np.sum, 'tempF': np.mean})
 
         model_data = model_data.dropna()
@@ -154,12 +154,13 @@ class SeasonalElasticNetCVModel(object):
         }
         return output
 
-    def predict(self, df, params=None):
+    def predict(self, demand_fixture_data, params=None):
         # needs only tempF
         if params is None:
             params = self.params
 
-        model_data = df.resample(self.model_freq).agg({'tempF': np.mean})
+        model_data = demand_fixture_data.resample(self.model_freq).agg(
+                {'tempF': np.mean})
 
         model_data.loc[:, 'CDD'] = np.maximum(model_data.tempF -
                                               self.cooling_base_temp, 0.)

@@ -26,10 +26,12 @@ class Mock(MagicMock):
 MOCK_MODULES = [
     'dateutil',
     'dateutil.parser',
+    'holidays',
     'numpy',
     'scipy',
     'scipy.optimize',
     'scipy.stats',
+    'sklearn',
     'sqlalchemy',
     'sqlalchemy.sql',
     'sqlalchemy.ext',
@@ -39,6 +41,8 @@ MOCK_MODULES = [
     'pandas',
     'pandas.core',
     'pandas.core.common',
+    'pandas.tseries',
+    'pandas.tseries.frequencies',
     'pint',
 ]
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
