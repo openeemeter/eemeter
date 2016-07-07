@@ -18,13 +18,4 @@ class WeatherSourceBase(object):
                 "Unit not supported ({}). Use 'degF' or 'degC'"
                 .format(unit)
             )
-            raise NotImplementedError(message)
-
-    def json(self):
-        return {
-            "station": self.station,
-            "records": [{
-                "datetime": d.strftime(self.cache_date_format),
-                "tempC": t if pd.notnull(t) else None,
-            } for d, t in self.tempC.iteritems()]
-        }
+            raise ValueError(message)

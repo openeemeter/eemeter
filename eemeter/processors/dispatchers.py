@@ -67,6 +67,9 @@ def get_energy_modeling_dispatches(logger, modeling_period_set, trace_set):
             frequency = _get_approximate_frequency(
                     logger, trace.data, t_label)
 
+            if frequency not in ['H', 'D', '15T', '30T']:
+                frequency = None
+
             model_class_selector = (trace.interpretation, frequency)
 
             formatter, model, filtered_trace = _dispatch(
@@ -183,5 +186,5 @@ def _get_approximate_frequency(logger, data, trace_label):
                 _log_success(freq)
                 return freq
 
-    logger.error("Could not determine frequency - no dominant frequency.")
+    logger.warning("Could not determine frequency - no dominant frequency.")
     return None

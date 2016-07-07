@@ -141,7 +141,7 @@ formatter.create_input(energy_trace, weather_source)
     '''
 
     def __repr__(self):
-        return 'ModelDataBillingFormatter()'.format(self.freq_str)
+        return 'ModelDataBillingFormatter()'
 
     def _unestimated(self, data):
         def _yield_values():

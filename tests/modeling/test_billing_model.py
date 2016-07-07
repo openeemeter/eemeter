@@ -59,3 +59,5 @@ def test_basic_usage(trace, mock_isd_weather_source):
 
     outputs = model.predict(formatted_predict_data)
     assert outputs.shape == (365,)
+
+    assert "ModelDataBillingFormatter" in str(ModelDataBillingFormatter)

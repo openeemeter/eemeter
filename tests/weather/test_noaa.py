@@ -30,13 +30,19 @@ def test_gsod_index_daily(mock_gsod_weather_source):
     assert temps.shape == (2,)
     assert_allclose(temps.values, [32, 32])
 
+    temps = mock_gsod_weather_source.indexed_temperatures(index, 'degC')
+    assert_allclose(temps.values, [0, 0])
+
+    with pytest.raises(ValueError):
+        mock_gsod_weather_source.indexed_temperatures(index, 'BAD')
+
 
 def test_gsod_index_arbitrary(mock_gsod_weather_source):
     index = pd.DatetimeIndex(['2011-01-30', '2011-01-31', '2011-03-31'],
                              dtype='datetime64[ns, UTC]', freq=None)
 
     with pytest.raises(ValueError):
-        temps = mock_gsod_weather_source.indexed_temperatures(
+        mock_gsod_weather_source.indexed_temperatures(
             index, 'degF')
 
     temps = mock_gsod_weather_source.indexed_temperatures(
