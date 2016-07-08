@@ -7,7 +7,20 @@ from eemeter.weather.tmy3 import TMY3WeatherSource
 
 
 def get_weather_source(logger, project):
-    '''
+    ''' Finds most relevant WeatherSource given project site.
+
+    Parameters
+    ----------
+    logger : logging.logger
+        Logger to collect logged data.
+    project : eemeter.structures.Project
+        Project for which to find weather source data.
+
+    Returns
+    -------
+    weather_source : eemeter.weather.ISDWeatherSource
+        Closest data-validated weather source in the same climate zone as
+        project ZIP code, if available.
     '''
 
     zipcode = project.site.zipcode
@@ -40,7 +53,20 @@ def get_weather_source(logger, project):
 
 
 def get_weather_normal_source(logger, project):
-    '''
+    ''' Finds most relevant WeatherSource given project site.
+
+    Parameters
+    ----------
+    logger : logging.logger
+        Logger to collect logged data.
+    project : eemeter.structures.Project
+        Project for which to find weather source data.
+
+    Returns
+    -------
+    weather_source : eemeter.weather.TMY3WeatherSource
+        Closest data-validated weather source in the same climate zone as
+        project ZIP code, if available.
     '''
 
     zipcode = project.site.zipcode

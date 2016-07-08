@@ -56,7 +56,17 @@ ENERGY_MODEL_CLASS_MAPPING = {
 
 
 def get_energy_modeling_dispatches(logger, modeling_period_set, trace_set):
-    '''
+    ''' Dispatches a set of applicable models and formatters for each
+    pairing of modeling period sets and trace sets given.
+
+    Parameters
+    ----------
+    logger : logging.logger
+        Logger to collect logged data.
+    modeling_period_set : eemeter.structures.ModelingPeriodSet
+        :code:`ModelingPeriod` s to dispatch.
+    trace_set : eemeter.structures.EnergyTraceSet
+        :code:`EnergyTrace` s to dispatch.
     '''
 
     dispatches = {}

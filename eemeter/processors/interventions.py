@@ -5,7 +5,15 @@ from eemeter.structures import (
 
 
 def get_modeling_period_set(logger, interventions):
-    '''
+    ''' Creates an applicable modeling period set given a list of
+    interventions.
+
+    Parameters
+    ----------
+    logger : logging.logger
+        Logger to collect logged data.
+    interventions : list of eemeter.structures.Intervention
+        Interventions for which to build ModelingPeriodSet.
     '''
 
     # don't attempt modeling where there are no interventions
