@@ -68,29 +68,38 @@ def test_basic_usage(project, mock_tmy3_weather_source):
     results = meter.evaluate(project,
                              weather_normal_source=mock_tmy3_weather_source)
 
-    project_results = results['project']
-    assert project_results['modeling_period_groups'] == \
-        [('baseline', 'reporting')]
-    assert ('baseline', '0') in project_results['modeled_trace_selectors']
-    assert ('reporting', '0') in project_results['modeled_trace_selectors']
-    assert project_results['trace_interpretations'] == \
+    assert results['modeling_period_groups'] == [('baseline', 'reporting')]
+
+    assert ('baseline', '0') in results['modeled_energy_trace_selectors']
+    assert ('reporting', '0') in results['modeled_energy_trace_selectors']
+
+    assert results['energy_trace_interpretations'] == \
         {'0': 'ELECTRICITY_CONSUMPTION_SUPPLIED'}
-    assert project_results['modeling_periods'][0] == 'baseline'
-    assert project_results['modeling_periods'][1] == 'reporting'
-    assert_allclose(project_results[
+
+    assert results['energy_trace_labels'][0] == '0'
+
+    assert results['modeling_period_labels'][0] == 'baseline'
+    assert results['modeling_period_labels'][1] == 'reporting'
+
+    assert results['modeling_period_interpretations']['baseline'] == \
+            'BASELINE'
+    assert results['modeling_period_interpretations']['reporting'] == \
+            'REPORTING'
+
+    assert_allclose(results[
         'total_baseline_normal_annual_electricity_consumption_kWh'],
         (378.01305934627737, 1.4456346634559814, 1.6021521363635194, 728))
-    assert_allclose(project_results[
+    assert_allclose(results[
         'total_reporting_normal_annual_electricity_consumption_kWh'],
         (374.651655365946, 1.4141494579046852, 1.5715270409819984, 691))
-    assert_allclose(project_results[
+    assert_allclose(results[
         'total_baseline_normal_annual_fuel_consumption_kWh'],
         (378.01305934627737, 1.4456346634559814, 1.6021521363635194, 728))
-    assert_allclose(project_results[
+    assert_allclose(results[
         'total_reporting_normal_annual_fuel_consumption_kWh'],
         (374.651655365946, 1.4141494579046852, 1.5715270409819984, 691))
 
-    trace_results = results['modeled_traces']
+    trace_results = results['modeled_energy_traces']
     trace1 = trace_results[('baseline', '0')]
     assert 'cvrmse' in trace1
     assert 'n' in trace1

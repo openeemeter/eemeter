@@ -98,28 +98,35 @@ class EnergyEfficiencyMeter(object):
             dispatch_outputs)
 
         output_data = {
-            "project": {
-                "modeled_trace_selectors": list(dispatches.keys()),
-                "trace_interpretations": {
-                    label: trace.interpretation
-                    for label, trace in project.energy_trace_set.itertraces()
-                },
-                "modeling_periods": [
-                    name
-                    for name, _ in modeling_period_set.get_modeling_periods()
-                ],
-                "modeling_period_groups": [
-                    (b_label, r_label)
-                    for (b_label, _), (r_label, _) in
-                    modeling_period_set.get_modeling_period_groups()
-                ]
+            "energy_trace_labels": [
+                label
+                for label, _ in project.energy_trace_set.itertraces()
+            ],
+            "energy_trace_interpretations": {
+                label: trace.interpretation
+                for label, trace in project.energy_trace_set.itertraces()
             },
-            "modeled_traces": dispatch_outputs,
+            "modeling_period_labels": [
+                label
+                for label, _ in modeling_period_set.get_modeling_periods()
+            ],
+            "modeling_period_interpretations": {
+                label: modeling_period.interpretation
+                for label, modeling_period in
+                    modeling_period_set.get_modeling_periods()
+            },
+            "modeling_period_groups": [
+                (baseline_label, reporting_label)
+                for (baseline_label, _), (reporting_label, _) in
+                modeling_period_set.get_modeling_period_groups()
+            ],
+            "modeled_energy_trace_selectors": list(dispatches.keys()),
+            "modeled_energy_traces": dispatch_outputs,
             "logs": log_collector.items
         }
 
         for key, value in project_derivatives.items():
-            output_data["project"].update({key: value})
+            output_data.update({key: value})
 
         return output_data
 
