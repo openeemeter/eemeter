@@ -9,6 +9,16 @@ from sklearn import linear_model
 
 
 class BillingElasticNetCVModel():
+    ''' Linear regression of energy values against CDD/HDD with elastic net
+    regularization.
+
+    Parameters
+    ----------
+    cooling_base_temp : float
+        Base temperature (degrees F) used in calculating cooling degree days.
+    heating_base_temp : float
+        Base temperature (degrees F) used in calculating heating degree days.
+    '''
 
     def __init__(self, cooling_base_temp, heating_base_temp):
 
@@ -48,6 +58,35 @@ class BillingElasticNetCVModel():
         return hdd
 
     def fit(self, input_data):
+        ''' Fits a model to the input data.
+
+        Parameters
+        ----------
+        input_data : pandas.DataFrame
+            Formatted input data as returned by
+            :code:`ModelDataBillingFormatter.create_input()`
+
+        Returns
+        -------
+        out : dict
+            Results of this model fit:
+
+            - :code:`"r2"`: R-squared value from this fit.
+            - :code:`"model_params"`: Fitted parameters.
+
+              - :code:`X_design_matrix`: patsy design matrix used in
+                formatting design matrix.
+              - :code:`formula`: patsy formula used in creating design matrix.
+              - :code:`coefficients`: ElasticNetCV coefficients.
+              - :code:`intercept`: ElasticNetCV intercept.
+
+            - :code:`"rmse"`: Root mean square error
+            - :code:`"cvrmse"`: Normalized root mean square error
+              (Coefficient of variation of root mean square error).
+            - :code:`"upper"`: self.upper,
+            - :code:`"lower"`: self.lower,
+            - :code:`"n"`: self.n
+        '''
         trace_data, temperature_data = input_data
 
         cdd = self._cdd(temperature_data)
@@ -129,6 +168,29 @@ class BillingElasticNetCVModel():
         return output
 
     def predict(self, demand_fixture_data, params=None):
+        ''' Predicts across index using fitted model params
+
+        Parameters
+        ----------
+        demand_fixture_data : pandas.DataFrame
+            Formatted input data as returned by
+            :code:`ModelDataBillingFormatter.create_demand_fixture()`
+        params : dict, default None
+            Parameters found during model fit. If None, `.fit()` must be called
+            before this method can be used.
+
+              - :code:`X_design_matrix`: patsy design matrix used in
+                formatting design matrix.
+              - :code:`formula`: patsy formula used in creating design matrix.
+              - :code:`coefficients`: ElasticNetCV coefficients.
+              - :code:`intercept`: ElasticNetCV intercept.
+
+        Returns
+        -------
+        output : pandas.DataFrame
+            Dataframe of energy values as given by the fitted model across the
+            index given in :code:`demand_fixture_data`.
+        '''
         # needs only tempF
         if params is None:
             params = self.params
@@ -161,6 +223,9 @@ class BillingElasticNetCVModel():
         return predicted
 
     def plot(self):
+        ''' Plots fit against input data. Should not be run before the
+        :code:`.fit(` method.
+        '''
 
         try:
             import matplotlib.pyplot as plt

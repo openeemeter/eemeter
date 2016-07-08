@@ -9,7 +9,7 @@ from sklearn import linear_model
 
 
 class SeasonalElasticNetCVModel(object):
-    ''' Linear Regression using daily frequency data to build a model of
+    ''' Linear regression using daily frequency data to build a model of
     formatted energy trace data that takes into account HDD, CDD, day of week,
     month, and holiday effects, with elastic net regularization.
 
@@ -255,6 +255,9 @@ class SeasonalElasticNetCVModel(object):
         return predicted
 
     def plot(self):
+        ''' Plots fit against input data. Should not be run before the
+        :code:`.fit(` method.
+        '''
 
         try:
             import matplotlib.pyplot as plt
