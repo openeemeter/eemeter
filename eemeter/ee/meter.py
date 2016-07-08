@@ -11,6 +11,14 @@ from eemeter.ee.derivatives import annualized_weather_normal
 
 
 class EnergyEfficiencyMeter(object):
+    ''' The standard way of calculating energy efficiency savings values from
+    project data.
+
+    Parameters
+    ----------
+    settings : dict
+        Dictionary of settings (ignored; for now, this is a placeholder).
+    '''
 
     def __init__(self, settings=None):
         if settings is None:
@@ -19,6 +27,55 @@ class EnergyEfficiencyMeter(object):
 
     def evaluate(self, project, weather_source=None,
                  weather_normal_source=None):
+        ''' Main entry point to the meter, taking in project data and returning
+        results indicating energy efficiency performance.
+
+        Parameters
+        ----------
+        project : eemeter.structures.Project
+            Project for which energy effienciency performance is to be
+            evaluated.
+        weather_source : eemeter.weather.WeatherSource
+            Weather source to be used for this meter. Overrides weather source
+            found using :code:`project.site`. Useful for test mocking.
+        weather_normal_source : eemeter.weather.WeatherSource
+            Weather normal source to be used for this meter. Overrides weather
+            source found using :code:`project.site`. Useful for test mocking.
+
+        Returns
+        -------
+        out : dict
+            Results of energy efficiency evaluation, organized into the
+            following items.
+
+            - :code:`"energy_trace_labels"`: labels for energy traces.
+            - :code:`"energy_trace_interpretations"`: dict of interpretations
+              of energy traces, organized by energy trace label.
+            - :code:`"modeling_period_labels"`: labels for modeling periods.
+            - :code:`"modeling_period_interpretations"`: dict of
+              interpretations of modeling_periods, organized by modeling
+              period label.
+            - :code:`"modeling_period_groups"`: list of modeling period groups,
+              organized into tuples containing modeling period labels.
+            - :code:`"modeled_energy_trace_selectors"`: list of selectors for
+              modeled energy traces consisting of a tuple of the form
+              :code:`(modeling_period_label, energy_trace_label)`
+            - :code:`"modeled_energy_traces"`: dict of results keyed by
+              :code:`"modeled_energy_trace_selectors"`. Each result contains
+              the following items:
+
+                - :code:`"status"`: :code:`"SUCCESS"` or :code:`"FAILURE"`
+                - :code:`"annualized_weather_normal"`: output from
+                  annualized_weather_normal derivative.
+                - :code:`"n"`: number of samples in fit.
+                - :code:`"r2"`: R-squared value for model fit.
+                - :code:`"rmse"`: Root Mean Square Error of model fit.
+                - :code:`"cvrmse"`: Coefficient of Variation of Root Mean
+                  Square Error (a normalized version of RMSE).
+                - :code:`"model_params"`: Parameters of the model.
+
+            - :code:`"logs"`: Logs collected during meter run.
+        '''
 
         log_collector = LogCollector()
 

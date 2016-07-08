@@ -24,6 +24,11 @@ Guides
 .. toctree::
    :maxdepth: 2
 
+   glossary
+
+.. toctree::
+   :maxdepth: 2
+
    weather_caching
 
 .. toctree::
