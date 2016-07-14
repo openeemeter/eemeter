@@ -103,237 +103,227 @@ class EnergyEfficiencyMeter(object):
 
         with log_collector.collect_logs("handle_dispatches") as logger:
 
-            dispatch_outputs = {}
-            for key, dispatch in dispatches.items():
+            derivatives = {}
+            for trace_label, modeled_energy_trace in dispatches.items():
 
-                dispatch_outputs[key] = {}
+                trace_derivatives = {}
+                derivatives[trace_label] = trace_derivatives
 
-                formatter = dispatch["formatter"]
-                model = dispatch["model"]
-                filtered_trace = dispatch["filtered_trace"]
-
-                if (formatter is None or model is None or
-                        filtered_trace is None):
-                    logger.info(
-                        'Modeling skipped for "{}" because of empty'
-                        ' dispatch:\n'
-                        '  formatter={}\n'
-                        '  model={}\n'
-                        '  filtered_trace={}'
-                        .format(key, formatter, model, filtered_trace)
-                    )
+                if modeled_energy_trace is None:
                     continue
 
-                input_data = formatter.create_input(
-                    filtered_trace, weather_source)
+                modeled_energy_trace.fit(weather_source)
 
-                try:
-                    output = model.fit(input_data)
-                except:
-                    logger.warn(
-                        'For "{}", {} was not able to fit using input data: {}'
-                        .format(key, model, input_data)
-                    )
-                    dispatch_outputs[key]["status"] = "FAILURE"
-                else:
-                    logger.info(
-                        'Successfully fitted {} to formatted input data for'
-                        ' {}.'
-                        .format(model, key)
-                    )
-                    dispatch_outputs[key].update(output)
+                for group_label, _ in \
+                    modeling_period_set.iter_modeling_period_groups():
 
-                    annualized = annualized_weather_normal(
-                        formatter, model, weather_normal_source)
-                    dispatch_outputs[key].update(annualized)
-                    dispatch_outputs[key]["status"] = "SUCCESS"
+                    period_derivatives = {
+                        "BASELINE": {},
+                        "REPORTING": {},
+                    }
+                    trace_derivatives[group_label] = \
+                        period_derivatives
+
+                    baseline_label, reporting_label = group_label
+
+                    baseline_output = modeled_energy_trace.fit_outputs[
+                        baseline_label]
+                    reporting_output = modeled_energy_trace.fit_outputs[
+                        reporting_label]
+
+                    if baseline_output["status"] == "SUCCESS":
+                        period_derivatives["BASELINE"].update(
+                            modeled_energy_trace.compute_derivative(
+                                baseline_label,
+                                annualized_weather_normal,
+                                weather_normal_source=\
+                                        weather_normal_source))
+
+                    if reporting_output["status"] == "SUCCESS":
+                        period_derivatives["REPORTING"].update(
+                            modeled_energy_trace.compute_derivative(
+                                reporting_label,
+                                annualized_weather_normal,
+                                weather_normal_source=\
+                                        weather_normal_source))
 
         project_derivatives = self._get_project_derivatives(
             modeling_period_set,
             project.energy_trace_set,
-            dispatches,
-            dispatch_outputs)
+            derivatives)
 
-        output_data = {
-            "energy_trace_labels": [
-                label
-                for label, _ in project.energy_trace_set.itertraces()
-            ],
-            "energy_trace_interpretations": {
-                label: trace.interpretation
-                for label, trace in project.energy_trace_set.itertraces()
-            },
-            "modeling_period_labels": [
-                label
-                for label, _ in modeling_period_set.get_modeling_periods()
-            ],
-            "modeling_period_interpretations": {
-                label: modeling_period.interpretation
-                for label, modeling_period in
-                    modeling_period_set.get_modeling_periods()
-            },
-            "modeling_period_groups": [
-                (baseline_label, reporting_label)
-                for (baseline_label, _), (reporting_label, _) in
-                modeling_period_set.get_modeling_period_groups()
-            ],
-            "modeled_energy_trace_selectors": list(dispatches.keys()),
-            "modeled_energy_traces": dispatch_outputs,
+        return {
+            "modeling_period_set": modeling_period_set,
+            "modeled_energy_traces": dispatches,
+            "modeled_energy_trace_derivatives": derivatives,
+            "project_derivatives": project_derivatives,
             "logs": log_collector.items
         }
 
-        for key, value in project_derivatives.items():
-            output_data.update({key: value})
-
-        return output_data
-
     def _get_project_derivatives(self, modeling_period_set, energy_trace_set,
-                                 dispatches, dispatch_outputs):
+                                 derivatives):
 
-        project_derivatives = defaultdict(lambda: (0, 0, 0, 0))
+        # create list of project derivative labels
 
-        for baseline, reporting \
-                in modeling_period_set.get_modeling_period_groups():
-            baseline_label, baseline_period = baseline
-            reporting_label, reporting_period = reporting
-            for trace_label, trace in energy_trace_set.itertraces():
+        target_trace_interpretations = [
+            {
+                'name': 'ELECTRICITY_CONSUMPTION_SUPPLIED',
+                'interpretations': (
+                    'ELECTRICITY_CONSUMPTION_SUPPLIED',
+                ),
+                'target_unit': 'KWH',
+                'requirements': ['BASELINE', 'REPORTING'],
+            },
+            {
+                'name': 'NATURAL_GAS_CONSUMPTION_SUPPLIED',
+                'interpretations': (
+                    'NATURAL_GAS_CONSUMPTION_SUPPLIED',
+                ),
+                'target_unit': 'KWH',
+                'requirements': ['BASELINE', 'REPORTING'],
+            },
+            {
+                'name': 'ALL_FUELS_CONSUMPTION_SUPPLIED',
+                'interpretations': (
+                    'ELECTRICITY_CONSUMPTION_SUPPLIED',
+                    'NATURAL_GAS_CONSUMPTION_SUPPLIED',
+                ),
+                'target_unit': 'KWH',
+                'requirements': ['BASELINE', 'REPORTING'],
+            },
+            {
+                'name': 'ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED',
+                'interpretations': (
+                    'ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED',
+                ),
+                'target_unit': 'KWH',
+                'requirements': ['REPORTING'],
+            },
+        ]
 
-                # baseline model
-                def _get_baseline(label):
-                    baseline_model_dispatch_outputs = \
-                        dispatch_outputs.get((baseline_label, trace_label))
-                    if baseline_model_dispatch_outputs is not None:
-                        return baseline_model_dispatch_outputs.get(label)
+        target_outputs = [
+            ('annualized_weather_normal', 'ANNUALIZED_WEATHER_NORMAL'),
+        ]
 
-                # reporting model
-                def _get_reporting(label):
-                    reporting_model_dispatch_outputs = \
-                        dispatch_outputs.get((reporting_label, trace_label))
-                    if reporting_model_dispatch_outputs is not None:
-                        return reporting_model_dispatch_outputs.get(label)
+        def _get_target_output(trace_label, modeling_period_group_label,
+                               output_key):
+            trace_output = derivatives.get(trace_label, None)
+            if trace_output is None:
+                return None, None
 
-                def _add_errors(errors1, errors2):
-                    # TODO add autocorrelation correction
-                    mean1, lower1, upper1, n1 = errors1
-                    mean2, lower2, upper2, n2 = errors2
+            group_output = trace_output.get(modeling_period_group_label, None)
+            if group_output is None:
+                return None, None
 
-                    mean = mean1 + mean2
-                    lower = (lower1**2 + lower2**2)**0.5
-                    upper = (upper1**2 + upper2**2)**0.5
-                    n = n1 + n2
-                    return (mean, lower, upper, n)
+            baseline_output = group_output['BASELINE']
+            reporting_output = group_output['REPORTING']
 
-                baseline_annualized = _get_baseline(
-                    "annualized_weather_normal")
-                reporting_annualized = _get_reporting(
-                    "annualized_weather_normal")
+            baseline = baseline_output.get(output_key, None)
+            reporting = reporting_output.get(output_key, None)
+            return baseline, reporting
 
-                both_available = (
-                    baseline_annualized is not None and
-                    reporting_annualized is not None
-                )
+        project_derivatives = {}
 
-                has_valid_baseline_electricity_consumption = (
-                    both_available and
-                    trace.interpretation == "ELECTRICITY_CONSUMPTION_SUPPLIED"
-                )
-                has_valid_reporting_electricity_consumption = (
-                    both_available and
-                    trace.interpretation == "ELECTRICITY_CONSUMPTION_SUPPLIED"
-                )
-                has_valid_baseline_natural_gas_consumption = (
-                    both_available and
-                    trace.interpretation == "NATURAL_GAS_CONSUMPTION_SUPPLIED"
-                )
-                has_valid_reporting_natural_gas_consumption = (
-                    both_available and
-                    trace.interpretation == "NATURAL_GAS_CONSUMPTION_SUPPLIED"
-                )
-                has_valid_baseline_generation = (
-                    baseline_annualized is not None and
-                    trace.interpretation ==
-                    "ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED"
-                )
-                has_valid_reporting_generation = (
-                    reporting_annualized is not None and
-                    trace.interpretation ==
-                    "ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED"
-                )
+        # for each modeling period group
+        for group_label, _ in \
+                modeling_period_set.iter_modeling_period_groups():
 
-                def update_derivative_column(name, data):
-                    project_derivatives[name] = \
-                        _add_errors(project_derivatives[name], data)
+            group_derivatives = {}
+            project_derivatives[group_label] = group_derivatives
 
-                fuel_baseline_col = \
-                    "total_baseline_normal_annual_fuel_consumption_kWh"
-                fuel_reporting_col = \
-                    "total_reporting_normal_annual_fuel_consumption_kWh"
+            # create the group derivatives
+            for spec in target_trace_interpretations:
+                name = spec["name"]
+                interpretations = spec["interpretations"]
+                target_unit = spec["target_unit"]
+                requirements = spec["requirements"]
 
-                elec_baseline_col = (
-                    "total_baseline_normal_annual"
-                    "_electricity_consumption_kWh"
-                )
-                elec_reporting_col = (
-                    "total_reporting_normal_annual"
-                    "_electricity_consumption_kWh"
-                )
+                if name not in group_derivatives:
+                    group_derivatives[name] = None
 
-                gas_baseline_col = (
-                    "total_baseline_normal_annual"
-                    "_natural_gas_consumption_therms"
-                )
-                gas_reporting_col = (
-                    "total_reporting_normal_annual"
-                    "_natural_gas_consumption_therms"
-                )
+                for trace_label, trace in energy_trace_set.itertraces():
 
-                solar_baseline_col = \
-                    "total_baseline_normal_annual_solar_generation_kWh"
-                solar_reporting_col = \
-                    "total_reporting_normal_annual_solar_generation_kWh"
+                    if trace.interpretation not in interpretations:
+                        continue
 
-                if has_valid_baseline_electricity_consumption:
-                    update_derivative_column(fuel_baseline_col,
-                                             baseline_annualized)
-                    update_derivative_column(elec_baseline_col,
-                                             baseline_annualized)
+                    for output_key, output_label in target_outputs:
 
-                if has_valid_baseline_natural_gas_consumption:
-                    baseline_annualized_kwh = (
-                        baseline_annualized[0]*29.3001,
-                        baseline_annualized[1]*29.3001,
-                        baseline_annualized[2]*29.3001,
-                        baseline_annualized[3]
-                    )
-                    update_derivative_column(fuel_baseline_col,
-                                             baseline_annualized_kwh)
-                    update_derivative_column(gas_baseline_col,
-                                             baseline_annualized)
+                        baseline_output, reporting_output = \
+                            _get_target_output(
+                                trace_label, group_label, output_key)
 
-                if has_valid_reporting_electricity_consumption:
-                    update_derivative_column(fuel_reporting_col,
-                                             reporting_annualized)
-                    update_derivative_column(elec_reporting_col,
-                                             reporting_annualized)
+                        if (('BASELINE' in requirements and
+                             baseline_output is None) or
+                            ('REPORTING' in requirements and \
+                             reporting_output is None)):
+                            continue
 
-                if has_valid_reporting_natural_gas_consumption:
-                    reporting_annualized_kwh = (
-                        reporting_annualized[0]*29.3001,
-                        reporting_annualized[1]*29.3001,
-                        reporting_annualized[2]*29.3001,
-                        reporting_annualized[3]
-                    )
-                    update_derivative_column(fuel_reporting_col,
-                                             reporting_annualized_kwh)
-                    update_derivative_column(gas_reporting_col,
-                                             reporting_annualized)
+                        if baseline_output is None:
+                            baseline_output = (0.0, 0.0, 0.0, 0)
 
-                if has_valid_baseline_generation:
-                    update_derivative_column(solar_baseline_col,
-                                             baseline_annualized)
+                        if reporting_output is None:
+                            reporting_output = (0.0, 0.0, 0.0, 0)
 
-                if has_valid_reporting_generation:
-                    update_derivative_column(solar_reporting_col,
-                                             reporting_annualized)
+                        baseline_output = _change_units(
+                            baseline_output, trace.unit, target_unit)
+                        reporting_output = _change_units(
+                            reporting_output, trace.unit, target_unit)
 
+                        if group_derivatives[name] is None:
+                            group_derivatives[name] = {
+                                'BASELINE': {
+                                    output_key: baseline_output,
+                                },
+                                'REPORTING': {
+                                    output_key: reporting_output,
+                                },
+                            }
+                        else:
+                            group_derivatives[name]['BASELINE'][output_key] = \
+                                _add_errors(
+                                    baseline_output,
+                                    group_derivatives[name]['BASELINE'][
+                                        output_key])
+                            group_derivatives[name]['REPORTING'][output_key] =\
+                                _add_errors(
+                                    reporting_output,
+                                    group_derivatives[name]['REPORTING'][
+                                        output_key])
         return project_derivatives
+
+
+def _add_errors(errors1, errors2):
+    # TODO add autocorrelation correction
+    mean1, lower1, upper1, n1 = errors1
+    mean2, lower2, upper2, n2 = errors2
+
+    mean = mean1 + mean2
+    lower = (lower1**2 + lower2**2)**0.5
+    upper = (upper1**2 + upper2**2)**0.5
+    n = n1 + n2
+    return (mean, lower, upper, n)
+
+
+def _change_units(errors, units_from, units_to):
+
+    factor = None
+
+    if units_from == "KWH":
+
+        if units_to == "KWH":
+            factor = 1.0
+        elif units_to == "THERM":
+            factor = 0.0341296
+
+    elif units_from == "THERM":
+
+        if units_to == "KWH":
+            factor = 29.3001
+        elif units_to == "THERM":
+            factor = 1.0
+
+    # shouldn't fail - all units should either be KWH or THERM
+    assert factor is not None
+
+    mean, upper, lower, n = errors
+    return (mean*factor, upper*factor, lower*factor, n)

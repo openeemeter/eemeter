@@ -11,10 +11,10 @@ def test_create_blank():
     groupings = []
     mps = ModelingPeriodSet(modeling_periods, groupings)
 
-    groups = list(mps.get_modeling_period_groups())
+    groups = list(mps.iter_modeling_period_groups())
     assert len(groups) == 0
 
-    modeling_periods = list(mps.get_modeling_periods())
+    modeling_periods = list(mps.iter_modeling_periods())
     assert len(modeling_periods) == 0
 
 
@@ -38,17 +38,17 @@ def test_create_basic():
 
     mps = ModelingPeriodSet(modeling_periods, grouping)
 
-    groups = list(mps.get_modeling_period_groups())
+    groups = list(mps.iter_modeling_period_groups())
     assert len(groups) == 1
     group = groups[0]
     assert len(group) == 2
     assert len(group[0]) == 2
     assert group[0][0] == "modeling_period_1"
-    assert group[1][0] == "modeling_period_2"
-    assert group[0][1] == modeling_period_1
+    assert group[0][1] == "modeling_period_2"
+    assert group[1][0] == modeling_period_1
     assert group[1][1] == modeling_period_2
 
-    modeling_periods = list(mps.get_modeling_periods())
+    modeling_periods = list(mps.iter_modeling_periods())
     assert len(modeling_periods) == 2
     assert modeling_periods[0][0] == "modeling_period_1"
     assert modeling_periods[1][0] == "modeling_period_2"

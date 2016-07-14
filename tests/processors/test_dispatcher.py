@@ -13,8 +13,7 @@ from eemeter.structures import (
     EnergyTrace,
     EnergyTraceSet,
 )
-from eemeter.modeling.formatters import ModelDataFormatter
-from eemeter.modeling.models import SeasonalElasticNetCVModel
+from eemeter.modeling.split import SplitModeledEnergyTrace
 
 
 @pytest.fixture
@@ -68,27 +67,17 @@ def test_basic_usage(modeling_period_set, trace_set):
 
     with lc.collect_logs("get_energy_modeling_dispatches") as logger:
         dispatches = get_energy_modeling_dispatches(
-                logger, modeling_period_set, trace_set)
+            logger, modeling_period_set, trace_set)
 
-    assert len(dispatches) == 2
-    dispatch1 = dispatches[("modeling_period_1", "trace")]
-    assert isinstance(dispatch1["formatter"], ModelDataFormatter)
-    assert isinstance(dispatch1["model"], SeasonalElasticNetCVModel)
-    assert isinstance(dispatch1["filtered_trace"], EnergyTrace)
-
-    dispatch2 = dispatches[("modeling_period_2", "trace")]
-    assert isinstance(dispatch2["formatter"], ModelDataFormatter)
-    assert isinstance(dispatch2["model"], SeasonalElasticNetCVModel)
-    assert isinstance(dispatch2["filtered_trace"], EnergyTrace)
+    assert len(dispatches) == 1
+    dispatch = dispatches["trace"]
+    assert isinstance(dispatch, SplitModeledEnergyTrace)
 
     logs = lc.items["get_energy_modeling_dispatches"]
-    print(logs)
     assert "INFO - Determined frequency of 'D' for EnergyTrace 'trace'." \
         in logs[0]
-    assert "INFO - Successfully dispatched formatter" \
+    assert "INFO - Successfully created SplitModeledEnergyTrace" \
         in logs[1]
-    assert "INFO - Determined frequency of 'D' for EnergyTrace 'trace'." \
-        in logs[2]
 
 
 def test_placeholder_trace(modeling_period_set, placeholder_trace_set):
@@ -96,21 +85,13 @@ def test_placeholder_trace(modeling_period_set, placeholder_trace_set):
 
     with lc.collect_logs("get_energy_modeling_dispatches") as logger:
         dispatches = get_energy_modeling_dispatches(
-                logger, modeling_period_set, placeholder_trace_set)
+            logger, modeling_period_set, placeholder_trace_set)
 
-    assert len(dispatches) == 2
-    dispatch1 = dispatches[("modeling_period_1", "trace")]
-    assert dispatch1["formatter"] is None
-    assert dispatch1["model"] is None
-    assert dispatch1["filtered_trace"] is None
-
-    dispatch2 = dispatches[("modeling_period_2", "trace")]
-    assert dispatch2["formatter"] is None
-    assert dispatch2["model"] is None
-    assert dispatch2["filtered_trace"] is None
+    assert len(dispatches) == 1
+    assert dispatches["trace"] is None
 
     logs = lc.items["get_energy_modeling_dispatches"]
     assert (
-        "INFO - Could not determine frequency:"
-        " EnergyTrace 'trace' is placeholder instance."
+        'INFO - Skipping modeling for placeholder trace '
+        '"trace" (ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED).'
     ) in logs[0]

@@ -27,16 +27,16 @@ def test_basic_usage():
     with lc.collect_logs("modeling_period_set") as logger:
         mps = get_modeling_period_set(logger, interventions)
 
-    groups = list(mps.get_modeling_period_groups())
+    groups = list(mps.iter_modeling_period_groups())
     assert len(groups) == 1
-    assert groups[0][0][0] == 'baseline'
-    assert groups[0][0][1].start_date is None
-    assert groups[0][0][1].end_date is start_date
-    assert groups[0][1][0] == 'reporting'
-    assert groups[0][1][1].start_date is end_date
-    assert groups[0][1][1].end_date is None
+    labels, periods = groups[0]
+    assert labels == ('baseline', 'reporting')
+    assert periods[0].start_date is None
+    assert periods[0].end_date is start_date
+    assert periods[1].start_date is end_date
+    assert periods[1].end_date is None
 
-    modeling_periods = list(mps.get_modeling_periods())
+    modeling_periods = list(mps.iter_modeling_periods())
     assert len(modeling_periods) == 2
 
     logs = lc.items["modeling_period_set"]

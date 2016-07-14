@@ -171,15 +171,16 @@ class ModelingPeriodSet(object):
             )
             raise ValueError(message)
 
-    def get_modeling_period_groups(self):
+    def iter_modeling_period_groups(self):
         for labels in self.groupings:
             baseline_label, reporting_label = labels
-            yield (
-                (baseline_label, self.modeling_periods[baseline_label]),
-                (reporting_label, self.modeling_periods[reporting_label]),
+            modeling_periods = (
+                self.modeling_periods[baseline_label],
+                self.modeling_periods[reporting_label]
             )
+            yield labels, modeling_periods
 
-    def get_modeling_periods(self):
+    def iter_modeling_periods(self):
         for label, modeling_period in sorted(self.modeling_periods.items(),
                                              key=lambda x: x[0]):
             yield label, modeling_period

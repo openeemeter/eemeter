@@ -13,7 +13,9 @@ from eemeter.structures import (
     EnergyTraceSet,
     EnergyTrace,
     Intervention,
+    ModelingPeriodSet,
 )
+from eemeter.modeling.split import SplitModeledEnergyTrace
 from eemeter.ee.meter import EnergyEfficiencyMeter
 from eemeter.testing.mocks import MockWeatherClient
 from eemeter.weather import TMY3WeatherSource
@@ -68,60 +70,33 @@ def test_basic_usage(project, mock_tmy3_weather_source):
     results = meter.evaluate(project,
                              weather_normal_source=mock_tmy3_weather_source)
 
-    assert results['modeling_period_groups'] == [('baseline', 'reporting')]
+    assert isinstance(results['modeling_period_set'], ModelingPeriodSet)
 
-    assert ('baseline', '0') in results['modeled_energy_trace_selectors']
-    assert ('reporting', '0') in results['modeled_energy_trace_selectors']
+    assert isinstance(results['modeled_energy_traces']['0'],
+        SplitModeledEnergyTrace)
 
-    assert results['energy_trace_interpretations'] == \
-        {'0': 'ELECTRICITY_CONSUMPTION_SUPPLIED'}
+    assert 'modeled_energy_trace_derivatives' in results
 
-    assert results['energy_trace_labels'][0] == '0'
 
-    assert results['modeling_period_labels'][0] == 'baseline'
-    assert results['modeling_period_labels'][1] == 'reporting'
-
-    assert results['modeling_period_interpretations']['baseline'] == \
-            'BASELINE'
-    assert results['modeling_period_interpretations']['reporting'] == \
-            'REPORTING'
-
-    assert_allclose(results[
-        'total_baseline_normal_annual_electricity_consumption_kWh'],
+    project_derivatives = \
+            results['project_derivatives'][('baseline', 'reporting')]
+    assert project_derivatives['ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED'] \
+        is None
+    assert project_derivatives['NATURAL_GAS_CONSUMPTION_SUPPLIED'] is None
+    all_fuels = project_derivatives['ALL_FUELS_CONSUMPTION_SUPPLIED']
+    elec = project_derivatives['ELECTRICITY_CONSUMPTION_SUPPLIED']
+    assert_allclose(all_fuels['BASELINE']['annualized_weather_normal'],
         (378.01305934627737, 1.4456346634559814, 1.6021521363635194, 728))
-    assert_allclose(results[
-        'total_reporting_normal_annual_electricity_consumption_kWh'],
+    assert_allclose(all_fuels['REPORTING']['annualized_weather_normal'],
         (374.651655365946, 1.4141494579046852, 1.5715270409819984, 691))
-    assert_allclose(results[
-        'total_baseline_normal_annual_fuel_consumption_kWh'],
+    assert_allclose(elec['BASELINE']['annualized_weather_normal'],
         (378.01305934627737, 1.4456346634559814, 1.6021521363635194, 728))
-    assert_allclose(results[
-        'total_reporting_normal_annual_fuel_consumption_kWh'],
+    assert_allclose(elec['REPORTING']['annualized_weather_normal'],
         (374.651655365946, 1.4141494579046852, 1.5715270409819984, 691))
-
-    trace_results = results['modeled_energy_traces']
-    trace1 = trace_results[('baseline', '0')]
-    assert 'cvrmse' in trace1
-    assert 'n' in trace1
-    assert 'upper' in trace1
-    assert 'annualized_weather_normal' in trace1
-    assert 'lower' in trace1
-    assert 'rmse' in trace1
-    assert 'r2' in trace1
-    assert 'model_params' in trace1
-    trace2 = trace_results[('reporting', '0')]
-    assert 'cvrmse' in trace2
-    assert 'n' in trace2
-    assert 'upper' in trace2
-    assert 'annualized_weather_normal' in trace2
-    assert 'lower' in trace2
-    assert 'rmse' in trace2
-    assert 'r2' in trace2
-    assert 'model_params' in trace2
 
     logs = results['logs']
     assert len(logs['get_weather_source']) == 2
     assert len(logs['get_weather_normal_source']) == 1
     assert len(logs['get_modeling_period_set']) == 1
-    assert len(logs['get_energy_modeling_dispatches']) == 4
-    assert len(logs['handle_dispatches']) == 2
+    assert len(logs['get_energy_modeling_dispatches']) == 2
+    assert len(logs['handle_dispatches']) == 0

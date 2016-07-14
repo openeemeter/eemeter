@@ -7,6 +7,9 @@ from eemeter.modeling.formatters import (
     ModelDataFormatter,
     ModelDataBillingFormatter,
 )
+from eemeter.modeling.split import (
+    SplitModeledEnergyTrace
+)
 from eemeter.structures import EnergyTrace
 
 
@@ -21,6 +24,7 @@ default_dispatch = (
         'heating_base_temp': 65,
     },
 )
+
 
 billing_dispatch = (
     ModelDataBillingFormatter,
@@ -64,98 +68,73 @@ def get_energy_modeling_dispatches(logger, modeling_period_set, trace_set):
     logger : logging.logger
         Logger to collect logged data.
     modeling_period_set : eemeter.structures.ModelingPeriodSet
+
         :code:`ModelingPeriod` s to dispatch.
     trace_set : eemeter.structures.EnergyTraceSet
         :code:`EnergyTrace` s to dispatch.
     '''
 
     dispatches = {}
-    for mp_label, modeling_period in \
-            modeling_period_set.get_modeling_periods():
-        for t_label, trace in trace_set.itertraces():
+    for trace_label, trace in trace_set.itertraces():
 
-            frequency = _get_approximate_frequency(
-                    logger, trace.data, t_label)
+        dispatches[trace_label] = None
 
-            if frequency not in ['H', 'D', '15T', '30T']:
-                frequency = None
+        if trace.placeholder:
+            logger.info(
+                'Skipping modeling for placeholder trace "{}" ({}).'
+                .format(trace_label, trace.interpretation)
+            )
+            continue
 
-            model_class_selector = (trace.interpretation, frequency)
+        frequency = _get_approximate_frequency(
+                logger, trace.data, trace_label)
 
-            formatter, model, filtered_trace = _dispatch(
-                logger, model_class_selector, modeling_period, trace,
-                mp_label, t_label)
+        if frequency not in ['H', 'D', '15T', '30T']:
+            frequency = None
 
-            dispatches[(mp_label, t_label)] = {
-                "formatter": formatter,
-                "model": model,
-                "filtered_trace": filtered_trace,
-            }
+        model_class_selector = (trace.interpretation, frequency)
+
+        try:
+            (
+                FormatterClass,
+                formatter_settings,
+                ModelClass,
+                model_settings,
+            ) = ENERGY_MODEL_CLASS_MAPPING[model_class_selector]
+        except KeyError:
+            logger.error(
+                'Could not dispatch formatter/model for'
+                ' ModelingPeriod "{}" ({}) and trace "{}" ({}) using model class'
+                ' selector {}.'
+                .format(modeling_period_label, modeling_period, trace_label,
+                        trace.interpretation, model_class_selector)
+            )
+            continue
+
+        formatter = FormatterClass(**formatter_settings)
+        model = ModelClass(**model_settings)
+
+        model_mapping = {
+            modeling_period_label: ModelClass(**model_settings)
+            for modeling_period_label, _ in
+                modeling_period_set.iter_modeling_periods()
+        }
+
+        modeled_energy_trace = SplitModeledEnergyTrace(
+            trace, formatter, model_mapping, modeling_period_set)
+
+
+        logger.info(
+            'Successfully created SplitModeledEnergyTrace formatter {}'
+            ' and model {} for {} and trace "{}" ({})'
+            ' using model class selector {}.'
+            .format(formatter, model, modeling_period_set,
+                    trace_label, trace.interpretation, model_class_selector)
+        )
+
+        dispatches[trace_label] = modeled_energy_trace
 
     return dispatches
-
-
-def _dispatch(logger, model_class_selector, modeling_period, trace,
-              modeling_period_label, trace_label):
-
-    if trace.placeholder:
-        logger.info(
-            'Skipping modeling for placeholder trace "{}" ({}).'
-            .format(trace_label, trace.interpretation)
-        )
-        return (None, None, None)
-
-    try:
-        formatter_class, formatter_settings, model_class, model_settings = \
-            ENERGY_MODEL_CLASS_MAPPING[model_class_selector]
-    except KeyError:
-        logger.error(
-            'Could not dispatch formatter/model for'
-            ' ModelingPeriod "{}" ({}) and trace "{}" ({}) using model class'
-            ' selector {}.'
-            .format(modeling_period_label, modeling_period, trace_label,
-                    trace.interpretation, model_class_selector)
-        )
-        return (None, None, None)
-
-    formatter = formatter_class(**formatter_settings)
-    model = model_class(**model_settings)
-
-    filtered_data = _filter_by_modeling_period(trace, modeling_period)
-    filtered_trace = EnergyTrace(trace.interpretation, data=filtered_data,
-                                 unit=trace.unit)
-    logger.info(
-        'Successfully dispatched formatter {} and model {} for'
-        ' ModelingPeriod "{}" ({}) and trace "{}" ({}) using model class'
-        ' selector {}.'
-        .format(formatter, model, modeling_period_label, modeling_period,
-                trace_label, trace.interpretation, model_class_selector)
-    )
-    return formatter, model, filtered_trace
-
-
-def _filter_by_modeling_period(trace, modeling_period):
-
-    start = modeling_period.start_date
-    end = modeling_period.end_date
-
-    if start is None:
-        if end is None:
-            filtered_df = trace.data.copy()
-        else:
-            filtered_df = trace.data[:end].copy()
-    else:
-        if end is None:
-            filtered_df = trace.data[start:].copy()
-        else:
-            filtered_df = trace.data[start:end].copy()
-
-    # require NaN last data point as cap
-    if filtered_df.shape[0] > 0:
-        filtered_df.value.iloc[-1] = np.nan
-        filtered_df.estimated.iloc[-1] = False
-
-    return filtered_df
 
 
 def _get_approximate_frequency(logger, data, trace_label):
