@@ -5,7 +5,6 @@ import pytz
 import pytest
 import pandas as pd
 import numpy as np
-from numpy.testing import assert_allclose
 
 from eemeter.structures import (
     Project,
@@ -84,18 +83,16 @@ def test_basic_usage(project, mock_tmy3_weather_source):
     assert project_derivatives['NATURAL_GAS_CONSUMPTION_SUPPLIED'] is None
     all_fuels = project_derivatives['ALL_FUELS_CONSUMPTION_SUPPLIED']
     elec = project_derivatives['ELECTRICITY_CONSUMPTION_SUPPLIED']
-    assert_allclose(
-        all_fuels['BASELINE']['annualized_weather_normal'],
-        (378.01305934627737, 1.4456346634559814, 1.6021521363635194, 728))
-    assert_allclose(
-        all_fuels['REPORTING']['annualized_weather_normal'],
-        (374.651655365946, 1.4141494579046852, 1.5715270409819984, 691))
-    assert_allclose(
-        elec['BASELINE']['annualized_weather_normal'],
-        (378.01305934627737, 1.4456346634559814, 1.6021521363635194, 728))
-    assert_allclose(
-        elec['REPORTING']['annualized_weather_normal'],
-        (374.651655365946, 1.4141494579046852, 1.5715270409819984, 691))
+
+    assert len(all_fuels['BASELINE']['annualized_weather_normal']) == 4
+    assert len(all_fuels['REPORTING']['annualized_weather_normal']) == 4
+    assert len(elec['BASELINE']['annualized_weather_normal']) == 4
+    assert len(elec['REPORTING']['annualized_weather_normal']) == 4
+
+    assert len(all_fuels['BASELINE']['gross_predicted']) == 4
+    assert len(all_fuels['REPORTING']['gross_predicted']) == 4
+    assert len(elec['BASELINE']['gross_predicted']) == 4
+    assert len(elec['REPORTING']['gross_predicted']) == 4
 
     logs = results['logs']
     assert len(logs['get_weather_source']) == 2

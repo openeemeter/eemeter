@@ -5,7 +5,7 @@ from eemeter.processors.location import (
     get_weather_normal_source,
 )
 from eemeter.processors.dispatchers import get_energy_modeling_dispatches
-from eemeter.ee.derivatives import annualized_weather_normal
+from eemeter.ee.derivatives import annualized_weather_normal, gross_predicted
 
 
 class EnergyEfficiencyMeter(object):
@@ -46,32 +46,14 @@ class EnergyEfficiencyMeter(object):
             Results of energy efficiency evaluation, organized into the
             following items.
 
-            - :code:`"energy_trace_labels"`: labels for energy traces.
-            - :code:`"energy_trace_interpretations"`: dict of interpretations
-              of energy traces, organized by energy trace label.
-            - :code:`"modeling_period_labels"`: labels for modeling periods.
-            - :code:`"modeling_period_interpretations"`: dict of
-              interpretations of modeling_periods, organized by modeling
-              period label.
-            - :code:`"modeling_period_groups"`: list of modeling period groups,
-              organized into tuples containing modeling period labels.
-            - :code:`"modeled_energy_trace_selectors"`: list of selectors for
-              modeled energy traces consisting of a tuple of the form
-              :code:`(modeling_period_label, energy_trace_label)`
-            - :code:`"modeled_energy_traces"`: dict of results keyed by
-              :code:`"modeled_energy_trace_selectors"`. Each result contains
-              the following items:
-
-                - :code:`"status"`: :code:`"SUCCESS"` or :code:`"FAILURE"`
-                - :code:`"annualized_weather_normal"`: output from
-                  annualized_weather_normal derivative.
-                - :code:`"n"`: number of samples in fit.
-                - :code:`"r2"`: R-squared value for model fit.
-                - :code:`"rmse"`: Root Mean Square Error of model fit.
-                - :code:`"cvrmse"`: Coefficient of Variation of Root Mean
-                  Square Error (a normalized version of RMSE).
-                - :code:`"model_params"`: Parameters of the model.
-
+            - :code:`"modeling_period_set"`:
+              :code:`eemeter.structures.ModelingPeriodSet` determined from this
+              project.
+            - :code:`"modeled_energy_traces"`: dict of dispatched modeled
+              energy traces.
+            - :code:`"modeled_energy_trace_derivatives"`: derivatives for each
+              modeled energy trace.
+            - :code:`"project_derivatives"`: Project summaries for derivatives.
             - :code:`"logs"`: Logs collected during meter run.
         '''
 
@@ -112,7 +94,7 @@ class EnergyEfficiencyMeter(object):
 
                 modeled_energy_trace.fit(weather_source)
 
-                for group_label, _ in \
+                for group_label, (_, reporting_period) in \
                         modeling_period_set.iter_modeling_period_groups():
 
                     period_derivatives = {
@@ -136,12 +118,26 @@ class EnergyEfficiencyMeter(object):
                                 annualized_weather_normal,
                                 weather_normal_source=weather_normal_source))
 
+                        period_derivatives["BASELINE"].update(
+                            modeled_energy_trace.compute_derivative(
+                                baseline_label,
+                                gross_predicted,
+                                weather_source=weather_source,
+                                reporting_period=reporting_period))
+
                     if reporting_output["status"] == "SUCCESS":
                         period_derivatives["REPORTING"].update(
                             modeled_energy_trace.compute_derivative(
                                 reporting_label,
                                 annualized_weather_normal,
                                 weather_normal_source=weather_normal_source))
+
+                        period_derivatives["REPORTING"].update(
+                            modeled_energy_trace.compute_derivative(
+                                reporting_label,
+                                gross_predicted,
+                                weather_source=weather_source,
+                                reporting_period=reporting_period))
 
         project_derivatives = self._get_project_derivatives(
             modeling_period_set,
@@ -199,6 +195,7 @@ class EnergyEfficiencyMeter(object):
 
         target_outputs = [
             ('annualized_weather_normal', 'ANNUALIZED_WEATHER_NORMAL'),
+            ('gross_predicted', 'GROSS_PREDICTED'),
         ]
 
         def _get_target_output(trace_label, modeling_period_group_label,
@@ -275,16 +272,30 @@ class EnergyEfficiencyMeter(object):
                                 },
                             }
                         else:
-                            group_derivatives[name]['BASELINE'][output_key] = \
-                                _add_errors(
-                                    baseline_output,
-                                    group_derivatives[name]['BASELINE'][
-                                        output_key])
-                            group_derivatives[name]['REPORTING'][output_key] =\
-                                _add_errors(
-                                    reporting_output,
-                                    group_derivatives[name]['REPORTING'][
-                                        output_key])
+                            old_baseline_output = \
+                                group_derivatives[name]['BASELINE'].get(
+                                    output_key, None)
+                            old_reporting_output = \
+                                group_derivatives[name]['REPORTING'].get(
+                                    output_key, None)
+
+                            if old_baseline_output is None:
+                                group_derivatives[name]['BASELINE'][
+                                    output_key] = baseline_output
+                            else:
+                                group_derivatives[name]['BASELINE'][
+                                    output_key] = _add_errors(
+                                        baseline_output,
+                                        old_baseline_output)
+
+                            if old_reporting_output is None:
+                                group_derivatives[name]['REPORTING'][
+                                    output_key] = reporting_output
+                            else:
+                                group_derivatives[name]['REPORTING'][
+                                    output_key] = _add_errors(
+                                        reporting_output,
+                                        old_reporting_output)
         return project_derivatives
 
 
