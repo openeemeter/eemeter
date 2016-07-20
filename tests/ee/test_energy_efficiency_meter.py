@@ -73,25 +73,28 @@ def test_basic_usage(project, mock_tmy3_weather_source):
     assert isinstance(results['modeling_period_set'], ModelingPeriodSet)
 
     assert isinstance(results['modeled_energy_traces']['0'],
-        SplitModeledEnergyTrace)
+                      SplitModeledEnergyTrace)
 
     assert 'modeled_energy_trace_derivatives' in results
 
-
     project_derivatives = \
-            results['project_derivatives'][('baseline', 'reporting')]
+        results['project_derivatives'][('baseline', 'reporting')]
     assert project_derivatives['ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED'] \
         is None
     assert project_derivatives['NATURAL_GAS_CONSUMPTION_SUPPLIED'] is None
     all_fuels = project_derivatives['ALL_FUELS_CONSUMPTION_SUPPLIED']
     elec = project_derivatives['ELECTRICITY_CONSUMPTION_SUPPLIED']
-    assert_allclose(all_fuels['BASELINE']['annualized_weather_normal'],
+    assert_allclose(
+        all_fuels['BASELINE']['annualized_weather_normal'],
         (378.01305934627737, 1.4456346634559814, 1.6021521363635194, 728))
-    assert_allclose(all_fuels['REPORTING']['annualized_weather_normal'],
+    assert_allclose(
+        all_fuels['REPORTING']['annualized_weather_normal'],
         (374.651655365946, 1.4141494579046852, 1.5715270409819984, 691))
-    assert_allclose(elec['BASELINE']['annualized_weather_normal'],
+    assert_allclose(
+        elec['BASELINE']['annualized_weather_normal'],
         (378.01305934627737, 1.4456346634559814, 1.6021521363635194, 728))
-    assert_allclose(elec['REPORTING']['annualized_weather_normal'],
+    assert_allclose(
+        elec['REPORTING']['annualized_weather_normal'],
         (374.651655365946, 1.4141494579046852, 1.5715270409819984, 691))
 
     logs = results['logs']

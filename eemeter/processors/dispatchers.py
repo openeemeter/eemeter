@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 
 from eemeter.modeling.models.seasonal import SeasonalElasticNetCVModel
 from eemeter.modeling.models.billing import BillingElasticNetCVModel
@@ -10,8 +9,6 @@ from eemeter.modeling.formatters import (
 from eemeter.modeling.split import (
     SplitModeledEnergyTrace
 )
-from eemeter.structures import EnergyTrace
-
 
 default_dispatch = (
     ModelDataFormatter,
@@ -104,10 +101,8 @@ def get_energy_modeling_dispatches(logger, modeling_period_set, trace_set):
         except KeyError:
             logger.error(
                 'Could not dispatch formatter/model for'
-                ' ModelingPeriod "{}" ({}) and trace "{}" ({}) using model class'
-                ' selector {}.'
-                .format(modeling_period_label, modeling_period, trace_label,
-                        trace.interpretation, model_class_selector)
+                ' model class selector {}.'
+                .format(model_class_selector)
             )
             continue
 
@@ -117,12 +112,11 @@ def get_energy_modeling_dispatches(logger, modeling_period_set, trace_set):
         model_mapping = {
             modeling_period_label: ModelClass(**model_settings)
             for modeling_period_label, _ in
-                modeling_period_set.iter_modeling_periods()
+            modeling_period_set.iter_modeling_periods()
         }
 
         modeled_energy_trace = SplitModeledEnergyTrace(
             trace, formatter, model_mapping, modeling_period_set)
-
 
         logger.info(
             'Successfully created SplitModeledEnergyTrace formatter {}'

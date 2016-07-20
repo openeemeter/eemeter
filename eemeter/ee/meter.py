@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 from eemeter.processors.collector import LogCollector
 from eemeter.processors.interventions import get_modeling_period_set
 from eemeter.processors.location import (
@@ -115,7 +113,7 @@ class EnergyEfficiencyMeter(object):
                 modeled_energy_trace.fit(weather_source)
 
                 for group_label, _ in \
-                    modeling_period_set.iter_modeling_period_groups():
+                        modeling_period_set.iter_modeling_period_groups():
 
                     period_derivatives = {
                         "BASELINE": {},
@@ -136,16 +134,14 @@ class EnergyEfficiencyMeter(object):
                             modeled_energy_trace.compute_derivative(
                                 baseline_label,
                                 annualized_weather_normal,
-                                weather_normal_source=\
-                                        weather_normal_source))
+                                weather_normal_source=weather_normal_source))
 
                     if reporting_output["status"] == "SUCCESS":
                         period_derivatives["REPORTING"].update(
                             modeled_energy_trace.compute_derivative(
                                 reporting_label,
                                 annualized_weather_normal,
-                                weather_normal_source=\
-                                        weather_normal_source))
+                                weather_normal_source=weather_normal_source))
 
         project_derivatives = self._get_project_derivatives(
             modeling_period_set,
@@ -254,7 +250,7 @@ class EnergyEfficiencyMeter(object):
 
                         if (('BASELINE' in requirements and
                              baseline_output is None) or
-                            ('REPORTING' in requirements and \
+                            ('REPORTING' in requirements and
                              reporting_output is None)):
                             continue
 
