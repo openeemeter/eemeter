@@ -1,14 +1,13 @@
 lxml
+holidays
 numpy
 pandas
-Pint
+patsy
 py
 pytest
 python-dateutil
 pytz
-PyYAML
 requests
 scipy
+scikit-learn
 six
-SQLAlchemy
-xlrd
