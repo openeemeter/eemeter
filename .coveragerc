@@ -1,4 +1,3 @@
 [run]
 omit =
     */__init__.py
-data_file=/home/travis/build/impactlab/eemeter/.coverage

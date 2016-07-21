@@ -1,0 +1,98 @@
+from eemeter.weather.location import (
+    zipcode_to_usaf_station,
+    zipcode_to_tmy3_station,
+)
+from eemeter.weather.noaa import ISDWeatherSource
+from eemeter.weather.tmy3 import TMY3WeatherSource
+
+
+def get_weather_source(logger, project):
+    ''' Finds most relevant WeatherSource given project site.
+
+    Parameters
+    ----------
+    logger : logging.logger
+        Logger to collect logged data.
+    project : eemeter.structures.Project
+        Project for which to find weather source data.
+
+    Returns
+    -------
+    weather_source : eemeter.weather.ISDWeatherSource
+        Closest data-validated weather source in the same climate zone as
+        project ZIP code, if available.
+    '''
+
+    zipcode = project.site.zipcode
+    station = zipcode_to_usaf_station(zipcode)
+
+    if station is None:
+        logger.error(
+            "Could not find ISD station for zipcode {}."
+            .format(zipcode)
+        )
+        return None
+
+    logger.info(
+        "Mapped ZIP code {} to ISD station {}"
+        .format(zipcode, station)
+    )
+
+    try:
+        weather_source = ISDWeatherSource(station)
+    except ValueError:
+        logger.error(
+            "Could not create ISDWeatherSource for station {}."
+            .format(station)
+        )
+        return None
+
+    logger.info("Created ISDWeatherSource using station {}".format(station))
+
+    return weather_source
+
+
+def get_weather_normal_source(logger, project):
+    ''' Finds most relevant WeatherSource given project site.
+
+    Parameters
+    ----------
+    logger : logging.logger
+        Logger to collect logged data.
+    project : eemeter.structures.Project
+        Project for which to find weather source data.
+
+    Returns
+    -------
+    weather_source : eemeter.weather.TMY3WeatherSource
+        Closest data-validated weather source in the same climate zone as
+        project ZIP code, if available.
+    '''
+
+    zipcode = project.site.zipcode
+    station = zipcode_to_tmy3_station(zipcode)
+
+    if station is None:
+        logger.error(
+            "Could not find appropriate TMY3 station for zipcode {}."
+            .format(zipcode)
+        )
+        return None
+
+    logger.info(
+        "Mapped ZIP code {} to TMY3 station {}"
+        .format(zipcode, station)
+    )
+
+    try:
+        weather_normal_source = TMY3WeatherSource(station)
+    except ValueError:
+        logger.error(
+            "Could not create TMY3WeatherSource for station {}."
+            .format(station)
+        )
+        return None
+
+    logger.info("Created TMY3WeatherSource using station {}".format(station))
+
+    return weather_normal_source
