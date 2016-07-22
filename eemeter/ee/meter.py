@@ -149,7 +149,9 @@ class EnergyEfficiencyMeter(object):
             "modeled_energy_traces": dispatches,
             "modeled_energy_trace_derivatives": derivatives,
             "project_derivatives": project_derivatives,
-            "logs": log_collector.items
+            "logs": log_collector.items,
+            "weather_source": weather_source,
+            "weather_normal_source": weather_normal_source,
         }
 
     def _get_project_derivatives(self, modeling_period_set, energy_trace_set,
