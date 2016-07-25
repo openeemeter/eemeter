@@ -102,6 +102,18 @@ def test_isd_index_arbitrary(mock_isd_weather_source):
     assert temps.shape == (1440, 1)
 
 
+def test_isd_index_arbitrary_single(mock_isd_weather_source):
+    index = pd.DatetimeIndex(['2011-01-30'],
+                             dtype='datetime64[ns, UTC]', freq=None)
+
+    with pytest.raises(ValueError):
+        mock_isd_weather_source.indexed_temperatures(index, 'degF')
+
+    with pytest.raises(ValueError):
+        mock_isd_weather_source.indexed_temperatures(
+            index, 'degF', allow_mixed_frequency=True)
+
+
 def test_bad_isd_station():
     with pytest.raises(ValueError):
         ISDWeatherSource("INVALID")

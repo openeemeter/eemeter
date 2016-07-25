@@ -213,6 +213,11 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
             raise ValueError(message)
 
         index_ = self._partitioned_multiindex(self.tempC.index, index)
+
+        if index_ is None:
+            message = 'Could not create partitioned mulitindex.'
+            raise ValueError(message)
+
         level = index_.names[1]
         index_.get_level_values(level)
         values = self.tempC.reindex(index_.get_level_values(level)).values
@@ -250,8 +255,11 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
                 else:
                     period_start = period_end
                     period_end = next(periods, None)
-        return pd.MultiIndex.from_tuples(list(_yield_index_tuples()),
-                                         names=names)
+
+        index_tuples = list(_yield_index_tuples())
+        if index_tuples == []:
+            return None
+        return pd.MultiIndex.from_tuples(index_tuples, names=names)
 
     def _get_min_period(self, index):
         return index.to_series().diff().dropna().min()

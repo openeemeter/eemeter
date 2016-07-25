@@ -159,7 +159,10 @@ formatter.create_input(energy_trace, weather_source)
                         yield index, (value + row.value)
                     index, value = None, None
 
-        index, values = zip(*list(_yield_values()))
+        yielded = list(_yield_values())
+        if len(yielded) == 0:
+            return pd.Series()
+        index, values = zip(*yielded)
         return pd.Series(values, index=index)
 
     def create_input(self, trace, weather_source):
