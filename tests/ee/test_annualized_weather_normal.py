@@ -1,6 +1,7 @@
 import tempfile
 
 import pytest
+from numpy.testing import assert_allclose
 
 from eemeter.modeling.formatters import ModelDataFormatter
 from eemeter.ee.derivatives import annualized_weather_normal
@@ -23,4 +24,5 @@ def test_basic_usage(mock_tmy3_weather_source):
     output = annualized_weather_normal(
         formatter, model, mock_tmy3_weather_source)
 
-    assert output['annualized_weather_normal'] == (365, 1.0, 1.0, 1)
+    assert_allclose(output['annualized_weather_normal'],
+                    (365, 19.1049731745428, 19.1049731745428, 365))

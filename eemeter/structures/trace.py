@@ -212,8 +212,7 @@ class EnergyTrace(object):
 
             if not isinstance(data.index, pd.DatetimeIndex):
                 message = (
-                    'Must index the pandas.DataFrame supplied in with a'
-                    ' pandas.DatetimeIndex.'
+                    '`data` must be indexed with a pandas.DatetimeIndex.'
                 )
                 raise ValueError(message)
 

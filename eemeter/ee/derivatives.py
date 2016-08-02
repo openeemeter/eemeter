@@ -45,7 +45,7 @@ def annualized_weather_normal(formatter, model, weather_normal_source):
 
     normals = model.predict(demand_fixture_data)
     annualized = normals.sum()
-    n = model.n
+    n = normal_index.shape[0]
     upper = (model.upper**2 * n)**0.5
     lower = (model.lower**2 * n)**0.5
 
@@ -103,7 +103,7 @@ def gross_predicted(formatter, model, weather_source, reporting_period):
 
     values = model.predict(demand_fixture_data)
     gross_predicted = values.sum()
-    n = model.n
+    n = index.shape[0]
     upper = (model.upper**2 * n)**0.5
     lower = (model.lower**2 * n)**0.5
 

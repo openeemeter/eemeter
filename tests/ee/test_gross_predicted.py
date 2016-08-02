@@ -3,6 +3,7 @@ from datetime import datetime
 
 import pytest
 import pytz
+from numpy.testing import assert_allclose
 
 from eemeter.modeling.formatters import ModelDataFormatter
 from eemeter.ee.derivatives import gross_predicted
@@ -45,7 +46,8 @@ def test_basic_usage(mock_isd_weather_source,
         formatter, model, mock_isd_weather_source,
         reporting_period_no_end_date)
 
-    assert output_end_date['gross_predicted'] == (547, 1.0, 1.0, 1)
+    assert_allclose(output_end_date['gross_predicted'],
+                    (547, 23.388031127053, 23.388031127053, 547))
     assert (
         output_end_date['gross_predicted'][0] <
         output_no_end_date['gross_predicted'][0]
