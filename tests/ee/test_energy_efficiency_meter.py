@@ -94,12 +94,5 @@ def test_basic_usage(project, mock_tmy3_weather_source):
     assert len(elec['BASELINE']['gross_predicted']) == 4
     assert len(elec['REPORTING']['gross_predicted']) == 4
 
-    logs = results['logs']
-    assert len(logs['get_weather_source']) == 2
-    assert len(logs['get_weather_normal_source']) == 1
-    assert len(logs['get_modeling_period_set']) == 1
-    assert len(logs['get_energy_modeling_dispatches']) == 2
-    assert len(logs['handle_dispatches']) == 0
-
     assert results['weather_source'].station == '994971'
     assert results['weather_normal_source'].station == '724838'

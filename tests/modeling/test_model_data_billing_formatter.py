@@ -51,6 +51,7 @@ def trace2():
     df = pd.DataFrame(data, index=index, columns=columns)
     return EnergyTrace("ELECTRICITY_CONSUMPTION_SUPPLIED", df, unit="KWH")
 
+
 @pytest.fixture
 def trace3():
     data = {
@@ -80,6 +81,7 @@ def test_empty(trace2, mock_isd_weather_source):
         trace2, mock_isd_weather_source)
     assert trace_data.shape == (0,)
     assert temperature_data.shape == (0,)
+
 
 def test_small(trace3, mock_isd_weather_source):
     mdbf = ModelDataBillingFormatter()

@@ -1,3 +1,5 @@
+import logging
+
 from eemeter.weather.location import (
     zipcode_to_usaf_station,
     zipcode_to_tmy3_station,
@@ -5,14 +7,14 @@ from eemeter.weather.location import (
 from eemeter.weather.noaa import ISDWeatherSource
 from eemeter.weather.tmy3 import TMY3WeatherSource
 
+logger = logging.getLogger(__name__)
 
-def get_weather_source(logger, project):
+
+def get_weather_source(project):
     ''' Finds most relevant WeatherSource given project site.
 
     Parameters
     ----------
-    logger : logging.logger
-        Logger to collect logged data.
     project : eemeter.structures.Project
         Project for which to find weather source data.
 
@@ -52,13 +54,11 @@ def get_weather_source(logger, project):
     return weather_source
 
 
-def get_weather_normal_source(logger, project):
+def get_weather_normal_source(project):
     ''' Finds most relevant WeatherSource given project site.
 
     Parameters
     ----------
-    logger : logging.logger
-        Logger to collect logged data.
     project : eemeter.structures.Project
         Project for which to find weather source data.
 

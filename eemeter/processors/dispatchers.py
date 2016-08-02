@@ -1,3 +1,5 @@
+import logging
+
 import pandas as pd
 
 from eemeter.modeling.models.seasonal import SeasonalElasticNetCVModel
@@ -9,6 +11,8 @@ from eemeter.modeling.formatters import (
 from eemeter.modeling.split import (
     SplitModeledEnergyTrace
 )
+
+logger = logging.getLogger(__name__)
 
 default_dispatch = (
     ModelDataFormatter,
@@ -56,14 +60,12 @@ ENERGY_MODEL_CLASS_MAPPING = {
 }
 
 
-def get_energy_modeling_dispatches(logger, modeling_period_set, trace_set):
+def get_energy_modeling_dispatches(modeling_period_set, trace_set):
     ''' Dispatches a set of applicable models and formatters for each
     pairing of modeling period sets and trace sets given.
 
     Parameters
     ----------
-    logger : logging.logger
-        Logger to collect logged data.
     modeling_period_set : eemeter.structures.ModelingPeriodSet
 
         :code:`ModelingPeriod` s to dispatch.
