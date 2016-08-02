@@ -1,17 +1,19 @@
+import logging
+
 from eemeter.structures import (
     ModelingPeriod,
     ModelingPeriodSet,
 )
 
+logger = logging.getLogger(__name__)
 
-def get_modeling_period_set(logger, interventions):
+
+def get_modeling_period_set(interventions):
     ''' Creates an applicable modeling period set given a list of
     interventions.
 
     Parameters
     ----------
-    logger : logging.logger
-        Logger to collect logged data.
     interventions : list of eemeter.structures.Intervention
         Interventions for which to build ModelingPeriodSet.
     '''

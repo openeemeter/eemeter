@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 
 from eemeter.processors.dispatchers import get_energy_modeling_dispatches
-from eemeter.processors.collector import LogCollector
 from eemeter.structures import (
     ModelingPeriod,
     ModelingPeriodSet,
@@ -63,35 +62,16 @@ def placeholder_trace_set():
 
 
 def test_basic_usage(modeling_period_set, trace_set):
-    lc = LogCollector()
-
-    with lc.collect_logs("get_energy_modeling_dispatches") as logger:
-        dispatches = get_energy_modeling_dispatches(
-            logger, modeling_period_set, trace_set)
+    dispatches = get_energy_modeling_dispatches(modeling_period_set, trace_set)
 
     assert len(dispatches) == 1
     dispatch = dispatches["trace"]
     assert isinstance(dispatch, SplitModeledEnergyTrace)
 
-    logs = lc.items["get_energy_modeling_dispatches"]
-    assert "INFO - Determined frequency of 'D' for EnergyTrace 'trace'." \
-        in logs[0]
-    assert "INFO - Successfully created SplitModeledEnergyTrace" \
-        in logs[1]
-
 
 def test_placeholder_trace(modeling_period_set, placeholder_trace_set):
-    lc = LogCollector()
-
-    with lc.collect_logs("get_energy_modeling_dispatches") as logger:
-        dispatches = get_energy_modeling_dispatches(
-            logger, modeling_period_set, placeholder_trace_set)
+    dispatches = get_energy_modeling_dispatches(modeling_period_set,
+                                                placeholder_trace_set)
 
     assert len(dispatches) == 1
     assert dispatches["trace"] is None
-
-    logs = lc.items["get_energy_modeling_dispatches"]
-    assert (
-        'INFO - Skipping modeling for placeholder trace '
-        '"trace" (ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED).'
-    ) in logs[0]

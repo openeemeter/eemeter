@@ -1,4 +1,5 @@
-from eemeter.processors.collector import LogCollector
+import logging
+
 from eemeter.processors.interventions import get_modeling_period_set
 from eemeter.processors.location import (
     get_weather_source,
@@ -6,6 +7,8 @@ from eemeter.processors.location import (
 )
 from eemeter.processors.dispatchers import get_energy_modeling_dispatches
 from eemeter.ee.derivatives import annualized_weather_normal, gross_predicted
+
+logger = logging.getLogger(__name__)
 
 
 class EnergyEfficiencyMeter(object):
@@ -54,90 +57,78 @@ class EnergyEfficiencyMeter(object):
             - :code:`"modeled_energy_trace_derivatives"`: derivatives for each
               modeled energy trace.
             - :code:`"project_derivatives"`: Project summaries for derivatives.
-            - :code:`"logs"`: Logs collected during meter run.
         '''
 
-        log_collector = LogCollector()
+        modeling_period_set = get_modeling_period_set(project.interventions)
 
-        with log_collector.collect_logs("get_modeling_period_set") as logger:
-            modeling_period_set = get_modeling_period_set(
-                logger, project.interventions)
+        if weather_source is None:
+            weather_source = get_weather_source(project)
+        else:
+            logger.info("Using supplied weather_source")
 
-        with log_collector.collect_logs("get_weather_source") as logger:
-            if weather_source is None:
-                weather_source = get_weather_source(logger, project)
-            else:
-                logger.info("Using supplied weather_source")
+        if weather_normal_source is None:
+            weather_normal_source = get_weather_normal_source(project)
+        else:
+            logger.info("Using supplied weather_normal_source")
 
-        with log_collector.collect_logs("get_weather_normal_source") as logger:
-            if weather_normal_source is None:
-                weather_normal_source = get_weather_normal_source(
-                    logger, project)
-            else:
-                logger.info("Using supplied weather_normal_source")
+        dispatches = get_energy_modeling_dispatches(
+            modeling_period_set, project.energy_trace_set)
 
-        with log_collector.collect_logs(
-                "get_energy_modeling_dispatches") as logger:
-            dispatches = get_energy_modeling_dispatches(
-                logger, modeling_period_set, project.energy_trace_set)
+        derivatives = {}
+        for trace_label, modeled_energy_trace in dispatches.items():
 
-        with log_collector.collect_logs("handle_dispatches") as logger:
+            trace_derivatives = {}
+            derivatives[trace_label] = trace_derivatives
 
-            derivatives = {}
-            for trace_label, modeled_energy_trace in dispatches.items():
+            if modeled_energy_trace is None:
+                continue
 
-                trace_derivatives = {}
-                derivatives[trace_label] = trace_derivatives
+            modeled_energy_trace.fit(weather_source)
 
-                if modeled_energy_trace is None:
-                    continue
+            for group_label, (_, reporting_period) in \
+                    modeling_period_set.iter_modeling_period_groups():
 
-                modeled_energy_trace.fit(weather_source)
+                period_derivatives = {
+                    "BASELINE": {},
+                    "REPORTING": {},
+                }
+                trace_derivatives[group_label] = \
+                    period_derivatives
 
-                for group_label, (_, reporting_period) in \
-                        modeling_period_set.iter_modeling_period_groups():
+                baseline_label, reporting_label = group_label
 
-                    period_derivatives = {
-                        "BASELINE": {},
-                        "REPORTING": {},
-                    }
-                    trace_derivatives[group_label] = \
-                        period_derivatives
+                baseline_output = modeled_energy_trace.fit_outputs[
+                    baseline_label]
+                reporting_output = modeled_energy_trace.fit_outputs[
+                    reporting_label]
 
-                    baseline_label, reporting_label = group_label
+                if baseline_output["status"] == "SUCCESS":
+                    period_derivatives["BASELINE"].update(
+                        modeled_energy_trace.compute_derivative(
+                            baseline_label,
+                            annualized_weather_normal,
+                            weather_normal_source=weather_normal_source))
 
-                    baseline_output = modeled_energy_trace.fit_outputs[
-                        baseline_label]
-                    reporting_output = modeled_energy_trace.fit_outputs[
-                        reporting_label]
+                    period_derivatives["BASELINE"].update(
+                        modeled_energy_trace.compute_derivative(
+                            baseline_label,
+                            gross_predicted,
+                            weather_source=weather_source,
+                            reporting_period=reporting_period))
 
-                    if baseline_output["status"] == "SUCCESS":
-                        period_derivatives["BASELINE"].update(
-                            modeled_energy_trace.compute_derivative(
-                                baseline_label,
-                                annualized_weather_normal,
-                                weather_normal_source=weather_normal_source))
+                if reporting_output["status"] == "SUCCESS":
+                    period_derivatives["REPORTING"].update(
+                        modeled_energy_trace.compute_derivative(
+                            reporting_label,
+                            annualized_weather_normal,
+                            weather_normal_source=weather_normal_source))
 
-                        period_derivatives["BASELINE"].update(
-                            modeled_energy_trace.compute_derivative(
-                                baseline_label,
-                                gross_predicted,
-                                weather_source=weather_source,
-                                reporting_period=reporting_period))
-
-                    if reporting_output["status"] == "SUCCESS":
-                        period_derivatives["REPORTING"].update(
-                            modeled_energy_trace.compute_derivative(
-                                reporting_label,
-                                annualized_weather_normal,
-                                weather_normal_source=weather_normal_source))
-
-                        period_derivatives["REPORTING"].update(
-                            modeled_energy_trace.compute_derivative(
-                                reporting_label,
-                                gross_predicted,
-                                weather_source=weather_source,
-                                reporting_period=reporting_period))
+                    period_derivatives["REPORTING"].update(
+                        modeled_energy_trace.compute_derivative(
+                            reporting_label,
+                            gross_predicted,
+                            weather_source=weather_source,
+                            reporting_period=reporting_period))
 
         project_derivatives = self._get_project_derivatives(
             modeling_period_set,
@@ -149,7 +140,6 @@ class EnergyEfficiencyMeter(object):
             "modeled_energy_traces": dispatches,
             "modeled_energy_trace_derivatives": derivatives,
             "project_derivatives": project_derivatives,
-            "logs": log_collector.items,
             "weather_source": weather_source,
             "weather_normal_source": weather_normal_source,
         }
