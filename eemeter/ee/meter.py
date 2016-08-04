@@ -103,32 +103,36 @@ class EnergyEfficiencyMeter(object):
                     reporting_label]
 
                 if baseline_output["status"] == "SUCCESS":
-                    period_derivatives["BASELINE"].update(
-                        modeled_energy_trace.compute_derivative(
-                            baseline_label,
-                            annualized_weather_normal,
-                            weather_normal_source=weather_normal_source))
+                    awn = modeled_energy_trace.compute_derivative(
+                        baseline_label,
+                        annualized_weather_normal,
+                        weather_normal_source=weather_normal_source)
+                    if awn is not None:
+                        period_derivatives["BASELINE"].update(awn)
 
-                    period_derivatives["BASELINE"].update(
-                        modeled_energy_trace.compute_derivative(
-                            baseline_label,
-                            gross_predicted,
-                            weather_source=weather_source,
-                            reporting_period=reporting_period))
+                    gp = modeled_energy_trace.compute_derivative(
+                        baseline_label,
+                        gross_predicted,
+                        weather_source=weather_source,
+                        reporting_period=reporting_period)
+                    if gp is not None:
+                        period_derivatives["BASELINE"].update(gp)
 
                 if reporting_output["status"] == "SUCCESS":
-                    period_derivatives["REPORTING"].update(
-                        modeled_energy_trace.compute_derivative(
-                            reporting_label,
-                            annualized_weather_normal,
-                            weather_normal_source=weather_normal_source))
+                    awn = modeled_energy_trace.compute_derivative(
+                        reporting_label,
+                        annualized_weather_normal,
+                        weather_normal_source=weather_normal_source)
+                    if awn is not None:
+                        period_derivatives["REPORTING"].update(awn)
 
-                    period_derivatives["REPORTING"].update(
-                        modeled_energy_trace.compute_derivative(
-                            reporting_label,
-                            gross_predicted,
-                            weather_source=weather_source,
-                            reporting_period=reporting_period))
+                    gp = modeled_energy_trace.compute_derivative(
+                        reporting_label,
+                        gross_predicted,
+                        weather_source=weather_source,
+                        reporting_period=reporting_period)
+                    if gp is not None:
+                        period_derivatives["REPORTING"].update(gp)
 
         project_derivatives = self._get_project_derivatives(
             modeling_period_set,
