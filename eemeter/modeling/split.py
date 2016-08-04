@@ -116,6 +116,10 @@ class SplitModeledEnergyTrace(object):
         outputs = self.fit_outputs[modeling_period_label]
 
         if outputs["status"] == "FAILURE":
+            logger.warn(
+                'Skipping prediction for modeling_period "{}" because'
+                ' model fit failed.'.format(modeling_period_label)
+            )
             return None
 
         if params is None:
@@ -149,7 +153,14 @@ class SplitModeledEnergyTrace(object):
             return None
 
         model = self.model_mapping[modeling_period_label]
-        return derivative_callable(self.formatter, model, **kwargs)
+
+        try:
+            derivative = derivative_callable(self.formatter, model, **kwargs)
+        except Exception:
+            logger.exception("Derivative computation failed.")
+            return None
+
+        return derivative
 
     @staticmethod
     def _filter_by_modeling_period(trace, modeling_period):
