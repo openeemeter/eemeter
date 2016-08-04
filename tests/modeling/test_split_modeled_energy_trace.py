@@ -61,6 +61,8 @@ def modeling_period_set():
 
 
 def test_basic_usage(trace, modeling_period_set, mock_isd_weather_source):
+
+    # create SplitModeledEnergyTrace
     formatter = ModelDataFormatter('D')
     model_mapping = {
         'modeling_period_1': SeasonalElasticNetCVModel(65, 65),
@@ -69,10 +71,12 @@ def test_basic_usage(trace, modeling_period_set, mock_isd_weather_source):
     smet = SplitModeledEnergyTrace(
         trace, formatter, model_mapping, modeling_period_set)
 
-    smet.fit(mock_isd_weather_source)
+    # fit normally
+    outputs = smet.fit(mock_isd_weather_source)
     assert 'modeling_period_1' in smet.fit_outputs
     assert 'modeling_period_2' in smet.fit_outputs
     assert len(smet.fit_outputs) == 2
+    assert outputs['modeling_period_1']['status'] == 'SUCCESS'
 
     index = pd.date_range('2001-01-01', periods=6, freq='D', tz=pytz.UTC)
 
@@ -98,3 +102,7 @@ def test_basic_usage(trace, modeling_period_set, mock_isd_weather_source):
 
     assert mp1_deriv == "A"
     assert mp2_deriv is None
+
+    # bad weather source
+    smet.fit(None)
+    assert outputs['modeling_period_1']['status'] == 'FAILURE'

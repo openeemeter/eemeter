@@ -24,6 +24,10 @@ class Intervention(object):
         )
 
     def _validate_start_date(self, dt):
+        if dt is None:
+            message = 'Intervention `start_date` cannot be None.'
+            raise ValueError(message)
+
         if not self._is_tz_aware(dt):
             message = 'Given datetime is not tz-aware: {}'.format(dt)
             raise ValueError(message)

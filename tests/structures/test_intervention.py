@@ -9,6 +9,11 @@ def test_naive_start_date():
         Intervention(datetime(2000, 1, 1))
 
 
+def test_none_start_date():
+    with pytest.raises(ValueError):
+        Intervention(None)
+
+
 def test_naive_end_date():
     with pytest.raises(ValueError):
         Intervention(datetime(2000, 1, 1, tzinfo=pytz.UTC),

@@ -56,10 +56,21 @@ class SplitModeledEnergyTrace(object):
                 self.trace.interpretation, data=filtered_data,
                 unit=self.trace.unit)
 
-            input_data = self.formatter.create_input(
-                filtered_trace, weather_source)
-
             model = self.model_mapping[modeling_period_label]
+
+            try:
+                input_data = self.formatter.create_input(
+                    filtered_trace, weather_source)
+            except:
+                logger.warn(
+                    'For trace "{}" and modeling_period "{}", was not'
+                    ' able to format input data for {}.'
+                    .format(self.trace.interpretation, modeling_period_label,
+                            model)
+                )
+                outputs = {"status": "FAILURE"}
+                self.fit_outputs[modeling_period_label] = outputs
+                continue
 
             try:
                 outputs = model.fit(input_data)
