@@ -4,12 +4,12 @@ Guides
 .. toctree::
    :maxdepth: 2
 
-   installation
+   introduction
 
 .. toctree::
    :maxdepth: 2
 
-   introduction
+   installation
 
 .. toctree::
    :maxdepth: 2
@@ -25,6 +25,11 @@ Guides
    :maxdepth: 2
 
    architecture_overview
+
+.. toctree::
+   :maxdepth: 2
+
+   methods_overview
 
 .. toctree::
    :maxdepth: 2
