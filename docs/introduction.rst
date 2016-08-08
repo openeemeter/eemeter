@@ -9,11 +9,11 @@ customer accounts. The software package consists of three main parts:
    energy, and building data
    (`github <https://github.com/impactlab/oeem-etl/>`_);
 2. a core calculation library (this package) that implements standardized
-   methods (`github <https://github.com/impactlab/eemeter/>`_); and,
+   methods (`github <https://github.com/impactlab/eemeter/>`_); and
 3. a datastore application for storing post-ETL inputs and computed outputs
    (`github <https://github.com/impactlab/oeem-energy-datastore/>`_).
 
-Core Use Cases
+Core use cases
 ^^^^^^^^^^^^^^
 
 The OpenEEmeter has been designed specifically to provide weather-normalized
@@ -28,8 +28,8 @@ are project and portfolio-level are:
 More information about these methods can be found in the
 :ref:`architecture-overview` and :ref:`methods-overview` sections.
 
-Other Potential Uses
-^^^^^^^^^^^^^^^^^^^^
+Other potential use cases
+^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The OpenEEmeter can also be configured to manage energy resources across a
 portfolio of buildings, including potentially:

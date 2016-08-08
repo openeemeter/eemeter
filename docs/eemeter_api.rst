@@ -1,5 +1,5 @@
-API
-===
+eemeter API
+===========
 
 eemeter.ee
 ----------

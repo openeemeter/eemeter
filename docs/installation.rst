@@ -1,6 +1,9 @@
 Installation
 ------------
 
+eemeter
+^^^^^^^
+
 To get started with the eemeter, use pip::
 
     $ pip install eemeter
@@ -11,3 +14,13 @@ Make sure you have the latest version:
 
     >>> import eemeter; eemeter.get_version()
     '0.4.6'
+
+datastore
+^^^^^^^^^
+
+...
+
+etl
+^^^
+
+...

@@ -18,6 +18,6 @@ application (see `eemeter`).
 Each of these components are open sourced under an MIT License and can be found
 on github:
 
- - `**etl** <https://github.com/impactlab/oeem-etl/>`_
- - `**eemeter** <https://github.com/impactlab/eemeter/>`_
- - `**datastore** <https://github.com/impactlab/oeem-energy-datastore/>`_
+ - **`etl <https://github.com/impactlab/oeem-etl/>`_**
+ - **`eemeter <https://github.com/impactlab/eemeter/>`_**
+ - **`datastore <https://github.com/impactlab/oeem-energy-datastore/>`_**
