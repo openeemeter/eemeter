@@ -20,17 +20,20 @@ Core Use Cases
 The OpenEEmeter has been designed specifically to provide weather-normalized
 energy savings measurements for a portfolio of projects using monthly billing
 data or interval smart meter data. The main outputs for this core use case
-are project and portfolio-level. More information about these methods can be
-found in the :ref:`architecture-overview` and :ref:`methods-overview` sections:
+are project and portfolio-level are:
 
 - Gross Energy Savings
 - Annualized Energy Savings
 - Realization Rate (when savings predictions are available)
 
+More information about these methods can be found in the
+:ref:`architecture-overview` and :ref:`methods-overview` sections.
+
 Other Potential Uses
 ^^^^^^^^^^^^^^^^^^^^
 
-The OpenEEmeter can also be configured to manage energy resources across a portfolio of buildings.
+The OpenEEmeter can also be configured to manage energy resources across a
+portfolio of buildings, including potentially:
 
 - Analytics of raw energy data
 - Portfolio management
@@ -134,3 +137,103 @@ usage and actual energy usage following the intervention. This method
 maintains the cost-effectiveness of the naive predicted savings approach, the
 real-world integrity of the building efficiency approach, without sacrificing
 on time as with the post hoc control group approach.
+
+4) Set up and Data Management
+"""""""""""""""""""""""""""""
+
+The OpenEEmeter is configured to manage consumption and project data.
+Consumption data can be of any sort - from monthly billing data to
+high-frequency sensor data. Project data is typically a set of attributes that
+can be used for advanced savings analytics, but at minimum must contain a date
+to demarcate pre and post intervention periods. Where project and consumption
+data originate from different database sources, a common key must be available
+to link projects with their respective consumption traces.
+
+The OpenEEmeter comes bundled with an ETL toolkit. If you are deploying the
+open source software, you will need to write a parser to load your data into
+the ETL pipeline. We rely on a python module called
+`luigi <https://luigi.readthedocs.io/>`_ to manage the bulk importation of
+data. For more on this, see :ref:`etl-toolkit`.
+
+Parsed consumption and project data are stored in the Datastore alongside
+outputs from the calculation engine.
+
+You may decide that you want to use EEmeter results to analyze project data
+that does not get parsed and uploaded into the Datastore. We have made it easy
+to export your EEmeter results through an API or through a web interface.
+Other options include a direct database connection to a BI tool like Tableau
+or Salesforce.
+
+5) EEmeter inputs
+"""""""""""""""""
+
+The EEmeter requires a combination of consumption data, project data, and
+weather data to calculate weather-normalized savings. At its most rudimentary,
+the EEmeter requires a **trace** of consumption data along with project data
+indicating the completion date and location of the project. The EEmeter will
+reject traces not meeting built-in data sufficiency requirements.
+
+Project data is important because it allows savings estimates to be
+calculated. The completion of a **project** (which can be thought of as any
+intervention for which there is an expected change in energy consumption)
+demarcates the shift between a baseline modeling period and a reporting
+modeling period (explained below in the methods section).
+
+6) EEmeter methods
+""""""""""""""""""
+
+The EEmeter provides multiple methods for calculating energy savings. The most
+conventional methods use weather normalization to calculate energy savings.
+Fundamentally, this means that once a relationship between weather patterns
+and energy consumption in a particular building is established, counterfactual
+usage parameters can be used to calculate savings against a projected baseline.
+
+As noted above, we term a set of consumption data points a **trace**. A trace
+can be broken down into component periods used for calculating savings. Most
+important is the baseline period. Baseline period consumption data is modeled
+to establish the relationship between weather and consumption for a building
+prior to an intervention. Different buildings will have different
+relationships between their energy use and the weather. Some will be
+relatively more insulated, others will be built differently, and others will
+be exposed to light differently. These differences create a better or worse
+fit between energy use and weather. Statistically, we will have higher
+confidence in the savings estimate for a particular building when there is a
+stronger, more consistent relationship with the weather.
+
+Once we have calculated a weather model, we can apply that model to a sample
+“normal” weather year. We understand what a typical house’s usage is relative
+to the weather, but we don’t necessarily want to use the previous weather year
+as our baseline (there may be some particular idiosyncrasies that we want to
+avoid). By estimating consumption relative to an average year, we reduce the
+likelihood of bias in the savings estimate.
+
+If we have a full year of post-intervention data, we can replicate this
+process for our reporting period. We calculate a new model for the
+relationship between weather and consumption for our reporting period and
+estimate consumption in the same “normal” year as our baseline. If the
+intervention has resulted in lower energy use relative to the weather, the
+output will show a reduction in consumption relative to the baseline. By
+referencing the same “normal” year, we can be reassured that there are fewer
+arbitrary factors influencing the results.
+
+When there is not a full year of data for the reporting period, we can instead
+turn to the actual consumption recorded at the meter for measuring savings.
+We simply take the estimate generated by the baseline model and apply it to
+the temperature for any point in the reporting period. We subtract the
+consumption from the matching timestamp to generate the savings value.
+
+When we measure savings using daily or hourly usage increments, additional
+controls are required. For example, energy use on weekends is typically
+systematically different than on weekdays and must be treated differently.
+Likewise, overnight energy use looks very different than daytime energy use
+even when weather conditions are the same. For these types of systematic
+differences, we introduce a number of new methods. The most straightforward
+is a “fixed-effects” method that takes into account the day of the week. This
+and other modifications to the core method are designed to produce a more
+accurate model for establishing a relationship between weather conditions and
+energy usage, thus making our savings estimates more reliable.
+
+7) EEmeter outputs
+""""""""""""""""""
+
+EEmeter outputs.

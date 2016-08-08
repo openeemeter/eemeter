@@ -34,6 +34,11 @@ Guides
 .. toctree::
    :maxdepth: 2
 
+   etl_toolkit
+
+.. toctree::
+   :maxdepth: 2
+
    glossary
 
 .. toctree::
