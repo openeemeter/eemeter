@@ -9,6 +9,11 @@ Guides
 .. toctree::
    :maxdepth: 2
 
+   introduction
+
+.. toctree::
+   :maxdepth: 2
+
    quickstart
 
 .. toctree::
