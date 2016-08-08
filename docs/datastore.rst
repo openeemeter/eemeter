@@ -1,4 +1,4 @@
-.. _datatore:
+.. _datastore:
 
 Datastore
 ---------
