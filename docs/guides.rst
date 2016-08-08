@@ -34,6 +34,11 @@ Guides
 .. toctree::
    :maxdepth: 2
 
+   datastore
+
+.. toctree::
+   :maxdepth: 2
+
    etl_toolkit
 
 .. toctree::
@@ -50,3 +55,8 @@ Guides
    :maxdepth: 2
 
    development
+
+.. toctree::
+   :maxdepth: 2
+
+   open_source
