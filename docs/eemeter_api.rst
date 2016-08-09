@@ -33,11 +33,15 @@ eemeter.processors
 
    processors
 
+.. _eemeter-structures:
+
 eemeter.structures
 ^^^^^^^^^^^^^^^^^^
 
 .. automodule:: eemeter.structures
     :members:
+
+.. _eemeter-weather:
 
 eemeter.weather
 ^^^^^^^^^^^^^^^
