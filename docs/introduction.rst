@@ -1,3 +1,5 @@
+.. _introduction:
+
 Introduction
 ------------
 
@@ -81,7 +83,8 @@ measurement. Utilizing newly available smart meter data, the OpenEEmeter
 solves the problem of measuring energy savings and opens new doors for
 managing demand side programs.
 
-Historically, energy **savings** have been measured in one of three ways. The
+Historically, energy :ref:`savings <glossary-energy-savings>` have been
+measured in one of three ways. The
 first (and least costly) approach is to take laboratory measurements of
 different energy-consuming devices (e.g., light bulbs) and calculate the
 difference in consumption from one to the next, then estimate the savings over
@@ -123,7 +126,7 @@ Smart meter data allows for more complexity in statistical models. Rather than
 relying on simple regression experiments to normalize energy consumption,
 analysts can parse the impact of exogenous and endogenous factors
 independently and iteratively. The notion of baseload energy use can even be
-disaggregated into multiple **demand states**. For example, a home will use
+disaggregated into multiple demand states. For example, a home will use
 very little energy when empty, a bit more when occupied, and a large amount
 when appliances and heating or cooling systems are operating. These demand
 states can be measured against various sorts of interventions, thus enabling
@@ -172,13 +175,12 @@ or Salesforce.
 
 The EEmeter requires a combination of consumption data, project data, and
 weather data to calculate weather-normalized savings. At its most rudimentary,
-the EEmeter requires a **trace** of consumption data along with project data
-indicating the completion date and location of the project. The EEmeter will
-reject traces not meeting built-in data sufficiency requirements.
+the EEmeter requires a :ref:`trace <glossary-trace>` of consumption data along with
+project data indicating the completion date and location of the project. The
+EEmeter will reject traces not meeting built-in data sufficiency requirements.
 
 Project data is important because it allows savings estimates to be
-calculated. The completion of a **project** (which can be thought of as any
-intervention for which there is an expected change in energy consumption)
+calculated. The completion of a :ref:`project <glossary-project>`
 demarcates the shift between a baseline modeling period and a reporting
 modeling period (explained below in the methods section).
 
@@ -187,13 +189,16 @@ modeling period (explained below in the methods section).
 3) EEmeter methods
 """"""""""""""""""
 
+See also :ref:`methods-overview`.
+
 The EEmeter provides multiple methods for calculating energy savings. The most
 conventional methods use weather normalization to calculate energy savings.
 Fundamentally, this means that once a relationship between weather patterns
 and energy consumption in a particular building is established, counterfactual
 usage parameters can be used to calculate savings against a projected baseline.
 
-As noted above, we term a set of consumption data points a **trace**. A trace
+As noted above, we term a set of consumption data points a
+:ref:`trace <glossary-trace>`. A trace
 can be broken down into component periods used for calculating savings. Most
 important is the baseline period. Baseline period consumption data is modeled
 to establish the relationship between weather and consumption for a building
@@ -241,4 +246,4 @@ energy usage, thus making our savings estimates more reliable.
 4) EEmeter outputs
 """"""""""""""""""
 
-EEmeter outputs.
+...

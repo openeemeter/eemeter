@@ -4,9 +4,9 @@ Development
 .. toctree::
    :maxdepth: 2
 
-   testing
+   eemeter_testing
 
 .. toctree::
    :maxdepth: 2
 
-   building_documentation
+   eemeter_building_documentation

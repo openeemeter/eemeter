@@ -1,7 +1,7 @@
 .. _datastore:
 
-Datastore
----------
+datastore
+=========
 
 The datastore is an application for housing energy and project data which
 provides a REST API for loading data, computing energy savings, and
@@ -13,7 +13,12 @@ The datastore uses the `django web framework <https://djangoproject.com/>`_
 with a `PostgreSQL <https://www.postgresql.org/>`_ database.
 
 
-Usage
-^^^^^
+.. toctree::
+   :maxdepth: 4
 
-...
+   datastore_setup
+
+.. toctree::
+   :maxdepth: 4
+
+   datastore_api

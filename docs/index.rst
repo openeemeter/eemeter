@@ -47,17 +47,17 @@ Usage
 .. toctree::
    :maxdepth: 4
 
-   eemeter_api
+   eemeter_index
 
 .. toctree::
    :maxdepth: 4
 
-   datastore_api
+   datastore_index
 
 .. toctree::
    :maxdepth: 4
 
-   etl_api
+   etl_index
 
 References
 ----------
