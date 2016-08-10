@@ -67,7 +67,9 @@ is a core strength of the EEmeter.
 
 As noted in the :ref:`background <background>`, we term a set of
 energy data points a :ref:`trace <glossary-trace>`, and a building or project
-might be associated with any number of these. They must each be modeled.
+might be associated with any number of traces. In order to calculate savings
+models, each of these traces must be modeled.
+
 Before modeling, traces are segmented into components which overlap each
 baseline and reporting period of interest, then are modeled separately. [#]_
 This creates up to :math:`n * m` models for a project with :math:`n` traces
@@ -86,6 +88,16 @@ fewer than :math:`n * m` due to missing or insufficient data
 (see :ref:`data-sufficiency`). The EEmeter takes these failures into account
 and considers them when building summaries of savings.
 
+.. figure:: trace-segmenting-illustration.png
+
+    An example of trace segmenting with two traces,
+    one baseline period and one reporting period. **Trace 1** is segmented
+    into just one component - the baseline component - because data for the
+    reporting period is missing. **Trace 2** is segmented into one baseline
+    component and one reporting component. The segments of **Trace 1** and
+    **Trace 2** have different lengths, but models of their energy demand
+    behavior can still be built.
+
 Weather normalization
 ^^^^^^^^^^^^^^^^^^^^^
 
@@ -94,7 +106,7 @@ of energy demand during arbitrary weather scenarios. The two most common
 weather scenarios for which the EEmeter will estimate demand are the
 ":ref:`normal <glossary-weather-normal>`" weather year and the observed
 reporting period weather year. This is generally necessary because the data
-observed in the baseline and reporting periods occured during different
+observed in the baseline and reporting periods occurred during different
 time periods with different weather -- and valid comparisons between them must
 account for this. Estimating energy performance during the "normal" weather
 attempts to reduce bias in the savings estimate by accounting for the
@@ -102,7 +114,7 @@ peculiarity (as compared to other years or seasons) of the relevant observed
 weather.
 
 In an attempt to reduce the number of arbitrary factors influencing results,
-we only ever compare model estimates or data over that has occured over the
+we only ever compare model estimates or data over that has occurred over the
 same weather scenario and time period. This helps (in the aggregate) to ensure
 equivalency of :ref:`end use demand <glossary-end-use-demand>` pre- and post-
 intervention.
@@ -122,55 +134,188 @@ the necessary :ref:`aggregation <aggregation>` steps.
 
 The equation for savings is always:
 
-:math:`\text{total savings} = \text{baseline} - \text{reporting}`
+    :math:`S_\text{total} = E_\text{b} - E_\text{r}`
 
-:math:`\text{percent savings} = \frac{\text{baseline} - \text{reporting}}{\text{baseline}}`
+or
+
+    :math:`S_\text{percent} = \frac{E_\text{b} - E_\text{r}}{E_\text{b}}`
+
+where
+
+    - :math:`S_\text{total}` is aggregate total savings
+    - :math:`S_\text{percent}` is aggregate percent savings
+    - :math:`E_\text{b}` is aggregate energy demand as under baseline period conditions
+    - :math:`E_\text{r}` is aggregate energy demand as under reporting period conditions
+
+Depending on the type of energy savings desired, the values :math:`E_\text{b}`
+and :math:`E_\text{r}` may be calculated differently. The following types of
+savings are supported:
+
+- :ref:`annualized-weather-normal`
+- :ref:`gross-predicted`
+- :ref:`gross-observed`
+
+.. _annualized-weather-normal:
 
 Annualized weather normal
 """""""""""""""""""""""""
 
-To calculate :ref:`annualized weather normal <glossary-annualized-weather-normal>`
-energy demand for a particular trace, the EEmeter selects the segment of that
-trace data occuring in the baseline period and the segment occuring in the
-reporting period and builds two models. It then
-:ref:`weather normalizes <glossary-weather-normalization>` the observed data
-for each segment according to the :ref:`matched <weather-data-matching>`
-weather normal.
+The :ref:`annualized weather normal <glossary-annualized-weather-normal>`
+estimates savings as it may have occurred during a
+:ref:`"normal" weather <glossary-weather-normal>` year. It does this by
+building models of both the baseline and reporting energy demand and using
+each to weather-normalize the energy values.
+
+    :math:`E_\text{b} = \text{M}_\text{b}\left(\text{X}_\text{normal}\right)`
+
+    :math:`E_\text{r} = \text{M}_\text{r}\left(\text{X}_\text{normal}\right)`
+
+where
+
+    - :math:`\text{M}_\text{b}` is the model of energy demand as built using
+      trace data segmented from the baseline period.
+
+    - :math:`\text{M}_\text{r}` is the model of energy demand as built using
+      trace data segmented from the reporting period.
+
+    - :math:`\text{X}_\text{normal}` are temperature and other covariate
+      values for the weather normal year.
+
+.. _gross-predicted:
 
 Gross predicted
 """""""""""""""
 
+The :ref:`gross predicted <glossary-gross-predicted>` method
+estimates savings that have occurred from the completion of the project
+interventions up to the date of the meter run.
+
+    :math:`E_\text{b} = \text{M}_\text{b}\left(\text{X}_\text{r}\right)`
+
+    :math:`E_\text{r} = \text{M}_\text{r}\left(\text{X}_\text{r}\right)`
+
+where
+
+    - :math:`\text{M}_\text{b}` is the model of energy demand as built using
+      trace data segmented from the baseline period.
+
+    - :math:`\text{M}_\text{r}` is the model of energy demand as built using
+      trace data segmented from the reporting period.
+
+    - :math:`\text{X}_\text{r}` are temperature and other covariate
+      values for reporting period.
+
+.. _gross-observed:
 
 Gross observed
 """"""""""""""
 
-To calculate gross observed :ref:`energy savings <glossary-energy-savings>`,
-the EEmeter selects a sample of :ref:`trace <glossary-trace>` data prior to an
-:ref:`intervention <glossary-intervention>` and estimates usage as it would
-have occured under reporting period the reporting period, using observed
-reporting period weather to establish a :ref:`baseline <glossary-baseline>`.
-For the reporting period, observed data is used.
+The :ref:`gross observed <glossary-gross-observed>` method
+estimates savings that have occurred from the completion of the project
+interventions up to the date of the meter run.
+
+    :math:`E_\text{b} = \text{M}_\text{b}\left(\text{X}_\text{r}\right)`
+
+    :math:`E_\text{r} = \text{A}_\text{r}`
+
+where
+
+    - :math:`\text{M}_\text{b}` is the model of energy demand as built using
+      trace data segmented from the baseline period.
+
+    - :math:`\text{A}_\text{r}` are the actual observed energy demand values
+      from the trace data segmented from the baseline period. If the actual
+      data has missing values, these are interpolated using gross predicted
+      values (i.e., :math:`\text{M}_\text{r}\left(\text{X}_\text{r}\right)`).
+
+    - :math:`\text{X}_\text{r}` are temperature and other covariate
+      values for reporting period.
 
 .. _aggregation:
 
 Aggregation rules
-"""""""""""""""""
+^^^^^^^^^^^^^^^^^
 
-...
+Because even an individual project may have multiple traces describing its
+energy demand, we must be able to aggregate trace-level results before we can
+obtain project-level or portfolio-level savings. Ideally, this aggregation is
+a simple sum of trace-level values. However, trace-level results are often
+littered with messy results which must be accounted for; some may be missing
+data, have bad model fits, or have entirely failed model builds. The EEmeter
+must successfully handle each of these cases, or risk invalidating results for
+entire portfolios.
+
+The aggregation steps are as follows:
+
+1. Select scope (project, portfolio) and gather all trace data available in
+   that scope
+2. Select baseline and reporting period. For portfolio level aggregations in
+   which baseline and reporting periods may not align, select reporting period
+   type and use the default baseline period for each project.
+3. Group traces by :ref:`interpretation <glossary-trace-interpretation>`
+4. Compute :math:`E_\text{b}` and :math:`E_\text{r}`:
+
+    a. Compute (or retrieve) :math:`E_\text{t,b}` and :math:`E_\text{t,r}` for
+       each trace :math:`\text{t}`.
+    b. Determine, for each :math:`E_\text{t,b}` and :math:`E_\text{t,r}` whether
+       or not it meets :ref:`criteria <inclusion-criteria>` for
+       inclusion in aggregation.
+    c. Discard *both* :math:`E_\text{t,b}` and :math:`E_\text{t,r}` for any trace
+       for which either :math:`E_\text{t,b}` or :math:`E_\text{t,r}` has been
+       discarded.
+    d. Compute :math:`E_\text{b} = \sum_{\text{t}}E_\text{t,b}`
+       and :math:`E_\text{r} = \sum_{\text{t}}E_\text{t,r}` for remaining
+       traces. Errors are propgated according to the principles in
+       :ref:`error-propogation`.
+
+5. Compute savings from :math:`E_\text{b}` and :math:`E_\text{r}` as usual.
+
+.. _inclusion-criteria:
+
+Inclusion criteria
+""""""""""""""""""
+
+For inclusion in aggregates, :math:`E_\text{t,b}` and :math:`E_\text{t,r}` must
+meet the following criteria
+
+
+1. If :code:`ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED`, which represents solar
+   generation, is available, and if solar panels were installed as one of the
+   project interventions, blank :math:`E_\text{t,b}` should be replaced with 0.
+2. Model has been successfully built.
+
+.. _error-propogation:
+
+Error propogation
+^^^^^^^^^^^^^^^^^
+
+Errors are propgated as if they followed :math:`\chi^2` distributions.
 
 .. _weather-data-matching:
 
 Weather data matching
-"""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^
 
+Since weather and temperature data is so central to the activity of the
+EEmeter, the particulars of how weather data is obtained for a project is often
+of interest. Weather data sources are determined automatically within the
+EEmeter using an internal mapping [#]_ bewteen ZIP codes [#]_ and weather
+stations. The source of the weather normal data may differ from the source of
+the observed weather data.
 
+There is a `jupyter <https://jupyter.org/>`_ notebook outlining the process of
+constructing the weather data available
+`here <https://github.com/impactlab/eemeter/blob/master/scripts/weather_stations_zipcodes_climate_zones.ipynb>`_.
 
-:ref:`ZCTAs <glossary-zip-code-tabulation-area>`
 
 .. [#] Additional information on *why* this method is used in preference to
-   other methods is described in the introduction.
+   other methods is described in the :ref:`introduction`.
 
 .. [#] This is not quite true for
    :ref:`structural change models <glossary-structural-change-model>`. This is
    covered in more detail in :ref:`modeling-overview`.
 
+.. [#] Available `on github <https://github.com/impactlab/eemeter/tree/master/eemeter/resources>`_.
+
+.. [#] The ZIP codes used in this mapping aren't strictly ZIP codes, they're
+   actually :ref:`ZCTAs <glossary-zip-code-tabulation-area>`.

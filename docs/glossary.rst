@@ -102,6 +102,23 @@ Glossary
 - **energy trace**: see :ref:`trace <glossary-trace>`
 
 
+.. _glossary-gross-observed:
+
+- **gross observed**: an estimate of
+  :ref:`energy demand <glossary-energy-demand>` over the
+  :ref:`reporting period <glossary-reporting-period>` as given by
+  :ref:`baseline <glossary-baseline>` models and observed values from the
+  reporting period.
+
+
+.. _glossary-gross-predicted:
+
+- **gross predicted**: an estimate of
+  :ref:`energy demand <glossary-energy-demand>` as given by the
+  :ref:`baseline <glossary-baseline>` and reporting models evaluated over the
+  :ref:`reporting period <glossary-reporting-period>`.
+
+
 .. _glossary-intervention:
 
 - **intervention**: a set of upgrades or performance improvements on physical
