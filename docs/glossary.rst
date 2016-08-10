@@ -1,6 +1,10 @@
 Glossary
 --------
 
+.. _glossary-annualized-weather-normal:
+
+- **annualized weather normal**: an estimate of annual energy demand under a
+  :ref:`weather normal <glossary-weather-normal>`.
 
 .. _glossary-baseline:
 
@@ -106,6 +110,16 @@ Glossary
   living in an existing building.
 
 
+.. _glossary-modeling-period:
+
+- **modeling period**: a period of time over which an
+  :ref:`energy model <glossary-energy-model>` is to be created for a
+  particular :ref:`trace <glossary-trace>`. This is a generalization of
+  :ref:`baseline <glossary-baseline-period>` and
+  :ref:`reporting <glossary-reporting-period>` periods. Modeling periods
+  generally fall into one of those two categories.
+
+
 .. _glossary-projected-baseline-energy-demand:
 
 - **projected baseline energy demand**: a counterfactual estimate of
@@ -135,6 +149,15 @@ Glossary
 - **retrofit**: a set of :ref:`interventions <glossary-intervention>` taking
   place at a particular building or site which modify pre-existing
   structures, installations or appliances.
+
+
+.. _glossary-structural-change-model:
+
+- **structural change model**: a model which takes tries to determine the
+  most probably extents of :ref:`baseline <glossary-baseline-period>` and
+  :ref:`reporting <glossary-reporting-period>` periods for a
+  :ref:`project <glossary-project>` given its :ref:`trace <glossary-trace>`
+  data.
 
 
 .. _glossary-trace:
