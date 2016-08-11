@@ -21,4 +21,9 @@ with a `PostgreSQL <https://www.postgresql.org/>`_ database.
 .. toctree::
    :maxdepth: 4
 
+   datastore_topics
+
+.. toctree::
+   :maxdepth: 4
+
    datastore_api

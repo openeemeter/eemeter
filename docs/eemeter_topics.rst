@@ -4,4 +4,9 @@ Topics
 .. toctree::
    :maxdepth: 2
 
-   weather_caching
+   eemeter_basic_usage
+
+.. toctree::
+   :maxdepth: 2
+
+   eemeter_weather_caching
