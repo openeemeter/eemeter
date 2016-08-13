@@ -1,4 +1,5 @@
 import logging
+import traceback
 
 import numpy as np
 
@@ -68,7 +69,8 @@ class SplitModeledEnergyTrace(object):
                     .format(self.trace.interpretation, modeling_period_label,
                             model)
                 )
-                outputs = {"status": "FAILURE"}
+                tb = traceback.format_exc()
+                outputs = {"status": "FAILURE", "traceback": tb}
                 self.fit_outputs[modeling_period_label] = outputs
                 continue
 
@@ -81,7 +83,9 @@ class SplitModeledEnergyTrace(object):
                     .format(self.trace.interpretation, modeling_period_label,
                             model, input_data)
                 )
-                outputs = {"status": "FAILURE"}
+
+                tb = traceback.format_exc()
+                outputs = {"status": "FAILURE", "traceback": tb}
             else:
                 logger.info(
                     'Successfully fitted {} to formatted input data for'
