@@ -4,17 +4,12 @@ Guides
 .. toctree::
    :maxdepth: 2
 
-   installation
+   introduction
 
 .. toctree::
    :maxdepth: 2
 
-   quickstart
-
-.. toctree::
-   :maxdepth: 2
-
-   loading_data
+   background
 
 .. toctree::
    :maxdepth: 2
@@ -24,14 +19,19 @@ Guides
 .. toctree::
    :maxdepth: 2
 
+   methods_overview
+
+.. toctree::
+   :maxdepth: 2
+
+   modeling_overview
+
+.. toctree::
+   :maxdepth: 2
+
    glossary
 
 .. toctree::
    :maxdepth: 2
 
-   weather_caching
-
-.. toctree::
-   :maxdepth: 2
-
-   development
+   open_source
