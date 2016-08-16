@@ -77,6 +77,11 @@ def test_basic_usage(trace, modeling_period_set, mock_isd_weather_source):
     assert 'modeling_period_2' in smet.fit_outputs
     assert len(smet.fit_outputs) == 2
     assert outputs['modeling_period_1']['status'] == 'SUCCESS'
+    assert outputs['modeling_period_1']['start_date'] == \
+        datetime(2000, 1, 1, tzinfo=pytz.UTC)
+    assert outputs['modeling_period_1']['end_date'] == \
+        datetime(2000, 9, 1, tzinfo=pytz.UTC)
+    assert outputs['modeling_period_1']['n_rows'] == 245
 
     index = pd.date_range('2001-01-01', periods=6, freq='D', tz=pytz.UTC)
 

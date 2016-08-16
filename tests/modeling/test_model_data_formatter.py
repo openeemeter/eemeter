@@ -51,6 +51,13 @@ def test_basic_daily(daily_trace, mock_isd_weather_source):
     assert_allclose(df.energy, [1, 1, np.nan])
     assert_allclose(df.tempF, [32., 32., 32.])
 
+    description = mdf.describe_input(df)
+    assert description.get('start_date') == \
+        datetime(2000, 1, 1, tzinfo=pytz.UTC)
+    assert description.get('end_date') == \
+        datetime(2000, 1, 3, tzinfo=pytz.UTC)
+    assert description.get('n_rows') == 3
+
 
 def test_basic_hourly(hourly_trace, mock_isd_weather_source):
     mdf = ModelDataFormatter("H")
@@ -63,6 +70,13 @@ def test_basic_hourly(hourly_trace, mock_isd_weather_source):
     assert df.index.freq == 'H'
     assert_allclose(df.energy, [1, 1, np.nan])
     assert_allclose(df.tempF, [32., 32., 32.])
+
+    description = mdf.describe_input(df)
+    assert description.get('start_date') == \
+        datetime(2000, 1, 1, 0, tzinfo=pytz.UTC)
+    assert description.get('end_date') == \
+        datetime(2000, 1, 1, 2, tzinfo=pytz.UTC)
+    assert description.get('n_rows') == 3
 
 
 def test_basic_hourly_to_daily(hourly_trace, mock_isd_weather_source):
@@ -113,3 +127,11 @@ def test_hourly_demand_fixture(hourly_trace, mock_isd_weather_source):
 def test_repr():
     mdf = ModelDataFormatter("H")
     assert str(mdf) == 'ModelDataFormatter("H")'
+
+
+def test_empty_description():
+    mdf = ModelDataFormatter("H")
+    description = mdf.describe_input(pd.DataFrame())
+    assert description['start_date'] is None
+    assert description['end_date'] is None
+    assert description['n_rows'] is 0

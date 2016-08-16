@@ -2,7 +2,54 @@ import pandas as pd
 from pandas.tseries.frequencies import to_offset
 
 
-class ModelDataFormatter(object):
+class FormatterBase(object):
+
+    def create_input(self, trace, weather_source):
+        message = (
+            "Inheriting classes must implement the `create_input(` method."
+        )
+        raise NotImplementedError(message)
+
+    def create_demand_fixture(self, index, weather_source):
+        message = (
+            'Inheriting classes must implement the'
+            ' `create_demand_fixture(` method.'
+        )
+        raise NotImplementedError(message)
+
+    def _get_start_date(self, input_data):
+        return None
+
+    def _get_end_date(self, input_data):
+        return None
+
+    def _get_n_rows(self, input_data):
+        return 0
+
+    def describe_input(self, input_data):
+        ''' Describes input data in a consistent format.
+
+        Parameters
+        ----------
+        input_data : pandas.DataFrame
+            input_data as given by `self.create_input(trace, weather_source)`
+
+        Returns
+        -------
+        description : dict
+
+            - **start_date**: earliest date of input data.
+            - **end_date**: latest date of input data.
+            - **n_rows**: number of rows of data.
+        '''
+        return {
+            "start_date": self._get_start_date(input_data),
+            "end_date": self._get_end_date(input_data),
+            "n_rows": self._get_n_rows(input_data),
+        }
+
+
+class ModelDataFormatter(FormatterBase):
     ''' Formatter for model data of known or predictable frequency.
     Basic usage:
 
@@ -86,8 +133,21 @@ class ModelDataFormatter(object):
         tempF = weather_source.indexed_temperatures(index, "degF")
         return pd.DataFrame({"tempF": tempF})
 
+    def _get_start_date(self, input_data):
+        if input_data.shape[0] >= 1:
+            return input_data.index[0]
+        return None
 
-class ModelDataBillingFormatter():
+    def _get_end_date(self, input_data):
+        if input_data.shape[0] >= 1:
+            return input_data.index[-1]
+        return None
+
+    def _get_n_rows(self, input_data):
+        return input_data.shape[0]
+
+
+class ModelDataBillingFormatter(FormatterBase):
     ''' Formatter for model data of unknown or unpredictable frequency.
     Basic usage:
 
@@ -221,3 +281,19 @@ formatter.create_input(energy_trace, weather_source)
         '''
         tempF = weather_source.indexed_temperatures(index, "degF")
         return pd.DataFrame({"tempF": tempF})
+
+    def _get_start_date(self, input_data):
+        unestimated_trace_data, temp_data = input_data
+        if unestimated_trace_data.shape[0] >= 1:
+            return unestimated_trace_data.index[0]
+        return None
+
+    def _get_end_date(self, input_data):
+        unestimated_trace_data, temp_data = input_data
+        if unestimated_trace_data.shape[0] >= 1:
+            return unestimated_trace_data.index[-1]
+        return None
+
+    def _get_n_rows(self, input_data):
+        unestimated_trace_data, temp_data = input_data
+        return unestimated_trace_data.shape[0]

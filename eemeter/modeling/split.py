@@ -69,13 +69,24 @@ class SplitModeledEnergyTrace(object):
                     .format(self.trace.interpretation, modeling_period_label,
                             model)
                 )
-                tb = traceback.format_exc()
-                outputs = {"status": "FAILURE", "traceback": tb}
-                self.fit_outputs[modeling_period_label] = outputs
+                self.fit_outputs[modeling_period_label] = {
+                    "status": "FAILURE",
+                    "traceback": traceback.format_exc(),
+                    "start_date": None,
+                    "end_date": None,
+                    "rows": None,
+                }
                 continue
+            else:
+                input_description = self.formatter.describe_input(input_data)
+                outputs = {
+                    "start_date": input_description.get('start_date'),
+                    "end_date": input_description.get('end_date'),
+                    "n_rows": input_description.get('n_rows'),
+                }
 
             try:
-                outputs = model.fit(input_data)
+                outputs.update(model.fit(input_data))
             except:
                 logger.warn(
                     'For trace "{}" and modeling_period "{}", {} was not'
@@ -84,8 +95,10 @@ class SplitModeledEnergyTrace(object):
                             model, input_data)
                 )
 
-                tb = traceback.format_exc()
-                outputs = {"status": "FAILURE", "traceback": tb}
+                outputs.update({
+                    "status": "FAILURE",
+                    "traceback": traceback.format_exc(),
+                })
             else:
                 logger.info(
                     'Successfully fitted {} to formatted input data for'
@@ -93,7 +106,7 @@ class SplitModeledEnergyTrace(object):
                     .format(model, self.trace.interpretation,
                             modeling_period_label)
                 )
-                outputs["status"] = "SUCCESS"
+                outputs.update({"status": "SUCCESS"})
 
             self.fit_outputs[modeling_period_label] = outputs
 
