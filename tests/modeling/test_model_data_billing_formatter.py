@@ -69,18 +69,33 @@ def trace3():
 
 def test_basic_daily(trace1, mock_isd_weather_source):
     mdbf = ModelDataBillingFormatter()
-    trace_data, temperature_data = mdbf.create_input(
+    input_data = mdbf.create_input(
         trace1, mock_isd_weather_source)
+
+    trace_data, temperature_data = input_data
     assert trace_data.shape == (4,)
     assert temperature_data.shape == (2832, 1)
+
+    description = mdbf.describe_input(input_data)
+    assert description.get('start_date') == \
+        datetime(2011, 1, 1, tzinfo=pytz.UTC)
+    assert description.get('end_date') == \
+        datetime(2011, 4, 29, tzinfo=pytz.UTC)
+    assert description.get('n_rows') == 4
 
 
 def test_empty(trace2, mock_isd_weather_source):
     mdbf = ModelDataBillingFormatter()
-    trace_data, temperature_data = mdbf.create_input(
+    input_data = mdbf.create_input(
         trace2, mock_isd_weather_source)
+    trace_data, temperature_data = input_data
     assert trace_data.shape == (0,)
     assert temperature_data.shape == (0,)
+
+    description = mdbf.describe_input(input_data)
+    assert description.get('start_date') is None
+    assert description.get('end_date') is None
+    assert description.get('n_rows') == 0
 
 
 def test_small(trace3, mock_isd_weather_source):
