@@ -1,8 +1,8 @@
 Open Energy Efficiency Meter
 ============================
 
-![Build status](https://travis-ci.org/impactlab/eemeter.svg?branch=develop)
-[![Coverage Status](https://coveralls.io/repos/github/impactlab/eemeter/badge.svg?branch=develop)](https://coveralls.io/github/impactlab/eemeter?branch=develop)
+![Build status](https://travis-ci.org/openeemeter/eemeter.svg?branch=develop)
+[![Coverage Status](https://coveralls.io/repos/github/openeemeter/eemeter/badge.svg?branch=develop)](https://coveralls.io/github/openeemeter/eemeter?branch=develop)
 
 Documentation
 -------------
@@ -12,7 +12,7 @@ Docs on [RTD](http://eemeter.readthedocs.org/en/latest/).
 Dev Installation
 ----------------
 
-    $ git clone https://github.com/impactlab/eemeter
+    $ git clone https://github.com/openeemeter/eemeter
     $ cd eemeter
     $ mkvirtualenv eemeter
     (eemeter)$ pip install -e .

@@ -10,7 +10,7 @@ setup(
     long_description=(
         "Standard methods for calculating energy efficiency savings."
     ),
-    url='https://github.com/impactlab/eemeter/',
+    url='https://github.com/openeemeter/eemeter/',
     author='Matt Gee, Phil Ngo, Brandon Willard',
     license='MIT',
     classifiers=[
@@ -23,7 +23,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'holidays',
-        'lxml',
+        'lxml <= 3.6.1',
         'numpy',
         'pandas >= 0.18',
         'patsy',

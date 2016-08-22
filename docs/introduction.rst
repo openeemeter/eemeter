@@ -9,11 +9,11 @@ customer accounts. The software package consists of three main parts:
 
 1. an Extract-Transform-Load (ETL) toolkit for processing project,
    energy, and building data
-   (`github <https://github.com/impactlab/oeem-etl/>`_);
+   (`github <https://github.com/openeemeter/etl/>`_);
 2. a core calculation library (this package) that implements standardized
-   methods (`github <https://github.com/impactlab/eemeter/>`_); and
+   methods (`github <https://github.com/openeemeter/eemeter/>`_); and
 3. a datastore application for storing post-ETL inputs and computed outputs
-   (`github <https://github.com/impactlab/oeem-energy-datastore/>`_).
+   (`github <https://github.com/openeemeter/datastore/>`_).
 
 More information about this architecture can be found in
 :ref:`architecture-overview`.
