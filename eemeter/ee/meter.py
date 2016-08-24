@@ -266,6 +266,7 @@ class EnergyEfficiencyMeter(object):
                                 'REPORTING': {
                                     output_key: reporting_output,
                                 },
+                                'unit': target_unit,
                             }
                         else:
                             old_baseline_output = \
