@@ -84,13 +84,16 @@ def test_basic_usage(project, mock_tmy3_weather_source):
     all_fuels = project_derivatives['ALL_FUELS_CONSUMPTION_SUPPLIED']
     elec = project_derivatives['ELECTRICITY_CONSUMPTION_SUPPLIED']
 
+    assert all_fuels['unit'] == "KWH"
+    assert elec['unit'] == "KWH"
+
     assert len(all_fuels['BASELINE']['annualized_weather_normal']) == 4
     assert len(all_fuels['REPORTING']['annualized_weather_normal']) == 4
-    assert len(elec['BASELINE']['annualized_weather_normal']) == 4
-    assert len(elec['REPORTING']['annualized_weather_normal']) == 4
-
     assert len(all_fuels['BASELINE']['gross_predicted']) == 4
     assert len(all_fuels['REPORTING']['gross_predicted']) == 4
+
+    assert len(elec['BASELINE']['annualized_weather_normal']) == 4
+    assert len(elec['REPORTING']['annualized_weather_normal']) == 4
     assert len(elec['BASELINE']['gross_predicted']) == 4
     assert len(elec['REPORTING']['gross_predicted']) == 4
 

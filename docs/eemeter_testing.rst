@@ -6,7 +6,7 @@ and in a virtual environment execute the following commands:
 
 .. code-block:: bash
 
-    $ git clone https://github.com/impactlab/eemeter
+    $ git clone https://github.com/openeemeter/eemeter
     $ cd eemeter
     $ mkvirtualenv eemeter
     $ pip install -r dev_requirements.txt

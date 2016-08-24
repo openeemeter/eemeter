@@ -6,8 +6,8 @@ Clone the repo and change directories
 
 .. code-block:: bash
 
-    git clone git@github.com:impactlab/oeem-energy-datastore.git
-    cd oeem-energy-datastore
+    git clone git@github.com:openeemeter/datastore.git
+    cd datastore
 
 Install required python packages
 """"""""""""""""""""""""""""""""
@@ -16,7 +16,7 @@ We recommend using virtualenv (or virtualenvwrapper) to manage python packages
 
 .. code-block:: bash
 
-    mkvirtualenv oeem-energy-datastore
+    mkvirtualenv datastore
     pip install -r requirements.txt
     pip install -r dev-requirements.txt
 
@@ -52,10 +52,10 @@ virtualenv postactivate script:
 
 .. code-block:: bash
 
-    vim /path/to/virtualenvs/oeem-energy-datastore/bin/postactivate
+    vim /path/to/virtualenvs/datastore/bin/postactivate
 
     # Refresh environment
-    workon oeem-energy-datastore
+    workon datastore
 
 Run database migrations
 """""""""""""""""""""""

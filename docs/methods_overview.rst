@@ -305,7 +305,7 @@ the observed weather data.
 
 There is a `jupyter <https://jupyter.org/>`_ notebook outlining the process of
 constructing the weather data available
-`here <https://github.com/impactlab/eemeter/blob/master/scripts/weather_stations_zipcodes_climate_zones.ipynb>`_.
+`here <https://github.com/openeemeter/eemeter/blob/master/scripts/weather_stations_zipcodes_climate_zones.ipynb>`_.
 
 
 .. [#] Additional information on *why* this method is used in preference to
@@ -315,7 +315,7 @@ constructing the weather data available
    :ref:`structural change models <glossary-structural-change-model>`. This is
    covered in more detail in :ref:`modeling-overview`.
 
-.. [#] Available `on github <https://github.com/impactlab/eemeter/tree/master/eemeter/resources>`_.
+.. [#] Available `on github <https://github.com/openeemeter/eemeter/tree/master/eemeter/resources>`_.
 
 .. [#] The ZIP codes used in this mapping aren't strictly ZIP codes, they're
    actually :ref:`ZCTAs <glossary-zip-code-tabulation-area>`.

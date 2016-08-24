@@ -17,9 +17,9 @@ application (see :ref:`eemeter`).
 Each of these components are open sourced under an MIT License and can be found
 on github:
 
- - `eemeter <https://github.com/impactlab/eemeter/>`_
- - `datastore <https://github.com/impactlab/oeem-energy-datastore/>`_
- - `etl <https://github.com/impactlab/oeem-etl/>`_
+ - `eemeter <https://github.com/openeemeter/eemeter/>`_
+ - `datastore <https://github.com/openeemeter/datastore/>`_
+ - `etl <https://github.com/openeemeter/etl/>`_
 
 The core calculation engine is separated from the datastore in order to allow
 easier development of and evaluation of its methods, but this architecture
