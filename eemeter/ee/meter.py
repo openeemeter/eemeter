@@ -665,24 +665,83 @@ class EnergyEfficiencyMeterTraceCentric(object):
 
 class Aggregator(object):
     """
-    Enforces trace interpretation uniformity
+    Enforces trace interpretation uniformity, aggregates according to the
+    aggregation rules supplied.
     """
 
-    def __init__(self, func):
+    def __init__(self, func,
+                 baseline_default_value=None,
+                 reporting_default_value=None):
         self.func = func
+        self.baseline_default_value = baseline_default_value
+        self.reporting_default_value = reporting_default_value
 
     def _validate_interpretation(self, derivative_pairs,
                                  target_interpretation):
         for d in derivative_pairs:
-            if d.interpretation != self.target_interpretation:
+            if d.interpretation != target_interpretation:
                 message = (
                     "DerivativePair interpretation ({}) does not match"
                     " target_interpretation ({})."
-                    .format(d.interpretation, self.target_interpretation)
+                    .format(d.interpretation, target_interpretation)
                 )
-                raise ValueError()
+                raise ValueError(message)
+
+    def _get_valid_derivatives(self, derivative_pairs):
+        baseline_derivatives, reporting_derivatives = [], []
+        n_valid = 0
+        n_invalid = 0
+
+        for pair in derivative_pairs:
+            baseline_derivative = pair.baseline
+            if baseline_derivative is None:
+                if self.baseline_default_value is not None:
+                    baseline_derivative = self.baseline_default_value
+
+            reporting_derivative = pair.reporting
+            if reporting_derivative is None:
+                if self.reporting_default_value is not None:
+                    reporting_derivative = self.reporting_default_value
+
+            if baseline_derivative is not None and \
+                    reporting_derivative is not None:
+                baseline_derivatives.append(baseline_derivative)
+                reporting_derivatives.append(reporting_derivative)
+                n_valid += 1
+            else:
+                n_invalid += 1
+
+        return baseline_derivatives, reporting_derivatives, n_valid, n_invalid
+
+    def _aggregate(self, derivatives):
+        if len(derivatives) == 0:
+            return None
+
+        aggregated = derivatives[0]
+        for d in derivatives[1:]:
+            aggregated = self.func(aggregated, d)
+        return aggregated
 
     def aggregate(self, derivative_pairs, target_interpretation):
         ''' Aggregates derivative pairs
+
+        Parameters
+        ----------
+        derivative_pairs : list of eemeter.ee.meter.Derivative
+            Derivative pairs to be aggregated.
+        target_interpretation : str
+            Interpretation of derivatives.
         '''
-        _validate_interpretation(derivative_pairs, target_interpretation)
+        self._validate_interpretation(derivative_pairs, target_interpretation)
+
+        baseline_derivatives, reporting_derivatives, n_valid, n_invalid = \
+            self._get_valid_derivatives(derivative_pairs)
+
+        baseline_aggregation = self._aggregate(baseline_derivatives)
+        reporting_aggregation = self._aggregate(reporting_derivatives)
+
+        aggregated = DerivativePair(
+            target_interpretation, baseline_aggregation, reporting_aggregation
+        )
+
+        return aggregated, n_valid, n_invalid
