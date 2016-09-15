@@ -1,41 +1,29 @@
 import pytest
 
-from eemeter.structures import (
-    Project,
-    ZIPCodeSite,
-    EnergyTraceSet,
-)
+from eemeter.structures import ZIPCodeSite
 
 from eemeter.processors.location import get_weather_normal_source
 
 
 @pytest.fixture
-def project():
-    ets = EnergyTraceSet({})
-    interventions = []
-    site = ZIPCodeSite("91104")
-    project = Project(ets, interventions, site)
-    return project
+def site():
+    return ZIPCodeSite("91104")
 
 
 @pytest.fixture
-def project_bad_zip():
-    ets = EnergyTraceSet({})
-    interventions = []
-    site = ZIPCodeSite("00000")
-    project = Project(ets, interventions, site)
-    return project
+def site_bad_zip():
+    return ZIPCodeSite("00000")
 
 
-def test_basic_usage(project):
+def test_basic_usage(site):
 
-    ws = get_weather_normal_source(project)
+    ws = get_weather_normal_source(site)
 
     assert ws.station == '722880'
 
 
-def test_bad_zip(project_bad_zip):
+def test_bad_zip(site_bad_zip):
 
-    ws = get_weather_normal_source(project_bad_zip)
+    ws = get_weather_normal_source(site_bad_zip)
 
     assert ws is None

@@ -10,13 +10,13 @@ from eemeter.weather.tmy3 import TMY3WeatherSource
 logger = logging.getLogger(__name__)
 
 
-def get_weather_source(project):
+def get_weather_source(site):
     ''' Finds most relevant WeatherSource given project site.
 
     Parameters
     ----------
-    project : eemeter.structures.Project
-        Project for which to find weather source data.
+    site : eemeter.structures.ZIPCodeSite
+        Site to match to weather source data.
 
     Returns
     -------
@@ -25,7 +25,7 @@ def get_weather_source(project):
         project ZIP code, if available.
     '''
 
-    zipcode = project.site.zipcode
+    zipcode = site.zipcode
     station = zipcode_to_usaf_station(zipcode)
 
     if station is None:
@@ -54,13 +54,13 @@ def get_weather_source(project):
     return weather_source
 
 
-def get_weather_normal_source(project):
+def get_weather_normal_source(site):
     ''' Finds most relevant WeatherSource given project site.
 
     Parameters
     ----------
-    project : eemeter.structures.Project
-        Project for which to find weather source data.
+    site : eemeter.structures.ZIPCodeSite
+        Site to match to weather source data.
 
     Returns
     -------
@@ -69,7 +69,7 @@ def get_weather_normal_source(project):
         project ZIP code, if available.
     '''
 
-    zipcode = project.site.zipcode
+    zipcode = site.zipcode
     station = zipcode_to_tmy3_station(zipcode)
 
     if station is None:
