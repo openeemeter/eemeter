@@ -1,7 +1,18 @@
 from datetime import datetime
+from collections import namedtuple
 
 import pandas as pd
 import pytz
+
+
+DerivativePair = namedtuple('DerivativePair', [
+    'interpretation', 'baseline', 'reporting'
+])
+
+
+Derivative = namedtuple('Derivative', [
+    'label', 'value', 'lower', 'upper', 'n'
+])
 
 
 def annualized_weather_normal(formatter, model, weather_normal_source):

@@ -1,5 +1,6 @@
 import pytest
-from eemeter.ee.meter import DerivativePair, Derivative, Aggregator
+from eemeter.ee.derivatives import DerivativePair, Derivative
+from eemeter.ee.aggregate import Aggregator
 
 
 @pytest.fixture
@@ -18,16 +19,49 @@ def derivative_pairs():
     ]
 
 
-def test_basic_usage(derivative_pairs):
+@pytest.fixture
+def derivative_pairs_mixed_interpretation():
+    return [
+        DerivativePair(
+            "interpretation1",
+            Derivative("1", 10, 3, 3, 5),
+            Derivative("2", 10, 6, 6, 5),
+        ),
+        DerivativePair(
+            "interpretation2",
+            Derivative("1", 10, 4, 4, 5),
+            Derivative("2", 10, 8, 8, 5),
+        ),
+    ]
 
-    def sum_func(d1, d2):
-        return Derivative(
+
+@pytest.fixture
+def derivative_pairs_one_empty():
+    return [
+        DerivativePair(
+            "interpretation",
             None,
-            d1.value + d2.value,
-            (d1.lower**2 + d2.lower**2)**0.5,
-            (d1.upper**2 + d2.upper**2)**0.5,
-            d1.n + d2.n,
-        )
+            Derivative("2", 10, 3, 3, 5),
+        ),
+        DerivativePair(
+            "interpretation",
+            Derivative("1", 10, 4, 4, 5),
+            Derivative("2", 10, 8, 8, 5),
+        ),
+    ]
+
+
+def sum_func(d1, d2):
+    return Derivative(
+        None,
+        d1.value + d2.value,
+        (d1.lower**2 + d2.lower**2)**0.5,
+        (d1.upper**2 + d2.upper**2)**0.5,
+        d1.n + d2.n,
+    )
+
+
+def test_basic_usage(derivative_pairs):
 
     aggregator = Aggregator(sum_func)
     derivative_pair, n_valid, n_invalid = \
@@ -51,3 +85,39 @@ def test_basic_usage(derivative_pairs):
     assert reporting.lower == 10
     assert reporting.upper == 10
     assert reporting.n == 10
+
+
+def test_mixed_interpretaiton_fails(derivative_pairs_mixed_interpretation):
+
+    aggregator = Aggregator(sum_func)
+
+    with pytest.raises(ValueError):
+        derivative_pair, n_valid, n_invalid = \
+            aggregator.aggregate(derivative_pairs_mixed_interpretation,
+                                 "interpretation1")
+
+
+def test_missing(derivative_pairs_one_empty):
+
+    aggregator = Aggregator(sum_func)
+
+    derivative_pair, n_valid, n_invalid = \
+        aggregator.aggregate(derivative_pairs_one_empty,
+                             "interpretation")
+
+    assert n_valid == 1
+    assert n_invalid == 1
+
+
+def test_missing_with_default(derivative_pairs_one_empty):
+
+    aggregator = Aggregator(sum_func, baseline_default_value=Derivative(
+        None, 0, 0, 0, 0
+    ))
+
+    derivative_pair, n_valid, n_invalid = \
+        aggregator.aggregate(derivative_pairs_one_empty,
+                             "interpretation")
+
+    assert n_valid == 2
+    assert n_invalid == 0
