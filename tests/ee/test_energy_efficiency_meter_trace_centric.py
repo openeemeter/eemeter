@@ -99,7 +99,18 @@ def test_basic_usage(energy_trace, site, modeling_period_set,
     assert results["formatter_kwargs"] is not None
 
     assert results["modeled_energy_trace"] is not None
+
     assert len(results["derivatives"]) == 2
+    results["derivatives"][0].interpretation == "annualized_weather_normal"
+    results["derivatives"][0].baseline.label == "modeling_period_1"
+    results["derivatives"][0].reporting.label == "modeling_period_2"
+    results["derivatives"][0].baseline.value > 0
+    results["derivatives"][0].reporting.value > 0
+    results["derivatives"][1].interpretation == "gross_predicted"
+    results["derivatives"][1].baseline.label == "modeling_period_1"
+    results["derivatives"][1].reporting.label == "modeling_period_2"
+    results["derivatives"][1].baseline.value > 0
+    results["derivatives"][1].reporting.value > 0
 
     assert results["weather_source_station"] == '722880'
     assert results["weather_normal_source_station"] == '724838'

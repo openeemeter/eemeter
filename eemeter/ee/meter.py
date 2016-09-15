@@ -373,9 +373,7 @@ class EnergyEfficiencyMeterTraceCentric(object):
     def __init__(self, default_model_mapping=None, default_formatter_mapping=None):
 
         if default_formatter_mapping is None:
-            daily_formatter = (ModelDataFormatter, {
-                'freq_str': 'D'
-            })
+            daily_formatter = (ModelDataFormatter, {'freq_str': 'D'})
             billing_formatter = (ModelDataBillingFormatter, {})
             default_formatter_mapping = {
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '15T'): daily_formatter,
@@ -555,7 +553,7 @@ class EnergyEfficiencyMeterTraceCentric(object):
                 return output
         else:
             FormatterClass, formatter_kwargs = formatter
-        formatter_instance = FormatterClass(formatter_kwargs)
+        formatter_instance = FormatterClass(**formatter_kwargs)
         output["formatter_class"] = FormatterClass.__name__
         output["formatter_kwargs"] = formatter_kwargs
 
@@ -593,7 +591,7 @@ class EnergyEfficiencyMeterTraceCentric(object):
         }
 
         modeled_energy_trace = SplitModeledEnergyTrace(
-            trace, formatter, model_mapping, modeling_period_set)
+            trace, formatter_instance, model_mapping, modeling_period_set)
 
         modeled_energy_trace.fit(weather_source)
         output["modeled_energy_trace"] = modeled_energy_trace
@@ -622,7 +620,8 @@ class EnergyEfficiencyMeterTraceCentric(object):
                         .compute_derivative(
                             baseline_label, derivative_func, **kwargs)
                     if baseline_derivative is not None:
-                        value, lower, upper, n = derivative[interpretation]
+                        value, lower, upper, n = \
+                            baseline_derivative[interpretation]
                         baseline_derivative = Derivative(
                             baseline_label, value, lower, upper, n
                         )
@@ -633,7 +632,8 @@ class EnergyEfficiencyMeterTraceCentric(object):
                         .compute_derivative(
                             reporting_label, derivative_func, **kwargs)
                     if reporting_derivative is not None:
-                        value, lower, upper, n = derivative[interpretation]
+                        value, lower, upper, n = \
+                            reporting_derivative[interpretation]
                         reporting_derivative = Derivative(
                             reporting_label, value, lower, upper, n
                         )
