@@ -43,9 +43,13 @@ class BaseSerializer(object):
         if self.parse_dates:
             dts = [dateutil.parser.parse(dt) for dt in dts]
 
+        index = pd.DatetimeIndex(dts)
+        if index.shape[0] > 0:
+            index = index.tz_convert(pytz.UTC)
+
         df = pd.DataFrame(
             {"value": values, "estimated": estimateds},
-            index=pd.DatetimeIndex(dts).tz_localize(pytz.UTC),
+            index=index,
             columns=["value", "estimated"],
         )
         df.value = df.value.astype(float)
