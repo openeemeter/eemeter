@@ -1,4 +1,14 @@
-from eemeter.ee.derivatives import DerivativePair
+from eemeter.ee.derivatives import DerivativePair, Derivative
+
+
+def sum_func(d1, d2):
+    return Derivative(
+        None,
+        d1.value + d2.value,
+        (d1.lower**2 + d2.lower**2)**0.5,
+        (d1.upper**2 + d2.upper**2)**0.5,
+        d1.n + d2.n,
+    )
 
 
 class Aggregator(object):
@@ -6,11 +16,15 @@ class Aggregator(object):
     Enforces trace interpretation uniformity, aggregates according to the
     aggregation rules supplied.
     """
+    aggregation_functions = {
+        "SUM": sum_func,
+    }
 
-    def __init__(self, func,
+
+    def __init__(self, aggregation_function="SUM",
                  baseline_default_value=None,
                  reporting_default_value=None):
-        self.func = func
+        self.func = self.aggregation_functions[aggregation_function]
         self.baseline_default_value = baseline_default_value
         self.reporting_default_value = reporting_default_value
 

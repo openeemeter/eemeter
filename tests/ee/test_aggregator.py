@@ -51,19 +51,9 @@ def derivative_pairs_one_empty():
     ]
 
 
-def sum_func(d1, d2):
-    return Derivative(
-        None,
-        d1.value + d2.value,
-        (d1.lower**2 + d2.lower**2)**0.5,
-        (d1.upper**2 + d2.upper**2)**0.5,
-        d1.n + d2.n,
-    )
-
-
 def test_basic_usage(derivative_pairs):
 
-    aggregator = Aggregator(sum_func)
+    aggregator = Aggregator("SUM")
     derivative_pair, n_valid, n_invalid = \
         aggregator.aggregate(derivative_pairs, "interpretation")
 
@@ -89,7 +79,7 @@ def test_basic_usage(derivative_pairs):
 
 def test_mixed_interpretaiton_fails(derivative_pairs_mixed_interpretation):
 
-    aggregator = Aggregator(sum_func)
+    aggregator = Aggregator()
 
     with pytest.raises(ValueError):
         derivative_pair, n_valid, n_invalid = \
@@ -99,7 +89,7 @@ def test_mixed_interpretaiton_fails(derivative_pairs_mixed_interpretation):
 
 def test_missing(derivative_pairs_one_empty):
 
-    aggregator = Aggregator(sum_func)
+    aggregator = Aggregator()
 
     derivative_pair, n_valid, n_invalid = \
         aggregator.aggregate(derivative_pairs_one_empty,
@@ -111,7 +101,7 @@ def test_missing(derivative_pairs_one_empty):
 
 def test_missing_with_default(derivative_pairs_one_empty):
 
-    aggregator = Aggregator(sum_func, baseline_default_value=Derivative(
+    aggregator = Aggregator(baseline_default_value=Derivative(
         None, 0, 0, 0, 0
     ))
 

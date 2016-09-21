@@ -25,6 +25,8 @@ from eemeter.ee.derivatives import (
     Derivative
 )
 
+from eemeter.io.serializers import deserialize_meter_input
+
 logger = logging.getLogger(__name__)
 
 
@@ -125,15 +127,19 @@ class EnergyEfficiencyMeter(object):
                     awn = modeled_energy_trace.compute_derivative(
                         baseline_label,
                         annualized_weather_normal,
-                        weather_normal_source=weather_normal_source)
+                        {
+                            "weather_normal_source": weather_normal_source,
+                        })
                     if awn is not None:
                         period_derivatives["BASELINE"].update(awn)
 
                     gp = modeled_energy_trace.compute_derivative(
                         baseline_label,
                         gross_predicted,
-                        weather_source=weather_source,
-                        reporting_period=reporting_period)
+                        {
+                            "weather_source": weather_source,
+                            "reporting_period": reporting_period,
+                        })
                     if gp is not None:
                         period_derivatives["BASELINE"].update(gp)
 
@@ -141,15 +147,19 @@ class EnergyEfficiencyMeter(object):
                     awn = modeled_energy_trace.compute_derivative(
                         reporting_label,
                         annualized_weather_normal,
-                        weather_normal_source=weather_normal_source)
+                        {
+                            "weather_normal_source": weather_normal_source,
+                        })
                     if awn is not None:
                         period_derivatives["REPORTING"].update(awn)
 
                     gp = modeled_energy_trace.compute_derivative(
                         reporting_label,
                         gross_predicted,
-                        weather_source=weather_source,
-                        reporting_period=reporting_period)
+                        {
+                            "weather_source": weather_source,
+                            "reporting_period": reporting_period,
+                        })
                     if gp is not None:
                         period_derivatives["REPORTING"].update(gp)
 
@@ -424,7 +434,7 @@ class EnergyEfficiencyMeterTraceCentric(object):
         self.default_formatter_mapping = default_formatter_mapping
         self.default_model_mapping = default_model_mapping
 
-    def evaluate(self, trace, site, modeling_period_set=None, formatter=None,
+    def evaluate(self, meter_input, formatter=None,
                  model=None, weather_source=None, weather_normal_source=None):
         ''' Main entry point to the meter, which models traces and calculates
         derivatives.
@@ -492,7 +502,48 @@ class EnergyEfficiencyMeterTraceCentric(object):
             "weather_normal_source_station": None,
         }
 
-        # Step 1: Match weather
+        # Step 1: Deserialize input and validate
+        deserialized_input = deserialize_meter_input(meter_input)
+        if "error" in deserialized_input:
+            message = (
+                "Meter input could not be deserialized:\n{}"
+                .format(deserialized_input)
+            )
+            output['status'] == FAILURE
+            output['failure_message'] = message
+            return output
+
+        trace = deserialized_input.get("trace", None)
+        if trace is None:
+            message = (
+                "Trace data not found in meter input."
+            )
+            output['status'] == FAILURE
+            output['failure_message'] = message
+            return output
+
+        project = deserialized_input.get("project", None)
+        if trace is None:
+            message = (
+                "Project data not found in meter input."
+            )
+            output['status'] == FAILURE
+            output['failure_message'] = message
+            return output
+
+        zipcode = project.get("zipcode", None)
+        if zipcode is None:
+            message = (
+                "ZIP code project data not found in meter input."
+            )
+            output['status'] == FAILURE
+            output['failure_message'] = message
+            return output
+
+        # can be blank for models capable of structural change analysis
+        modeling_period_set = project.get("modeling_period_set", None)
+
+        # Step 2: Match weather
         if weather_source is None:
             weather_source = get_weather_source(site)
             message = "Using weather_source {}".format(weather_source)
@@ -511,7 +562,7 @@ class EnergyEfficiencyMeterTraceCentric(object):
         output['weather_normal_source_station'] = weather_normal_source.station
         output['logs'].append(message)
 
-        # Step 2: Check to see if trace is placeholder, if so,
+        # Step 3: Check to see if trace is placeholder, if so,
         # return with SUCCESS, empty derivatives.
         if trace.placeholder:
             message = (
@@ -520,11 +571,11 @@ class EnergyEfficiencyMeterTraceCentric(object):
             )
             logger.info(message)
             output['logs'].append(message)
-            output["status"] = SUCCESS
-            output["derivatives"] = []
+            output['status'] = SUCCESS
+            output['derivatives'] = []
             return output
 
-        # Step 3: Determine trace interpretation and frequency
+        # Step 4: Determine trace interpretation and frequency
         if model is None or formatter is None:
             trace_interpretation = trace.interpretation
 
@@ -535,7 +586,7 @@ class EnergyEfficiencyMeterTraceCentric(object):
 
             selector = (trace_interpretation, trace_frequency)
 
-        # Step 4: create formatter instance
+        # Step 5: create formatter instance
         if formatter is None:
             FormatterClass, formatter_kwargs = self.default_formatter_mapping.get(selector, (None, None))
             if FormatterClass is None:
@@ -552,7 +603,7 @@ class EnergyEfficiencyMeterTraceCentric(object):
         output["formatter_class"] = FormatterClass.__name__
         output["formatter_kwargs"] = formatter_kwargs
 
-        # Step 5: create model instance
+        # Step 6: create model instance
         if model is None:
             ModelClass, model_kwargs = self.default_model_mapping.get(selector, (None, None))
             if ModelClass is None:
@@ -568,7 +619,8 @@ class EnergyEfficiencyMeterTraceCentric(object):
         output["model_class"] = ModelClass.__name__
         output["model_kwargs"] = model_kwargs
 
-        # Step 6: validate modeling period set.
+        # Step 7: validate modeling period set. Always fails for now, since
+        # no models are yet fully structural change analysis aware
         if modeling_period_set is None:
             message = (
                 "Model is not structural-change capable, so `modeling_period`"
@@ -578,7 +630,7 @@ class EnergyEfficiencyMeterTraceCentric(object):
             output['failure_message'] = message
             return output
 
-        # Step 7: create split modeled energy trace
+        # Step 8: create split modeled energy trace
         model_mapping = {
             modeling_period_label: ModelClass(**model_kwargs)
             for modeling_period_label, _ in
@@ -591,7 +643,7 @@ class EnergyEfficiencyMeterTraceCentric(object):
         modeled_energy_trace.fit(weather_source)
         output["modeled_energy_trace"] = modeled_energy_trace
 
-        # Step 8: for each modeling period group, create derivatives
+        # Step 9: for each modeling period group, create derivatives
         output["derivatives"] = []
         for group_label, (_, reporting_period) in \
                 modeling_period_set.iter_modeling_period_groups():
@@ -613,7 +665,7 @@ class EnergyEfficiencyMeterTraceCentric(object):
                 if baseline_model_success:
                     baseline_derivative = modeled_energy_trace \
                         .compute_derivative(
-                            baseline_label, derivative_func, **kwargs)
+                            baseline_label, derivative_func, kwargs)
                     if baseline_derivative is not None:
                         value, lower, upper, n = \
                             baseline_derivative[interpretation]
@@ -625,7 +677,7 @@ class EnergyEfficiencyMeterTraceCentric(object):
                 if reporting_model_success:
                     reporting_derivative = modeled_energy_trace \
                         .compute_derivative(
-                            reporting_label, derivative_func, **kwargs)
+                            reporting_label, derivative_func, kwargs)
                     if reporting_derivative is not None:
                         value, lower, upper, n = \
                             reporting_derivative[interpretation]
@@ -652,6 +704,7 @@ class EnergyEfficiencyMeterTraceCentric(object):
                         "weather_source": weather_source,
                         "reporting_period": reporting_period,
                     }),
+                # more derivatives can go here
             ])
 
         output["status"] = SUCCESS

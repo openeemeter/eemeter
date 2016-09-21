@@ -146,7 +146,7 @@ class SplitModeledEnergyTrace(object):
                 demand_fixture_data, params)
 
     def compute_derivative(self, modeling_period_label, derivative_callable,
-                           **kwargs):
+                           derivative_callable_kwargs):
         ''' Compute a modeling derivative for this modeling period.
 
         Parameters
@@ -160,7 +160,7 @@ class SplitModeledEnergyTrace(object):
 
                 >>> derivative_callable(formatter, model, **kwargs)
 
-        **kwargs
+        derivative_callable_kwargs : dict
             Arbitrary keyword arguments to be passed to the derviative callable
         '''
 
@@ -172,7 +172,8 @@ class SplitModeledEnergyTrace(object):
         model = self.model_mapping[modeling_period_label]
 
         try:
-            derivative = derivative_callable(self.formatter, model, **kwargs)
+            derivative = derivative_callable(self.formatter, model,
+                                             **derivative_callable_kwargs)
         except Exception:
             logger.exception("Derivative computation failed.")
             return None
