@@ -592,6 +592,8 @@ class EnergyEfficiencyMeterTraceCentric(object):
         # Step 4: Determine trace interpretation and frequency
         if model is None or formatter is None:
             trace_interpretation = trace.interpretation
+            print(trace.data)
+            print(trace.data.index)
 
             print("Trace inferred_freq: {}".format(trace.data.index.inferred_freq))
             trace_frequency = get_approximate_frequency(trace)
