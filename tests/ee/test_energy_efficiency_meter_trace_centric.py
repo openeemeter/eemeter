@@ -1,18 +1,9 @@
 import tempfile
-from datetime import datetime
 
-import numpy as np
 import pandas as pd
 import pytest
 import pytz
 
-from eemeter.structures import (
-    ZIPCodeSite,
-    EnergyTrace,
-    ModelingPeriod,
-    ModelingPeriodSet,
-)
-from eemeter.modeling.split import SplitModeledEnergyTrace
 from eemeter.ee.meter import EnergyEfficiencyMeterTraceCentric
 from eemeter.testing.mocks import MockWeatherClient
 from eemeter.weather import TMY3WeatherSource
@@ -98,7 +89,8 @@ def test_basic_usage(meter_input, mock_isd_weather_source,
     assert results['modeled_energy_trace'] is not None
 
     assert len(results['derivatives']) == 2
-    assert results['derivatives'][0].interpretation == 'annualized_weather_normal'
+    assert results['derivatives'][0].interpretation == \
+        'annualized_weather_normal'
     assert results['derivatives'][0].baseline.label == 'baseline'
     assert results['derivatives'][0].reporting.label == 'reporting'
     assert results['derivatives'][0].baseline.value > 0

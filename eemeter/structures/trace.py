@@ -180,7 +180,8 @@ class EnergyTrace(object):
             )
         else:
             return (
-                "EnergyTrace(interpretation={}, unit={}, data=pd.Dataframe({}))"
+                "EnergyTrace(interpretation={}, unit={},"
+                " data=pandas.Dataframe({}))"
                 .format(self.interpretation, self.unit, self.data.shape)
             )
 

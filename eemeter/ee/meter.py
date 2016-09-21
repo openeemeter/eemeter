@@ -24,6 +24,7 @@ from eemeter.ee.derivatives import (
     DerivativePair,
     Derivative
 )
+from eemeter.structures import ZIPCodeSite
 
 from eemeter.io.serializers import deserialize_meter_input
 
@@ -362,7 +363,6 @@ def _change_units(errors, units_from, units_to):
     return (mean*factor, upper*factor, lower*factor, n)
 
 
-
 class EnergyEfficiencyMeterTraceCentric(object):
     ''' Meter for determining energy efficiency derivatives for a single
     traces.
@@ -375,7 +375,8 @@ class EnergyEfficiencyMeterTraceCentric(object):
 
     '''
 
-    def __init__(self, default_model_mapping=None, default_formatter_mapping=None):
+    def __init__(self, default_model_mapping=None,
+                 default_formatter_mapping=None):
 
         if default_formatter_mapping is None:
             daily_formatter = (ModelDataFormatter, {'freq_str': 'D'})
@@ -383,19 +384,23 @@ class EnergyEfficiencyMeterTraceCentric(object):
             default_formatter_mapping = {
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '15T'): daily_formatter,
                 ('ELECTRICITY_CONSUMPTION_SUPPLIED', '15T'): daily_formatter,
-                ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', '15T'): daily_formatter,
+                ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', '15T'):
+                    daily_formatter,
 
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '30T'): daily_formatter,
                 ('ELECTRICITY_CONSUMPTION_SUPPLIED', '30T'): daily_formatter,
-                ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', '30T'): daily_formatter,
+                ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', '30T'):
+                    daily_formatter,
 
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', 'H'): daily_formatter,
                 ('ELECTRICITY_CONSUMPTION_SUPPLIED', 'H'): daily_formatter,
-                ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', 'H'): daily_formatter,
+                ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', 'H'):
+                    daily_formatter,
 
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', 'D'): daily_formatter,
                 ('ELECTRICITY_CONSUMPTION_SUPPLIED', 'D'): daily_formatter,
-                ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', 'D'): daily_formatter,
+                ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', 'D'):
+                    daily_formatter,
 
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', None): billing_formatter,
                 ('ELECTRICITY_CONSUMPTION_SUPPLIED', None): billing_formatter,
@@ -413,19 +418,23 @@ class EnergyEfficiencyMeterTraceCentric(object):
             default_model_mapping = {
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '15T'): seasonal_model,
                 ('ELECTRICITY_CONSUMPTION_SUPPLIED', '15T'): seasonal_model,
-                ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', '15T'): seasonal_model,
+                ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', '15T'):
+                    seasonal_model,
 
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '30T'): seasonal_model,
                 ('ELECTRICITY_CONSUMPTION_SUPPLIED', '30T'): seasonal_model,
-                ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', '30T'): seasonal_model,
+                ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', '30T'):
+                    seasonal_model,
 
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', 'H'): seasonal_model,
                 ('ELECTRICITY_CONSUMPTION_SUPPLIED', 'H'): seasonal_model,
-                ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', 'H'): seasonal_model,
+                ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', 'H'):
+                    seasonal_model,
 
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', 'D'): seasonal_model,
                 ('ELECTRICITY_CONSUMPTION_SUPPLIED', 'D'): seasonal_model,
-                ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', 'D'): seasonal_model,
+                ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', 'D'):
+                    seasonal_model,
 
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', None): billing_model,
                 ('ELECTRICITY_CONSUMPTION_SUPPLIED', None): billing_model,
@@ -448,12 +457,12 @@ class EnergyEfficiencyMeterTraceCentric(object):
             weather data.
         modeling_period_set : eemeter.structures.ModelPeriodSet
             Modeling periods to use in evaluation.
-        formatter : tuple of (eemeter.modeling.Formatter class, kwargs dict), default None
-            Formatter instance for trace and weather data. Used to create input
+        formatter : tuple of (class, dict), default None
+            Formatter for trace and weather data. Used to create input
             for model. If None is provided, will be auto-matched to appropriate
             default formatter.
-        model : tuple of (eemeter.modeling.Model class, kwargs dict), default None
-            Tuple of model instance to use in modeling. If None is provided,
+        model : tuple of (class, dict), default None
+            Model to use in modeling. If None is provided,
             will be auto-matched to appropriate default model.
         weather_source : eemeter.weather.WeatherSource
             Weather source to be used for this meter. Overrides weather source
@@ -468,17 +477,21 @@ class EnergyEfficiencyMeterTraceCentric(object):
             Dictionary of results with the following keys:
 
             - :code:`"status"`: SUCCESS/FAILURE
-            - :code:`"failure_message"`: if FAILURE, message indicates reason for failure, may include traceback
+            - :code:`"failure_message"`: if FAILURE, message indicates reason
+              for failure, may include traceback
             - :code:`"logs"`: list of collected log messages
             - :code:`"model_class"`: Name of model class
-            - :code:`"model_kwargs"`: dict of model keyword arguments (settings)
+            - :code:`"model_kwargs"`: dict of model keyword arguments
+              (settings)
             - :code:`"formatter_class"`: Name of formatter class
-            - :code:`"formatter_kwargs"`: dict of formatter keyword arguments (settings)
+            - :code:`"formatter_kwargs"`: dict of formatter keyword arguments
+              (settings)
             - :code:`"eemeter_version"`: version of the eemeter package
             - :code:`"modeled_energy_trace"`: modeled energy trace
             - :code:`"derivatives"`: derivatives for each interpretation
             - :code:`"weather_source_station"`: Matched weather source station.
-            - :code:`"weather_normal_source_station"`: Matched weather normal source station.
+            - :code:`"weather_normal_source_station"`: Matched weather normal
+              source station.
         '''
 
         SUCCESS = "SUCCESS"
@@ -539,6 +552,7 @@ class EnergyEfficiencyMeterTraceCentric(object):
             output['status'] == FAILURE
             output['failure_message'] = message
             return output
+        site = ZIPCodeSite(zipcode)
 
         # can be blank for models capable of structural change analysis
         modeling_period_set = project.get("modeling_period_set", None)
@@ -588,7 +602,8 @@ class EnergyEfficiencyMeterTraceCentric(object):
 
         # Step 5: create formatter instance
         if formatter is None:
-            FormatterClass, formatter_kwargs = self.default_formatter_mapping.get(selector, (None, None))
+            FormatterClass, formatter_kwargs = self.default_formatter_mapping \
+                .get(selector, (None, None))
             if FormatterClass is None:
                 message = (
                     "Default formatter mapping did not find a match for"
@@ -605,7 +620,8 @@ class EnergyEfficiencyMeterTraceCentric(object):
 
         # Step 6: create model instance
         if model is None:
-            ModelClass, model_kwargs = self.default_model_mapping.get(selector, (None, None))
+            ModelClass, model_kwargs = self.default_model_mapping.get(
+                selector, (None, None))
             if ModelClass is None:
                 message = (
                     "Default model mapping did not find a match for the"

@@ -16,10 +16,10 @@ class Aggregator(object):
     Enforces trace interpretation uniformity, aggregates according to the
     aggregation rules supplied.
     """
+
     aggregation_functions = {
         "SUM": sum_func,
     }
-
 
     def __init__(self, aggregation_function="SUM",
                  baseline_default_value=None,

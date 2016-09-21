@@ -1,7 +1,6 @@
 import pytest
 import pandas as pd
 import pytz
-from copy import deepcopy
 
 from eemeter.structures import (
     EnergyTrace,
@@ -47,6 +46,7 @@ def meter_input():
     }
     return meter_input
 
+
 def test_basic_usage(meter_input):
     result = deserialize_meter_input(meter_input)
     assert isinstance(result["trace"], EnergyTrace)
@@ -55,50 +55,60 @@ def test_basic_usage(meter_input):
     assert isinstance(result["project"]["zipcode"],
                       str)
 
+
 def test_missing_type(meter_input):
     del meter_input["type"]
     result = deserialize_meter_input(meter_input)
     assert "type" in result["error"]
+
 
 def test_missing_trace(meter_input):
     del meter_input["trace"]
     result = deserialize_meter_input(meter_input)
     assert "trace" in result["error"]
 
+
 def test_missing_trace_type(meter_input):
     del meter_input["trace"]["type"]
     result = deserialize_meter_input(meter_input)
     assert "type" in result["error"]
+
 
 def test_missing_trace_interpretation(meter_input):
     del meter_input["trace"]["interpretation"]
     result = deserialize_meter_input(meter_input)
     assert "interpretation" in result["error"]
 
+
 def test_missing_trace_unit(meter_input):
     del meter_input["trace"]["unit"]
     result = deserialize_meter_input(meter_input)
     assert "unit" in result["error"]
+
 
 def test_missing_trace_records(meter_input):
     del meter_input["trace"]["records"]
     result = deserialize_meter_input(meter_input)
     assert "records" in result["error"]
 
+
 def test_missing_project(meter_input):
     del meter_input["project"]
     result = deserialize_meter_input(meter_input)
     assert "project" in result["error"]
+
 
 def test_missing_project_type(meter_input):
     del meter_input["project"]
     result = deserialize_meter_input(meter_input)
     assert "type" in result["error"]
 
+
 def test_missing_project_zipcode(meter_input):
     del meter_input["project"]["zipcode"]
     result = deserialize_meter_input(meter_input)
     assert "zipcode" in result["error"]
+
 
 def test_missing_project_modeling_period_group(meter_input):
     del meter_input["project"]["modeling_period_group"]

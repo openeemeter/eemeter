@@ -157,6 +157,7 @@ def _deserialize_simple_project(project):
             )
         }
 
+
 def _deserialize_project_with_single_model_period_group(project):
 
     # check for "zipcode" key
@@ -191,6 +192,7 @@ def _deserialize_project_with_single_model_period_group(project):
         }
     }
 
+
 def _deserialize_single_modeling_period_group(modeling_period_group):
 
     # check for "baseline_period" key
@@ -203,11 +205,11 @@ def _deserialize_single_modeling_period_group(modeling_period_group):
             )
         }
     else:
-        start_date=baseline_period.get("start", None)
+        start_date = baseline_period.get("start", None)
         if start_date is not None:
             start_date = dateutil.parser.parse(start_date)
 
-        end_date=baseline_period.get("end", None)
+        end_date = baseline_period.get("end", None)
         if end_date is not None:
             end_date = dateutil.parser.parse(end_date)
 
@@ -227,11 +229,11 @@ def _deserialize_single_modeling_period_group(modeling_period_group):
             )
         }
     else:
-        start_date=reporting_period.get("start", None)
+        start_date = reporting_period.get("start", None)
         if start_date is not None:
             start_date = dateutil.parser.parse(start_date)
 
-        end_date=reporting_period.get("end", None)
+        end_date = reporting_period.get("end", None)
         if end_date is not None:
             end_date = dateutil.parser.parse(end_date)
 
