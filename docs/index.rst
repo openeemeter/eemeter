@@ -66,7 +66,7 @@ References
 - `ANSI/BPI-2400-S-2012 <http://www.bpi.org/Web%20Download/BPI%20Standards/BPI-2400-S-2012_Standard_Practice_for_Standardized_Qualification_of_Whole-House%20Energy%20Savings_9-28-12_sg.pdf>`_
 - `NREL's Uniform Methods <http://energy.gov/sites/prod/files/2013/11/f5/53827-8.pdf>`_
 
-Licence
+License
 -------
 
-MIT
+`MIT <https://opensource.org/licenses/MIT>`_
