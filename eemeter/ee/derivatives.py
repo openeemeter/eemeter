@@ -92,10 +92,11 @@ def gross_predicted(formatter, model, weather_source, reporting_period):
           - :code:`n` is the number of samples considered in developing the
             bound - useful for adding other values with errors.
     '''
-    start_date = reporting_period.start_date
+    start_date = reporting_period.start_date.date()
     end_date = reporting_period.end_date
     if end_date is None:
         end_date = datetime.utcnow()
+    end_date = end_date.date()
     index = pd.date_range(start_date, end_date, freq='D', tz=pytz.UTC)
 
     demand_fixture_data = formatter.create_demand_fixture(
