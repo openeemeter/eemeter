@@ -45,7 +45,7 @@ class BaseSerializer(object):
 
         df = pd.DataFrame(
             {"value": values, "estimated": estimateds},
-            index=pd.DatetimeIndex(dts),
+            index=pd.DatetimeIndex(dts).tz_localize(pytz.UTC),
             columns=["value", "estimated"],
         )
         df.value = df.value.astype(float)
