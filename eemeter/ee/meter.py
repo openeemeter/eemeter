@@ -1,32 +1,38 @@
 import logging
+from collections import OrderedDict
 
-from eemeter.processors.interventions import get_modeling_period_set
-from eemeter.processors.location import (
-    get_weather_source,
-    get_weather_normal_source,
-)
-from eemeter.processors.dispatchers import (
-    get_energy_modeling_dispatches,
-    get_approximate_frequency,
-)
-from eemeter.ee.derivatives import annualized_weather_normal, gross_predicted
-from eemeter.modeling.models.seasonal import SeasonalElasticNetCVModel
-from eemeter.modeling.formatters import (
-    ModelDataFormatter,
-    ModelDataBillingFormatter,
-)
-from eemeter.modeling.models.billing import BillingElasticNetCVModel
 from eemeter import get_version
+from eemeter.ee.derivatives import (
+    DerivativePair,
+    Derivative,
+    annualized_weather_normal,
+    gross_predicted,
+)
+from eemeter.modeling.formatters import (
+    ModelDataBillingFormatter,
+    ModelDataFormatter,
+)
+from eemeter.modeling.models import (
+    BillingElasticNetCVModel,
+    SeasonalElasticNetCVModel,
+)
 from eemeter.modeling.split import (
     SplitModeledEnergyTrace
 )
-from eemeter.ee.derivatives import (
-    DerivativePair,
-    Derivative
+from eemeter.io.serializers import (
+    deserialize_meter_input,
+    serialize_derivative_pairs,
+)
+from eemeter.processors.dispatchers import (
+    get_approximate_frequency,
+    get_energy_modeling_dispatches,
+)
+from eemeter.processors.interventions import get_modeling_period_set
+from eemeter.processors.location import (
+    get_weather_normal_source,
+    get_weather_source,
 )
 from eemeter.structures import ZIPCodeSite
-
-from eemeter.io.serializers import deserialize_meter_input
 
 logger = logging.getLogger(__name__)
 
@@ -497,23 +503,23 @@ class EnergyEfficiencyMeterTraceCentric(object):
         SUCCESS = "SUCCESS"
         FAILURE = "FAILURE"
 
-        output = {
-            "status": None,
-            "failure_message": None,
-            "logs": [],
+        output = OrderedDict([
+            ("status", None),
+            ("failure_message", None),
+            ("logs", []),
 
-            "eemeter_version": get_version(),
-            "model_class": None,
-            "model_kwargs": None,
-            "formatter_class": None,
-            "formatter_kwargs": None,
+            ("eemeter_version", get_version()),
 
-            "modeled_energy_trace": None,
-            "derivatives": None,
+            ("model_class", None),
+            ("model_kwargs", None),
+            ("formatter_class", None),
+            ("formatter_kwargs", None),
 
-            "weather_source_station": None,
-            "weather_normal_source_station": None,
-        }
+            ("modeled_energy_trace", None),
+            ("derivatives", None),
+            ("weather_source_station", None),
+            ("weather_normal_source_station", None),
+        ])
 
         # Step 1: Deserialize input and validate
         deserialized_input = deserialize_meter_input(meter_input)
@@ -656,10 +662,10 @@ class EnergyEfficiencyMeterTraceCentric(object):
             trace, formatter_instance, model_mapping, modeling_period_set)
 
         modeled_energy_trace.fit(weather_source)
-        output["modeled_energy_trace"] = modeled_energy_trace
+        # output["modeled_energy_trace"] = modeled_energy_trace
 
         # Step 9: for each modeling period group, create derivatives
-        output["derivatives"] = []
+        derivative_pairs = []
         for group_label, (_, reporting_period) in \
                 modeling_period_set.iter_modeling_period_groups():
 
@@ -705,7 +711,7 @@ class EnergyEfficiencyMeterTraceCentric(object):
                 )
                 return derivative_pair
 
-            output["derivatives"].extend([
+            derivative_pairs.extend([
                 _compute_derivative(
                     baseline_label, reporting_label,
                     "annualized_weather_normal", annualized_weather_normal,
@@ -722,5 +728,6 @@ class EnergyEfficiencyMeterTraceCentric(object):
                 # more derivatives can go here
             ])
 
+        output["derivatives"] = serialize_derivative_pairs(derivative_pairs)
         output["status"] = SUCCESS
         return output
