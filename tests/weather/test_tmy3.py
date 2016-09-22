@@ -34,8 +34,8 @@ def test_daily_by_index(mock_tmy3_weather_source):
     assert temps.shape == (2,)
     assert_allclose(temps.values, [32, 32])
 
-    # load from cache
-    temps = mock_tmy3_weather_source.indexed_temperatures(index, 'degF')
+    # force load from cache
+    mock_tmy3_weather_source._load_data()
 
 
 def test_weird_frequency_by_index(mock_tmy3_weather_source):
