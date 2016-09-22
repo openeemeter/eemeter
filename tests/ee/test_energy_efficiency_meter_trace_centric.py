@@ -89,17 +89,17 @@ def test_basic_usage(meter_input, mock_isd_weather_source,
     assert results['modeled_energy_trace'] is not None
 
     assert len(results['derivatives']) == 2
-    assert results['derivatives'][0].interpretation == \
+    assert results['derivatives'][0]["interpretation"] == \
         'annualized_weather_normal'
-    assert results['derivatives'][0].baseline.label == 'baseline'
-    assert results['derivatives'][0].reporting.label == 'reporting'
-    assert results['derivatives'][0].baseline.value > 0
-    assert results['derivatives'][0].reporting.value > 0
-    assert results['derivatives'][1].interpretation == 'gross_predicted'
-    assert results['derivatives'][1].baseline.label == 'baseline'
-    assert results['derivatives'][1].reporting.label == 'reporting'
-    assert results['derivatives'][1].baseline.value > 0
-    assert results['derivatives'][1].reporting.value > 0
+    assert results['derivatives'][0]["baseline"]["label"] == 'baseline'
+    assert results['derivatives'][0]["reporting"]["label"] == 'reporting'
+    assert results['derivatives'][0]["baseline"]["value"] > 0
+    assert results['derivatives'][0]["reporting"]["value"] > 0
+    assert results['derivatives'][1]["interpretation"] == 'gross_predicted'
+    assert results['derivatives'][1]["baseline"]["label"] == 'baseline'
+    assert results['derivatives'][1]["reporting"]["label"] == "reporting"
+    assert results['derivatives'][1]["baseline"]["value"] > 0
+    assert results['derivatives'][1]["reporting"]["value"] > 0
 
     assert results['weather_source_station'] == '722880'
     assert results['weather_normal_source_station'] == '724838'

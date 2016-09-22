@@ -22,6 +22,7 @@ from eemeter.modeling.split import (
 from eemeter.io.serializers import (
     deserialize_meter_input,
     serialize_derivative_pairs,
+    serialize_split_modeled_energy_trace,
 )
 from eemeter.processors.dispatchers import (
     get_approximate_frequency,
@@ -662,7 +663,8 @@ class EnergyEfficiencyMeterTraceCentric(object):
             trace, formatter_instance, model_mapping, modeling_period_set)
 
         modeled_energy_trace.fit(weather_source)
-        # output["modeled_energy_trace"] = modeled_energy_trace
+        output["modeled_energy_trace"] = \
+            serialize_split_modeled_energy_trace(modeled_energy_trace)
 
         # Step 9: for each modeling period group, create derivatives
         derivative_pairs = []

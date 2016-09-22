@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import pandas as pd
 from pandas.tseries.frequencies import to_offset
 
@@ -146,6 +148,14 @@ class ModelDataFormatter(FormatterBase):
     def _get_n_rows(self, input_data):
         return input_data.shape[0]
 
+    def serialize_input(self, input_data):
+        return OrderedDict([
+            (start.isoformat(), OrderedDict([
+                ("energy", row.energy if pd.notnull(row.energy) else None),
+                ("tempF", row.tempF if pd.notnull(row.tempF) else None),
+            ]))
+            for start, row in input_data.iterrows()
+        ])
 
 class ModelDataBillingFormatter(FormatterBase):
     ''' Formatter for model data of unknown or unpredictable frequency.
@@ -297,3 +307,22 @@ formatter.create_input(energy_trace, weather_source)
     def _get_n_rows(self, input_data):
         unestimated_trace_data, temp_data = input_data
         return unestimated_trace_data.shape[0]
+
+    def serialize_input(self, input_data):
+        trace_data, temp_data = input_data
+
+        # must be careful because empty does not carry multiindex
+        if trace_data.shape[0] == 0:
+            return OrderedDict([])
+
+        # funky stuff in here manages the multiindex on the temperature data
+        return OrderedDict([
+            (start.isoformat(), OrderedDict([
+                ("energy", energy),
+                ("tempF", OrderedDict([
+                    (i[1].isoformat(), v[0]) for i, v in group.iterrows()
+                ])),
+            ]))
+            for (start, energy), (p, group) in
+                zip(trace_data.iteritems(), temp_data.groupby(level="period"))
+        ])

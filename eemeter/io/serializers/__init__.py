@@ -3,6 +3,7 @@ from .meter_input import (
 )
 from .meter_output import (
     serialize_derivative_pairs,
+    serialize_split_modeled_energy_trace,
 )
 from .trace import (
     ArbitrarySerializer,
@@ -17,4 +18,5 @@ __all__ = (
     "ArbitraryEndSerializer",
     "deserialize_meter_input",
     "serialize_derivative_pairs",
+    "serialize_split_modeled_energy_trace",
 )

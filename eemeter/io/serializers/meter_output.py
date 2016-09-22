@@ -1,34 +1,79 @@
 from collections import OrderedDict
 
 def serialize_derivative_pairs(derivative_pairs):
-    serialized = []
-    for interpretation, baseline, reporting in derivative_pairs:
-
-        if baseline is not None:
-            baseline_serialized = OrderedDict([
+    return [
+        OrderedDict([
+            ("interpretation", interpretation),
+            ("baseline", None if baseline is None else OrderedDict([
                 ("label", baseline.label),
                 ("value", baseline.value),
                 ("lower", baseline.lower),
                 ("upper", baseline.upper),
                 ("n", baseline.n),
-            ])
-        else:
-            baseline_serialized = None
-
-        if reporting is not None:
-            reporting_serialized = OrderedDict([
+            ])),
+            ("reporting", None if reporting is None else OrderedDict([
                 ("label", reporting.label),
                 ("value", reporting.value),
                 ("lower", reporting.lower),
                 ("upper", reporting.upper),
                 ("n", reporting.n),
-            ])
-        else:
-            reporting_serialized = None
+            ])),
+        ])
+        for interpretation, baseline, reporting in derivative_pairs
+    ]
 
-        serialized.append(OrderedDict([
-            ("interpretation", interpretation),
-            ("baseline", baseline_serialized),
-            ("reporting", reporting_serialized),
-        ]))
+
+def serialize_split_modeled_energy_trace(modeled_trace):
+    serialized = OrderedDict([
+        ("fits", _serialize_fit_outputs(modeled_trace.fit_outputs)),
+        ("modeling_period_set", serialize_modeling_period_set(modeled_trace.modeling_period_set)),
+    ])
+
     return serialized
+
+
+def _serialize_fit_outputs(fit_outputs):
+    return OrderedDict([
+        (mp_label, OrderedDict([
+            ("status", output.get("status", None)),
+            ("traceback", output.get("traceback", None)),
+            ("input_data", output.get("input_data", None)),
+            ("start_date", None if output.get("start_date", None) is None else output.get("start_date").isoformat()),
+            ("end_date", None if output.get("end_date", None) is None else output.get("end_date").isoformat()),
+            ("n_rows", output.get("n_rows", None)),
+            ("model_fit", _serialize_model_fit(output.get("model_fit", None))),
+        ]))
+        for mp_label, output in sorted(fit_outputs.items(), key=lambda x: x[0])
+    ])
+
+
+def _serialize_model_fit(model_fit):
+    if model_fit is None:
+        return None
+    else:
+        return OrderedDict([
+            ("r2", model_fit.get("r2", None)),
+            ("cvrmse", model_fit.get("cvrmse", None)),
+            ("rmse", model_fit.get("rmse", None)),
+            ("lower", model_fit.get("lower", None)),
+            ("upper", model_fit.get("upper", None)),
+            ("n", model_fit.get("n", None)),
+            ("model_params", None),
+        ])
+
+
+def serialize_modeling_period_set(modeling_period_set):
+    return OrderedDict([
+        ("modeling_period_groups", [
+            OrderedDict([("baseline", g[0]), ("reporting", g[1])])
+            for g in modeling_period_set.groupings
+        ]),
+        ("modeling_periods", OrderedDict([
+            (label, OrderedDict([
+                ("interpretation", mp.interpretation),
+                ("start_date", None if mp.start_date is None else mp.start_date.isoformat()),
+                ("end_date", None if mp.end_date is None else mp.end_date.isoformat()),
+            ]))
+            for label, mp in sorted(modeling_period_set.modeling_periods.items(), key=lambda x: x[0])
+        ])),
+    ])
