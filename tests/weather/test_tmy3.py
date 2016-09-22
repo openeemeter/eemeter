@@ -34,6 +34,15 @@ def test_daily_by_index(mock_tmy3_weather_source):
     assert temps.shape == (2,)
     assert_allclose(temps.values, [32, 32])
 
+    # load from cache
+    temps = mock_tmy3_weather_source.indexed_temperatures(index, 'degF')
+
+
+def test_weird_frequency_by_index(mock_tmy3_weather_source):
+    index = pd.date_range('2000-01-01 00:00:00Z', periods=2, freq='5H')
+    with pytest.raises(ValueError):
+        temps = mock_tmy3_weather_source.indexed_temperatures(index, 'degF')
+
 
 def test_cross_year_boundary(mock_tmy3_weather_source):
     index = pd.date_range('1999-12-31 12:00:00Z', periods=2, freq='D')
