@@ -40,6 +40,16 @@ class Aggregator(object):
                 )
                 raise ValueError(message)
 
+    def _validate_unit(self, derivative_pairs, target_unit):
+        for d in derivative_pairs:
+            if d.unit != target_unit:
+                message = (
+                    "DerivativePair unit ({}) does not match"
+                    " target_unit ({})."
+                    .format(d.unit, target_unit)
+                )
+                raise ValueError(message)
+
     def _get_valid_derivatives(self, derivative_pairs):
         baseline_derivatives, reporting_derivatives = [], []
         n_valid = 0
@@ -75,17 +85,34 @@ class Aggregator(object):
             aggregated = self.func(aggregated, d)
         return aggregated
 
-    def aggregate(self, derivative_pairs, target_interpretation):
+    def aggregate(self, derivative_pairs, target_interpretation=None,
+                  target_unit=None):
         ''' Aggregates derivative pairs
 
         Parameters
         ----------
         derivative_pairs : list of eemeter.ee.meter.Derivative
-            Derivative pairs to be aggregated.
-        target_interpretation : str
-            Interpretation of derivatives.
+            Derivative pairs to be aggregated; should be at least one.
+        target_interpretation : str, default None
+            Interpretation of derivatives; if None, will use interpretation of
+            first.
+        target_unit : str, default None
+            Unit of derivatives; if None, will use unit of first.
         '''
+
+        if len(derivative_pairs) == 0:
+            raise ValueError(
+                "Cannot aggregate empty list."
+            )
+
+        if target_interpretation is None:
+            target_interpretation = derivative_pairs[0].interpretation
+
+        if target_unit is None:
+            target_unit = derivative_pairs[0].unit
+
         self._validate_interpretation(derivative_pairs, target_interpretation)
+        self._validate_unit(derivative_pairs, target_unit)
 
         baseline_derivatives, reporting_derivatives, n_valid, n_invalid = \
             self._get_valid_derivatives(derivative_pairs)
@@ -94,7 +121,8 @@ class Aggregator(object):
         reporting_aggregation = self._aggregate(reporting_derivatives)
 
         aggregated = DerivativePair(
-            target_interpretation, baseline_aggregation, reporting_aggregation
+            target_interpretation, target_unit,
+            baseline_aggregation, reporting_aggregation
         )
 
         return aggregated, n_valid, n_invalid

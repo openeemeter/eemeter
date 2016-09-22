@@ -6,7 +6,7 @@ import pytz
 
 
 DerivativePair = namedtuple('DerivativePair', [
-    'interpretation', 'baseline', 'reporting'
+    'interpretation', 'unit', 'baseline', 'reporting'
 ])
 
 

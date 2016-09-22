@@ -4,15 +4,34 @@ from eemeter.ee.aggregate import Aggregator
 
 
 @pytest.fixture
+def derivative_pairs_empty():
+    return []
+
+
+@pytest.fixture
+def derivative_pairs_single():
+    return [
+        DerivativePair(
+            "interpretation",
+            "kWh",
+            Derivative("1", 10, 3, 3, 5, None),
+            Derivative("2", 10, 6, 6, 5, None),
+        ),
+    ]
+
+
+@pytest.fixture
 def derivative_pairs():
     return [
         DerivativePair(
             "interpretation",
+            "kWh",
             Derivative("1", 10, 3, 3, 5, None),
             Derivative("2", 10, 6, 6, 5, None),
         ),
         DerivativePair(
             "interpretation",
+            "kWh",
             Derivative("1", 10, 4, 4, 5, None),
             Derivative("2", 10, 8, 8, 5, None),
         ),
@@ -24,11 +43,30 @@ def derivative_pairs_mixed_interpretation():
     return [
         DerivativePair(
             "interpretation1",
+            "kWh",
             Derivative("1", 10, 3, 3, 5, None),
             Derivative("2", 10, 6, 6, 5, None),
         ),
         DerivativePair(
             "interpretation2",
+            "kWh",
+            Derivative("1", 10, 4, 4, 5, None),
+            Derivative("2", 10, 8, 8, 5, None),
+        ),
+    ]
+
+@pytest.fixture
+def derivative_pairs_mixed_unit():
+    return [
+        DerivativePair(
+            "interpretation1",
+            "kWh",
+            Derivative("1", 10, 3, 3, 5, None),
+            Derivative("2", 10, 6, 6, 5, None),
+        ),
+        DerivativePair(
+            "interpretation2",
+            "therm",
             Derivative("1", 10, 4, 4, 5, None),
             Derivative("2", 10, 8, 8, 5, None),
         ),
@@ -40,11 +78,13 @@ def derivative_pairs_one_empty():
     return [
         DerivativePair(
             "interpretation",
+            "kWh",
             None,
             Derivative("2", 10, 3, 3, 5, None),
         ),
         DerivativePair(
             "interpretation",
+            "kWh",
             Derivative("1", 10, 4, 4, 5, None),
             Derivative("2", 10, 8, 8, 5, None),
         ),
@@ -76,6 +116,21 @@ def test_basic_usage(derivative_pairs):
     assert reporting.upper == 10
     assert reporting.n == 10
 
+def test_empty(derivative_pairs_empty):
+    aggregator = Aggregator()
+    with pytest.raises(ValueError):
+        aggregator.aggregate(derivative_pairs_empty)
+
+
+def test_single(derivative_pairs_single):
+    aggregator = Aggregator()
+
+    derivative_pairs, n_valid, n_invalid = \
+        aggregator.aggregate(derivative_pairs_single)
+
+    assert n_valid == 1
+    assert n_invalid == 0
+
 
 def test_mixed_interpretaiton_fails(derivative_pairs_mixed_interpretation):
 
@@ -85,6 +140,16 @@ def test_mixed_interpretaiton_fails(derivative_pairs_mixed_interpretation):
         derivative_pair, n_valid, n_invalid = \
             aggregator.aggregate(derivative_pairs_mixed_interpretation,
                                  "interpretation1")
+
+
+def test_mixed_unit_fails(derivative_pairs_mixed_unit):
+
+    aggregator = Aggregator()
+
+    with pytest.raises(ValueError):
+        derivative_pair, n_valid, n_invalid = \
+            aggregator.aggregate(derivative_pairs_mixed_unit,
+                                 "kWh")
 
 
 def test_missing(derivative_pairs_one_empty):
