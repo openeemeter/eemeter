@@ -52,3 +52,7 @@ def test_basic_usage(mock_isd_weather_source,
         output_end_date['gross_predicted'][0] <
         output_no_end_date['gross_predicted'][0]
     )
+
+    serialized = output_end_date['gross_predicted'][4]
+    assert len(serialized) == 547
+    assert serialized['2015-01-01T00:00:00+00:00'] == 32.0

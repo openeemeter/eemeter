@@ -64,7 +64,8 @@ def annualized_weather_normal(formatter, model, weather_normal_source):
     lower = (model.lower**2 * n)**0.5
 
     return {
-        "annualized_weather_normal": (annualized, lower, upper, n, serialized_demand_fixture),
+        "annualized_weather_normal": (annualized, lower, upper, n,
+                                      serialized_demand_fixture),
     }
 
 
@@ -126,5 +127,6 @@ def gross_predicted(formatter, model, weather_source, reporting_period):
     lower = (model.lower**2 * n)**0.5
 
     return {
-        "gross_predicted": (gross_predicted, lower, upper, n, serialized_demand_fixture),
+        "gross_predicted": (gross_predicted, lower, upper, n,
+                            serialized_demand_fixture),
     }

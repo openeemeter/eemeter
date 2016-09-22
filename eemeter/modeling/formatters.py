@@ -50,9 +50,6 @@ class FormatterBase(object):
             "n_rows": self._get_n_rows(input_data),
         }
 
-    def serialize_demand_fixture(self, demand_fixture_data):
-        pass
-
 
 class ModelDataFormatter(FormatterBase):
     ''' Formatter for model data of known or predictable frequency.
@@ -158,6 +155,12 @@ class ModelDataFormatter(FormatterBase):
                 ("tempF", row.tempF if pd.notnull(row.tempF) else None),
             ]))
             for start, row in input_data.iterrows()
+        ])
+
+    def serialize_demand_fixture(self, demand_fixture_data):
+        return OrderedDict([
+            (i.isoformat(), row.tempF)
+            for i, row in demand_fixture_data.iterrows()
         ])
 
 class ModelDataBillingFormatter(FormatterBase):
@@ -328,4 +331,10 @@ formatter.create_input(energy_trace, weather_source)
             ]))
             for (start, energy), (p, group) in
                 zip(trace_data.iteritems(), temp_data.groupby(level="period"))
+        ])
+
+    def serialize_demand_fixture(self, demand_fixture_data):
+        return OrderedDict([
+            (i.isoformat(), row.tempF)
+            for i, row in demand_fixture_data.iterrows()
         ])
