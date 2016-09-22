@@ -18,6 +18,23 @@ def derivative_pairs():
         ),
         DerivativePair(
             "interpretation2",
+            Derivative("1", None, None, None, None, None),
+            Derivative("2", 10, 8, 8, 5, None),
+        ),
+    ]
+
+
+@pytest.fixture
+def derivative_pairs_badly_formed():
+    return [
+        DerivativePair(
+            "interpretation1",
+            Derivative("1", 10, 3, 3, 5,
+                       OrderedDict([('2011-01-01T00:00:00+00:00', 32.0)])),
+            Derivative("2", 10, 6, 6, 5, None),
+        ),
+        DerivativePair(
+            "interpretation2",
             None,
             Derivative("2", 10, 8, 8, 5, None),
         ),
@@ -27,7 +44,7 @@ def derivative_pairs():
 def test_basic_usage(derivative_pairs):
     serialized = serialize_derivative_pairs(derivative_pairs)
     assert len(serialized) == 2
-    assert len(json.dumps(serialized)) == 420
+    assert len(json.dumps(serialized)) == 510
     assert serialized[0]["interpretation"] == "interpretation1"
     assert serialized[0]["baseline"]["label"] == "1"
     assert serialized[0]["baseline"]["value"] == 10
@@ -39,5 +56,9 @@ def test_basic_usage(derivative_pairs):
     assert serialized[0]["reporting"]["demand_fixture"] is None
 
     assert serialized[1]["interpretation"] == "interpretation2"
-    assert serialized[1]["baseline"] is None
+    assert serialized[1]["baseline"]["label"] == "1"
     assert serialized[1]["reporting"]["value"] == 10
+
+def test_badly_formed(derivative_pairs_badly_formed):
+    with pytest.raises(AttributeError):
+        serialized = serialize_derivative_pairs(derivative_pairs_badly_formed)

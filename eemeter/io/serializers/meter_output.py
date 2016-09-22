@@ -4,7 +4,7 @@ def serialize_derivative_pairs(derivative_pairs):
     return [
         OrderedDict([
             ("interpretation", interpretation),
-            ("baseline", None if baseline is None else OrderedDict([
+            ("baseline", OrderedDict([
                 ("label", baseline.label),
                 ("value", baseline.value),
                 ("lower", baseline.lower),
@@ -13,7 +13,7 @@ def serialize_derivative_pairs(derivative_pairs):
                 ("demand_fixture",
                  baseline.serialized_demand_fixture),
             ])),
-            ("reporting", None if reporting is None else OrderedDict([
+            ("reporting", OrderedDict([
                 ("label", reporting.label),
                 ("value", reporting.value),
                 ("lower", reporting.lower),
@@ -29,6 +29,7 @@ def serialize_derivative_pairs(derivative_pairs):
 
 def serialize_split_modeled_energy_trace(modeled_trace):
     serialized = OrderedDict([
+        ("type", "SPLIT_MODELED_ENERGY_TRACE"),
         ("fits", _serialize_fit_outputs(modeled_trace.fit_outputs)),
         ("modeling_period_set", serialize_modeling_period_set(modeled_trace.modeling_period_set)),
     ])

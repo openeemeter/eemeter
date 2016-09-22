@@ -688,7 +688,8 @@ class EnergyEfficiencyMeterTraceCentric(object):
             def _compute_derivative(baseline_label, reporting_label,
                                     interpretation, derivative_func, kwargs):
 
-                baseline_derivative = None
+                baseline_derivative = \
+                    Derivative(baseline_label, None, None, None, None, None)
                 if baseline_model_success:
                     baseline_derivative = modeled_energy_trace \
                         .compute_derivative(
@@ -701,7 +702,8 @@ class EnergyEfficiencyMeterTraceCentric(object):
                             serialized_demand_fixture
                         )
 
-                reporting_derivative = None
+                reporting_derivative = \
+                    Derivative(reporting_label, None, None, None, None, None)
                 if reporting_model_success:
                     reporting_derivative = modeled_energy_trace \
                         .compute_derivative(
