@@ -115,7 +115,7 @@ class SplitModeledEnergyTrace(object):
                         .format(model, self.trace.interpretation,
                                 modeling_period_label)
                     )
-                    outputs["model_filt"].update(model_fit)
+                    outputs["model_fit"].update(model_fit)
                     outputs.update({
                         "status": "SUCCESS",
                     })
