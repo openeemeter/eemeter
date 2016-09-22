@@ -50,6 +50,9 @@ class FormatterBase(object):
             "n_rows": self._get_n_rows(input_data),
         }
 
+    def serialize_demand_fixture(self, demand_fixture_data):
+        pass
+
 
 class ModelDataFormatter(FormatterBase):
     ''' Formatter for model data of known or predictable frequency.

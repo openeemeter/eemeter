@@ -8,6 +8,7 @@ def sum_func(d1, d2):
         (d1.lower**2 + d2.lower**2)**0.5,
         (d1.upper**2 + d2.upper**2)**0.5,
         d1.n + d2.n,
+        None,
     )
 
 

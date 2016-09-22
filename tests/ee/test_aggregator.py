@@ -8,13 +8,13 @@ def derivative_pairs():
     return [
         DerivativePair(
             "interpretation",
-            Derivative("1", 10, 3, 3, 5),
-            Derivative("2", 10, 6, 6, 5),
+            Derivative("1", 10, 3, 3, 5, None),
+            Derivative("2", 10, 6, 6, 5, None),
         ),
         DerivativePair(
             "interpretation",
-            Derivative("1", 10, 4, 4, 5),
-            Derivative("2", 10, 8, 8, 5),
+            Derivative("1", 10, 4, 4, 5, None),
+            Derivative("2", 10, 8, 8, 5, None),
         ),
     ]
 
@@ -24,13 +24,13 @@ def derivative_pairs_mixed_interpretation():
     return [
         DerivativePair(
             "interpretation1",
-            Derivative("1", 10, 3, 3, 5),
-            Derivative("2", 10, 6, 6, 5),
+            Derivative("1", 10, 3, 3, 5, None),
+            Derivative("2", 10, 6, 6, 5, None),
         ),
         DerivativePair(
             "interpretation2",
-            Derivative("1", 10, 4, 4, 5),
-            Derivative("2", 10, 8, 8, 5),
+            Derivative("1", 10, 4, 4, 5, None),
+            Derivative("2", 10, 8, 8, 5, None),
         ),
     ]
 
@@ -41,12 +41,12 @@ def derivative_pairs_one_empty():
         DerivativePair(
             "interpretation",
             None,
-            Derivative("2", 10, 3, 3, 5),
+            Derivative("2", 10, 3, 3, 5, None),
         ),
         DerivativePair(
             "interpretation",
-            Derivative("1", 10, 4, 4, 5),
-            Derivative("2", 10, 8, 8, 5),
+            Derivative("1", 10, 4, 4, 5, None),
+            Derivative("2", 10, 8, 8, 5, None),
         ),
     ]
 
@@ -102,7 +102,7 @@ def test_missing(derivative_pairs_one_empty):
 def test_missing_with_default(derivative_pairs_one_empty):
 
     aggregator = Aggregator(baseline_default_value=Derivative(
-        None, 0, 0, 0, 0
+        None, 0, 0, 0, 0, None
     ))
 
     derivative_pair, n_valid, n_invalid = \

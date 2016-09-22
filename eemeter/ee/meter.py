@@ -286,9 +286,13 @@ class EnergyEfficiencyMeter(object):
 
                         if baseline_output is None:
                             baseline_output = (0.0, 0.0, 0.0, 0)
+                        else:
+                            baseline_output = baseline_output[:4]
 
                         if reporting_output is None:
                             reporting_output = (0.0, 0.0, 0.0, 0)
+                        else:
+                            reporting_output = reporting_output[:4]
 
                         baseline_output = _change_units(
                             baseline_output, trace.unit, target_unit)
@@ -690,10 +694,11 @@ class EnergyEfficiencyMeterTraceCentric(object):
                         .compute_derivative(
                             baseline_label, derivative_func, kwargs)
                     if baseline_derivative is not None:
-                        value, lower, upper, n = \
+                        value, lower, upper, n, serialized_demand_fixture = \
                             baseline_derivative[interpretation]
                         baseline_derivative = Derivative(
-                            baseline_label, value, lower, upper, n
+                            baseline_label, value, lower, upper, n,
+                            serialized_demand_fixture
                         )
 
                 reporting_derivative = None
@@ -702,10 +707,11 @@ class EnergyEfficiencyMeterTraceCentric(object):
                         .compute_derivative(
                             reporting_label, derivative_func, kwargs)
                     if reporting_derivative is not None:
-                        value, lower, upper, n = \
+                        value, lower, upper, n, serialized_demand_fixture = \
                             reporting_derivative[interpretation]
                         reporting_derivative = Derivative(
-                            reporting_label, value, lower, upper, n
+                            reporting_label, value, lower, upper, n,
+                            serialized_demand_fixture
                         )
 
                 derivative_pair = DerivativePair(

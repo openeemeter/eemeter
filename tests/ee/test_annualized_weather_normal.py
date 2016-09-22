@@ -24,5 +24,5 @@ def test_basic_usage(mock_tmy3_weather_source):
     output = annualized_weather_normal(
         formatter, model, mock_tmy3_weather_source)
 
-    assert_allclose(output['annualized_weather_normal'],
+    assert_allclose(output['annualized_weather_normal'][:4],
                     (365, 19.1049731745428, 19.1049731745428, 365))

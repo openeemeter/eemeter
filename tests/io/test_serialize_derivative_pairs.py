@@ -11,13 +11,13 @@ def derivative_pairs():
     return [
         DerivativePair(
             "interpretation1",
-            Derivative("1", 10, 3, 3, 5),
-            Derivative("2", 10, 6, 6, 5),
+            Derivative("1", 10, 3, 3, 5, None),
+            Derivative("2", 10, 6, 6, 5, None),
         ),
         DerivativePair(
             "interpretation2",
             None,
-            Derivative("2", 10, 8, 8, 5),
+            Derivative("2", 10, 8, 8, 5, None),
         ),
     ]
 

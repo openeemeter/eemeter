@@ -138,7 +138,13 @@ def test_basic_usage_daily(split_modeled_energy_trace_daily):
     assert mp2['start_date'] is None
     assert mp2['end_date'] is None
     assert mp2['n_rows'] is not None
-    assert mp2['model_fit'] is None
+    assert mp2['model_fit']['r2'] is None
+    assert mp2['model_fit']['cvrmse'] is None
+    assert mp2['model_fit']['rmse'] is None
+    assert mp2['model_fit']['lower'] is None
+    assert mp2['model_fit']['upper'] is None
+    assert mp2['model_fit']['n'] is None
+    assert mp2['model_fit']['model_params'] is None
 
     modeling_period_set = serialized["modeling_period_set"]
     modeling_periods = modeling_period_set["modeling_periods"]
