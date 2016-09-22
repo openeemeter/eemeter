@@ -10,6 +10,8 @@ def serialize_derivative_pairs(derivative_pairs):
                 ("lower", baseline.lower),
                 ("upper", baseline.upper),
                 ("n", baseline.n),
+                ("demand_fixture",
+                 baseline.serialized_demand_fixture),
             ])),
             ("reporting", None if reporting is None else OrderedDict([
                 ("label", reporting.label),
@@ -17,6 +19,8 @@ def serialize_derivative_pairs(derivative_pairs):
                 ("lower", reporting.lower),
                 ("upper", reporting.upper),
                 ("n", reporting.n),
+                ("demand_fixture",
+                 reporting.serialized_demand_fixture),
             ])),
         ])
         for interpretation, baseline, reporting in derivative_pairs
