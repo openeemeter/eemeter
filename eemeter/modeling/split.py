@@ -66,6 +66,7 @@ class SplitModeledEnergyTrace(object):
                 "start_date": None,
                 "end_date": None,
                 "n_rows": None,
+                "model_fit": {},
             }
 
             # attempt to create input data
@@ -114,9 +115,9 @@ class SplitModeledEnergyTrace(object):
                         .format(model, self.trace.interpretation,
                                 modeling_period_label)
                     )
+                    outputs["model_filt"].update(model_fit)
                     outputs.update({
                         "status": "SUCCESS",
-                        "model_fit": model_fit,
                     })
 
             self.fit_outputs[modeling_period_label] = outputs
