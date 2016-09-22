@@ -37,11 +37,11 @@ def _serialize_fit_outputs(fit_outputs):
         (mp_label, OrderedDict([
             ("status", output.get("status", None)),
             ("traceback", output.get("traceback", None)),
-            ("input_data", output.get("input_data", None)),
             ("start_date", None if output.get("start_date", None) is None else output.get("start_date").isoformat()),
             ("end_date", None if output.get("end_date", None) is None else output.get("end_date").isoformat()),
             ("n_rows", output.get("n_rows", None)),
             ("model_fit", _serialize_model_fit(output.get("model_fit", None))),
+            ("input_data", output.get("input_data", None)),
         ]))
         for mp_label, output in sorted(fit_outputs.items(), key=lambda x: x[0])
     ])

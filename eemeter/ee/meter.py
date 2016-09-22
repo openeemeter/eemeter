@@ -516,10 +516,10 @@ class EnergyEfficiencyMeterTraceCentric(object):
             ("formatter_class", None),
             ("formatter_kwargs", None),
 
-            ("modeled_energy_trace", None),
-            ("derivatives", None),
             ("weather_source_station", None),
             ("weather_normal_source_station", None),
+            ("derivatives", None),
+            ("modeled_energy_trace", None),
         ])
 
         # Step 1: Deserialize input and validate
