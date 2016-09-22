@@ -74,12 +74,12 @@ def derivative_pairs_mixed_unit():
 
 
 @pytest.fixture
-def derivative_pairs_one_empty():
+def derivative_pairs_one_invalid():
     return [
         DerivativePair(
             "interpretation",
             "kWh",
-            None,
+            Derivative("1", None, None, None, None, None),
             Derivative("2", 10, 3, 3, 5, None),
         ),
         DerivativePair(
@@ -152,26 +152,26 @@ def test_mixed_unit_fails(derivative_pairs_mixed_unit):
                                  "kWh")
 
 
-def test_missing(derivative_pairs_one_empty):
+def test_missing(derivative_pairs_one_invalid):
 
     aggregator = Aggregator()
 
     derivative_pair, n_valid, n_invalid = \
-        aggregator.aggregate(derivative_pairs_one_empty,
+        aggregator.aggregate(derivative_pairs_one_invalid,
                              "interpretation")
 
     assert n_valid == 1
     assert n_invalid == 1
 
 
-def test_missing_with_default(derivative_pairs_one_empty):
+def test_missing_with_default(derivative_pairs_one_invalid):
 
     aggregator = Aggregator(baseline_default_value=Derivative(
         None, 0, 0, 0, 0, None
     ))
 
     derivative_pair, n_valid, n_invalid = \
-        aggregator.aggregate(derivative_pairs_one_empty,
+        aggregator.aggregate(derivative_pairs_one_invalid,
                              "interpretation")
 
     assert n_valid == 2

@@ -50,24 +50,36 @@ class Aggregator(object):
                 )
                 raise ValueError(message)
 
+    def _derivative_is_valid(self, derivative):
+        return not (
+            derivative.value is None or
+            derivative.lower is None or
+            derivative.upper is None or
+            derivative.n is None
+        )
+
     def _get_valid_derivatives(self, derivative_pairs):
         baseline_derivatives, reporting_derivatives = [], []
         n_valid = 0
         n_invalid = 0
 
         for pair in derivative_pairs:
+
             baseline_derivative = pair.baseline
-            if baseline_derivative is None:
+            baseline_valid = self._derivative_is_valid(baseline_derivative)
+            if not baseline_valid:
                 if self.baseline_default_value is not None:
                     baseline_derivative = self.baseline_default_value
+                    baseline_valid = True
 
             reporting_derivative = pair.reporting
-            if reporting_derivative is None:
+            reporting_valid = self._derivative_is_valid(reporting_derivative)
+            if not reporting_valid:
                 if self.reporting_default_value is not None:
                     reporting_derivative = self.reporting_default_value
+                    reporting_valid = True
 
-            if baseline_derivative is not None and \
-                    reporting_derivative is not None:
+            if baseline_valid and reporting_valid:
                 baseline_derivatives.append(baseline_derivative)
                 reporting_derivatives.append(reporting_derivative)
                 n_valid += 1
