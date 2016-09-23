@@ -133,7 +133,6 @@ class Aggregator(object):
         target_unit : str, default None
             Unit of derivatives; if None, will use unit of first.
         '''
-
         deserialized = deserialize_aggregation_input(aggregation_input)
 
         aggregation_interpretation = deserialized["aggregation_interpretation"]
@@ -177,13 +176,17 @@ class Aggregator(object):
         baseline_aggregation = self._aggregate(baseline_derivatives, func)
         reporting_aggregation = self._aggregate(reporting_derivatives, func)
 
-        aggregated = DerivativePair(
-            None, target_derivative_interpretation,
-            target_trace_interpretation, target_unit,
-            baseline_aggregation, reporting_aggregation
-        )
+        if baseline_aggregation is None or reporting_aggregation is None:
+            aggregated = None
+        else:
+            aggregated = DerivativePair(
+                None, target_derivative_interpretation,
+                target_trace_interpretation, target_unit,
+                baseline_aggregation, reporting_aggregation
+            )
+            aggregated = serialize_derivative_pair(aggregated)
 
         return OrderedDict([
-            ("aggregated", serialize_derivative_pair(aggregated)),
+            ("aggregated", aggregated),
             ("status", status),
         ])
