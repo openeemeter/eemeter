@@ -4,103 +4,362 @@ from eemeter.ee.aggregate import Aggregator
 
 
 @pytest.fixture
-def derivative_pairs_empty():
-    return []
+def aggregation_input():
+    return {
+        "type": "BASIC_AGGREGATION",
+        "aggregation_interpretation": "SUM",
+        "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+        "derivative_interpretation": "annualized_weather_normal",
+        "derivatives": {
+            "type": "DERIVATIVE_PAIRS",
+            "derivative_pairs": [
+                {
+                    "derivative_interpretation": "annualized_weather_normal",
+                    "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+                    "unit": "therm",
+                    "baseline_value": 10,
+                    "baseline_lower": 3,
+                    "baseline_upper": 3,
+                    "baseline_n": 5,
+                    "reporting_value": 10,
+                    "reporting_lower": 6,
+                    "reporting_upper": 6,
+                    "reporting_n": 5,
+                },
+                {
+                    "derivative_interpretation": "annualized_weather_normal",
+                    "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+                    "unit": "therm",
+                    "baseline_value": 10,
+                    "baseline_lower": 4,
+                    "baseline_upper": 4,
+                    "baseline_n": 5,
+                    "reporting_value": 10,
+                    "reporting_lower": 8,
+                    "reporting_upper": 8,
+                    "reporting_n": 5,
+                }
+            ]
+        }
+    }
 
 
 @pytest.fixture
-def derivative_pairs_single():
-    return [
-        DerivativePair(
-            "interpretation",
-            "kWh",
-            Derivative("1", 10, 3, 3, 5, None),
-            Derivative("2", 10, 6, 6, 5, None),
-        ),
-    ]
+def aggregation_input_empty():
+    return {
+        "type": "BASIC_AGGREGATION",
+        "aggregation_interpretation": "SUM",
+        "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+        "derivative_interpretation": "annualized_weather_normal",
+        "derivatives": {
+            "type": "DERIVATIVE_PAIRS",
+            "derivative_pairs": []
+        }
+    }
 
 
 @pytest.fixture
-def derivative_pairs():
-    return [
-        DerivativePair(
-            "interpretation",
-            "kWh",
-            Derivative("1", 10, 3, 3, 5, None),
-            Derivative("2", 10, 6, 6, 5, None),
-        ),
-        DerivativePair(
-            "interpretation",
-            "kWh",
-            Derivative("1", 10, 4, 4, 5, None),
-            Derivative("2", 10, 8, 8, 5, None),
-        ),
-    ]
+def aggregation_input_single():
+    return {
+        "type": "BASIC_AGGREGATION",
+        "aggregation_interpretation": "SUM",
+        "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+        "derivative_interpretation": "annualized_weather_normal",
+        "derivatives": {
+            "type": "DERIVATIVE_PAIRS",
+            "derivative_pairs": [
+                {
+                    "derivative_interpretation": "annualized_weather_normal",
+                    "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+                    "unit": "therm",
+                    "baseline_value": 10,
+                    "baseline_lower": 3,
+                    "baseline_upper": 3,
+                    "baseline_n": 5,
+                    "reporting_value": 10,
+                    "reporting_lower": 6,
+                    "reporting_upper": 6,
+                    "reporting_n": 5,
+                }
+            ]
+        }
+    }
 
 
 @pytest.fixture
-def derivative_pairs_mixed_interpretation():
-    return [
-        DerivativePair(
-            "interpretation1",
-            "kWh",
-            Derivative("1", 10, 3, 3, 5, None),
-            Derivative("2", 10, 6, 6, 5, None),
-        ),
-        DerivativePair(
-            "interpretation2",
-            "kWh",
-            Derivative("1", 10, 4, 4, 5, None),
-            Derivative("2", 10, 8, 8, 5, None),
-        ),
-    ]
+def aggregation_input_mixed_derivative_interpretation():
+    return {
+        "type": "BASIC_AGGREGATION",
+        "aggregation_interpretation": "SUM",
+        "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+        "derivative_interpretation": "annualized_weather_normal",
+        "derivatives": {
+            "type": "DERIVATIVE_PAIRS",
+            "derivative_pairs": [
+                {
+                    "derivative_interpretation": "annualized_weather_normal",
+                    "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+                    "unit": "therm",
+                    "baseline_value": 10,
+                    "baseline_lower": 3,
+                    "baseline_upper": 3,
+                    "baseline_n": 5,
+                    "reporting_value": 10,
+                    "reporting_lower": 6,
+                    "reporting_upper": 6,
+                    "reporting_n": 5,
+                },
+                {
+                    "derivative_interpretation": "gross_predicted",
+                    "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+                    "unit": "therm",
+                    "baseline_value": 10,
+                    "baseline_lower": 4,
+                    "baseline_upper": 4,
+                    "baseline_n": 5,
+                    "reporting_value": 10,
+                    "reporting_lower": 8,
+                    "reporting_upper": 8,
+                    "reporting_n": 5,
+                }
+            ]
+        }
+    }
+
 
 @pytest.fixture
-def derivative_pairs_mixed_unit():
-    return [
-        DerivativePair(
-            "interpretation1",
-            "kWh",
-            Derivative("1", 10, 3, 3, 5, None),
-            Derivative("2", 10, 6, 6, 5, None),
-        ),
-        DerivativePair(
-            "interpretation2",
-            "therm",
-            Derivative("1", 10, 4, 4, 5, None),
-            Derivative("2", 10, 8, 8, 5, None),
-        ),
-    ]
+def aggregation_input_mixed_trace_interpretation():
+    return {
+        "type": "BASIC_AGGREGATION",
+        "aggregation_interpretation": "SUM",
+        "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+        "derivative_interpretation": "annualized_weather_normal",
+        "derivatives": {
+            "type": "DERIVATIVE_PAIRS",
+            "derivative_pairs": [
+                {
+                    "derivative_interpretation": "annualized_weather_normal",
+                    "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+                    "unit": "therm",
+                    "baseline_value": 10,
+                    "baseline_lower": 3,
+                    "baseline_upper": 3,
+                    "baseline_n": 5,
+                    "reporting_value": 10,
+                    "reporting_lower": 6,
+                    "reporting_upper": 6,
+                    "reporting_n": 5,
+                },
+                {
+                    "derivative_interpretation": "annualized_weather_normal",
+                    "trace_interpretation": "ELECTRICITY_CONSUMPTION_SUPPLIED",
+                    "unit": "therm",
+                    "baseline_value": 10,
+                    "baseline_lower": 4,
+                    "baseline_upper": 4,
+                    "baseline_n": 5,
+                    "reporting_value": 10,
+                    "reporting_lower": 8,
+                    "reporting_upper": 8,
+                    "reporting_n": 5,
+                }
+            ]
+        }
+    }
 
 
 @pytest.fixture
-def derivative_pairs_one_invalid():
-    return [
-        DerivativePair(
-            "interpretation",
-            "kWh",
-            Derivative("1", None, None, None, None, None),
-            Derivative("2", 10, 3, 3, 5, None),
-        ),
-        DerivativePair(
-            "interpretation",
-            "kWh",
-            Derivative("1", 10, 4, 4, 5, None),
-            Derivative("2", 10, 8, 8, 5, None),
-        ),
-    ]
+def aggregation_input_mixed_unit():
+    return {
+        "type": "BASIC_AGGREGATION",
+        "aggregation_interpretation": "SUM",
+        "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+        "derivative_interpretation": "annualized_weather_normal",
+        "derivatives": {
+            "type": "DERIVATIVE_PAIRS",
+            "derivative_pairs": [
+                {
+                    "derivative_interpretation": "annualized_weather_normal",
+                    "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+                    "unit": "therm",
+                    "baseline_value": 10,
+                    "baseline_lower": 3,
+                    "baseline_upper": 3,
+                    "baseline_n": 5,
+                    "reporting_value": 10,
+                    "reporting_lower": 6,
+                    "reporting_upper": 6,
+                    "reporting_n": 5,
+                },
+                {
+                    "derivative_interpretation": "annualized_weather_normal",
+                    "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+                    "unit": "kWh",
+                    "baseline_value": 10,
+                    "baseline_lower": 4,
+                    "baseline_upper": 4,
+                    "baseline_n": 5,
+                    "reporting_value": 10,
+                    "reporting_lower": 8,
+                    "reporting_upper": 8,
+                    "reporting_n": 5,
+                }
+            ]
+        }
+    }
 
 
-def test_basic_usage(derivative_pairs):
+@pytest.fixture
+def aggregation_input_one_invalid():
+    return {
+        "type": "BASIC_AGGREGATION",
+        "aggregation_interpretation": "SUM",
+        "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+        "derivative_interpretation": "annualized_weather_normal",
+        "derivatives": {
+            "type": "DERIVATIVE_PAIRS",
+            "derivative_pairs": [
+                {
+                    "derivative_interpretation": "annualized_weather_normal",
+                    "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+                    "unit": "therm",
+                    "baseline_value": None,
+                    "baseline_lower": None,
+                    "baseline_upper": None,
+                    "baseline_n": None,
+                    "reporting_value": 10,
+                    "reporting_lower": 6,
+                    "reporting_upper": 6,
+                    "reporting_n": 5,
+                },
+                {
+                    "derivative_interpretation": "annualized_weather_normal",
+                    "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+                    "unit": "therm",
+                    "baseline_value": 10,
+                    "baseline_lower": 4,
+                    "baseline_upper": 4,
+                    "baseline_n": 5,
+                    "reporting_value": 10,
+                    "reporting_lower": 8,
+                    "reporting_upper": 8,
+                    "reporting_n": 5,
+                }
+            ]
+        }
+    }
 
-    aggregator = Aggregator("SUM")
+
+@pytest.fixture
+def aggregation_input_one_invalid_default_baseline():
+    return {
+        "type": "BASIC_AGGREGATION",
+        "aggregation_interpretation": "SUM",
+        "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+        "derivative_interpretation": "annualized_weather_normal",
+        "baseline_default_value": {
+            "type": "SIMPLE_DEFAULT",
+            "value": 0,
+            "lower": 0,
+            "upper": 0,
+            "n": 0,
+        },
+        "derivatives": {
+            "type": "DERIVATIVE_PAIRS",
+            "derivative_pairs": [
+                {
+                    "derivative_interpretation": "annualized_weather_normal",
+                    "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+                    "unit": "therm",
+                    "baseline_value": None,
+                    "baseline_lower": None,
+                    "baseline_upper": None,
+                    "baseline_n": None,
+                    "reporting_value": 10,
+                    "reporting_lower": 6,
+                    "reporting_upper": 6,
+                    "reporting_n": 5,
+                },
+                {
+                    "derivative_interpretation": "annualized_weather_normal",
+                    "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+                    "unit": "therm",
+                    "baseline_value": 10,
+                    "baseline_lower": 4,
+                    "baseline_upper": 4,
+                    "baseline_n": 5,
+                    "reporting_value": 10,
+                    "reporting_lower": 8,
+                    "reporting_upper": 8,
+                    "reporting_n": 5,
+                }
+            ]
+        }
+    }
+
+
+@pytest.fixture
+def aggregation_input_one_invalid_default_reporting():
+    return {
+        "type": "BASIC_AGGREGATION",
+        "aggregation_interpretation": "SUM",
+        "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+        "derivative_interpretation": "annualized_weather_normal",
+        "reporting_default_value": {
+            "type": "SIMPLE_DEFAULT",
+            "value": 0,
+            "lower": 0,
+            "upper": 0,
+            "n": 0,
+        },
+        "derivatives": {
+            "type": "DERIVATIVE_PAIRS",
+            "derivative_pairs": [
+                {
+                    "derivative_interpretation": "annualized_weather_normal",
+                    "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+                    "unit": "therm",
+                    "baseline_value": 10,
+                    "baseline_lower": 3,
+                    "baseline_upper": 3,
+                    "baseline_n": 5,
+                    "reporting_value": 10,
+                    "reporting_lower": 6,
+                    "reporting_upper": 6,
+                    "reporting_n": 5,
+                },
+                {
+                    "derivative_interpretation": "annualized_weather_normal",
+                    "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+                    "unit": "therm",
+                    "baseline_value": 10,
+                    "baseline_lower": 4,
+                    "baseline_upper": 4,
+                    "baseline_n": 5,
+                    "reporting_value": None,
+                    "reporting_lower": None,
+                    "reporting_upper": None,
+                    "reporting_n": None,
+                }
+            ]
+        }
+    }
+
+
+def test_basic_usage(aggregation_input):
+
+    aggregator = Aggregator()
     derivative_pair, n_valid, n_invalid = \
-        aggregator.aggregate(derivative_pairs, "interpretation")
+        aggregator.aggregate(aggregation_input)
 
     assert n_valid == 2
     assert n_invalid == 0
 
-    assert derivative_pair.interpretation == "interpretation"
+    assert derivative_pair.derivative_interpretation == \
+        "annualized_weather_normal"
+
+    assert derivative_pair.trace_interpretation == \
+        "NATURAL_GAS_CONSUMPTION_SUPPLIED"
 
     baseline = derivative_pair.baseline
     assert baseline.label is None
@@ -116,63 +375,79 @@ def test_basic_usage(derivative_pairs):
     assert reporting.upper == 10
     assert reporting.n == 10
 
-def test_empty(derivative_pairs_empty):
+
+def test_empty(aggregation_input_empty):
     aggregator = Aggregator()
     with pytest.raises(ValueError):
-        aggregator.aggregate(derivative_pairs_empty)
+        aggregator.aggregate(aggregation_input_empty)
 
 
-def test_single(derivative_pairs_single):
+def test_single(aggregation_input_single):
     aggregator = Aggregator()
 
     derivative_pairs, n_valid, n_invalid = \
-        aggregator.aggregate(derivative_pairs_single)
+        aggregator.aggregate(aggregation_input_single)
 
     assert n_valid == 1
     assert n_invalid == 0
 
 
-def test_mixed_interpretaiton_fails(derivative_pairs_mixed_interpretation):
+def test_mixed_derivative_interpretaiton_fails(
+        aggregation_input_mixed_derivative_interpretation):
 
     aggregator = Aggregator()
 
     with pytest.raises(ValueError):
         derivative_pair, n_valid, n_invalid = \
-            aggregator.aggregate(derivative_pairs_mixed_interpretation,
-                                 "interpretation1")
+            aggregator.aggregate(aggregation_input_mixed_derivative_interpretation)
 
 
-def test_mixed_unit_fails(derivative_pairs_mixed_unit):
+def test_mixed_trace_interpretaiton_fails(
+        aggregation_input_mixed_trace_interpretation):
 
     aggregator = Aggregator()
 
     with pytest.raises(ValueError):
         derivative_pair, n_valid, n_invalid = \
-            aggregator.aggregate(derivative_pairs_mixed_unit,
-                                 "kWh")
+            aggregator.aggregate(aggregation_input_mixed_trace_interpretation)
 
 
-def test_missing(derivative_pairs_one_invalid):
+def test_mixed_unit_fails(aggregation_input_mixed_unit):
+
+    aggregator = Aggregator()
+
+    with pytest.raises(ValueError):
+        derivative_pair, n_valid, n_invalid = \
+            aggregator.aggregate(aggregation_input_mixed_unit)
+
+
+def test_missing(aggregation_input_one_invalid):
 
     aggregator = Aggregator()
 
     derivative_pair, n_valid, n_invalid = \
-        aggregator.aggregate(derivative_pairs_one_invalid,
-                             "interpretation")
+        aggregator.aggregate(aggregation_input_one_invalid)
 
     assert n_valid == 1
     assert n_invalid == 1
 
 
-def test_missing_with_default(derivative_pairs_one_invalid):
+def test_missing_with_baseline_default(aggregation_input_one_invalid_default_baseline):
 
-    aggregator = Aggregator(baseline_default_value=Derivative(
-        None, 0, 0, 0, 0, None
-    ))
+    aggregator = Aggregator()
 
     derivative_pair, n_valid, n_invalid = \
-        aggregator.aggregate(derivative_pairs_one_invalid,
-                             "interpretation")
+        aggregator.aggregate(aggregation_input_one_invalid_default_baseline)
+
+    assert n_valid == 2
+    assert n_invalid == 0
+
+def test_missing_with_reporting_default(aggregation_input_one_invalid_default_reporting):
+
+    aggregator = Aggregator()
+
+    derivative_pair, n_valid, n_invalid = \
+        aggregator.aggregate(aggregation_input_one_invalid_default_reporting)
 
     assert n_valid == 2
     assert n_invalid == 0

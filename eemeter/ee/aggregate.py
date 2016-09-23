@@ -1,4 +1,5 @@
 from eemeter.ee.derivatives import DerivativePair, Derivative
+from eemeter.io.serializers import deserialize_aggregation_input
 
 
 def sum_func(d1, d2):
@@ -22,21 +23,27 @@ class Aggregator(object):
         "SUM": sum_func,
     }
 
-    def __init__(self, aggregation_function="SUM",
-                 baseline_default_value=None,
-                 reporting_default_value=None):
-        self.func = self.aggregation_functions[aggregation_function]
-        self.baseline_default_value = baseline_default_value
-        self.reporting_default_value = reporting_default_value
-
-    def _validate_interpretation(self, derivative_pairs,
-                                 target_interpretation):
+    def _validate_derivative_interpretation(self, derivative_pairs,
+                                            target_derivative_interpretation):
         for d in derivative_pairs:
-            if d.interpretation != target_interpretation:
+            if d.derivative_interpretation != target_derivative_interpretation:
                 message = (
-                    "DerivativePair interpretation ({}) does not match"
-                    " target_interpretation ({})."
-                    .format(d.interpretation, target_interpretation)
+                    "DerivativePair derivative_interpretation ({}) does not"
+                    " match target_derivative_interpretation ({})."
+                    .format(d.derivative_interpretation,
+                            target_derivative_interpretation)
+                )
+                raise ValueError(message)
+
+    def _validate_trace_interpretation(self, derivative_pairs,
+                                            target_trace_interpretation):
+        for d in derivative_pairs:
+            if d.trace_interpretation != target_trace_interpretation:
+                message = (
+                    "DerivativePair trace_interpretation ({}) does not"
+                    " match target_trace_interpretation ({})."
+                    .format(d.trace_interpretation,
+                            target_trace_interpretation)
                 )
                 raise ValueError(message)
 
@@ -58,7 +65,8 @@ class Aggregator(object):
             derivative.n is None
         )
 
-    def _get_valid_derivatives(self, derivative_pairs):
+    def _get_valid_derivatives(self, derivative_pairs, baseline_default_value,
+                               reporting_default_value):
         baseline_derivatives, reporting_derivatives = [], []
         n_valid = 0
         n_invalid = 0
@@ -68,15 +76,15 @@ class Aggregator(object):
             baseline_derivative = pair.baseline
             baseline_valid = self._derivative_is_valid(baseline_derivative)
             if not baseline_valid:
-                if self.baseline_default_value is not None:
-                    baseline_derivative = self.baseline_default_value
+                if baseline_default_value is not None:
+                    baseline_derivative = baseline_default_value
                     baseline_valid = True
 
             reporting_derivative = pair.reporting
             reporting_valid = self._derivative_is_valid(reporting_derivative)
             if not reporting_valid:
-                if self.reporting_default_value is not None:
-                    reporting_derivative = self.reporting_default_value
+                if reporting_default_value is not None:
+                    reporting_derivative = reporting_default_value
                     reporting_valid = True
 
             if baseline_valid and reporting_valid:
@@ -88,17 +96,16 @@ class Aggregator(object):
 
         return baseline_derivatives, reporting_derivatives, n_valid, n_invalid
 
-    def _aggregate(self, derivatives):
+    def _aggregate(self, derivatives, func):
         if len(derivatives) == 0:
             return None
 
         aggregated = derivatives[0]
         for d in derivatives[1:]:
-            aggregated = self.func(aggregated, d)
+            aggregated = func(aggregated, d)
         return aggregated
 
-    def aggregate(self, derivative_pairs, target_interpretation=None,
-                  target_unit=None):
+    def aggregate(self, aggregation_input):
         ''' Aggregates derivative pairs
 
         Parameters
@@ -112,29 +119,52 @@ class Aggregator(object):
             Unit of derivatives; if None, will use unit of first.
         '''
 
+        deserialized = deserialize_aggregation_input(aggregation_input)
+
+        aggregation_interpretation = deserialized["aggregation_interpretation"]
+        func = self.aggregation_functions[aggregation_interpretation]
+        baseline_default_value = deserialized.get("baseline_default_value")
+        reporting_default_value = deserialized.get("reporting_default_value")
+
+        derivative_pairs = deserialized["derivative_pairs"]
+        target_derivative_interpretation = \
+            deserialized["derivative_interpretation"]
+        target_trace_interpretation = deserialized["trace_interpretation"]
+        target_unit = None
+
         if len(derivative_pairs) == 0:
             raise ValueError(
                 "Cannot aggregate empty list."
             )
 
-        if target_interpretation is None:
-            target_interpretation = derivative_pairs[0].interpretation
+        if target_derivative_interpretation is None:
+            target_derivative_interpretation = \
+                derivative_pairs[0].derivative_interpretation
+
+        if target_trace_interpretation is None:
+            target_trace_interpretation = \
+                derivative_pairs[0].trace_interpretation
 
         if target_unit is None:
             target_unit = derivative_pairs[0].unit
 
-        self._validate_interpretation(derivative_pairs, target_interpretation)
+        self._validate_derivative_interpretation(
+            derivative_pairs, target_derivative_interpretation)
+        self._validate_trace_interpretation(
+            derivative_pairs, target_trace_interpretation)
         self._validate_unit(derivative_pairs, target_unit)
 
         baseline_derivatives, reporting_derivatives, n_valid, n_invalid = \
-            self._get_valid_derivatives(derivative_pairs)
+            self._get_valid_derivatives(derivative_pairs,
+                                        baseline_default_value,
+                                        reporting_default_value)
 
-        baseline_aggregation = self._aggregate(baseline_derivatives)
-        reporting_aggregation = self._aggregate(reporting_derivatives)
+        baseline_aggregation = self._aggregate(baseline_derivatives, func)
+        reporting_aggregation = self._aggregate(reporting_derivatives, func)
 
         aggregated = DerivativePair(
-            target_interpretation, target_unit,
-            baseline_aggregation, reporting_aggregation
+            target_derivative_interpretation, target_trace_interpretation,
+            target_unit, baseline_aggregation, reporting_aggregation
         )
 
         return aggregated, n_valid, n_invalid

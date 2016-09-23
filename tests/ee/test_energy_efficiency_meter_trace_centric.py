@@ -89,13 +89,17 @@ def test_basic_usage(meter_input, mock_isd_weather_source,
     assert results['modeled_energy_trace'] is not None
 
     assert len(results['derivatives']) == 2
-    assert results['derivatives'][0]["interpretation"] == \
+    assert results['derivatives'][0]["derivative_interpretation"] == \
         'annualized_weather_normal'
+    assert results['derivatives'][0]["trace_interpretation"] == \
+        'NATURAL_GAS_CONSUMPTION_SUPPLIED'
+    assert results['derivatives'][0]["unit"] == 'THERM'
     assert results['derivatives'][0]["baseline"]["label"] == 'baseline'
     assert results['derivatives'][0]["reporting"]["label"] == 'reporting'
     assert results['derivatives'][0]["baseline"]["value"] > 0
     assert results['derivatives'][0]["reporting"]["value"] > 0
-    assert results['derivatives'][1]["interpretation"] == 'gross_predicted'
+    assert results['derivatives'][1]["derivative_interpretation"] == \
+        'gross_predicted'
     assert results['derivatives'][1]["baseline"]["label"] == 'baseline'
     assert results['derivatives'][1]["reporting"]["label"] == "reporting"
     assert results['derivatives'][1]["baseline"]["value"] > 0

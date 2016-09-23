@@ -717,7 +717,7 @@ class EnergyEfficiencyMeterTraceCentric(object):
                         )
 
                 derivative_pair = DerivativePair(
-                    interpretation, trace.unit,
+                    interpretation, trace.interpretation, trace.unit,
                     baseline_derivative, reporting_derivative
                 )
                 return derivative_pair
