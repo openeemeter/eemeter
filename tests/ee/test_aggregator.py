@@ -14,6 +14,7 @@ def aggregation_input():
             "type": "DERIVATIVE_PAIRS",
             "derivative_pairs": [
                 {
+                    "label": "1",
                     "derivative_interpretation": "annualized_weather_normal",
                     "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
                     "unit": "therm",
@@ -27,6 +28,7 @@ def aggregation_input():
                     "reporting_n": 5,
                 },
                 {
+                    "label": "2",
                     "derivative_interpretation": "annualized_weather_normal",
                     "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
                     "unit": "therm",
@@ -69,6 +71,7 @@ def aggregation_input_single():
             "type": "DERIVATIVE_PAIRS",
             "derivative_pairs": [
                 {
+                    "label": "1",
                     "derivative_interpretation": "annualized_weather_normal",
                     "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
                     "unit": "therm",
@@ -97,6 +100,7 @@ def aggregation_input_mixed_derivative_interpretation():
             "type": "DERIVATIVE_PAIRS",
             "derivative_pairs": [
                 {
+                    "label": "1",
                     "derivative_interpretation": "annualized_weather_normal",
                     "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
                     "unit": "therm",
@@ -110,6 +114,7 @@ def aggregation_input_mixed_derivative_interpretation():
                     "reporting_n": 5,
                 },
                 {
+                    "label": "2",
                     "derivative_interpretation": "gross_predicted",
                     "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
                     "unit": "therm",
@@ -138,6 +143,7 @@ def aggregation_input_mixed_trace_interpretation():
             "type": "DERIVATIVE_PAIRS",
             "derivative_pairs": [
                 {
+                    "label": "1",
                     "derivative_interpretation": "annualized_weather_normal",
                     "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
                     "unit": "therm",
@@ -151,6 +157,7 @@ def aggregation_input_mixed_trace_interpretation():
                     "reporting_n": 5,
                 },
                 {
+                    "label": "2",
                     "derivative_interpretation": "annualized_weather_normal",
                     "trace_interpretation": "ELECTRICITY_CONSUMPTION_SUPPLIED",
                     "unit": "therm",
@@ -179,6 +186,7 @@ def aggregation_input_mixed_unit():
             "type": "DERIVATIVE_PAIRS",
             "derivative_pairs": [
                 {
+                    "label": "1",
                     "derivative_interpretation": "annualized_weather_normal",
                     "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
                     "unit": "therm",
@@ -192,6 +200,7 @@ def aggregation_input_mixed_unit():
                     "reporting_n": 5,
                 },
                 {
+                    "label": "2",
                     "derivative_interpretation": "annualized_weather_normal",
                     "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
                     "unit": "kWh",
@@ -220,6 +229,7 @@ def aggregation_input_one_invalid():
             "type": "DERIVATIVE_PAIRS",
             "derivative_pairs": [
                 {
+                    "label": "1",
                     "derivative_interpretation": "annualized_weather_normal",
                     "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
                     "unit": "therm",
@@ -233,6 +243,7 @@ def aggregation_input_one_invalid():
                     "reporting_n": 5,
                 },
                 {
+                    "label": "2",
                     "derivative_interpretation": "annualized_weather_normal",
                     "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
                     "unit": "therm",
@@ -268,6 +279,7 @@ def aggregation_input_one_invalid_default_baseline():
             "type": "DERIVATIVE_PAIRS",
             "derivative_pairs": [
                 {
+                    "label": "1",
                     "derivative_interpretation": "annualized_weather_normal",
                     "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
                     "unit": "therm",
@@ -281,6 +293,7 @@ def aggregation_input_one_invalid_default_baseline():
                     "reporting_n": 5,
                 },
                 {
+                    "label": "2",
                     "derivative_interpretation": "annualized_weather_normal",
                     "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
                     "unit": "therm",
@@ -316,6 +329,7 @@ def aggregation_input_one_invalid_default_reporting():
             "type": "DERIVATIVE_PAIRS",
             "derivative_pairs": [
                 {
+                    "label": "1",
                     "derivative_interpretation": "annualized_weather_normal",
                     "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
                     "unit": "therm",
@@ -329,6 +343,7 @@ def aggregation_input_one_invalid_default_reporting():
                     "reporting_n": 5,
                 },
                 {
+                    "label": "2",
                     "derivative_interpretation": "annualized_weather_normal",
                     "trace_interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
                     "unit": "therm",
@@ -349,105 +364,114 @@ def aggregation_input_one_invalid_default_reporting():
 def test_basic_usage(aggregation_input):
 
     aggregator = Aggregator()
-    derivative_pair, n_valid, n_invalid = \
-        aggregator.aggregate(aggregation_input)
 
-    assert n_valid == 2
-    assert n_invalid == 0
+    output = aggregator.aggregate(aggregation_input)
 
-    assert derivative_pair.derivative_interpretation == \
+    status = output['status']
+    assert status['1']['baseline_status'] == "ACCEPTED"
+    assert status['1']['reporting_status'] == "ACCEPTED"
+    assert status['2']['baseline_status'] == "ACCEPTED"
+    assert status['2']['reporting_status'] == "ACCEPTED"
+
+    derivative_pair = output["aggregated"]
+
+    assert derivative_pair["label"] is None
+
+    assert derivative_pair["derivative_interpretation"] == \
         "annualized_weather_normal"
 
-    assert derivative_pair.trace_interpretation == \
+    assert derivative_pair["trace_interpretation"] == \
         "NATURAL_GAS_CONSUMPTION_SUPPLIED"
 
-    baseline = derivative_pair.baseline
-    assert baseline.label is None
-    assert baseline.value == 20
-    assert baseline.lower == 5
-    assert baseline.upper == 5
-    assert baseline.n == 10
+    baseline = derivative_pair["baseline"]
+    assert baseline["value"] == 20
+    assert baseline["lower"] == 5
+    assert baseline["upper"] == 5
+    assert baseline["n"] == 10
 
-    reporting = derivative_pair.reporting
-    assert reporting.label is None
-    assert reporting.value == 20
-    assert reporting.lower == 10
-    assert reporting.upper == 10
-    assert reporting.n == 10
+    reporting = derivative_pair["reporting"]
+    assert reporting["value"] == 20
+    assert reporting["lower"] == 10
+    assert reporting["upper"] == 10
+    assert reporting["n"] == 10
 
 
 def test_empty(aggregation_input_empty):
+
     aggregator = Aggregator()
     with pytest.raises(ValueError):
         aggregator.aggregate(aggregation_input_empty)
 
 
 def test_single(aggregation_input_single):
+
     aggregator = Aggregator()
+    output = aggregator.aggregate(aggregation_input_single)
 
-    derivative_pairs, n_valid, n_invalid = \
-        aggregator.aggregate(aggregation_input_single)
-
-    assert n_valid == 1
-    assert n_invalid == 0
+    status = output['status']
+    assert status['1']['baseline_status'] == "ACCEPTED"
+    assert status['1']['reporting_status'] == "ACCEPTED"
 
 
 def test_mixed_derivative_interpretaiton_fails(
         aggregation_input_mixed_derivative_interpretation):
 
     aggregator = Aggregator()
-
     with pytest.raises(ValueError):
-        derivative_pair, n_valid, n_invalid = \
-            aggregator.aggregate(aggregation_input_mixed_derivative_interpretation)
+        aggregator.aggregate(aggregation_input_mixed_derivative_interpretation)
 
 
 def test_mixed_trace_interpretaiton_fails(
         aggregation_input_mixed_trace_interpretation):
 
     aggregator = Aggregator()
-
     with pytest.raises(ValueError):
-        derivative_pair, n_valid, n_invalid = \
-            aggregator.aggregate(aggregation_input_mixed_trace_interpretation)
+        aggregator.aggregate(aggregation_input_mixed_trace_interpretation)
 
 
 def test_mixed_unit_fails(aggregation_input_mixed_unit):
 
     aggregator = Aggregator()
-
     with pytest.raises(ValueError):
-        derivative_pair, n_valid, n_invalid = \
-            aggregator.aggregate(aggregation_input_mixed_unit)
+        aggregator.aggregate(aggregation_input_mixed_unit)
 
 
 def test_missing(aggregation_input_one_invalid):
 
     aggregator = Aggregator()
+    output = aggregator.aggregate(aggregation_input_one_invalid)
 
-    derivative_pair, n_valid, n_invalid = \
-        aggregator.aggregate(aggregation_input_one_invalid)
+    status = output['status']
+    assert status['1']['baseline_status'] == "REJECTED"
+    assert status['1']['reporting_status'] == "ACCEPTED"
+    assert status['2']['baseline_status'] == "ACCEPTED"
+    assert status['2']['reporting_status'] == "ACCEPTED"
 
-    assert n_valid == 1
-    assert n_invalid == 1
 
-
-def test_missing_with_baseline_default(aggregation_input_one_invalid_default_baseline):
-
-    aggregator = Aggregator()
-
-    derivative_pair, n_valid, n_invalid = \
-        aggregator.aggregate(aggregation_input_one_invalid_default_baseline)
-
-    assert n_valid == 2
-    assert n_invalid == 0
-
-def test_missing_with_reporting_default(aggregation_input_one_invalid_default_reporting):
+def test_missing_with_baseline_default(
+        aggregation_input_one_invalid_default_baseline):
 
     aggregator = Aggregator()
+    output = aggregator.aggregate(
+        aggregation_input_one_invalid_default_baseline)
 
-    derivative_pair, n_valid, n_invalid = \
-        aggregator.aggregate(aggregation_input_one_invalid_default_reporting)
+    status = output['status']
+    assert status['1']['baseline_status'] == "DEFAULT"
+    assert status['1']['reporting_status'] == "ACCEPTED"
+    assert status['2']['baseline_status'] == "ACCEPTED"
+    assert status['2']['reporting_status'] == "ACCEPTED"
 
-    assert n_valid == 2
-    assert n_invalid == 0
+
+def test_missing_with_reporting_default(
+        aggregation_input_one_invalid_default_reporting):
+
+    aggregator = Aggregator()
+    output = aggregator.aggregate(
+        aggregation_input_one_invalid_default_reporting)
+
+    status = output['status']
+    assert status['1']['baseline_status'] == "ACCEPTED"
+    assert status['1']['reporting_status'] == "ACCEPTED"
+    assert status['2']['baseline_status'] == "ACCEPTED"
+    assert status['2']['reporting_status'] == "DEFAULT"
+

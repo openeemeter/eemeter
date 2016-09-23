@@ -11,6 +11,7 @@ from eemeter.ee.derivatives import DerivativePair, Derivative
 def derivative_pairs():
     return [
         DerivativePair(
+            "label",
             "ANNUALIZED_WEATHER_NORMAL",
             "ELECTRICITY_CONSUMPTION_SUPPLIED",
             "KWH",
@@ -19,6 +20,7 @@ def derivative_pairs():
             Derivative("2", 10, 6, 6, 5, None),
         ),
         DerivativePair(
+            "label",
             "GROSS_PREDICTED",
             "ELECTRICITY_CONSUMPTION_SUPPLIED",
             "KWH",
@@ -32,6 +34,7 @@ def derivative_pairs():
 def derivative_pairs_badly_formed():
     return [
         DerivativePair(
+            "label",
             "ANNUALIZED_WEATHER_NORMAL",
             "ELECTRICITY_CONSUMPTION_SUPPLIED",
             "KWH",
@@ -40,6 +43,7 @@ def derivative_pairs_badly_formed():
             Derivative("2", 10, 6, 6, 5, None),
         ),
         DerivativePair(
+            "label",
             "GROSS_PREDICTED",
             "ELECTRICITY_CONSUMPTION_SUPPLIED",
             "KWH",
@@ -52,7 +56,8 @@ def derivative_pairs_badly_formed():
 def test_basic_usage(derivative_pairs):
     serialized = serialize_derivative_pairs(derivative_pairs)
     assert len(serialized) == 2
-    assert len(json.dumps(serialized)) == 692
+    assert len(json.dumps(serialized)) == 728
+    assert serialized[0]["label"] == "label"
     assert serialized[0]["derivative_interpretation"] == \
         "ANNUALIZED_WEATHER_NORMAL"
     assert serialized[0]["trace_interpretation"] == \

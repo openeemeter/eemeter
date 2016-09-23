@@ -1,5 +1,6 @@
 from eemeter.ee.derivatives import Derivative, DerivativePair
 
+
 def deserialize_aggregation_input(aggregation_input):
 
     # verify type
@@ -164,6 +165,7 @@ def _deserialize_derivative_pairs(derivatives):
     try:
         return [
             DerivativePair(
+                pair["label"],
                 pair["derivative_interpretation"],
                 pair["trace_interpretation"],
                 pair["unit"],

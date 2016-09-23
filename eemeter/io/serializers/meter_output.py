@@ -1,8 +1,13 @@
 from collections import OrderedDict
 
 def serialize_derivative_pairs(derivative_pairs):
-    return [
-        OrderedDict([
+    return [ serialize_derivative_pair(dp) for dp in derivative_pairs]
+
+
+def serialize_derivative_pair(derivative_pair):
+    label, d_interp, t_interp, unit, baseline, reporting = derivative_pair
+    return OrderedDict([
+            ("label", label),
             ("derivative_interpretation", d_interp),
             ("trace_interpretation", t_interp),
             ("unit", unit),
@@ -25,8 +30,6 @@ def serialize_derivative_pairs(derivative_pairs):
                  reporting.serialized_demand_fixture),
             ])),
         ])
-        for d_interp, t_interp, unit, baseline, reporting in derivative_pairs
-    ]
 
 
 def serialize_split_modeled_energy_trace(modeled_trace):

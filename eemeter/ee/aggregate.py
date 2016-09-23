@@ -1,5 +1,10 @@
+from collections import OrderedDict
+
 from eemeter.ee.derivatives import DerivativePair, Derivative
-from eemeter.io.serializers import deserialize_aggregation_input
+from eemeter.io.serializers import (
+    deserialize_aggregation_input,
+    serialize_derivative_pair,
+)
 
 
 def sum_func(d1, d2):
@@ -68,33 +73,39 @@ class Aggregator(object):
     def _get_valid_derivatives(self, derivative_pairs, baseline_default_value,
                                reporting_default_value):
         baseline_derivatives, reporting_derivatives = [], []
-        n_valid = 0
-        n_invalid = 0
+        statuses = OrderedDict([])
 
         for pair in derivative_pairs:
 
+            baseline_status = "ACCEPTED"
             baseline_derivative = pair.baseline
             baseline_valid = self._derivative_is_valid(baseline_derivative)
             if not baseline_valid:
+                baseline_status = "REJECTED"
                 if baseline_default_value is not None:
+                    baseline_status = "DEFAULT"
                     baseline_derivative = baseline_default_value
-                    baseline_valid = True
 
+            reporting_status = "ACCEPTED"
             reporting_derivative = pair.reporting
             reporting_valid = self._derivative_is_valid(reporting_derivative)
             if not reporting_valid:
+                reporting_status = "REJECTED"
                 if reporting_default_value is not None:
+                    reporting_status = "DEFAULT"
                     reporting_derivative = reporting_default_value
-                    reporting_valid = True
 
-            if baseline_valid and reporting_valid:
+            if ((baseline_status in ["ACCEPTED", "DEFAULT"]) and
+                    (reporting_status in ["ACCEPTED", "DEFAULT"])):
                 baseline_derivatives.append(baseline_derivative)
                 reporting_derivatives.append(reporting_derivative)
-                n_valid += 1
-            else:
-                n_invalid += 1
 
-        return baseline_derivatives, reporting_derivatives, n_valid, n_invalid
+            statuses[pair.label] = OrderedDict([
+                ("baseline_status", baseline_status),
+                ("reporting_status", reporting_status),
+            ])
+
+        return baseline_derivatives, reporting_derivatives, statuses
 
     def _aggregate(self, derivatives, func):
         if len(derivatives) == 0:
@@ -154,7 +165,7 @@ class Aggregator(object):
             derivative_pairs, target_trace_interpretation)
         self._validate_unit(derivative_pairs, target_unit)
 
-        baseline_derivatives, reporting_derivatives, n_valid, n_invalid = \
+        baseline_derivatives, reporting_derivatives, status = \
             self._get_valid_derivatives(derivative_pairs,
                                         baseline_default_value,
                                         reporting_default_value)
@@ -163,8 +174,12 @@ class Aggregator(object):
         reporting_aggregation = self._aggregate(reporting_derivatives, func)
 
         aggregated = DerivativePair(
-            target_derivative_interpretation, target_trace_interpretation,
-            target_unit, baseline_aggregation, reporting_aggregation
+            None, target_derivative_interpretation,
+            target_trace_interpretation, target_unit,
+            baseline_aggregation, reporting_aggregation
         )
 
-        return aggregated, n_valid, n_invalid
+        return OrderedDict([
+            ("aggregated", serialize_derivative_pair(aggregated)),
+            ("status", status),
+        ])
