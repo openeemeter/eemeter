@@ -368,8 +368,10 @@ def test_basic_usage(aggregation_input):
     output = aggregator.aggregate(aggregation_input)
 
     status = output['status']
+    assert status['1']['status'] == "ACCEPTED"
     assert status['1']['baseline_status'] == "ACCEPTED"
     assert status['1']['reporting_status'] == "ACCEPTED"
+    assert status['2']['status'] == "ACCEPTED"
     assert status['2']['baseline_status'] == "ACCEPTED"
     assert status['2']['reporting_status'] == "ACCEPTED"
 
@@ -442,8 +444,10 @@ def test_missing(aggregation_input_one_invalid):
     output = aggregator.aggregate(aggregation_input_one_invalid)
 
     status = output['status']
+    assert status['1']['status'] == "REJECTED"
     assert status['1']['baseline_status'] == "REJECTED"
     assert status['1']['reporting_status'] == "ACCEPTED"
+    assert status['2']['status'] == "ACCEPTED"
     assert status['2']['baseline_status'] == "ACCEPTED"
     assert status['2']['reporting_status'] == "ACCEPTED"
 

@@ -99,10 +99,14 @@ class Aggregator(object):
                     (reporting_status in ["ACCEPTED", "DEFAULT"])):
                 baseline_derivatives.append(baseline_derivative)
                 reporting_derivatives.append(reporting_derivative)
+                pair_status = "ACCEPTED"
+            else:
+                pair_status = "REJECTED"
 
             statuses[pair.label] = OrderedDict([
                 ("baseline_status", baseline_status),
                 ("reporting_status", reporting_status),
+                ("status", pair_status),
             ])
 
         return baseline_derivatives, reporting_derivatives, statuses
