@@ -125,12 +125,7 @@ class Aggregator(object):
 
         Parameters
         ----------
-        derivative_pairs : list of eemeter.ee.meter.Derivative
-            Derivative pairs to be aggregated; should be at least one.
-        target_interpretation : str, default None
-            Interpretation of derivatives; if None, will use interpretation of
-            first.
-        target_unit : str, default None
+        aggregation_input : str, default None
             Unit of derivatives; if None, will use unit of first.
         '''
         deserialized = deserialize_aggregation_input(aggregation_input)
@@ -188,5 +183,9 @@ class Aggregator(object):
 
         return OrderedDict([
             ("aggregated", aggregated),
+            ("aggregation_interpretation", aggregation_interpretation),
+            ("derivative_interpretation", target_derivative_interpretation),
+            ("trace_interpretation", target_trace_interpretation),
+            ("unit", target_unit),
             ("status", status),
         ])

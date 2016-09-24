@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+
 def serialize_derivative_pairs(derivative_pairs):
     return [ serialize_derivative_pair(dp) for dp in derivative_pairs]
 

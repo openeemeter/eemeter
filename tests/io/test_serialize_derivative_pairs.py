@@ -76,6 +76,7 @@ def test_basic_usage(derivative_pairs):
     assert serialized[1]["baseline"]["label"] == "1"
     assert serialized[1]["reporting"]["value"] == 10
 
+
 def test_badly_formed(derivative_pairs_badly_formed):
     with pytest.raises(AttributeError):
         serialized = serialize_derivative_pairs(derivative_pairs_badly_formed)
