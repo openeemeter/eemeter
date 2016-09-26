@@ -107,3 +107,15 @@ def test_basic_usage(meter_input, mock_isd_weather_source,
 
     assert results['weather_source_station'] == '722880'
     assert results['weather_normal_source_station'] == '724838'
+
+
+def test_bad_meter_input(mock_isd_weather_source, mock_tmy3_weather_source):
+
+    meter = EnergyEfficiencyMeterTraceCentric()
+
+    results = meter.evaluate({},
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['status'] == 'FAILURE'
+    assert results['failure_message'].startswith("Meter input")

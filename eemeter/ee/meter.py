@@ -533,39 +533,19 @@ class EnergyEfficiencyMeterTraceCentric(object):
                 "Meter input could not be deserialized:\n{}"
                 .format(deserialized_input)
             )
-            output['status'] == FAILURE
+            output['status'] = FAILURE
             output['failure_message'] = message
             return output
 
-        trace = deserialized_input.get("trace", None)
-        if trace is None:
-            message = (
-                "Trace data not found in meter input."
-            )
-            output['status'] == FAILURE
-            output['failure_message'] = message
-            return output
-
-        project = deserialized_input.get("project", None)
-        if trace is None:
-            message = (
-                "Project data not found in meter input."
-            )
-            output['status'] == FAILURE
-            output['failure_message'] = message
-            return output
-
-        zipcode = project.get("zipcode", None)
-        if zipcode is None:
-            message = (
-                "ZIP code project data not found in meter input."
-            )
-            output['status'] == FAILURE
-            output['failure_message'] = message
-            return output
+        # Assume that deserialized input fails without these keys, so don't
+        # bother error checking
+        trace = deserialized_input["trace"]
+        project = deserialized_input["project"]
+        zipcode = project["zipcode"]
         site = ZIPCodeSite(zipcode)
 
-        # can be blank for models capable of structural change analysis
+        # Can be blank for models capable of structural change analysis, so
+        # provide default
         modeling_period_set = project.get("modeling_period_set", None)
 
         # Step 2: Match weather
@@ -587,7 +567,7 @@ class EnergyEfficiencyMeterTraceCentric(object):
         output['weather_normal_source_station'] = weather_normal_source.station
         output['logs'].append(message)
 
-        # Step 3: Check to see if trace is placeholder, if so,
+        # Step 3: Check to see if trace is placeholder. If so,
         # return with SUCCESS, empty derivatives.
         if trace.placeholder:
             message = (
