@@ -1,7 +1,9 @@
-import pandas as pd
-import numpy as np
-import pytz
 import warnings
+
+import dateutil.parser
+import numpy as np
+import pandas as pd
+import pytz
 
 
 class BaseSerializer(object):
@@ -9,6 +11,9 @@ class BaseSerializer(object):
     sort_key = None
     required_fields = []
     datetime_fields = []
+
+    def __init__(self, parse_dates=False):
+        self.parse_dates = parse_dates
 
     def _sort_records(self, records):
         if self.sort_key is None:
@@ -35,9 +40,16 @@ class BaseSerializer(object):
         else:
             dts, values, estimateds = zip(*validated_tuples)
 
+        if self.parse_dates:
+            dts = [dateutil.parser.parse(dt) for dt in dts]
+
+        index = pd.DatetimeIndex(dts)
+        if index.shape[0] > 0:
+            index = index.tz_convert(pytz.UTC)
+
         df = pd.DataFrame(
             {"value": values, "estimated": estimateds},
-            index=pd.DatetimeIndex(dts),
+            index=index,
             columns=["value", "estimated"],
         )
         df.value = df.value.astype(float)
@@ -80,7 +92,10 @@ class BaseSerializer(object):
 
         # make sure dates/datetimes are tz aware
         for field in self.datetime_fields:
-            dt = record[field]
+            if self.parse_dates:
+                dt = dateutil.parser.parse(record[field])
+            else:
+                dt = record[field]
             if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
                 message = (
                     'Record field ("{}": {}) is not timezone aware:\n{}'

@@ -46,6 +46,8 @@ class BillingElasticNetCVModel():
         elif 'daily' in temperature_data.index.names:
             cdd = np.maximum((temperature_data - self.cooling_base_temp)
                              .groupby(level='period').sum()[0], 0.0)
+        else:
+            cdd = []
         return cdd
 
     def _hdd(self, temperature_data):
@@ -55,6 +57,8 @@ class BillingElasticNetCVModel():
         elif 'daily' in temperature_data.index.names:
             hdd = np.maximum((self.heating_base_temp - temperature_data)
                              .groupby(level='period').sum()[0], 0.0)
+        else:
+            hdd = []
         return hdd
 
     def fit(self, input_data):

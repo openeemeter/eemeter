@@ -1,7 +1,19 @@
 from datetime import datetime
+from collections import namedtuple
 
 import pandas as pd
 import pytz
+
+
+DerivativePair = namedtuple('DerivativePair', [
+    'label', 'derivative_interpretation', 'trace_interpretation', 'unit',
+    'baseline', 'reporting'
+])
+
+
+Derivative = namedtuple('Derivative', [
+    'label', 'value', 'lower', 'upper', 'n', 'serialized_demand_fixture'
+])
 
 
 def annualized_weather_normal(formatter, model, weather_normal_source):
@@ -43,6 +55,9 @@ def annualized_weather_normal(formatter, model, weather_normal_source):
     demand_fixture_data = formatter.create_demand_fixture(
             normal_index, weather_normal_source)
 
+    serialized_demand_fixture = \
+        formatter.serialize_demand_fixture(demand_fixture_data)
+
     normals = model.predict(demand_fixture_data)
     annualized = normals.sum()
     n = normal_index.shape[0]
@@ -50,7 +65,8 @@ def annualized_weather_normal(formatter, model, weather_normal_source):
     lower = (model.lower**2 * n)**0.5
 
     return {
-        "annualized_weather_normal": (annualized, lower, upper, n),
+        "annualized_weather_normal": (annualized, lower, upper, n,
+                                      serialized_demand_fixture),
     }
 
 
@@ -92,14 +108,18 @@ def gross_predicted(formatter, model, weather_source, reporting_period):
           - :code:`n` is the number of samples considered in developing the
             bound - useful for adding other values with errors.
     '''
-    start_date = reporting_period.start_date
+    start_date = reporting_period.start_date.date()
     end_date = reporting_period.end_date
     if end_date is None:
         end_date = datetime.utcnow()
+    end_date = end_date.date()
     index = pd.date_range(start_date, end_date, freq='D', tz=pytz.UTC)
 
     demand_fixture_data = formatter.create_demand_fixture(
         index, weather_source)
+
+    serialized_demand_fixture = \
+        formatter.serialize_demand_fixture(demand_fixture_data)
 
     values = model.predict(demand_fixture_data)
     gross_predicted = values.sum()
@@ -108,5 +128,6 @@ def gross_predicted(formatter, model, weather_source, reporting_period):
     lower = (model.lower**2 * n)**0.5
 
     return {
-        "gross_predicted": (gross_predicted, lower, upper, n),
+        "gross_predicted": (gross_predicted, lower, upper, n,
+                            serialized_demand_fixture),
     }

@@ -18,3 +18,9 @@ TMY3WeatherSource
 .. autoclass:: eemeter.weather.TMY3WeatherSource
     :members:
     :inherited-members:
+
+Location
+--------
+
+.. automodule:: eemeter.weather.location
+    :members:

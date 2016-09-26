@@ -11,7 +11,7 @@ setup(
         "Standard methods for calculating energy efficiency savings."
     ),
     url='https://github.com/openeemeter/eemeter/',
-    author='Matt Gee, Phil Ngo, Brandon Willard',
+    author='Open Energy Efficiency',
     license='MIT',
     classifiers=[
         'Development Status :: 3 - Alpha',
