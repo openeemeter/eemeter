@@ -8,10 +8,10 @@ from scipy.stats import chi2
 from sklearn import linear_model
 
 
-class SeasonalElasticNetCVModel(object):
+class SeasonalBayesianRidgeModel(object):
     ''' Linear regression using daily frequency data to build a model of
     formatted energy trace data that takes into account HDD, CDD, day of week,
-    month, and holiday effects, with elastic net regularization.
+    month, and holiday effects, with a Bayesian Ridge model
 
     Parameters
     ----------
@@ -28,7 +28,7 @@ class SeasonalElasticNetCVModel(object):
 
         self.model_freq = pd.tseries.frequencies.Day()
         self.base_formula = 'energy ~ 1 + CDD + HDD + CDD:HDD'
-        self.l1_ratio = 0.5
+        self.alpha_1, self.alpha_2 = 1e-6, 1e-6
         self.holidays = holidays.UnitedStates()
         self.params = None
         self.X = None
@@ -41,7 +41,7 @@ class SeasonalElasticNetCVModel(object):
 
     def __repr__(self):
         return (
-            'SeasonalElasticNetCVModel(cooling_base_temp={},'
+            'SeasonalBayesianRidgeModel(cooling_base_temp={},'
             ' heating_base_temp={})'
             .format(self.cooling_base_temp, self.heating_base_temp)
         )
@@ -128,8 +128,9 @@ class SeasonalElasticNetCVModel(object):
 
         y, X = patsy.dmatrices(formula, model_data, return_type='dataframe')
 
-        model_obj = linear_model.ElasticNetCV(l1_ratio=self.l1_ratio,
+        model_obj = linear_model.BayesianRidge(alpha_1=self.alpha_1, alpha_2=self.alpha_2,
                                               fit_intercept=False)
+
         if cross_validate:
             number_folds = 5
             k = int(np.floor(float(X.shape[0]) / number_folds))
@@ -137,7 +138,7 @@ class SeasonalElasticNetCVModel(object):
             for i in range(2, number_folds + 1):
                 split = float(i-1)/i
                 index = int(np.floor(X.shape[0] * split))
-                X_trainFolds = X[:index]
+                X_trainFolds = X[:index]        
                 y_trainFolds = y.values.ravel()[:index]
                 X_testFold = X[(index + 1):]
                 y_testFold = y.values.ravel()[(index + 1):]
@@ -146,7 +147,7 @@ class SeasonalElasticNetCVModel(object):
                               index=model_data.tempF.index[(index+1):])
                 accuracies[i-2] = ((y_testFold - estimated)**2).mean()**.5
             self.accuracies = accuracies
-
+            
         model_obj.fit(X, y.values.ravel())
 
         estimated = pd.Series(model_obj.predict(X),
@@ -210,8 +211,7 @@ class SeasonalElasticNetCVModel(object):
             "lower": self.lower,
             "n": self.n
         }
-        if cross_validate:
-            output['accuracies'] = self.accuracies
+        if cross_validate: output['accuracies'] = self.accuracies
         return output
 
     def predict(self, demand_fixture_data, params=None):
@@ -260,7 +260,7 @@ class SeasonalElasticNetCVModel(object):
                                            model_data,
                                            return_type='dataframe')
 
-        model_obj = linear_model.ElasticNetCV(l1_ratio=self.l1_ratio,
+        model_obj = linear_model.BayesianRidge(alpha_1=self.alpha_1, alpha_2=self.alpha_2,
                                               fit_intercept=False)
 
         model_obj.coef_ = params["coefficients"]
