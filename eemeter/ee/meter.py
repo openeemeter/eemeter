@@ -599,7 +599,7 @@ class EnergyEfficiencyMeterTraceCentric(object):
                     "Default formatter mapping did not find a match for"
                     " the selector {}".format(selector)
                 )
-                output['status'] == FAILURE
+                output['status'] = FAILURE
                 output['failure_message'] = message
                 return output
         else:

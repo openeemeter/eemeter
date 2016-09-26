@@ -49,6 +49,45 @@ def meter_input():
     }
     return meter_input
 
+@pytest.fixture
+def meter_input_strange_interpretation():
+
+    record_starts = pd.date_range('2012-01-01', periods=365*4, freq='D',
+                                  tz=pytz.UTC)
+
+    records = [
+        {
+            "start": dt.isoformat(),
+            "value": 1.0,
+            "estimated": False
+        } for dt in record_starts
+    ]
+
+    meter_input = {
+        "type": "SINGLE_TRACE_SIMPLE_PROJECT",
+        "trace": {
+            "type": "ARBITRARY_START",
+            "interpretation": "ELECTRICITY_CONSUMPTION_NET",
+            "unit": "therm",
+            "records": records
+        },
+        "project": {
+            "type": "PROJECT_WITH_SINGLE_MODELING_PERIOD_GROUP",
+            "zipcode": "91104",
+            "modeling_period_group": {
+                "baseline_period": {
+                    "start": None,
+                    "end": "2014-01-01T00:00:00+00:00"
+                },
+                "reporting_period": {
+                    "start": "2014-02-01T00:00:00+00:00",
+                    "end": None
+                }
+            }
+        }
+    }
+    return meter_input
+
 
 @pytest.fixture
 def mock_isd_weather_source():
@@ -119,3 +158,17 @@ def test_bad_meter_input(mock_isd_weather_source, mock_tmy3_weather_source):
 
     assert results['status'] == 'FAILURE'
     assert results['failure_message'].startswith("Meter input")
+
+
+def test_strange_interpretation(meter_input_strange_interpretation,
+                                mock_isd_weather_source,
+                                mock_tmy3_weather_source):
+
+    meter = EnergyEfficiencyMeterTraceCentric()
+
+    results = meter.evaluate(meter_input_strange_interpretation,
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['status'] == 'FAILURE'
+    assert results['failure_message'].startswith("Default formatter")
