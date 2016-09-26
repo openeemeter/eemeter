@@ -85,8 +85,7 @@ def get_energy_modeling_dispatches(modeling_period_set, trace_set):
             )
             continue
 
-        frequency = _get_approximate_frequency(
-                logger, trace.data, trace_label)
+        frequency = get_approximate_frequency(trace)
 
         if frequency not in ['H', 'D', '15T', '30T']:
             frequency = None
@@ -133,24 +132,24 @@ def get_energy_modeling_dispatches(modeling_period_set, trace_set):
     return dispatches
 
 
-def _get_approximate_frequency(logger, data, trace_label):
+def get_approximate_frequency(trace):
 
-    if data is None:
+    if trace.data is None:
         logger.info(
             "Could not determine frequency:"
-            " EnergyTrace '{}' is placeholder instance."
-            .format(trace_label)
+            " {} is placeholder instance."
+            .format(trace)
         )
         return None
 
     def _log_success(freq):
         logger.info(
-            "Determined frequency of '{}' for EnergyTrace '{}'."
-            .format(freq, trace_label)
+            "Determined frequency of '{}' for {}."
+            .format(freq, trace)
         )
 
     try:
-        freq = pd.infer_freq(data.index)
+        freq = pd.infer_freq(trace.data.index)
     except ValueError:  # too few data points
         logger.error("Could not determine frequency - too few points.")
         return None
@@ -163,7 +162,7 @@ def _get_approximate_frequency(logger, data, trace_label):
     # strategy: try two groups of 5 dates
     for i in range(0, 9, 5):
         try:
-            freq = pd.infer_freq(data.index[i:i+5])
+            freq = pd.infer_freq(trace.data.index[i:i+5])
         except ValueError:
             pass
         else:

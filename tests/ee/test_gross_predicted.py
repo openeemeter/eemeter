@@ -46,9 +46,13 @@ def test_basic_usage(mock_isd_weather_source,
         formatter, model, mock_isd_weather_source,
         reporting_period_no_end_date)
 
-    assert_allclose(output_end_date['gross_predicted'],
+    assert_allclose(output_end_date['gross_predicted'][:4],
                     (547, 23.388031127053, 23.388031127053, 547))
     assert (
         output_end_date['gross_predicted'][0] <
         output_no_end_date['gross_predicted'][0]
     )
+
+    serialized = output_end_date['gross_predicted'][4]
+    assert len(serialized) == 547
+    assert serialized['2015-01-01T00:00:00+00:00'] == 32.0

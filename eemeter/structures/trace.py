@@ -180,8 +180,9 @@ class EnergyTrace(object):
             )
         else:
             return (
-                "EnergyTrace(interpretation={}, unit={}, data={})"
-                .format(self.interpretation, self.unit, self.data)
+                "EnergyTrace(interpretation={}, unit={},"
+                " data=pandas.Dataframe({}))"
+                .format(self.interpretation, self.unit, self.data.shape)
             )
 
     def _set_interpretation(self, interpretation):

@@ -59,6 +59,17 @@ class SplitModeledEnergyTrace(object):
 
             model = self.model_mapping[modeling_period_label]
 
+            outputs = {
+                "status": None,
+                "traceback": None,
+                "input_data": None,
+                "start_date": None,
+                "end_date": None,
+                "n_rows": None,
+                "model_fit": {},
+            }
+
+            # attempt to create input data
             try:
                 input_data = self.formatter.create_input(
                     filtered_trace, weather_source)
@@ -69,44 +80,45 @@ class SplitModeledEnergyTrace(object):
                     .format(self.trace.interpretation, modeling_period_label,
                             model)
                 )
-                self.fit_outputs[modeling_period_label] = {
-                    "status": "FAILURE",
-                    "traceback": traceback.format_exc(),
-                    "start_date": None,
-                    "end_date": None,
-                    "rows": None,
-                }
-                continue
-            else:
-                input_description = self.formatter.describe_input(input_data)
-                outputs = {
-                    "start_date": input_description.get('start_date'),
-                    "end_date": input_description.get('end_date'),
-                    "n_rows": input_description.get('n_rows'),
-                }
-
-            try:
-                outputs.update(model.fit(input_data))
-            except:
-                logger.warn(
-                    'For trace "{}" and modeling_period "{}", {} was not'
-                    ' able to fit using input data: {}'
-                    .format(self.trace.interpretation, modeling_period_label,
-                            model, input_data)
-                )
-
                 outputs.update({
                     "status": "FAILURE",
                     "traceback": traceback.format_exc(),
                 })
             else:
-                logger.info(
-                    'Successfully fitted {} to formatted input data for'
-                    ' trace "{}" and modeling_period "{}".'
-                    .format(model, self.trace.interpretation,
-                            modeling_period_label)
-                )
-                outputs.update({"status": "SUCCESS"})
+                input_description = self.formatter.describe_input(input_data)
+                input_serialization = self.formatter.serialize_input(input_data)
+                outputs.update({
+                    "input_data": input_serialization,
+                    "start_date": input_description.get('start_date'),
+                    "end_date": input_description.get('end_date'),
+                    "n_rows": input_description.get('n_rows'),
+                })
+
+                try:
+                    model_fit = model.fit(input_data)
+                except:
+                    logger.warn(
+                        'For trace "{}" and modeling_period "{}", {} was not'
+                        ' able to fit using input data: {}'
+                        .format(self.trace.interpretation, modeling_period_label,
+                                model, input_data)
+                    )
+
+                    outputs.update({
+                        "status": "FAILURE",
+                        "traceback": traceback.format_exc(),
+                    })
+                else:
+                    logger.info(
+                        'Successfully fitted {} to formatted input data for'
+                        ' trace "{}" and modeling_period "{}".'
+                        .format(model, self.trace.interpretation,
+                                modeling_period_label)
+                    )
+                    outputs["model_fit"].update(model_fit)
+                    outputs.update({
+                        "status": "SUCCESS",
+                    })
 
             self.fit_outputs[modeling_period_label] = outputs
 
@@ -140,13 +152,13 @@ class SplitModeledEnergyTrace(object):
             return None
 
         if params is None:
-            params = outputs["model_params"]
+            params = outputs["model_fit"]["model_params"]
 
         return self.model_mapping[modeling_period_label].predict(
                 demand_fixture_data, params)
 
     def compute_derivative(self, modeling_period_label, derivative_callable,
-                           **kwargs):
+                           derivative_callable_kwargs):
         ''' Compute a modeling derivative for this modeling period.
 
         Parameters
@@ -160,7 +172,7 @@ class SplitModeledEnergyTrace(object):
 
                 >>> derivative_callable(formatter, model, **kwargs)
 
-        **kwargs
+        derivative_callable_kwargs : dict
             Arbitrary keyword arguments to be passed to the derviative callable
         '''
 
@@ -172,7 +184,8 @@ class SplitModeledEnergyTrace(object):
         model = self.model_mapping[modeling_period_label]
 
         try:
-            derivative = derivative_callable(self.formatter, model, **kwargs)
+            derivative = derivative_callable(self.formatter, model,
+                                             **derivative_callable_kwargs)
         except Exception:
             logger.exception("Derivative computation failed.")
             return None
