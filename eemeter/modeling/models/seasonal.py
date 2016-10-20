@@ -202,7 +202,6 @@ class SeasonalElasticNetCVModel(object):
 
     def _bootstrap_empirical_errors(self):
         ''' Calculate empirical bootstrap error function '''
-        self.N_bootstrap = 100
         if len(self.X) < 200:
             return lambda N: self.rmse * (N**0.8)
         residstack = []
