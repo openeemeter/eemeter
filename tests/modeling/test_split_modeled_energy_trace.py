@@ -88,11 +88,13 @@ def test_basic_usage(trace, modeling_period_set, mock_isd_weather_source):
     demand_fixture_data = \
         smet.formatter.create_demand_fixture(index, mock_isd_weather_source)
 
-    mp1_pred = smet.predict('modeling_period_1', demand_fixture_data)
+    mp1_pred, mp1_lower, mp1_upper = smet.predict('modeling_period_1', demand_fixture_data)
     mp2_pred = smet.predict('modeling_period_2', demand_fixture_data)
 
     assert mp1_pred.shape == (6,)
     assert mp2_pred is None
+    assert mp1_lower > 0
+    assert mp1_upper > 0
 
     with pytest.raises(KeyError):
         smet.predict('modeling_period_3', demand_fixture_data)

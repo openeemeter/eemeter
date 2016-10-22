@@ -124,8 +124,7 @@ class SplitModeledEnergyTrace(object):
 
         return self.fit_outputs
 
-    def predict(self, modeling_period_label, demand_fixture_data,
-                params=None):
+    def predict(self, modeling_period_label, demand_fixture_data, params=None):
         ''' Predict for any one of the modeling_periods associated with this
         trace. Light wrapper around :code:`model.predict(` method.
 

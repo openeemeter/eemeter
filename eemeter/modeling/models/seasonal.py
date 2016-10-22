@@ -202,26 +202,60 @@ class SeasonalElasticNetCVModel(object):
 
     def _bootstrap_empirical_errors(self):
         ''' Calculate empirical bootstrap error function '''
-        if len(self.X) < 200:
+
+        min_points = self.N_bootstrap * 2
+
+        # fallback error function
+        if len(self.X) < min_points:
             return lambda N: self.rmse * (N**0.8)
-        residstack = []
-        for i in range(50):
-            thisbs = self.model_obj.fit(self.X[:-self.N_bootstrap+i],\
-                     self.y.values.ravel()[:-self.N_bootstrap+i])
-            test = thisbs.predict(self.X[-self.N_bootstrap+i:])
-            myresid_test = test[:50] - self.y.values.ravel()[-self.N_bootstrap+i:][:50]
-            residstack.append(myresid_test)
-        residstack = np.array(residstack)
-        myx, myy = [], []
-        for i in range(1,50):
-            nahead = np.std(np.sum(residstack[:,0:i],axis=1))
-            myx.append(i)
-            myy.append(nahead)
-        ymin = np.min(myy)
-        alpha = (len(myy)*(np.sum([np.log(x)*np.log(y) for x,y in zip(myx,myy)])) - \
-                np.sum(np.log(myx))*np.sum(np.log(myy))) / \
-                (len(myy)*np.sum(np.log(myx)**2) - (np.sum(np.log(myx)))**2)
-        beta = np.exp((np.sum(np.log(myy)) - alpha * np.sum(np.log(myx)))/len(myy))
+
+        # split data n_splits times collecting residuals.
+        # splits on every index from (N_bootstrap from end)
+        # to (N_bootstrap - n_splits from end)
+        n_splits = self.N_bootstrap / 2
+        resid_stack = []
+        for i in range(n_splits):
+
+            split_index = (-self.N_bootstrap) + i
+            pre_split = slice(None, split_index)
+            post_split = slice(split_index, None)
+            X_pre = self.X[pre_split]
+            X_post = self.X[post_split]
+            y_pre = self.y.values.ravel()[pre_split]
+            y_post = self.y.values.ravel()[post_split]
+
+            bootstrap_model = self.model_obj.fit(X_pre, y_pre)
+            test = bootstrap_model.predict(X_post)
+            resid = test[:n_splits] - y_post[:n_splits]
+            resid_stack.append(resid)
+        resid_stack = np.array(resid_stack)
+
+        # from residuals determine alpha and beta
+        xs = list(range(1, 50))
+        ys = [np.std(np.sum(resid_stack[:, 0:i], axis=1)) for i in xs]
+
+        y_min = np.min(ys)
+        n_ys = len(ys)
+        alpha = (
+            (
+                n_ys * (
+                    np.sum([
+                        np.log(x) * np.log(y)
+                        for x, y in zip(xs, ys)
+                    ])
+                ) -
+                np.sum(np.log(xs)) * np.sum(np.log(ys))
+            ) / (
+                n_ys * np.sum(np.log(xs)**2) -
+                np.sum(np.log(xs))**2
+            )
+        )
+        beta = np.exp(
+            (
+                np.sum(np.log(ys)) -
+                alpha * np.sum(np.log(xs))
+            ) / n_ys
+        )
         return lambda N: beta * (N**alpha)
 
     def predict(self, demand_fixture_data, params=None, summed=False):
@@ -283,18 +317,15 @@ class SeasonalElasticNetCVModel(object):
             N = len(predicted)
             predicted = np.sum(predicted)
             error_fun = self._bootstrap_empirical_errors()
-            stddev = error_fun(N) 
+            stddev = error_fun(N)
             # Convert to 95% confidence limits
             lower = stddev * 1.959964 / 2
             upper = stddev * 1.959964 / 2
-            return predicted, lower, upper
-
-        predicted = predicted.reindex(model_data.index)
-        lower = model_obj.lower
-        upper = model_obj.upper
+        else:
+            predicted = predicted.reindex(model_data.index)
+            lower = self.lower
+            upper = self.upper
         return predicted, lower, upper
-        
-            
 
     def plot(self):
         ''' Plots fit against input data. Should not be run before the

@@ -34,4 +34,4 @@ class MockModel(object):
         return {}
 
     def predict(self, df, params=None):
-        return pd.Series(1, index=df.index)
+        return pd.Series(1, index=df.index), 1, 1
