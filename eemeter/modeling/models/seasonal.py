@@ -180,6 +180,10 @@ class SeasonalElasticNetCVModel(object):
         self.upper = np.sqrt(n/c1) * self.rmse
         self.n = n
 
+        # compute bootstrapped empirical errors (if possible) for when we want
+        # summed errors.
+        self.error_fun = self._bootstrap_empirical_errors()
+
         self.plot()
 
         self.params = {
@@ -316,8 +320,7 @@ class SeasonalElasticNetCVModel(object):
         if summed:
             N = len(predicted)
             predicted = np.sum(predicted)
-            error_fun = self._bootstrap_empirical_errors()
-            stddev = error_fun(N)
+            stddev = self.error_fun(N)
             # Convert to 95% confidence limits
             lower = stddev * 1.959964 / 2
             upper = stddev * 1.959964 / 2
