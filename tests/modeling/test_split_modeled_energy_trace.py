@@ -3,6 +3,7 @@ from datetime import datetime
 
 import pandas as pd
 import numpy as np
+from numpy.testing import assert_allclose
 import pytest
 import pytz
 
@@ -88,7 +89,8 @@ def test_basic_usage(trace, modeling_period_set, mock_isd_weather_source):
     demand_fixture_data = \
         smet.formatter.create_demand_fixture(index, mock_isd_weather_source)
 
-    mp1_pred, mp1_lower, mp1_upper = smet.predict('modeling_period_1', demand_fixture_data)
+    mp1_pred, mp1_lower, mp1_upper = smet.predict(
+        'modeling_period_1', demand_fixture_data, summed=False)
     mp2_pred = smet.predict('modeling_period_2', demand_fixture_data)
 
     assert mp1_pred.shape == (6,)
@@ -109,6 +111,13 @@ def test_basic_usage(trace, modeling_period_set, mock_isd_weather_source):
 
     assert mp1_deriv == "A"
     assert mp2_deriv is None
+    pred, lower, upper = smet.predict(
+        'modeling_period_1', demand_fixture_data, summed=True)
+
+    # predict summed
+    assert_allclose(pred, 5.9939999999999989)
+    assert lower > 0
+    assert upper > 0
 
     # bad weather source
     smet.fit(None)

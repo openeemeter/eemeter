@@ -212,7 +212,7 @@ class SeasonalElasticNetCVModel(object):
         # split data n_splits times collecting residuals.
         # splits on every index from (N_bootstrap from end)
         # to (N_bootstrap - n_splits from end)
-        n_splits = self.N_bootstrap / 2
+        n_splits = int(self.N_bootstrap / 2)
         resid_stack = []
         for i in range(n_splits):
 
@@ -258,7 +258,7 @@ class SeasonalElasticNetCVModel(object):
         )
         return lambda N: beta * (N**alpha)
 
-    def predict(self, demand_fixture_data, params=None, summed=False):
+    def predict(self, demand_fixture_data, params=None, summed=True):
         ''' Predicts across index using fitted model params
 
         Parameters

@@ -72,7 +72,7 @@ def test_basic(input_df):
     assert_allclose(m.rmse, 0.0009999999)
     assert m.y.shape == (365, 1)
 
-    predict, lower, upper = m.predict(input_df)
+    predict, lower, upper = m.predict(input_df, summed=False)
 
     assert predict.shape == (365,)
     assert_allclose(predict[datetime(2000, 1, 1, tzinfo=pytz.UTC)], 0.9990000)
@@ -88,3 +88,10 @@ def test_basic(input_df):
     assert m.r2 == 0.0
     assert_allclose(m.rmse, 0.0009999999)
     assert m.y.shape == (365, 1)
+
+    # predict w/ error bootstrapping
+    predict, lower, upper = m.predict(input_df)
+
+    assert_allclose(predict, 364.635)
+    assert lower > 0
+    assert upper > 0
