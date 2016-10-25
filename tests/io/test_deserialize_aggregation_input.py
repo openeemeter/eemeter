@@ -2,6 +2,7 @@ import pytest
 
 from eemeter.io.serializers import deserialize_aggregation_input
 
+
 @pytest.fixture
 def aggregation_input():
     aggregation_input = {
@@ -112,7 +113,7 @@ def test_bad_baseline_default(aggregation_input):
     result = deserialize_aggregation_input(aggregation_input)
     assert result["error"].startswith('Serialization')
 
-    aggregation_input['baseline_default_value'] = {"type":"Unknown"}
+    aggregation_input['baseline_default_value'] = {"type": "Unknown"}
     result = deserialize_aggregation_input(aggregation_input)
     assert result["error"].startswith('Serialization')
 
@@ -135,13 +136,14 @@ def test_bad_baseline_default(aggregation_input):
     result = deserialize_aggregation_input(aggregation_input)
     assert result["baseline_default_value"] is not None
 
+
 def test_bad_reporting_default(aggregation_input):
 
     aggregation_input['reporting_default_value'] = {}
     result = deserialize_aggregation_input(aggregation_input)
     assert result["error"].startswith('Serialization')
 
-    aggregation_input['reporting_default_value'] = {"type":"Unknown"}
+    aggregation_input['reporting_default_value'] = {"type": "Unknown"}
     result = deserialize_aggregation_input(aggregation_input)
     assert result["error"].startswith('Serialization')
 
@@ -171,7 +173,7 @@ def test_bad_derivatives(aggregation_input):
     result = deserialize_aggregation_input(aggregation_input)
     assert result["error"].startswith('Serialization')
 
-    aggregation_input['derivatives'] = {"type":"Unknown"}
+    aggregation_input['derivatives'] = {"type": "Unknown"}
     result = deserialize_aggregation_input(aggregation_input)
     assert result["error"].startswith('Serialization')
 

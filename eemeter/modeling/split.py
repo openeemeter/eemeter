@@ -86,7 +86,8 @@ class SplitModeledEnergyTrace(object):
                 })
             else:
                 input_description = self.formatter.describe_input(input_data)
-                input_serialization = self.formatter.serialize_input(input_data)
+                input_serialization = self.formatter.serialize_input(
+                    input_data)
                 outputs.update({
                     "input_data": input_serialization,
                     "start_date": input_description.get('start_date'),
@@ -100,8 +101,8 @@ class SplitModeledEnergyTrace(object):
                     logger.warn(
                         'For trace "{}" and modeling_period "{}", {} was not'
                         ' able to fit using input data: {}'
-                        .format(self.trace.interpretation, modeling_period_label,
-                                model, input_data)
+                        .format(self.trace.interpretation,
+                                modeling_period_label, model, input_data)
                     )
 
                     outputs.update({

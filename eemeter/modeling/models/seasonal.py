@@ -124,10 +124,12 @@ class SeasonalElasticNetCVModel(object):
             + C(tempF.index.weekday)\
             '''
 
-        holiday_names = self._holidays_indexed(model_data.index[:-self.N_bootstrap])
+        holiday_names = self._holidays_indexed(
+            model_data.index[:-self.N_bootstrap])
 
         if len(np.unique(holiday_names)) == 11:
-            model_data.loc[:, 'holiday_name'] = self._holidays_indexed(model_data.index)
+            model_data.loc[:, 'holiday_name'] = self._holidays_indexed(
+                model_data.index)
             formula += " + C(holiday_name)"
 
         y, X = patsy.dmatrices(formula, model_data, return_type='dataframe')
@@ -238,7 +240,6 @@ class SeasonalElasticNetCVModel(object):
         xs = list(range(1, 50))
         ys = [np.std(np.sum(resid_stack[:, 0:i], axis=1)) for i in xs]
 
-        y_min = np.min(ys)
         n_ys = len(ys)
         alpha = (
             (

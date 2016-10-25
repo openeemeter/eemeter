@@ -80,7 +80,8 @@ def modeling_period_set():
 
 
 @pytest.fixture
-def split_modeled_energy_trace_daily(daily_trace, modeling_period_set, mock_isd_weather_source):
+def split_modeled_energy_trace_daily(daily_trace, modeling_period_set,
+                                     mock_isd_weather_source):
 
     # create SplitModeledEnergyTrace
     formatter = ModelDataFormatter('D')
@@ -94,8 +95,10 @@ def split_modeled_energy_trace_daily(daily_trace, modeling_period_set, mock_isd_
     smet.fit(mock_isd_weather_source)
     return smet
 
+
 @pytest.fixture
-def split_modeled_energy_trace_monthly(monthly_trace, modeling_period_set, mock_isd_weather_source):
+def split_modeled_energy_trace_monthly(monthly_trace, modeling_period_set,
+                                       mock_isd_weather_source):
 
     # create SplitModeledEnergyTrace
     formatter = ModelDataBillingFormatter()
@@ -109,8 +112,10 @@ def split_modeled_energy_trace_monthly(monthly_trace, modeling_period_set, mock_
     smet.fit(mock_isd_weather_source)
     return smet
 
+
 def test_basic_usage_daily(split_modeled_energy_trace_daily):
-    serialized = serialize_split_modeled_energy_trace(split_modeled_energy_trace_daily)
+    serialized = serialize_split_modeled_energy_trace(
+        split_modeled_energy_trace_daily)
 
     type_ = serialized["type"]
     assert type_ == "SPLIT_MODELED_ENERGY_TRACE"
@@ -160,8 +165,10 @@ def test_basic_usage_daily(split_modeled_energy_trace_daily):
     assert modeling_periods["modeling_period_1"]["end_date"] == \
         '2000-09-01T00:00:00+00:00'
 
+
 def test_basic_usage_monthly(split_modeled_energy_trace_monthly):
-    serialized = serialize_split_modeled_energy_trace(split_modeled_energy_trace_monthly)
+    serialized = serialize_split_modeled_energy_trace(
+        split_modeled_energy_trace_monthly)
 
     fits = serialized["fits"]
     mp1 = fits["modeling_period_1"]
