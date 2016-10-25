@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 
 def serialize_derivative_pairs(derivative_pairs):
-    return [ serialize_derivative_pair(dp) for dp in derivative_pairs]
+    return [serialize_derivative_pair(dp) for dp in derivative_pairs]
 
 
 def serialize_derivative_pair(derivative_pair):
@@ -37,7 +37,8 @@ def serialize_split_modeled_energy_trace(modeled_trace):
     serialized = OrderedDict([
         ("type", "SPLIT_MODELED_ENERGY_TRACE"),
         ("fits", _serialize_fit_outputs(modeled_trace.fit_outputs)),
-        ("modeling_period_set", serialize_modeling_period_set(modeled_trace.modeling_period_set)),
+        ("modeling_period_set", serialize_modeling_period_set(
+            modeled_trace.modeling_period_set)),
     ])
 
     return serialized
@@ -48,8 +49,12 @@ def _serialize_fit_outputs(fit_outputs):
         (mp_label, OrderedDict([
             ("status", output.get("status", None)),
             ("traceback", output.get("traceback", None)),
-            ("start_date", None if output.get("start_date", None) is None else output.get("start_date").isoformat()),
-            ("end_date", None if output.get("end_date", None) is None else output.get("end_date").isoformat()),
+            ("start_date",
+                None if output.get("start_date", None) is None
+                else output.get("start_date").isoformat()),
+            ("end_date",
+                None if output.get("end_date", None) is None
+                else output.get("end_date").isoformat()),
             ("n_rows", output.get("n_rows", None)),
             ("model_fit", _serialize_model_fit(output.get("model_fit", None))),
             ("input_data", output.get("input_data", None)),
@@ -82,9 +87,14 @@ def serialize_modeling_period_set(modeling_period_set):
         ("modeling_periods", OrderedDict([
             (label, OrderedDict([
                 ("interpretation", mp.interpretation),
-                ("start_date", None if mp.start_date is None else mp.start_date.isoformat()),
-                ("end_date", None if mp.end_date is None else mp.end_date.isoformat()),
+                ("start_date",
+                    None if mp.start_date is None
+                    else mp.start_date.isoformat()),
+                ("end_date",
+                    None if mp.end_date is None else mp.end_date.isoformat()),
             ]))
-            for label, mp in sorted(modeling_period_set.modeling_periods.items(), key=lambda x: x[0])
+            for label, mp in sorted(
+                modeling_period_set.modeling_periods.items(),
+                key=lambda x: x[0])
         ])),
     ])

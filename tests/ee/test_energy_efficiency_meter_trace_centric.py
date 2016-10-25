@@ -49,6 +49,7 @@ def meter_input():
     }
     return meter_input
 
+
 @pytest.fixture
 def meter_input_strange_interpretation():
 

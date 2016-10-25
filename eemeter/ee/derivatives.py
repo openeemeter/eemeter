@@ -58,11 +58,8 @@ def annualized_weather_normal(formatter, model, weather_normal_source):
     serialized_demand_fixture = \
         formatter.serialize_demand_fixture(demand_fixture_data)
 
-    normals = model.predict(demand_fixture_data)
-    annualized = normals.sum()
+    annualized, lower, upper = model.predict(demand_fixture_data, summed=True)
     n = normal_index.shape[0]
-    upper = (model.upper**2 * n)**0.5
-    lower = (model.lower**2 * n)**0.5
 
     return {
         "annualized_weather_normal": (annualized, lower, upper, n,
@@ -121,11 +118,9 @@ def gross_predicted(formatter, model, weather_source, reporting_period):
     serialized_demand_fixture = \
         formatter.serialize_demand_fixture(demand_fixture_data)
 
-    values = model.predict(demand_fixture_data)
-    gross_predicted = values.sum()
+    gross_predicted, lower, upper = model.predict(demand_fixture_data,
+                                                  summed=True)
     n = index.shape[0]
-    upper = (model.upper**2 * n)**0.5
-    lower = (model.lower**2 * n)**0.5
 
     return {
         "gross_predicted": (gross_predicted, lower, upper, n,

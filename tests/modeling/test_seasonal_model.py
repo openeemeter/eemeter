@@ -69,13 +69,15 @@ def test_basic(input_df):
     assert 'intercept' in m.params
     assert 'coefficients' in m.params
     assert m.r2 == 0.0
-    assert_allclose(m.rmse, 0.0010302718099450827)
+    assert_allclose(m.rmse, 0.0009999999)
     assert m.y.shape == (365, 1)
 
-    predict = m.predict(input_df)
+    predict, lower, upper = m.predict(input_df, summed=False)
 
     assert predict.shape == (365,)
-    assert_allclose(predict[datetime(2000, 1, 1, tzinfo=pytz.UTC)], 0.9989697)
+    assert_allclose(predict[datetime(2000, 1, 1, tzinfo=pytz.UTC)], 0.9990000)
+    assert lower > 0
+    assert upper > 0
 
     assert len(m.holidays) > 0
     assert m.n == 365
@@ -84,5 +86,12 @@ def test_basic(input_df):
     assert 'intercept' in m.params
     assert 'coefficients' in m.params
     assert m.r2 == 0.0
-    assert_allclose(m.rmse, 0.0010302718099450827)
+    assert_allclose(m.rmse, 0.0009999999)
     assert m.y.shape == (365, 1)
+
+    # predict w/ error bootstrapping
+    predict, lower, upper = m.predict(input_df)
+
+    assert_allclose(predict, 364.635)
+    assert lower > 0
+    assert upper > 0

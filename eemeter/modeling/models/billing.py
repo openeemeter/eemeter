@@ -224,7 +224,7 @@ class BillingElasticNetCVModel():
         # add NaNs back in
         predicted = predicted.reindex(model_data.index)
 
-        return predicted
+        return predicted, self.lower, self.upper
 
     def plot(self):
         ''' Plots fit against input data. Should not be run before the

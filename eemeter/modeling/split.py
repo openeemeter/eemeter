@@ -86,7 +86,8 @@ class SplitModeledEnergyTrace(object):
                 })
             else:
                 input_description = self.formatter.describe_input(input_data)
-                input_serialization = self.formatter.serialize_input(input_data)
+                input_serialization = self.formatter.serialize_input(
+                    input_data)
                 outputs.update({
                     "input_data": input_serialization,
                     "start_date": input_description.get('start_date'),
@@ -100,8 +101,8 @@ class SplitModeledEnergyTrace(object):
                     logger.warn(
                         'For trace "{}" and modeling_period "{}", {} was not'
                         ' able to fit using input data: {}'
-                        .format(self.trace.interpretation, modeling_period_label,
-                                model, input_data)
+                        .format(self.trace.interpretation,
+                                modeling_period_label, model, input_data)
                     )
 
                     outputs.update({
@@ -124,8 +125,7 @@ class SplitModeledEnergyTrace(object):
 
         return self.fit_outputs
 
-    def predict(self, modeling_period_label, demand_fixture_data,
-                params=None):
+    def predict(self, modeling_period_label, demand_fixture_data, **kwargs):
         ''' Predict for any one of the modeling_periods associated with this
         trace. Light wrapper around :code:`model.predict(` method.
 
@@ -151,11 +151,11 @@ class SplitModeledEnergyTrace(object):
             )
             return None
 
-        if params is None:
-            params = outputs["model_fit"]["model_params"]
+        if 'params' not in kwargs:
+            kwargs['params'] = outputs["model_fit"]["model_params"]
 
         return self.model_mapping[modeling_period_label].predict(
-                demand_fixture_data, params)
+                demand_fixture_data, **kwargs)
 
     def compute_derivative(self, modeling_period_label, derivative_callable,
                            derivative_callable_kwargs):

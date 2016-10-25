@@ -25,10 +25,11 @@ class SeasonalElasticNetCVModel(object):
 
         self.cooling_base_temp = cooling_base_temp
         self.heating_base_temp = heating_base_temp
+        self.N_bootstrap = 100
 
         self.model_freq = pd.tseries.frequencies.Day()
         self.base_formula = 'energy ~ 1 + CDD + HDD + CDD:HDD'
-        self.l1_ratio = 0.5
+        self.l1_ratio = [.01, .1, .3, .5, .7, .8, .9, .95, .99, 1]
         self.holidays = holidays.UnitedStates()
         self.params = None
         self.X = None
@@ -104,26 +105,31 @@ class SeasonalElasticNetCVModel(object):
 
         formula = self.base_formula
 
+        # Check length of trace and ensure we have enough data to bootstrap
+        # the error estimate.
+
         # Make sure these factors have enough levels to not
         # cause issues.
-        if len(np.unique(model_data.index.month)) >= 12:
+        if len(np.unique(model_data.index.month[:-self.N_bootstrap])) >= 12:
             formula += '''\
             + CDD * C(tempF.index.month) \
             + HDD * C(tempF.index.month) \
             + C(tempF.index.month) \
             '''
 
-        if len(np.unique(model_data.index.weekday)) >= 7:
+        if len(np.unique(model_data.index.weekday[:-self.N_bootstrap])) >= 7:
             formula += '''\
             + (CDD) * C(tempF.index.weekday) \
             + (HDD) * C(tempF.index.weekday) \
             + C(tempF.index.weekday)\
             '''
 
-        holiday_names = self._holidays_indexed(model_data.index)
+        holiday_names = self._holidays_indexed(
+            model_data.index[:-self.N_bootstrap])
 
         if len(np.unique(holiday_names)) == 11:
-            model_data.loc[:, 'holiday_name'] = holiday_names
+            model_data.loc[:, 'holiday_name'] = self._holidays_indexed(
+                model_data.index)
             formula += " + C(holiday_name)"
 
         y, X = patsy.dmatrices(formula, model_data, return_type='dataframe')
@@ -138,6 +144,7 @@ class SeasonalElasticNetCVModel(object):
         self.X = X
         self.y = y
         self.estimated = estimated
+        self.model_obj = model_obj
 
         r2 = model_obj.score(X, y)
         rmse = ((y.values.ravel() - estimated)**2).mean()**.5
@@ -175,6 +182,10 @@ class SeasonalElasticNetCVModel(object):
         self.upper = np.sqrt(n/c1) * self.rmse
         self.n = n
 
+        # compute bootstrapped empirical errors (if possible) for when we want
+        # summed errors.
+        self.error_fun = self._bootstrap_empirical_errors()
+
         self.plot()
 
         self.params = {
@@ -195,7 +206,64 @@ class SeasonalElasticNetCVModel(object):
         }
         return output
 
-    def predict(self, demand_fixture_data, params=None):
+    def _bootstrap_empirical_errors(self):
+        ''' Calculate empirical bootstrap error function '''
+
+        min_points = self.N_bootstrap * 2
+
+        # fallback error function
+        if len(self.X) < min_points:
+            return lambda N: self.rmse * (N**0.8)
+
+        # split data n_splits times collecting residuals.
+        # splits on every index from (N_bootstrap from end)
+        # to (N_bootstrap - n_splits from end)
+        n_splits = int(self.N_bootstrap / 2)
+        resid_stack = []
+        for i in range(n_splits):
+
+            split_index = (-self.N_bootstrap) + i
+            pre_split = slice(None, split_index)
+            post_split = slice(split_index, None)
+            X_pre = self.X[pre_split]
+            X_post = self.X[post_split]
+            y_pre = self.y.values.ravel()[pre_split]
+            y_post = self.y.values.ravel()[post_split]
+
+            bootstrap_model = self.model_obj.fit(X_pre, y_pre)
+            test = bootstrap_model.predict(X_post)
+            resid = test[:n_splits] - y_post[:n_splits]
+            resid_stack.append(resid)
+        resid_stack = np.array(resid_stack)
+
+        # from residuals determine alpha and beta
+        xs = list(range(1, 50))
+        ys = [np.std(np.sum(resid_stack[:, 0:i], axis=1)) for i in xs]
+
+        n_ys = len(ys)
+        alpha = (
+            (
+                n_ys * (
+                    np.sum([
+                        np.log(x) * np.log(y)
+                        for x, y in zip(xs, ys)
+                    ])
+                ) -
+                np.sum(np.log(xs)) * np.sum(np.log(ys))
+            ) / (
+                n_ys * np.sum(np.log(xs)**2) -
+                np.sum(np.log(xs))**2
+            )
+        )
+        beta = np.exp(
+            (
+                np.sum(np.log(ys)) -
+                alpha * np.sum(np.log(xs))
+            ) / n_ys
+        )
+        return lambda N: beta * (N**alpha)
+
+    def predict(self, demand_fixture_data, params=None, summed=True):
         ''' Predicts across index using fitted model params
 
         Parameters
@@ -250,9 +318,18 @@ class SeasonalElasticNetCVModel(object):
         predicted = pd.Series(model_obj.predict(X), index=X.index)
 
         # add NaNs back in
-        predicted = predicted.reindex(model_data.index)
-
-        return predicted
+        if summed:
+            N = len(predicted)
+            predicted = np.sum(predicted)
+            stddev = self.error_fun(N)
+            # Convert to 95% confidence limits
+            lower = stddev * 1.959964 / 2
+            upper = stddev * 1.959964 / 2
+        else:
+            predicted = predicted.reindex(model_data.index)
+            lower = self.lower
+            upper = self.upper
+        return predicted, lower, upper
 
     def plot(self):
         ''' Plots fit against input data. Should not be run before the

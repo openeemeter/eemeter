@@ -41,7 +41,7 @@ class Aggregator(object):
                 raise ValueError(message)
 
     def _validate_trace_interpretation(self, derivative_pairs,
-                                            target_trace_interpretation):
+                                       target_trace_interpretation):
         for d in derivative_pairs:
             if d.trace_interpretation != target_trace_interpretation:
                 message = (

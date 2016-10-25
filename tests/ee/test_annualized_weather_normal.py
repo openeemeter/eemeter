@@ -28,7 +28,7 @@ def test_daily(mock_tmy3_weather_source):
         formatter, model, mock_tmy3_weather_source)
 
     assert_allclose(output['annualized_weather_normal'][:4],
-                    (365, 19.1049731745428, 19.1049731745428, 365))
+                    (365, 1, 1, 365))
 
     serialized = output['annualized_weather_normal'][4]
     assert len(serialized) == 365
@@ -42,7 +42,7 @@ def test_monthly(mock_tmy3_weather_source):
         formatter, model, mock_tmy3_weather_source)
 
     assert_allclose(output['annualized_weather_normal'][:4],
-                    (365, 19.1049731745428, 19.1049731745428, 365))
+                    (365, 1, 1, 365))
 
     serialized = output['annualized_weather_normal'][4]
     assert len(serialized) == 365
