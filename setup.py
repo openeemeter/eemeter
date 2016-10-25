@@ -25,7 +25,7 @@ setup(
         'holidays',
         'lxml <= 3.6.1',
         'numpy',
-        'pandas >= 0.18',
+        'pandas >= 0.18,<0.19',
         'patsy',
         'pytz',
         'requests',

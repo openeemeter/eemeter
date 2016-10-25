@@ -119,6 +119,7 @@ def _deserialize_default_value(default_value):
             'error': 'Serialization type "{}" not recognized.'.format(type_)
         }
 
+
 def _deserialize_simple_default(default_value):
     try:
         return Derivative(

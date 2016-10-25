@@ -163,6 +163,7 @@ class ModelDataFormatter(FormatterBase):
             for i, row in demand_fixture_data.iterrows()
         ])
 
+
 class ModelDataBillingFormatter(FormatterBase):
     ''' Formatter for model data of unknown or unpredictable frequency.
     Basic usage:
@@ -330,7 +331,7 @@ formatter.create_input(energy_trace, weather_source)
                 ])),
             ]))
             for (start, energy), (p, group) in
-                zip(trace_data.iteritems(), temp_data.groupby(level="period"))
+            zip(trace_data.iteritems(), temp_data.groupby(level="period"))
         ])
 
     def serialize_demand_fixture(self, demand_fixture_data):

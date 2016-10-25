@@ -33,5 +33,8 @@ class MockModel(object):
     def fit(self, df):
         return {}
 
-    def predict(self, df, params=None):
-        return pd.Series(1, index=df.index)
+    def predict(self, df, params=None, summed=True):
+        if summed:
+            return pd.Series(1, index=df.index).sum(), 1, 1
+        else:
+            return pd.Series(1, index=df.index), 1, 1

@@ -1,5 +1,4 @@
 import pytest
-from eemeter.ee.derivatives import DerivativePair, Derivative
 from eemeter.ee.aggregate import Aggregator
 
 
@@ -478,4 +477,3 @@ def test_missing_with_reporting_default(
     assert status['1']['reporting_status'] == "ACCEPTED"
     assert status['2']['baseline_status'] == "ACCEPTED"
     assert status['2']['reporting_status'] == "DEFAULT"
-
