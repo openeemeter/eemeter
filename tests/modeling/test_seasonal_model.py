@@ -45,7 +45,7 @@ def test_basic(input_df):
     assert str(m).startswith("SeasonalElasticNetCVModel(")
     assert m.cooling_base_temp == 65
     assert m.heating_base_temp == 65
-    assert m.model_freq.name == 'D'
+    assert m.n_bootstrap == 100
     assert m.n is None
     assert m.params is None
     assert m.r2 is None
@@ -62,7 +62,6 @@ def test_basic(input_df):
     assert "lower" in output
     assert "n" in output
 
-    assert len(m.holidays) > 0
     assert m.n == 365
     assert 'formula' in m.params
     assert 'X_design_info' in m.params
@@ -79,7 +78,6 @@ def test_basic(input_df):
     assert lower > 0
     assert upper > 0
 
-    assert len(m.holidays) > 0
     assert m.n == 365
     assert 'formula' in m.params
     assert 'X_design_info' in m.params
