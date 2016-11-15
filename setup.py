@@ -31,6 +31,7 @@ setup(
         'requests',
         'scipy',
         'scikit-learn',
+        'SQLAlchemy'
     ],
     package_data={'': ['*.json', '*.gz']},
     setup_requires=['pytest-runner'],
