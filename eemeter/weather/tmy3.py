@@ -5,7 +5,7 @@ import pytz
 
 from .base import WeatherSourceBase
 from .clients import TMY3Client
-from .cache import SqliteJSONStore
+from .cache import SqlJSONStore
 
 
 class TMY3WeatherSource(WeatherSourceBase):
@@ -64,11 +64,11 @@ class TMY3WeatherSource(WeatherSourceBase):
     freq = "H"
     client = TMY3Client()
 
-    def __init__(self, station, cache_directory=None, preload=True):
+    def __init__(self, station, cache_url=None, preload=True):
         super(TMY3WeatherSource, self).__init__(station)
 
         self.station = station
-        self.json_store = SqliteJSONStore(cache_directory)
+        self.json_store = SqlJSONStore(cache_url)
 
         self._check_station(station)
 
