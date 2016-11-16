@@ -11,3 +11,4 @@ requests
 scipy
 scikit-learn
 six
+SQLAlchemy
