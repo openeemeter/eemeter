@@ -55,12 +55,12 @@ sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-#needs_sphinx = '1.0'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'nbsphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
@@ -105,7 +105,7 @@ release = 'v0.4.12-alpha'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build']
+exclude_patterns = ['_build', '.ipynb_checkpoints']
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
