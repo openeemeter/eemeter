@@ -11,13 +11,9 @@ from .cache import SqlJSONStore
 class TMY3WeatherSource(WeatherSourceBase):
     ''' The :code:`TMY3WeatherSource` draws weather data from the NREL's
     Typical Meteorological Year 3 database. It stores fetched data locally by
-    default in a SQLite database at :code:`~/eemeter/cache/weather_cache.db`,
-    unless you use set the following environment variable to something
-    different:
-
-    .. code-block:: bash
-
-        $ export EEMETER_WEATHER_CACHE_DIRECTORY=/path/to/custom/directory
+    default in a SQLite database at :code:`~/.eemeter/cache/weather_cache.db`,
+    unless you use set the EEMETER_WEATHER_CACHE_URL environment variable to 
+    another, SQLAlchemy compatible database URL:
 
     Basic usage is as follows:
 
