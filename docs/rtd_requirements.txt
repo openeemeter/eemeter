@@ -1,5 +1,6 @@
 ipykernel
 nbsphinx
+setuptools >= 18.5
 sphinx >= 1.4
 sphinx-rtd-theme
 sphinxcontrib-napoleon
