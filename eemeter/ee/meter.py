@@ -560,7 +560,10 @@ class EnergyEfficiencyMeterTraceCentric(object):
 
         if weather_normal_source is None:
             weather_normal_source = get_weather_normal_source(site)
-            message = "Using weather_normal_source {}".format(weather_source)
+            message = (
+                "Using weather_normal_source {}"
+                .format(weather_normal_source)
+            )
         else:
             message = "Using supplied weather_normal_source"
             logger.info(message)

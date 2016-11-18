@@ -55,17 +55,19 @@ sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-#needs_sphinx = '1.0'
+needs_sphinx = '1.4'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'nbsphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinx.ext.autosummary',
     'sphinxcontrib.napoleon',
+    'IPython.sphinxext.ipython_console_highlighting',  # see https://github.com/spatialaudio/nbsphinx/issues/64
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -105,7 +107,9 @@ release = 'v0.4.12-alpha'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['_build']
+exclude_patterns = ['_build', '**.ipynb_checkpoints']
+
+highlight_language = 'none'
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -123,7 +127,7 @@ exclude_patterns = ['_build']
 #show_authors = False
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+#pygments_style = 'sphinx'
 
 # A list of ignored prefixes for module index sorting.
 #modindex_common_prefix = []
