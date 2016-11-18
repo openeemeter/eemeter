@@ -1,6 +1,7 @@
 dependencies:
   - ipykernel
-  - nbsphinx
   - sphinx >= 1.4
-  - sphinx-rtd-theme
-  - sphinxcontrib-napoleon
+  - pip:
+    - nbsphinx
+    - sphinx-rtd-theme
+    - sphinxcontrib-napoleon
