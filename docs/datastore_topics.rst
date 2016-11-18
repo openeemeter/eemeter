@@ -6,3 +6,4 @@ Topics
 
    datastore_basic_usage.ipynb
    datastore_tables
+   datastore_management_commands
