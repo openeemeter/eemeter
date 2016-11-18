@@ -40,24 +40,13 @@ Usage
 -----
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
 
    guides
-
-.. toctree::
-   :maxdepth: 4
-
    eemeter_index
-
-.. toctree::
-   :maxdepth: 4
-
    datastore_index
-
-.. toctree::
-   :maxdepth: 4
-
    etl_index
+
 
 References
 ----------

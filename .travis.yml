@@ -5,6 +5,10 @@ cache:
     - $HOME/.pip-cache/
     - .tox
 
+addons:
+  apt_packages:
+    - pandoc
+
 language: python
 
 python:
