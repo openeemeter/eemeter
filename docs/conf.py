@@ -67,6 +67,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.autosummary',
     'sphinxcontrib.napoleon',
+    'IPython.sphinxext.ipython_console_highlighting',  # see https://github.com/spatialaudio/nbsphinx/issues/64
 ]
 
 # Add any paths that contain templates here, relative to this directory.
