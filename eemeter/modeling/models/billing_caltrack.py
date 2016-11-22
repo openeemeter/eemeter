@@ -9,10 +9,11 @@ import scipy.optimize
 import statsmodels.formula.api as smf
 
 class BillingNNLSModel():
-    def __init__(self, cooling_base_temp, heating_base_temp):
+    def __init__(self, cooling_base_temp, heating_base_temp, heating_only=False):
 
         self.cooling_base_temp = cooling_base_temp
         self.heating_base_temp = heating_base_temp
+        self.heating_only = heating_only
 
         self.formula = 'energy ~ CDD + HDD'
 
@@ -28,29 +29,40 @@ class BillingNNLSModel():
         self.n = None
 
     def _make_monthly(self, df):
-        df = copy.deepcopy(df_in)
-        output_index = df.resample('M').apply(sum).index
-        ndays, usage, cdd, hdd = [0], [0], [0], [0]
+        ''' This can and should be vectorized, but we're doing it pedantically
+            now so as to not screw it up. '''
+	df = copy.deepcopy(df_in)
+	output_index = df.resample('M').apply(sum).index
+        ndays, usage, upd, cdd, hdd = [0], [0], [0], [0], [0]
         this_yr, this_mo = output_index[0].year, output_index[0].month
         for idx, row in df.iterrows():
            if this_yr!=idx.year or this_mo!=idx.month:
                ndays.append(0)
                usage.append(0)
+               upd.append(0)
                cdd.append(0)
                hdd.append(0)
                this_yr, this_mo = idx.year, idx.month
-           cdd[-1] = cdd[-1] + np.maximum(row['tempF'] - self.cooling_base_temp, 0)
-           hdd[-1] = hdd[-1] + np.maximum(self.heating_base_temp - row['tempF'], 0)
            if 'energy' not in row.keys():
                ndays[-1] = ndays[-1] + 1
+               cdd[-1] = cdd[-1] + np.maximum(row['tempF'] - self.cooling_base_temp, 0)
+               hdd[-1] = hdd[-1] + np.maximum(self.heating_base_temp - row['tempF'], 0)
            elif np.isfinite(row['energy']):
                ndays[-1] = ndays[-1] + 1
                usage[-1] = usage[-1] + row['energy']
+               cdd[-1] = cdd[-1] + np.maximum(row['tempF'] - self.cooling_base_temp, 0)
+               hdd[-1] = hdd[-1] + np.maximum(self.heating_base_temp - row['tempF'], 0)
         for i in range(len(usage)):
-            if ndays[i] < 25: usage[i] = np.nan
-            else: usage[i] = (usage[i] / ndays[i]) * \
-                  calendar.monthrange(output_index[i].year,output_index[i].month)[1]
-        output = pd.DataFrame({'CDD': cdd, 'HDD': hdd, 'energy': usage}, index=output_index)
+            if ndays[i] < 25:
+                upd[i] = np.nan
+                if ndays[i] == 0: cdd[i], hdd[i] = 0, 0
+                else: cdd[i], hdd[i] = cdd[i]/ndays[i], hdd[i]/ndays[i]
+            else:
+                upd[i] = (usage[i] / ndays[i])
+                cdd[i], hdd[i] = cdd[i]/ndays[i], hdd[i]/ndays[i]
+        output = pd.DataFrame({'CDD': cdd, 'HDD': hdd, 'upd': upd, 'usage': usage}, index=output_index)
+        if np.isnan(output['upd'][0]): output=output[1:]
+        if np.isnan(output['upd'][-1]): output=output[:-1]
         return output
 
     def fit(self, input_data):
@@ -85,27 +97,29 @@ class BillingNNLSModel():
         '''
         trace_data, temperature_data = input_data
 
-        cdd = self._cdd(temperature_data)
-        hdd = self._hdd(temperature_data)
         data = pd.DataFrame(
             {'energy': trace_data.iloc[:-1], 'tempF': temperature_data},
             columns=['energy', 'tempF'])
         model_data = self._make_monthly(data)
 
-        if len(model_data) < 12 or sum(np.isnan(model_data.energy[:12]))>0: 
+        if np.sum(!np.isnan(df['upd'])) <= 12:
             return None
 
         # Fit the intercept-only model
-        formula = 'energy ~ 1'
-        int_mod = smf.ols(formula=formula, data=df)
-        int_res = int_mod.fit()
-        int_rsquared = int_res.rsquared
-        int_qualified = (int_res.params['Intercept'] >= 0) and \
-                        (int_res.pvalues['Intercept'] < 0.1)
+        formula = 'upd ~ 1'
+        try:
+            int_mod = smf.ols(formula=formula, data=df)
+            int_res = int_mod.fit()
+            int_rsquared = int_res.rsquared
+            int_qualified = (int_res.params['Intercept'] >= 0) and \
+                            (int_res.pvalues['Intercept'] < 0.1)
+        except:
+            int_rsquared, int_qualified = 0, False
     
         # CDD-only
-        formula = 'energy ~ CDD'
+        formula = 'upd ~ CDD'
         try:
+            if self.heating_only: assert False
             cdd_mod = smf.ols(formula=formula, data=df)
             cdd_res = cdd_mod.fit()
             cdd_rsquared = cdd_res.rsquared
@@ -115,7 +129,7 @@ class BillingNNLSModel():
             cdd_rsquared, cdd_qualified = 0, False
     
         # HDD-only
-        formula = 'energy ~ HDD'
+        formula = 'upd ~ HDD'
         try:
             hdd_mod = smf.ols(formula=formula, data=df)
             hdd_res = hdd_mod.fit()
@@ -124,10 +138,11 @@ class BillingNNLSModel():
                             (hdd_res.pvalues['Intercept'] < 0.1) and (hdd_res.pvalues['HDD'] < 0.1)
         except:
             hdd_rsquared, hdd_qualified = 0, False
-
+    
         # CDD+HDD
-        formula = 'energy ~ CDD + HDD'
+        formula = 'upd ~ CDD + HDD'
         try:
+            if self.heating_only: assert False
             full_mod = smf.ols(formula=formula, data=df)
             full_res = full_mod.fit()
             full_rsquared = full_res.rsquared
@@ -141,27 +156,32 @@ class BillingNNLSModel():
         self.result = None
         if full_qualified and full_rsquared > \
           max([int(hdd_qualified)*hdd_rsquared,int(cdd_qualified)*cdd_rsquared,int(int_qualified)*int_rsquared]):
-            self.formula = 'energy ~ CDD + HDD'
+            self.formula = 'upd ~ CDD + HDD'
             self.result = full_res
-        if hdd_qualified and hdd_rsquared > \
+        elif hdd_qualified and hdd_rsquared > \
           max([int(full_qualified)*full_rsquared,int(cdd_qualified)*cdd_rsquared,int(int_qualified)*int_rsquared]):
-            self.formula = 'energy ~ HDD'
+            self.formula = 'upd ~ HDD'
             self.result = hdd_res
-        if cdd_qualified and cdd_rsquared > \
+        elif cdd_qualified and cdd_rsquared > \
           max([int(full_qualified)*full_rsquared,int(hdd_qualified)*hdd_rsquared,int(int_qualified)*int_rsquared]):
-            self.formula = 'energy ~ CDD'
+            self.formula = 'upd ~ CDD'
             self.result = cdd_res
-        if int_qualified:
-            self.formula = 'energy ~ 1'
+        else:
+            self.formula = 'upd ~ 1'
             self.result = int_res
     
         if self.result is None: return None
 
         estimated = self.result.predict(model_data)
         estimated = pd.Series(estimated, index=model_data.energy.index)
+        for i in range(len(estimated.index)):
+            estimated[i] = estimated[i] * \
+                calendar.monthrange(estimated.index[i].year,estimated.index[i].month)[1]
 
         y,X = patsy.dmatrices(self.formula, model_data, return_type='dataframe')
         self.X = X
+        for i in range(len(y.index)):
+            y[i] = y[i] * calendar.monthrange(estimated.index[i].year,estimated.index[i].month)[1]
         self.y = y
         self.estimated = estimated
 
@@ -255,6 +275,8 @@ class BillingNNLSModel():
 
         predicted = self.result.predict(model_data)
         predicted = pd.Series(predicted, index=model_data.index)
+        for i in range(len(predicted.index)):
+            predicted[i] = predicted[i]* calendar.monthrange(predicted.index[i].year,predicted.index[i].month)[1]
 
         return predicted
 
