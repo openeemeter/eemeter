@@ -4,6 +4,7 @@ import calendar
 import numpy as np
 import pandas as pd
 import patsy
+import copy
 from scipy.stats import chi2
 import scipy.optimize
 import statsmodels.formula.api as smf
@@ -28,7 +29,7 @@ class BillingNNLSModel():
         self.cvrmse = None
         self.n = None
 
-    def _make_monthly(self, df):
+    def _make_monthly(self, df_in):
         ''' This can and should be vectorized, but we're doing it pedantically
             now so as to not screw it up. '''
 	df = copy.deepcopy(df_in)
@@ -102,13 +103,13 @@ class BillingNNLSModel():
             columns=['energy', 'tempF'])
         model_data = self._make_monthly(data)
 
-        if np.sum(!np.isnan(df['upd'])) <= 12:
+        if np.sum(np.isfinite(model_data['upd'])) <= 12:
             return None
 
         # Fit the intercept-only model
         formula = 'upd ~ 1'
         try:
-            int_mod = smf.ols(formula=formula, data=df)
+            int_mod = smf.ols(formula=formula, data=model_data)
             int_res = int_mod.fit()
             int_rsquared = int_res.rsquared
             int_qualified = (int_res.params['Intercept'] >= 0) and \
@@ -120,7 +121,7 @@ class BillingNNLSModel():
         formula = 'upd ~ CDD'
         try:
             if self.heating_only: assert False
-            cdd_mod = smf.ols(formula=formula, data=df)
+            cdd_mod = smf.ols(formula=formula, data=model_data)
             cdd_res = cdd_mod.fit()
             cdd_rsquared = cdd_res.rsquared
             cdd_qualified = (cdd_res.params['Intercept'] >= 0) and (cdd_res.params['CDD'] >= 0) and \
@@ -131,7 +132,7 @@ class BillingNNLSModel():
         # HDD-only
         formula = 'upd ~ HDD'
         try:
-            hdd_mod = smf.ols(formula=formula, data=df)
+            hdd_mod = smf.ols(formula=formula, data=model_data)
             hdd_res = hdd_mod.fit()
             hdd_rsquared = hdd_res.rsquared
             hdd_qualified = (hdd_res.params['Intercept'] >= 0) and (hdd_res.params['HDD'] >= 0) and \
@@ -143,7 +144,7 @@ class BillingNNLSModel():
         formula = 'upd ~ CDD + HDD'
         try:
             if self.heating_only: assert False
-            full_mod = smf.ols(formula=formula, data=df)
+            full_mod = smf.ols(formula=formula, data=model_data)
             full_res = full_mod.fit()
             full_rsquared = full_res.rsquared
             full_qualified = (full_res.params['Intercept'] >= 0) and (full_res.params['HDD'] >= 0) and (full_res.params['CDD'] >= 0) and \
@@ -169,11 +170,12 @@ class BillingNNLSModel():
         else:
             self.formula = 'upd ~ 1'
             self.result = int_res
+        print self.formula, self.result
     
         if self.result is None: return None
 
         estimated = self.result.predict(model_data)
-        estimated = pd.Series(estimated, index=model_data.energy.index)
+        estimated = pd.Series(estimated, index=model_data.index)
         for i in range(len(estimated.index)):
             estimated[i] = estimated[i] * \
                 calendar.monthrange(estimated.index[i].year,estimated.index[i].month)[1]
@@ -181,7 +183,7 @@ class BillingNNLSModel():
         y,X = patsy.dmatrices(self.formula, model_data, return_type='dataframe')
         self.X = X
         for i in range(len(y.index)):
-            y[i] = y[i] * calendar.monthrange(estimated.index[i].year,estimated.index[i].month)[1]
+            y['upd'][i] = y['upd'][i] * calendar.monthrange(estimated.index[i].year,estimated.index[i].month)[1]
         self.y = y
         self.estimated = estimated
 
