@@ -4,7 +4,6 @@ dependencies:
   - scikit-learn
   - numpy
   - scipy
-  - holidays
   - lxml <= 3.6.1
   - pandas >= 0.18,<0.19
   - patsy
@@ -14,3 +13,4 @@ dependencies:
     - nbsphinx
     - sphinx-rtd-theme
     - sphinxcontrib-napoleon
+    - holidays
