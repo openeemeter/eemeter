@@ -5,4 +5,3 @@ dependencies:
     - nbsphinx
     - sphinx-rtd-theme
     - sphinxcontrib-napoleon
-    - "-e ."
