@@ -7,6 +7,7 @@ from eemeter.ee.derivatives import (
     Derivative,
     annualized_weather_normal,
     gross_predicted,
+    gross_actual
 )
 from eemeter.modeling.formatters import (
     ModelDataBillingFormatter,
@@ -170,6 +171,14 @@ class EnergyEfficiencyMeter(object):
                         })
                     if gp is not None:
                         period_derivatives["REPORTING"].update(gp)
+
+                    ga = modeled_energy_trace.compute_derivative(
+                        reporting_label,
+                        gross_actual,
+                        { })
+                    if ga is not None:
+                        period_derivatives["REPORTING"].update(ga)
+
 
         project_derivatives = self._get_project_derivatives(
             modeling_period_set,

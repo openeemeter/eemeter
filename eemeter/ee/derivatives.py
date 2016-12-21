@@ -127,7 +127,7 @@ def gross_predicted(formatter, model, weather_source, reporting_period):
                             serialized_demand_fixture),
     }
 
-def gross_actual(formatter, model, trace, weather_source, reporting_period):
+def gross_actual(formatter, model):
     ''' Find gross actual energy usage
 
     Parameters
@@ -138,11 +138,6 @@ def gross_actual(formatter, model, trace, weather_source, reporting_period):
     model : eemeter.modeling.models.Model
         Model that can be used to predict out of sample energy trace values.
         Must supply the :code:`.predict(demand_fixture_data)` method.
-    trace : Input to the formatter
-    weather_source : eemeter.weather.WeatherSource
-        WeatherSource providing observed weather data.
-    reporting_period : eemeter.structures.ModelingPeriod
-        Period targetted by reporting model.
 
     Returns
     -------
@@ -163,19 +158,11 @@ def gross_actual(formatter, model, trace, weather_source, reporting_period):
           - :code:`n` is the number of samples considered in developing the
             bound - useful for adding other values with errors.
     '''
-    start_date = reporting_period.start_date.date()
-    end_date = reporting_period.end_date
-    if end_date is None:
-        end_date = datetime.utcnow()
-    end_date = end_date.date()
+    serialized_input = formatter.serialize_input(model.input_data)
 
-    input_data = formatter.create_input(trace, weather_source)
-
-    serialized_input = formatter.serialize_input(input_data)
-
-    gross_actual = model.calc_gross(input_data, summed=True)
+    gross_actual = model.calc_gross()
     upper, lower = 0, 0
-    n = input_data.index.shape[0]
+    n = model.input_data.index.shape[0]
 
     return {
         "gross_predicted": (gross_actual, lower, upper, n,

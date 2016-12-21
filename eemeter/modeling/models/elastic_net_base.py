@@ -38,6 +38,7 @@ class ElasticNetCVBaseModel(object):
         self.rmse = None
         self.cvrmse = None
         self.n = None
+        self.input_data = None
 
     def fit(self, input_data):
         ''' Fits a model to the input data.
@@ -71,6 +72,7 @@ class ElasticNetCVBaseModel(object):
         '''
         # convert to daily
 
+        self.input_data = input_data
         model_data = self._model_data_from_input_data(input_data)
         formula = self._patsy_formula(model_data)
         y, X = patsy.dmatrices(formula, model_data, return_type='dataframe')
@@ -261,8 +263,8 @@ class ElasticNetCVBaseModel(object):
             upper = self.upper
         return predicted, lower, upper
 
-    def calc_gross(self, input_data):
-        return np.nansum(input_data.energy)
+    def calc_gross(self):
+        return np.nansum(self.input_data.energy)
 
     def plot(self):
         ''' Plots fit against input data. Should not be run before the

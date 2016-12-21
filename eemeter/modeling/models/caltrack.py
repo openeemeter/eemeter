@@ -26,12 +26,14 @@ class CaltrackModel(object):
         self.rmse = None
         self.cvrmse = None
         self.n = None
+        self.input_data = None
 
     def __repr__(self):
         if self.fit_cdd: return ( 'Caltrack full' )
         else: return ( 'Caltrack HDD-only' )
 
     def fit(self, input_data):
+        self.input_data = input_data
         df = input_data
         # Fit the intercept-only model
         int_formula = 'upd ~ 1'
@@ -219,11 +221,11 @@ class CaltrackModel(object):
             upper = pd.Series(upper, index=X.index)
             return predicted, upper, lower
 
-    def calc_gross(self, input_data):
+    def calc_gross(self):
         gross = 0.0
-        for i in range(len(input_data.index)):
-            if np.isfinite(input_data.upd):
-                gross = gross + input_data.upd[i] * input_data.ndays[i]
+        for i in range(len(self.input_data.index)):
+            if np.isfinite(self.input_data.upd):
+                gross = gross + self.input_data.upd[i] * self.input_data.ndays[i]
         return gross
 
     def plot(self):
