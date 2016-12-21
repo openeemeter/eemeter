@@ -1,5 +1,6 @@
 import warnings
 
+import copy
 import numpy as np
 import pandas as pd
 import patsy
@@ -195,8 +196,8 @@ class CaltrackModel(object):
                                            return_type='dataframe')
 
         predicted = self.model_res.predict(X)
-        lower = np.zeros(predicted.shape)
-        upper = np.zeros(predicted.shape)
+        lower = copy.deepcopy(predicted)
+        upper = copy.deepcopy(predicted)
         # Get parameter covariance matrix
         cov = self.model_res.cov_params()
         # Get prediction errors for each data point
@@ -204,7 +205,8 @@ class CaltrackModel(object):
         predicted_baseline_use, predicted_baseline_use_var = 0.0, 0.0
 
         # Sum them up using the number of days in the demand fixture.
-        for i in range(len(demand_fixture_data.index)):
+        for i in demand_fixture_data.index:
+            if i not in predicted.index: continue
             predicted[i] = predicted[i] * demand_fixture_data.ndays[i]
             predicted_baseline_use = predicted_baseline_use + predicted[i]
             thisvar = prediction_var[i] * demand_fixture_data.ndays[i]

@@ -360,6 +360,7 @@ class CaltrackFormatter(FormatterBase):
 
     def create_daily_data(self, data):
         ''' Helper function to handle monthly or other irregular data.'''
+        if len(data.index)==0: return pd.Series()
         idx = [data.index[0]]
         upd = []
         # Loop through the input data, skipping the first usage number,
@@ -378,6 +379,7 @@ class CaltrackFormatter(FormatterBase):
     def convert_to_monthly(self, df):
         # Convert from daily usage and temperature to monthly
         # usage per day and average HDD/CDD.
+        if len(df.index)==0: return pd.DataFrame()
         ndays, usage, upd, cdd, hdd, output_index = \
             [0], [0], [0], [0], [0], [df.index[0]]
         this_yr, this_mo = output_index[0].year, output_index[0].month
