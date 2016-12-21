@@ -126,3 +126,58 @@ def gross_predicted(formatter, model, weather_source, reporting_period):
         "gross_predicted": (gross_predicted, lower, upper, n,
                             serialized_demand_fixture),
     }
+
+def gross_actual(formatter, model, trace, weather_source, reporting_period):
+    ''' Find gross actual energy usage
+
+    Parameters
+    ----------
+    formatter : eemeter.modeling.formatter.Formatter
+        Formatter that can be used to create a demand fixure. Must supply the
+        :code:`.create_demand_fixture(index, weather_source)` method.
+    model : eemeter.modeling.models.Model
+        Model that can be used to predict out of sample energy trace values.
+        Must supply the :code:`.predict(demand_fixture_data)` method.
+    trace : Input to the formatter
+    weather_source : eemeter.weather.WeatherSource
+        WeatherSource providing observed weather data.
+    reporting_period : eemeter.structures.ModelingPeriod
+        Period targetted by reporting model.
+
+    Returns
+    -------
+    out : dict
+        Dictionary with the following item:
+
+        - :code:`"gross_predicted"`: 4-tuple with the values
+          :code:`(annualized, lower, upper, n)`, where
+
+          - :code:`gross_predicted` is the total gross predicted value
+            over time period defined by the reporting period.
+          - :code:`lower` is the number which should be subtracted from
+            :code:`gross_predicted` to obtain the 0.025 quantile lower error
+            bound.
+          - :code:`upper` is the number which should be added to
+            :code:`gross_predicted` to obtain the 0.975 quantile upper error
+            bound.
+          - :code:`n` is the number of samples considered in developing the
+            bound - useful for adding other values with errors.
+    '''
+    start_date = reporting_period.start_date.date()
+    end_date = reporting_period.end_date
+    if end_date is None:
+        end_date = datetime.utcnow()
+    end_date = end_date.date()
+
+    input_data = formatter.create_input(trace, weather_source)
+
+    serialized_input = formatter.serialize_input(input_data)
+
+    gross_actual = model.calc_gross(input_data, summed=True)
+    upper, lower = 0, 0
+    n = input_data.index.shape[0]
+
+    return {
+        "gross_predicted": (gross_actual, lower, upper, n,
+                            serialized_input),
+    }

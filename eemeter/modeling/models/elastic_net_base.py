@@ -261,6 +261,9 @@ class ElasticNetCVBaseModel(object):
             upper = self.upper
         return predicted, lower, upper
 
+    def calc_gross(self, input_data):
+        return np.nansum(input_data.energy)
+
     def plot(self):
         ''' Plots fit against input data. Should not be run before the
         :code:`.fit(` method.

@@ -219,6 +219,13 @@ class CaltrackModel(object):
             upper = pd.Series(upper, index=X.index)
             return predicted, upper, lower
 
+    def calc_gross(self, input_data):
+        gross = 0.0
+        for i in range(len(input_data.index)):
+            if np.isfinite(input_data.upd):
+                gross = gross + input_data.upd[i] * input_data.ndays[i]
+        return gross
+
     def plot(self):
         ''' Plots fit against input data. Should not be run before the
         :code:`.fit(` method.
