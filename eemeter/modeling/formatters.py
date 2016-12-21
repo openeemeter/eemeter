@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 import pandas as pd
+import numpy as np
 from pandas.tseries.frequencies import to_offset
 
 
@@ -339,3 +340,128 @@ formatter.create_input(energy_trace, weather_source)
             (i.isoformat(), row.tempF)
             for i, row in demand_fixture_data.iterrows()
         ])
+
+#########################################################
+
+class CaltrackFormatter(FormatterBase):
+    def __init__(self):
+        self.bp_cdd, self.bp_hdd = 70, 60
+
+    def __repr__(self):
+        return 'CaltrackFormatter()'
+
+    def create_daily_data(self, data):
+        idx = [data.index[0]]
+        upd = []
+        for i in data.index[1:]:
+            start_date = idx[-1]
+            ndays = (i - start_date).days
+            this_upd = data.value[i] / float(ndays)
+            for j in pd.date_range(start_date,i)[1:]:
+                idx.append(j)
+                upd.append(this_upd)
+        idx = idx[1:]
+        return pd.Series(upd, index=pd.DatetimeIndex(idx,freq='D'))
+
+    def convert_to_monthly(self, df):
+        ndays, usage, upd, cdd, hdd, output_index = \
+            [0], [0], [0], [0], [0], [df.index[0]]
+        this_yr, this_mo = output_index[0].year, output_index[0].month
+        for idx, row in df.iterrows():
+            if this_yr!=idx.year or this_mo!=idx.month:
+                ndays.append(0)
+                usage.append(0)
+                upd.append(0)
+                cdd.append(0)
+                hdd.append(0)
+                this_yr, this_mo = idx.year, idx.month
+                output_index.append(idx)
+            if np.isfinite(row['energy']) and np.isfinite(row['tempF']):
+                ndays[-1] = ndays[-1] + 1
+                usage[-1] = usage[-1] + row['energy']
+                cdd[-1] = cdd[-1] + np.maximum(row['tempF'] - self.bp_cdd, 0)
+                hdd[-1] = hdd[-1] + np.maximum(self.bp_hdd - row['tempF'], 0)
+
+        for i in range(len(usage)):
+            if (ndays[i] < 15):
+                upd[i], cdd[i], hdd[i] = np.nan, np.nan, np.nan
+            else:
+                upd[i] = (usage[i] / ndays[i])
+                cdd[i], hdd[i] = cdd[i]/ndays[i], hdd[i]/ndays[i]
+        output = pd.DataFrame({'CDD': cdd, 'HDD': hdd, 'upd': upd, 'usage': usage}, index=output_index)
+        return output
+
+    def create_input(self, trace, weather_source):
+        energy = pd.Series()
+        if (trace.data.index.freq is None or
+                to_offset(trace.data.index.freq) > to_offset('D')):
+            # Input is less frequent than daily (e.g., monthly)
+            energy = self.create_daily_trace(trace.data)
+        else:
+            # Input is daily, hourly, 15-minutely, etc.
+            energy = trace.data.value.resample('D').sum()
+
+        tempF = weather_source.indexed_temperatures(energy.index, "degF")
+        df = pd.DataFrame({"energy": energy, "tempF": tempF},
+                        columns=["energy", "tempF"])
+        df = self.convert_to_monthly(df)
+        return df
+
+    def create_demand_fixture(self, index, weather_source):
+        '''Creates a :code:`DatetimeIndex` ed dataframe containing formatted
+        demand fixture data.
+
+        Parameters
+        ----------
+        index : pandas.DatetimeIndex
+            The desired index for demand fixture data.
+        weather_source : eemeter.weather.WeatherSourceBase
+            The source of weather fixture data.
+
+        Returns
+        -------
+        input_df : pandas.DataFrame
+            Predictably formatted input data. This data should be directly
+            usable as input to applicable model.predict() methods.
+        '''
+        idx = None
+        if (index.freq is None or
+                to_offset(index.freq) > to_offset('D')):
+            # Input is less frequent than daily (e.g., monthly)
+            dummy = pd.DataFrame({'value':np.zeros(len(index))},index=index)
+            energy = self.create_daily_data(dummy)
+            idx = energy.index
+        else:
+            # Input is daily, hourly, 15-minutely, etc.
+            dummy = pd.Series(np.zeros(len(index)),index=index)
+            energy = dummy.value.resample('D').sum()
+            idx = energy.index
+
+        tempF = weather_source.indexed_temperatures(idx, "degF")
+        df = pd.DataFrame({"tempF": tempF, "energy": tempF*0})
+        df = self.convert_to_monthly(df)
+        del df['usage']
+        del df['upd']
+        return df
+
+    def serialize_input(self, input_data):
+        return OrderedDict([
+            (start.isoformat(), OrderedDict([
+                ("upd", row.upd if pd.isfinite(row.upd) else None),
+                ("usage", row.usage if pd.isfinite(row.usage) else None),
+                ("HDD", row.HDD if pd.isfinite(row.HDD) else None),
+                ("CDD", row.CDD if pd.isfinite(row.CDD) else None),
+            ]))
+            for start, row in input_data.iterrows()
+        ])
+
+    def serialize_demand_fixture(self, demand_fixture_data):
+        return OrderedDict([
+            (start.isoformat(), OrderedDict([
+                ("HDD", row.HDD if pd.isfinite(row.HDD) else None),
+                ("CDD", row.CDD if pd.isfinite(row.CDD) else None),
+            ]))
+            for i, row in demand_fixture_data.iterrows()
+        ])
+
+
