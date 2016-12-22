@@ -108,7 +108,7 @@ def gross_predicted(formatter, model, weather_source, reporting_period):
     start_date = reporting_period.start_date.date()
     end_date = reporting_period.end_date
     if end_date is None:
-        end_date = datetime.utcnow()
+        end_date = model.input_data.index[-1] #datetime.utcnow()
     end_date = end_date.date()
     index = pd.date_range(start_date, end_date, freq='D', tz=pytz.UTC)
 
@@ -165,6 +165,6 @@ def gross_actual(formatter, model):
     n = model.input_data.index.shape[0]
 
     return {
-        "gross_predicted": (gross_actual, lower, upper, n,
-                            serialized_input),
+        "gross_actual": (gross_actual, lower, upper, n,
+                         serialized_input),
     }
