@@ -63,7 +63,7 @@ class CaltrackModel(object):
                     best_bp, best_rsquared = bp, cdd_rsquared
                     best_mod, best_res = cdd_mod, cdd_res
             if best_bp is not None and \
-                (full_res.pvalues['Intercept'] < 0.1) and (full_res.pvalues['CDD_'+best_bp] < 0.1):
+                (best_res.pvalues['Intercept'] < 0.1) and (best_res.pvalues['CDD_'+best_bp] < 0.1):
                 cdd_qualified = True
                 cdd_formula = 'upd ~ CDD_'+best_bp
                 cdd_bp = int(best_bp)
@@ -82,12 +82,12 @@ class CaltrackModel(object):
                 hdd_mod = smf.ols(formula=hdd_formula, data=df)
                 hdd_res = hdd_mod.fit()
                 hdd_rsquared = hdd_res.rsquared
-                if hdd_rsquared > best_rsquared and cdd_res.params['Intercept'] >= 0 and \
+                if hdd_rsquared > best_rsquared and hdd_res.params['Intercept'] >= 0 and \
                     hdd_res.params['HDD_'+bp] >= 0:
                     best_bp, best_rsquared = bp, hdd_rsquared
                     best_mod, best_res = hdd_mod, hdd_res
             if best_bp is not None and \
-                (full_res.pvalues['Intercept'] < 0.1) and (full_res.pvalues['HDD_'+best_bp] < 0.1):
+                (best_res.pvalues['Intercept'] < 0.1) and (best_res.pvalues['HDD_'+best_bp] < 0.1):
                 hdd_qualified = True
                 hdd_formula = 'upd ~ HDD_'+best_bp
                 hdd_bp = int(best_bp)
@@ -116,9 +116,9 @@ class CaltrackModel(object):
                     best_hdd_bp, best_cdd_bp, best_rsquared = full_hdd_bp, full_cdd_bp, full_rsquared
                     best_mod, best_res = full_mod, full_res
             if best_hdd_bp is not None and \
-                (full_res.pvalues['Intercept'] < 0.1) and \
-                (full_res.pvalues['CDD_'+best_cdd_bp] < 0.1) and \
-                (full_res.pvalues['HDD_'+best_hdd_bp] < 0.1):
+                (best_res.pvalues['Intercept'] < 0.1) and \
+                (best_res.pvalues['CDD_'+best_cdd_bp] < 0.1) and \
+                (best_res.pvalues['HDD_'+best_hdd_bp] < 0.1):
                 full_qualified = True
                 full_formula = 'upd ~ CDD_'+best_cdd_bp+' + HDD_'+best_hdd_bp
                 full_hdd_bp = int(best_hdd_bp)
