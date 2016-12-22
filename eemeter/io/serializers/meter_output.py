@@ -67,6 +67,13 @@ def _serialize_model_fit(model_fit):
     if model_fit is None:
         return None
     else:
+        model_params = {}
+        for k,v in model_fit.get("model_params",{}).iteritems():
+            if type(v) == type({}):
+                model_params[k] = OrderedDict(v)
+            elif k == 'X_design_info': continue
+            else: model_params[k] = v
+        model_params = OrderedDict(model_params)
         return OrderedDict([
             ("r2", model_fit.get("r2", None)),
             ("cvrmse", model_fit.get("cvrmse", None)),
@@ -74,7 +81,7 @@ def _serialize_model_fit(model_fit):
             ("lower", model_fit.get("lower", None)),
             ("upper", model_fit.get("upper", None)),
             ("n", model_fit.get("n", None)),
-            ("model_params", None),
+            ("model_params", model_params),
         ])
 
 

@@ -352,8 +352,12 @@ class CaltrackFormatter(FormatterBase):
     is imposed on each month.
     
     '''
-    def __init__(self):
-        self.bp_cdd, self.bp_hdd = 70, 60
+    def __init__(self, grid_search=False):
+        if grid_search:
+            self.bp_cdd = [55, 60, 65, 70, 75, 80, 85]
+            self.bp_hdd = [55, 60, 65, 70, 75, 80, 85]
+        else: 
+            self.bp_cdd, self.bp_hdd = [70,], [60,]
 
     def __repr__(self):
         return 'CaltrackFormatter()'
@@ -379,34 +383,47 @@ class CaltrackFormatter(FormatterBase):
     def convert_to_monthly(self, df):
         # Convert from daily usage and temperature to monthly
         # usage per day and average HDD/CDD.
-        if len(df.index)==0: return pd.DataFrame()
-        ndays, usage, upd, cdd, hdd, output_index = \
-            [0], [0], [0], [0], [0], [df.index[0]]
+        cdd = {i: [0] for i in self.bp_cdd}
+        hdd = {i: [0] for i in self.bp_hdd}
+        if len(df.index)==0:
+            df_dict = {'upd': [], 'usage': [], 'ndays': []}
+            df_dict.update({'CDD_'+str(bp): [] for bp in cdd.keys()})
+            df_dict.update({'HDD_'+str(bp): [] for bp in hdd.keys()})
+            return pd.DataFrame(df_dict, index=[])
+        ndays, usage, upd, output_index = \
+            [0], [0], [0], [df.index[0]]
         this_yr, this_mo = output_index[0].year, output_index[0].month
         for idx, row in df.iterrows():
             if this_yr!=idx.year or this_mo!=idx.month:
                 ndays.append(0)
                 usage.append(0)
                 upd.append(0)
-                cdd.append(0)
-                hdd.append(0)
+                for i in cdd.keys(): cdd[i].append(0)
+                for i in hdd.keys(): hdd[i].append(0)
                 this_yr, this_mo = idx.year, idx.month
                 output_index.append(idx)
             if np.isfinite(row['energy']) and np.isfinite(row['tempF']):
                 ndays[-1] = ndays[-1] + 1
                 usage[-1] = usage[-1] + row['energy']
-                cdd[-1] = cdd[-1] + np.maximum(row['tempF'] - self.bp_cdd, 0)
-                hdd[-1] = hdd[-1] + np.maximum(self.bp_hdd - row['tempF'], 0)
+                for bp in cdd.keys():
+                    cdd[bp][-1] = cdd[bp][-1] + np.maximum(row['tempF'] - bp, 0)
+                for bp in hdd.keys():
+                    hdd[bp][-1] = hdd[bp][-1] + np.maximum(bp - row['tempF'], 0)
 
         for i in range(len(usage)):
             if (ndays[i] < 15):
                 # Caltrack sufficiency requirement of >=15 days per month
-                upd[i], cdd[i], hdd[i] = np.nan, np.nan, np.nan
+                upd[i] = np.nan
+                for bp in cdd.keys(): cdd[bp][i] = np.nan
+                for bp in hdd.keys(): hdd[bp][i] = np.nan
             else:
                 upd[i] = (usage[i] / ndays[i])
-                cdd[i], hdd[i] = cdd[i]/ndays[i], hdd[i]/ndays[i]
-        output = pd.DataFrame({'CDD': cdd, 'HDD': hdd, 'upd': upd, 'usage': usage, \
-                               'ndays': ndays}, index=output_index)
+                for bp in cdd.keys(): cdd[bp][i] = cdd[bp][i]/ndays[i]
+                for bp in hdd.keys(): hdd[bp][i] = hdd[bp][i]/ndays[i]
+        df_dict = {'upd': upd, 'usage': usage, 'ndays': ndays}
+        df_dict.update({'CDD_'+str(bp): cdd[bp] for bp in cdd.keys()})
+        df_dict.update({'HDD_'+str(bp): hdd[bp] for bp in hdd.keys()})
+        output = pd.DataFrame(df_dict, index=output_index)
         return output
 
     def create_input(self, trace, weather_source):
@@ -465,11 +482,7 @@ class CaltrackFormatter(FormatterBase):
     def serialize_input(self, input_data):
         return OrderedDict([
             (start.isoformat(), OrderedDict([
-                ("upd", row.upd if np.isfinite(row.upd) else None),
-                ("usage", row.usage if np.isfinite(row.usage) else None),
-                ("ndays", row.ndays if np.isfinite(row.ndays) else None),
-                ("HDD", row.HDD if np.isfinite(row.HDD) else None),
-                ("CDD", row.CDD if np.isfinite(row.CDD) else None),
+                (i, row[i] if np.isfinite(row[i]) else None) for i in row.keys()
             ]))
             for start, row in input_data.iterrows()
         ])
@@ -477,9 +490,7 @@ class CaltrackFormatter(FormatterBase):
     def serialize_demand_fixture(self, demand_fixture_data):
         return OrderedDict([
             (start.isoformat(), OrderedDict([
-                ("HDD", row.HDD if np.isfinite(row.HDD) else None),
-                ("CDD", row.CDD if np.isfinite(row.CDD) else None),
-                ("ndays", row.ndays if np.isfinite(row.ndays) else None),
+                (i, row[i] if np.isfinite(row[i]) else None) for i in row.keys()
             ]))
             for start, row in demand_fixture_data.iterrows()
         ])

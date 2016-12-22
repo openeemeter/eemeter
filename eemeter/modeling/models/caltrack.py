@@ -1,4 +1,5 @@
 import warnings
+from collections import OrderedDict
 
 import copy
 import numpy as np
@@ -28,6 +29,7 @@ class CaltrackModel(object):
         self.cvrmse = None
         self.n = None
         self.input_data = None
+        self.hdd_bp, self.cdd_bp = None, None
 
     def __repr__(self):
         if self.fit_cdd: return ( 'Caltrack full' )
@@ -47,40 +49,88 @@ class CaltrackModel(object):
             int_rsquared, int_qualified = 0, False
     
         # CDD-only
-        cdd_formula = 'upd ~ CDD'
         try:
             if not self.fit_cdd: assert False
-            cdd_mod = smf.ols(formula=cdd_formula, data=df)
-            cdd_res = cdd_mod.fit()
-            cdd_rsquared = cdd_res.rsquared
-            cdd_qualified = (cdd_res.params['Intercept'] >= 0) and (cdd_res.params['CDD'] >= 0) and \
-                            (cdd_res.pvalues['Intercept'] < 0.1) and (cdd_res.pvalues['CDD'] < 0.1)
+            bps = [i[4:] for i in df.columns if i[:3]=='CDD']
+            best_bp, best_rsquared, best_mod, best_res = None, -9e9, None, None
+            for bp in bps:
+                cdd_formula = 'upd ~ CDD_'+bp
+                cdd_mod = smf.ols(formula=cdd_formula, data=df)
+                cdd_res = cdd_mod.fit()
+                cdd_rsquared = cdd_res.rsquared
+                if cdd_rsquared > best_rsquared and cdd_res.params['Intercept'] >= 0 and \
+                    cdd_res.params['CDD_'+bp] >= 0:
+                    best_bp, best_rsquared = bp, cdd_rsquared
+                    best_mod, best_res = cdd_mod, cdd_res
+            if best_bp is not None and \
+                (full_res.pvalues['Intercept'] < 0.1) and (full_res.pvalues['CDD_'+best_bp] < 0.1):
+                cdd_qualified = True
+                cdd_formula = 'upd ~ CDD_'+best_bp
+                cdd_bp = int(best_bp)
+                cdd_mod, cdd_res, cdd_rsquared = best_mod, best_res, best_rsquared
+            else:
+                cdd_rsquared, cdd_qualified = 0, False
         except:
             cdd_rsquared, cdd_qualified = 0, False
     
         # HDD-only
-        hdd_formula = 'upd ~ HDD'
         try:
-            hdd_mod = smf.ols(formula=hdd_formula, data=df)
-            hdd_res = hdd_mod.fit()
-            hdd_rsquared = hdd_res.rsquared
-            hdd_qualified = (hdd_res.params['Intercept'] >= 0) and (hdd_res.params['HDD'] >= 0) and \
-                            (hdd_res.pvalues['Intercept'] < 0.1) and (hdd_res.pvalues['HDD'] < 0.1)
+            bps = [i[4:] for i in df.columns if i[:3]=='HDD']
+            best_bp, best_rsquared, best_mod, best_res = None, -9e9, None, None
+            for bp in bps:
+                hdd_formula = 'upd ~ HDD_'+bp
+                hdd_mod = smf.ols(formula=hdd_formula, data=df)
+                hdd_res = hdd_mod.fit()
+                hdd_rsquared = hdd_res.rsquared
+                if hdd_rsquared > best_rsquared and cdd_res.params['Intercept'] >= 0 and \
+                    hdd_res.params['HDD_'+bp] >= 0:
+                    best_bp, best_rsquared = bp, hdd_rsquared
+                    best_mod, best_res = hdd_mod, hdd_res
+            if best_bp is not None and \
+                (full_res.pvalues['Intercept'] < 0.1) and (full_res.pvalues['HDD_'+best_bp] < 0.1):
+                hdd_qualified = True
+                hdd_formula = 'upd ~ HDD_'+best_bp
+                hdd_bp = int(best_bp)
+                hdd_mod, hdd_res, hdd_rsquared = best_mod, best_res, best_rsquared
+            else:
+                hdd_rsquared, hdd_qualified = 0, False
         except:
             hdd_rsquared, hdd_qualified = 0, False
 
         # CDD+HDD
-        full_formula = 'upd ~ CDD + HDD'
         try:
             if not self.fit_cdd: assert False
-            full_mod = smf.ols(formula=full_formula, data=df)
-            full_res = full_mod.fit()
-            full_rsquared = full_res.rsquared
-            full_qualified = (full_res.params['Intercept'] >= 0) and (full_res.params['HDD'] >= 0) and (full_res.params['CDD'] >= 0) and \
-                             (full_res.pvalues['Intercept'] < 0.1) and (full_res.pvalues['CDD'] < 0.1) and (full_res.pvalues['HDD'] < 0.1)
+            hdd_bps = [i[4:] for i in df.columns if i[:3]=='HDD']
+            cdd_bps = [i[4:] for i in df.columns if i[:3]=='CDD']
+            best_hdd_bp, best_cdd_bp, best_rsquared, best_mod, best_res = \
+                None, None, -9e9, None, None
+            for full_hdd_bp in hdd_bps:
+                for full_cdd_bp in cdd_bps:
+                    full_formula = 'upd ~ CDD_'+full_cdd_bp+' + HDD_'+full_hdd_bp
+                    full_mod = smf.ols(formula=full_formula, data=df)
+                    full_res = full_mod.fit()
+                    full_rsquared = full_res.rsquared
+                if full_rsquared > full_rsquared and full_res.params['Intercept'] >= 0 and \
+                    full_res.params['HDD_'+full_hdd_bp] >= 0 and \
+                    full_res.params['CDD_'+full_cdd_bp] >= 0:
+                    best_hdd_bp, best_cdd_bp, best_rsquared = full_hdd_bp, full_cdd_bp, full_rsquared
+                    best_mod, best_res = full_mod, full_res
+            if best_hdd_bp is not None and \
+                (full_res.pvalues['Intercept'] < 0.1) and \
+                (full_res.pvalues['CDD_'+best_cdd_bp] < 0.1) and \
+                (full_res.pvalues['HDD_'+best_hdd_bp] < 0.1):
+                full_qualified = True
+                full_formula = 'upd ~ CDD_'+best_cdd_bp+' + HDD_'+best_hdd_bp
+                full_hdd_bp = int(best_hdd_bp)
+                full_cdd_bp = int(best_cdd_bp)
+                full_mod, full_res, full_rsquared = best_mod, best_res, best_rsquared
+            else:
+                full_rsquared, full_qualified = 0, False
         except:
             full_rsquared, full_qualified = 0, False
     
+        self.hdd_bp, self.cdd_bp = None, None
+
         # Now we take the best qualified model.
         if (full_qualified or hdd_qualified or cdd_qualified or int_qualified) == False: 
             raise ValueError("No candidate model fit to data successfully")
@@ -92,6 +142,7 @@ class CaltrackModel(object):
             self.estimated = full_res.fittedvalues
             self.r2, self.rmse = full_rsquared, np.sqrt(full_res.mse_total)
             self.model_obj, self.model_res, formula = full_mod, full_res, full_formula
+            self.hdd_bp, self.cdd_bp = full_hdd_bp, full_cdd_bp
         elif hdd_qualified and hdd_rsquared > \
             max([int(full_qualified)*full_rsquared,int(cdd_qualified)*cdd_rsquared,int(int_qualified)*int_rsquared]):
             # Use HDD-only
@@ -99,6 +150,7 @@ class CaltrackModel(object):
             self.estimated = hdd_res.fittedvalues
             self.r2, self.rmse = hdd_rsquared, np.sqrt(hdd_res.mse_total)
             self.model_obj, self.model_res, formula = hdd_mod, hdd_res, hdd_formula
+            self.hdd_bp = hdd_bp
         elif cdd_qualified and cdd_rsquared > \
             max([int(full_qualified)*full_rsquared,int(hdd_qualified)*hdd_rsquared,int(int_qualified)*int_rsquared]):
             # Use CDD-only
@@ -106,6 +158,7 @@ class CaltrackModel(object):
             self.estimated = cdd_res.fittedvalues
             self.r2, self.rmse = cdd_rsquared, np.sqrt(cdd_res.mse_total)
             self.model_obj, self.model_res, formula = cdd_mod, cdd_res, cdd_formula
+            self.cdd_bp = cdd_bp
         else:
             # Use Intercept-only
             self.y,self.X = patsy.dmatrices(int_formula, df, return_type='dataframe')
@@ -145,9 +198,11 @@ class CaltrackModel(object):
         #self.plot()
 
         self.params = {
-            "coefficients": self.model_res.params, 
-            "X_design_info": self.X.design_info,
+            "coefficients": self.model_res.params.to_dict(),
             "formula": formula,
+            "cdd_bp": self.cdd_bp,
+            "hdd_bp": self.hdd_bp,
+            "X_design_info": self.X.design_info,
         }
 
         output = {
@@ -157,7 +212,7 @@ class CaltrackModel(object):
             "cvrmse": self.cvrmse,
             "upper": self.upper,
             "lower": self.lower,
-            "n": self.n
+            "n": self.n,
         }
         return output
 
