@@ -354,8 +354,8 @@ class CaltrackFormatter(FormatterBase):
     '''
     def __init__(self, grid_search=False):
         if grid_search:
-            self.bp_cdd = [55, 60, 65, 70, 75, 80, 85]
-            self.bp_hdd = [55, 60, 65, 70, 75, 80, 85]
+            self.bp_cdd = [50, 55, 60, 65, 70, 75, 80, 85]
+            self.bp_hdd = [50, 55, 60, 65, 70, 75, 80, 85]
         else: 
             self.bp_cdd, self.bp_hdd = [70,], [60,]
 
