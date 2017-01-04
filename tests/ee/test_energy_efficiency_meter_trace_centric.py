@@ -13,8 +13,8 @@ from eemeter.weather import ISDWeatherSource
 @pytest.fixture
 def meter_input():
 
-    record_starts = pd.date_range('2012-01-01', periods=365*4, freq='D',
-                                  tz=pytz.UTC)
+    record_starts = pd.date_range(
+        '2012-01-01', periods=365 * 4, freq='D', tz=pytz.UTC)
 
     records = [
         {
@@ -53,8 +53,8 @@ def meter_input():
 @pytest.fixture
 def meter_input_strange_interpretation():
 
-    record_starts = pd.date_range('2012-01-01', periods=365*4, freq='D',
-                                  tz=pytz.UTC)
+    record_starts = pd.date_range(
+        '2012-01-01', periods=365 * 4, freq='D', tz=pytz.UTC)
 
     records = [
         {

@@ -162,7 +162,7 @@ def get_approximate_frequency(trace):
     # strategy: try two groups of 5 dates
     for i in range(0, 9, 5):
         try:
-            freq = pd.infer_freq(trace.data.index[i:i+5])
+            freq = pd.infer_freq(trace.data.index[i:i + 5])
         except ValueError:
             pass
         else:

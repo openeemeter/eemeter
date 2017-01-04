@@ -305,7 +305,7 @@ class GSODWeatherSource(NOAAWeatherSourceBase):
     ''' The :code:`GSODWeatherSource` draws weather data from the NOAA
     Global Summary of the Day FTP site. It stores fetched data locally by
     default in a SQLite database at :code:`~/eemeter/cache/weather_cache.db`,
-    unless you use set the EEMETER_WEATHER_CACHE_URL environment variable to 
+    unless you use set the EEMETER_WEATHER_CACHE_URL environment variable to
     another, SQLAlchemy compatible database URL:
 
     Basic usage is as follows:

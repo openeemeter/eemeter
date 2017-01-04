@@ -12,7 +12,7 @@ class WeatherSourceBase(object):
         if unit is None or unit == "degC":
             return x
         elif unit == "degF":
-            return 1.8*x + 32
+            return 1.8 * x + 32
         else:
             message = (
                 "Unit not supported ({}). Use 'degF' or 'degC'"

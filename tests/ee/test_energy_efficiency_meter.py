@@ -22,7 +22,7 @@ from eemeter.weather import TMY3WeatherSource
 
 @pytest.fixture
 def daily_data():
-    index = pd.date_range('2012-01-01', periods=365*4, freq='D', tz=pytz.UTC)
+    index = pd.date_range('2012-01-01', periods=365 * 4, freq='D', tz=pytz.UTC)
     data = {
         "value": np.tile(1, (365 * 4,)),
         "estimated": np.tile(False, (365 * 4,))

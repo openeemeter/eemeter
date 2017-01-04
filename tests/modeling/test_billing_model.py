@@ -53,7 +53,8 @@ def test_basic_usage(trace, mock_isd_weather_source):
     assert 'cvrmse' in outputs
     assert 'model_params' in outputs
 
-    index = pd.date_range('2011-01-01', freq='H', periods=365*24, tz=pytz.UTC)
+    index = pd.date_range(
+        '2011-01-01', freq='H', periods=365 * 24, tz=pytz.UTC)
     formatted_predict_data = formatter.create_demand_fixture(
         index, mock_isd_weather_source)
 

@@ -105,9 +105,9 @@ def test_basic_usage(trace, modeling_period_set, mock_isd_weather_source):
         return returnme
 
     mp1_deriv = smet.compute_derivative(
-            'modeling_period_1', callable_, {"returnme": "A"})
+        'modeling_period_1', callable_, {"returnme": "A"})
     mp2_deriv = smet.compute_derivative(
-            'modeling_period_2', callable_, {"returnme": "A"})
+        'modeling_period_2', callable_, {"returnme": "A"})
 
     assert mp1_deriv == "A"
     assert mp2_deriv is None

@@ -1,7 +1,14 @@
 import os
 import json
-from datetime import datetime
-from sqlalchemy import create_engine, Table, MetaData, Column, Integer, String, DateTime
+from sqlalchemy import (
+    create_engine,
+    Table,
+    MetaData,
+    Column,
+    Integer,
+    String,
+    DateTime,
+)
 from sqlalchemy.sql import select, func
 
 
@@ -31,7 +38,9 @@ class SqlJSONStore(object):
         eng = create_engine(url)
         metadata = MetaData(eng)
 
-        tbl_items = Table("items", metadata,
+        tbl_items = Table(
+            "items",
+            metadata,
             Column("id", Integer, primary_key=True),
             Column("data", String),
             Column("key", String, unique=True),
@@ -50,7 +59,8 @@ class SqlJSONStore(object):
     def save_json(self, key, data):
         data = json.dumps(data)
         if self.key_exists(key):
-            s = self.items.update().where(self.items.c.key==key).values(key=key, data=data, dt=func.now())
+            s = self.items.update().where(self.items.c.key == key).values(
+                key=key, data=data, dt=func.now())
         else:
             s = self.items.insert().values(key=key, data=data, dt=func.now())
         s.execute()
@@ -77,5 +87,5 @@ class SqlJSONStore(object):
         if key is None:
             s = self.items.delete()
         else:
-            s = self.items.delete().where(self.items.c.key==key)
+            s = self.items.delete().where(self.items.c.key == key)
         s.execute()

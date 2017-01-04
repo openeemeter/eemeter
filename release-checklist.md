@@ -44,11 +44,11 @@
 * Verify the latest tagged release on github
 * Determine the next version you'll be releasing using [semantic versioning](http://semver.org/)
 * Create release branch from `develop`, named in the form _release/vMAJOR.MINOR.PATCH-TAG_, for example _release/v0.4.13-alpha_
-  
+
   ```
     git checkout -b release/vMAJOR.MINOR.PATCH-TAG
   ```
-  
+
 * Update the version number in the following files:
   * `docs/conf.py`: the release and version strings
   * `eemeter/__init__.py`: the `VERSION` tuple
@@ -74,7 +74,7 @@
     git push origin --tags
     git push origin master
   ```
-  
+
 * Merge master into develop
 
   ```
@@ -105,7 +105,7 @@
 * Verify eemeter version
   * Install eemeter by running `pip install eemeter --upgrade --no-deps`
   * Start python shell and run the following:
-  
+
   ```
     import eemeter
     eemeter.get_version()

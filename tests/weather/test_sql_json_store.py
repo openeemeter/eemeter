@@ -44,4 +44,3 @@ def test_basic_usage():
     s.clear("b")
     assert s.key_exists("a") is True
     assert s.key_exists("b") is False
-

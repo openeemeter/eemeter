@@ -119,9 +119,9 @@ class ElasticNetCVBaseModel(object):
 
         n = self.estimated.shape[0]
 
-        c1, c2 = chi2.ppf([0.025, 1-0.025], n)
-        self.lower = np.sqrt(n/c2) * self.rmse
-        self.upper = np.sqrt(n/c1) * self.rmse
+        c1, c2 = chi2.ppf([0.025, 1 - 0.025], n)
+        self.lower = np.sqrt(n / c2) * self.rmse
+        self.upper = np.sqrt(n / c1) * self.rmse
         self.n = n
 
         # compute bootstrapped empirical errors (if possible) for when we want
@@ -282,6 +282,6 @@ class ElasticNetCVBaseModel(object):
                          color='b', alpha=0.3)
 
         pd.Series(self.y.values.ravel(), index=self.estimated.index).plot(
-                  color='k', linewidth=1.5)
+            color='k', linewidth=1.5)
 
         plt.show()

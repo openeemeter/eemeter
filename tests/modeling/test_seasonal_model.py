@@ -68,7 +68,7 @@ def test_basic(input_df):
     assert 'intercept' in m.params
     assert 'coefficients' in m.params
     assert m.r2 == 0.0
-    assert_allclose(m.rmse, 0.0009999999)
+    assert_allclose(m.rmse, 0.00100000000, rtol=1e-5, atol=1e-5)
     assert m.y.shape == (365, 1)
 
     predict, lower, upper = m.predict(input_df, summed=False)
@@ -84,7 +84,7 @@ def test_basic(input_df):
     assert 'intercept' in m.params
     assert 'coefficients' in m.params
     assert m.r2 == 0.0
-    assert_allclose(m.rmse, 0.0009999999)
+    assert_allclose(m.rmse, 0.00100000000, rtol=1e-5, atol=1e-5)
     assert m.y.shape == (365, 1)
 
     # predict w/ error bootstrapping
