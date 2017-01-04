@@ -24,9 +24,9 @@ def get_modeling_period_set(interventions):
         return None
 
     baseline_period_end = _get_earliest_intervention_start_date(
-            interventions)
+        interventions)
     reporting_period_start = _get_latest_intervention_end_date(
-            interventions)
+        interventions)
 
     if reporting_period_start is None:
         # fall back to baseline_period_end - interventions are still

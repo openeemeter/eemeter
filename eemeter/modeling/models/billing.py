@@ -28,7 +28,11 @@ class BillingElasticNetCVModel(ElasticNetCVBaseModel):
         return (
             'BillingElasticNetCVModel(cooling_base_temp={},'
             ' heating_base_temp={}, n_bootstrap={})'
-            .format(self.cooling_base_temp, self.heating_base_temp, self.n_bootstrap)
+            .format(
+                self.cooling_base_temp,
+                self.heating_base_temp,
+                self.n_bootstrap
+            )
         )
 
     def _model_data_from_input_data(self, input_data):
