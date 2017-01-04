@@ -24,7 +24,7 @@ we term the :ref:`baseline period <glossary-baseline-period>`.
 This period is used to establish models of the relationship between
 :ref:`energy demand <glossary-energy-demand>` and a set of factors that
 represent or contribute to :ref:`end use demand <glossary-energy-demand>` (such as
-weather, time of day, or day of week) for a particular building _prior_ to an
+weather, time of day, or day of week) for a particular building *prior* to an
 intervention. The :ref:`baseline <glossary-baseline>` becomes a reference
 point from which to make comparisions to post-intervention energy performance.
 The baseline period is one of two types of
@@ -101,7 +101,7 @@ and considers them when building summaries of savings.
 Weather normalization
 ^^^^^^^^^^^^^^^^^^^^^
 
-Once we have created a model, we can apply that model determine an estimate of
+Once we have created a model, we can apply that model to determine an estimate
 of energy demand during arbitrary weather scenarios. The two most common
 weather scenarios for which the EEmeter will estimate demand are the
 ":ref:`normal <glossary-weather-normal>`" weather year and the observed
@@ -116,8 +116,7 @@ weather.
 In an attempt to reduce the number of arbitrary factors influencing results,
 we only ever compare model estimates or data over that has occurred over the
 same weather scenario and time period. This helps (in the aggregate) to ensure
-equivalency of :ref:`end use demand <glossary-end-use-demand>` pre- and post-
-intervention.
+equivalency of :ref:`end use demand <glossary-end-use-demand>` pre- and post-intervention.
 
 Savings
 ^^^^^^^
@@ -265,8 +264,8 @@ The aggregation steps are as follows:
        discarded.
     d. Compute :math:`E_\text{b} = \sum_{\text{t}}E_\text{t,b}`
        and :math:`E_\text{r} = \sum_{\text{t}}E_\text{t,r}` for remaining
-       traces. Errors are propgated according to the principles in
-       :ref:`error-propogation`.
+       traces. Errors are propagated according to the principles in
+       :ref:`error-propagation`.
 
 5. Compute savings from :math:`E_\text{b}` and :math:`E_\text{r}` as usual.
 
@@ -284,12 +283,12 @@ meet the following criteria
    project interventions, blank :math:`E_\text{t,b}` should be replaced with 0.
 2. Model has been successfully built.
 
-.. _error-propogation:
+.. _error-propagation:
 
-Error propogation
+Error propagation
 ^^^^^^^^^^^^^^^^^
 
-Errors are propgated as if they followed :math:`\chi^2` distributions.
+Errors are propagated as if they followed :math:`\chi^2` distributions.
 
 .. _weather-data-matching:
 
@@ -299,7 +298,7 @@ Weather data matching
 Since weather and temperature data is so central to the activity of the
 EEmeter, the particulars of how weather data is obtained for a project is often
 of interest. Weather data sources are determined automatically within the
-EEmeter using an internal mapping [#]_ bewteen ZIP codes [#]_ and weather
+EEmeter using an internal mapping [#]_ between ZIP codes [#]_ and weather
 stations. The source of the weather normal data may differ from the source of
 the observed weather data.
 

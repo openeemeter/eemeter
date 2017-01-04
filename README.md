@@ -1,4 +1,4 @@
-Open Energy Efficiency Meter
+Open Energy Efficiency Meter 
 ============================
 
 ![Build status](https://travis-ci.org/openeemeter/eemeter.svg?branch=develop)
