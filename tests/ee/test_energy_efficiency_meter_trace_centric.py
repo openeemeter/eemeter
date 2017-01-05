@@ -13,8 +13,8 @@ from eemeter.weather import ISDWeatherSource
 @pytest.fixture
 def meter_input():
 
-    record_starts = pd.date_range('2012-01-01', periods=365*4, freq='D',
-                                  tz=pytz.UTC)
+    record_starts = pd.date_range(
+        '2012-01-01', periods=365 * 4, freq='D', tz=pytz.UTC)
 
     records = [
         {
@@ -53,8 +53,8 @@ def meter_input():
 @pytest.fixture
 def meter_input_strange_interpretation():
 
-    record_starts = pd.date_range('2012-01-01', periods=365*4, freq='D',
-                                  tz=pytz.UTC)
+    record_starts = pd.date_range(
+        '2012-01-01', periods=365 * 4, freq='D', tz=pytz.UTC)
 
     records = [
         {
@@ -92,16 +92,16 @@ def meter_input_strange_interpretation():
 
 @pytest.fixture
 def mock_isd_weather_source():
-    tmp_dir = tempfile.mkdtemp()
-    ws = ISDWeatherSource('722880', tmp_dir)
+    tmp_url = "sqlite:///{}/weather_cache.db".format(tempfile.mkdtemp())
+    ws = ISDWeatherSource('722880', tmp_url)
     ws.client = MockWeatherClient()
     return ws
 
 
 @pytest.fixture
 def mock_tmy3_weather_source():
-    tmp_dir = tempfile.mkdtemp()
-    ws = TMY3WeatherSource('724838', tmp_dir, preload=False)
+    tmp_url = "sqlite:///{}/weather_cache.db".format(tempfile.mkdtemp())
+    ws = TMY3WeatherSource('724838', tmp_url, preload=False)
     ws.client = MockWeatherClient()
     ws._load_data()
     return ws

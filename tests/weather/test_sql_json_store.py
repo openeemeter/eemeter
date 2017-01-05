@@ -1,15 +1,16 @@
 import tempfile
+from eemeter.weather.cache import SqlJSONStore
 from datetime import datetime
 import pytz
-
-from eemeter.weather.cache import SqliteJSONStore
 
 
 def test_basic_usage():
     tmpdir = tempfile.mkdtemp()
-    s = SqliteJSONStore(tmpdir)
+    url = "sqlite:///{}/weather_cache.db".format(tmpdir)
+    s = SqlJSONStore(url)
 
     assert s.key_exists("a") is False
+
     data = s.retrieve_json("a")
     assert data is None
 
@@ -33,9 +34,8 @@ def test_basic_usage():
 
     s.clear()
     assert s.key_exists("a") is False
-    assert str(s) == 'SqliteJSONStore("{}")'.format(tmpdir)
 
-    # TODO test clear partial only one
+    assert str(s) == 'SqlJSONStore("{}")'.format(url)
 
     s.save_json("a", "b")
     s.save_json("b", "c")

@@ -53,7 +53,7 @@ def annualized_weather_normal(formatter, model, weather_normal_source):
                                  tz=pytz.UTC)
 
     demand_fixture_data = formatter.create_demand_fixture(
-            normal_index, weather_normal_source)
+        normal_index, weather_normal_source)
 
     serialized_demand_fixture = \
         formatter.serialize_demand_fixture(demand_fixture_data)
