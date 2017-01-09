@@ -517,7 +517,7 @@ class ESPIUsageParser(object):
             Timezone info as recognized by python datetime objects.
         '''
         local_time_parameters = self.root.find(
-                './/{http://naesb.org/espi}LocalTimeParameters')
+            './/{http://naesb.org/espi}LocalTimeParameters')
 
         try:
             # Parse Daylight Savings Time elements.
@@ -525,11 +525,11 @@ class ESPIUsageParser(object):
             #   when DST should be in effect, and the offset is the actual
             #   effect.
             dst_start_rule = local_time_parameters.find(
-                    '{http://naesb.org/espi}dstStartRule').text
+                '{http://naesb.org/espi}dstStartRule').text
             dst_end_rule = local_time_parameters.find(
-                    '{http://naesb.org/espi}dstEndRule').text
+                '{http://naesb.org/espi}dstEndRule').text
             dst_offset = local_time_parameters.find(
-                    '{http://naesb.org/espi}dstOffset').text
+                '{http://naesb.org/espi}dstOffset').text
         except AttributeError:
             # one or more of these was not found - assume UTC.
             return pytz.UTC
@@ -544,7 +544,7 @@ class ESPIUsageParser(object):
         # Find the ESPI timezone offset code, and convert it to
         # a python timezone object.
         tz_offset = local_time_parameters.find(
-                '{http://naesb.org/espi}tzOffset').text
+            '{http://naesb.org/espi}tzOffset').text
         return self._tz_offset_to_timezone(tz_offset)
 
     class _ChildElementGetter(object):
@@ -583,10 +583,12 @@ class ESPIUsageParser(object):
             if child_element is not None:
                 try:
                     return self.VALUE_PARSERS[child_element_name](
-                            child_element.text)
+                        child_element.text)
                 except KeyError:
-                    msg = 'No parsing function defined for text value of \
-                           element %s' % child_element_name
+                    msg = (
+                        'No parsing function defined for text value of'
+                        ' element %s' % child_element_name
+                    )
                     raise NotImplementedError(msg)
 
     def _parse_reading_type(self, reading_type_element):
@@ -606,7 +608,7 @@ class ESPIUsageParser(object):
         # Initialize Getter class for reading type element, to make getting
         # and parsing the values of child elements easier.
         reading_type = self._ChildElementGetter(
-                reading_type_element, self.VALUE_PARSERS)
+            reading_type_element, self.VALUE_PARSERS)
 
         data_spec = [
             ('accumulation_behavior',
@@ -624,8 +626,10 @@ class ESPIUsageParser(object):
             ('measuring_period', '{http://naesb.org/espi}measuringPeriod'),
         ]
 
-        return {name: reading_type.child_element_value(path)
-                for name, path in data_spec}
+        return {
+            name: reading_type.child_element_value(path)
+            for name, path in data_spec
+        }
 
     def _get_reading_type_interval_block_groups(self):
         """ Yields reading type elements and their associated interval blocks.
@@ -645,7 +649,7 @@ class ESPIUsageParser(object):
         # Want to be able to pick off a MeterReading element out of sequence
         # when we hit a ReadingType, so use an iterator,
         entry_elements = self.root.findall(
-                './{http://www.w3.org/2005/Atom}entry')
+            './{http://www.w3.org/2005/Atom}entry')
 
         def _reading_type_element(entry):
             return entry.find(".//{http://naesb.org/espi}ReadingType")
@@ -730,22 +734,22 @@ class ESPIUsageParser(object):
             Data in the IntervalReading element.
         '''
         reading_quality_element = interval_reading.find(
-                "{http://naesb.org/espi}ReadingQuality/"
-                "{http://naesb.org/espi}quality")
+            "{http://naesb.org/espi}ReadingQuality/"
+            "{http://naesb.org/espi}quality")
         try:
             reading_quality = \
-                    self.QUALITY_OF_READING[reading_quality_element.text]
+                self.QUALITY_OF_READING[reading_quality_element.text]
         except AttributeError:
             reading_quality = None
 
         duration_element = interval_reading.find(
-                "{http://naesb.org/espi}timePeriod/"
-                "{http://naesb.org/espi}duration")
+            "{http://naesb.org/espi}timePeriod/"
+            "{http://naesb.org/espi}duration")
         duration = timedelta(seconds=int(duration_element.text))
 
         start_element = interval_reading.find(
-                "{http://naesb.org/espi}timePeriod/"
-                "{http://naesb.org/espi}start")
+            "{http://naesb.org/espi}timePeriod/"
+            "{http://naesb.org/espi}start")
 
         # Timestamps are, by definition, UTC.
         # We ignore the given self.timezone, because we would convert to
@@ -754,10 +758,12 @@ class ESPIUsageParser(object):
 
         value = int(interval_reading.find("{http://naesb.org/espi}value").text)
 
-        return {"reading_quality": reading_quality,
-                "duration": duration,
-                "start": start,
-                "value": value}
+        return {
+            "reading_quality": reading_quality,
+            "duration": duration,
+            "start": start,
+            "value": value
+        }
 
     def _parse_interval_block_group(self, interval_block_group):
         '''
@@ -795,7 +801,7 @@ class ESPIUsageParser(object):
             Data in the group of IntervalBlock elements
         '''
         reading_type = self._parse_reading_type(
-                interval_block_group["reading_type"])
+            interval_block_group["reading_type"])
 
         interval_blocks = interval_block_group["interval_blocks"]
 
@@ -821,19 +827,19 @@ class ESPIUsageParser(object):
         '''
         # Capture start and duration of the interval block.
         interval_duration_element = interval_block.find(
-                "{http://naesb.org/espi}interval/"
-                "{http://naesb.org/espi}duration")
+            "{http://naesb.org/espi}interval/"
+            "{http://naesb.org/espi}duration")
         interval_start_element = interval_block.find(
-                "{http://naesb.org/espi}interval/"
-                "{http://naesb.org/espi}start")
+            "{http://naesb.org/espi}interval/"
+            "{http://naesb.org/espi}start")
         interval_duration = timedelta(
-                seconds=int(interval_duration_element.text))
+            seconds=int(interval_duration_element.text))
         interval_start = datetime.fromtimestamp(
-                int(interval_start_element.text), tz=pytz.UTC)
+            int(interval_start_element.text), tz=pytz.UTC)
 
         # Collect and parse all interval readings for the block.
         interval_reading_elements = interval_block.findall(
-                "{http://naesb.org/espi}IntervalReading")
+            "{http://naesb.org/espi}IntervalReading")
         interval_readings = [
             self._parse_interval_reading(reading)
             for reading in interval_reading_elements
@@ -872,9 +878,9 @@ class ESPIUsageParser(object):
         # Values must be adjusted with interval-block level multiplier.
         # Package block readings with adjusted units and block fuel type.
         fuel_type = self._normalize_fuel_type(
-                interval_block_group["reading_type"]["commodity"])
+            interval_block_group["reading_type"]["commodity"])
         multiplier = 10 ** interval_block_group["reading_type"][
-                "power_of_ten_multiplier"]
+            "power_of_ten_multiplier"]
         unit_name = interval_block_group["reading_type"]["uom"]
 
         for interval_block in interval_block_group["interval_blocks"]:
@@ -928,7 +934,7 @@ class ESPIUsageParser(object):
         for group in self._get_reading_type_interval_block_groups():
             flow_direction = group["reading_type"]["flow_direction"]
             records = list(
-                    self._get_interval_block_group_consumption_records(group))
+                self._get_interval_block_group_consumption_records(group))
             yield flow_direction, sorted(records, key=lambda x: x["start"])
 
     def get_energy_traces(self, service_kind_default="electricity"):
@@ -972,6 +978,8 @@ class ESPIUsageParser(object):
                         fuel_type = service_kind_default
                     selector = (fuel_type, flow_direction)
                     interpretation = INTERPRETATION_MAPPING[selector]
-                    yield EnergyTrace(interpretation, records=records,
-                                      unit=records[0]["unit_name"],
-                                      serializer=ArbitrarySerializer())
+                    yield EnergyTrace(
+                        interpretation,
+                        records=records,
+                        unit=records[0]["unit_name"],
+                        serializer=ArbitrarySerializer())

@@ -378,7 +378,7 @@ def _change_units(errors, units_from, units_to):
     assert factor is not None
 
     mean, upper, lower, n = errors
-    return (mean*factor, upper*factor, lower*factor, n)
+    return (mean * factor, upper * factor, lower * factor, n)
 
 
 class EnergyEfficiencyMeterTraceCentric(object):

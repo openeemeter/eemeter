@@ -122,7 +122,7 @@ class NOAAClient(object):
             columns = line.split()
             date_str = columns[2].decode('utf-8')
             temp_F = float(columns[3])
-            temp_C = (5./9.) * (temp_F - 32.)
+            temp_C = (5. / 9.) * (temp_F - 32.)
             dt = pytz.UTC.localize(datetime.strptime(date_str, "%Y%m%d"))
             series[dt] = temp_C
 

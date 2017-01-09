@@ -8,29 +8,29 @@ def serialize_derivative_pairs(derivative_pairs):
 def serialize_derivative_pair(derivative_pair):
     label, d_interp, t_interp, unit, baseline, reporting = derivative_pair
     return OrderedDict([
-            ("label", label),
-            ("derivative_interpretation", d_interp),
-            ("trace_interpretation", t_interp),
-            ("unit", unit),
-            ("baseline", OrderedDict([
-                ("label", baseline.label),
-                ("value", baseline.value),
-                ("lower", baseline.lower),
-                ("upper", baseline.upper),
-                ("n", baseline.n),
-                ("demand_fixture",
-                 baseline.serialized_demand_fixture),
-            ])),
-            ("reporting", OrderedDict([
-                ("label", reporting.label),
-                ("value", reporting.value),
-                ("lower", reporting.lower),
-                ("upper", reporting.upper),
-                ("n", reporting.n),
-                ("demand_fixture",
-                 reporting.serialized_demand_fixture),
-            ])),
-        ])
+        ("label", label),
+        ("derivative_interpretation", d_interp),
+        ("trace_interpretation", t_interp),
+        ("unit", unit),
+        ("baseline", OrderedDict([
+            ("label", baseline.label),
+            ("value", baseline.value),
+            ("lower", baseline.lower),
+            ("upper", baseline.upper),
+            ("n", baseline.n),
+            ("demand_fixture",
+             baseline.serialized_demand_fixture),
+        ])),
+        ("reporting", OrderedDict([
+            ("label", reporting.label),
+            ("value", reporting.value),
+            ("lower", reporting.lower),
+            ("upper", reporting.upper),
+            ("n", reporting.n),
+            ("demand_fixture",
+             reporting.serialized_demand_fixture),
+        ])),
+    ])
 
 
 def serialize_split_modeled_energy_trace(modeled_trace):

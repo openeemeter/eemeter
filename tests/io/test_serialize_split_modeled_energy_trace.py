@@ -51,8 +51,8 @@ def monthly_trace():
 
 @pytest.fixture
 def mock_isd_weather_source():
-    tmp_dir = tempfile.mkdtemp()
-    ws = ISDWeatherSource("722880", tmp_dir)
+    tmp_url = "sqlite:///{}/weather_cache.db".format(tempfile.mkdtemp())
+    ws = ISDWeatherSource("722880", tmp_url)
     ws.client = MockWeatherClient()
     return ws
 
