@@ -30,7 +30,11 @@ class SeasonalElasticNetCVModel(ElasticNetCVBaseModel):
         return (
             'SeasonalElasticNetCVModel(cooling_base_temp={},'
             ' heating_base_temp={}, n_bootstrap={})'
-            .format(self.cooling_base_temp, self.heating_base_temp, self.n_bootstrap)
+            .format(
+                self.cooling_base_temp,
+                self.heating_base_temp,
+                self.n_bootstrap
+            )
         )
 
     def _model_data_from_input_data(self, input_data):
@@ -107,7 +111,7 @@ class SeasonalElasticNetCVModel(ElasticNetCVBaseModel):
 
         # needs only tempF
         model_data = demand_fixture_data.resample(model_freq).agg(
-                {'tempF': np.mean})
+            {'tempF': np.mean})
 
         model_data.loc[:, 'CDD'] = np.maximum(model_data.tempF -
                                               self.cooling_base_temp, 0.)

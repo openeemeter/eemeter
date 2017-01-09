@@ -5,7 +5,7 @@ import pandas as pd
 
 from .base import WeatherSourceBase
 from .clients import NOAAClient
-from .cache import SqliteJSONStore
+from .cache import SqlJSONStore
 
 logger = logging.getLogger(__name__)
 
@@ -14,10 +14,10 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
 
     client = NOAAClient()
 
-    def __init__(self, station, cache_directory=None):
+    def __init__(self, station, cache_url=None):
         super(NOAAWeatherSourceBase, self).__init__(station)
 
-        self.json_store = SqliteJSONStore(cache_directory)
+        self.json_store = SqlJSONStore(cache_url)
         self.loaded_years = set()
         self._check_station(station)
         logger.info(
@@ -305,12 +305,8 @@ class GSODWeatherSource(NOAAWeatherSourceBase):
     ''' The :code:`GSODWeatherSource` draws weather data from the NOAA
     Global Summary of the Day FTP site. It stores fetched data locally by
     default in a SQLite database at :code:`~/eemeter/cache/weather_cache.db`,
-    unless you use set the following environment variable to something
-    different:
-
-    .. code-block:: bash
-
-        $ export EEMETER_WEATHER_CACHE_DIRECTORY=/path/to/custom/directory
+    unless you use set the EEMETER_WEATHER_CACHE_URL environment variable to
+    another, SQLAlchemy compatible database URL:
 
     Basic usage is as follows:
 

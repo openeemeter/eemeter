@@ -130,7 +130,7 @@ def haversine(lat1, lng1, lat2, lng2):
     # haversine formula
     dlng = lng2 - lng1
     dlat = lat2 - lat1
-    a = np.sin(dlat/2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlng/2)**2
+    a = np.sin(dlat / 2)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlng / 2)**2
     c = 2 * np.arcsin(np.sqrt(a))
     r = 6371  # Radius of earth in kilometers. Use 3959 for miles
     return c * r

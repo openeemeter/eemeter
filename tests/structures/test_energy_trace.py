@@ -110,8 +110,8 @@ def test_data_and_valid_unit(
     assert et.interpretation == interpretation
     assert et.unit == normalized_unit
     np.testing.assert_allclose(
-            et.data.value.iloc[0], (unit_timeseries.value * mult).iloc[0],
-            rtol=1e-3, atol=1e-3)
+        et.data.value.iloc[0], (unit_timeseries.value * mult).iloc[0],
+        rtol=1e-3, atol=1e-3)
     assert not et.data.estimated.iloc[0]
     assert not et.placeholder
 

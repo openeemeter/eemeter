@@ -14,8 +14,8 @@ from eemeter.structures import ModelingPeriod
 
 @pytest.fixture
 def mock_isd_weather_source():
-    tmp_dir = tempfile.mkdtemp()
-    ws = ISDWeatherSource("724838", tmp_dir)
+    tmp_url = "sqlite:///{}/weather_cache.db".format(tempfile.mkdtemp())
+    ws = ISDWeatherSource("724838", tmp_url)
     ws.client = MockWeatherClient()
     return ws
 

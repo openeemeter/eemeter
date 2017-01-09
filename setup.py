@@ -32,6 +32,7 @@ setup(
         'scipy',
         'scikit-learn',
         'statsmodels',
+        'SQLAlchemy',
     ],
     package_data={'': ['*.json', '*.gz']},
     setup_requires=['pytest-runner'],

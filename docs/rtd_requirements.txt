@@ -1,5 +1,0 @@
-ipykernel
-nbsphinx
-sphinx >= 1.4
-sphinx-rtd-theme
-sphinxcontrib-napoleon

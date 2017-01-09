@@ -155,7 +155,7 @@ class SplitModeledEnergyTrace(object):
             kwargs['params'] = outputs["model_fit"]["model_params"]
 
         return self.model_mapping[modeling_period_label].predict(
-                demand_fixture_data, **kwargs)
+            demand_fixture_data, **kwargs)
 
     def compute_derivative(self, modeling_period_label, derivative_callable,
                            derivative_callable_kwargs):

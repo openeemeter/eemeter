@@ -188,9 +188,11 @@ class ArbitrarySerializer(BaseSerializer):
                 previous_end_datetime = end
 
             else:  # start < previous_end_datetime
-                message = 'Skipping overlapping record: '\
-                        'start ({}) < previous end ({})'\
-                        .format(start, previous_end_datetime)
+                message = (
+                    'Skipping overlapping record: '
+                    'start ({}) < previous end ({})'
+                    .format(start, previous_end_datetime)
+                )
                 warnings.warn(message)
 
         # final record carries last datetime, but only if there was a record

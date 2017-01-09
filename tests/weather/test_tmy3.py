@@ -10,8 +10,8 @@ from eemeter.testing import MockWeatherClient
 
 @pytest.fixture
 def mock_tmy3_weather_source():
-    tmp_dir = tempfile.mkdtemp()
-    ws = TMY3WeatherSource("724838", tmp_dir, preload=False)
+    tmp_url = "sqlite:///{}/weather_cache.db".format(tempfile.mkdtemp())
+    ws = TMY3WeatherSource("724838", tmp_url, preload=False)
     ws.client = MockWeatherClient()
     ws._load_data()
     return ws
