@@ -138,7 +138,7 @@ def test_basic_usage_daily(split_modeled_energy_trace_daily):
     assert model_fit["lower"] is not None
     assert model_fit["upper"] is not None
     assert model_fit["n"] is not None
-    assert model_fit["model_params"] is None
+    assert model_fit["model_params"] is not None
 
     assert mp2['status'] == "FAILURE"
     assert mp2['traceback'] is not None
@@ -152,7 +152,7 @@ def test_basic_usage_daily(split_modeled_energy_trace_daily):
     assert mp2['model_fit']['lower'] is None
     assert mp2['model_fit']['upper'] is None
     assert mp2['model_fit']['n'] is None
-    assert mp2['model_fit']['model_params'] is None
+    assert mp2['model_fit']['model_params'] is not None
 
     modeling_period_set = serialized["modeling_period_set"]
     modeling_periods = modeling_period_set["modeling_periods"]
@@ -188,7 +188,7 @@ def test_basic_usage_monthly(split_modeled_energy_trace_monthly):
     assert model_fit["lower"] is not None
     assert model_fit["upper"] is not None
     assert model_fit["n"] is not None
-    assert model_fit["model_params"] is None
+    assert model_fit["model_params"] is not None
 
     assert mp2['status'] == "SUCCESS"
     assert mp2['traceback'] is None

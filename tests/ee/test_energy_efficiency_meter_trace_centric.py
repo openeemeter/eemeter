@@ -121,9 +121,9 @@ def test_basic_usage(meter_input, mock_isd_weather_source,
     assert len(results['logs']) == 2
 
     assert results['eemeter_version'] is not None
-    assert results['model_class'] == 'SeasonalElasticNetCVModel'
+    assert results['model_class'] == 'CaltrackModel'
     assert results['model_kwargs'] is not None
-    assert results['formatter_class'] == 'ModelDataFormatter'
+    assert results['formatter_class'] == 'CaltrackFormatter'
     assert results['formatter_kwargs'] is not None
 
     assert results['modeled_energy_trace'] is not None
