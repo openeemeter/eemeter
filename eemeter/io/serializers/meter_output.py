@@ -68,11 +68,13 @@ def _serialize_model_fit(model_fit):
         return None
     else:
         model_params = {}
-        for k,v in model_fit.get("model_params",{}).items():
-            if type(v) == type({}):
+        for k, v in model_fit.get("model_params", {}).items():
+            if isinstance(v, type({})):
                 model_params[k] = OrderedDict(v)
-            elif k == 'X_design_info': continue
-            else: model_params[k] = v
+            elif k == 'X_design_info':
+                continue
+            else:
+                model_params[k] = v
         model_params = OrderedDict(model_params)
         return OrderedDict([
             ("r2", model_fit.get("r2", None)),

@@ -127,6 +127,7 @@ def gross_predicted(formatter, model, weather_source, reporting_period):
                             serialized_demand_fixture),
     }
 
+
 def gross_actual(formatter, model):
     ''' Find gross actual energy usage
 

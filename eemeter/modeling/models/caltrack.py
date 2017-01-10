@@ -1,20 +1,18 @@
 import warnings
-from collections import OrderedDict
 
 import copy
 import numpy as np
 import pandas as pd
 import patsy
 import statsmodels.formula.api as smf
-import statsmodels.api as sm
-from scipy import stats
 from scipy.stats import chi2
+
 
 class CaltrackModel(object):
     ''' This class implements the two-stage modeling routine agreed upon
     as part of the Caltrack beta test. If fit_cdd is True, then all four
-    candidate models (HDD+CDD, CDD-only, HDD-only, and Intercept-only) are 
-    used in stage 1 estimation. If it's false, then only HDD-only and 
+    candidate models (HDD+CDD, CDD-only, HDD-only, and Intercept-only) are
+    used in stage 1 estimation. If it's false, then only HDD-only and
     Intercept-only are used. '''
     def __init__(self, fit_cdd=True):
 
@@ -32,8 +30,10 @@ class CaltrackModel(object):
         self.hdd_bp, self.cdd_bp = None, None
 
     def __repr__(self):
-        if self.fit_cdd: return ( 'Caltrack full' )
-        else: return ( 'Caltrack HDD-only' )
+        if self.fit_cdd:
+            return ('Caltrack full')
+        else:
+            return ('Caltrack HDD-only')
 
     def fit(self, input_data):
         self.input_data = input_data
@@ -43,55 +43,63 @@ class CaltrackModel(object):
         try:
             int_mod = smf.ols(formula=int_formula, data=df)
             int_res = int_mod.fit()
-            int_rsquared = int_res.rsquared
+            int_rsquared = int_res.rsquared \
+                if np.isfinite(int_res.rsquared) else 0
             int_qualified = True
         except:
             int_rsquared, int_qualified = 0, False
-    
+
         # CDD-only
         try:
-            if not self.fit_cdd: assert False
-            bps = [i[4:] for i in df.columns if i[:3]=='CDD']
+            if not self.fit_cdd:
+                assert False
+            bps = [i[4:] for i in df.columns if i[:3] == 'CDD']
             best_bp, best_rsquared, best_mod, best_res = None, -9e9, None, None
             for bp in bps:
-                cdd_formula = 'upd ~ CDD_'+bp
+                cdd_formula = 'upd ~ CDD_' + bp
                 cdd_mod = smf.ols(formula=cdd_formula, data=df)
                 cdd_res = cdd_mod.fit()
                 cdd_rsquared = cdd_res.rsquared
-                if cdd_rsquared > best_rsquared and cdd_res.params['Intercept'] >= 0 and \
-                    cdd_res.params['CDD_'+bp] >= 0:
+                if cdd_rsquared > best_rsquared and \
+                   cdd_res.params['Intercept'] >= 0 and \
+                   cdd_res.params['CDD_' + bp] >= 0:
                     best_bp, best_rsquared = bp, cdd_rsquared
                     best_mod, best_res = cdd_mod, cdd_res
             if best_bp is not None and \
-                (best_res.pvalues['Intercept'] < 0.1) and (best_res.pvalues['CDD_'+best_bp] < 0.1):
+               (best_res.pvalues['Intercept'] < 0.1) and \
+               (best_res.pvalues['CDD_' + best_bp] < 0.1):
                 cdd_qualified = True
-                cdd_formula = 'upd ~ CDD_'+best_bp
+                cdd_formula = 'upd ~ CDD_' + best_bp
                 cdd_bp = int(best_bp)
-                cdd_mod, cdd_res, cdd_rsquared = best_mod, best_res, best_rsquared
+                cdd_mod, cdd_res, cdd_rsquared = \
+                    best_mod, best_res, best_rsquared
             else:
                 cdd_rsquared, cdd_qualified = 0, False
         except:
             cdd_rsquared, cdd_qualified = 0, False
-    
+
         # HDD-only
         try:
-            bps = [i[4:] for i in df.columns if i[:3]=='HDD']
+            bps = [i[4:] for i in df.columns if i[:3] == 'HDD']
             best_bp, best_rsquared, best_mod, best_res = None, -9e9, None, None
             for bp in bps:
-                hdd_formula = 'upd ~ HDD_'+bp
+                hdd_formula = 'upd ~ HDD_' + bp
                 hdd_mod = smf.ols(formula=hdd_formula, data=df)
                 hdd_res = hdd_mod.fit()
                 hdd_rsquared = hdd_res.rsquared
-                if hdd_rsquared > best_rsquared and hdd_res.params['Intercept'] >= 0 and \
-                    hdd_res.params['HDD_'+bp] >= 0:
+                if hdd_rsquared > best_rsquared and \
+                   hdd_res.params['Intercept'] >= 0 and \
+                   hdd_res.params['HDD_' + bp] >= 0:
                     best_bp, best_rsquared = bp, hdd_rsquared
                     best_mod, best_res = hdd_mod, hdd_res
             if best_bp is not None and \
-                (best_res.pvalues['Intercept'] < 0.1) and (best_res.pvalues['HDD_'+best_bp] < 0.1):
+               (best_res.pvalues['Intercept'] < 0.1) and \
+               (best_res.pvalues['HDD_' + best_bp] < 0.1):
                 hdd_qualified = True
-                hdd_formula = 'upd ~ HDD_'+best_bp
+                hdd_formula = 'upd ~ HDD_' + best_bp
                 hdd_bp = int(best_bp)
-                hdd_mod, hdd_res, hdd_rsquared = best_mod, best_res, best_rsquared
+                hdd_mod, hdd_res, hdd_rsquared = \
+                    best_mod, best_res, best_rsquared
             else:
                 hdd_rsquared, hdd_qualified = 0, False
         except:
@@ -99,72 +107,93 @@ class CaltrackModel(object):
 
         # CDD+HDD
         try:
-            if not self.fit_cdd: assert False
-            hdd_bps = [i[4:] for i in df.columns if i[:3]=='HDD']
-            cdd_bps = [i[4:] for i in df.columns if i[:3]=='CDD']
+            if not self.fit_cdd:
+                assert False
+            hdd_bps = [i[4:] for i in df.columns if i[:3] == 'HDD']
+            cdd_bps = [i[4:] for i in df.columns if i[:3] == 'CDD']
             best_hdd_bp, best_cdd_bp, best_rsquared, best_mod, best_res = \
                 None, None, -9e9, None, None
             for full_hdd_bp in hdd_bps:
                 for full_cdd_bp in cdd_bps:
-                    full_formula = 'upd ~ CDD_'+full_cdd_bp+' + HDD_'+full_hdd_bp
+                    full_formula = 'upd ~ CDD_' + full_cdd_bp + \
+                                   ' + HDD_' + full_hdd_bp
                     full_mod = smf.ols(formula=full_formula, data=df)
                     full_res = full_mod.fit()
                     full_rsquared = full_res.rsquared
-                if full_rsquared > full_rsquared and full_res.params['Intercept'] >= 0 and \
-                    full_res.params['HDD_'+full_hdd_bp] >= 0 and \
-                    full_res.params['CDD_'+full_cdd_bp] >= 0:
-                    best_hdd_bp, best_cdd_bp, best_rsquared = full_hdd_bp, full_cdd_bp, full_rsquared
+                if full_rsquared > full_rsquared and \
+                   full_res.params['Intercept'] >= 0 and \
+                   full_res.params['HDD_' + full_hdd_bp] >= 0 and \
+                   full_res.params['CDD_' + full_cdd_bp] >= 0:
+                    best_hdd_bp, best_cdd_bp, best_rsquared = \
+                        full_hdd_bp, full_cdd_bp, full_rsquared
                     best_mod, best_res = full_mod, full_res
             if best_hdd_bp is not None and \
-                (best_res.pvalues['Intercept'] < 0.1) and \
-                (best_res.pvalues['CDD_'+best_cdd_bp] < 0.1) and \
-                (best_res.pvalues['HDD_'+best_hdd_bp] < 0.1):
+               (best_res.pvalues['Intercept'] < 0.1) and \
+               (best_res.pvalues['CDD_' + best_cdd_bp] < 0.1) and \
+               (best_res.pvalues['HDD_' + best_hdd_bp] < 0.1):
                 full_qualified = True
-                full_formula = 'upd ~ CDD_'+best_cdd_bp+' + HDD_'+best_hdd_bp
+                full_formula = 'upd ~ CDD_' + best_cdd_bp + \
+                               ' + HDD_' + best_hdd_bp
                 full_hdd_bp = int(best_hdd_bp)
                 full_cdd_bp = int(best_cdd_bp)
-                full_mod, full_res, full_rsquared = best_mod, best_res, best_rsquared
+                full_mod, full_res, full_rsquared = \
+                    best_mod, best_res, best_rsquared
             else:
                 full_rsquared, full_qualified = 0, False
         except:
             full_rsquared, full_qualified = 0, False
-    
+
         self.hdd_bp, self.cdd_bp = None, None
 
         # Now we take the best qualified model.
-        if (full_qualified or hdd_qualified or cdd_qualified or int_qualified) == False: 
+        if (full_qualified or hdd_qualified or
+           cdd_qualified or int_qualified) is False:
             raise ValueError("No candidate model fit to data successfully")
             return None
         if full_qualified and full_rsquared > \
-            max([int(hdd_qualified)*hdd_rsquared,int(cdd_qualified)*cdd_rsquared,int(int_qualified)*int_rsquared]):
+           max([int(hdd_qualified) * hdd_rsquared,
+                int(cdd_qualified) * cdd_rsquared,
+                int(int_qualified) * int_rsquared]):
             # Use the full model
-            self.y,self.X = patsy.dmatrices(full_formula, df, return_type='dataframe')
+            self.y, self.X = patsy.dmatrices(full_formula, df,
+                                             return_type='dataframe')
             self.estimated = full_res.fittedvalues
             self.r2, self.rmse = full_rsquared, np.sqrt(full_res.mse_total)
-            self.model_obj, self.model_res, formula = full_mod, full_res, full_formula
+            self.model_obj, self.model_res, formula = \
+                full_mod, full_res, full_formula
             self.hdd_bp, self.cdd_bp = full_hdd_bp, full_cdd_bp
         elif hdd_qualified and hdd_rsquared > \
-            max([int(full_qualified)*full_rsquared,int(cdd_qualified)*cdd_rsquared,int(int_qualified)*int_rsquared]):
+                max([int(full_qualified) * full_rsquared,
+                     int(cdd_qualified) * cdd_rsquared,
+                     int(int_qualified) * int_rsquared]):
             # Use HDD-only
-            self.y,self.X = patsy.dmatrices(hdd_formula, df, return_type='dataframe')
+            self.y, self.X = patsy.dmatrices(hdd_formula, df,
+                                             return_type='dataframe')
             self.estimated = hdd_res.fittedvalues
             self.r2, self.rmse = hdd_rsquared, np.sqrt(hdd_res.mse_total)
-            self.model_obj, self.model_res, formula = hdd_mod, hdd_res, hdd_formula
+            self.model_obj, self.model_res, formula = \
+                hdd_mod, hdd_res, hdd_formula
             self.hdd_bp = hdd_bp
         elif cdd_qualified and cdd_rsquared > \
-            max([int(full_qualified)*full_rsquared,int(hdd_qualified)*hdd_rsquared,int(int_qualified)*int_rsquared]):
+                max([int(full_qualified) * full_rsquared,
+                     int(hdd_qualified) * hdd_rsquared,
+                     int(int_qualified) * int_rsquared]):
             # Use CDD-only
-            self.y,self.X = patsy.dmatrices(cdd_formula, df, return_type='dataframe')
+            self.y, self.X = patsy.dmatrices(cdd_formula, df,
+                                             return_type='dataframe')
             self.estimated = cdd_res.fittedvalues
             self.r2, self.rmse = cdd_rsquared, np.sqrt(cdd_res.mse_total)
-            self.model_obj, self.model_res, formula = cdd_mod, cdd_res, cdd_formula
+            self.model_obj, self.model_res, formula = \
+                cdd_mod, cdd_res, cdd_formula
             self.cdd_bp = cdd_bp
         else:
             # Use Intercept-only
-            self.y,self.X = patsy.dmatrices(int_formula, df, return_type='dataframe')
+            self.y, self.X = patsy.dmatrices(int_formula, df,
+                                             return_type='dataframe')
             self.estimated = int_res.fittedvalues
             self.r2, self.rmse = int_rsquared, np.sqrt(int_res.mse_total)
-            self.model_obj, self.model_res, formula = int_mod, int_res, int_formula
+            self.model_obj, self.model_res, formula = \
+                int_mod, int_res, int_formula
 
         if self.y.mean != 0:
             self.cvrmse = self.rmse / float(self.y.values.ravel().mean())
@@ -190,12 +219,10 @@ class CaltrackModel(object):
 
         n = self.estimated.shape[0]
 
-        c1, c2 = chi2.ppf([0.025, 1-0.025], n)
-        self.lower = np.sqrt(n/c2) * self.rmse
-        self.upper = np.sqrt(n/c1) * self.rmse
+        c1, c2 = chi2.ppf([0.025, 1 - 0.025], n)
+        self.lower = np.sqrt(n / c2) * self.rmse
+        self.upper = np.sqrt(n / c1) * self.rmse
         self.n = n
-
-        #self.plot()
 
         self.params = {
             "coefficients": self.model_res.params.to_dict(),
@@ -256,12 +283,14 @@ class CaltrackModel(object):
         # Get parameter covariance matrix
         cov = self.model_res.cov_params()
         # Get prediction errors for each data point
-        prediction_var = self.model_res.mse_resid * (X * np.dot(cov,X.T).T).sum(1)
+        prediction_var = self.model_res.mse_resid * \
+            (X * np.dot(cov, X.T).T).sum(1)
         predicted_baseline_use, predicted_baseline_use_var = 0.0, 0.0
 
         # Sum them up using the number of days in the demand fixture.
         for i in demand_fixture_data.index:
-            if i not in predicted.index: continue
+            if i not in predicted.index:
+                continue
             predicted[i] = predicted[i] * demand_fixture_data.ndays[i]
             predicted_baseline_use = predicted_baseline_use + predicted[i]
             thisvar = prediction_var[i] * demand_fixture_data.ndays[i]
@@ -270,8 +299,9 @@ class CaltrackModel(object):
             upper[i] = np.sqrt(thisvar) * 1.959964 / 2
 
         if summed:
-            return predicted_baseline_use, np.sqrt(predicted_baseline_use_var)*1.959964 / 2, \
-                   np.sqrt(predicted_baseline_use_var)*1.959964 / 2
+            return predicted_baseline_use, \
+                np.sqrt(predicted_baseline_use_var) * 1.959964 / 2, \
+                np.sqrt(predicted_baseline_use_var) * 1.959964 / 2
         else:
             predicted = pd.Series(predicted, index=X.index)
             lower = pd.Series(lower, index=X.index)
@@ -282,7 +312,8 @@ class CaltrackModel(object):
         gross = 0.0
         for i in range(len(self.input_data.index)):
             if np.isfinite(self.input_data.upd):
-                gross = gross + self.input_data.upd[i] * self.input_data.ndays[i]
+                gross = gross + self.input_data.upd[i] * \
+                    self.input_data.ndays[i]
         return gross
 
     def plot(self):
@@ -306,6 +337,6 @@ class CaltrackModel(object):
                          color='b', alpha=0.3)
 
         pd.Series(self.y.values.ravel(), index=self.estimated.index).plot(
-                  color='k', linewidth=1.5)
+            color='k', linewidth=1.5)
 
         plt.show()
