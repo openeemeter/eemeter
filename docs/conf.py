@@ -44,6 +44,10 @@ MOCK_MODULES = [
     'pandas.tseries',
     'pandas.tseries.frequencies',
     'pint',
+    'statsmodels',
+    'statsmodels.api',
+    'statsmodels.formula',
+    'statsmodels.formula.api',
 ]
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
