@@ -137,8 +137,6 @@ def test_basic_usage(meter_input, mock_isd_weather_source,
     assert results['derivatives'][0]["baseline"]["label"] == 'baseline'
     assert results['derivatives'][0]["reporting"]["label"] == 'reporting'
     assert results['derivatives'][0]["baseline"]["value"] is not None
-    print('FOO')
-    print(results['derivatives'][0]["baseline"]["value"])
     assert results['derivatives'][0]["baseline"]["value"] > 0
     assert results['derivatives'][0]["reporting"]["value"] > 0
     assert results['derivatives'][1]["derivative_interpretation"] == \
