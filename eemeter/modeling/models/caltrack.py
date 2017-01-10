@@ -271,7 +271,6 @@ class CaltrackModel(object):
         if params is None:
             params = self.params
 
-        design_info = params["X_design_info"]
         formula = params["formula"]
 
         dfd = demand_fixture_data.dropna()
