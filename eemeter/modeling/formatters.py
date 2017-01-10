@@ -482,8 +482,8 @@ class CaltrackFormatter(FormatterBase):
         tempF = weather_source.indexed_temperatures(idx, "degF")
         df = pd.DataFrame({"tempF": tempF, "energy": tempF * 0})
         df = self.convert_to_monthly(df)
-        del df['usage']
-        del df['upd']
+        #del df['usage']
+        #del df['upd']
         return df
 
     def serialize_input(self, input_data):

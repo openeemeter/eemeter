@@ -272,10 +272,10 @@ class CaltrackModel(object):
             params = self.params
 
         design_info = params["X_design_info"]
+        formula = params["formula"]
 
-        (X,) = patsy.build_design_matrices([design_info],
-                                           demand_fixture_data,
-                                           return_type='dataframe')
+        _, X = patsy.dmatrices(formula, demand_fixture_data,
+                               return_type='dataframe')
 
         predicted = self.model_res.predict(X)
         lower = copy.deepcopy(predicted)
