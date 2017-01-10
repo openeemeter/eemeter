@@ -274,11 +274,13 @@ class CaltrackModel(object):
         design_info = params["X_design_info"]
         formula = params["formula"]
 
-        _, X = patsy.dmatrices(formula, demand_fixture_data,
+        dfd = demand_fixture_data.dropna()
+
+        _, X = patsy.dmatrices(formula, dfd,
                                return_type='dataframe')
 
         predicted = self.model_res.predict(X)
-        predicted = pd.Series(predicted, index=demand_fixture_data.index)
+        predicted = pd.Series(predicted, index=dfd.index)
         lower = copy.deepcopy(predicted)
         upper = copy.deepcopy(predicted)
         # Get parameter covariance matrix
