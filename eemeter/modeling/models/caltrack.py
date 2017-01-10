@@ -278,6 +278,7 @@ class CaltrackModel(object):
                                return_type='dataframe')
 
         predicted = self.model_res.predict(X)
+        predicted = pd.Series(predicted, index=demand_fixture_data.index)
         lower = copy.deepcopy(predicted)
         upper = copy.deepcopy(predicted)
         # Get parameter covariance matrix
@@ -289,7 +290,7 @@ class CaltrackModel(object):
 
         # Sum them up using the number of days in the demand fixture.
         for i in demand_fixture_data.index:
-            if i not in predicted.index:
+            if i not in predicted.index or not np.isfinite(predicted[i]):
                 continue
             predicted[i] = predicted[i] * demand_fixture_data.ndays[i]
             predicted_baseline_use = predicted_baseline_use + predicted[i]
