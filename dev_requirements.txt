@@ -7,7 +7,7 @@ pytest==3.0.5
 pytest-flake8==0.8.1
 sphinx==1.4.8
 sphinx-rtd-theme==0.1.9
-sphinxcontrib-napoleon==0.5.1
+sphinxcontrib-napoleon==0.6.0
 SQLAlchemy==1.1.4
 tox==2.5.0
 twine==1.8.1
