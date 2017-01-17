@@ -31,6 +31,15 @@ def daily_trace():
 
 
 @pytest.fixture
+def hourly_trace():
+    data = {"value": np.ones(60*24) * 1}
+    columns = ["value", "estimated"]
+    index = pd.date_range('2000-01-01', periods=60*24, freq='H', tz=pytz.UTC)
+    df = pd.DataFrame(data, index=index, columns=columns)
+    return EnergyTrace("ELECTRICITY_CONSUMPTION_SUPPLIED", df, unit="KWH")
+
+
+@pytest.fixture
 def daily_trace_with_nans():
     data = {"value": np.append(np.ones(30) * 1, np.ones(30) * np.nan)}
     columns = ["value", "estimated"]
@@ -51,6 +60,26 @@ def test_basic_daily(daily_trace, mock_isd_weather_source):
     assert df.index[1] == datetime(2000, 2, 1, tzinfo=pytz.UTC)
     assert len(df.index) == 2
     assert_allclose(df.upd, [1, 1])
+    assert_allclose(df.HDD_60, [60 - 32., 60 - 32.])
+
+    description = mdf.describe_input(df)
+    assert description.get('start_date') == \
+        datetime(2000, 1, 1, tzinfo=pytz.UTC)
+    assert description.get('n_rows') == 2
+
+
+def test_basic_hourly(hourly_trace, mock_isd_weather_source):
+    mdf = CaltrackFormatter()
+
+    df = mdf.create_input(hourly_trace, mock_isd_weather_source)
+
+    assert 'upd' in df.columns
+    assert 'CDD_70' in df.columns
+    assert 'HDD_60' in df.columns
+    assert df.index[0] == datetime(2000, 1, 1, tzinfo=pytz.UTC)
+    assert df.index[1] == datetime(2000, 2, 1, tzinfo=pytz.UTC)
+    assert len(df.index) == 2
+    assert_allclose(df.upd, [24, 24])
     assert_allclose(df.HDD_60, [60 - 32., 60 - 32.])
 
     description = mdf.describe_input(df)
