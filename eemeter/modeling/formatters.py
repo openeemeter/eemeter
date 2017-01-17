@@ -435,6 +435,8 @@ class CaltrackFormatter(FormatterBase):
 
     def create_input(self, trace, weather_source):
         energy = pd.Series()
+        if trace.data.index.freq is None:
+            trace.data.index.freq = pd.infer_freq(trace.data.index)
         if (trace.data.index.freq is None or
                 to_offset(trace.data.index.freq) > to_offset('D')):
             # Input is less frequent than daily (e.g., monthly)
