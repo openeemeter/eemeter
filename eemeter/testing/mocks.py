@@ -29,6 +29,7 @@ class MockModel(object):
         self.n = 1
         self.upper = 1
         self.lower = 1
+        self.input_data = pd.DataFrame()
 
     def fit(self, df):
         return {}

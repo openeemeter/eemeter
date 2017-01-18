@@ -9,6 +9,7 @@ dependencies:
   - patsy
   - pytz
   - requests
+  - statsmodels
   - pip:
     - nbsphinx
     - sphinx-rtd-theme

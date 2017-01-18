@@ -121,9 +121,9 @@ def test_basic_usage(meter_input, mock_isd_weather_source,
     assert len(results['logs']) == 2
 
     assert results['eemeter_version'] is not None
-    assert results['model_class'] == 'SeasonalElasticNetCVModel'
+    assert results['model_class'] == 'CaltrackModel'
     assert results['model_kwargs'] is not None
-    assert results['formatter_class'] == 'ModelDataFormatter'
+    assert results['formatter_class'] == 'CaltrackFormatter'
     assert results['formatter_kwargs'] is not None
 
     assert results['modeled_energy_trace'] is not None
@@ -136,6 +136,7 @@ def test_basic_usage(meter_input, mock_isd_weather_source,
     assert results['derivatives'][0]["unit"] == 'THERM'
     assert results['derivatives'][0]["baseline"]["label"] == 'baseline'
     assert results['derivatives'][0]["reporting"]["label"] == 'reporting'
+    assert results['derivatives'][0]["baseline"]["value"] is not None
     assert results['derivatives'][0]["baseline"]["value"] > 0
     assert results['derivatives'][0]["reporting"]["value"] > 0
     assert results['derivatives'][1]["derivative_interpretation"] == \

@@ -24,14 +24,15 @@ setup(
     install_requires=[
         'holidays',
         'lxml <= 3.6.1',
-        'numpy',
+        'numpy >= 1.10.2',
+        'scipy',
         'pandas >= 0.18,<0.19',
         'patsy',
         'pytz',
         'requests',
-        'scipy',
         'scikit-learn',
-        'SQLAlchemy'
+        'statsmodels >= 0.8.0rc1',
+        'SQLAlchemy',
     ],
     package_data={'': ['*.json', '*.gz']},
     setup_requires=['pytest-runner'],

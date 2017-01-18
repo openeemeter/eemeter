@@ -7,14 +7,13 @@ from eemeter.ee.derivatives import (
     Derivative,
     annualized_weather_normal,
     gross_predicted,
+    gross_actual
 )
 from eemeter.modeling.formatters import (
-    ModelDataBillingFormatter,
-    ModelDataFormatter,
+    CaltrackFormatter,
 )
 from eemeter.modeling.models import (
-    BillingElasticNetCVModel,
-    SeasonalElasticNetCVModel,
+    CaltrackModel,
 )
 from eemeter.modeling.split import (
     SplitModeledEnergyTrace
@@ -170,6 +169,12 @@ class EnergyEfficiencyMeter(object):
                         })
                     if gp is not None:
                         period_derivatives["REPORTING"].update(gp)
+
+                    ga = modeled_energy_trace.compute_derivative(
+                        reporting_label,
+                        gross_actual, {})
+                    if ga is not None:
+                        period_derivatives["REPORTING"].update(ga)
 
         project_derivatives = self._get_project_derivatives(
             modeling_period_set,
@@ -390,65 +395,82 @@ class EnergyEfficiencyMeterTraceCentric(object):
                  default_formatter_mapping=None):
 
         if default_formatter_mapping is None:
-            daily_formatter = (ModelDataFormatter, {'freq_str': 'D'})
-            billing_formatter = (ModelDataBillingFormatter, {})
+            caltrack_formatter = (CaltrackFormatter, {'grid_search': True})
             default_formatter_mapping = {
-                ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '15T'): daily_formatter,
-                ('ELECTRICITY_CONSUMPTION_SUPPLIED', '15T'): daily_formatter,
+                ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '15T'):
+                    caltrack_formatter,
+                ('ELECTRICITY_CONSUMPTION_SUPPLIED', '15T'):
+                    caltrack_formatter,
                 ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', '15T'):
-                    daily_formatter,
+                    caltrack_formatter,
 
-                ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '30T'): daily_formatter,
-                ('ELECTRICITY_CONSUMPTION_SUPPLIED', '30T'): daily_formatter,
+                ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '30T'):
+                    caltrack_formatter,
+                ('ELECTRICITY_CONSUMPTION_SUPPLIED', '30T'):
+                    caltrack_formatter,
                 ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', '30T'):
-                    daily_formatter,
+                    caltrack_formatter,
 
-                ('NATURAL_GAS_CONSUMPTION_SUPPLIED', 'H'): daily_formatter,
-                ('ELECTRICITY_CONSUMPTION_SUPPLIED', 'H'): daily_formatter,
+                ('NATURAL_GAS_CONSUMPTION_SUPPLIED', 'H'):
+                    caltrack_formatter,
+                ('ELECTRICITY_CONSUMPTION_SUPPLIED', 'H'):
+                    caltrack_formatter,
                 ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', 'H'):
-                    daily_formatter,
+                    caltrack_formatter,
 
-                ('NATURAL_GAS_CONSUMPTION_SUPPLIED', 'D'): daily_formatter,
-                ('ELECTRICITY_CONSUMPTION_SUPPLIED', 'D'): daily_formatter,
+                ('NATURAL_GAS_CONSUMPTION_SUPPLIED', 'D'):
+                    caltrack_formatter,
+                ('ELECTRICITY_CONSUMPTION_SUPPLIED', 'D'):
+                    caltrack_formatter,
                 ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', 'D'):
-                    daily_formatter,
+                    caltrack_formatter,
 
-                ('NATURAL_GAS_CONSUMPTION_SUPPLIED', None): billing_formatter,
-                ('ELECTRICITY_CONSUMPTION_SUPPLIED', None): billing_formatter,
+                ('NATURAL_GAS_CONSUMPTION_SUPPLIED', None):
+                    caltrack_formatter,
+                ('ELECTRICITY_CONSUMPTION_SUPPLIED', None):
+                    caltrack_formatter,
             }
 
         if default_model_mapping is None:
-            seasonal_model = (SeasonalElasticNetCVModel, {
-                'cooling_base_temp': 65,
-                'heating_base_temp': 65,
+            caltrack_gas_model = (CaltrackModel, {
+                'fit_cdd': False,
             })
-            billing_model = (BillingElasticNetCVModel, {
-                'cooling_base_temp': 65,
-                'heating_base_temp': 65,
+            caltrack_elec_model = (CaltrackModel, {
+                'fit_cdd': True,
             })
             default_model_mapping = {
-                ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '15T'): seasonal_model,
-                ('ELECTRICITY_CONSUMPTION_SUPPLIED', '15T'): seasonal_model,
+                ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '15T'):
+                    caltrack_gas_model,
+                ('ELECTRICITY_CONSUMPTION_SUPPLIED', '15T'):
+                    caltrack_elec_model,
                 ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', '15T'):
-                    seasonal_model,
+                    caltrack_elec_model,
 
-                ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '30T'): seasonal_model,
-                ('ELECTRICITY_CONSUMPTION_SUPPLIED', '30T'): seasonal_model,
+                ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '30T'):
+                    caltrack_gas_model,
+                ('ELECTRICITY_CONSUMPTION_SUPPLIED', '30T'):
+                    caltrack_elec_model,
                 ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', '30T'):
-                    seasonal_model,
+                    caltrack_elec_model,
 
-                ('NATURAL_GAS_CONSUMPTION_SUPPLIED', 'H'): seasonal_model,
-                ('ELECTRICITY_CONSUMPTION_SUPPLIED', 'H'): seasonal_model,
+                ('NATURAL_GAS_CONSUMPTION_SUPPLIED', 'H'):
+                    caltrack_gas_model,
+                ('ELECTRICITY_CONSUMPTION_SUPPLIED', 'H'):
+                    caltrack_elec_model,
                 ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', 'H'):
-                    seasonal_model,
+                    caltrack_elec_model,
 
-                ('NATURAL_GAS_CONSUMPTION_SUPPLIED', 'D'): seasonal_model,
-                ('ELECTRICITY_CONSUMPTION_SUPPLIED', 'D'): seasonal_model,
+                ('NATURAL_GAS_CONSUMPTION_SUPPLIED', 'D'):
+                    caltrack_gas_model,
+                ('ELECTRICITY_CONSUMPTION_SUPPLIED', 'D'):
+                    caltrack_elec_model,
                 ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', 'D'):
-                    seasonal_model,
+                    caltrack_elec_model,
 
-                ('NATURAL_GAS_CONSUMPTION_SUPPLIED', None): billing_model,
-                ('ELECTRICITY_CONSUMPTION_SUPPLIED', None): billing_model,
+                ('NATURAL_GAS_CONSUMPTION_SUPPLIED', None):
+                    caltrack_gas_model,
+                ('ELECTRICITY_CONSUMPTION_SUPPLIED', None):
+                    caltrack_elec_model,
             }
 
         self.default_formatter_mapping = default_formatter_mapping
