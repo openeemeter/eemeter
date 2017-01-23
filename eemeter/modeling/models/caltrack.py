@@ -285,8 +285,8 @@ class CaltrackModel(object):
         # Get parameter covariance matrix
         cov = self.model_res.cov_params()
         # Get prediction errors for each data point
-        prediction_var = self.model_res.mse_resid * \
-            (X * np.dot(cov, X.T).T).sum(1)
+        prediction_var = self.model_res.mse_resid + \
+            (X * np.dot(cov, X.T).T).sum(1) 
         predicted_baseline_use, predicted_baseline_use_var = 0.0, 0.0
 
         # Sum them up using the number of days in the demand fixture.
