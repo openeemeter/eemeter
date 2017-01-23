@@ -148,13 +148,13 @@ def gross_actual(formatter, model):
         - :code:`"gross_predicted"`: 4-tuple with the values
           :code:`(annualized, lower, upper, n)`, where
 
-          - :code:`gross_predicted` is the total gross predicted value
+          - :code:`gross_actual` is the total gross actual value
             over time period defined by the reporting period.
           - :code:`lower` is the number which should be subtracted from
-            :code:`gross_predicted` to obtain the 0.025 quantile lower error
+            :code:`gross_actual` to obtain the 0.025 quantile lower error
             bound.
           - :code:`upper` is the number which should be added to
-            :code:`gross_predicted` to obtain the 0.975 quantile upper error
+            :code:`gross_actual` to obtain the 0.975 quantile upper error
             bound.
           - :code:`n` is the number of samples considered in developing the
             bound - useful for adding other values with errors.
