@@ -32,9 +32,9 @@ def daily_trace():
 
 @pytest.fixture
 def hourly_trace():
-    data = {"value": np.ones(60*24) * 1}
+    data = {"value": np.ones(60 * 24) * 1}
     columns = ["value", "estimated"]
-    index = pd.date_range('2000-01-01', periods=60*24, freq='H', tz=pytz.UTC)
+    index = pd.date_range('2000-01-01', periods=60 * 24, freq='H', tz=pytz.UTC)
     df = pd.DataFrame(data, index=index, columns=columns)
     return EnergyTrace("ELECTRICITY_CONSUMPTION_SUPPLIED", df, unit="KWH")
 
