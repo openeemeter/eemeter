@@ -5,14 +5,8 @@ import pandas as pd
 import pytz
 
 
-DerivativePair = namedtuple('DerivativePair', [
-    'label', 'derivative_interpretation', 'trace_interpretation', 'unit',
-    'baseline', 'reporting'
-])
-
-
 Derivative = namedtuple('Derivative', [
-    'label', 'value', 'lower', 'upper', 'n', 'serialized_demand_fixture'
+    'source', 'series', 'orderable', 'value', 'variance', 'unit', 'serialized_demand_fixture'
 ])
 
 

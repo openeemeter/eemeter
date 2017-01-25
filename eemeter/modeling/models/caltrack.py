@@ -301,6 +301,7 @@ class CaltrackModel(object):
             upper[i] = np.sqrt(thisvar) * 1.959964 / 2
 
         if summed:
+            #TODO: return variance here
             return predicted_baseline_use, \
                 np.sqrt(predicted_baseline_use_var) * 1.959964 / 2, \
                 np.sqrt(predicted_baseline_use_var) * 1.959964 / 2
@@ -308,8 +309,10 @@ class CaltrackModel(object):
             predicted = pd.Series(predicted, index=X.index)
             lower = pd.Series(lower, index=X.index)
             upper = pd.Series(upper, index=X.index)
+            #TODO: return variance here
             return predicted, upper, lower
 
+    # TODO move this to its own model? or use the formatter?
     def calc_gross(self):
         gross = 0.0
         for i in range(len(self.input_data.index)):
