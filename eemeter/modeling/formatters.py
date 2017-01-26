@@ -382,6 +382,7 @@ class CaltrackFormatter(FormatterBase):
     def convert_to_monthly(self, df):
         # Convert from daily usage and temperature to monthly
         # usage per day and average HDD/CDD.
+        df = df[~df.index.duplicated(keep='last')]
         cdd = {i: [0] for i in self.bp_cdd}
         hdd = {i: [0] for i in self.bp_hdd}
         if len(df.index) == 0:
@@ -436,9 +437,11 @@ class CaltrackFormatter(FormatterBase):
     def create_input(self, trace, weather_source):
         energy = pd.Series()
         if trace.data.index.freq is None:
-            trace.data.index.freq = pd.infer_freq(trace.data.index)
-        if (trace.data.index.freq is None or
-                to_offset(trace.data.index.freq) > to_offset('D')):
+            try:
+                trace.data.index.freq = pd.infer_freq(trace.data.index)
+            except:
+                energy = self.create_daily_data(trace.data)
+        if to_offset(trace.data.index.freq) > to_offset('D'):
             # Input is less frequent than daily (e.g., monthly)
             energy = self.create_daily_data(trace.data)
         else:
