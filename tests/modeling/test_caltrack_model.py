@@ -9,9 +9,9 @@ import pytz
 
 from eemeter.weather import ISDWeatherSource
 from eemeter.testing.mocks import MockWeatherClient
-from eemeter.modeling.formatters import CaltrackFormatter
+from eemeter.modeling.formatters import ModelDataFormatter, ModelDataBillingFormatter
 from eemeter.structures import EnergyTrace
-from eemeter.modeling.models import CaltrackModel
+from eemeter.modeling.models import CaltrackMonthlyModel
 
 
 @pytest.fixture
@@ -35,14 +35,36 @@ def daily_trace():
 
 
 @pytest.fixture
+def billing_trace():
+    data = {
+        "value": [1, 1, 1, 1, np.nan],
+        "estimated": [False, False, True, False, False]
+    }
+    columns = ["value", "estimated"]
+    index = [
+        datetime(2011, 1, 1, tzinfo=pytz.UTC),
+        datetime(2011, 2, 1, tzinfo=pytz.UTC),
+        datetime(2011, 3, 2, tzinfo=pytz.UTC),
+        datetime(2011, 4, 3, tzinfo=pytz.UTC),
+        datetime(2011, 4, 29, tzinfo=pytz.UTC),
+    ]
+    df = pd.DataFrame(data, index=index, columns=columns)
+    return EnergyTrace("ELECTRICITY_CONSUMPTION_SUPPLIED", df, unit="KWH")
+
+
+@pytest.fixture
 def input_df(mock_isd_weather_source, daily_trace):
-    mdf = CaltrackFormatter()
+    mdf = ModelDataFormatter("D")
     return mdf.create_input(daily_trace, mock_isd_weather_source)
 
+@pytest.fixture
+def input_billing_df(mock_isd_weather_source, billing_trace):
+    mdbf = ModelDataBillingFormatter()
+    return mdbf.create_input(billing_trace, mock_isd_weather_source)
 
 def test_basic(input_df):
-    m = CaltrackModel(fit_cdd=True)
-    assert str(m).startswith("Caltrack full")
+    m = CaltrackMonthlyModel(fit_cdd=True)
+    assert str(m).startswith("Caltrack")
     assert m.n is None
     assert m.params is None
     assert m.r2 is None
@@ -85,5 +107,43 @@ def test_basic(input_df):
     predict, lower, upper = m.predict(input_df)
 
     assert_allclose(predict, 365.)
+    assert lower > 0
+    assert upper > 0
+
+def test_basic_billing(input_billing_df, mock_isd_weather_source):
+    m = CaltrackMonthlyModel(fit_cdd=True)
+    assert str(m).startswith("Caltrack")
+    assert m.n is None
+    assert m.params is None
+    assert m.r2 is None
+    assert m.rmse is None
+    assert m.y is None
+
+    output = m.fit(input_billing_df)
+
+    assert "r2" in output
+    assert "rmse" in output
+    assert "cvrmse" in output
+    assert "model_params" in output
+    assert "upper" in output
+    assert "lower" in output
+    assert "n" in output
+
+    assert 'formula' in m.params
+    assert 'X_design_info' in m.params
+    assert 'coefficients' in m.params
+
+    index = pd.date_range('2011-01-01', freq='D', periods=365, tz=pytz.UTC)
+    formatter = ModelDataBillingFormatter()
+    formatted_predict_data = formatter.create_demand_fixture(
+        index, mock_isd_weather_source)
+
+    outputs, lower, upper = m.predict(formatted_predict_data, summed=False)
+    assert outputs.shape == (12,)
+    assert all(lower > 0)
+    assert all(upper > 0)
+
+    outputs, lower, upper = m.predict(formatted_predict_data, summed=True)
+    assert outputs > 0
     assert lower > 0
     assert upper > 0

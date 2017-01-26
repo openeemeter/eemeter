@@ -41,12 +41,8 @@ class CaltrackMonthlyModel(object):
     def billing_to_daily(self, trace_and_temp):
         ''' Helper function to handle monthly billing or other irregular data.'''
         (energy_data, temp_data) = trace_and_temp
-        if 'hourly' in temp_data.index.names:
-            temp_data = temp_data.groupby(level='period').sum()[0] / 24.0
-        elif 'daily' in temperature_data.index.names:
-            temp_data = temp_data.groupby(level='period').sum()[0]
-        else:
-            raise ValueError("Invalid temperature data, must be daily or hourly")
+        temp_data.index = temp_data.index.droplevel()
+        temp_data = temp_data.resample('D').apply(np.mean)[0]
        
         # Handle short series
         idx = None
@@ -58,26 +54,26 @@ class CaltrackMonthlyModel(object):
             else:
                 idx = [pd.date_range(end=energy_data.index[0], periods=2)[0]]
         else:
-            idx = [energy_data.index[0]]
+            idx = [energy_data.index[0] - pd.Timedelta('1 day')]
             energy_data = energy_data[1:]
         upd = []
         # Loop through the input data, skipping the first usage number,
         # and create a series of usage values by dividing equally across
         # each period.
-        for i in energy_data.index:
+        for i in range(len(energy_data.index)):
             start_date = idx[-1]
-            ndays = (i - start_date).days
-            this_upd = energy_data.value[i] / float(ndays)
-            for j in pd.date_range(start_date, i)[1:]:
+            ndays = (energy_data.index[i] - start_date).days - 1
+            this_upd = energy_data.values[i] / float(ndays)
+            for j in pd.date_range(start_date, energy_data.index[i])[1:-1]:
                 idx.append(j)
                 upd.append(this_upd)
         idx = idx[1:]
         # Construct and return data frame
         energy_data = pd.Series(upd, index=pd.DatetimeIndex(idx, freq='D'))
         model_data = pd.DataFrame({
-            'energy': energy_data.iloc[:-1],
-            'tempF': temp_data,
-        }, columns=['energy', 'tempF'])
+            'energy': energy_data.values,
+            'tempF': temp_data.values,
+        }, index=idx)
         return model_data
 
     def daily_to_monthly_avg(self, df):
@@ -93,6 +89,7 @@ class CaltrackMonthlyModel(object):
         ndays, usage, upd, output_index = \
             [0], [0], [0], [df.index[0]]
         this_yr, this_mo = output_index[0].year, output_index[0].month
+        is_demand_fixture = 'energy' not in df.columns
         for idx, row in df.iterrows():
             if this_yr != idx.year or this_mo != idx.month:
                 ndays.append(0)
@@ -104,9 +101,10 @@ class CaltrackMonthlyModel(object):
                     hdd[i].append(0)
                 this_yr, this_mo = idx.year, idx.month
                 output_index.append(idx)
-            if np.isfinite(row['energy']) and np.isfinite(row['tempF']):
+            if (is_demand_fixture or np.isfinite(row['energy'])) and \
+               np.isfinite(row['tempF']):
                 ndays[-1] = ndays[-1] + 1
-                usage[-1] = usage[-1] + row['energy']
+                usage[-1] = usage[-1] + (row['energy'] if not is_demand_fixture else 0)
                 for bp in cdd.keys():
                     cdd[bp][-1] = cdd[bp][-1] + \
                         np.maximum(row['tempF'] - bp, 0)
@@ -138,7 +136,7 @@ class CaltrackMonthlyModel(object):
         self.input_data = input_data
         if type(input_data) == type(()):
             self.input_data = self.billing_to_daily(input_data)
-        df = self.daily_to_monthly_avg(input_data)
+        df = self.daily_to_monthly_avg(self.input_data)
         # Fit the intercept-only model
         int_formula = 'upd ~ 1'
         try:
@@ -374,6 +372,7 @@ class CaltrackMonthlyModel(object):
 
         formula = params["formula"]
 
+        demand_fixture_data = self.daily_to_monthly_avg(demand_fixture_data)
         dfd = demand_fixture_data.dropna()
 
         _, X = patsy.dmatrices(formula, dfd,
