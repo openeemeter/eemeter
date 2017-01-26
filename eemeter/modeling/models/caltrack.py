@@ -136,7 +136,7 @@ class CaltrackMonthlyModel(object):
 
     def fit(self, input_data):
         self.input_data = input_data
-        if type(input_data) == type((,)):
+        if type(input_data) == type(()):
             self.input_data = self.billing_to_daily(input_data)
         df = self.daily_to_monthly_avg(input_data)
         # Fit the intercept-only model
