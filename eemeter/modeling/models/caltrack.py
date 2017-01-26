@@ -8,15 +8,16 @@ import statsmodels.formula.api as smf
 from scipy.stats import chi2
 
 
-class CaltrackModel(object):
+class CaltrackMonthlyModel(object):
     ''' This class implements the two-stage modeling routine agreed upon
     as part of the Caltrack beta test. If fit_cdd is True, then all four
     candidate models (HDD+CDD, CDD-only, HDD-only, and Intercept-only) are
     used in stage 1 estimation. If it's false, then only HDD-only and
     Intercept-only are used. '''
-    def __init__(self, fit_cdd=True):
+    def __init__(self, fit_cdd=True, grid_search=False):
 
         self.fit_cdd = fit_cdd
+        self.grid_search = grid_search
         self.model_freq = pd.tseries.frequencies.MonthEnd()
         self.params = None
         self.X = None
@@ -27,17 +28,117 @@ class CaltrackModel(object):
         self.cvrmse = None
         self.n = None
         self.input_data = None
-        self.hdd_bp, self.cdd_bp = None, None
+        self.fit_bp_hdd, self.fit_bp_cdd = None, None
+        if grid_search:
+            self.bp_cdd = [50, 55, 60, 65, 70, 75, 80, 85]
+            self.bp_hdd = [50, 55, 60, 65, 70, 75, 80, 85]
+        else:
+            self.bp_cdd, self.bp_hdd = [70, ], [60, ]
 
     def __repr__(self):
-        if self.fit_cdd:
-            return ('Caltrack full')
+        return ('Caltrack monthly')
+
+    def billing_to_daily(self, trace_and_temp):
+        ''' Helper function to handle monthly billing or other irregular data.'''
+        (energy_data, temp_data) = trace_and_temp
+        if 'hourly' in temp_data.index.names:
+            temp_data = temp_data.groupby(level='period').sum()[0] / 24.0
+        elif 'daily' in temperature_data.index.names:
+            temp_data = temp_data.groupby(level='period').sum()[0]
         else:
-            return ('Caltrack HDD-only')
+            raise ValueError("Invalid temperature data, must be daily or hourly")
+       
+        # Handle short series
+        idx = None
+        if len(energy_data.index) == 0:
+            raise ValueError("No energy data")
+        elif len(energy_data.index) == 1:
+            if energy_data.index.freq is None:
+                raise ValueError("No usable energy data")
+            else:
+                idx = [pd.date_range(end=energy_data.index[0], periods=2)[0]]
+        else:
+            idx = [energy_data.index[0]]
+            energy_data = energy_data[1:]
+        upd = []
+        # Loop through the input data, skipping the first usage number,
+        # and create a series of usage values by dividing equally across
+        # each period.
+        for i in energy_data.index:
+            start_date = idx[-1]
+            ndays = (i - start_date).days
+            this_upd = energy_data.value[i] / float(ndays)
+            for j in pd.date_range(start_date, i)[1:]:
+                idx.append(j)
+                upd.append(this_upd)
+        idx = idx[1:]
+        # Construct and return data frame
+        energy_data = pd.Series(upd, index=pd.DatetimeIndex(idx, freq='D'))
+        model_data = pd.DataFrame({
+            'energy': energy_data.iloc[:-1],
+            'tempF': temp_data,
+        }, columns=['energy', 'tempF'])
+        return model_data
+
+    def daily_to_monthly_avg(self, df):
+        # Convert from daily usage and temperature to monthly
+        # usage per day and average HDD/CDD.
+        cdd = {i: [0] for i in self.bp_cdd}
+        hdd = {i: [0] for i in self.bp_hdd}
+        if len(df.index) == 0:
+            df_dict = {'upd': [], 'usage': [], 'ndays': []}
+            df_dict.update({'CDD_' + str(bp): [] for bp in cdd.keys()})
+            df_dict.update({'HDD_' + str(bp): [] for bp in hdd.keys()})
+            return pd.DataFrame(df_dict, index=[])
+        ndays, usage, upd, output_index = \
+            [0], [0], [0], [df.index[0]]
+        this_yr, this_mo = output_index[0].year, output_index[0].month
+        for idx, row in df.iterrows():
+            if this_yr != idx.year or this_mo != idx.month:
+                ndays.append(0)
+                usage.append(0)
+                upd.append(0)
+                for i in cdd.keys():
+                    cdd[i].append(0)
+                for i in hdd.keys():
+                    hdd[i].append(0)
+                this_yr, this_mo = idx.year, idx.month
+                output_index.append(idx)
+            if np.isfinite(row['energy']) and np.isfinite(row['tempF']):
+                ndays[-1] = ndays[-1] + 1
+                usage[-1] = usage[-1] + row['energy']
+                for bp in cdd.keys():
+                    cdd[bp][-1] = cdd[bp][-1] + \
+                        np.maximum(row['tempF'] - bp, 0)
+                for bp in hdd.keys():
+                    hdd[bp][-1] = hdd[bp][-1] + \
+                        np.maximum(bp - row['tempF'], 0)
+
+        for i in range(len(usage)):
+            if (ndays[i] < 15):
+                # Caltrack sufficiency requirement of >=15 days per month
+                upd[i] = np.nan
+                for bp in cdd.keys():
+                    cdd[bp][i] = np.nan
+                for bp in hdd.keys():
+                    hdd[bp][i] = np.nan
+            else:
+                upd[i] = (usage[i] / ndays[i])
+                for bp in cdd.keys():
+                    cdd[bp][i] = cdd[bp][i] / ndays[i]
+                for bp in hdd.keys():
+                    hdd[bp][i] = hdd[bp][i] / ndays[i]
+        df_dict = {'upd': upd, 'usage': usage, 'ndays': ndays}
+        df_dict.update({'CDD_' + str(bp): cdd[bp] for bp in cdd.keys()})
+        df_dict.update({'HDD_' + str(bp): hdd[bp] for bp in hdd.keys()})
+        output = pd.DataFrame(df_dict, index=output_index)
+        return output
 
     def fit(self, input_data):
         self.input_data = input_data
-        df = input_data
+        if type(input_data) == type((,)):
+            self.input_data = self.billing_to_daily(input_data)
+        df = self.daily_to_monthly_avg(input_data)
         # Fit the intercept-only model
         int_formula = 'upd ~ 1'
         try:
@@ -143,7 +244,7 @@ class CaltrackModel(object):
         except:
             full_rsquared, full_qualified = 0, False
 
-        self.hdd_bp, self.cdd_bp = None, None
+        self.fit_bp_hdd, self.fit_bp_cdd = None, None
 
         # Now we take the best qualified model.
         if (full_qualified or hdd_qualified or
@@ -161,7 +262,7 @@ class CaltrackModel(object):
             self.r2, self.rmse = full_rsquared, np.sqrt(full_res.mse_total)
             self.model_obj, self.model_res, formula = \
                 full_mod, full_res, full_formula
-            self.hdd_bp, self.cdd_bp = full_hdd_bp, full_cdd_bp
+            self.fit_bp_hdd, self.fit_bp_cdd = full_hdd_bp, full_cdd_bp
         elif hdd_qualified and hdd_rsquared > \
                 max([int(full_qualified) * full_rsquared,
                      int(cdd_qualified) * cdd_rsquared,
@@ -173,7 +274,7 @@ class CaltrackModel(object):
             self.r2, self.rmse = hdd_rsquared, np.sqrt(hdd_res.mse_total)
             self.model_obj, self.model_res, formula = \
                 hdd_mod, hdd_res, hdd_formula
-            self.hdd_bp = hdd_bp
+            self.fit_bp_hdd = hdd_bp
         elif cdd_qualified and cdd_rsquared > \
                 max([int(full_qualified) * full_rsquared,
                      int(hdd_qualified) * hdd_rsquared,
@@ -185,7 +286,7 @@ class CaltrackModel(object):
             self.r2, self.rmse = cdd_rsquared, np.sqrt(cdd_res.mse_total)
             self.model_obj, self.model_res, formula = \
                 cdd_mod, cdd_res, cdd_formula
-            self.cdd_bp = cdd_bp
+            self.fit_bp_cdd = cdd_bp
         else:
             # Use Intercept-only
             self.y, self.X = patsy.dmatrices(int_formula, df,
@@ -227,8 +328,8 @@ class CaltrackModel(object):
         self.params = {
             "coefficients": self.model_res.params.to_dict(),
             "formula": formula,
-            "cdd_bp": self.cdd_bp,
-            "hdd_bp": self.hdd_bp,
+            "cdd_bp": self.fit_bp_cdd,
+            "hdd_bp": self.fit_bp_hdd,
             "X_design_info": self.X.design_info,
         }
 
