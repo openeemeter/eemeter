@@ -262,7 +262,7 @@ class ElasticNetCVBaseModel(object):
             lower = self.lower
             upper = self.upper
 
-        #TODO: return variance here
+        # TODO: return variance here
         return predicted, lower, upper
 
     def calc_gross(self):

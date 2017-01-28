@@ -88,11 +88,16 @@ class SplitModeledEnergyTrace(object):
                 input_description = self.formatter.describe_input(input_data)
                 input_serialization = self.formatter.serialize_input(
                     input_data)
+                input_mask = self.formatter.get_input_data_mask(
+                    input_data)
                 outputs.update({
-                    "input_data": input_serialization,
+                    "input_data_serialization": input_serialization,
+                    "input_data": input_data,
+                    "input_mask": input_mask,  # missing days
                     "start_date": input_description.get('start_date'),
                     "end_date": input_description.get('end_date'),
                     "n_rows": input_description.get('n_rows'),
+                    "trace": filtered_trace,
                 })
 
                 try:

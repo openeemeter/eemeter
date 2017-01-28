@@ -9,7 +9,10 @@ import pytz
 
 from eemeter.weather import ISDWeatherSource
 from eemeter.testing.mocks import MockWeatherClient
-from eemeter.modeling.formatters import ModelDataFormatter, ModelDataBillingFormatter
+from eemeter.modeling.formatters import (
+    ModelDataFormatter,
+    ModelDataBillingFormatter
+)
 from eemeter.structures import EnergyTrace
 from eemeter.modeling.models import CaltrackMonthlyModel
 
@@ -57,10 +60,12 @@ def input_df(mock_isd_weather_source, daily_trace):
     mdf = ModelDataFormatter("D")
     return mdf.create_input(daily_trace, mock_isd_weather_source)
 
+
 @pytest.fixture
 def input_billing_df(mock_isd_weather_source, billing_trace):
     mdbf = ModelDataBillingFormatter()
     return mdbf.create_input(billing_trace, mock_isd_weather_source)
+
 
 def test_basic(input_df):
     m = CaltrackMonthlyModel(fit_cdd=True)
@@ -77,8 +82,6 @@ def test_basic(input_df):
     assert "rmse" in output
     assert "cvrmse" in output
     assert "model_params" in output
-    assert "upper" in output
-    assert "lower" in output
     assert "n" in output
 
     assert m.n == 12
@@ -89,12 +92,11 @@ def test_basic(input_df):
     assert_allclose(m.rmse, 0., rtol=1e-5, atol=1e-5)
     assert m.y.shape == (12, 1)
 
-    predict, lower, upper = m.predict(input_df, summed=False)
+    predict, variance = m.predict(input_df, summed=False)
 
     assert predict.shape == (12,)
     assert_allclose(predict[datetime(2000, 1, 1, tzinfo=pytz.UTC)], 31.)
-    assert all(lower > 0)
-    assert all(upper > 0)
+    assert all(variance > 0)
 
     assert m.n == 12
     assert 'formula' in m.params
@@ -104,11 +106,11 @@ def test_basic(input_df):
     assert_allclose(m.rmse, 0.00000000000, rtol=1e-5, atol=1e-5)
     assert m.y.shape == (12, 1)
 
-    predict, lower, upper = m.predict(input_df)
+    predict, variance = m.predict(input_df)
 
     assert_allclose(predict, 365.)
-    assert lower > 0
-    assert upper > 0
+    assert variance > 0
+
 
 def test_basic_billing(input_billing_df, mock_isd_weather_source):
     m = CaltrackMonthlyModel(fit_cdd=True)
@@ -125,8 +127,6 @@ def test_basic_billing(input_billing_df, mock_isd_weather_source):
     assert "rmse" in output
     assert "cvrmse" in output
     assert "model_params" in output
-    assert "upper" in output
-    assert "lower" in output
     assert "n" in output
 
     assert 'formula' in m.params
@@ -138,12 +138,10 @@ def test_basic_billing(input_billing_df, mock_isd_weather_source):
     formatted_predict_data = formatter.create_demand_fixture(
         index, mock_isd_weather_source)
 
-    outputs, lower, upper = m.predict(formatted_predict_data, summed=False)
+    outputs, variance = m.predict(formatted_predict_data, summed=False)
     assert outputs.shape == (12,)
-    assert all(lower > 0)
-    assert all(upper > 0)
+    assert all(variance > 0)
 
-    outputs, lower, upper = m.predict(formatted_predict_data, summed=True)
+    outputs, variance = m.predict(formatted_predict_data, summed=True)
     assert outputs > 0
-    assert lower > 0
-    assert upper > 0
+    assert variance > 0

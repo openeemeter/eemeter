@@ -1,35 +1,20 @@
 from collections import OrderedDict
 
 
-def serialize_derivative_pairs(derivative_pairs):
-    return [serialize_derivative_pair(dp) for dp in derivative_pairs]
+def serialize_derivatives(derivatives):
+    return [serialize_derivative(d) for d in derivatives]
 
 
-def serialize_derivative_pair(derivative_pair):
-    label, d_interp, t_interp, unit, baseline, reporting = derivative_pair
+def serialize_derivative(d):
     return OrderedDict([
-        ("label", label),
-        ("derivative_interpretation", d_interp),
-        ("trace_interpretation", t_interp),
-        ("unit", unit),
-        ("baseline", OrderedDict([
-            ("label", baseline.label),
-            ("value", baseline.value),
-            ("lower", baseline.lower),
-            ("upper", baseline.upper),
-            ("n", baseline.n),
-            ("demand_fixture",
-             baseline.serialized_demand_fixture),
-        ])),
-        ("reporting", OrderedDict([
-            ("label", reporting.label),
-            ("value", reporting.value),
-            ("lower", reporting.lower),
-            ("upper", reporting.upper),
-            ("n", reporting.n),
-            ("demand_fixture",
-             reporting.serialized_demand_fixture),
-        ])),
+        ("modeling_period_group", d.modeling_period_group),
+        ("source", d.source),
+        ("series", d.series),
+        ("orderable", d.orderable),
+        ("value", d.value),
+        ("variance", d.variance),
+        ("unit", d.unit),
+        ("serialized_demand_fixture", d.serialized_demand_fixture),
     ])
 
 

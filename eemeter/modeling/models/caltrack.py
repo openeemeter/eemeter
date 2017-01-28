@@ -1,11 +1,8 @@
-import warnings
-
 import copy
 import numpy as np
 import pandas as pd
 import patsy
 import statsmodels.formula.api as smf
-from scipy.stats import chi2
 
 
 class CaltrackMonthlyModel(object):
@@ -39,11 +36,12 @@ class CaltrackMonthlyModel(object):
         return ('Caltrack monthly')
 
     def billing_to_daily(self, trace_and_temp):
-        ''' Helper function to handle monthly billing or other irregular data.'''
+        ''' Helper function to handle monthly billing or other irregular data.
+        '''
         (energy_data, temp_data) = trace_and_temp
         temp_data.index = temp_data.index.droplevel()
         temp_data = temp_data.resample('D').apply(np.mean)[0]
-       
+
         # Handle short series
         idx = None
         if len(energy_data.index) == 0:
@@ -104,7 +102,8 @@ class CaltrackMonthlyModel(object):
             if (is_demand_fixture or np.isfinite(row['energy'])) and \
                np.isfinite(row['tempF']):
                 ndays[-1] = ndays[-1] + 1
-                usage[-1] = usage[-1] + (row['energy'] if not is_demand_fixture else 0)
+                usage[-1] = usage[-1] + (
+                    row['energy'] if not is_demand_fixture else 0)
                 for bp in cdd.keys():
                     cdd[bp][-1] = cdd[bp][-1] + \
                         np.maximum(row['tempF'] - bp, 0)
@@ -134,7 +133,7 @@ class CaltrackMonthlyModel(object):
 
     def fit(self, input_data):
         self.input_data = input_data
-        if type(input_data) == type(()):
+        if isinstance(input_data, tuple):
             self.input_data = self.billing_to_daily(input_data)
         df = self.daily_to_monthly_avg(self.input_data)
         # Fit the intercept-only model
@@ -318,9 +317,6 @@ class CaltrackMonthlyModel(object):
 
         n = self.estimated.shape[0]
 
-        c1, c2 = chi2.ppf([0.025, 1 - 0.025], n)
-        self.lower = np.sqrt(n / c2) * self.rmse
-        self.upper = np.sqrt(n / c1) * self.rmse
         self.n = n
 
         self.params = {
@@ -336,8 +332,6 @@ class CaltrackMonthlyModel(object):
             "model_params": self.params,
             "rmse": self.rmse,
             "cvrmse": self.cvrmse,
-            "upper": self.upper,
-            "lower": self.lower,
             "n": self.n,
         }
         return output
@@ -380,8 +374,7 @@ class CaltrackMonthlyModel(object):
 
         predicted = self.model_res.predict(X)
         predicted = pd.Series(predicted, index=dfd.index)
-        lower = copy.deepcopy(predicted)
-        upper = copy.deepcopy(predicted)
+        variance = copy.deepcopy(predicted)
         # Get parameter covariance matrix
         cov = self.model_res.cov_params()
         # Get prediction errors for each data point
@@ -395,22 +388,17 @@ class CaltrackMonthlyModel(object):
                 continue
             predicted[i] = predicted[i] * demand_fixture_data.ndays[i]
             predicted_baseline_use = predicted_baseline_use + predicted[i]
-            thisvar = prediction_var[i] * demand_fixture_data.ndays[i]
-            predicted_baseline_use_var = predicted_baseline_use_var + thisvar
-            lower[i] = np.sqrt(thisvar) * 1.959964 / 2
-            upper[i] = np.sqrt(thisvar) * 1.959964 / 2
+            variance[i] = prediction_var[i] * demand_fixture_data.ndays[i]
+            predicted_baseline_use_var = \
+                predicted_baseline_use_var + variance[i]
 
         if summed:
-            #TODO: return variance here
-            return predicted_baseline_use, \
-                np.sqrt(predicted_baseline_use_var) * 1.959964 / 2, \
-                np.sqrt(predicted_baseline_use_var) * 1.959964 / 2
+            predicted = predicted_baseline_use
+            variance = predicted_baseline_use_var
         else:
             predicted = pd.Series(predicted, index=X.index)
-            lower = pd.Series(lower, index=X.index)
-            upper = pd.Series(upper, index=X.index)
-            #TODO: return variance here
-            return predicted, upper, lower
+            variance = pd.Series(variance, index=X.index)
+        return predicted, variance
 
     # TODO move this to its own model? or use the formatter?
     def calc_gross(self):
@@ -420,28 +408,3 @@ class CaltrackMonthlyModel(object):
                 gross = gross + self.input_data.upd[i] * \
                     self.input_data.ndays[i]
         return gross
-
-    def plot(self):
-        ''' Plots fit against input data. Should not be run before the
-        :code:`.fit(` method.
-        '''
-
-        try:
-            import matplotlib.pyplot as plt
-        except ImportError:
-            warnings.warn("Cannot plot - no matplotlib.")
-            return None
-
-        plt.title("actual v. estimated w/ 95% confidence")
-
-        self.estimated.plot(color='b', alpha=0.7)
-
-        plt.fill_between(self.estimated.index.to_datetime(),
-                         self.estimated + self.upper,
-                         self.estimated - self.lower,
-                         color='b', alpha=0.3)
-
-        pd.Series(self.y.values.ravel(), index=self.estimated.index).plot(
-            color='k', linewidth=1.5)
-
-        plt.show()

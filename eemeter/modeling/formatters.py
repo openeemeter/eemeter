@@ -1,3 +1,7 @@
+'''
+These take usage data or a pandas index and attach weather data
+'''
+
 from collections import OrderedDict
 
 import pandas as pd
@@ -150,6 +154,8 @@ class ModelDataFormatter(FormatterBase):
         return input_data.shape[0]
 
     def serialize_input(self, input_data):
+        ''' Serialize input data
+        '''
         return OrderedDict([
             (start.isoformat(), OrderedDict([
                 ("energy", row.energy if pd.notnull(row.energy) else None),
@@ -159,10 +165,29 @@ class ModelDataFormatter(FormatterBase):
         ])
 
     def serialize_demand_fixture(self, demand_fixture_data):
+        ''' Serialize demand fixture data
+        '''
         return OrderedDict([
             (i.isoformat(), row.tempF)
             for i, row in demand_fixture_data.iterrows()
         ])
+
+    def get_input_data_mask(self, input_data):
+        ''' Boolean list of missing/not missing values:
+            True  => not missing
+            False => missing
+        '''
+
+        dts, mask = [], []
+        for i, row in input_data.iterrows():
+            dts.append(i)
+            mask.append(pd.isnull(row.energy) or pd.isnull(row.tempF))
+        return pd.Series(mask, index=dts)
+
+    def daily_trace_data(self, trace):
+        ''' Transforms a trace for this formatter to a daily series
+        '''
+        return trace.data.resample('D').sum()
 
 
 class ModelDataBillingFormatter(FormatterBase):
@@ -341,178 +366,35 @@ formatter.create_input(energy_trace, weather_source)
             for i, row in demand_fixture_data.iterrows()
         ])
 
-
-class CaltrackFormatter(FormatterBase):
-    '''
-    This formatter implements the data prep methods agreed upon in
-    the Caltrack beta test. HDD and CDD are computed using fixed balance
-    points, usage per day is computed for each month, and a data
-    sufficiency requirement of at least 15 days of valid temperature+usage data
-    is imposed on each month.
-    '''
-    def __init__(self, grid_search=False):
-        if grid_search:
-            self.bp_cdd = [50, 55, 60, 65, 70, 75, 80, 85]
-            self.bp_hdd = [50, 55, 60, 65, 70, 75, 80, 85]
-        else:
-            self.bp_cdd, self.bp_hdd = [70, ], [60, ]
-
-    def __repr__(self):
-        return 'CaltrackFormatter()'
-
-    def create_daily_data(self, data):
-        ''' Helper function to handle monthly or other irregular data.'''
-        if len(data.index) == 0:
-            return pd.Series()
-        idx = [data.index[0]]
-        upd = []
-        # Loop through the input data, skipping the first usage number,
-        # and create a series of usage values by dividing equally across
-        # each period.
-        for i in data.index[1:]:
-            start_date = idx[-1]
-            ndays = (i - start_date).days
-            this_upd = data.value[i] / float(ndays)
-            for j in pd.date_range(start_date, i)[1:]:
-                idx.append(j)
-                upd.append(this_upd)
-        idx = idx[1:]
-        return pd.Series(upd, index=pd.DatetimeIndex(idx, freq='D'))
-
-    def convert_to_monthly(self, df):
-        # Convert from daily usage and temperature to monthly
-        # usage per day and average HDD/CDD.
-        cdd = {i: [0] for i in self.bp_cdd}
-        hdd = {i: [0] for i in self.bp_hdd}
-        if len(df.index) == 0:
-            df_dict = {'upd': [], 'usage': [], 'ndays': []}
-            df_dict.update({'CDD_' + str(bp): [] for bp in cdd.keys()})
-            df_dict.update({'HDD_' + str(bp): [] for bp in hdd.keys()})
-            return pd.DataFrame(df_dict, index=[])
-        ndays, usage, upd, output_index = \
-            [0], [0], [0], [df.index[0]]
-        this_yr, this_mo = output_index[0].year, output_index[0].month
-        for idx, row in df.iterrows():
-            if this_yr != idx.year or this_mo != idx.month:
-                ndays.append(0)
-                usage.append(0)
-                upd.append(0)
-                for i in cdd.keys():
-                    cdd[i].append(0)
-                for i in hdd.keys():
-                    hdd[i].append(0)
-                this_yr, this_mo = idx.year, idx.month
-                output_index.append(idx)
-            if np.isfinite(row['energy']) and np.isfinite(row['tempF']):
-                ndays[-1] = ndays[-1] + 1
-                usage[-1] = usage[-1] + row['energy']
-                for bp in cdd.keys():
-                    cdd[bp][-1] = cdd[bp][-1] + \
-                        np.maximum(row['tempF'] - bp, 0)
-                for bp in hdd.keys():
-                    hdd[bp][-1] = hdd[bp][-1] + \
-                        np.maximum(bp - row['tempF'], 0)
-
-        for i in range(len(usage)):
-            if (ndays[i] < 15):
-                # Caltrack sufficiency requirement of >=15 days per month
-                upd[i] = np.nan
-                for bp in cdd.keys():
-                    cdd[bp][i] = np.nan
-                for bp in hdd.keys():
-                    hdd[bp][i] = np.nan
-            else:
-                upd[i] = (usage[i] / ndays[i])
-                for bp in cdd.keys():
-                    cdd[bp][i] = cdd[bp][i] / ndays[i]
-                for bp in hdd.keys():
-                    hdd[bp][i] = hdd[bp][i] / ndays[i]
-        df_dict = {'upd': upd, 'usage': usage, 'ndays': ndays}
-        df_dict.update({'CDD_' + str(bp): cdd[bp] for bp in cdd.keys()})
-        df_dict.update({'HDD_' + str(bp): hdd[bp] for bp in hdd.keys()})
-        output = pd.DataFrame(df_dict, index=output_index)
-        return output
-
-    def create_input(self, trace, weather_source):
-        energy = pd.Series()
-        if trace.data.index.freq is None:
-            trace.data.index.freq = pd.infer_freq(trace.data.index)
-        if (trace.data.index.freq is None or
-                to_offset(trace.data.index.freq) > to_offset('D')):
-            # Input is less frequent than daily (e.g., monthly)
-            energy = self.create_daily_data(trace.data)
-        else:
-            # Input is daily, hourly, 15-minutely, etc.
-            energy = trace.data.value.resample('D').sum()
-
-        tempF = weather_source.indexed_temperatures(energy.index, "degF")
-        df = pd.DataFrame({"energy": energy, "tempF": tempF},
-                          columns=["energy", "tempF"])
-        df = self.convert_to_monthly(df)
-        return df
-
-    def create_demand_fixture(self, index, weather_source):
-        '''Creates a :code:`DatetimeIndex` ed dataframe containing formatted
-        demand fixture data.
-
-        Parameters
-        ----------
-        index : pandas.DatetimeIndex
-            The desired index for demand fixture data.
-        weather_source : eemeter.weather.WeatherSourceBase
-            The source of weather fixture data.
-
-        Returns
-        -------
-        input_df : pandas.DataFrame
-            Predictably formatted input data. This data should be directly
-            usable as input to applicable model.predict() methods.
+    def get_input_data_mask(self, input_data):
+        ''' Boolean list of missing/not missing values:
+            True  => not missing
+            False => missing
         '''
-        idx = None
-        if (index.freq is None or
-                to_offset(index.freq) > to_offset('D')):
-            # Input is less frequent than daily (e.g., monthly)
-            dummy = pd.DataFrame({'value': np.zeros(len(index))}, index=index)
-            energy = self.create_daily_data(dummy)
-            idx = energy.index
-        else:
-            # Input is daily, hourly, 15-minutely, etc.
-            dummy = pd.Series(np.zeros(len(index)), index=index)
-            energy = dummy.resample('D').sum()
-            idx = energy.index
+        trace_data, temp_data = input_data
+        dts = []
+        mask = []
+        if trace_data.empty or temp_data.empty:
+            return pd.Series(mask)
+        for (start, energy), (p, group) in zip(
+                trace_data.iteritems(),
+                temp_data.groupby(level="period")):
+            temps = group.copy()
+            temps.index = temps.index.droplevel()
+            daily_temps = temps.resample('D').apply(np.mean)[0]
+            for i, tempF in daily_temps.iteritems():
+                dts.append(i)
+                mask.append(pd.isnull(energy) or pd.isnull(tempF))
+        return pd.Series(mask, index=dts)
 
-        tempF = weather_source.indexed_temperatures(idx, "degF")
-        df = pd.DataFrame({"tempF": tempF, "energy": tempF * 0})
-        df = self.convert_to_monthly(df)
-        return df
+    def daily_trace_data(self, trace):
+        ''' Transforms a trace for this formatter to a daily series
+        '''
+        if trace.data.empty:
+            return pd.Series([])
+        data = [
+            value / (e - s).days for value, s, e in
+            zip(trace.data.value, trace.data.index, trace.data.index[1:])
+        ] + [np.nan]  # add missing last data point
 
-    def serialize_input(self, input_data):
-        return OrderedDict([
-            (start.isoformat(), OrderedDict([
-                (i, row[i] if np.isfinite(row[i]) else None)
-                for i in row.keys()
-            ]))
-            for start, row in input_data.iterrows()
-        ])
-
-    def serialize_demand_fixture(self, demand_fixture_data):
-        return OrderedDict([
-            (start.isoformat(), OrderedDict([
-                (i, row[i] if np.isfinite(row[i]) else None)
-                for i in row.keys()
-            ]))
-            for start, row in demand_fixture_data.iterrows()
-        ])
-
-    def _get_start_date(self, input_data):
-        if input_data.shape[0] >= 1:
-            return input_data.index[0]
-        return None
-
-    def _get_end_date(self, input_data):
-        if input_data.shape[0] >= 1:
-            return input_data.index[-1]
-        return None
-
-    def _get_n_rows(self, input_data):
-        return input_data.shape[0]
+        return pd.Series(data, index=trace.data.index).resample('D').ffill()
