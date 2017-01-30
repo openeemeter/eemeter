@@ -31,6 +31,7 @@ class ElasticNetCVBaseModel(object):
         self.params = None
         self.upper = None
         self.lower = None
+        self.variance = None
         self.X = None
         self.y = None
         self.estimated = None
@@ -124,6 +125,7 @@ class ElasticNetCVBaseModel(object):
         c1, c2 = chi2.ppf([0.025, 1 - 0.025], n)
         self.lower = np.sqrt(n / c2) * self.rmse
         self.upper = np.sqrt(n / c1) * self.rmse
+        self.variance = self.rmse ** 2
         self.n = n
 
         # compute bootstrapped empirical errors (if possible) for when we want
@@ -253,17 +255,19 @@ class ElasticNetCVBaseModel(object):
             n = len(predicted)
             predicted = np.sum(predicted)
             stddev = self.error_fun(n)
+            variance = stddev ** 2
             # Convert to 95% confidence limits
             lower = stddev * 1.959964 / 2
             upper = stddev * 1.959964 / 2
         else:
             # add NaNs back in
             predicted = predicted.reindex(model_data.index)
+            variance = self.variance
             lower = self.lower
             upper = self.upper
 
         # TODO: return variance here
-        return predicted, lower, upper
+        return predicted, variance
 
     def calc_gross(self):
         return np.nansum(self.input_data.energy)
