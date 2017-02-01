@@ -42,27 +42,32 @@ class CaltrackMonthlyModel(object):
         temp_data.index = temp_data.index.droplevel()
         temp_data = temp_data.resample('D').apply(np.mean)[0]
 
+        energy_data = energy_data[~energy_data.index.\
+            duplicated(keep='last')].sort_index()
+        if energy_data.index.freq is None:
+            try:
+                energy_data.index.freq = pd.infer_freq(energy_data.index)
+            except:
+                pass
+
         # Handle short series
         idx = None
         if len(energy_data.index) == 0:
             raise ValueError("No energy data")
-        elif len(energy_data.index) == 1:
-            if energy_data.index.freq is None:
-                raise ValueError("No usable energy data")
-            else:
-                idx = [pd.date_range(end=energy_data.index[0], periods=2)[0]]
+        if energy_data.index.freq is not None:
+            idx = [pd.date_range(end=energy_data.index[0], periods=2,
+                                 freq=energy_data.index.freq)[0]]
         else:
-            idx = [energy_data.index[0] - pd.Timedelta('1 day')]
-            energy_data = energy_data[1:]
+            idx = [energy_data.index[0]]
         upd = []
         # Loop through the input data, skipping the first usage number,
         # and create a series of usage values by dividing equally across
         # each period.
-        for i in range(len(energy_data.index)):
+        for i in energy_data.index.difference(idx):
             start_date = idx[-1]
-            ndays = (energy_data.index[i] - start_date).days - 1
-            this_upd = energy_data.values[i] / float(ndays)
-            for j in pd.date_range(start_date, energy_data.index[i])[1:-1]:
+            ndays = (i - start_date).days
+            this_upd = energy_data[i] / float(ndays)
+            for j in pd.date_range(start_date, i)[1:]:
                 idx.append(j)
                 upd.append(this_upd)
         idx = idx[1:]
@@ -77,6 +82,7 @@ class CaltrackMonthlyModel(object):
     def daily_to_monthly_avg(self, df):
         # Convert from daily usage and temperature to monthly
         # usage per day and average HDD/CDD.
+        df = df[~df.index.duplicated(keep='last')].sort_index()
         cdd = {i: [0] for i in self.bp_cdd}
         hdd = {i: [0] for i in self.bp_hdd}
         if len(df.index) == 0:
