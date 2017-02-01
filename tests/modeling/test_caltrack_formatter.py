@@ -48,6 +48,16 @@ def daily_trace_with_nans():
     return EnergyTrace("ELECTRICITY_CONSUMPTION_SUPPLIED", df, unit="KWH")
 
 
+@pytest.fixture
+def daily_trace_with_duplicates():
+    data = {"value": np.ones(61)}
+    columns = ["value", "estimated"]
+    index = pd.date_range('2000-01-01', periods=60, freq='D', tz=pytz.UTC)
+    index2 = pd.date_range('2000-01-01', periods=1, freq='D', tz=pytz.UTC)
+    df = pd.DataFrame(data, index=index.append(index2), columns=columns)
+    return EnergyTrace("ELECTRICITY_CONSUMPTION_SUPPLIED", df, unit="KWH")
+
+
 def test_basic_daily(daily_trace, mock_isd_weather_source):
     mdf = CaltrackFormatter()
 
@@ -140,6 +150,19 @@ def test_basic_daily_with_nans(daily_trace_with_nans, mock_isd_weather_source):
     assert description.get('start_date') == \
         datetime(2000, 1, 1, tzinfo=pytz.UTC)
     assert description.get('n_rows') == 2
+
+
+def test_basic_daily_with_duplicates(daily_trace_with_duplicates,
+                                     mock_isd_weather_source):
+    mdf = CaltrackFormatter()
+
+    df = mdf.create_input(daily_trace_with_duplicates, mock_isd_weather_source)
+
+    assert 'upd' in df.columns
+    assert 'CDD_70' in df.columns
+    assert 'HDD_60' in df.columns
+    assert df.index[0] == datetime(2000, 1, 1, tzinfo=pytz.UTC)
+    assert df.ndays[0] == 31
 
 
 def test_daily_demand_fixture(daily_trace, mock_isd_weather_source):
