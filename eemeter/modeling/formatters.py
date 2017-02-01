@@ -362,14 +362,25 @@ class CaltrackFormatter(FormatterBase):
 
     def create_daily_data(self, data):
         ''' Helper function to handle monthly or other irregular data.'''
+        data = data[~data.index.duplicated(keep='last')].sort_index()
+        if data.index.freq is None:
+            try:
+                data.index.freq = pd.infer_freq(data.index)
+            except:
+                pass
         if len(data.index) == 0:
             return pd.Series()
-        idx = [data.index[0]]
+        if data.index.freq is not None:
+            idx = [pd.date_range(end=data.index[0], periods=2,
+                                 freq=data.index.freq)[0]]
+        else:
+            idx = [data.index[0]]
         upd = []
-        # Loop through the input data, skipping the first usage number,
+        # Loop through the input data, skipping the first usage number
+        # if the periodicity cannot be inferred,
         # and create a series of usage values by dividing equally across
         # each period.
-        for i in data.index[1:]:
+        for i in data.index.difference(idx):
             start_date = idx[-1]
             ndays = (i - start_date).days
             this_upd = data.value[i] / float(ndays)
@@ -382,6 +393,7 @@ class CaltrackFormatter(FormatterBase):
     def convert_to_monthly(self, df):
         # Convert from daily usage and temperature to monthly
         # usage per day and average HDD/CDD.
+        df = df[~df.index.duplicated(keep='last')].sort_index()
         cdd = {i: [0] for i in self.bp_cdd}
         hdd = {i: [0] for i in self.bp_hdd}
         if len(df.index) == 0:
@@ -436,9 +448,12 @@ class CaltrackFormatter(FormatterBase):
     def create_input(self, trace, weather_source):
         energy = pd.Series()
         if trace.data.index.freq is None:
-            trace.data.index.freq = pd.infer_freq(trace.data.index)
-        if (trace.data.index.freq is None or
-                to_offset(trace.data.index.freq) > to_offset('D')):
+            try:
+                trace.data.index.freq = pd.infer_freq(trace.data.index)
+            except:
+                energy = self.create_daily_data(trace.data)
+        if trace.data.index.freq is None or \
+           to_offset(trace.data.index.freq) > to_offset('D'):
             # Input is less frequent than daily (e.g., monthly)
             energy = self.create_daily_data(trace.data)
         else:
