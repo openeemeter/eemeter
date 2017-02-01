@@ -372,7 +372,7 @@ class CaltrackFormatter(FormatterBase):
             return pd.Series()
         if data.index.freq is not None:
             idx = [pd.date_range(end=data.index[0], periods=2,
-                                  freq=data.index.freq)[0]]
+                                 freq=data.index.freq)[0]]
         else:
             idx = [data.index[0]]
         upd = []
