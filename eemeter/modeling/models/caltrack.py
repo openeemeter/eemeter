@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import patsy
 import statsmodels.formula.api as smf
-
+import eemeter.modeling.exceptions as model_exceptions
 
 class CaltrackMonthlyModel(object):
     ''' This class implements the two-stage modeling routine agreed upon
@@ -39,11 +39,15 @@ class CaltrackMonthlyModel(object):
         ''' Helper function to handle monthly billing or other irregular data.
         '''
         (energy_data, temp_data) = trace_and_temp
+        # Convert billing multiindex to straight index
         temp_data.index = temp_data.index.droplevel()
+        # Resample temperature data to daily
         temp_data = temp_data.resample('D').apply(np.mean)[0]
 
+        # Drop any duplicate indices
         energy_data = energy_data[~energy_data.index.\
             duplicated(keep='last')].sort_index()
+        # Infer data frequency, if necessary and possible
         if energy_data.index.freq is None:
             try:
                 energy_data.index.freq = pd.infer_freq(energy_data.index)
@@ -53,7 +57,10 @@ class CaltrackMonthlyModel(object):
         # Handle short series
         idx = None
         if len(energy_data.index) == 0:
-            raise ValueError("No energy data")
+            raise model_exceptions.DataSufficiencyException("No energy trace data")
+        # If the periodicity is defined, don't throw away the first point
+        # in the trace. If it isn't, then we do have to throw it away
+        # because we don't know how long a period the usage covers.
         if energy_data.index.freq is not None:
             idx = [pd.date_range(end=energy_data.index[0], periods=2,
                                  freq=energy_data.index.freq)[0]]
@@ -70,6 +77,11 @@ class CaltrackMonthlyModel(object):
             for j in pd.date_range(start_date, i)[1:]:
                 idx.append(j)
                 upd.append(this_upd)
+
+        # If we only have our starting date in idx, then there is no
+        # usage data.
+        if len(idx) < 2:
+            raise model_exceptions.DataSufficiencyException("No energy trace data")
         idx = idx[1:]
         # Construct and return data frame
         energy_data = pd.Series(upd, index=pd.DatetimeIndex(idx, freq='D'))
@@ -80,21 +92,29 @@ class CaltrackMonthlyModel(object):
         return model_data
 
     def daily_to_monthly_avg(self, df):
-        # Convert from daily usage and temperature to monthly
-        # usage per day and average HDD/CDD.
+        ''' Convert from daily usage and temperature to monthly
+        usage per day and average HDD/CDD. '''
+
+        # Throw out any duplicate indices
         df = df[~df.index.duplicated(keep='last')].sort_index()
+        # Create arrays to hold computed CDD and HDD for each
+        # balance point temperature.
         cdd = {i: [0] for i in self.bp_cdd}
         hdd = {i: [0] for i in self.bp_hdd}
+
+        # If there isn't any data, throw an exception
         if len(df.index) == 0:
-            df_dict = {'upd': [], 'usage': [], 'ndays': []}
-            df_dict.update({'CDD_' + str(bp): [] for bp in cdd.keys()})
-            df_dict.update({'HDD_' + str(bp): [] for bp in hdd.keys()})
-            return pd.DataFrame(df_dict, index=[])
+            raise model_exceptions.DataSufficiencyException("No energy trace data")
+        # Create the arrays to hold our output
         ndays, usage, upd, output_index = \
             [0], [0], [0], [df.index[0]]
         this_yr, this_mo = output_index[0].year, output_index[0].month
+        # Check whether we are creating a demand fixture.
         is_demand_fixture = 'energy' not in df.columns
+
+        # Loop through the input data frame
         for idx, row in df.iterrows():
+            # Check whether we are in a new month.
             if this_yr != idx.year or this_mo != idx.month:
                 ndays.append(0)
                 usage.append(0)
@@ -105,6 +125,7 @@ class CaltrackMonthlyModel(object):
                     hdd[i].append(0)
                 this_yr, this_mo = idx.year, idx.month
                 output_index.append(idx)
+            # If this day is valid, add it to the usage and CDD/HDD arrays.
             if (is_demand_fixture or np.isfinite(row['energy'])) and \
                np.isfinite(row['tempF']):
                 ndays[-1] = ndays[-1] + 1
@@ -117,9 +138,9 @@ class CaltrackMonthlyModel(object):
                     hdd[bp][-1] = hdd[bp][-1] + \
                         np.maximum(bp - row['tempF'], 0)
 
+        # Caltrack sufficiency requirement of >=15 days per month
         for i in range(len(usage)):
             if (ndays[i] < 15):
-                # Caltrack sufficiency requirement of >=15 days per month
                 upd[i] = np.nan
                 for bp in cdd.keys():
                     cdd[bp][i] = np.nan
@@ -131,6 +152,8 @@ class CaltrackMonthlyModel(object):
                     cdd[bp][i] = cdd[bp][i] / ndays[i]
                 for bp in hdd.keys():
                     hdd[bp][i] = hdd[bp][i] / ndays[i]
+
+        # Create output data frame
         df_dict = {'upd': upd, 'usage': usage, 'ndays': ndays}
         df_dict.update({'CDD_' + str(bp): cdd[bp] for bp in cdd.keys()})
         df_dict.update({'HDD_' + str(bp): hdd[bp] for bp in hdd.keys()})
@@ -252,7 +275,8 @@ class CaltrackMonthlyModel(object):
         # Now we take the best qualified model.
         if (full_qualified or hdd_qualified or
            cdd_qualified or int_qualified) is False:
-            raise ValueError("No candidate model fit to data successfully")
+            raise model_exceptions.ModelFitException(\
+                "No candidate model fit to data successfully")
             return None
         if full_qualified and full_rsquared > \
            max([int(hdd_qualified) * hdd_rsquared,
@@ -378,15 +402,19 @@ class CaltrackMonthlyModel(object):
         _, X = patsy.dmatrices(formula, dfd,
                                return_type='dataframe')
 
-        predicted = self.model_res.predict(X)
-        predicted = pd.Series(predicted, index=dfd.index)
-        variance = copy.deepcopy(predicted)
-        # Get parameter covariance matrix
-        cov = self.model_res.cov_params()
-        # Get prediction errors for each data point
-        prediction_var = self.model_res.mse_resid + \
-            (X * np.dot(cov, X.T).T).sum(1)
-        predicted_baseline_use, predicted_baseline_use_var = 0.0, 0.0
+        try:
+            predicted = self.model_res.predict(X)
+            predicted = pd.Series(predicted, index=dfd.index)
+            variance = copy.deepcopy(predicted)
+            # Get parameter covariance matrix
+            cov = self.model_res.cov_params()
+            # Get prediction errors for each data point
+            prediction_var = self.model_res.mse_resid + \
+                (X * np.dot(cov, X.T).T).sum(1)
+            predicted_baseline_use, predicted_baseline_use_var = 0.0, 0.0
+        except:
+            raise model_exceptions.ModelPredictException(\
+                "Prediction failed!")
 
         # Sum them up using the number of days in the demand fixture.
         for i in demand_fixture_data.index:
