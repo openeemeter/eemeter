@@ -2,6 +2,7 @@ import tempfile
 from datetime import datetime
 
 import numpy as np
+from numpy.testing import assert_allclose
 import pandas as pd
 import pytest
 import pytz
@@ -83,6 +84,14 @@ def test_basic_daily(trace1, mock_isd_weather_source):
         datetime(2011, 4, 29, tzinfo=pytz.UTC)
     assert description.get('n_rows') == 4
 
+    missing = mdbf.get_input_data_mask(input_data)
+    assert missing.shape == (118,)
+    assert sum(missing) == 0
+
+    daily = mdbf.daily_trace_data(trace1)
+    assert daily.shape[0] == 119
+    assert_allclose(daily.sum(), trace1.data.value.sum())
+
 
 def test_empty(trace2, mock_isd_weather_source):
     mdbf = ModelDataBillingFormatter()
@@ -96,6 +105,13 @@ def test_empty(trace2, mock_isd_weather_source):
     assert description.get('start_date') is None
     assert description.get('end_date') is None
     assert description.get('n_rows') == 0
+
+    missing = mdbf.get_input_data_mask(input_data)
+    assert missing.shape == (0,)
+
+    daily = mdbf.daily_trace_data(trace2)
+    assert daily.shape[0] == 1
+    assert_allclose(daily.sum(), trace2.data.value.sum())
 
 
 def test_small(trace3, mock_isd_weather_source):

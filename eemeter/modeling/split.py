@@ -88,26 +88,31 @@ class SplitModeledEnergyTrace(object):
                 input_description = self.formatter.describe_input(input_data)
                 input_serialization = self.formatter.serialize_input(
                     input_data)
+                input_mask = self.formatter.get_input_data_mask(
+                    input_data)
                 outputs.update({
-                    "input_data": input_serialization,
+                    "input_data_serialization": input_serialization,
+                    "input_mask": input_mask,  # missing days
                     "start_date": input_description.get('start_date'),
                     "end_date": input_description.get('end_date'),
                     "n_rows": input_description.get('n_rows'),
+                    "trace": filtered_trace,
                 })
 
                 try:
                     model_fit = model.fit(input_data)
                 except:
+                    tb = traceback.format_exc()
                     logger.warn(
                         'For trace "{}" and modeling_period "{}", {} was not'
-                        ' able to fit using input data: {}'
+                        ' able to fit using input data with traceback:\n{}'
                         .format(self.trace.interpretation,
-                                modeling_period_label, model, input_data)
+                                modeling_period_label, model, tb)
                     )
 
                     outputs.update({
                         "status": "FAILURE",
-                        "traceback": traceback.format_exc(),
+                        "traceback": tb,
                     })
                 else:
                     logger.info(

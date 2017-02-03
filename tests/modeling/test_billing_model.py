@@ -58,23 +58,20 @@ def test_basic_usage(trace, mock_isd_weather_source):
     formatted_predict_data = formatter.create_demand_fixture(
         index, mock_isd_weather_source)
 
-    outputs, lower, upper = model.predict(formatted_predict_data, summed=False)
+    outputs, variance = model.predict(formatted_predict_data, summed=False)
     assert outputs.shape == (365,)
-    assert lower > 0
-    assert upper > 0
+    assert variance > 0
 
     index = pd.date_range('2011-01-01', freq='D', periods=365, tz=pytz.UTC)
     formatted_predict_data = formatter.create_demand_fixture(
         index, mock_isd_weather_source)
 
-    outputs, lower, upper = model.predict(formatted_predict_data, summed=False)
+    outputs, variance = model.predict(formatted_predict_data, summed=False)
     assert outputs.shape == (365,)
-    assert lower > 0
-    assert upper > 0
+    assert variance > 0
 
-    outputs, lower, upper = model.predict(formatted_predict_data, summed=True)
+    outputs, variance = model.predict(formatted_predict_data, summed=True)
     assert outputs > 0
-    assert lower > 0
-    assert upper > 0
+    assert variance > 0
 
     assert "ModelDataBillingFormatter" in str(ModelDataBillingFormatter)

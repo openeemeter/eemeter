@@ -71,12 +71,11 @@ def test_basic(input_df):
     assert_allclose(m.rmse, 0.00100000000, rtol=1e-5, atol=1e-5)
     assert m.y.shape == (365, 1)
 
-    predict, lower, upper = m.predict(input_df, summed=False)
+    predict, variance = m.predict(input_df, summed=False)
 
     assert predict.shape == (365,)
     assert_allclose(predict[datetime(2000, 1, 1, tzinfo=pytz.UTC)], 0.9990000)
-    assert lower > 0
-    assert upper > 0
+    assert variance > 0
 
     assert m.n == 365
     assert 'formula' in m.params
@@ -88,8 +87,7 @@ def test_basic(input_df):
     assert m.y.shape == (365, 1)
 
     # predict w/ error bootstrapping
-    predict, lower, upper = m.predict(input_df)
+    predict, variance = m.predict(input_df)
 
     assert_allclose(predict, 364.635)
-    assert lower > 0
-    assert upper > 0
+    assert variance > 0

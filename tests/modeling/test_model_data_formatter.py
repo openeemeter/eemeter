@@ -58,6 +58,14 @@ def test_basic_daily(daily_trace, mock_isd_weather_source):
         datetime(2000, 1, 3, tzinfo=pytz.UTC)
     assert description.get('n_rows') == 3
 
+    missing = mdf.get_input_data_mask(df)
+    assert missing.shape[0] == 3
+    assert missing.sum() == 1
+
+    daily = mdf.daily_trace_data(daily_trace)
+    assert daily.shape[0] == 3
+    assert_allclose(daily_trace.data.value.sum(), daily.sum())
+
 
 def test_basic_hourly(hourly_trace, mock_isd_weather_source):
     mdf = ModelDataFormatter("H")
@@ -77,6 +85,14 @@ def test_basic_hourly(hourly_trace, mock_isd_weather_source):
     assert description.get('end_date') == \
         datetime(2000, 1, 1, 2, tzinfo=pytz.UTC)
     assert description.get('n_rows') == 3
+
+    missing = mdf.get_input_data_mask(df)
+    assert missing.shape == (3,)
+    assert sum(missing) == 1
+
+    daily = mdf.daily_trace_data(hourly_trace)
+    assert daily.shape[0] == 1
+    assert_allclose(hourly_trace.data.value.sum(), daily.sum())
 
 
 def test_basic_hourly_to_daily(hourly_trace, mock_isd_weather_source):
