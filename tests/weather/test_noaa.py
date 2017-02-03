@@ -123,4 +123,5 @@ def test_isd_repr(mock_isd_weather_source):
     assert str(mock_isd_weather_source) == 'ISDWeatherSource("722880")'
 
 def test_not_mocked():
-    ISDWeatherSource('722880')
+    ws = ISDWeatherSource('722880')
+    ws.add_year_range(2011, 2011)
