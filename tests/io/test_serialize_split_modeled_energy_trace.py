@@ -1,5 +1,6 @@
 from datetime import datetime
 import tempfile
+import json
 
 import numpy as np
 import pandas as pd
@@ -117,6 +118,9 @@ def test_basic_usage_daily(split_modeled_energy_trace_daily):
     serialized = serialize_split_modeled_energy_trace(
         split_modeled_energy_trace_daily)
 
+    # no error
+    json.dumps(serialized)
+
     type_ = serialized["type"]
     assert type_ == "SPLIT_MODELED_ENERGY_TRACE"
 
@@ -169,6 +173,9 @@ def test_basic_usage_daily(split_modeled_energy_trace_daily):
 def test_basic_usage_monthly(split_modeled_energy_trace_monthly):
     serialized = serialize_split_modeled_energy_trace(
         split_modeled_energy_trace_monthly)
+
+    # no error
+    json.dumps(serialized)
 
     fits = serialized["fits"]
     mp1 = fits["modeling_period_1"]

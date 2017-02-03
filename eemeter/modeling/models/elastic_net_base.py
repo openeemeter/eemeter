@@ -31,6 +31,7 @@ class ElasticNetCVBaseModel(object):
         self.params = None
         self.upper = None
         self.lower = None
+        self.variance = None
         self.X = None
         self.y = None
         self.estimated = None
@@ -124,6 +125,7 @@ class ElasticNetCVBaseModel(object):
         c1, c2 = chi2.ppf([0.025, 1 - 0.025], n)
         self.lower = np.sqrt(n / c2) * self.rmse
         self.upper = np.sqrt(n / c1) * self.rmse
+        self.variance = self.rmse ** 2
         self.n = n
 
         # compute bootstrapped empirical errors (if possible) for when we want
@@ -131,7 +133,7 @@ class ElasticNetCVBaseModel(object):
         self.error_fun = self._bootstrap_empirical_errors()
 
         self.params = {
-            "coefficients": model_obj.coef_,
+            "coefficients": list(model_obj.coef_),
             "intercept": model_obj.intercept_,
             "X_design_info": X.design_info,
             "formula": formula,
@@ -244,24 +246,26 @@ class ElasticNetCVBaseModel(object):
         model_obj = linear_model.ElasticNetCV(l1_ratio=self.l1_ratio,
                                               fit_intercept=False)
 
-        model_obj.coef_ = params["coefficients"]
+        model_obj.coef_ = np.array(params["coefficients"])
         model_obj.intercept_ = params["intercept"]
 
-        predicted = pd.Series(model_obj.predict(X), index=X.index)
+        try:
+            predicted = pd.Series(model_obj.predict(X), index=X.index)
+        except:
+            return np.nan, np.nan
 
         if summed:
             n = len(predicted)
             predicted = np.sum(predicted)
             stddev = self.error_fun(n)
+            variance = stddev ** 2
             # Convert to 95% confidence limits
-            lower = stddev * 1.959964 / 2
-            upper = stddev * 1.959964 / 2
         else:
             # add NaNs back in
             predicted = predicted.reindex(model_data.index)
-            lower = self.lower
-            upper = self.upper
-        return predicted, lower, upper
+            variance = self.variance
+
+        return predicted, variance
 
     def calc_gross(self):
         return np.nansum(self.input_data.energy)
