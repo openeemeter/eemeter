@@ -9,7 +9,7 @@ sphinx==1.5.2
 sphinx-rtd-theme==0.1.9
 sphinxcontrib-napoleon==0.6.0
 SQLAlchemy==1.1.5
-tox==2.5.0
+tox==2.6.0
 twine==1.8.1
 xlrd==1.0.0
 numpy==1.12.0
