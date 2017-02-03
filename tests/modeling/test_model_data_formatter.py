@@ -64,7 +64,7 @@ def test_basic_daily(daily_trace, mock_isd_weather_source):
 
     daily = mdf.daily_trace_data(daily_trace)
     assert daily.shape[0] == 3
-    assert_allclose(daily_trace.data.sum(), daily.sum())
+    assert_allclose(daily_trace.data.value.sum(), daily.sum())
 
 
 def test_basic_hourly(hourly_trace, mock_isd_weather_source):
@@ -92,7 +92,7 @@ def test_basic_hourly(hourly_trace, mock_isd_weather_source):
 
     daily = mdf.daily_trace_data(hourly_trace)
     assert daily.shape[0] == 1
-    assert_allclose(hourly_trace.data.sum(), daily.sum())
+    assert_allclose(hourly_trace.data.value.sum(), daily.sum())
 
 
 def test_basic_hourly_to_daily(hourly_trace, mock_isd_weather_source):

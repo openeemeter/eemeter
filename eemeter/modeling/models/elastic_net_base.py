@@ -133,7 +133,7 @@ class ElasticNetCVBaseModel(object):
         self.error_fun = self._bootstrap_empirical_errors()
 
         self.params = {
-            "coefficients": model_obj.coef_,
+            "coefficients": list(model_obj.coef_),
             "intercept": model_obj.intercept_,
             "X_design_info": X.design_info,
             "formula": formula,
@@ -246,10 +246,13 @@ class ElasticNetCVBaseModel(object):
         model_obj = linear_model.ElasticNetCV(l1_ratio=self.l1_ratio,
                                               fit_intercept=False)
 
-        model_obj.coef_ = params["coefficients"]
+        model_obj.coef_ = np.array(params["coefficients"])
         model_obj.intercept_ = params["intercept"]
 
-        predicted = pd.Series(model_obj.predict(X), index=X.index)
+        try:
+            predicted = pd.Series(model_obj.predict(X), index=X.index)
+        except:
+            return np.nan, np.nan
 
         if summed:
             n = len(predicted)
@@ -257,16 +260,11 @@ class ElasticNetCVBaseModel(object):
             stddev = self.error_fun(n)
             variance = stddev ** 2
             # Convert to 95% confidence limits
-            lower = stddev * 1.959964 / 2
-            upper = stddev * 1.959964 / 2
         else:
             # add NaNs back in
             predicted = predicted.reindex(model_data.index)
             variance = self.variance
-            lower = self.lower
-            upper = self.upper
 
-        # TODO: return variance here
         return predicted, variance
 
     def calc_gross(self):
