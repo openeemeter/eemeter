@@ -121,3 +121,6 @@ def test_bad_isd_station():
 
 def test_isd_repr(mock_isd_weather_source):
     assert str(mock_isd_weather_source) == 'ISDWeatherSource("722880")'
+
+def test_not_mocked():
+    ISDWeatherSource('722880')
