@@ -52,22 +52,22 @@ class BillingElasticNetCVModel(ElasticNetCVBaseModel):
 
     def _cdd(self, temperature_data):
         if 'hourly' in temperature_data.index.names:
-            cdd = np.maximum((temperature_data - self.cooling_base_temp)
-                             .groupby(level='period').sum()[0] / 24.0, 0.0)
+            cdd = np.maximum(temperature_data - self.cooling_base_temp, 0.0)\
+                             .groupby(level='period').sum()[0] / 24.0
         elif 'daily' in temperature_data.index.names:
-            cdd = np.maximum((temperature_data - self.cooling_base_temp)
-                             .groupby(level='period').sum()[0], 0.0)
+            cdd = np.maximum(temperature_data - self.cooling_base_temp, 0.0)\
+                             .groupby(level='period').sum()[0]
         else:
             cdd = []
         return cdd
 
     def _hdd(self, temperature_data):
         if 'hourly' in temperature_data.index.names:
-            hdd = np.maximum((self.heating_base_temp - temperature_data)
-                             .groupby(level='period').sum()[0] / 24.0, 0.0)
+            hdd = np.maximum(self.heating_base_temp - temperature_data, 0.0)\
+                             .groupby(level='period').sum()[0] / 24.0
         elif 'daily' in temperature_data.index.names:
-            hdd = np.maximum((self.heating_base_temp - temperature_data)
-                             .groupby(level='period').sum()[0], 0.0)
+            hdd = np.maximum(self.heating_base_temp - temperature_data, 0.0)\
+                             .groupby(level='period').sum()[0]
         else:
             hdd = []
         return hdd
