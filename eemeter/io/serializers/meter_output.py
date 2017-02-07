@@ -42,7 +42,7 @@ def _serialize_fit_outputs(fit_outputs):
                 else output.get("end_date").isoformat()),
             ("n_rows", output.get("n_rows", None)),
             ("model_fit", _serialize_model_fit(output.get("model_fit", None))),
-            ("input_data", output.get("input_data", None)),
+            ("input_data", output.get("input_data_serialization", None)),
         ]))
         for mp_label, output in sorted(fit_outputs.items(), key=lambda x: x[0])
     ])

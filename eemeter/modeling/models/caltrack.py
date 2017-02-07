@@ -5,6 +5,7 @@ import patsy
 import statsmodels.formula.api as smf
 import eemeter.modeling.exceptions as model_exceptions
 
+
 class CaltrackMonthlyModel(object):
     ''' This class implements the two-stage modeling routine agreed upon
     as part of the Caltrack beta test. If fit_cdd is True, then all four
@@ -39,56 +40,42 @@ class CaltrackMonthlyModel(object):
         ''' Helper function to handle monthly billing or other irregular data.
         '''
         (energy_data, temp_data) = trace_and_temp
+
+        # Handle short series
+        if energy_data.empty or temp_data.empty:
+            raise model_exceptions.DataSufficiencyException("No energy trace data")
+
         # Convert billing multiindex to straight index
         temp_data.index = temp_data.index.droplevel()
+
         # Resample temperature data to daily
         temp_data = temp_data.resample('D').apply(np.mean)[0]
 
         # Drop any duplicate indices
-        energy_data = energy_data[~energy_data.index.\
-            duplicated(keep='last')].sort_index()
-        # Infer data frequency, if necessary and possible
-        if energy_data.index.freq is None:
-            try:
-                energy_data.index.freq = pd.infer_freq(energy_data.index)
-            except:
-                pass
+        energy_data = energy_data[
+            ~energy_data.index.duplicated(keep='last')].sort_index()
 
         # Handle short series
-        idx = None
-        if len(energy_data.index) == 0:
+        if energy_data.empty:
             raise model_exceptions.DataSufficiencyException("No energy trace data")
-        # If the periodicity is defined, don't throw away the first point
-        # in the trace. If it isn't, then we do have to throw it away
-        # because we don't know how long a period the usage covers.
-        if energy_data.index.freq is not None:
-            idx = [pd.date_range(end=energy_data.index[0], periods=2,
-                                 freq=energy_data.index.freq)[0]]
-        else:
-            idx = [energy_data.index[0]]
-        upd = []
-        # Loop through the input data, skipping the first usage number,
-        # and create a series of usage values by dividing equally across
-        # each period.
-        for i in energy_data.index.difference(idx):
-            start_date = idx[-1]
-            ndays = (i - start_date).days
-            this_upd = energy_data[i] / float(ndays)
-            for j in pd.date_range(start_date, i)[1:]:
-                idx.append(j)
-                upd.append(this_upd)
 
-        # If we only have our starting date in idx, then there is no
-        # usage data.
-        if len(idx) < 2:
-            raise model_exceptions.DataSufficiencyException("No energy trace data")
-        idx = idx[1:]
-        # Construct and return data frame
-        energy_data = pd.Series(upd, index=pd.DatetimeIndex(idx, freq='D'))
+        # get daily mean values
+        energy_data_daily_mean_values = [
+            value / (e - s).days for value, s, e in
+            zip(energy_data, energy_data.index, energy_data.index[1:])
+        ] + [np.nan]  # add missing last data point, which is null by convention anyhow
+
+        # spread out over the month
+        energy_data_daily = pd.Series(
+            energy_data_daily_mean_values,
+            index=energy_data.index
+            ).resample('D').ffill()[:-1]
+
         model_data = pd.DataFrame({
-            'energy': energy_data.values,
-            'tempF': temp_data.values,
-        }, index=idx)
+            'energy': energy_data_daily,
+            'tempF': temp_data,
+        })
+
         return model_data
 
     def daily_to_monthly_avg(self, df):
@@ -328,23 +315,6 @@ class CaltrackMonthlyModel(object):
         else:
             self.cvrmse = np.nan
 
-        # For justification of these 95% confidence intervals, based on rmse,
-        # see http://stats.stackexchange.com/questions/78079/
-        #     confidence-interval-of-rmse
-        #
-        # > Let xi be your true value for the ith data point and xhat_i the
-        # >   estimated value.
-        # > If we assume that the differences between the estimated and
-        # > true values have
-        # >
-        # > 1. mean zero (i.e. the xhat_i are distributed around xi)
-        # > 2. follow a Normal distribution
-        # > 3. and all have the same standard deviation sigma
-        # > then you really want a confidence interval for sigma
-        # > ...
-        #
-        # We might decide these assumptions don't hold.
-
         n = self.estimated.shape[0]
 
         self.n = n
@@ -433,12 +403,3 @@ class CaltrackMonthlyModel(object):
             predicted = pd.Series(predicted, index=X.index)
             variance = pd.Series(variance, index=X.index)
         return predicted, variance
-
-    # TODO move this to its own model? or use the formatter?
-    def calc_gross(self):
-        gross = 0.0
-        for i in range(len(self.input_data.index)):
-            if np.isfinite(self.input_data.upd):
-                gross = gross + self.input_data.upd[i] * \
-                    self.input_data.ndays[i]
-        return gross

@@ -11,7 +11,43 @@ from eemeter.weather import ISDWeatherSource
 
 
 @pytest.fixture
-def meter_input():
+def project_meter_input():
+    return {
+        "type": "PROJECT_WITH_SINGLE_MODELING_PERIOD_GROUP",
+        "zipcode": "91104",
+        "modeling_period_group": {
+            "baseline_period": {
+                "start": None,
+                "end": "2014-01-01T00:00:00+00:00"
+            },
+            "reporting_period": {
+                "start": "2014-02-01T00:00:00+00:00",
+                "end": None
+            }
+        }
+    }
+
+
+def _electricity_input(records):
+    return {
+        "type": "ARBITRARY_START",
+        "interpretation": "ELECTRICITY_CONSUMPTION_SUPPLIED",
+        "unit": "KWH",
+        "records": records
+    }
+
+
+def _natural_gas_input(records):
+    return {
+        "type": "ARBITRARY_START",
+        "interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
+        "unit": "THERM",
+        "records": records
+    }
+
+
+@pytest.fixture
+def meter_input_daily(project_meter_input):
 
     record_starts = pd.date_range(
         '2012-01-01', periods=365 * 4, freq='D', tz=pytz.UTC)
@@ -26,32 +62,93 @@ def meter_input():
 
     meter_input = {
         "type": "SINGLE_TRACE_SIMPLE_PROJECT",
-        "trace": {
-            "type": "ARBITRARY_START",
-            "interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
-            "unit": "therm",
-            "records": records
-        },
-        "project": {
-            "type": "PROJECT_WITH_SINGLE_MODELING_PERIOD_GROUP",
-            "zipcode": "91104",
-            "modeling_period_group": {
-                "baseline_period": {
-                    "start": None,
-                    "end": "2014-01-01T00:00:00+00:00"
-                },
-                "reporting_period": {
-                    "start": "2014-02-01T00:00:00+00:00",
-                    "end": None
-                }
-            }
-        }
+        "trace": _natural_gas_input(records),
+        "project": project_meter_input,
     }
     return meter_input
 
 
 @pytest.fixture
-def meter_input_strange_interpretation():
+def meter_input_empty(project_meter_input):
+
+    records = []
+
+    meter_input = {
+        "type": "SINGLE_TRACE_SIMPLE_PROJECT",
+        "trace": _natural_gas_input(records),
+        "project": project_meter_input,
+    }
+    return meter_input
+
+
+@pytest.fixture
+def meter_input_daily_baseline_only(project_meter_input):
+
+    record_starts = pd.date_range(
+        '2012-01-01', periods=365 * 1, freq='D', tz=pytz.UTC)
+
+    records = [
+        {
+            "start": dt.isoformat(),
+            "value": 1.0,
+            "estimated": False
+        } for dt in record_starts
+    ]
+
+    meter_input = {
+        "type": "SINGLE_TRACE_SIMPLE_PROJECT",
+        "trace": _natural_gas_input(records),
+        "project": project_meter_input,
+    }
+    return meter_input
+
+
+@pytest.fixture
+def meter_input_daily_reporting_only(project_meter_input):
+
+    record_starts = pd.date_range(
+        '2014-02-01', periods=365 * 1, freq='D', tz=pytz.UTC)
+
+    records = [
+        {
+            "start": dt.isoformat(),
+            "value": 1.0,
+            "estimated": False
+        } for dt in record_starts
+    ]
+
+    meter_input = {
+        "type": "SINGLE_TRACE_SIMPLE_PROJECT",
+        "trace": _natural_gas_input(records),
+        "project": project_meter_input,
+    }
+    return meter_input
+
+
+@pytest.fixture
+def meter_input_monthly(project_meter_input):
+
+    record_starts = pd.date_range(
+        '2012-01-01', periods=50, freq='MS', tz=pytz.UTC)
+
+    records = [
+        {
+            "start": dt.isoformat(),
+            "value": 1.0,
+            "estimated": False
+        } for dt in record_starts
+    ]
+
+    meter_input = {
+        "type": "SINGLE_TRACE_SIMPLE_PROJECT",
+        "trace": _electricity_input(records),
+        "project": project_meter_input,
+    }
+    return meter_input
+
+
+@pytest.fixture
+def meter_input_strange_interpretation(project_meter_input):
 
     record_starts = pd.date_range(
         '2012-01-01', periods=365 * 4, freq='D', tz=pytz.UTC)
@@ -72,20 +169,7 @@ def meter_input_strange_interpretation():
             "unit": "therm",
             "records": records
         },
-        "project": {
-            "type": "PROJECT_WITH_SINGLE_MODELING_PERIOD_GROUP",
-            "zipcode": "91104",
-            "modeling_period_group": {
-                "baseline_period": {
-                    "start": None,
-                    "end": "2014-01-01T00:00:00+00:00"
-                },
-                "reporting_period": {
-                    "start": "2014-02-01T00:00:00+00:00",
-                    "end": None
-                }
-            }
-        }
+        "project": project_meter_input
     }
     return meter_input
 
@@ -107,12 +191,12 @@ def mock_tmy3_weather_source():
     return ws
 
 
-def test_basic_usage(meter_input, mock_isd_weather_source,
-                     mock_tmy3_weather_source):
+def test_basic_usage_daily(
+        meter_input_daily, mock_isd_weather_source, mock_tmy3_weather_source):
 
     meter = EnergyEfficiencyMeter()
 
-    results = meter.evaluate(meter_input,
+    results = meter.evaluate(meter_input_daily,
                              weather_source=mock_isd_weather_source,
                              weather_normal_source=mock_tmy3_weather_source)
 
@@ -157,6 +241,181 @@ def test_basic_usage(meter_input, mock_isd_weather_source,
         ('reporting_model', 'annualized_weather_normal_monthly')
     ])
 
+
+def test_basic_usage_monthly(
+        meter_input_monthly,
+        mock_isd_weather_source,
+        mock_tmy3_weather_source):
+
+    meter = EnergyEfficiencyMeter()
+
+    results = meter.evaluate(meter_input_monthly,
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['status'] == 'SUCCESS'
+    assert results['failure_message'] is None
+    assert len(results['logs']) == 2
+
+    assert results['eemeter_version'] is not None
+    assert results['model_class'] == 'CaltrackMonthlyModel'
+    assert results['model_kwargs'] is not None
+    assert results['formatter_class'] == 'ModelDataBillingFormatter'
+    assert results['formatter_kwargs'] is not None
+
+    assert results['modeled_energy_trace'] is not None
+
+    derivatives = results['derivatives']
+    assert len(derivatives) == 144
+    assert derivatives[0]['modeling_period_group'] == \
+        ('baseline', 'reporting')
+    assert derivatives[0]['orderable'] is None
+    assert derivatives[0]['unit'] is not None
+    assert derivatives[0]['value'] is not None
+    assert derivatives[0]['variance'] is not None
+    assert derivatives[0]['serialized_demand_fixture'] is not None
+
+    source_series = set([(d['source'], d['series']) for d in derivatives])
+    assert source_series == set([
+        ('baseline_model', 'annualized_weather_normal'),
+        ('baseline_model', 'annualized_weather_normal_monthly'),
+        ('baseline_model', 'reporting_cumulative'),
+        ('baseline_model', 'reporting_monthly'),
+        ('baseline_model_minus_observed', 'reporting_cumulative'),
+        ('baseline_model_minus_observed', 'reporting_monthly'),
+        ('baseline_model_minus_reporting_model', 'annualized_weather_normal'),
+        ('baseline_model_minus_reporting_model',
+            'annualized_weather_normal_monthly'),
+        ('observed', 'baseline_monthly'),
+        ('observed', 'project_monthly'),
+        ('observed', 'reporting_cumulative'),
+        ('observed', 'reporting_monthly'),
+        ('reporting_model', 'annualized_weather_normal'),
+        ('reporting_model', 'annualized_weather_normal_monthly')
+    ])
+
+
+def test_basic_usage_baseline_only(
+        meter_input_daily_baseline_only,
+        mock_isd_weather_source,
+        mock_tmy3_weather_source):
+
+    meter = EnergyEfficiencyMeter()
+
+    results = meter.evaluate(meter_input_daily_baseline_only,
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['status'] == 'SUCCESS'
+    assert results['failure_message'] is None
+    assert len(results['logs']) == 2
+
+    assert results['eemeter_version'] is not None
+    assert results['model_class'] == 'CaltrackMonthlyModel'
+    assert results['model_kwargs'] is not None
+    assert results['formatter_class'] == 'ModelDataFormatter'
+    assert results['formatter_kwargs'] is not None
+
+    assert results['modeled_energy_trace'] is not None
+
+    derivatives = results['derivatives']
+    assert len(derivatives) == 26
+    assert derivatives[0]['modeling_period_group'] == \
+        ('baseline', 'reporting')
+    assert derivatives[0]['orderable'] is None
+    assert derivatives[0]['unit'] is not None
+    assert derivatives[0]['value'] is not None
+    assert derivatives[0]['variance'] is not None
+    assert derivatives[0]['serialized_demand_fixture'] is not None
+
+    source_series = set([(d['source'], d['series']) for d in derivatives])
+    assert source_series == set([
+        ('baseline_model', 'annualized_weather_normal'),
+        ('baseline_model', 'annualized_weather_normal_monthly'),
+        # ('baseline_model', 'reporting_cumulative'),
+        # ('baseline_model', 'reporting_monthly'),
+        # ('baseline_model_minus_observed', 'reporting_cumulative'),
+        # ('baseline_model_minus_observed', 'reporting_monthly'),
+        # ('baseline_model_minus_reporting_model', 'annualized_weather_normal'),
+        # ('baseline_model_minus_reporting_model',
+        #     'annualized_weather_normal_monthly'),
+        ('observed', 'baseline_monthly'),
+        # ('observed', 'project_monthly'),
+        ('observed', 'reporting_cumulative'),
+        # ('observed', 'reporting_monthly'),
+        # ('reporting_model', 'annualized_weather_normal'),
+        # ('reporting_model', 'annualized_weather_normal_monthly')
+    ])
+
+
+def test_basic_usage_reporting_only(
+        meter_input_daily_reporting_only,
+        mock_isd_weather_source,
+        mock_tmy3_weather_source):
+
+    meter = EnergyEfficiencyMeter()
+
+    results = meter.evaluate(meter_input_daily_reporting_only,
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['status'] == 'SUCCESS'
+    assert results['failure_message'] is None
+    assert len(results['logs']) == 2
+
+    assert results['eemeter_version'] is not None
+    assert results['model_class'] == 'CaltrackMonthlyModel'
+    assert results['model_kwargs'] is not None
+    assert results['formatter_class'] == 'ModelDataFormatter'
+    assert results['formatter_kwargs'] is not None
+
+    assert results['modeled_energy_trace'] is not None
+
+    derivatives = results['derivatives']
+    assert len(derivatives) == 27
+    assert derivatives[0]['modeling_period_group'] == \
+        ('baseline', 'reporting')
+    assert derivatives[0]['orderable'] is None
+    assert derivatives[0]['unit'] is not None
+    assert derivatives[0]['value'] is not None
+    assert derivatives[0]['variance'] is not None
+    assert derivatives[0]['serialized_demand_fixture'] is not None
+
+    source_series = set([(d['source'], d['series']) for d in derivatives])
+    assert source_series == set([
+        # ('baseline_model', 'annualized_weather_normal'),
+        # ('baseline_model', 'annualized_weather_normal_monthly'),
+        # ('baseline_model', 'reporting_cumulative'),
+        # ('baseline_model', 'reporting_monthly'),
+        # ('baseline_model_minus_observed', 'reporting_cumulative'),
+        # ('baseline_model_minus_observed', 'reporting_monthly'),
+        # ('baseline_model_minus_reporting_model', 'annualized_weather_normal'),
+        # ('baseline_model_minus_reporting_model',
+        #     'annualized_weather_normal_monthly'),
+        # ('observed', 'baseline_monthly'),
+        ('observed', 'project_monthly'),
+        ('observed', 'reporting_cumulative'),
+        ('observed', 'reporting_monthly'),
+        ('reporting_model', 'annualized_weather_normal'),
+        ('reporting_model', 'annualized_weather_normal_monthly')
+    ])
+
+
+def test_basic_usage_empty(
+        meter_input_empty,
+        mock_isd_weather_source,
+        mock_tmy3_weather_source):
+
+    meter = EnergyEfficiencyMeter()
+
+    results = meter.evaluate(meter_input_empty,
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['status'] == 'SUCCESS'
+    assert results['failure_message'] is None
+    assert results['modeled_energy_trace'] is not None
+    assert len(results['derivatives']) == 0
 
 def test_bad_meter_input(mock_isd_weather_source, mock_tmy3_weather_source):
 

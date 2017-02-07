@@ -187,7 +187,7 @@ class ModelDataFormatter(FormatterBase):
     def daily_trace_data(self, trace):
         ''' Transforms a trace for this formatter to a daily series
         '''
-        return trace.data.resample('D').sum()
+        return trace.data.value.resample('D').sum()  # discard 'estimated' col
 
 
 class ModelDataBillingFormatter(FormatterBase):

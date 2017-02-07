@@ -10,3 +10,4 @@ dist/
 !.travis.yml
 !.coveragerc
 !.gitattributes
+!.pyup.yml
