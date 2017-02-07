@@ -249,7 +249,12 @@ class ElasticNetCVBaseModel(object):
         model_obj.coef_ = params["coefficients"]
         model_obj.intercept_ = params["intercept"]
 
-        predicted = pd.Series(model_obj.predict(X), index=X.index)
+        try:
+            predicted = pd.Series(model_obj.predict(X), index=X.index)
+        except ValueError:
+            predicted = None
+            variance = None
+            return predicted, variance
 
         if summed:
             n = len(predicted)

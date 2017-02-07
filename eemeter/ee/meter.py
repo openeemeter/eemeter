@@ -417,6 +417,13 @@ class EnergyEfficiencyMeter(object):
 
             def subtract_value_variance_tuple(tuple1, tuple2):
                 (val1, var1), (val2, var2) = tuple1, tuple2
+                try:
+                    assert val1 is not None
+                    assert val2 is not None
+                    assert var1 is not None
+                    assert var2 is not None
+                except:
+                    return (None, None)
                 return (val1 - val2, (var1**2 + var2**2)**0.5)
 
             raw_derivatives = []
