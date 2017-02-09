@@ -328,7 +328,9 @@ class EnergyEfficiencyMeter(object):
 
         # Step 8: create split modeled energy trace
         model_mapping = {
-            modeling_period_label: ModelClass(**model_kwargs)
+            modeling_period_label: ModelClass(\
+                modeling_period_interpretation=modeling_period_label, \
+                **model_kwargs)
             for modeling_period_label, _ in
             modeling_period_set.iter_modeling_periods()
         }
@@ -351,6 +353,20 @@ class EnergyEfficiencyMeter(object):
 
             baseline_model_success = (baseline_output["status"] == "SUCCESS")
             reporting_model_success = (reporting_output["status"] == "SUCCESS")
+            if not baseline_model_success:
+                message = (
+                    "Baseline model fit failed, so no derivatives will be returned."
+                )
+                output['status'] == FAILURE
+                output['failure_message'] = message
+                return output
+            if not reporting_model_success:
+                message = (
+                    "Reporting model fit failed, so no derivatives will be returned."
+                )
+                output['status'] == FAILURE
+                output['failure_message'] = message
+                return output
 
             formatter = modeled_trace.formatter
             unit = modeled_trace.trace.unit
