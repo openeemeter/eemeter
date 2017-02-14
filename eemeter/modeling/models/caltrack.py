@@ -196,13 +196,18 @@ class CaltrackMonthlyModel(object):
                 "Energy trace data does not meet minimum contiguous "+\
                 "months requirement")
 
+        try:
+            assert np.nansum(df['upd'].values) > 0.01
+        except:
+            raise model_exceptions.DataSufficiencyException(\
+                "Energy trace data is all or nearly all zero")
+
         # Fit the intercept-only model
         int_formula = 'upd ~ 1'
         try:
             int_mod = smf.ols(formula=int_formula, data=df)
             int_res = int_mod.fit()
-            int_rsquared = int_res.rsquared \
-                if np.isfinite(int_res.rsquared) else 0
+            int_rsquared = 0.0
             int_qualified = True
         except:
             int_rsquared, int_qualified = 0, False
