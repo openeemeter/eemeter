@@ -252,10 +252,11 @@ class EnergyEfficiencyMeter(object):
                 "Using weather_normal_source {}"
                 .format(weather_normal_source)
             )
+            output['weather_normal_source_station'] = None
         else:
             message = "Using supplied weather_normal_source"
             logger.info(message)
-        output['weather_normal_source_station'] = weather_normal_source.station
+            output['weather_normal_source_station'] = weather_normal_source.station
         output['logs'].append(message)
 
         # Step 3: Check to see if trace is placeholder. If so,
