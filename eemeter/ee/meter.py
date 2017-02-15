@@ -354,20 +354,6 @@ class EnergyEfficiencyMeter(object):
 
             baseline_model_success = (baseline_output["status"] == "SUCCESS")
             reporting_model_success = (reporting_output["status"] == "SUCCESS")
-            if not baseline_model_success:
-                message = (
-                    "Baseline model fit failed, so no derivatives will be returned."
-                )
-                output['status'] == FAILURE
-                output['failure_message'] = message
-                return output
-            if not reporting_model_success:
-                message = (
-                    "Reporting model fit failed, so no derivatives will be returned."
-                )
-                output['status'] == FAILURE
-                output['failure_message'] = message
-                return output
 
             formatter = modeled_trace.formatter
             unit = modeled_trace.trace.unit
@@ -440,10 +426,11 @@ class EnergyEfficiencyMeter(object):
 
                 # Apply mask which indicates where data is missing (with daily
                 # resolution)
-                reporting_mask = reporting_output['input_mask']
-                for i, mask in reporting_mask.iteritems():
-                    if pd.isnull(mask):
-                        reporting_period_daily_fixture[i] = np.nan
+                if 'input_mask' in reporting_output.keys():
+                    reporting_mask = reporting_output['input_mask']
+                    for i, mask in reporting_mask.iteritems():
+                        if pd.isnull(mask):
+                            reporting_period_daily_fixture[i] = np.nan
 
                 reporting_period_daily_fixture_monthly = \
                     by_month(reporting_period_daily_fixture)
