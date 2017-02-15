@@ -28,6 +28,24 @@ def project_meter_input():
     }
 
 
+@pytest.fixture
+def project_meter_input_bad_zipcode():
+    return {
+        "type": "PROJECT_WITH_SINGLE_MODELING_PERIOD_GROUP",
+        "zipcode": "11111",  # not valid
+        "modeling_period_group": {
+            "baseline_period": {
+                "start": None,
+                "end": "2014-01-01T00:00:00+00:00"
+            },
+            "reporting_period": {
+                "start": "2014-02-01T00:00:00+00:00",
+                "end": None
+            }
+        }
+    }
+
+
 def _electricity_input(records):
     return {
         "type": "ARBITRARY_START",
@@ -170,6 +188,28 @@ def meter_input_strange_interpretation(project_meter_input):
             "records": records
         },
         "project": project_meter_input
+    }
+    return meter_input
+
+
+@pytest.fixture
+def meter_input_bad_zipcode(project_meter_input_bad_zipcode):
+
+    record_starts = pd.date_range(
+        '2012-01-01', periods=50, freq='MS', tz=pytz.UTC)
+
+    records = [
+        {
+            "start": dt.isoformat(),
+            "value": 1.0,
+            "estimated": False
+        } for dt in record_starts
+    ]
+
+    meter_input = {
+        "type": "SINGLE_TRACE_SIMPLE_PROJECT",
+        "trace": _electricity_input(records),
+        "project": project_meter_input_bad_zipcode,
     }
     return meter_input
 
@@ -441,3 +481,33 @@ def test_strange_interpretation(meter_input_strange_interpretation,
 
     assert results['status'] == 'FAILURE'
     assert results['failure_message'].startswith("Default formatter")
+
+
+def test_bad_zipcode(meter_input_bad_zipcode):
+
+    meter = EnergyEfficiencyMeter()
+
+    results = meter.evaluate(meter_input_bad_zipcode)
+
+    derivatives = results['derivatives']
+    assert len(derivatives) == 53
+
+    source_series = set([(d['source'], d['series']) for d in derivatives])
+    assert source_series == set([
+        # ('baseline_model', 'annualized_weather_normal'),
+        # ('baseline_model', 'annualized_weather_normal_monthly'),
+        # ('baseline_model', 'reporting_cumulative'),
+        # ('baseline_model', 'reporting_monthly'),
+        # ('baseline_model_minus_observed', 'reporting_cumulative'),
+        # ('baseline_model_minus_observed', 'reporting_monthly'),
+        # ('baseline_model_minus_reporting_model', 'annualized_weather_normal'),
+        # ('baseline_model_minus_reporting_model',
+        #     'annualized_weather_normal_monthly'),
+        ('observed', 'baseline_monthly'),
+        ('observed', 'project_monthly'),
+        ('observed', 'reporting_cumulative'),
+        ('observed', 'reporting_monthly'),
+        # ('reporting_model', 'annualized_weather_normal'),
+        # ('reporting_model', 'annualized_weather_normal_monthly')
+    ])
+
