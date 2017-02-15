@@ -239,10 +239,11 @@ class EnergyEfficiencyMeter(object):
         if weather_source is None:
             weather_source = get_weather_source(site)
             message = "Using weather_source {}".format(weather_source)
+            output['weather_source_station'] = None
         else:
             message = "Using supplied weather_source"
             logger.info(message)
-        output['weather_source_station'] = weather_source.station
+            output['weather_source_station'] = weather_source.station
         output['logs'].append(message)
 
         if weather_normal_source is None:
