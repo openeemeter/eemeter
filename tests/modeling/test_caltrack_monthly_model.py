@@ -1,5 +1,5 @@
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 import pandas as pd
@@ -40,8 +40,8 @@ def daily_trace():
 @pytest.fixture
 def billing_trace():
     data = {
-        "value": [1, 1, 1, 1, np.nan],
-        "estimated": [False, False, True, False, False]
+        "value": [1, 1, 1, 1, np.nan] + [1,]*13,
+        "estimated": [False, False, True, False, False] + [False,]*13
     }
     columns = ["value", "estimated"]
     index = [
@@ -50,7 +50,9 @@ def billing_trace():
         datetime(2011, 3, 2, tzinfo=pytz.UTC),
         datetime(2011, 4, 3, tzinfo=pytz.UTC),
         datetime(2011, 4, 29, tzinfo=pytz.UTC),
-    ]
+    ] + [ 
+        datetime(2011, 6, 1, tzinfo=pytz.UTC) + \
+        timedelta(days=30*i) for i in range(13) ]
     df = pd.DataFrame(data, index=index, columns=columns)
     return EnergyTrace("ELECTRICITY_CONSUMPTION_SUPPLIED", df, unit="KWH")
 
