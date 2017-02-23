@@ -491,12 +491,18 @@ class EnergyEfficiencyMeter(object):
             if baseline_model_success and reporting_model_success \
                     and weather_normal_source_success:
                 series = 'Cumulative baseline model minus reporting model, normal year'
+                description = '''Total predicted usage according to the baseline model
+                                 over the normal weather year, minus the total predicted
+                                 usage according to the reporting model over the normal
+                                 weather year. Days for which normal year weather data
+                                 does not exist are removed.'''
                 try:
                     value, variance = subtract_value_variance_tuple(
                         baseline_model.predict(annualized_daily_fixture, summed=True),
                         reporting_model.predict(annualized_daily_fixture, summed=True))
                     raw_derivatives.append({
                         'series': series,
+                        'description': description,
                         'orderable': None,
                         'value': value,
                         'variance': variance
@@ -505,12 +511,17 @@ class EnergyEfficiencyMeter(object):
                     _report_failed_derivative(series)
 
                 series = 'Baseline model minus reporting model, normal year'
+                description = '''Predicted usage according to the baseline model
+                                 over the normal weather year, minus the predicted
+                                 usage according to the reporting model over the normal
+                                 weather year.'''
                 try:
                     value, variance = subtract_value_variance_tuple(
                         baseline_model.predict(annualized_daily_fixture),
                         reporting_model.predict(annualized_daily_fixture))
                     raw_derivatives.append({
                         'series': series,
+                        'description': description,
                         'orderable': [i.isoformat() for i in value.index],
                         'value': value.values,
                         'variance': variance.values
@@ -522,11 +533,15 @@ class EnergyEfficiencyMeter(object):
             if baseline_model_success:
                 if weather_normal_source_success:
                     series = 'Cumulative baseline model, normal year'
+                    description = '''Total predicted usage according to the baseline model
+                                     over the normal weather year. Days for which normal
+                                     year weather data does not exist are removed.'''
                     try:
                         value, variance = baseline_model.predict(
                                     annualized_daily_fixture, summed=True)
                         raw_derivatives.append({
                             'series': series,
+                            'description': description,
                             'orderable': None,
                             'value': value,
                             'variance': variance
@@ -535,11 +550,14 @@ class EnergyEfficiencyMeter(object):
                         _report_failed_derivative(series)
 
                     series = 'Baseline model, normal year'
+                    description = '''Predicted usage according to the baseline model
+                                     over the normal weather year.'''
                     try:
                         value, variance = baseline_model.predict(
                                     annualized_daily_fixture)
                         raw_derivatives.append({
                             'series': series,
+                            'description': description,
                             'orderable': [i.isoformat() for i in value],
                             'value': value.values,
                             'variance': variance.values
@@ -550,11 +568,15 @@ class EnergyEfficiencyMeter(object):
 
                 if weather_source_success:
                     series = 'Cumulative baseline model, reporting period'
+                    description = '''Total predicted usage according to the baseline model
+                                     over the reporting period. Days for which reporting
+                                     period weather data does not exist are removed.'''
                     try:
                         value, variance = baseline_model.predict(
                                 reporting_period_daily_fixture, summed=True)
                         raw_derivatives.append({
                             'series': series,
+                            'description': description,
                             'orderable': None,
                             'value': value,
                             'variance': variance
@@ -563,11 +585,14 @@ class EnergyEfficiencyMeter(object):
                         _report_failed_derivative(series)
 
                     series = 'Baseline model, reporting period'
+                    description = '''Predicted usage according to the baseline model
+                                     over the reporting period.'''
                     try:
                         value, variance = baseline_model.predict(
                                 reporting_period_daily_fixture)
                         raw_derivatives.append({
                             'series': series,
+                            'description': description,
                             'orderable': [i.isoformat() for i in value.index],
                             'value': value.values,
                             'variance': variance.values
@@ -577,6 +602,10 @@ class EnergyEfficiencyMeter(object):
 
 
                     series = 'Cumulative baseline model minus observed, reporting period'
+                    description = '''Total predicted usage according to the baseline model
+                                     minus observed usage over the reporting period. 
+                                     Days for which reporting period weather data or usage
+                                     do not exist are removed.'''
                     try:
                         value, variance = subtract_value_variance_tuple(
                                 baseline_model.predict(
@@ -585,6 +614,7 @@ class EnergyEfficiencyMeter(object):
                             )
                         raw_derivatives.append({
                             'series': series,
+                            'description': description,
                             'orderable': None,
                             'value': value,
                             'variance': variance
@@ -593,6 +623,8 @@ class EnergyEfficiencyMeter(object):
                         _report_failed_derivative(series)
 
                     series = 'Baseline model minus observed, reporting period'
+                    description = '''Predicted usage according to the baseline model
+                                     minus observed usage over the reporting period.'''
                     try:
                         value, variance = subtract_value_variance_tuple(
                                 baseline_model.predict(
@@ -601,6 +633,7 @@ class EnergyEfficiencyMeter(object):
                             )
                         raw_derivatives.append({
                             'series': series,
+                            'description': description,
                             'orderable': [i.isoformat() for i in value.index],
                             'value': value.values,
                             'variance': variance.values
@@ -611,11 +644,15 @@ class EnergyEfficiencyMeter(object):
             if reporting_model_success:
                 if weather_normal_source_success:
                     series = 'Cumulative reporting model, normal year'
+                    description = '''Total predicted usage according to the reporting model
+                                     over the reporting period.  Days for which normal year
+                                     weather data does not exist are removed.'''
                     try:
                         value, variance = reporting_model.predict(
                                     annualized_daily_fixture, summed=True)
                         raw_derivatives.append({
                             'series': series,
+                            'description': description,
                             'orderable': None,
                             'value': value,
                             'variance': variance
@@ -624,11 +661,14 @@ class EnergyEfficiencyMeter(object):
                         _report_failed_derivative(series)
 
                     series = 'Reporting model, normal year'
+                    description = '''Predicted usage according to the reporting model
+                                     over the reporting period.'''
                     try:
                         value, variance = reporting_model.predict(
                                     annualized_daily_fixture)
                         raw_derivatives.append({
                             'series': series,
+                            'description': description,
                             'orderable': [i.isoformat() for i in value.index],
                             'value': value.values,
                             'variance': variance.values
@@ -637,9 +677,13 @@ class EnergyEfficiencyMeter(object):
                         _report_failed_derivative(series)
 
             series = 'Cumulative observed, reporting period'
+            description = '''Total observed usage over the reporting period.
+                             Days for which weather data does not exist
+                             are NOT removed.'''
             try:
                 raw_derivatives.append({
                     'series': series,
+                    'description': description,
                     'orderable': None,
                     'value': reporting_period_data.sum(),
                     'variance': 0
@@ -648,9 +692,11 @@ class EnergyEfficiencyMeter(object):
                 _report_failed_derivative(series)
 
             series = 'Observed, reporting period'
+            description = '''Observed usage over the reporting period.'''
             try:
                 raw_derivatives.append({
                     'series': series,
+                    'description': description,
                     'orderable': [i.isoformat() for i in reporting_period_data.index],
                     'value': reporting_period_data.values,
                     'variance': 0
@@ -659,9 +705,13 @@ class EnergyEfficiencyMeter(object):
                 _report_failed_derivative(series)
 
             series = 'Cumulative observed, baseline period'
+            description = '''Total observed usage over the baseline period.
+                             Days for which weather data does not exist
+                             are NOT removed.'''
             try:
                 raw_derivatives.append({
                     'series': series,
+                    'description': description,
                     'orderable': None,
                     'value': baseline_period_data.sum(),
                     'variance': 0
@@ -670,9 +720,11 @@ class EnergyEfficiencyMeter(object):
                 _report_failed_derivative(series)
 
             series = 'Observed, baseline period'
+            description = '''Observed usage over the baseline period.'''
             try:
                 raw_derivatives.append({
                     'series': series,
+                    'description': description,
                     'orderable': [i.isoformat() for i in baseline_period_data.index],
                     'value': baseline_period_data.values,
                     'variance': 0
@@ -681,9 +733,11 @@ class EnergyEfficiencyMeter(object):
                 _report_failed_derivative(series)
 
             series = 'Observed, project period'
+            description = '''Observed usage over the project period.'''
             try:
                 raw_derivatives.append({
                     'series': series,
+                    'description': description,
                     'orderable': [i.isoformat() for i in project_period_data.index],
                     'value': project_period_data.values,
                     'variance': 0
@@ -692,10 +746,13 @@ class EnergyEfficiencyMeter(object):
                 _report_failed_derivative(series)
 
             series = 'Temperature, baseline period'
+            description = '''Observed temperature (degF) over the baseline period.'''
             try:
                 raw_derivatives.append({
                     'series': series,
-                    'orderable': [i.isoformat() for i in unmasked_baseline_period_daily_fixture.index],
+                    'description': description,
+                    'orderable': [i.isoformat() for i in \
+                                  unmasked_baseline_period_daily_fixture.index],
                     'value': unmasked_baseline_period_daily_fixture['degF'].values,
                     'variance': 0
                 })
@@ -703,10 +760,13 @@ class EnergyEfficiencyMeter(object):
                 _report_failed_derivative(series)
 
             series = 'Temperature, reporting period'
+            description = '''Observed temperature (degF) over the reporting period.'''
             try:
                 raw_derivatives.append({
                     'series': series,
-                    'orderable': [i.isoformat() for i in unmasked_reporting_period_daily_fixture.index],
+                    'description': description,
+                    'orderable': [i.isoformat() for i in \
+                                  unmasked_reporting_period_daily_fixture.index],
                     'value': unmasked_reporting_period_daily_fixture['degF'].values,
                     'variance': 0
                 })
@@ -714,9 +774,12 @@ class EnergyEfficiencyMeter(object):
                 _report_failed_derivative(series)
 
             series = 'Inclusion mask, baseline period'
+            description = '''Mask for baseline period data which is included in 
+                             model and savings cumulatives.'''
             try:
                 raw_derivatives.append({
                     'series': series,
+                    'description': description,
                     'orderable': [i.isoformat() for i in baseline_mask.index],
                     'value': baseline_mask.values,
                     'variance': 0
@@ -725,9 +788,12 @@ class EnergyEfficiencyMeter(object):
                 _report_failed_derivative(series)
 
             series = 'Inclusion mask, reporting period'
+            description = '''Mask for reporting period data which is included in 
+                             model and savings cumulatives.'''
             try:
                 raw_derivatives.append({
                     'series': series,
+                    'description': description,
                     'orderable': [i.isoformat() for i in reporting_mask.index],
                     'value': reporting_mask.values,
                     'variance': 0
@@ -739,6 +805,7 @@ class EnergyEfficiencyMeter(object):
                 Derivative(
                     (baseline_label, reporting_label),
                     d['series'],
+                    d['description'],
                     list(d['orderable']) \
                         if hasattr(d['orderable'], '__iter__') \
                         else [d['orderable'],],
