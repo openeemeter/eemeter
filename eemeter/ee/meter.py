@@ -738,11 +738,16 @@ class EnergyEfficiencyMeter(object):
             derivatives += [
                 Derivative(
                     (baseline_label, reporting_label),
-                    d['source'],
                     d['series'],
-                    d['orderable'],
-                    d['value'],
-                    d['variance'],
+                    list(d['orderable']) \
+                        if hasattr(d['orderable'], '__iter__') \
+                        else [d['orderable'],],
+                    list(d['value']) \
+                        if hasattr(d['value'], '__iter__') \
+                        else [d['value'],],
+                    list(d['variance']) \
+                        if hasattr(d['variance'], '__iter__') \
+                        else [d['variance'],]
                 )
                 for d in raw_derivatives
             ]
