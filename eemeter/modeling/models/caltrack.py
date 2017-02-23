@@ -162,6 +162,21 @@ class CaltrackMonthlyModel(object):
         output = pd.DataFrame(df_dict, index=output_index)
         return output
 
+
+    def monthly_avg_to_daily(self, input_data, index=None):
+        if index is None:
+            index = pd.date_range(
+                input_data.index[0],
+                input_data.index[-1].to_period('M').to_timestamp('M'),
+                freq='d')
+        output_data = input_data.reindex(index, method='bfill')
+        if 'usage' in output_data.columns:
+            del output_data['usage']
+        if 'ndays' in output_data.columns:
+            del output_data['ndays']
+        return output_data
+
+
     def fit(self, input_data):
         self.input_data = input_data
         if isinstance(input_data, tuple):
@@ -415,6 +430,7 @@ class CaltrackMonthlyModel(object):
 
         formula = params["formula"]
 
+        demand_fixture_index = demand_fixture_data.index.copy()
         demand_fixture_data = self.daily_to_monthly_avg(demand_fixture_data)
         dfd = demand_fixture_data.dropna()
 
@@ -449,6 +465,12 @@ class CaltrackMonthlyModel(object):
             predicted = predicted_baseline_use
             variance = predicted_baseline_use_var
         else:
-            predicted = pd.Series(predicted, index=X.index)
-            variance = pd.Series(variance, index=X.index)
+            input_data = pd.DataFrame({
+                'predicted': predicted,
+                'variance': variance},
+                index = X.index)
+            output_data = self.monthly_avg_to_daily(input_data, \
+                index=demand_fixture_index)
+            predicted = output_data['predicted']
+            variance = output_data['variance']
         return predicted, variance
