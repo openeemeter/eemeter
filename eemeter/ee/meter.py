@@ -31,13 +31,11 @@ logger = logging.getLogger(__name__)
 
 Derivative = namedtuple('Derivative', [
     'modeling_period_group',
-    'source',
     'series',
+    'description',
     'orderable',
     'value',
-    'variance',
-    'unit',
-    'serialized_demand_fixture'
+    'variance'
 ])
 
 
@@ -411,6 +409,14 @@ class EnergyEfficiencyMeter(object):
                 reporting_data_start_date = reporting_start_date
                 reporting_data_end_date = reporting_start_date
 
+            if not baseline_period_data.empty:
+                baseline_data_start_date = baseline_period_data.index[0]
+                baseline_data_end_date = baseline_period_data.index[-1]
+            else:
+                baseline_data_start_date = baseline_start_date
+                baseline_data_end_date = baseline_start_date
+
+
             baseline_model = modeled_trace.model_mapping[baseline_label]
             reporting_model = modeled_trace.model_mapping[reporting_label]
 
@@ -438,6 +444,9 @@ class EnergyEfficiencyMeter(object):
                         end=baseline_data_end_date,
                         freq='D',
                         tz=pytz.UTC)
+
+                baseline_period_daily_fixture = formatter.create_demand_fixture(
+                    baseline_period_daily_index, weather_source)
 
                 # Apply mask which indicates where data is missing (with daily
                 # resolution)
@@ -805,7 +814,7 @@ class EnergyEfficiencyMeter(object):
                 Derivative(
                     (baseline_label, reporting_label),
                     d['series'],
-                    d['description'],
+                    reduce(lambda a, b: a + ' ' + b, d['description'].split()),
                     list(d['orderable']) \
                         if hasattr(d['orderable'], '__iter__') \
                         else [d['orderable'],],

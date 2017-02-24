@@ -8,13 +8,11 @@ def serialize_derivatives(derivatives):
 def serialize_derivative(d):
     return OrderedDict([
         ("modeling_period_group", d.modeling_period_group),
-        ("source", d.source),
         ("series", d.series),
+        ("description", d.description),
         ("orderable", d.orderable),
         ("value", d.value),
-        ("variance", d.variance),
-        ("unit", d.unit),
-        ("serialized_demand_fixture", d.serialized_demand_fixture),
+        ("variance", d.variance)
     ])
 
 
