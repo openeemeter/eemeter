@@ -4,6 +4,7 @@ from collections import OrderedDict, namedtuple
 import numpy as np
 import pandas as pd
 import pytz
+from functools import reduce
 
 from eemeter import get_version
 from eemeter.modeling.formatters import (
