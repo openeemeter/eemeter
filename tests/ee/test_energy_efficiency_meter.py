@@ -3,6 +3,7 @@ import tempfile
 import pandas as pd
 import pytest
 import pytz
+import json
 
 from eemeter.ee.meter import EnergyEfficiencyMeter
 from eemeter.testing.mocks import MockWeatherClient
@@ -262,19 +263,21 @@ def test_basic_usage_daily(
 
     source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
-        'Inclusion mask, reporting period', 
-        'Observed, reporting period', 
-        'Cumulative baseline model, normal year', 
-        'Cumulative reporting model, normal year', 
-        'Cumulative baseline model minus reporting model, normal year', 
-        'Inclusion mask, baseline period', 
-        'Observed, baseline period', 
-        'Cumulative baseline model, reporting period', 
-        'Cumulative observed, baseline period', 
-        'Cumulative baseline model minus observed, reporting period', 
-        'Cumulative observed, reporting period', 
+        'Inclusion mask, reporting period',
+        'Observed, reporting period',
+        'Cumulative baseline model, normal year',
+        'Cumulative reporting model, normal year',
+        'Cumulative baseline model minus reporting model, normal year',
+        'Inclusion mask, baseline period',
+        'Observed, baseline period',
+        'Cumulative baseline model, reporting period',
+        'Cumulative observed, baseline period',
+        'Cumulative baseline model minus observed, reporting period',
+        'Cumulative observed, reporting period',
         'Observed, project period'
     ])
+
+    json.dumps(results)
 
 
 def test_basic_usage_monthly(
@@ -310,20 +313,21 @@ def test_basic_usage_monthly(
 
     source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
-        'Inclusion mask, reporting period', 
-        'Observed, reporting period', 
-        'Cumulative baseline model, normal year', 
-        'Cumulative reporting model, normal year', 
-        'Cumulative baseline model minus reporting model, normal year', 
-        'Inclusion mask, baseline period', 
-        'Observed, baseline period', 
-        'Cumulative baseline model, reporting period', 
-        'Cumulative observed, baseline period', 
-        'Cumulative baseline model minus observed, reporting period', 
-        'Cumulative observed, reporting period', 
+        'Inclusion mask, reporting period',
+        'Observed, reporting period',
+        'Cumulative baseline model, normal year',
+        'Cumulative reporting model, normal year',
+        'Cumulative baseline model minus reporting model, normal year',
+        'Inclusion mask, baseline period',
+        'Observed, baseline period',
+        'Cumulative baseline model, reporting period',
+        'Cumulative observed, baseline period',
+        'Cumulative baseline model minus observed, reporting period',
+        'Cumulative observed, reporting period',
         'Observed, project period'
     ])
 
+    json.dumps(results)
 
 def test_basic_usage_baseline_only(
         meter_input_daily_baseline_only,
@@ -358,17 +362,17 @@ def test_basic_usage_baseline_only(
 
     source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
-        'Inclusion mask, reporting period', 
-        'Observed, reporting period', 
-        'Cumulative baseline model, normal year', 
-        #'Cumulative reporting model, normal year', 
-        #'Cumulative baseline model minus reporting model, normal year', 
-        'Inclusion mask, baseline period', 
-        'Observed, baseline period', 
-        #'Cumulative baseline model, reporting period', 
-        'Cumulative observed, baseline period', 
-        #'Cumulative baseline model minus observed, reporting period', 
-        'Cumulative observed, reporting period', 
+        'Inclusion mask, reporting period',
+        'Observed, reporting period',
+        'Cumulative baseline model, normal year',
+        #'Cumulative reporting model, normal year',
+        #'Cumulative baseline model minus reporting model, normal year',
+        'Inclusion mask, baseline period',
+        'Observed, baseline period',
+        #'Cumulative baseline model, reporting period',
+        'Cumulative observed, baseline period',
+        #'Cumulative baseline model minus observed, reporting period',
+        'Cumulative observed, reporting period',
         'Observed, project period'
     ])
 
@@ -406,17 +410,17 @@ def test_basic_usage_reporting_only(
 
     source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
-        'Inclusion mask, reporting period', 
-        'Observed, reporting period', 
-        #'Cumulative baseline model, normal year', 
-        'Cumulative reporting model, normal year', 
-        #'Cumulative baseline model minus reporting model, normal year', 
-        'Inclusion mask, baseline period', 
-        'Observed, baseline period', 
-        #'Cumulative baseline model, reporting period', 
-        'Cumulative observed, baseline period', 
-        #'Cumulative baseline model minus observed, reporting period', 
-        'Cumulative observed, reporting period', 
+        'Inclusion mask, reporting period',
+        'Observed, reporting period',
+        #'Cumulative baseline model, normal year',
+        'Cumulative reporting model, normal year',
+        #'Cumulative baseline model minus reporting model, normal year',
+        'Inclusion mask, baseline period',
+        'Observed, baseline period',
+        #'Cumulative baseline model, reporting period',
+        'Cumulative observed, baseline period',
+        #'Cumulative baseline model minus observed, reporting period',
+        'Cumulative observed, reporting period',
         'Observed, project period'
     ])
 
@@ -474,16 +478,16 @@ def test_bad_zipcode(meter_input_bad_zipcode):
 
     source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
-        #'Inclusion mask, reporting period', 
-        'Observed, reporting period', 
-        #'Cumulative baseline model, normal year', 
-        #'Cumulative reporting model, normal year', 
-        #'Cumulative baseline model minus reporting model, normal year', 
-        #'Inclusion mask, baseline period', 
-        'Observed, baseline period', 
-        #'Cumulative baseline model, reporting period', 
-        'Cumulative observed, baseline period', 
-        #'Cumulative baseline model minus observed, reporting period', 
-        'Cumulative observed, reporting period', 
+        #'Inclusion mask, reporting period',
+        'Observed, reporting period',
+        #'Cumulative baseline model, normal year',
+        #'Cumulative reporting model, normal year',
+        #'Cumulative baseline model minus reporting model, normal year',
+        #'Inclusion mask, baseline period',
+        'Observed, baseline period',
+        #'Cumulative baseline model, reporting period',
+        'Cumulative observed, baseline period',
+        #'Cumulative baseline model minus observed, reporting period',
+        'Cumulative observed, reporting period',
         'Observed, project period'
     ])

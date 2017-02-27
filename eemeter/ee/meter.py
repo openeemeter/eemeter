@@ -613,7 +613,7 @@ class EnergyEfficiencyMeter(object):
 
                     series = 'Cumulative baseline model minus observed, reporting period'
                     description = '''Total predicted usage according to the baseline model
-                                     minus observed usage over the reporting period. 
+                                     minus observed usage over the reporting period.
                                      Days for which reporting period weather data or usage
                                      do not exist are removed.'''
                     try:
@@ -784,28 +784,28 @@ class EnergyEfficiencyMeter(object):
                 _report_failed_derivative(series)
 
             series = 'Inclusion mask, baseline period'
-            description = '''Mask for baseline period data which is included in 
+            description = '''Mask for baseline period data which is included in
                              model and savings cumulatives.'''
             try:
                 raw_derivatives.append({
                     'series': series,
                     'description': description,
                     'orderable': [i.isoformat() for i in baseline_mask.index],
-                    'value': baseline_mask.values,
+                    'value': [bool(v) for v in baseline_mask.values],
                     'variance': 0
                 })
             except:
                 _report_failed_derivative(series)
 
             series = 'Inclusion mask, reporting period'
-            description = '''Mask for reporting period data which is included in 
+            description = '''Mask for reporting period data which is included in
                              model and savings cumulatives.'''
             try:
                 raw_derivatives.append({
                     'series': series,
                     'description': description,
                     'orderable': [i.isoformat() for i in reporting_mask.index],
-                    'value': reporting_mask.values,
+                    'value': [bool(v) for v in reporting_mask.values],
                     'variance': 0
                 })
             except:
