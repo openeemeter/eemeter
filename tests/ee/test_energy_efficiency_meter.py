@@ -253,32 +253,27 @@ def test_basic_usage_daily(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 138
+    assert len(derivatives) == 12
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
-    assert derivatives[0]['orderable'] is None
-    assert derivatives[0]['unit'] is not None
+    assert derivatives[0]['orderable'] == [None]
     assert derivatives[0]['value'] is not None
     assert derivatives[0]['variance'] is not None
-    assert derivatives[0]['serialized_demand_fixture'] is not None
 
-    source_series = set([(d['source'], d['series']) for d in derivatives])
+    source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
-        ('baseline_model', 'annualized_weather_normal'),
-        ('baseline_model', 'annualized_weather_normal_monthly'),
-        ('baseline_model', 'reporting_cumulative'),
-        ('baseline_model', 'reporting_monthly'),
-        ('baseline_model_minus_observed', 'reporting_cumulative'),
-        ('baseline_model_minus_observed', 'reporting_monthly'),
-        ('baseline_model_minus_reporting_model', 'annualized_weather_normal'),
-        ('baseline_model_minus_reporting_model',
-            'annualized_weather_normal_monthly'),
-        ('observed', 'baseline_monthly'),
-        ('observed', 'project_monthly'),
-        ('observed', 'reporting_cumulative'),
-        ('observed', 'reporting_monthly'),
-        ('reporting_model', 'annualized_weather_normal'),
-        ('reporting_model', 'annualized_weather_normal_monthly')
+        'Inclusion mask, reporting period', 
+        'Observed, reporting period', 
+        'Cumulative baseline model, normal year', 
+        'Cumulative reporting model, normal year', 
+        'Cumulative baseline model minus reporting model, normal year', 
+        'Inclusion mask, baseline period', 
+        'Observed, baseline period', 
+        'Cumulative baseline model, reporting period', 
+        'Cumulative observed, baseline period', 
+        'Cumulative baseline model minus observed, reporting period', 
+        'Cumulative observed, reporting period', 
+        'Observed, project period'
     ])
 
 
@@ -306,32 +301,27 @@ def test_basic_usage_monthly(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 144
+    assert len(derivatives) == 12
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
-    assert derivatives[0]['orderable'] is None
-    assert derivatives[0]['unit'] is not None
+    assert derivatives[0]['orderable'] == [None]
     assert derivatives[0]['value'] is not None
     assert derivatives[0]['variance'] is not None
-    assert derivatives[0]['serialized_demand_fixture'] is not None
 
-    source_series = set([(d['source'], d['series']) for d in derivatives])
+    source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
-        ('baseline_model', 'annualized_weather_normal'),
-        ('baseline_model', 'annualized_weather_normal_monthly'),
-        ('baseline_model', 'reporting_cumulative'),
-        ('baseline_model', 'reporting_monthly'),
-        ('baseline_model_minus_observed', 'reporting_cumulative'),
-        ('baseline_model_minus_observed', 'reporting_monthly'),
-        ('baseline_model_minus_reporting_model', 'annualized_weather_normal'),
-        ('baseline_model_minus_reporting_model',
-            'annualized_weather_normal_monthly'),
-        ('observed', 'baseline_monthly'),
-        ('observed', 'project_monthly'),
-        ('observed', 'reporting_cumulative'),
-        ('observed', 'reporting_monthly'),
-        ('reporting_model', 'annualized_weather_normal'),
-        ('reporting_model', 'annualized_weather_normal_monthly')
+        'Inclusion mask, reporting period', 
+        'Observed, reporting period', 
+        'Cumulative baseline model, normal year', 
+        'Cumulative reporting model, normal year', 
+        'Cumulative baseline model minus reporting model, normal year', 
+        'Inclusion mask, baseline period', 
+        'Observed, baseline period', 
+        'Cumulative baseline model, reporting period', 
+        'Cumulative observed, baseline period', 
+        'Cumulative baseline model minus observed, reporting period', 
+        'Cumulative observed, reporting period', 
+        'Observed, project period'
     ])
 
 
@@ -359,32 +349,27 @@ def test_basic_usage_baseline_only(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 26
+    assert len(derivatives) == 8
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
-    assert derivatives[0]['orderable'] is None
-    assert derivatives[0]['unit'] is not None
+    assert derivatives[0]['orderable'] == [None]
     assert derivatives[0]['value'] is not None
     assert derivatives[0]['variance'] is not None
-    assert derivatives[0]['serialized_demand_fixture'] is not None
 
-    source_series = set([(d['source'], d['series']) for d in derivatives])
+    source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
-        ('baseline_model', 'annualized_weather_normal'),
-        ('baseline_model', 'annualized_weather_normal_monthly'),
-        # ('baseline_model', 'reporting_cumulative'),
-        # ('baseline_model', 'reporting_monthly'),
-        # ('baseline_model_minus_observed', 'reporting_cumulative'),
-        # ('baseline_model_minus_observed', 'reporting_monthly'),
-        # ('baseline_model_minus_reporting_model', 'annualized_weather_normal'),
-        # ('baseline_model_minus_reporting_model',
-        #     'annualized_weather_normal_monthly'),
-        ('observed', 'baseline_monthly'),
-        # ('observed', 'project_monthly'),
-        ('observed', 'reporting_cumulative'),
-        # ('observed', 'reporting_monthly'),
-        # ('reporting_model', 'annualized_weather_normal'),
-        # ('reporting_model', 'annualized_weather_normal_monthly')
+        'Inclusion mask, reporting period', 
+        'Observed, reporting period', 
+        'Cumulative baseline model, normal year', 
+        #'Cumulative reporting model, normal year', 
+        #'Cumulative baseline model minus reporting model, normal year', 
+        'Inclusion mask, baseline period', 
+        'Observed, baseline period', 
+        #'Cumulative baseline model, reporting period', 
+        'Cumulative observed, baseline period', 
+        #'Cumulative baseline model minus observed, reporting period', 
+        'Cumulative observed, reporting period', 
+        'Observed, project period'
     ])
 
 
@@ -412,32 +397,27 @@ def test_basic_usage_reporting_only(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 27
+    assert len(derivatives) == 8
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
-    assert derivatives[0]['orderable'] is None
-    assert derivatives[0]['unit'] is not None
+    assert derivatives[0]['orderable'] == [None]
     assert derivatives[0]['value'] is not None
     assert derivatives[0]['variance'] is not None
-    assert derivatives[0]['serialized_demand_fixture'] is not None
 
-    source_series = set([(d['source'], d['series']) for d in derivatives])
+    source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
-        # ('baseline_model', 'annualized_weather_normal'),
-        # ('baseline_model', 'annualized_weather_normal_monthly'),
-        # ('baseline_model', 'reporting_cumulative'),
-        # ('baseline_model', 'reporting_monthly'),
-        # ('baseline_model_minus_observed', 'reporting_cumulative'),
-        # ('baseline_model_minus_observed', 'reporting_monthly'),
-        # ('baseline_model_minus_reporting_model', 'annualized_weather_normal'),
-        # ('baseline_model_minus_reporting_model',
-        #     'annualized_weather_normal_monthly'),
-        # ('observed', 'baseline_monthly'),
-        ('observed', 'project_monthly'),
-        ('observed', 'reporting_cumulative'),
-        ('observed', 'reporting_monthly'),
-        ('reporting_model', 'annualized_weather_normal'),
-        ('reporting_model', 'annualized_weather_normal_monthly')
+        'Inclusion mask, reporting period', 
+        'Observed, reporting period', 
+        #'Cumulative baseline model, normal year', 
+        'Cumulative reporting model, normal year', 
+        #'Cumulative baseline model minus reporting model, normal year', 
+        'Inclusion mask, baseline period', 
+        'Observed, baseline period', 
+        #'Cumulative baseline model, reporting period', 
+        'Cumulative observed, baseline period', 
+        #'Cumulative baseline model minus observed, reporting period', 
+        'Cumulative observed, reporting period', 
+        'Observed, project period'
     ])
 
 
@@ -490,24 +470,20 @@ def test_bad_zipcode(meter_input_bad_zipcode):
     results = meter.evaluate(meter_input_bad_zipcode)
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 53
+    assert len(derivatives) == 5
 
-    source_series = set([(d['source'], d['series']) for d in derivatives])
+    source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
-        # ('baseline_model', 'annualized_weather_normal'),
-        # ('baseline_model', 'annualized_weather_normal_monthly'),
-        # ('baseline_model', 'reporting_cumulative'),
-        # ('baseline_model', 'reporting_monthly'),
-        # ('baseline_model_minus_observed', 'reporting_cumulative'),
-        # ('baseline_model_minus_observed', 'reporting_monthly'),
-        # ('baseline_model_minus_reporting_model', 'annualized_weather_normal'),
-        # ('baseline_model_minus_reporting_model',
-        #     'annualized_weather_normal_monthly'),
-        ('observed', 'baseline_monthly'),
-        ('observed', 'project_monthly'),
-        ('observed', 'reporting_cumulative'),
-        ('observed', 'reporting_monthly'),
-        # ('reporting_model', 'annualized_weather_normal'),
-        # ('reporting_model', 'annualized_weather_normal_monthly')
+        #'Inclusion mask, reporting period', 
+        'Observed, reporting period', 
+        #'Cumulative baseline model, normal year', 
+        #'Cumulative reporting model, normal year', 
+        #'Cumulative baseline model minus reporting model, normal year', 
+        #'Inclusion mask, baseline period', 
+        'Observed, baseline period', 
+        #'Cumulative baseline model, reporting period', 
+        'Cumulative observed, baseline period', 
+        #'Cumulative baseline model minus observed, reporting period', 
+        'Cumulative observed, reporting period', 
+        'Observed, project period'
     ])
-

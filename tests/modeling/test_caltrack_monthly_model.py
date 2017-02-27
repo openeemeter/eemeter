@@ -96,7 +96,7 @@ def test_basic(input_df):
 
     predict, variance = m.predict(input_df, summed=False)
 
-    assert predict.shape == (12,)
+    assert predict.shape == (365,)
     assert_allclose(predict[datetime(2000, 1, 1, tzinfo=pytz.UTC)], 31.)
     assert all(variance > 0)
 
@@ -141,7 +141,7 @@ def test_basic_billing(input_billing_df, mock_isd_weather_source):
         index, mock_isd_weather_source)
 
     outputs, variance = m.predict(formatted_predict_data, summed=False)
-    assert outputs.shape == (12,)
+    assert outputs.shape == (365,)
     assert all(variance > 0)
 
     outputs, variance = m.predict(formatted_predict_data, summed=True)

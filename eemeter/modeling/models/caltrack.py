@@ -169,7 +169,7 @@ class CaltrackMonthlyModel(object):
                 input_data.index[0],
                 input_data.index[-1].to_period('M').to_timestamp('M'),
                 freq='d')
-        output_data = input_data.reindex(index, method='bfill')
+        output_data = input_data.reindex(index, method='ffill')
         if 'usage' in output_data.columns:
             del output_data['usage']
         if 'ndays' in output_data.columns:

@@ -413,8 +413,8 @@ class EnergyEfficiencyMeter(object):
                 baseline_data_start_date = baseline_period_data.index[0]
                 baseline_data_end_date = baseline_period_data.index[-1]
             else:
-                baseline_data_start_date = baseline_start_date
-                baseline_data_end_date = baseline_start_date
+                baseline_data_start_date = baseline_end_date
+                baseline_data_end_date = baseline_end_date
 
 
             baseline_model = modeled_trace.model_mapping[baseline_label]
