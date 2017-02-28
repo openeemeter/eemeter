@@ -513,9 +513,9 @@ class EnergyEfficiencyMeter(object):
                     raw_derivatives.append({
                         'series': series,
                         'description': description,
-                        'orderable': None,
-                        'value': value,
-                        'variance': variance
+                        'orderable': [None],
+                        'value': [value],
+                        'variance': [variance]
                     })
                 except:
                     _report_failed_derivative(series)
@@ -533,8 +533,8 @@ class EnergyEfficiencyMeter(object):
                         'series': series,
                         'description': description,
                         'orderable': [i.isoformat() for i in value.index],
-                        'value': value.values,
-                        'variance': variance.values
+                        'value': value.values.tolist(),
+                        'variance': variance.values.tolist()
                     })
                 except:
                     _report_failed_derivative(series)
@@ -552,9 +552,9 @@ class EnergyEfficiencyMeter(object):
                         raw_derivatives.append({
                             'series': series,
                             'description': description,
-                            'orderable': None,
-                            'value': value,
-                            'variance': variance
+                            'orderable': [None],
+                            'value': [value],
+                            'variance': [variance]
                         })
                     except:
                         _report_failed_derivative(series)
@@ -569,8 +569,8 @@ class EnergyEfficiencyMeter(object):
                             'series': series,
                             'description': description,
                             'orderable': [i.isoformat() for i in value],
-                            'value': value.values,
-                            'variance': variance.values
+                            'value': value.values.tolist(),
+                            'variance': variance.values.tolist()
                         })
                     except:
                         _report_failed_derivative(series)
@@ -587,9 +587,9 @@ class EnergyEfficiencyMeter(object):
                         raw_derivatives.append({
                             'series': series,
                             'description': description,
-                            'orderable': None,
-                            'value': value,
-                            'variance': variance
+                            'orderable': [None],
+                            'value': [value],
+                            'variance': [variance]
                         })
                     except:
                         _report_failed_derivative(series)
@@ -604,8 +604,8 @@ class EnergyEfficiencyMeter(object):
                             'series': series,
                             'description': description,
                             'orderable': [i.isoformat() for i in value.index],
-                            'value': value.values,
-                            'variance': variance.values
+                            'value': value.values.tolist(),
+                            'variance': variance.values.tolist()
                         })
                     except:
                         _report_failed_derivative(series)
@@ -625,9 +625,9 @@ class EnergyEfficiencyMeter(object):
                         raw_derivatives.append({
                             'series': series,
                             'description': description,
-                            'orderable': None,
-                            'value': value,
-                            'variance': variance
+                            'orderable': [None],
+                            'value': [value],
+                            'variance': [variance]
                         })
                     except:
                         _report_failed_derivative(series)
@@ -645,8 +645,8 @@ class EnergyEfficiencyMeter(object):
                             'series': series,
                             'description': description,
                             'orderable': [i.isoformat() for i in value.index],
-                            'value': value.values,
-                            'variance': variance.values
+                            'value': value.values.tolist(),
+                            'variance': variance.values.tolist()
                         })
                     except:
                         _report_failed_derivative(series)
@@ -663,9 +663,9 @@ class EnergyEfficiencyMeter(object):
                         raw_derivatives.append({
                             'series': series,
                             'description': description,
-                            'orderable': None,
-                            'value': value,
-                            'variance': variance
+                            'orderable': [None],
+                            'value': [value],
+                            'variance': [variance]
                         })
                     except:
                         _report_failed_derivative(series)
@@ -680,8 +680,8 @@ class EnergyEfficiencyMeter(object):
                             'series': series,
                             'description': description,
                             'orderable': [i.isoformat() for i in value.index],
-                            'value': value.values,
-                            'variance': variance.values
+                            'value': value.values.tolist(),
+                            'variance': variance.values.tolist()
                         })
                     except:
                         _report_failed_derivative(series)
@@ -694,9 +694,9 @@ class EnergyEfficiencyMeter(object):
                 raw_derivatives.append({
                     'series': series,
                     'description': description,
-                    'orderable': None,
-                    'value': reporting_period_data.sum(),
-                    'variance': 0
+                    'orderable': [None],
+                    'value': [reporting_period_data.sum()],
+                    'variance': [0]
                 })
             except:
                 _report_failed_derivative(series)
@@ -708,8 +708,8 @@ class EnergyEfficiencyMeter(object):
                     'series': series,
                     'description': description,
                     'orderable': [i.isoformat() for i in reporting_period_data.index],
-                    'value': reporting_period_data.values,
-                    'variance': 0
+                    'value': reporting_period_data.values.tolist(),
+                    'variance': [0 for _ in range(reporting_period_data.shape[0])]
                 })
             except:
                 _report_failed_derivative(series)
@@ -722,9 +722,9 @@ class EnergyEfficiencyMeter(object):
                 raw_derivatives.append({
                     'series': series,
                     'description': description,
-                    'orderable': None,
-                    'value': baseline_period_data.sum(),
-                    'variance': 0
+                    'orderable': [None],
+                    'value': [baseline_period_data.sum()],
+                    'variance': [0]
                 })
             except:
                 _report_failed_derivative(series)
@@ -736,8 +736,8 @@ class EnergyEfficiencyMeter(object):
                     'series': series,
                     'description': description,
                     'orderable': [i.isoformat() for i in baseline_period_data.index],
-                    'value': baseline_period_data.values,
-                    'variance': 0
+                    'value': baseline_period_data.values.tolist(),
+                    'variance': [0 for _ in range(baseline_period_data.shape[0])]
                 })
             except:
                 _report_failed_derivative(series)
@@ -749,8 +749,8 @@ class EnergyEfficiencyMeter(object):
                     'series': series,
                     'description': description,
                     'orderable': [i.isoformat() for i in project_period_data.index],
-                    'value': project_period_data.values,
-                    'variance': 0
+                    'value': project_period_data.values.tolist(),
+                    'variance': [0 for _ in range(project_period_data.shape[0])]
                 })
             except:
                 _report_failed_derivative(series)
@@ -763,8 +763,8 @@ class EnergyEfficiencyMeter(object):
                     'description': description,
                     'orderable': [i.isoformat() for i in \
                                   unmasked_baseline_period_daily_fixture.index],
-                    'value': unmasked_baseline_period_daily_fixture['degF'].values,
-                    'variance': 0
+                    'value': unmasked_baseline_period_daily_fixture['degF'].values.tolist(),
+                    'variance': [0 for _ in range(unmasked_baseline_period_daily_fixture['degF'].shape[0])]
                 })
             except:
                 _report_failed_derivative(series)
@@ -777,8 +777,8 @@ class EnergyEfficiencyMeter(object):
                     'description': description,
                     'orderable': [i.isoformat() for i in \
                                   unmasked_reporting_period_daily_fixture.index],
-                    'value': unmasked_reporting_period_daily_fixture['degF'].values,
-                    'variance': 0
+                    'value': unmasked_reporting_period_daily_fixture['degF'].values.tolist(),
+                    'variance': [0 for _ in range(unmasked_reporting_period_daily_fixture['degF'].shape[0])]
                 })
             except:
                 _report_failed_derivative(series)
@@ -792,7 +792,7 @@ class EnergyEfficiencyMeter(object):
                     'description': description,
                     'orderable': [i.isoformat() for i in baseline_mask.index],
                     'value': [bool(v) for v in baseline_mask.values],
-                    'variance': 0
+                    'variance': [0 for _ in range(baseline_mask.shape[0])]
                 })
             except:
                 _report_failed_derivative(series)
@@ -806,7 +806,7 @@ class EnergyEfficiencyMeter(object):
                     'description': description,
                     'orderable': [i.isoformat() for i in reporting_mask.index],
                     'value': [bool(v) for v in reporting_mask.values],
-                    'variance': 0
+                    'variance': [0 for _ in range(reporting_mask.shape[0])]
                 })
             except:
                 _report_failed_derivative(series)
@@ -816,15 +816,9 @@ class EnergyEfficiencyMeter(object):
                     (baseline_label, reporting_label),
                     d['series'],
                     reduce(lambda a, b: a + ' ' + b, d['description'].split()),
-                    list(d['orderable']) \
-                        if hasattr(d['orderable'], '__iter__') \
-                        else [d['orderable'],],
-                    list(d['value']) \
-                        if hasattr(d['value'], '__iter__') \
-                        else [d['value'],],
-                    list(d['variance']) \
-                        if hasattr(d['variance'], '__iter__') \
-                        else [d['variance'],]
+                    d['orderable'],
+                    d['value'],
+                    d['variance'],
                 )
                 for d in raw_derivatives
             ]

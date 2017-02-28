@@ -258,8 +258,6 @@ def test_basic_usage_daily(
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
-    assert derivatives[0]['value'] is not None
-    assert derivatives[0]['variance'] is not None
 
     source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
@@ -276,6 +274,12 @@ def test_basic_usage_daily(
         'Cumulative observed, reporting period',
         'Observed, project period'
     ])
+
+    for d in derivatives:
+        assert isinstance(d['orderable'], list)
+        assert isinstance(d['value'], list)
+        assert isinstance(d['variance'], list)
+        assert len(d['orderable']) == len(d['value']) == len(d['variance'])
 
     json.dumps(results)
 
@@ -308,8 +312,6 @@ def test_basic_usage_monthly(
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
-    assert derivatives[0]['value'] is not None
-    assert derivatives[0]['variance'] is not None
 
     source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
@@ -326,6 +328,12 @@ def test_basic_usage_monthly(
         'Cumulative observed, reporting period',
         'Observed, project period'
     ])
+
+    for d in derivatives:
+        assert isinstance(d['orderable'], list)
+        assert isinstance(d['value'], list)
+        assert isinstance(d['variance'], list)
+        assert len(d['orderable']) == len(d['value']) == len(d['variance'])
 
     json.dumps(results)
 
@@ -357,8 +365,6 @@ def test_basic_usage_baseline_only(
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
-    assert derivatives[0]['value'] is not None
-    assert derivatives[0]['variance'] is not None
 
     source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
@@ -376,6 +382,13 @@ def test_basic_usage_baseline_only(
         'Observed, project period'
     ])
 
+    for d in derivatives:
+        assert isinstance(d['orderable'], list)
+        assert isinstance(d['value'], list)
+        assert isinstance(d['variance'], list)
+        assert len(d['orderable']) == len(d['value']) == len(d['variance'])
+
+    json.dumps(results)
 
 def test_basic_usage_reporting_only(
         meter_input_daily_reporting_only,
@@ -424,6 +437,13 @@ def test_basic_usage_reporting_only(
         'Observed, project period'
     ])
 
+    for d in derivatives:
+        assert isinstance(d['orderable'], list)
+        assert isinstance(d['value'], list)
+        assert isinstance(d['variance'], list)
+        assert len(d['orderable']) == len(d['value']) == len(d['variance'])
+
+    json.dumps(results)
 
 def test_basic_usage_empty(
         meter_input_empty,
@@ -491,3 +511,11 @@ def test_bad_zipcode(meter_input_bad_zipcode):
         'Cumulative observed, reporting period',
         'Observed, project period'
     ])
+
+    for d in derivatives:
+        assert isinstance(d['orderable'], list)
+        assert isinstance(d['value'], list)
+        assert isinstance(d['variance'], list)
+        assert len(d['orderable']) == len(d['value']) == len(d['variance'])
+
+    json.dumps(results)
