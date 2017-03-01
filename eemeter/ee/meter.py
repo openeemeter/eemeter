@@ -436,6 +436,9 @@ class EnergyEfficiencyMeter(object):
 
                 reporting_period_daily_fixture = formatter.create_demand_fixture(
                     reporting_period_daily_index, weather_source)
+                reporting_period_fixture_success = True
+                if len(reporting_period_daily_fixture) == 0:
+                    reporting_period_fixture_success = False
 
                 if baseline_data_start_date == baseline_data_end_date:
                     baseline_period_daily_index = pd.Series([])
@@ -470,6 +473,10 @@ class EnergyEfficiencyMeter(object):
                             baseline_period_daily_fixture[i] = np.nan
                 else:
                     baseline_mask = pd.Series([])
+
+            else:
+                reporting_mask = pd.Series([])
+                baseline_mask = pd.Series([])
 
             def subtract_value_variance_tuple(tuple1, tuple2):
                 (val1, var1), (val2, var2) = tuple1, tuple2
@@ -576,7 +583,7 @@ class EnergyEfficiencyMeter(object):
                         _report_failed_derivative(series)
 
 
-                if weather_source_success:
+                if weather_source_success and reporting_period_fixture_success:
                     series = 'Cumulative baseline model, reporting period'
                     description = '''Total predicted usage according to the baseline model
                                      over the reporting period. Days for which reporting
@@ -755,38 +762,40 @@ class EnergyEfficiencyMeter(object):
             except:
                 _report_failed_derivative(series)
 
-            series = 'Temperature, baseline period'
-            description = '''Observed temperature (degF) over the baseline period.'''
-            try:
-                raw_derivatives.append({
-                    'series': series,
-                    'description': description,
-                    'orderable': [i.isoformat() for i in \
-                                  unmasked_baseline_period_daily_fixture.index],
-                    'value': unmasked_baseline_period_daily_fixture['tempF'].values.tolist(),
-                    'variance': [0 for _ in range(unmasked_baseline_period_daily_fixture['tempF'].shape[0])]
-                })
-            except:
-                _report_failed_derivative(series)
-
-            series = 'Temperature, reporting period'
-            description = '''Observed temperature (degF) over the reporting period.'''
-            try:
-                raw_derivatives.append({
-                    'series': series,
-                    'description': description,
-                    'orderable': [i.isoformat() for i in \
-                                  unmasked_reporting_period_daily_fixture.index],
-                    'value': unmasked_reporting_period_daily_fixture['tempF'].values.tolist(),
-                    'variance': [0 for _ in range(unmasked_reporting_period_daily_fixture['tempF'].shape[0])]
-                })
-            except:
-                _report_failed_derivative(series)
+            if weather_source_success:
+                series = 'Temperature, baseline period'
+                description = '''Observed temperature (degF) over the baseline period.'''
+                try:
+                    raw_derivatives.append({
+                        'series': series,
+                        'description': description,
+                        'orderable': [i.isoformat() for i in \
+                                      unmasked_baseline_period_daily_fixture.index],
+                        'value': unmasked_baseline_period_daily_fixture['tempF'].values.tolist(),
+                        'variance': [0 for _ in range(unmasked_baseline_period_daily_fixture['tempF'].shape[0])]
+                    })
+                except:
+                    _report_failed_derivative(series)
+    
+                series = 'Temperature, reporting period'
+                description = '''Observed temperature (degF) over the reporting period.'''
+                try:
+                    raw_derivatives.append({
+                        'series': series,
+                        'description': description,
+                        'orderable': [i.isoformat() for i in \
+                                      unmasked_reporting_period_daily_fixture.index],
+                        'value': unmasked_reporting_period_daily_fixture['tempF'].values.tolist(),
+                        'variance': [0 for _ in range(unmasked_reporting_period_daily_fixture['tempF'].shape[0])]
+                    })
+                except:
+                    _report_failed_derivative(series)
 
             series = 'Inclusion mask, baseline period'
             description = '''Mask for baseline period data which is included in
                              model and savings cumulatives.'''
-            try:
+            #try:
+            if True:
                 raw_derivatives.append({
                     'series': series,
                     'description': description,
@@ -794,7 +803,8 @@ class EnergyEfficiencyMeter(object):
                     'value': [bool(v) for v in baseline_mask.values],
                     'variance': [0 for _ in range(baseline_mask.shape[0])]
                 })
-            except:
+            #except:
+            else:
                 _report_failed_derivative(series)
 
             series = 'Inclusion mask, reporting period'

@@ -544,7 +544,7 @@ def test_bad_zipcode(meter_input_bad_zipcode):
     results = meter.evaluate(meter_input_bad_zipcode)
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 5
+    assert len(derivatives) == 7
 
     source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
@@ -567,8 +567,8 @@ def test_bad_zipcode(meter_input_bad_zipcode):
 
         'Observed, project period',
 
-        # 'Inclusion mask, baseline period',
-        # 'Inclusion mask, reporting period',
+        'Inclusion mask, baseline period',
+        'Inclusion mask, reporting period',
         # 'Temperature, baseline period',
         # 'Temperature, reporting period',
     ])
