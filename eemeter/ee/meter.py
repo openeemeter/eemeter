@@ -763,7 +763,7 @@ class EnergyEfficiencyMeter(object):
                     'description': description,
                     'orderable': [i.isoformat() for i in \
                                   unmasked_baseline_period_daily_fixture.index],
-                    'value': unmasked_baseline_period_daily_fixture['degF'].values,
+                    'value': unmasked_baseline_period_daily_fixture['tempF'].values,
                     'variance': 0
                 })
             except:
@@ -777,7 +777,7 @@ class EnergyEfficiencyMeter(object):
                     'description': description,
                     'orderable': [i.isoformat() for i in \
                                   unmasked_reporting_period_daily_fixture.index],
-                    'value': unmasked_reporting_period_daily_fixture['degF'].values,
+                    'value': unmasked_reporting_period_daily_fixture['tempF'].values,
                     'variance': 0
                 })
             except:
