@@ -261,25 +261,31 @@ def test_basic_usage_daily(
 
     source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
-        'Inclusion mask, reporting period',
-        'Observed, reporting period',
+        'Cumulative baseline model minus reporting model, normal year',
         'Cumulative baseline model, normal year',
         'Baseline model, normal year',
         'Cumulative reporting model, normal year',
-        'Reporting model, normal year',
-        'Cumulative baseline model minus reporting model, normal year',
         'Baseline model minus reporting model, normal year',
-        'Inclusion mask, baseline period',
-        'Observed, baseline period',
-        'Cumulative baseline model, reporting period',
-        'Baseline model, reporting period',
-        'Cumulative observed, baseline period',
+        'Baseline model, normal year',
+        'Reporting model, normal year',
+
         'Cumulative baseline model minus observed, reporting period',
-        'Baseline model minus observed, reporting period',
+        'Cumulative baseline model, reporting period',
         'Cumulative observed, reporting period',
+        'Baseline model minus observed, reporting period',
+        'Baseline model, reporting period',
+        'Observed, reporting period',
+
+        'Cumulative observed, baseline period',
+        'Observed, baseline period',
+
         'Observed, project period',
+
+        'Inclusion mask, baseline period',
+        'Inclusion mask, reporting period',
+
         'Temperature, baseline period',
-        'Temperature, reporting period'
+        'Temperature, reporting period',
     ])
 
     for d in derivatives:
@@ -322,25 +328,31 @@ def test_basic_usage_monthly(
 
     source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
-        'Inclusion mask, reporting period',
-        'Observed, reporting period',
+        'Cumulative baseline model minus reporting model, normal year',
         'Cumulative baseline model, normal year',
         'Baseline model, normal year',
         'Cumulative reporting model, normal year',
-        'Reporting model, normal year',
-        'Cumulative baseline model minus reporting model, normal year',
         'Baseline model minus reporting model, normal year',
-        'Inclusion mask, baseline period',
-        'Observed, baseline period',
-        'Cumulative baseline model, reporting period',
-        'Baseline model, reporting period',
-        'Cumulative observed, baseline period',
+        'Baseline model, normal year',
+        'Reporting model, normal year',
+
         'Cumulative baseline model minus observed, reporting period',
-        'Baseline model minus observed, reporting period',
+        'Cumulative baseline model, reporting period',
         'Cumulative observed, reporting period',
+        'Baseline model minus observed, reporting period',
+        'Baseline model, reporting period',
+        'Observed, reporting period',
+
+        'Cumulative observed, baseline period',
+        'Observed, baseline period',
+
         'Observed, project period',
+
+        'Inclusion mask, baseline period',
+        'Inclusion mask, reporting period',
+
         'Temperature, baseline period',
-        'Temperature, reporting period'
+        'Temperature, reporting period',
     ])
 
     for d in derivatives:
@@ -382,24 +394,30 @@ def test_basic_usage_baseline_only(
 
     source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
-        'Inclusion mask, reporting period',
-        'Observed, reporting period',
+        # 'Cumulative baseline model minus reporting model, normal year',
         'Cumulative baseline model, normal year',
+        # 'Cumulative reporting model, normal year',
+        # 'Baseline model minus reporting model, normal year',
         'Baseline model, normal year',
-        #'Cumulative reporting model, normal year',
-        #'Cumulative baseline model minus reporting model, normal year',
-        #'Baseline model minus reporting model, normal year',
-        'Inclusion mask, baseline period',
-        'Observed, baseline period',
-        #'Cumulative baseline model, reporting period',
-        #'Baseline model, reporting period',
-        'Cumulative observed, baseline period',
-        #'Cumulative baseline model minus observed, reporting period',
-        #'Baseline model minus observed, reporting period',
+        # 'Reporting model, normal year',
+
+        # 'Cumulative baseline model minus observed, reporting period',
+        # 'Cumulative baseline model, reporting period',
         'Cumulative observed, reporting period',
+        # 'Baseline model minus observed, reporting period',
+        # 'Baseline model, reporting period',
+        'Observed, reporting period',
+
+        'Cumulative observed, baseline period',
+        'Observed, baseline period',
+
         'Observed, project period',
+
+        'Inclusion mask, baseline period',
+        'Inclusion mask, reporting period',
+
         'Temperature, baseline period',
-        'Temperature, reporting period'
+        'Temperature, reporting period',
     ])
 
     for d in derivatives:
@@ -443,17 +461,30 @@ def test_basic_usage_reporting_only(
 
     source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
-        'Inclusion mask, reporting period',
-        'Observed, reporting period',
+        # 'Cumulative baseline model minus reporting model, normal year',
+        # 'Cumulative baseline model, normal year',
         'Cumulative reporting model, normal year',
+        # 'Baseline model minus reporting model, normal year',
+        # 'Baseline model, normal year',
         'Reporting model, normal year',
-        'Inclusion mask, baseline period',
-        'Observed, baseline period',
-        'Cumulative observed, baseline period',
+
+        # 'Cumulative baseline model minus observed, reporting period',
+        # 'Cumulative baseline model, reporting period',
         'Cumulative observed, reporting period',
+        # 'Baseline model minus observed, reporting period',
+        # 'Baseline model, reporting period',
+        'Observed, reporting period',
+
+        'Cumulative observed, baseline period',
+        'Observed, baseline period',
+
         'Observed, project period',
+
+        'Inclusion mask, baseline period',
+        'Inclusion mask, reporting period',
+
         'Temperature, baseline period',
-        'Temperature, reporting period'
+        'Temperature, reporting period',
     ])
 
     for d in derivatives:
@@ -517,11 +548,29 @@ def test_bad_zipcode(meter_input_bad_zipcode):
 
     source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
-        'Observed, reporting period', 
-        'Observed, baseline period', 
-        'Cumulative observed, baseline period', 
-        'Cumulative observed, reporting period', 
+        # 'Cumulative baseline model minus reporting model, normal year',
+        # 'Cumulative baseline model, normal year',
+        # 'Cumulative reporting model, normal year',
+        # 'Baseline model minus reporting model, normal year',
+        # 'Baseline model, normal year',
+        # 'Reporting model, normal year',
+
+        # 'Cumulative baseline model minus observed, reporting period',
+        # 'Cumulative baseline model, reporting period',
+        'Cumulative observed, reporting period',
+        # 'Baseline model minus observed, reporting period',
+        # 'Baseline model, reporting period',
+        'Observed, reporting period',
+
+        'Cumulative observed, baseline period',
+        'Observed, baseline period',
+
         'Observed, project period',
+
+        # 'Inclusion mask, baseline period',
+        # 'Inclusion mask, reporting period',
+        # 'Temperature, baseline period',
+        # 'Temperature, reporting period',
     ])
 
     for d in derivatives:

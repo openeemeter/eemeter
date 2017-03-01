@@ -527,8 +527,8 @@ class EnergyEfficiencyMeter(object):
                                  weather year.'''
                 try:
                     value, variance = subtract_value_variance_tuple(
-                        baseline_model.predict(annualized_daily_fixture),
-                        reporting_model.predict(annualized_daily_fixture))
+                        baseline_model.predict(annualized_daily_fixture, summed=False),
+                        reporting_model.predict(annualized_daily_fixture, summed=False))
                     raw_derivatives.append({
                         'series': series,
                         'description': description,
@@ -564,7 +564,7 @@ class EnergyEfficiencyMeter(object):
                                      over the normal weather year.'''
                     try:
                         value, variance = baseline_model.predict(
-                                    annualized_daily_fixture)
+                                    annualized_daily_fixture, summed=False)
                         raw_derivatives.append({
                             'series': series,
                             'description': description,
@@ -599,7 +599,7 @@ class EnergyEfficiencyMeter(object):
                                      over the reporting period.'''
                     try:
                         value, variance = baseline_model.predict(
-                                reporting_period_daily_fixture)
+                                reporting_period_daily_fixture, summed=False)
                         raw_derivatives.append({
                             'series': series,
                             'description': description,
@@ -638,7 +638,7 @@ class EnergyEfficiencyMeter(object):
                     try:
                         value, variance = subtract_value_variance_tuple(
                                 baseline_model.predict(
-                                    reporting_period_daily_fixture),
+                                    reporting_period_daily_fixture, summed=False),
                                 (reporting_period_data, 0)
                             )
                         raw_derivatives.append({
@@ -675,7 +675,7 @@ class EnergyEfficiencyMeter(object):
                                      over the reporting period.'''
                     try:
                         value, variance = reporting_model.predict(
-                                    annualized_daily_fixture)
+                                    annualized_daily_fixture, summed=False)
                         raw_derivatives.append({
                             'series': series,
                             'description': description,
