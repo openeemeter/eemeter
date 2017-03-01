@@ -794,8 +794,7 @@ class EnergyEfficiencyMeter(object):
             series = 'Inclusion mask, baseline period'
             description = '''Mask for baseline period data which is included in
                              model and savings cumulatives.'''
-            #try:
-            if True:
+            try:
                 raw_derivatives.append({
                     'series': series,
                     'description': description,
@@ -803,8 +802,7 @@ class EnergyEfficiencyMeter(object):
                     'value': [bool(v) for v in baseline_mask.values],
                     'variance': [0 for _ in range(baseline_mask.shape[0])]
                 })
-            #except:
-            else:
+            except:
                 _report_failed_derivative(series)
 
             series = 'Inclusion mask, reporting period'
