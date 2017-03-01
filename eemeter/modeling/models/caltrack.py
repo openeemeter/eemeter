@@ -468,7 +468,7 @@ class CaltrackMonthlyModel(object):
             input_data = pd.DataFrame({
                 'predicted': predicted,
                 'variance': variance},
-                index = X.index)
+                index = predicted.index)
             output_data = self.monthly_avg_to_daily(input_data, \
                 index=demand_fixture_index)
             predicted = output_data['predicted']
