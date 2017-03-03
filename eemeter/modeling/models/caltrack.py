@@ -451,23 +451,23 @@ class CaltrackMonthlyModel(object):
             raise model_exceptions.ModelPredictException(\
                 "Prediction failed!")
 
-        # Sum them up using the number of days in the demand fixture.
-        for i in demand_fixture_data.index:
-            if i not in predicted.index or not np.isfinite(predicted[i]):
-                continue
-            predicted[i] = predicted[i] * demand_fixture_data.ndays[i]
-            predicted_baseline_use = predicted_baseline_use + predicted[i]
-            variance[i] = prediction_var[i] * demand_fixture_data.ndays[i]
-            predicted_baseline_use_var = \
-                predicted_baseline_use_var + variance[i]
-
         if summed:
+        # Sum them up using the number of days in the demand fixture.
+            for i in demand_fixture_data.index:
+                if i not in predicted.index or not np.isfinite(predicted[i]):
+                    continue
+                predicted[i] = predicted[i] * demand_fixture_data.ndays[i]
+                predicted_baseline_use = predicted_baseline_use + predicted[i]
+                variance[i] = prediction_var[i] * demand_fixture_data.ndays[i]
+                predicted_baseline_use_var = \
+                    predicted_baseline_use_var + variance[i]
+    
             predicted = predicted_baseline_use
             variance = predicted_baseline_use_var
         else:
             input_data = pd.DataFrame({
                 'predicted': predicted,
-                'variance': variance},
+                'variance': prediction_var},
                 index = predicted.index)
             output_data = self.monthly_avg_to_daily(input_data, \
                 index=demand_fixture_index)
