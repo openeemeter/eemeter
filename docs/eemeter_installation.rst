@@ -31,8 +31,9 @@ If they fail, please see follow installation instructions for those packages
 (lxml_, numpy_).
 
 Some statsmodels installations require numpy to be installed. If you run into
-errors with the statsmodels installations, be sure numpy is installed before
-attempting to isntall eemeter.
+errors with the statsmodels installation, be sure numpy is installed before
+attempting to install statsmodels. Once statsmodels is installed correctly,
+install eemeter.
 
 .. _Anaconda: https://www.continuum.io/downloads
 .. _lxml: http://lxml.de/installation.html
