@@ -254,7 +254,7 @@ def test_basic_usage_daily(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 19
+    assert len(derivatives) == 21
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
@@ -268,6 +268,7 @@ def test_basic_usage_daily(
         'Baseline model minus reporting model, normal year',
         'Baseline model, normal year',
         'Reporting model, normal year',
+        'Baseline model, baseline period',
 
         'Cumulative baseline model minus observed, reporting period',
         'Cumulative baseline model, reporting period',
@@ -275,6 +276,9 @@ def test_basic_usage_daily(
         'Baseline model minus observed, reporting period',
         'Baseline model, reporting period',
         'Observed, reporting period',
+
+        'Baseline model, baseline period',
+        'Reporting model, reporting period',
 
         'Cumulative observed, baseline period',
         'Observed, baseline period',
@@ -321,7 +325,7 @@ def test_basic_usage_monthly(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 19
+    assert len(derivatives) == 21
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
@@ -342,6 +346,9 @@ def test_basic_usage_monthly(
         'Baseline model minus observed, reporting period',
         'Baseline model, reporting period',
         'Observed, reporting period',
+
+        'Baseline model, baseline period',
+        'Reporting model, reporting period',
 
         'Cumulative observed, baseline period',
         'Observed, baseline period',
@@ -387,7 +394,7 @@ def test_basic_usage_baseline_only(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 11
+    assert len(derivatives) == 12
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
@@ -407,6 +414,9 @@ def test_basic_usage_baseline_only(
         # 'Baseline model minus observed, reporting period',
         # 'Baseline model, reporting period',
         'Observed, reporting period',
+
+        'Baseline model, baseline period',
+        #'Reporting model, reporting period',
 
         'Cumulative observed, baseline period',
         'Observed, baseline period',
@@ -452,7 +462,7 @@ def test_basic_usage_reporting_only(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 11
+    assert len(derivatives) == 12
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
@@ -474,6 +484,9 @@ def test_basic_usage_reporting_only(
         # 'Baseline model minus observed, reporting period',
         # 'Baseline model, reporting period',
         'Observed, reporting period',
+
+        #'Baseline model, baseline period',
+        'Reporting model, reporting period',
 
         'Cumulative observed, baseline period',
         'Observed, baseline period',
@@ -561,6 +574,9 @@ def test_bad_zipcode(meter_input_bad_zipcode):
         # 'Baseline model minus observed, reporting period',
         # 'Baseline model, reporting period',
         'Observed, reporting period',
+
+        #'Baseline model, baseline period',
+        #'Reporting model, reporting period',
 
         'Cumulative observed, baseline period',
         'Observed, baseline period',
