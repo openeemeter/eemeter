@@ -451,6 +451,9 @@ class EnergyEfficiencyMeter(object):
 
                 baseline_period_daily_fixture = formatter.create_demand_fixture(
                     baseline_period_daily_index, weather_source)
+                baseline_period_fixture_success = True
+                if len(baseline_period_daily_fixture) == 0:
+                    baseline_period_fixture_success = False
 
                 # Apply mask which indicates where data is missing (with daily
                 # resolution)
@@ -617,7 +620,6 @@ class EnergyEfficiencyMeter(object):
                     except:
                         _report_failed_derivative(series)
 
-
                     series = 'Cumulative baseline model minus observed, reporting period'
                     description = '''Total predicted usage according to the baseline model
                                      minus observed usage over the reporting period.
@@ -658,6 +660,23 @@ class EnergyEfficiencyMeter(object):
                     except:
                         _report_failed_derivative(series)
 
+                if weather_source_success and baseline_period_fixture_success:
+                    series = 'Baseline model, baseline period'
+                    description = '''Predicted usage according to the baseline model
+                                     over the baseline period.'''
+                    try:
+                        value, variance = baseline_model.predict(
+                                baseline_period_daily_fixture, summed=False)
+                        raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [i.isoformat() for i in baseline_period_daily_fixture.index],
+                            'value': value.tolist(),
+                            'variance': variance.tolist()
+                        })
+                    except:
+                        _report_failed_derivative(series)
+
             if reporting_model_success:
                 if weather_normal_source_success:
                     series = 'Cumulative reporting model, normal year'
@@ -687,6 +706,23 @@ class EnergyEfficiencyMeter(object):
                             'series': series,
                             'description': description,
                             'orderable': [i.isoformat() for i in annualized_daily_fixture.index],
+                            'value': value.tolist(),
+                            'variance': variance.tolist()
+                        })
+                    except:
+                        _report_failed_derivative(series)
+
+                if weather_source_success and reporting_period_fixture_success:
+                    series = 'Reporting model, reporting period'
+                    description = '''Predicted usage according to the reporting model
+                                     over the reporting period.'''
+                    try:
+                        value, variance = reporting_model.predict(
+                                reporting_period_daily_fixture, summed=False)
+                        raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [i.isoformat() for i in reporting_period_daily_fixture.index],
                             'value': value.tolist(),
                             'variance': variance.tolist()
                         })
