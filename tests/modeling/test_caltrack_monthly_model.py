@@ -97,7 +97,7 @@ def test_basic(input_df):
     predict, variance = m.predict(input_df, summed=False)
 
     assert predict.shape == (365,)
-    assert_allclose(predict[datetime(2000, 1, 1, tzinfo=pytz.UTC)], 31.)
+    assert_allclose(predict[datetime(2000, 1, 1, tzinfo=pytz.UTC)], 1.)
     assert all(variance > 0)
 
     assert m.n == 12
