@@ -337,7 +337,6 @@ def test_basic_usage_monthly(
         'Baseline model, normal year',
         'Cumulative reporting model, normal year',
         'Baseline model minus reporting model, normal year',
-        'Baseline model, normal year',
         'Reporting model, normal year',
 
         'Cumulative baseline model minus observed, reporting period',
