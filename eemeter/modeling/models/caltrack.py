@@ -8,11 +8,24 @@ import eemeter.modeling.exceptions as model_exceptions
 
 class CaltrackMonthlyModel(object):
     ''' This class implements the two-stage modeling routine agreed upon
-    as part of the Caltrack beta test. If fit_cdd is True, then all four
-    candidate models (HDD+CDD, CDD-only, HDD-only, and Intercept-only) are
+    as part of the Caltrack beta test. 
+    
+    If fit_cdd is True, then all four candidate models (HDD+CDD, 
+    CDD-only, HDD-only, and Intercept-only) are
     used in stage 1 estimation. If it's false, then only HDD-only and
-    Intercept-only are used. '''
-    def __init__(self, fit_cdd=True, grid_search=False):
+    Intercept-only are used. 
+
+    If grid_search is set to True, the balance point temperatures are
+    determined by maximizing R^2 across the range 50-85 degF. Otherwise,
+    70 and 60 degF are used for cooling and heating, respectively.
+
+    Min_contiguous_months sets the number of contiguous months of data
+    required at the beginning of the reporting period/end of the baseline
+    period in order for the weather normalization to be valid.
+    '''
+    def __init__(self, fit_cdd=True, grid_search=False, \
+                       min_contiguous_months=12, \
+                       modeling_period_interpretation='baseline'):
 
         self.fit_cdd = fit_cdd
         self.grid_search = grid_search
@@ -27,6 +40,8 @@ class CaltrackMonthlyModel(object):
         self.n = None
         self.input_data = None
         self.fit_bp_hdd, self.fit_bp_cdd = None, None
+        self.min_contiguous_months = min_contiguous_months
+        self.modeling_period_interpretation = modeling_period_interpretation
         if grid_search:
             self.bp_cdd = [50, 55, 60, 65, 70, 75, 80, 85]
             self.bp_hdd = [50, 55, 60, 65, 70, 75, 80, 85]
@@ -34,7 +49,7 @@ class CaltrackMonthlyModel(object):
             self.bp_cdd, self.bp_hdd = [70, ], [60, ]
 
     def __repr__(self):
-        return ('Caltrack monthly')
+        return ('CaltrackMonthlyModel')
 
     def billing_to_daily(self, trace_and_temp):
         ''' Helper function to handle monthly billing or other irregular data.
@@ -147,18 +162,67 @@ class CaltrackMonthlyModel(object):
         output = pd.DataFrame(df_dict, index=output_index)
         return output
 
+
+    def monthly_avg_to_daily(self, input_data, index=None):
+        if index is None:
+            index = pd.date_range(
+                input_data.index[0],
+                input_data.index[-1].to_period('M').to_timestamp('M'),
+                freq='d')
+        output_data = input_data.reindex(index, method='ffill')
+        if 'usage' in output_data.columns:
+            del output_data['usage']
+        if 'ndays' in output_data.columns:
+            del output_data['ndays']
+        return output_data
+
+
     def fit(self, input_data):
         self.input_data = input_data
         if isinstance(input_data, tuple):
             self.input_data = self.billing_to_daily(input_data)
         df = self.daily_to_monthly_avg(self.input_data)
+
+        # Caltrack sufficiency requirement of number of contiguous months
+        try:
+            _n = self.min_contiguous_months
+            if self.modeling_period_interpretation == 'baseline':
+                # In the baseline period, require the last N months be non-nan.
+                assert (np.isnan(df['upd'].values[-1]) and \
+                        len(df['upd']) > _n and\
+                        np.sum(~np.isnan(df['upd'].values[-(_n+1):-1]))==_n) or \
+                       (~np.isnan(df['upd'].values[-1]) and \
+                        len(df['upd']) >= _n and\
+                        np.sum(~np.isnan(df['upd'].values[-_n:]))==_n)
+            elif self.modeling_period_interpretation == 'reporting':
+                # In the reporting period, require the first N months be non-nan.
+                assert (np.isnan(df['upd'].values[0]) and \
+                        len(df['upd']) > _n and\
+                        np.sum(~np.isnan(df['upd'].values[1:(_n+1)]))==_n) or \
+                       (~np.isnan(df['upd'].values[0]) and \
+                        len(df['upd']) >= _n and\
+                        np.sum(~np.isnan(df['upd'].values[:_n]))==_n)
+            else:
+                # If this trace is neither a baseline nor a reporting period,
+                # don't impose the requirement.
+                pass
+        except:
+            raise model_exceptions.DataSufficiencyException(\
+                "Energy trace data does not meet minimum contiguous "+\
+                "months requirement")
+
+        try:
+            assert np.nansum(df['upd'].values) > 0.01
+        except:
+            raise model_exceptions.DataSufficiencyException(\
+                "Energy trace data is all or nearly all zero")
+
         # Fit the intercept-only model
         int_formula = 'upd ~ 1'
         try:
             int_mod = smf.ols(formula=int_formula, data=df)
             int_res = int_mod.fit()
-            int_rsquared = int_res.rsquared \
-                if np.isfinite(int_res.rsquared) else 0
+            int_rsquared = 0.0
             int_qualified = True
         except:
             int_rsquared, int_qualified = 0, False
@@ -366,6 +430,7 @@ class CaltrackMonthlyModel(object):
 
         formula = params["formula"]
 
+        demand_fixture_index = demand_fixture_data.index.copy()
         demand_fixture_data = self.daily_to_monthly_avg(demand_fixture_data)
         dfd = demand_fixture_data.dropna()
 
@@ -386,20 +451,26 @@ class CaltrackMonthlyModel(object):
             raise model_exceptions.ModelPredictException(\
                 "Prediction failed!")
 
-        # Sum them up using the number of days in the demand fixture.
-        for i in demand_fixture_data.index:
-            if i not in predicted.index or not np.isfinite(predicted[i]):
-                continue
-            predicted[i] = predicted[i] * demand_fixture_data.ndays[i]
-            predicted_baseline_use = predicted_baseline_use + predicted[i]
-            variance[i] = prediction_var[i] * demand_fixture_data.ndays[i]
-            predicted_baseline_use_var = \
-                predicted_baseline_use_var + variance[i]
-
         if summed:
+        # Sum them up using the number of days in the demand fixture.
+            for i in demand_fixture_data.index:
+                if i not in predicted.index or not np.isfinite(predicted[i]):
+                    continue
+                predicted[i] = predicted[i] * demand_fixture_data.ndays[i]
+                predicted_baseline_use = predicted_baseline_use + predicted[i]
+                variance[i] = prediction_var[i] * demand_fixture_data.ndays[i]
+                predicted_baseline_use_var = \
+                    predicted_baseline_use_var + variance[i]
+    
             predicted = predicted_baseline_use
             variance = predicted_baseline_use_var
         else:
-            predicted = pd.Series(predicted, index=X.index)
-            variance = pd.Series(variance, index=X.index)
+            input_data = pd.DataFrame({
+                'predicted': predicted,
+                'variance': prediction_var},
+                index = predicted.index)
+            output_data = self.monthly_avg_to_daily(input_data, \
+                index=demand_fixture_index)
+            predicted = output_data['predicted']
+            variance = output_data['variance']
         return predicted, variance
