@@ -56,9 +56,11 @@ class CaltrackMonthlyModel(object):
         '''
         (energy_data, temp_data) = trace_and_temp
 
-        # Handle short series
-        if energy_data.empty or temp_data.empty:
+        # Handle empty series
+        if energy_data.empty:
             raise model_exceptions.DataSufficiencyException("No energy trace data")
+        if temp_data.empty:
+            raise model_exceptions.DataSufficiencyException("No temperature data")
 
         # Convert billing multiindex to straight index
         temp_data.index = temp_data.index.droplevel()
@@ -70,9 +72,13 @@ class CaltrackMonthlyModel(object):
         energy_data = energy_data[
             ~energy_data.index.duplicated(keep='last')].sort_index()
 
-        # Handle short series
+        # Check for empty series post-resampling and deduplication
         if energy_data.empty:
-            raise model_exceptions.DataSufficiencyException("No energy trace data")
+            raise model_exceptions.DataSufficiencyException(\
+                "No energy trace data after deduplication")
+        if temp_data.empty:
+            raise model_exceptions.DataSufficiencyException(\
+                "No temperature data after resampling")
 
         # get daily mean values
         energy_data_daily_mean_values = [
@@ -450,6 +456,18 @@ class CaltrackMonthlyModel(object):
         except:
             raise model_exceptions.ModelPredictException(\
                 "Prediction failed!")
+
+        try:
+            assert np.all(~np.isnan(predicted))
+        except:
+            raise model_exceptions.ModelPredictException(\
+                "Prediction has NaN values")
+
+        try:
+            assert np.all(~np.isnan(prediction_var))
+        except:
+            raise model_exceptions.ModelPredictException(\
+                "Prediction has NaN variances")
 
         if summed:
         # Sum them up using the number of days in the demand fixture.
