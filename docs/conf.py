@@ -24,6 +24,8 @@ class Mock(MagicMock):
 
 MOCK_MODULES = [
     'dateutil',
+    'dateutil.tz',
+    'dateutil.tz.tzutc',
     'dateutil.parser',
     'holidays',
     'numpy',
