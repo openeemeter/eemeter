@@ -405,13 +405,13 @@ class CaltrackMonthlyModel(object):
                     full_mod = smf.ols(formula=full_formula, data=df)
                     full_res = full_mod.fit()
                     full_rsquared = full_res.rsquared
-                if (full_rsquared > full_rsquared and
-                        full_res.params['Intercept'] >= 0 and
-                        full_res.params['HDD_' + full_hdd_bp] >= 0 and
-                        full_res.params['CDD_' + full_cdd_bp] >= 0):
-                    best_hdd_bp, best_cdd_bp, best_rsquared = \
-                        full_hdd_bp, full_cdd_bp, full_rsquared
-                    best_mod, best_res = full_mod, full_res
+                    if (full_rsquared > best_rsquared and
+                            full_res.params['Intercept'] >= 0 and
+                            full_res.params['HDD_' + full_hdd_bp] >= 0 and
+                            full_res.params['CDD_' + full_cdd_bp] >= 0):
+                        best_hdd_bp, best_cdd_bp, best_rsquared = \
+                            full_hdd_bp, full_cdd_bp, full_rsquared
+                        best_mod, best_res = full_mod, full_res
 
             if (best_hdd_bp is not None and
                     (best_res.pvalues['Intercept'] < 0.1) and

@@ -812,7 +812,7 @@ class EnergyEfficiencyMeter(object):
                     })
                 except:
                     _report_failed_derivative(series)
-    
+
                 series = 'Temperature, reporting period'
                 description = '''Observed temperature (degF) over the reporting period.'''
                 try:
