@@ -13,6 +13,9 @@ from eemeter.modeling.formatters import (
     ModelDataFormatter,
     ModelDataBillingFormatter
 )
+from eemeter.modeling.exceptions import (
+    DataSufficiencyException,
+)
 from eemeter.structures import EnergyTrace
 from eemeter.modeling.models import CaltrackMonthlyModel
 
@@ -50,9 +53,10 @@ def billing_trace():
         datetime(2011, 3, 2, tzinfo=pytz.UTC),
         datetime(2011, 4, 3, tzinfo=pytz.UTC),
         datetime(2011, 4, 29, tzinfo=pytz.UTC),
-    ] + [ 
-        datetime(2011, 6, 1, tzinfo=pytz.UTC) + \
-        timedelta(days=30*i) for i in range(13) ]
+    ] + [
+        datetime(2011, 6, 1, tzinfo=pytz.UTC) + timedelta(days=30*i)
+        for i in range(13)
+    ]
     df = pd.DataFrame(data, index=index, columns=columns)
     return EnergyTrace("ELECTRICITY_CONSUMPTION_SUPPLIED", df, unit="KWH")
 
@@ -68,6 +72,98 @@ def input_billing_df(mock_isd_weather_source, billing_trace):
     mdbf = ModelDataBillingFormatter()
     return mdbf.create_input(billing_trace, mock_isd_weather_source)
 
+def test_sufficiency_criteria():
+    m_baseline = CaltrackMonthlyModel(
+        fit_cdd=True, modeling_period_interpretation='baseline')
+    m_reporting = CaltrackMonthlyModel(
+        fit_cdd=True, modeling_period_interpretation='reporting')
+
+    # too short
+    too_short_df = pd.DataFrame({
+        'upd': [1 for _ in range(5)],
+        'HDD_XX': [1 for _ in range(5)]
+    })
+
+    with pytest.raises(DataSufficiencyException) as e:
+        m_baseline.meets_sufficiency_or_error(too_short_df)
+    message = str(e.value)
+    assert message == (
+        'Data does not meet minimum contiguous months'
+        ' requirement. The last 12 months of a baseline period must'
+        ' have non-NaN energy and temperature values. In this case,'
+        ' there were only 5 months in the series.'
+    )
+
+    with pytest.raises(DataSufficiencyException) as e:
+        m_reporting.meets_sufficiency_or_error(too_short_df)
+    message = str(e.value)
+    assert message == (
+        'Data does not meet minimum contiguous months'
+        ' requirement. The first 12 months of a reporting period must'
+        ' have non-NaN energy and temperature values. In this case,'
+        ' there were only 5 months in the series.'
+    )
+
+    # no error
+    upd_ok_temp_ok_baseline = pd.DataFrame({
+        'upd': [1 if i > 3 else np.nan for i in range(20)],
+        'HDD_XX': [1 if i > 3 else np.nan for i in range(20)],
+    })
+    m_baseline.meets_sufficiency_or_error(upd_ok_temp_ok_baseline)
+
+    upd_bad_temp_bad_reporting = pd.DataFrame({
+        'upd': [1 if i > 3 else np.nan for i in range(20)],
+        'HDD_XX': [1 if i > 3 else np.nan for i in range(20)],
+    })
+    with pytest.raises(DataSufficiencyException) as e:
+        m_reporting.meets_sufficiency_or_error(upd_bad_temp_bad_reporting)
+    message = str(e.value)
+    assert message == (
+        'Data does not meet minimum contiguous months'
+        ' requirement. The first 12 months of a reporting period must have'
+        ' at least 15 valid days of energy and temperature data. In this case,'
+        ' only 9 and 9 of the first 12 months of energy and temperature data'
+        ' met that requirement, respectively.'
+    )
+
+    upd_bad_temp_ok_baseline = pd.DataFrame({
+        'upd': [1 if i > 17 else np.nan for i in range(20)],
+        'HDD_XX': [1 if i > 3 else np.nan for i in range(20)],
+    })
+    with pytest.raises(DataSufficiencyException) as e:
+        m_baseline.meets_sufficiency_or_error(upd_bad_temp_ok_baseline)
+    message = str(e.value)
+    assert message == (
+        'Data does not meet minimum contiguous months'
+        ' requirement. The last 12 months of a baseline period must have at'
+        ' least 15 valid days of energy and temperature data. In this case,'
+        ' only 2 of the last 12 months of energy data met that requirement.'
+    )
+
+    upd_ok_temp_bad_reporting = pd.DataFrame({
+        'upd': [np.nan if i > 17 else 1 for i in range(20)],
+        'HDD_XX': [np.nan if i > 3 else 1 for i in range(20)],
+    })
+    with pytest.raises(DataSufficiencyException) as e:
+        m_reporting.meets_sufficiency_or_error(upd_ok_temp_bad_reporting)
+    message = str(e.value)
+    assert message == (
+        'Data does not meet minimum contiguous months requirement. The first'
+        ' 12 months of a reporting period must have at least 15 valid days of'
+        ' energy and temperature data. In this case, only 4 of the first 12'
+        ' months of temperature data met that requirement.'
+    )
+
+    zeros = pd.DataFrame({
+        'upd': [0 for i in range(20)],
+        'HDD_XX': [0 for i in range(20)],
+    })
+    with pytest.raises(DataSufficiencyException) as e:
+        m_reporting.meets_sufficiency_or_error(zeros)
+    message = str(e.value)
+    assert message == (
+        'Energy trace data is all or nearly all zero'
+    )
 
 def test_basic(input_df):
     m = CaltrackMonthlyModel(fit_cdd=True)

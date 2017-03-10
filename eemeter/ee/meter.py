@@ -812,7 +812,7 @@ class EnergyEfficiencyMeter(object):
                     })
                 except:
                     _report_failed_derivative(series)
-    
+
                 series = 'Temperature, reporting period'
                 description = '''Observed temperature (degF) over the reporting period.'''
                 try:
@@ -826,6 +826,22 @@ class EnergyEfficiencyMeter(object):
                     })
                 except:
                     _report_failed_derivative(series)
+
+            if weather_normal_source_success:
+                series = 'Temperature, normal year'
+                description = '''Observed temperature (degF) over the normal year.'''
+                try:
+                    raw_derivatives.append({
+                        'series': series,
+                        'description': description,
+                        'orderable': [i.isoformat() for i in \
+                                      annualized_daily_fixture.index],
+                        'value': annualized_daily_fixture['tempF'].values.tolist(),
+                        'variance': [0 for _ in range(annualized_daily_fixture['tempF'].shape[0])]
+                    })
+                except:
+                    _report_failed_derivative(series)
+    
 
             series = 'Inclusion mask, baseline period'
             description = '''Mask for baseline period data which is included in
