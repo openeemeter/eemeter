@@ -254,7 +254,7 @@ def test_basic_usage_daily(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 21
+    assert len(derivatives) == 22
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
@@ -290,6 +290,7 @@ def test_basic_usage_daily(
 
         'Temperature, baseline period',
         'Temperature, reporting period',
+        'Temperature, normal year',
     ])
 
     for d in derivatives:
@@ -325,7 +326,7 @@ def test_basic_usage_monthly(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 21
+    assert len(derivatives) == 22
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
@@ -359,6 +360,7 @@ def test_basic_usage_monthly(
 
         'Temperature, baseline period',
         'Temperature, reporting period',
+        'Temperature, normal year',
     ])
 
     for d in derivatives:
@@ -393,7 +395,7 @@ def test_basic_usage_baseline_only(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 12
+    assert len(derivatives) == 13
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
@@ -427,6 +429,7 @@ def test_basic_usage_baseline_only(
 
         'Temperature, baseline period',
         'Temperature, reporting period',
+        'Temperature, normal year',
     ])
 
     for d in derivatives:
@@ -461,7 +464,7 @@ def test_basic_usage_reporting_only(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 12
+    assert len(derivatives) == 13
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
@@ -497,6 +500,7 @@ def test_basic_usage_reporting_only(
 
         'Temperature, baseline period',
         'Temperature, reporting period',
+        'Temperature, normal year',
     ])
 
     for d in derivatives:
@@ -586,6 +590,7 @@ def test_bad_zipcode(meter_input_bad_zipcode):
         'Inclusion mask, reporting period',
         # 'Temperature, baseline period',
         # 'Temperature, reporting period',
+        # 'Temperature, normal year',
     ])
 
     for d in derivatives:
