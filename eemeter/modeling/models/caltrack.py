@@ -467,7 +467,12 @@ class CaltrackMonthlyModel(object):
                 cdd_bp
             ) = self._fit_cdd_only(df)
         else:
+            cdd_formula = None
+            cdd_mod = None
+            cdd_res = None
+            cdd_rsquared = 0
             cdd_qualified = False
+            cdd_bp = None
 
         # HDD-only
         (
@@ -491,7 +496,13 @@ class CaltrackMonthlyModel(object):
                 full_cdd_bp
             ) = self._fit_full(df)
         else:
+            full_formula = None
+            full_mod = None
+            full_res = None
+            full_rsquared = 0
             full_qualified = False
+            full_hdd_bp = None
+            full_cdd_bp = None
 
         # Now we take the best qualified model.
         if (full_qualified or

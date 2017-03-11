@@ -165,8 +165,53 @@ def test_sufficiency_criteria():
         'Energy trace data is all or nearly all zero'
     )
 
-def test_basic(input_df):
+def test_fit_cdd(input_df):
     m = CaltrackMonthlyModel(fit_cdd=True)
+    assert str(m).startswith("Caltrack")
+    assert m.n is None
+    assert m.params is None
+    assert m.r2 is None
+    assert m.rmse is None
+    assert m.y is None
+
+    output = m.fit(input_df)
+
+    assert "r2" in output
+    assert "rmse" in output
+    assert "cvrmse" in output
+    assert "model_params" in output
+    assert "n" in output
+
+    assert m.n == 12
+    assert 'formula' in m.params
+    assert 'X_design_info' in m.params
+    assert 'coefficients' in m.params
+    assert m.r2 == 0.0
+    assert_allclose(m.rmse, 0., rtol=1e-5, atol=1e-5)
+    assert m.y.shape == (12, 1)
+
+    predict, variance = m.predict(input_df, summed=False)
+
+    assert predict.shape == (365,)
+    assert_allclose(predict[datetime(2000, 1, 1, tzinfo=pytz.UTC)], 1.)
+    assert all(variance > 0)
+
+    assert m.n == 12
+    assert 'formula' in m.params
+    assert 'X_design_info' in m.params
+    assert 'coefficients' in m.params
+    assert m.r2 == 0.0
+    assert_allclose(m.rmse, 0.00000000000, rtol=1e-5, atol=1e-5)
+    assert m.y.shape == (12, 1)
+
+    predict, variance = m.predict(input_df)
+
+    assert_allclose(predict, 365.)
+    assert variance > 0
+
+
+def test_fit_cdd_false(input_df):
+    m = CaltrackMonthlyModel(fit_cdd=False)
     assert str(m).startswith("Caltrack")
     assert m.n is None
     assert m.params is None
