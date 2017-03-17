@@ -19,13 +19,16 @@ class Project(object):
         The site of this project.
     '''
 
-    def __init__(self, energy_trace_set, interventions, site):
+    def __init__(self, energy_trace_set, interventions, site, project_id=None):
         self.energy_trace_set = energy_trace_set
         self.interventions = interventions
         self.site = site
+        self.project_id = project_id
 
     def __repr__(self):
+        if self.project_id is not None:
+            return "Project(project_id={})".format(self.project_id)
         return (
-            "Project(energy_trace_set={}, interventions={}, site={})"
+            "Project(energy_trace_set={}, interventions={}, site={}, project)"
             .format(self.energy_trace_set, self.interventions, self.site)
         )

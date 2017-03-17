@@ -35,7 +35,7 @@ def get_weather_source(site):
         )
         return None
 
-    logger.info(
+    logger.debug(
         "Mapped ZIP code {} to ISD station {}"
         .format(zipcode, station)
     )
@@ -49,7 +49,7 @@ def get_weather_source(site):
         )
         return None
 
-    logger.info("Created ISDWeatherSource using station {}".format(station))
+    logger.debug("Created ISDWeatherSource using station {}".format(station))
 
     return weather_source
 
@@ -79,7 +79,7 @@ def get_weather_normal_source(site):
         )
         return None
 
-    logger.info(
+    logger.debug(
         "Mapped ZIP code {} to TMY3 station {}"
         .format(zipcode, station)
     )
@@ -93,6 +93,6 @@ def get_weather_normal_source(site):
         )
         return None
 
-    logger.info("Created TMY3WeatherSource using station {}".format(station))
+    logger.debug("Created TMY3WeatherSource using station {}".format(station))
 
     return weather_normal_source
