@@ -147,13 +147,8 @@ class EnergyEfficiencyMeter(object):
 
         Parameters
         ----------
-        trace : eemeter.structures.EnergyTrace
-            Trace for which to evaluate meter
-        site : eemeter.structures.ZIPCodeSite
-            Contains ZIP code to match to weather stations from which to pull
-            weather data.
-        modeling_period_set : eemeter.structures.ModelPeriodSet
-            Modeling periods to use in evaluation.
+        meter_input : dict
+            Serialized input containing trace and project data.
         formatter : tuple of (class, dict), default None
             Formatter for trace and weather data. Used to create input
             for model. If None is provided, will be auto-matched to appropriate
@@ -234,6 +229,13 @@ class EnergyEfficiencyMeter(object):
         # provide default
         modeling_period_set = project.get("modeling_period_set", None)
 
+        project_id = project["project_id"]
+        trace_id = trace.trace_id
+        logger.debug(
+            'Running meter for for trace {} and project {}'
+            .format(project_id, trace_id)
+        )
+
         # Step 2: Match weather
         if weather_source is None:
             weather_source = get_weather_source(site)
@@ -251,7 +253,7 @@ class EnergyEfficiencyMeter(object):
             weather_source_station = weather_source.station
         output['weather_source_station'] = weather_source_station
         output['logs'].append(message)
-        logger.info(message)
+        logger.debug(message)
 
         if weather_normal_source is None:
             weather_normal_source = get_weather_normal_source(site)
@@ -272,7 +274,7 @@ class EnergyEfficiencyMeter(object):
             weather_normal_source_station = weather_normal_source.station
         output['weather_normal_source_station'] = weather_normal_source_station
         output['logs'].append(message)
-        logger.info(message)
+        logger.debug(message)
 
         # Step 3: Check to see if trace is placeholder. If so,
         # return with SUCCESS, empty derivatives.
@@ -841,7 +843,7 @@ class EnergyEfficiencyMeter(object):
                     })
                 except:
                     _report_failed_derivative(series)
-    
+
 
             series = 'Inclusion mask, baseline period'
             description = '''Mask for baseline period data which is included in

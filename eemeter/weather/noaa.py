@@ -20,7 +20,7 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
         self.json_store = SqlJSONStore(cache_url)
         self.loaded_years = set()
         self._check_station(station)
-        logger.info(
+        logger.debug(
             "Created {} using cache: {}"
             .format(self, self.json_store)
         )
@@ -41,7 +41,7 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
         if most_recent_fetch is not None:
 
             if target > most_recent_fetch:
-                logger.info(
+                logger.debug(
                     "{} will update {} data because the most recent fetch"
                     " of that data occurred on {}, but the target date for"
                     " getting recent data is {}."
@@ -51,7 +51,7 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
                 )
                 self.add_year(target.year, force_fetch=True)
             else:
-                logger.info(
+                logger.debug(
                     "{} will not update {} data because the most recent"
                     " fetch of that data occurred on {}, which is more recent"
                     " than the target date {}."
@@ -60,7 +60,7 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
                             target.strftime("%Y-%m-%d"))
                 )
         else:
-            logger.info(
+            logger.debug(
                 "{self} will not update {year} data because {year} data is"
                 " not cached."
                 .format(self=self, year=target.year)
@@ -111,12 +111,12 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
                 new_series = self._fetch_year(year)
                 self.save_series(year, new_series)
                 self.tempC.update(new_series)
-                logger.info(
+                logger.debug(
                     "{} forced refetch of loaded {} data."
                     .format(self, year)
                 )
             else:  # ignore request to add year since it's already added.
-                logger.info(
+                logger.debug(
                     "{} ignored request to load {} data because it had"
                     " already been loaded."
                     .format(self, year)
@@ -125,7 +125,7 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
             if self._year_saved(year) and not force_fetch:
                 # saved locally, no need to fetch
                 new_series = self.load_series(year)
-                logger.info(
+                logger.debug(
                     "{} loaded cached {} data."
                     .format(self, year)
                 )
@@ -133,12 +133,12 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
                 new_series = self._fetch_year(year)
                 self.save_series(year, new_series)
                 if force_fetch:
-                    logger.info(
+                    logger.debug(
                         "{} forced refetch of cached {} data."
                         .format(self, year)
                     )
                 else:
-                    logger.info(
+                    logger.debug(
                         "{} performed initial fetch/cache of {} data."
                         .format(self, year)
                     )

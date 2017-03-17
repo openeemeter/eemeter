@@ -68,6 +68,26 @@ def test_data_but_invalid_unit(interpretation):
                     unit="INVALID")
 
 
+def test_has_trace_id_and_interval():
+    et = EnergyTrace(
+        interpretation='ELECTRICITY_CONSUMPTION_SUPPLIED',
+        placeholder=True
+    )
+    assert et.trace_id is None
+    assert et.interval is None
+
+    et = EnergyTrace(
+        interpretation='ELECTRICITY_CONSUMPTION_SUPPLIED',
+        placeholder=True,
+        trace_id='ABC',
+        interval='daily'
+    )
+    assert et.trace_id == 'ABC'
+    assert et.interval == 'daily'
+
+    assert 'ABC' in str(et)
+
+
 @pytest.fixture
 def unit():
     return "KWH"
