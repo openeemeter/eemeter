@@ -191,37 +191,68 @@ Run aggregations of meter results by group.
 
 Create and destroy the data warehouse mart for meter results.
 
+The warehouse table is `warehouse_meterresultmart`
+
 *Example usage*:
 
 .. code-block:: bash
 
-    python manage.py meterresultmart recreate
-
-This is equivalent to running
-
-.. code-block:: bash
-
-    python manage.py meterresultmart destroy
     python manage.py meterresultmart create
+    python manage.py meterresultmart destroy
 
-*Optional arguments*::
+`modelresultmart`
+^^^^^^^^^^^^^^^^^
 
-      --batch_size          Batch size for creating mart items (default 1000)
+Create and destroy the data warehouse mart for model results.
 
-`groupstatisticsmart`
-^^^^^^^^^^^^^^^^^^^^^
-
-Create and destroy the data warehouse mart for group statistics (aggregations)
+The warehouse table is `warehouse_modelresultmart`
 
 *Example usage*:
 
 .. code-block:: bash
 
-    python manage.py groupstatisticsmart recreate
+    python manage.py modelresultmart create
+    python manage.py modelresultmart destroy
 
-This is equivalent to running
+`projectsummarymart`
+^^^^^^^^^^^^^^^^^^^^
+
+Create and destroy a data mart for metering results organized by project for
+a charting frontend.
+
+The warehouse table is `warehouse_projectsummarymart`
+
+*Example usage*:
 
 .. code-block:: bash
 
-    python manage.py groupstatisticsmart destroy
-    python manage.py groupstatisticsmart create
+    python manage.py projectsummarymart create
+    python manage.py projectsummarymart destroy
+
+`tracesummarymart`
+^^^^^^^^^^^^^^^^^^^^
+
+Create and destroy a data mart that summarizes traces and their records.
+
+The warehouse table is `warehouse_tracesummarymart`
+
+*Example usage*:
+
+.. code-block:: bash
+
+    python manage.py tracesummarymart create
+    python manage.py tracesummarymart destroy
+
+`geoinfo`
+^^^^^^^^^
+
+Create and destroy two tables for geographical information
+
+The warehouse tables are `warehouse_zctainfo` and `warehouse_countyinfo`
+
+*Example usage*:
+
+.. code-block:: bash
+
+    python manage.py geoinfo create
+    python manage.py geoinfo destroy

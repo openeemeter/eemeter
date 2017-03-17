@@ -1,9 +1,9 @@
 ipykernel==4.5.2
-lxml==3.7.2
+lxml==3.7.3
 mock==2.0.0
 nbsphinx==0.2.13
 pandoc==1.0.0b2
-pytest==3.0.6
+pytest==3.0.7
 pytest-flake8==0.8.1
 sphinx==1.5.3
 sphinx-rtd-theme==0.1.9
