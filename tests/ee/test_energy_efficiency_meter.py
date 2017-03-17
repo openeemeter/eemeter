@@ -16,6 +16,7 @@ def project_meter_input():
     return {
         "type": "PROJECT_WITH_SINGLE_MODELING_PERIOD_GROUP",
         "zipcode": "91104",
+        "project_id": "PROJECT_1",
         "modeling_period_group": {
             "baseline_period": {
                 "start": None,
@@ -61,6 +62,7 @@ def _natural_gas_input(records):
         "type": "ARBITRARY_START",
         "interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
         "unit": "THERM",
+        "trace_id": "TRACE_1",
         "records": records
     }
 
@@ -79,9 +81,12 @@ def meter_input_daily(project_meter_input):
         } for dt in record_starts
     ]
 
+    trace = _natural_gas_input(records)
+    trace.update({'interval': 'daily'})
+
     meter_input = {
         "type": "SINGLE_TRACE_SIMPLE_PROJECT",
-        "trace": _natural_gas_input(records),
+        "trace": trace,
         "project": project_meter_input,
     }
     return meter_input
@@ -246,6 +251,11 @@ def test_basic_usage_daily(
     assert len(results['logs']) == 2
 
     assert results['eemeter_version'] is not None
+
+    assert results['project_id'] == 'PROJECT_1'
+    assert results['trace_id'] == 'TRACE_1'
+    assert results['interval'] == 'daily'
+
     assert results['model_class'] == 'CaltrackMonthlyModel'
     assert results['model_kwargs'] is not None
     assert results['formatter_class'] == 'ModelDataFormatter'
@@ -558,6 +568,10 @@ def test_bad_zipcode(meter_input_bad_zipcode):
     meter = EnergyEfficiencyMeter()
 
     results = meter.evaluate(meter_input_bad_zipcode)
+
+    assert results['project_id'] is None
+    assert results['trace_id'] is None
+    assert results['interval'] is None
 
     derivatives = results['derivatives']
     assert len(derivatives) == 7

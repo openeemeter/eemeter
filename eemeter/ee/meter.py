@@ -195,6 +195,9 @@ class EnergyEfficiencyMeter(object):
             ("logs", []),
 
             ("eemeter_version", get_version()),
+            ("trace_id", None),
+            ("project_id", None),
+            ("interval", None),
 
             ("model_class", None),
             ("model_kwargs", None),
@@ -231,6 +234,12 @@ class EnergyEfficiencyMeter(object):
 
         project_id = project["project_id"]
         trace_id = trace.trace_id
+        interval = trace.interval
+
+        output['project_id'] = project_id
+        output['trace_id'] = trace_id
+        output['interval'] = interval
+
         logger.debug(
             'Running meter for for trace {} and project {}'
             .format(project_id, trace_id)
