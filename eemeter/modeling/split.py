@@ -111,7 +111,7 @@ class SplitModeledEnergyTrace(object):
                         "traceback": tb,
                     })
                 else:
-                    logger.info(
+                    logger.debug(
                         '{} fit successful for trace {} in {} period.'
                         .format(model, self.trace.trace_id, modeling_period_label)
                     )
