@@ -52,7 +52,7 @@ class CaltrackMonthlyModel(object):
     def __repr__(self):
         return 'CaltrackMonthlyModel'
 
-    def billing_to_daily(self, trace_and_temp):
+    def billing_to_monthly_avg(self, trace_and_temp):
         ''' Helper function to handle monthly billing or other irregular data.
         '''
         (energy_data, temp_data) = trace_and_temp
@@ -67,7 +67,7 @@ class CaltrackMonthlyModel(object):
         temp_data.index = temp_data.index.droplevel()
 
         # Resample temperature data to daily
-        temp_data = temp_data.resample('D').apply(np.mean)[0]
+        temp_data_daily = temp_data.resample('D').apply(np.mean)[0]
 
         # Drop any duplicate indices
         energy_data = energy_data[
@@ -77,28 +77,94 @@ class CaltrackMonthlyModel(object):
         if energy_data.empty:
             raise model_exceptions.DataSufficiencyException(
                 "No energy trace data after deduplication")
-        if temp_data.empty:
+        if temp_data_daily.empty:
             raise model_exceptions.DataSufficiencyException(
                 "No temperature data after resampling")
 
         # get daily mean values
-        energy_data_daily_mean_values = [
+        upd_data_daily_mean_values = [
             value / (e - s).days for value, s, e in
             zip(energy_data, energy_data.index, energy_data.index[1:])
         ] + [np.nan]  # add missing last data point, which is null by convention anyhow
+        usage_data_daily_mean_values = [
+            value for value, s, e in
+            zip(energy_data, energy_data.index, energy_data.index[1:])
+        ] + [np.nan]  # add missing last data point, which is null by convention anyhow
+
+        # Create arrays to hold computed CDD and HDD for each
+        # balance point temperature.
+        cdd = {i: [0] for i in self.bp_cdd}
+        hdd = {i: [0] for i in self.bp_hdd}
+        for bp in self.bp_cdd:
+            cdd[bp] = pd.Series(
+                np.maximum(temp_data_daily - bp, 0),
+                index = temp_data_daily.index)
+        for bp in self.bp_hdd:
+            hdd[bp] = pd.Series(
+                np.maximum(bp - temp_data_daily, 0),
+                index = temp_data_daily.index)
+
+        ndays_data_daily_mean_values = []
+        hdd_data_daily_mean_values = {}
+        cdd_data_daily_mean_values = {}
+
+        for s, e in zip(energy_data.index, energy_data.index[1:]):
+            thisn = np.sum(np.isfinite(temp_data_daily[s:e]))
+            ndays_data_daily_mean_values.append(thisn)
+            if thisn >= 15:
+                for bp in self.bp_cdd:
+                    thismean = np.nanmean(cdd[bp][s:e])
+                    if bp not in cdd_data_daily_mean_values.keys():
+                        cdd_data_daily_mean_values[bp] = []
+                    cdd_data_daily_mean_values[bp].append(thismean)
+                for bp in self.bp_hdd:
+                    thismean = np.nanmean(hdd[bp][s:e])
+                    if bp not in hdd_data_daily_mean_values.keys():
+                        hdd_data_daily_mean_values[bp] = []
+                    hdd_data_daily_mean_values[bp].append(thismean)
+            else:
+                for bp in self.bp_cdd:
+                    cdd_data_daily_mean_values[bp].append(np.nan)
+                for bp in self.bp_hdd:
+                    hdd_data_daily_mean_values[bp].append(np.nan)
 
         # spread out over the month
-        energy_data_daily = pd.Series(
-            energy_data_daily_mean_values,
+        upd_data = pd.Series(
+            upd_data_daily_mean_values,
             index=energy_data.index
-            ).resample('D').ffill()[:-1]
+            )
+        usage_data = pd.Series(
+            usage_data_daily_mean_values,
+            index=energy_data.index
+            )
+        ndays_data = pd.Series(
+            ndays_data_daily_mean_values + [np.nan],
+            index=energy_data.index
+            )
+        cdd_data = {}
+        hdd_data = {}
+        for bp in self.bp_cdd:
+            cdd_data[bp] = pd.Series(
+                cdd_data_daily_mean_values[bp] + [np.nan],
+                index=energy_data.index
+                )
+        for bp in self.bp_hdd:
+            hdd_data[bp] = pd.Series(
+                hdd_data_daily_mean_values[bp] + [np.nan],
+                index=energy_data.index
+                )
 
-        model_data = pd.DataFrame({
-            'energy': energy_data_daily,
-            'tempF': temp_data,
-        })
+        model_data = {
+            'upd': upd_data,
+            'usage': usage_data,
+            'ndays': ndays_data,
+        }
+        model_data.update({'CDD_' + str(bp): \
+            cdd_data[bp] for bp in cdd_data.keys()})
+        model_data.update({'HDD_' + str(bp): \
+            hdd_data[bp] for bp in hdd_data.keys()})
 
-        return model_data
+        return pd.DataFrame(model_data)
 
     def daily_to_monthly_avg(self, df):
         ''' Convert from daily usage and temperature to monthly
@@ -141,7 +207,8 @@ class CaltrackMonthlyModel(object):
 
             # If this day is valid, add it to the usage and CDD/HDD arrays.
             day_is_valid = (
-                (is_demand_fixture or np.isfinite(row['energy'])) and
+                (is_demand_fixture or
+                (np.isfinite(row['energy']) and row['energy']>=0)) and
                 np.isfinite(row['tempF']))
             if day_is_valid:
                 ndays[-1] = ndays[-1] + 1
@@ -438,12 +505,11 @@ class CaltrackMonthlyModel(object):
 
     def fit(self, input_data):
 
+        self.input_data = input_data
         if isinstance(input_data, tuple):
-            self.input_data = self.billing_to_daily(input_data)
+            df = self.billing_to_monthly_avg(input_data)
         else:
-            self.input_data = input_data
-
-        df = self.daily_to_monthly_avg(self.input_data)
+            df = self.daily_to_monthly_avg(self.input_data)
 
         self.meets_sufficiency_or_error(df)
 
