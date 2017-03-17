@@ -79,7 +79,7 @@ def get_energy_modeling_dispatches(modeling_period_set, trace_set):
         dispatches[trace_label] = None
 
         if trace.placeholder:
-            logger.info(
+            logger.debug(
                 'Skipping modeling for placeholder trace "{}" ({}).'
                 .format(trace_label, trace.interpretation)
             )
@@ -119,7 +119,7 @@ def get_energy_modeling_dispatches(modeling_period_set, trace_set):
         modeled_energy_trace = SplitModeledEnergyTrace(
             trace, formatter, model_mapping, modeling_period_set)
 
-        logger.info(
+        logger.debug(
             'Successfully created SplitModeledEnergyTrace formatter {}'
             ' and model {} for {} and trace "{}" ({})'
             ' using model class selector {}.'
@@ -135,7 +135,7 @@ def get_energy_modeling_dispatches(modeling_period_set, trace_set):
 def get_approximate_frequency(trace):
 
     if trace.data is None:
-        logger.info(
+        logger.warn(
             "Could not determine frequency:"
             " {} is placeholder instance."
             .format(trace)
@@ -143,7 +143,7 @@ def get_approximate_frequency(trace):
         return None
 
     def _log_success(freq):
-        logger.info(
+        logger.debug(
             "Determined frequency of '{}' for {}."
             .format(freq, trace)
         )

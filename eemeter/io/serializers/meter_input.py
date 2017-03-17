@@ -102,6 +102,12 @@ def _deserialize_single_trace(trace):
             )
         }
 
+    # check for optional "trace_id" key
+    trace_id = trace.get('trace_id', None)
+
+    # check for optional "interval" key
+    interval = trace.get('interval', None)
+
     # switch on type
     if type_ == 'ARBITRARY':
         return {
@@ -109,7 +115,9 @@ def _deserialize_single_trace(trace):
                 interpretation=interpretation,
                 unit=unit,
                 records=records,
-                serializer=ArbitrarySerializer(parse_dates=True)
+                serializer=ArbitrarySerializer(parse_dates=True),
+                trace_id=trace_id,
+                interval=interval,
             )
         }
     elif type_ == 'ARBITRARY_START':
@@ -118,7 +126,9 @@ def _deserialize_single_trace(trace):
                 interpretation=interpretation,
                 unit=unit,
                 records=records,
-                serializer=ArbitraryStartSerializer(parse_dates=True)
+                serializer=ArbitraryStartSerializer(parse_dates=True),
+                trace_id=trace_id,
+                interval=interval,
             )
         }
     elif type_ == 'ARBITRARY_END':
@@ -127,7 +137,9 @@ def _deserialize_single_trace(trace):
                 interpretation=interpretation,
                 unit=unit,
                 records=records,
-                serializer=ArbitraryEndSerializer(parse_dates=True)
+                serializer=ArbitraryEndSerializer(parse_dates=True),
+                trace_id=trace_id,
+                interval=interval,
             )
         }
     else:
@@ -185,10 +197,14 @@ def _deserialize_project_with_single_model_period_group(project):
     if "error" in modeling_period_set:
         return modeling_period_set
 
+    # check for optional "project_id" key
+    project_id = project.get('project_id', None)
+
     return {
         "project": {
             "zipcode": zipcode,
             "modeling_period_set": modeling_period_set["modeling_period_set"],
+            "project_id": project_id,
         }
     }
 
