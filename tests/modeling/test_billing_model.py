@@ -14,14 +14,13 @@ from eemeter.testing.mocks import MockWeatherClient
 
 @pytest.fixture
 def trace():
-    index = pd.DatetimeIndex(
-        ["2012-06-06", "2012-07-06", "2012-08-06", "2012-09-06"],
-        dtype='datetime64[ns, UTC]', freq=None)
+    index = pd.date_range('6/6/2012','6/6/2013',freq='M',
+        tz=pytz.UTC)
 
     data = pd.DataFrame(
         {
-            "value": [1, 1, 1, np.nan],
-            "estimated": [False, False, False, False]
+            "value": [1,] * 12,
+            "estimated": [False,] * 12
         }, index=index, columns=['value', 'estimated'])
 
     return EnergyTrace(

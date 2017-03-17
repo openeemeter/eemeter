@@ -397,4 +397,8 @@ formatter.create_input(energy_trace, weather_source)
             zip(trace.data.value, trace.data.index, trace.data.index[1:])
         ] + [np.nan]  # add missing last data point
 
-        return pd.Series(data, index=trace.data.index).resample('D').ffill()
+        retval = pd.Series(data, index=trace.data.index)
+        retval = retval[
+            ~retval.index.duplicated(keep='last')].sort_index()
+        retval = retval.resample('D').ffill()
+        return retval

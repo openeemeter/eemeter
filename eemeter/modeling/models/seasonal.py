@@ -21,10 +21,11 @@ class SeasonalElasticNetCVModel(ElasticNetCVBaseModel):
     '''
 
     def __init__(self, cooling_base_temp=65, heating_base_temp=65,
-                 n_bootstrap=100):
+                 n_bootstrap=100, modeling_period_interpretation='baseline'):
 
         super(SeasonalElasticNetCVModel, self).__init__(
             cooling_base_temp, heating_base_temp, n_bootstrap)
+        self.modeling_period_interpretation = modeling_period_interpretation
 
     def __repr__(self):
         return (
