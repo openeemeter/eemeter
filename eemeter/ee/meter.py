@@ -4,6 +4,7 @@ from collections import OrderedDict, namedtuple
 import numpy as np
 import pandas as pd
 import pytz
+from functools import reduce
 
 from eemeter import get_version
 from eemeter.modeling.formatters import (
@@ -31,13 +32,11 @@ logger = logging.getLogger(__name__)
 
 Derivative = namedtuple('Derivative', [
     'modeling_period_group',
-    'source',
     'series',
+    'description',
     'orderable',
     'value',
-    'variance',
-    'unit',
-    'serialized_demand_fixture'
+    'variance'
 ])
 
 
@@ -148,13 +147,8 @@ class EnergyEfficiencyMeter(object):
 
         Parameters
         ----------
-        trace : eemeter.structures.EnergyTrace
-            Trace for which to evaluate meter
-        site : eemeter.structures.ZIPCodeSite
-            Contains ZIP code to match to weather stations from which to pull
-            weather data.
-        modeling_period_set : eemeter.structures.ModelPeriodSet
-            Modeling periods to use in evaluation.
+        meter_input : dict
+            Serialized input containing trace and project data.
         formatter : tuple of (class, dict), default None
             Formatter for trace and weather data. Used to create input
             for model. If None is provided, will be auto-matched to appropriate
@@ -201,6 +195,9 @@ class EnergyEfficiencyMeter(object):
             ("logs", []),
 
             ("eemeter_version", get_version()),
+            ("trace_id", None),
+            ("project_id", None),
+            ("interval", None),
 
             ("model_class", None),
             ("model_kwargs", None),
@@ -235,27 +232,58 @@ class EnergyEfficiencyMeter(object):
         # provide default
         modeling_period_set = project.get("modeling_period_set", None)
 
+        project_id = project["project_id"]
+        trace_id = trace.trace_id
+        interval = trace.interval
+
+        output['project_id'] = project_id
+        output['trace_id'] = trace_id
+        output['interval'] = interval
+
+        logger.debug(
+            'Running meter for for trace {} and project {}'
+            .format(project_id, trace_id)
+        )
+
         # Step 2: Match weather
         if weather_source is None:
             weather_source = get_weather_source(site)
-            message = "Using weather_source {}".format(weather_source)
+            if weather_source is None:
+                message = (
+                    "Could not find weather normal source matching site {}"
+                    .format(site)
+                )
+                weather_source_station = None
+            else:
+                message = "Using weather_source {}".format(weather_source)
+                weather_source_station = weather_source.station
         else:
             message = "Using supplied weather_source"
-            logger.info(message)
-        output['weather_source_station'] = weather_source.station
+            weather_source_station = weather_source.station
+        output['weather_source_station'] = weather_source_station
         output['logs'].append(message)
+        logger.debug(message)
 
         if weather_normal_source is None:
             weather_normal_source = get_weather_normal_source(site)
-            message = (
-                "Using weather_normal_source {}"
-                .format(weather_normal_source)
-            )
+            if weather_normal_source is None:
+                message = (
+                    "Could not find weather normal source matching site {}"
+                    .format(site)
+                )
+                weather_normal_source_station = None
+            else:
+                message = (
+                    "Using weather_normal_source {}"
+                    .format(weather_normal_source)
+                )
+                weather_normal_source_station = weather_normal_source.station
         else:
             message = "Using supplied weather_normal_source"
-            logger.info(message)
-        output['weather_normal_source_station'] = weather_normal_source.station
+            weather_normal_source_station = weather_normal_source.station
+        output['weather_normal_source_station'] = weather_normal_source_station
         output['logs'].append(message)
+        logger.debug(message)
 
         # Step 3: Check to see if trace is placeholder. If so,
         # return with SUCCESS, empty derivatives.
@@ -328,7 +356,9 @@ class EnergyEfficiencyMeter(object):
 
         # Step 8: create split modeled energy trace
         model_mapping = {
-            modeling_period_label: ModelClass(**model_kwargs)
+            modeling_period_label: ModelClass(\
+                modeling_period_interpretation=modeling_period_label, \
+                **model_kwargs)
             for modeling_period_label, _ in
             modeling_period_set.iter_modeling_periods()
         }
@@ -356,11 +386,6 @@ class EnergyEfficiencyMeter(object):
             unit = modeled_trace.trace.unit
             trace = modeled_trace.trace
 
-            # annualized fixture
-            normal_index = pd.date_range(
-                '2015-01-01', freq='D', periods=365, tz=pytz.UTC)
-            annualized_daily_fixture = formatter.create_demand_fixture(
-                normal_index, weather_normal_source)
 
             # default project dates
             baseline_end_date = baseline_period.end_date
@@ -378,21 +403,15 @@ class EnergyEfficiencyMeter(object):
             reporting_period_data = \
                 daily_trace_data[reporting_start_date:].copy()
 
-            # get monthly versions of the daily data
-            def by_month(series):
-                if series.empty:
-                    return []
-                return [
-                    ("{}-{:02d}".format(year, month), group)
-                    for (year, month), group in pd.groupby(
-                        series, by=[series.index.year, series.index.month])
-                ]
+            weather_source_success = (weather_source is not None)
+            weather_normal_source_success = (weather_normal_source is not None)
 
-            annualized_daily_fixture_monthly = \
-                by_month(annualized_daily_fixture)
-            observed_baseline_period_monthly = by_month(baseline_period_data)
-            observed_project_period_monthly = by_month(project_period_data)
-            observed_reporting_period_monthly = by_month(reporting_period_data)
+            # annualized fixture
+            if weather_normal_source_success:
+                normal_index = pd.date_range(
+                    '2015-01-01', freq='D', periods=365, tz=pytz.UTC)
+                annualized_daily_fixture = formatter.create_demand_fixture(
+                    normal_index, weather_normal_source)
 
             # find start and end dates of reporting data
             if not reporting_period_data.empty:
@@ -402,12 +421,20 @@ class EnergyEfficiencyMeter(object):
                 reporting_data_start_date = reporting_start_date
                 reporting_data_end_date = reporting_start_date
 
+            if not baseline_period_data.empty:
+                baseline_data_start_date = baseline_period_data.index[0]
+                baseline_data_end_date = baseline_period_data.index[-1]
+            else:
+                baseline_data_start_date = baseline_end_date
+                baseline_data_end_date = baseline_end_date
+
+
             baseline_model = modeled_trace.model_mapping[baseline_label]
             reporting_model = modeled_trace.model_mapping[reporting_label]
 
             # reporting period fixture
             if None not in (
-                    reporting_data_start_date, reporting_data_end_date):
+                    reporting_data_start_date, reporting_data_end_date) and weather_source_success:
 
                 if reporting_data_start_date == reporting_data_end_date:
                     reporting_period_daily_index = pd.Series([])
@@ -420,50 +447,60 @@ class EnergyEfficiencyMeter(object):
 
                 reporting_period_daily_fixture = formatter.create_demand_fixture(
                     reporting_period_daily_index, weather_source)
+                reporting_period_fixture_success = True
+                if len(reporting_period_daily_fixture) == 0:
+                    reporting_period_fixture_success = False
+
+                if baseline_data_start_date == baseline_data_end_date:
+                    baseline_period_daily_index = pd.Series([])
+                else:
+                    baseline_period_daily_index = pd.date_range(
+                        start=baseline_data_start_date,
+                        end=baseline_data_end_date,
+                        freq='D',
+                        tz=pytz.UTC)
+
+                baseline_period_daily_fixture = formatter.create_demand_fixture(
+                    baseline_period_daily_index, weather_source)
+                baseline_period_fixture_success = True
+                if len(baseline_period_daily_fixture) == 0:
+                    baseline_period_fixture_success = False
 
                 # Apply mask which indicates where data is missing (with daily
                 # resolution)
-                reporting_mask = reporting_output['input_mask']
-                for i, mask in reporting_mask.iteritems():
-                    if pd.isnull(mask):
-                        reporting_period_daily_fixture[i] = np.nan
+                unmasked_reporting_period_daily_fixture = \
+                    reporting_period_daily_fixture.copy()
+                if 'input_mask' in reporting_output.keys():
+                    reporting_mask = reporting_output['input_mask']
+                    for i, mask in reporting_mask.iteritems():
+                        if pd.isnull(mask):
+                            reporting_period_daily_fixture[i] = np.nan
+                else:
+                    reporting_mask = pd.Series([])
 
-                reporting_period_daily_fixture_monthly = \
-                    by_month(reporting_period_daily_fixture)
+                unmasked_baseline_period_daily_fixture = \
+                    baseline_period_daily_fixture.copy()
+                if 'input_mask' in baseline_output.keys():
+                    baseline_mask = baseline_output['input_mask']
+                    for i, mask in baseline_mask.iteritems():
+                        if pd.isnull(mask):
+                            baseline_period_daily_fixture[i] = np.nan
+                else:
+                    baseline_mask = pd.Series([])
 
-                # do some month realignment to make sure they match
-                fixture_months = set([
-                    m for (m, _) in reporting_period_daily_fixture_monthly
-                ])
-                observed_months = set([
-                    m for (m, _) in observed_reporting_period_monthly
-                ])
-
-                all_months = fixture_months | observed_months
-                common_months = fixture_months & observed_months
-                misaligned_months = all_months - common_months
-                if len(misaligned_months) > 0:
-                    message = (
-                        'Derivative orderables {} missing from one of'
-                        'daily_fixture or observed series'
-                        .format(misaligned_months)
-                    )
-                    logger.warning(message)
-
-                reporting_period_daily_fixture_monthly = [
-                    (m, d)
-                    for (m, d) in reporting_period_daily_fixture_monthly
-                    if m in common_months
-                ]
-
-                observed_reporting_period_monthly = [
-                    (m, d)
-                    for (m, d) in observed_reporting_period_monthly
-                    if m in common_months
-                ]
+            else:
+                reporting_mask = pd.Series([])
+                baseline_mask = pd.Series([])
 
             def subtract_value_variance_tuple(tuple1, tuple2):
                 (val1, var1), (val2, var2) = tuple1, tuple2
+                try:
+                    assert val1 is not None
+                    assert val2 is not None
+                    assert var1 is not None
+                    assert var2 is not None
+                except:
+                    return (None, None)
                 return (val1 - val2, (var1**2 + var2**2)**0.5)
 
             raw_derivatives = []
@@ -476,273 +513,383 @@ class EnergyEfficiencyMeter(object):
                     for start, value in series.iteritems()
                 ])
 
-            def _report_failed_derivative(source, series, orderable):
+            def _report_failed_derivative(series):
                 logger.warning(
-                    'Failed computing derivative (source={}, series={}, orderable={})'
-                    .format(source, series, orderable)
+                    'Failed computing derivative (series={})'
+                    .format(series)
                 )
 
-            if baseline_model_success and reporting_model_success:
-
-                source = 'baseline_model_minus_reporting_model'
-                series = 'annualized_weather_normal'
-                orderable = None
+            if baseline_model_success and reporting_model_success \
+                    and weather_normal_source_success:
+                series = 'Cumulative baseline model minus reporting model, normal year'
+                description = '''Total predicted usage according to the baseline model
+                                 over the normal weather year, minus the total predicted
+                                 usage according to the reporting model over the normal
+                                 weather year. Days for which normal year weather data
+                                 does not exist are removed.'''
                 try:
+                    value, variance = subtract_value_variance_tuple(
+                        baseline_model.predict(annualized_daily_fixture, summed=True),
+                        reporting_model.predict(annualized_daily_fixture, summed=True))
                     raw_derivatives.append({
-                        'source': source,
                         'series': series,
-                        'orderable': orderable,
-                        'serialized_demand_fixture': serialize_demand_fixture(
-                            annualized_daily_fixture),
-                        'value_variance': subtract_value_variance_tuple(
-                            baseline_model.predict(
-                                annualized_daily_fixture, summed=True),
-                            reporting_model.predict(
-                                annualized_daily_fixture, summed=True),
-                        ),
+                        'description': description,
+                        'orderable': [None,],
+                        'value': [value,],
+                        'variance': [variance,]
                     })
                 except:
-                    _report_failed_derivative(source, series, orderable)
+                    _report_failed_derivative(series)
 
-                for (month, values) in annualized_daily_fixture_monthly:
+                series = 'Baseline model minus reporting model, normal year'
+                description = '''Predicted usage according to the baseline model
+                                 over the normal weather year, minus the predicted
+                                 usage according to the reporting model over the normal
+                                 weather year.'''
+                try:
+                    value, variance = subtract_value_variance_tuple(
+                        baseline_model.predict(annualized_daily_fixture, summed=False),
+                        reporting_model.predict(annualized_daily_fixture, summed=False))
+                    raw_derivatives.append({
+                        'series': series,
+                        'description': description,
+                        'orderable': [i.isoformat() for i in annualized_daily_fixture.index],
+                        'value': value.tolist(),
+                        'variance': variance.tolist()
+                    })
+                except:
+                    _report_failed_derivative(series)
 
-                    source = 'baseline_model_minus_reporting_model'
-                    series = 'annualized_weather_normal_monthly'
-                    orderable = month
-                    try:
-                        raw_derivatives.append({
-                            'source': source,
-                            'series': series,
-                            'orderable': orderable,
-                            'serialized_demand_fixture':
-                                serialize_demand_fixture(values),
-                            'value_variance': subtract_value_variance_tuple(
-                                baseline_model.predict(values, summed=True),
-                                reporting_model.predict(values, summed=True)),
-                        })
-                    except:
-                        _report_failed_derivative(source, series, orderable)
 
             if baseline_model_success:
-
-                source = 'baseline_model'
-                series = 'annualized_weather_normal'
-                orderable =  None
-                try:
-                    raw_derivatives.append({
-                        'source': source,
-                        'series': series,
-                        'orderable': orderable,
-                        'serialized_demand_fixture':
-                            serialize_demand_fixture(annualized_daily_fixture),
-                        'value_variance':
-                            baseline_model.predict(
-                                annualized_daily_fixture, summed=True),
-                    })
-                except:
-                    _report_failed_derivative(source, series, orderable)
-
-                source = 'baseline_model'
-                series = 'reporting_cumulative'
-                orderable = None
-                try:
-                    raw_derivatives.append({
-                        'source': source,
-                        'series': series,
-                        'orderable': orderable,
-                        'serialized_demand_fixture': serialize_demand_fixture(
-                            reporting_period_daily_fixture),
-                        'value_variance': baseline_model.predict(
-                            reporting_period_daily_fixture, summed=True),
-                    })
-                except:
-                    _report_failed_derivative(source, series, orderable)
-
-                source = 'baseline_model_minus_observed'
-                series = 'reporting_cumulative'
-                orderable = None
-                try:
-                    raw_derivatives.append({
-                        'source': source,
-                        'series': series,
-                        'orderable': orderable,
-                        'serialized_demand_fixture': (
-                            serialize_demand_fixture(
-                                reporting_period_daily_fixture),
-                            serialize_observed(reporting_period_data)
-                        ),
-                        'value_variance': subtract_value_variance_tuple(
-                            baseline_model.predict(
-                                reporting_period_daily_fixture, summed=True),
-                            (reporting_period_data.sum(), 0),
-                        ),
-                    })
-                except:
-                    _report_failed_derivative(source, series, orderable)
-
-                for (month, values) in annualized_daily_fixture_monthly:
-                    source = 'baseline_model'
-                    series = 'annualized_weather_normal_monthly'
-                    orderable = month
+                if weather_normal_source_success:
+                    series = 'Cumulative baseline model, normal year'
+                    description = '''Total predicted usage according to the baseline model
+                                     over the normal weather year. Days for which normal
+                                     year weather data does not exist are removed.'''
                     try:
+                        value, variance = baseline_model.predict(
+                                    annualized_daily_fixture, summed=True)
                         raw_derivatives.append({
-                            'source': source,
                             'series': series,
-                            'orderable': orderable,
-                            'serialized_demand_fixture':
-                                serialize_demand_fixture(values),
-                            'value_variance':
-                                baseline_model.predict(values, summed=True),
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [variance,]
                         })
                     except:
-                        _report_failed_derivative(source, series, orderable)
+                        _report_failed_derivative(series)
 
-                for (month, values) in reporting_period_daily_fixture_monthly:
-                    source = 'baseline_model'
-                    series = 'reporting_monthly'
-                    orderable = month
+                    series = 'Baseline model, normal year'
+                    description = '''Predicted usage according to the baseline model
+                                     over the normal weather year.'''
                     try:
+                        value, variance = baseline_model.predict(
+                                    annualized_daily_fixture, summed=False)
                         raw_derivatives.append({
-                            'source': source,
                             'series': series,
-                            'orderable': orderable,
-                            'serialized_demand_fixture':
-                                serialize_demand_fixture(values),
-                            'value_variance':
-                                baseline_model.predict(values, summed=True),
+                            'description': description,
+                            'orderable': [i.isoformat() for i in annualized_daily_fixture.index],
+                            'value': value.tolist(),
+                            'variance': variance.tolist()
                         })
                     except:
-                        _report_failed_derivative(source, series, orderable)
+                        _report_failed_derivative(series)
 
-                for (month1, values1), (month2, values2) in zip(
-                        reporting_period_daily_fixture_monthly,
-                        observed_reporting_period_monthly):
-                    source = 'baseline_model_minus_observed'
-                    series = 'reporting_monthly'
-                    orderable =  month1  # == month2; we checked above
+
+                if weather_source_success and reporting_period_fixture_success:
+                    series = 'Cumulative baseline model, reporting period'
+                    description = '''Total predicted usage according to the baseline model
+                                     over the reporting period. Days for which reporting
+                                     period weather data does not exist are removed.'''
                     try:
+                        value, variance = baseline_model.predict(
+                                reporting_period_daily_fixture, summed=True)
                         raw_derivatives.append({
-                            'source': source,
                             'series': series,
-                            'orderable': orderable,
-                            'serialized_demand_fixture': (
-                                serialize_demand_fixture(values1),
-                                serialize_observed(values2)
-                            ),
-                            'value_variance': subtract_value_variance_tuple(
-                                baseline_model.predict(values1, summed=True),
-                                (values2.sum(), 0),
-                            ),
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [variance,]
                         })
                     except:
-                        _report_failed_derivative(source, series, orderable)
+                        _report_failed_derivative(series)
+
+                    series = 'Baseline model, reporting period'
+                    description = '''Predicted usage according to the baseline model
+                                     over the reporting period.'''
+                    try:
+                        value, variance = baseline_model.predict(
+                                reporting_period_daily_fixture, summed=False)
+                        raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [i.isoformat() for i in reporting_period_daily_fixture.index],
+                            'value': value.tolist(),
+                            'variance': variance.tolist()
+                        })
+                    except:
+                        _report_failed_derivative(series)
+
+                    series = 'Cumulative baseline model minus observed, reporting period'
+                    description = '''Total predicted usage according to the baseline model
+                                     minus observed usage over the reporting period.
+                                     Days for which reporting period weather data or usage
+                                     do not exist are removed.'''
+                    try:
+                        value, variance = subtract_value_variance_tuple(
+                                baseline_model.predict(
+                                    reporting_period_daily_fixture, summed=True),
+                                (reporting_period_data.sum(), 0)
+                            )
+                        raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [variance,]
+                        })
+                    except:
+                        _report_failed_derivative(series)
+
+                    series = 'Baseline model minus observed, reporting period'
+                    description = '''Predicted usage according to the baseline model
+                                     minus observed usage over the reporting period.'''
+                    try:
+                        value, variance = subtract_value_variance_tuple(
+                                baseline_model.predict(
+                                    reporting_period_daily_fixture, summed=False),
+                                (reporting_period_data, 0)
+                            )
+                        raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [i.isoformat() for i in reporting_period_daily_fixture.index],
+                            'value': value.tolist(),
+                            'variance': variance.tolist()
+                        })
+                    except:
+                        _report_failed_derivative(series)
+
+                if weather_source_success and baseline_period_fixture_success:
+                    series = 'Baseline model, baseline period'
+                    description = '''Predicted usage according to the baseline model
+                                     over the baseline period.'''
+                    try:
+                        value, variance = baseline_model.predict(
+                                baseline_period_daily_fixture, summed=False)
+                        raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [i.isoformat() for i in baseline_period_daily_fixture.index],
+                            'value': value.tolist(),
+                            'variance': variance.tolist()
+                        })
+                    except:
+                        _report_failed_derivative(series)
 
             if reporting_model_success:
-
-                source = 'reporting_model'
-                series = 'annualized_weather_normal'
-                orderable = None
-                try:
-                    raw_derivatives.append({
-                        'source': source,
-                        'series': series,
-                        'orderable': orderable,
-                        'serialized_demand_fixture':
-                            serialize_demand_fixture(annualized_daily_fixture),
-                        'value_variance':
-                            reporting_model.predict(
-                                annualized_daily_fixture, summed=True),
-                    })
-                except:
-                    _report_failed_derivative(source, series, orderable)
-
-                for (month, values) in annualized_daily_fixture_monthly:
-                    source = 'reporting_model'
-                    series = 'annualized_weather_normal_monthly'
-                    orderable = month
+                if weather_normal_source_success:
+                    series = 'Cumulative reporting model, normal year'
+                    description = '''Total predicted usage according to the reporting model
+                                     over the reporting period.  Days for which normal year
+                                     weather data does not exist are removed.'''
                     try:
+                        value, variance = reporting_model.predict(
+                                    annualized_daily_fixture, summed=True)
                         raw_derivatives.append({
-                            'source': source,
                             'series': series,
-                            'orderable': orderable,
-                            'serialized_demand_fixture':
-                                serialize_demand_fixture(values),
-                            'value_variance':
-                                reporting_model.predict(values, summed=True),
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [variance,]
                         })
                     except:
-                        _report_failed_derivative(source, series, orderable)
+                        _report_failed_derivative(series)
 
-            source = 'observed'
-            series = 'reporting_cumulative'
-            orderable = None
+                    series = 'Reporting model, normal year'
+                    description = '''Predicted usage according to the reporting model
+                                     over the reporting period.'''
+                    try:
+                        value, variance = reporting_model.predict(
+                                    annualized_daily_fixture, summed=False)
+                        raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [i.isoformat() for i in annualized_daily_fixture.index],
+                            'value': value.tolist(),
+                            'variance': variance.tolist()
+                        })
+                    except:
+                        _report_failed_derivative(series)
+
+                if weather_source_success and reporting_period_fixture_success:
+                    series = 'Reporting model, reporting period'
+                    description = '''Predicted usage according to the reporting model
+                                     over the reporting period.'''
+                    try:
+                        value, variance = reporting_model.predict(
+                                reporting_period_daily_fixture, summed=False)
+                        raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [i.isoformat() for i in reporting_period_daily_fixture.index],
+                            'value': value.tolist(),
+                            'variance': variance.tolist()
+                        })
+                    except:
+                        _report_failed_derivative(series)
+
+            series = 'Cumulative observed, reporting period'
+            description = '''Total observed usage over the reporting period.
+                             Days for which weather data does not exist
+                             are NOT removed.'''
             try:
                 raw_derivatives.append({
-                    'source': source,
                     'series': series,
-                    'orderable': orderable,
-                    'serialized_demand_fixture':
-                        serialize_observed(reporting_period_data),
-                    'value_variance': (reporting_period_data.sum(), 0),
+                    'description': description,
+                    'orderable': [None],
+                    'value': [reporting_period_data.sum(),],
+                    'variance': [0,]
                 })
             except:
-                _report_failed_derivative(source, series, orderable)
+                _report_failed_derivative(series)
 
-            for (month, values) in observed_reporting_period_monthly:
-                source = 'observed'
-                series = 'reporting_monthly'
-                orderable = month
+            series = 'Observed, reporting period'
+            description = '''Observed usage over the reporting period.'''
+            try:
+                raw_derivatives.append({
+                    'series': series,
+                    'description': description,
+                    'orderable': [i.isoformat() for i in reporting_period_data.index],
+                    'value': reporting_period_data.values.tolist(),
+                    'variance': [0 for _ in range(reporting_period_data.shape[0])]
+                })
+            except:
+                _report_failed_derivative(series)
+
+            series = 'Cumulative observed, baseline period'
+            description = '''Total observed usage over the baseline period.
+                             Days for which weather data does not exist
+                             are NOT removed.'''
+            try:
+                raw_derivatives.append({
+                    'series': series,
+                    'description': description,
+                    'orderable': [None],
+                    'value': [baseline_period_data.sum()],
+                    'variance': [0,]
+                })
+            except:
+                _report_failed_derivative(series)
+
+            series = 'Observed, baseline period'
+            description = '''Observed usage over the baseline period.'''
+            try:
+                raw_derivatives.append({
+                    'series': series,
+                    'description': description,
+                    'orderable': [i.isoformat() for i in baseline_period_data.index],
+                    'value': baseline_period_data.values.tolist(),
+                    'variance': [0 for _ in range(baseline_period_data.shape[0])]
+                })
+            except:
+                _report_failed_derivative(series)
+
+            series = 'Observed, project period'
+            description = '''Observed usage over the project period.'''
+            try:
+                raw_derivatives.append({
+                    'series': series,
+                    'description': description,
+                    'orderable': [i.isoformat() for i in project_period_data.index],
+                    'value': project_period_data.values.tolist(),
+                    'variance': [0 for _ in range(project_period_data.shape[0])]
+                })
+            except:
+                _report_failed_derivative(series)
+
+            if weather_source_success:
+                series = 'Temperature, baseline period'
+                description = '''Observed temperature (degF) over the baseline period.'''
                 try:
                     raw_derivatives.append({
-                        'source': source,
                         'series': series,
-                        'orderable': orderable,
-                        'serialized_demand_fixture': serialize_observed(values),
-                        'value_variance': (values.sum(), 0),
+                        'description': description,
+                        'orderable': [i.isoformat() for i in \
+                                      unmasked_baseline_period_daily_fixture.index],
+                        'value': unmasked_baseline_period_daily_fixture['tempF'].values.tolist(),
+                        'variance': [0 for _ in range(unmasked_baseline_period_daily_fixture['tempF'].shape[0])]
                     })
                 except:
-                    _report_failed_derivative(source, series, orderable)
+                    _report_failed_derivative(series)
 
-            for (month, values) in observed_baseline_period_monthly:
-                source = 'observed'
-                series = 'baseline_monthly'
-                orderable = month
+                series = 'Temperature, reporting period'
+                description = '''Observed temperature (degF) over the reporting period.'''
                 try:
                     raw_derivatives.append({
-                        'source': source,
                         'series': series,
-                        'orderable': orderable,
-                        'serialized_demand_fixture': serialize_observed(values),
-                        'value_variance': (values.sum(), 0),
+                        'description': description,
+                        'orderable': [i.isoformat() for i in \
+                                      unmasked_reporting_period_daily_fixture.index],
+                        'value': unmasked_reporting_period_daily_fixture['tempF'].values.tolist(),
+                        'variance': [0 for _ in range(unmasked_reporting_period_daily_fixture['tempF'].shape[0])]
                     })
                 except:
-                    _report_failed_derivative(source, series, orderable)
+                    _report_failed_derivative(series)
 
-            for (month, values) in observed_project_period_monthly:
-                source = 'observed'
-                series = 'project_monthly'
-                orderable = month
+            if weather_normal_source_success:
+                series = 'Temperature, normal year'
+                description = '''Observed temperature (degF) over the normal year.'''
                 try:
                     raw_derivatives.append({
-                        'source': source,
                         'series': series,
-                        'orderable': orderable,
-                        'serialized_demand_fixture': serialize_observed(values),
-                        'value_variance': (values.sum(), 0),
+                        'description': description,
+                        'orderable': [i.isoformat() for i in \
+                                      annualized_daily_fixture.index],
+                        'value': annualized_daily_fixture['tempF'].values.tolist(),
+                        'variance': [0 for _ in range(annualized_daily_fixture['tempF'].shape[0])]
                     })
                 except:
-                    _report_failed_derivative(source, series, orderable)
+                    _report_failed_derivative(series)
+
+
+            series = 'Inclusion mask, baseline period'
+            description = '''Mask for baseline period data which is included in
+                             model and savings cumulatives.'''
+            try:
+                raw_derivatives.append({
+                    'series': series,
+                    'description': description,
+                    'orderable': [i.isoformat() for i in baseline_mask.index],
+                    'value': [bool(v) for v in baseline_mask.values],
+                    'variance': [0 for _ in range(baseline_mask.shape[0])]
+                })
+            except:
+                _report_failed_derivative(series)
+
+            series = 'Inclusion mask, reporting period'
+            description = '''Mask for reporting period data which is included in
+                             model and savings cumulatives.'''
+            try:
+                raw_derivatives.append({
+                    'series': series,
+                    'description': description,
+                    'orderable': [i.isoformat() for i in reporting_mask.index],
+                    'value': [bool(v) for v in reporting_mask.values],
+                    'variance': [0 for _ in range(reporting_mask.shape[0])]
+                })
+            except:
+                _report_failed_derivative(series)
 
             derivatives += [
                 Derivative(
                     (baseline_label, reporting_label),
-                    d['source'],
                     d['series'],
+                    reduce(lambda a, b: a + ' ' + b, d['description'].split()),
                     d['orderable'],
-                    d['value_variance'][0],
-                    d['value_variance'][1],
-                    unit,
-                    d['serialized_demand_fixture']
+                    d['value'],
+                    d['variance'],
                 )
                 for d in raw_derivatives
             ]

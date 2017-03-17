@@ -3,6 +3,7 @@ import tempfile
 import pandas as pd
 import pytest
 import pytz
+import json
 
 from eemeter.ee.meter import EnergyEfficiencyMeter
 from eemeter.testing.mocks import MockWeatherClient
@@ -15,6 +16,25 @@ def project_meter_input():
     return {
         "type": "PROJECT_WITH_SINGLE_MODELING_PERIOD_GROUP",
         "zipcode": "91104",
+        "project_id": "PROJECT_1",
+        "modeling_period_group": {
+            "baseline_period": {
+                "start": None,
+                "end": "2014-01-01T00:00:00+00:00"
+            },
+            "reporting_period": {
+                "start": "2014-02-01T00:00:00+00:00",
+                "end": None
+            }
+        }
+    }
+
+
+@pytest.fixture
+def project_meter_input_bad_zipcode():
+    return {
+        "type": "PROJECT_WITH_SINGLE_MODELING_PERIOD_GROUP",
+        "zipcode": "11111",  # not valid
         "modeling_period_group": {
             "baseline_period": {
                 "start": None,
@@ -42,6 +62,7 @@ def _natural_gas_input(records):
         "type": "ARBITRARY_START",
         "interpretation": "NATURAL_GAS_CONSUMPTION_SUPPLIED",
         "unit": "THERM",
+        "trace_id": "TRACE_1",
         "records": records
     }
 
@@ -60,9 +81,12 @@ def meter_input_daily(project_meter_input):
         } for dt in record_starts
     ]
 
+    trace = _natural_gas_input(records)
+    trace.update({'interval': 'daily'})
+
     meter_input = {
         "type": "SINGLE_TRACE_SIMPLE_PROJECT",
-        "trace": _natural_gas_input(records),
+        "trace": trace,
         "project": project_meter_input,
     }
     return meter_input
@@ -175,6 +199,28 @@ def meter_input_strange_interpretation(project_meter_input):
 
 
 @pytest.fixture
+def meter_input_bad_zipcode(project_meter_input_bad_zipcode):
+
+    record_starts = pd.date_range(
+        '2012-01-01', periods=50, freq='MS', tz=pytz.UTC)
+
+    records = [
+        {
+            "start": dt.isoformat(),
+            "value": 1.0,
+            "estimated": False
+        } for dt in record_starts
+    ]
+
+    meter_input = {
+        "type": "SINGLE_TRACE_SIMPLE_PROJECT",
+        "trace": _electricity_input(records),
+        "project": project_meter_input_bad_zipcode,
+    }
+    return meter_input
+
+
+@pytest.fixture
 def mock_isd_weather_source():
     tmp_url = "sqlite:///{}/weather_cache.db".format(tempfile.mkdtemp())
     ws = ISDWeatherSource('722880', tmp_url)
@@ -205,6 +251,11 @@ def test_basic_usage_daily(
     assert len(results['logs']) == 2
 
     assert results['eemeter_version'] is not None
+
+    assert results['project_id'] == 'PROJECT_1'
+    assert results['trace_id'] == 'TRACE_1'
+    assert results['interval'] == 'daily'
+
     assert results['model_class'] == 'CaltrackMonthlyModel'
     assert results['model_kwargs'] is not None
     assert results['formatter_class'] == 'ModelDataFormatter'
@@ -213,33 +264,52 @@ def test_basic_usage_daily(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 138
+    assert len(derivatives) == 22
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
-    assert derivatives[0]['orderable'] is None
-    assert derivatives[0]['unit'] is not None
-    assert derivatives[0]['value'] is not None
-    assert derivatives[0]['variance'] is not None
-    assert derivatives[0]['serialized_demand_fixture'] is not None
+    assert derivatives[0]['orderable'] == [None]
 
-    source_series = set([(d['source'], d['series']) for d in derivatives])
+    source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
-        ('baseline_model', 'annualized_weather_normal'),
-        ('baseline_model', 'annualized_weather_normal_monthly'),
-        ('baseline_model', 'reporting_cumulative'),
-        ('baseline_model', 'reporting_monthly'),
-        ('baseline_model_minus_observed', 'reporting_cumulative'),
-        ('baseline_model_minus_observed', 'reporting_monthly'),
-        ('baseline_model_minus_reporting_model', 'annualized_weather_normal'),
-        ('baseline_model_minus_reporting_model',
-            'annualized_weather_normal_monthly'),
-        ('observed', 'baseline_monthly'),
-        ('observed', 'project_monthly'),
-        ('observed', 'reporting_cumulative'),
-        ('observed', 'reporting_monthly'),
-        ('reporting_model', 'annualized_weather_normal'),
-        ('reporting_model', 'annualized_weather_normal_monthly')
+        'Cumulative baseline model minus reporting model, normal year',
+        'Cumulative baseline model, normal year',
+        'Baseline model, normal year',
+        'Cumulative reporting model, normal year',
+        'Baseline model minus reporting model, normal year',
+        'Baseline model, normal year',
+        'Reporting model, normal year',
+        'Baseline model, baseline period',
+
+        'Cumulative baseline model minus observed, reporting period',
+        'Cumulative baseline model, reporting period',
+        'Cumulative observed, reporting period',
+        'Baseline model minus observed, reporting period',
+        'Baseline model, reporting period',
+        'Observed, reporting period',
+
+        'Baseline model, baseline period',
+        'Reporting model, reporting period',
+
+        'Cumulative observed, baseline period',
+        'Observed, baseline period',
+
+        'Observed, project period',
+
+        'Inclusion mask, baseline period',
+        'Inclusion mask, reporting period',
+
+        'Temperature, baseline period',
+        'Temperature, reporting period',
+        'Temperature, normal year',
     ])
+
+    for d in derivatives:
+        assert isinstance(d['orderable'], list)
+        assert isinstance(d['value'], list)
+        assert isinstance(d['variance'], list)
+        assert len(d['orderable']) == len(d['value']) == len(d['variance'])
+
+    json.dumps(results)
 
 
 def test_basic_usage_monthly(
@@ -266,34 +336,50 @@ def test_basic_usage_monthly(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 144
+    assert len(derivatives) == 22
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
-    assert derivatives[0]['orderable'] is None
-    assert derivatives[0]['unit'] is not None
-    assert derivatives[0]['value'] is not None
-    assert derivatives[0]['variance'] is not None
-    assert derivatives[0]['serialized_demand_fixture'] is not None
+    assert derivatives[0]['orderable'] == [None]
 
-    source_series = set([(d['source'], d['series']) for d in derivatives])
+    source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
-        ('baseline_model', 'annualized_weather_normal'),
-        ('baseline_model', 'annualized_weather_normal_monthly'),
-        ('baseline_model', 'reporting_cumulative'),
-        ('baseline_model', 'reporting_monthly'),
-        ('baseline_model_minus_observed', 'reporting_cumulative'),
-        ('baseline_model_minus_observed', 'reporting_monthly'),
-        ('baseline_model_minus_reporting_model', 'annualized_weather_normal'),
-        ('baseline_model_minus_reporting_model',
-            'annualized_weather_normal_monthly'),
-        ('observed', 'baseline_monthly'),
-        ('observed', 'project_monthly'),
-        ('observed', 'reporting_cumulative'),
-        ('observed', 'reporting_monthly'),
-        ('reporting_model', 'annualized_weather_normal'),
-        ('reporting_model', 'annualized_weather_normal_monthly')
+        'Cumulative baseline model minus reporting model, normal year',
+        'Cumulative baseline model, normal year',
+        'Baseline model, normal year',
+        'Cumulative reporting model, normal year',
+        'Baseline model minus reporting model, normal year',
+        'Reporting model, normal year',
+
+        'Cumulative baseline model minus observed, reporting period',
+        'Cumulative baseline model, reporting period',
+        'Cumulative observed, reporting period',
+        'Baseline model minus observed, reporting period',
+        'Baseline model, reporting period',
+        'Observed, reporting period',
+
+        'Baseline model, baseline period',
+        'Reporting model, reporting period',
+
+        'Cumulative observed, baseline period',
+        'Observed, baseline period',
+
+        'Observed, project period',
+
+        'Inclusion mask, baseline period',
+        'Inclusion mask, reporting period',
+
+        'Temperature, baseline period',
+        'Temperature, reporting period',
+        'Temperature, normal year',
     ])
 
+    for d in derivatives:
+        assert isinstance(d['orderable'], list)
+        assert isinstance(d['value'], list)
+        assert isinstance(d['variance'], list)
+        assert len(d['orderable']) == len(d['value']) == len(d['variance'])
+
+    json.dumps(results)
 
 def test_basic_usage_baseline_only(
         meter_input_daily_baseline_only,
@@ -319,34 +405,50 @@ def test_basic_usage_baseline_only(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 26
+    assert len(derivatives) == 13
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
-    assert derivatives[0]['orderable'] is None
-    assert derivatives[0]['unit'] is not None
-    assert derivatives[0]['value'] is not None
-    assert derivatives[0]['variance'] is not None
-    assert derivatives[0]['serialized_demand_fixture'] is not None
+    assert derivatives[0]['orderable'] == [None]
 
-    source_series = set([(d['source'], d['series']) for d in derivatives])
+    source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
-        ('baseline_model', 'annualized_weather_normal'),
-        ('baseline_model', 'annualized_weather_normal_monthly'),
-        # ('baseline_model', 'reporting_cumulative'),
-        # ('baseline_model', 'reporting_monthly'),
-        # ('baseline_model_minus_observed', 'reporting_cumulative'),
-        # ('baseline_model_minus_observed', 'reporting_monthly'),
-        # ('baseline_model_minus_reporting_model', 'annualized_weather_normal'),
-        # ('baseline_model_minus_reporting_model',
-        #     'annualized_weather_normal_monthly'),
-        ('observed', 'baseline_monthly'),
-        # ('observed', 'project_monthly'),
-        ('observed', 'reporting_cumulative'),
-        # ('observed', 'reporting_monthly'),
-        # ('reporting_model', 'annualized_weather_normal'),
-        # ('reporting_model', 'annualized_weather_normal_monthly')
+        # 'Cumulative baseline model minus reporting model, normal year',
+        'Cumulative baseline model, normal year',
+        # 'Cumulative reporting model, normal year',
+        # 'Baseline model minus reporting model, normal year',
+        'Baseline model, normal year',
+        # 'Reporting model, normal year',
+
+        # 'Cumulative baseline model minus observed, reporting period',
+        # 'Cumulative baseline model, reporting period',
+        'Cumulative observed, reporting period',
+        # 'Baseline model minus observed, reporting period',
+        # 'Baseline model, reporting period',
+        'Observed, reporting period',
+
+        'Baseline model, baseline period',
+        #'Reporting model, reporting period',
+
+        'Cumulative observed, baseline period',
+        'Observed, baseline period',
+
+        'Observed, project period',
+
+        'Inclusion mask, baseline period',
+        'Inclusion mask, reporting period',
+
+        'Temperature, baseline period',
+        'Temperature, reporting period',
+        'Temperature, normal year',
     ])
 
+    for d in derivatives:
+        assert isinstance(d['orderable'], list)
+        assert isinstance(d['value'], list)
+        assert isinstance(d['variance'], list)
+        assert len(d['orderable']) == len(d['value']) == len(d['variance'])
+
+    json.dumps(results)
 
 def test_basic_usage_reporting_only(
         meter_input_daily_reporting_only,
@@ -372,34 +474,52 @@ def test_basic_usage_reporting_only(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 27
+    assert len(derivatives) == 13
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
-    assert derivatives[0]['orderable'] is None
-    assert derivatives[0]['unit'] is not None
+    assert derivatives[0]['orderable'] == [None]
     assert derivatives[0]['value'] is not None
     assert derivatives[0]['variance'] is not None
-    assert derivatives[0]['serialized_demand_fixture'] is not None
 
-    source_series = set([(d['source'], d['series']) for d in derivatives])
+    source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
-        # ('baseline_model', 'annualized_weather_normal'),
-        # ('baseline_model', 'annualized_weather_normal_monthly'),
-        # ('baseline_model', 'reporting_cumulative'),
-        # ('baseline_model', 'reporting_monthly'),
-        # ('baseline_model_minus_observed', 'reporting_cumulative'),
-        # ('baseline_model_minus_observed', 'reporting_monthly'),
-        # ('baseline_model_minus_reporting_model', 'annualized_weather_normal'),
-        # ('baseline_model_minus_reporting_model',
-        #     'annualized_weather_normal_monthly'),
-        # ('observed', 'baseline_monthly'),
-        ('observed', 'project_monthly'),
-        ('observed', 'reporting_cumulative'),
-        ('observed', 'reporting_monthly'),
-        ('reporting_model', 'annualized_weather_normal'),
-        ('reporting_model', 'annualized_weather_normal_monthly')
+        # 'Cumulative baseline model minus reporting model, normal year',
+        # 'Cumulative baseline model, normal year',
+        'Cumulative reporting model, normal year',
+        # 'Baseline model minus reporting model, normal year',
+        # 'Baseline model, normal year',
+        'Reporting model, normal year',
+
+        # 'Cumulative baseline model minus observed, reporting period',
+        # 'Cumulative baseline model, reporting period',
+        'Cumulative observed, reporting period',
+        # 'Baseline model minus observed, reporting period',
+        # 'Baseline model, reporting period',
+        'Observed, reporting period',
+
+        #'Baseline model, baseline period',
+        'Reporting model, reporting period',
+
+        'Cumulative observed, baseline period',
+        'Observed, baseline period',
+
+        'Observed, project period',
+
+        'Inclusion mask, baseline period',
+        'Inclusion mask, reporting period',
+
+        'Temperature, baseline period',
+        'Temperature, reporting period',
+        'Temperature, normal year',
     ])
 
+    for d in derivatives:
+        assert isinstance(d['orderable'], list)
+        assert isinstance(d['value'], list)
+        assert isinstance(d['variance'], list)
+        assert len(d['orderable']) == len(d['value']) == len(d['variance'])
+
+    json.dumps(results)
 
 def test_basic_usage_empty(
         meter_input_empty,
@@ -441,3 +561,56 @@ def test_strange_interpretation(meter_input_strange_interpretation,
 
     assert results['status'] == 'FAILURE'
     assert results['failure_message'].startswith("Default formatter")
+
+
+def test_bad_zipcode(meter_input_bad_zipcode):
+
+    meter = EnergyEfficiencyMeter()
+
+    results = meter.evaluate(meter_input_bad_zipcode)
+
+    assert results['project_id'] is None
+    assert results['trace_id'] is None
+    assert results['interval'] is None
+
+    derivatives = results['derivatives']
+    assert len(derivatives) == 7
+
+    source_series = set([d['series'] for d in derivatives])
+    assert source_series == set([
+        # 'Cumulative baseline model minus reporting model, normal year',
+        # 'Cumulative baseline model, normal year',
+        # 'Cumulative reporting model, normal year',
+        # 'Baseline model minus reporting model, normal year',
+        # 'Baseline model, normal year',
+        # 'Reporting model, normal year',
+
+        # 'Cumulative baseline model minus observed, reporting period',
+        # 'Cumulative baseline model, reporting period',
+        'Cumulative observed, reporting period',
+        # 'Baseline model minus observed, reporting period',
+        # 'Baseline model, reporting period',
+        'Observed, reporting period',
+
+        #'Baseline model, baseline period',
+        #'Reporting model, reporting period',
+
+        'Cumulative observed, baseline period',
+        'Observed, baseline period',
+
+        'Observed, project period',
+
+        'Inclusion mask, baseline period',
+        'Inclusion mask, reporting period',
+        # 'Temperature, baseline period',
+        # 'Temperature, reporting period',
+        # 'Temperature, normal year',
+    ])
+
+    for d in derivatives:
+        assert isinstance(d['orderable'], list)
+        assert isinstance(d['value'], list)
+        assert isinstance(d['variance'], list)
+        assert len(d['orderable']) == len(d['value']) == len(d['variance'])
+
+    json.dumps(results)

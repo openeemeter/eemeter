@@ -19,10 +19,11 @@ class BillingElasticNetCVModel(ElasticNetCVBaseModel):
     '''
 
     def __init__(self, cooling_base_temp=65, heating_base_temp=65,
-                 n_bootstrap=100):
+                 n_bootstrap=100, modeling_period_interpretation='baseline'):
 
         super(BillingElasticNetCVModel, self).__init__(
             cooling_base_temp, heating_base_temp, n_bootstrap)
+        self.modeling_period_interpretation = modeling_period_interpretation
 
     def __repr__(self):
         return (
@@ -52,22 +53,22 @@ class BillingElasticNetCVModel(ElasticNetCVBaseModel):
 
     def _cdd(self, temperature_data):
         if 'hourly' in temperature_data.index.names:
-            cdd = np.maximum((temperature_data - self.cooling_base_temp)
-                             .groupby(level='period').sum()[0] / 24.0, 0.0)
+            cdd = np.maximum(temperature_data - self.cooling_base_temp, 0.0)\
+                             .groupby(level='period').sum()[0] / 24.0
         elif 'daily' in temperature_data.index.names:
-            cdd = np.maximum((temperature_data - self.cooling_base_temp)
-                             .groupby(level='period').sum()[0], 0.0)
+            cdd = np.maximum(temperature_data - self.cooling_base_temp, 0.0)\
+                             .groupby(level='period').sum()[0]
         else:
             cdd = []
         return cdd
 
     def _hdd(self, temperature_data):
         if 'hourly' in temperature_data.index.names:
-            hdd = np.maximum((self.heating_base_temp - temperature_data)
-                             .groupby(level='period').sum()[0] / 24.0, 0.0)
+            hdd = np.maximum(self.heating_base_temp - temperature_data, 0.0)\
+                             .groupby(level='period').sum()[0] / 24.0
         elif 'daily' in temperature_data.index.names:
-            hdd = np.maximum((self.heating_base_temp - temperature_data)
-                             .groupby(level='period').sum()[0], 0.0)
+            hdd = np.maximum(self.heating_base_temp - temperature_data, 0.0)\
+                             .groupby(level='period').sum()[0]
         else:
             hdd = []
         return hdd
