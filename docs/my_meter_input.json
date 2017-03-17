@@ -4,6 +4,8 @@
     "type": "ARBITRARY_START",
     "interpretation": "ELECTRICITY_CONSUMPTION_SUPPLIED",
     "unit": "KWH",
+    "trace_id": "TRACE_ID_123",
+    "interval": "daily",
     "records": [
       {
         "start": "2011-01-01T00:00:00+00:00",
@@ -7320,6 +7322,7 @@
   "project": {
     "type": "PROJECT_WITH_SINGLE_MODELING_PERIOD_GROUP",
     "zipcode": "50321",
+    "project_id": "PROJECT_ID_ABC",
     "modeling_period_group": {
       "baseline_period": {
         "start": null,

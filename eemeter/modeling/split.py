@@ -75,10 +75,8 @@ class SplitModeledEnergyTrace(object):
                     filtered_trace, weather_source)
             except:
                 logger.warn(
-                    'For trace "{}" and modeling_period "{}", was not'
-                    ' able to format input data for {}.'
-                    .format(self.trace.interpretation, modeling_period_label,
-                            model)
+                    'Input data formatting failed for trace {} in {} period.'
+                    .format(self.trace.trace_id, modeling_period_label)
                 )
                 outputs.update({
                     "status": "FAILURE",
@@ -104,10 +102,8 @@ class SplitModeledEnergyTrace(object):
                 except:
                     tb = traceback.format_exc()
                     logger.warn(
-                        'For trace "{}" and modeling_period "{}", {} was not'
-                        ' able to fit using input data with traceback:\n{}'
-                        .format(self.trace.interpretation,
-                                modeling_period_label, model, tb)
+                        '{} fit failed for trace {} in {} period.'
+                        .format(model, self.trace.trace_id, modeling_period_label)
                     )
 
                     outputs.update({
@@ -116,10 +112,8 @@ class SplitModeledEnergyTrace(object):
                     })
                 else:
                     logger.info(
-                        'Successfully fitted {} to formatted input data for'
-                        ' trace "{}" and modeling_period "{}".'
-                        .format(model, self.trace.interpretation,
-                                modeling_period_label)
+                        '{} fit successful for trace {} in {} period.'
+                        .format(model, self.trace.trace_id, modeling_period_label)
                     )
                     outputs["model_fit"].update(model_fit)
                     outputs.update({
@@ -148,19 +142,19 @@ class SplitModeledEnergyTrace(object):
         '''
 
         outputs = self.fit_outputs[modeling_period_label]
+        model = self.model_mapping[modeling_period_label]
 
         if outputs["status"] == "FAILURE":
             logger.warn(
-                'Skipping prediction for modeling_period "{}" because'
-                ' model fit failed.'.format(modeling_period_label)
+                '{} cannot predict in failed {} period for trace {}.'
+                .format(model, modeling_period_label, self.trace.trace_id)
             )
             return None
 
         if 'params' not in kwargs:
             kwargs['params'] = outputs["model_fit"]["model_params"]
 
-        return self.model_mapping[modeling_period_label].predict(
-            demand_fixture_data, **kwargs)
+        return model.predict(demand_fixture_data, **kwargs)
 
     def compute_derivative(self, modeling_period_label, derivative_callable,
                            derivative_callable_kwargs):
@@ -216,7 +210,8 @@ class SplitModeledEnergyTrace(object):
 
         # require NaN last data point as cap
         if filtered_df.shape[0] > 0:
-            filtered_df.value.iloc[-1] = np.nan
-            filtered_df.estimated.iloc[-1] = False
+            last_index = filtered_df.index[-1]
+            filtered_df.set_value(last_index, 'value', np.nan)
+            filtered_df.set_value(last_index, 'estimated', False)
 
         return filtered_df

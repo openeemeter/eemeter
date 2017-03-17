@@ -166,13 +166,17 @@ class EnergyTrace(object):
         'NATURAL_GAS_CONSUMPTION_SUPPLIED',
     ]
 
-    def __init__(self, interpretation, data=None, records=None, unit=None,
-                 placeholder=False, serializer=None):
+    def __init__(
+            self, interpretation, data=None, records=None, unit=None,
+            placeholder=False, serializer=None, trace_id=None, interval=None):
 
         self._set_interpretation(interpretation)
-        self._set_data(data, records, unit, placeholder, serializer)
+        self._set_data(
+            data, records, unit, placeholder, serializer, trace_id, interval)
 
     def __repr__(self):
+        if self.trace_id is not None:
+            return "EnergyTrace(trace_id={})".format(self.trace_id)
         if self.placeholder:
             return (
                 "EnergyTrace(interpretation={}, placeholder=True)"
@@ -195,7 +199,11 @@ class EnergyTrace(object):
             )
             raise ValueError(message)
 
-    def _set_data(self, data, records, unit, placeholder, serializer):
+    def _set_data(
+            self, data, records, unit, placeholder, serializer, trace_id,
+            interval):
+        self.trace_id = trace_id
+        self.interval = interval
         if (placeholder and data is None and records is None and
                 serializer is None):
             # placeholder initialization option.
