@@ -174,8 +174,8 @@ class ModelDataFormatter(FormatterBase):
 
     def get_input_data_mask(self, input_data):
         ''' Boolean list of missing/not missing values:
-            True  => not missing
-            False => missing
+            True  => missing
+            False => not missing
         '''
 
         dts, mask = [], []
@@ -368,8 +368,8 @@ formatter.create_input(energy_trace, weather_source)
 
     def get_input_data_mask(self, input_data):
         ''' Boolean list of missing/not missing values:
-            True  => not missing
-            False => missing
+            True  => missing
+            False => not missing
         '''
         trace_data, temp_data = input_data
         dts = []
