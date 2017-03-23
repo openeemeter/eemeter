@@ -26,7 +26,7 @@ setup(
         'lxml <= 3.6.1',
         'numpy >= 1.10.2',
         'scipy',
-        'pandas >= 0.18,<0.19',
+        'pandas >= 0.19.2',
         'patsy',
         'pytz',
         'requests',

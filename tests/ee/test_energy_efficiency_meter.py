@@ -264,7 +264,7 @@ def test_basic_usage_daily(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 22
+    assert len(derivatives) == 26
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
@@ -286,6 +286,9 @@ def test_basic_usage_daily(
         'Baseline model minus observed, reporting period',
         'Baseline model, reporting period',
         'Observed, reporting period',
+        'Masked baseline model minus observed, reporting period',
+        'Masked baseline model, reporting period',
+        'Masked observed, reporting period',
 
         'Baseline model, baseline period',
         'Reporting model, reporting period',
@@ -301,6 +304,7 @@ def test_basic_usage_daily(
         'Temperature, baseline period',
         'Temperature, reporting period',
         'Temperature, normal year',
+        'Masked temperature, reporting period',
     ])
 
     for d in derivatives:
@@ -336,7 +340,7 @@ def test_basic_usage_monthly(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 22
+    assert len(derivatives) == 26
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
@@ -356,6 +360,9 @@ def test_basic_usage_monthly(
         'Baseline model minus observed, reporting period',
         'Baseline model, reporting period',
         'Observed, reporting period',
+        'Masked baseline model minus observed, reporting period',
+        'Masked baseline model, reporting period',
+        'Masked observed, reporting period',
 
         'Baseline model, baseline period',
         'Reporting model, reporting period',
@@ -371,6 +378,7 @@ def test_basic_usage_monthly(
         'Temperature, baseline period',
         'Temperature, reporting period',
         'Temperature, normal year',
+        'Masked temperature, reporting period',
     ])
 
     for d in derivatives:
@@ -405,7 +413,7 @@ def test_basic_usage_baseline_only(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 13
+    assert len(derivatives) == 15
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
@@ -425,6 +433,9 @@ def test_basic_usage_baseline_only(
         # 'Baseline model minus observed, reporting period',
         # 'Baseline model, reporting period',
         'Observed, reporting period',
+        # 'Masked baseline model minus observed, reporting period',
+        # 'Masked baseline model, reporting period',
+        'Masked observed, reporting period',
 
         'Baseline model, baseline period',
         #'Reporting model, reporting period',
@@ -440,6 +451,7 @@ def test_basic_usage_baseline_only(
         'Temperature, baseline period',
         'Temperature, reporting period',
         'Temperature, normal year',
+        'Masked temperature, reporting period',
     ])
 
     for d in derivatives:
@@ -474,7 +486,7 @@ def test_basic_usage_reporting_only(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 13
+    assert len(derivatives) == 15
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
@@ -496,6 +508,9 @@ def test_basic_usage_reporting_only(
         # 'Baseline model minus observed, reporting period',
         # 'Baseline model, reporting period',
         'Observed, reporting period',
+        # 'Masked baseline model minus observed, reporting period',
+        # 'Masked baseline model, reporting period',
+        'Masked observed, reporting period',
 
         #'Baseline model, baseline period',
         'Reporting model, reporting period',
@@ -511,6 +526,7 @@ def test_basic_usage_reporting_only(
         'Temperature, baseline period',
         'Temperature, reporting period',
         'Temperature, normal year',
+        'Masked temperature, reporting period',
     ])
 
     for d in derivatives:
@@ -574,7 +590,7 @@ def test_bad_zipcode(meter_input_bad_zipcode):
     assert results['interval'] is None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 7
+    assert len(derivatives) == 8
 
     source_series = set([d['series'] for d in derivatives])
     assert source_series == set([
@@ -591,6 +607,9 @@ def test_bad_zipcode(meter_input_bad_zipcode):
         # 'Baseline model minus observed, reporting period',
         # 'Baseline model, reporting period',
         'Observed, reporting period',
+        # 'Masked baseline model minus observed, reporting period',
+        # 'Masked baseline model, reporting period',
+        'Masked observed, reporting period',
 
         #'Baseline model, baseline period',
         #'Reporting model, reporting period',
@@ -602,9 +621,12 @@ def test_bad_zipcode(meter_input_bad_zipcode):
 
         'Inclusion mask, baseline period',
         'Inclusion mask, reporting period',
+
         # 'Temperature, baseline period',
         # 'Temperature, reporting period',
         # 'Temperature, normal year',
+
+        # 'Masked temperature, reporting period',
     ])
 
     for d in derivatives:

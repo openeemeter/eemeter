@@ -310,8 +310,8 @@ class EnergyEfficiencyMeter(object):
 
         # Step 5: create formatter instance
         if formatter is None:
-            FormatterClass, formatter_kwargs = self.default_formatter_mapping \
-                .get(selector, (None, None))
+            FormatterClass, formatter_kwargs = \
+                self.default_formatter_mapping.get(selector, (None, None))
             if FormatterClass is None:
                 message = (
                     "Default formatter mapping did not find a match for"
@@ -356,8 +356,8 @@ class EnergyEfficiencyMeter(object):
 
         # Step 8: create split modeled energy trace
         model_mapping = {
-            modeling_period_label: ModelClass(\
-                modeling_period_interpretation=modeling_period_label, \
+            modeling_period_label: ModelClass(
+                modeling_period_interpretation=modeling_period_label,
                 **model_kwargs)
             for modeling_period_label, _ in
             modeling_period_set.iter_modeling_periods()
@@ -385,7 +385,6 @@ class EnergyEfficiencyMeter(object):
             formatter = modeled_trace.formatter
             unit = modeled_trace.trace.unit
             trace = modeled_trace.trace
-
 
             # default project dates
             baseline_end_date = baseline_period.end_date
@@ -427,7 +426,6 @@ class EnergyEfficiencyMeter(object):
             else:
                 baseline_data_start_date = baseline_end_date
                 baseline_data_end_date = baseline_end_date
-
 
             baseline_model = modeled_trace.model_mapping[baseline_label]
             reporting_model = modeled_trace.model_mapping[reporting_label]
@@ -560,7 +558,6 @@ class EnergyEfficiencyMeter(object):
                 except:
                     _report_failed_derivative(series)
 
-
             if baseline_model_success:
                 if weather_normal_source_success:
                     series = 'Cumulative baseline model, normal year'
@@ -596,7 +593,6 @@ class EnergyEfficiencyMeter(object):
                     except:
                         _report_failed_derivative(series)
 
-
                 if weather_source_success and reporting_period_fixture_success:
                     series = 'Cumulative baseline model, reporting period'
                     description = '''Total predicted usage according to the baseline model
@@ -628,6 +624,33 @@ class EnergyEfficiencyMeter(object):
                             'value': value.tolist(),
                             'variance': variance.tolist()
                         })
+                    except:
+                        _report_failed_derivative(series)
+
+                    series = 'Masked baseline model, reporting period'
+                    description = '''Predicted usage according to the baseline model
+                                     over the reporting period, null where values are
+                                     missing in either the observed usage or
+                                     temperature data.'''
+
+                    try:
+                        value, variance = baseline_model.predict(
+                                reporting_period_daily_fixture, summed=False)
+
+                        raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [i.isoformat() for i in reporting_period_daily_fixture.index],
+                            'value': [
+                                v if not reporting_mask.get(i, True) else None
+                                for i, v in value.iteritems()
+                            ],
+                            'variance': [
+                                v if not reporting_mask.get(i, True) else None
+                                for i, v in variance.iteritems()
+                            ],
+                        })
+
                     except:
                         _report_failed_derivative(series)
 
@@ -667,6 +690,33 @@ class EnergyEfficiencyMeter(object):
                             'orderable': [i.isoformat() for i in reporting_period_daily_fixture.index],
                             'value': value.tolist(),
                             'variance': variance.tolist()
+                        })
+                    except:
+                        _report_failed_derivative(series)
+
+                    series = 'Masked baseline model minus observed, reporting period'
+                    description = '''Predicted usage according to the baseline model
+                                     minus observed usage over the reporting period,
+                                     null where values are missing in either
+                                     the observed usage or temperature data.'''
+                    try:
+                        value, variance = subtract_value_variance_tuple(
+                                baseline_model.predict(
+                                    reporting_period_daily_fixture, summed=False),
+                                (reporting_period_data, 0)
+                            )
+                        raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [i.isoformat() for i in reporting_period_daily_fixture.index],
+                            'value': [
+                                v if not reporting_mask.get(i, True) else None
+                                for i, v in value.iteritems()
+                            ],
+                            'variance': [
+                                v if not reporting_mask.get(i, True) else None
+                                for i, v in variance.iteritems()
+                            ],
                         })
                     except:
                         _report_failed_derivative(series)
@@ -768,6 +818,27 @@ class EnergyEfficiencyMeter(object):
             except:
                 _report_failed_derivative(series)
 
+            series = 'Masked observed, reporting period'
+            description = '''Observed usage over the reporting period,
+                             null where values are missing in either
+                             the observed usage or temperature data.'''
+            try:
+                raw_derivatives.append({
+                    'series': series,
+                    'description': description,
+                    'orderable': [i.isoformat() for i in reporting_period_data.index],
+                    'value': [
+                        v if not reporting_mask.get(i, True) else None
+                        for i, v in reporting_period_data.iteritems()
+                    ],
+                    'variance': [
+                        0 if not reporting_mask.get(i, True) else None
+                        for i, v in reporting_period_data.iteritems()
+                    ],
+                })
+            except:
+                _report_failed_derivative(series)
+
             series = 'Cumulative observed, baseline period'
             description = '''Total observed usage over the baseline period.
                              Days for which weather data does not exist
@@ -816,8 +887,8 @@ class EnergyEfficiencyMeter(object):
                     raw_derivatives.append({
                         'series': series,
                         'description': description,
-                        'orderable': [i.isoformat() for i in \
-                                      unmasked_baseline_period_daily_fixture.index],
+                        'orderable': [
+                            i.isoformat() for i in unmasked_baseline_period_daily_fixture.index],
                         'value': unmasked_baseline_period_daily_fixture['tempF'].values.tolist(),
                         'variance': [0 for _ in range(unmasked_baseline_period_daily_fixture['tempF'].shape[0])]
                     })
@@ -830,10 +901,32 @@ class EnergyEfficiencyMeter(object):
                     raw_derivatives.append({
                         'series': series,
                         'description': description,
-                        'orderable': [i.isoformat() for i in \
-                                      unmasked_reporting_period_daily_fixture.index],
+                        'orderable': [
+                            i.isoformat() for i in unmasked_reporting_period_daily_fixture.index],
                         'value': unmasked_reporting_period_daily_fixture['tempF'].values.tolist(),
                         'variance': [0 for _ in range(unmasked_reporting_period_daily_fixture['tempF'].shape[0])]
+                    })
+                except:
+                    _report_failed_derivative(series)
+
+                series = 'Masked temperature, reporting period'
+                description = '''Observed temperature (degF) over the reporting
+                                 period, null where values are missing in either
+                                 the observed usage or temperature data.'''
+                try:
+                    raw_derivatives.append({
+                        'series': series,
+                        'description': description,
+                        'orderable': [
+                            i.isoformat() for i in unmasked_reporting_period_daily_fixture.index],
+                        'value': [
+                            v if not reporting_mask.get(i, True) else None
+                            for i, v in unmasked_reporting_period_daily_fixture['tempF'].iteritems()
+                        ],
+                        'variance': [
+                            0 if not reporting_mask.get(i, True) else None
+                            for i, v in unmasked_reporting_period_daily_fixture['tempF'].iteritems()
+                        ],
                     })
                 except:
                     _report_failed_derivative(series)
@@ -845,14 +938,13 @@ class EnergyEfficiencyMeter(object):
                     raw_derivatives.append({
                         'series': series,
                         'description': description,
-                        'orderable': [i.isoformat() for i in \
-                                      annualized_daily_fixture.index],
+                        'orderable': [
+                            i.isoformat() for i in annualized_daily_fixture.index],
                         'value': annualized_daily_fixture['tempF'].values.tolist(),
                         'variance': [0 for _ in range(annualized_daily_fixture['tempF'].shape[0])]
                     })
                 except:
                     _report_failed_derivative(series)
-
 
             series = 'Inclusion mask, baseline period'
             description = '''Mask for baseline period data which is included in
