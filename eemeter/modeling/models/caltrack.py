@@ -166,6 +166,30 @@ class CaltrackMonthlyModel(object):
 
         return pd.DataFrame(model_data)
 
+
+    def add_cols_to_demand_fixture(self, df):
+        cdd = {i: [0] for i in self.bp_cdd}
+        hdd = {i: [0] for i in self.bp_hdd}
+        for bp in self.bp_cdd:
+            cdd[bp] = pd.Series(
+                np.maximum(df.tempF - bp, 0),
+                index = df.index)
+        for bp in self.bp_hdd:
+            hdd[bp] = pd.Series(
+                np.maximum(bp - df.tempF, 0),
+                index = df.index)
+        model_data = {
+            'upd': np.zeros(len(df.index)),
+            'usage': np.zeros(len(df.index)),
+            'ndays': np.ones(len(df.index)),
+        }
+        model_data.update({'CDD_' + str(bp): \
+            cdd[bp] for bp in cdd.keys()})
+        model_data.update({'HDD_' + str(bp): \
+            hdd[bp] for bp in hdd.keys()})
+        return pd.DataFrame(model_data, index=df.index)
+
+
     def daily_to_monthly_avg(self, df):
         ''' Convert from daily usage and temperature to monthly
         usage per day and average HDD/CDD. '''
@@ -644,6 +668,7 @@ class CaltrackMonthlyModel(object):
 
         n = estimated.shape[0]
 
+        self.df = df
         self.y, self.X = y, X
         self.estimated = estimated
         self.r2, self.rmse = r2, rmse
@@ -699,7 +724,7 @@ class CaltrackMonthlyModel(object):
         formula = params["formula"]
 
         demand_fixture_index = demand_fixture_data.index.copy()
-        demand_fixture_data = self.daily_to_monthly_avg(demand_fixture_data)
+        demand_fixture_data = self.add_cols_to_demand_fixture(demand_fixture_data)
         dfd = demand_fixture_data.dropna()
 
         _, X = patsy.dmatrices(formula, dfd,
