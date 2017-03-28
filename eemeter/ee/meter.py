@@ -53,7 +53,8 @@ class EnergyEfficiencyMeter(object):
     '''
 
     def __init__(self, default_model_mapping=None,
-                 default_formatter_mapping=None):
+                 default_formatter_mapping=None,
+                 min_months_for_data_sufficiency=12):
 
         if default_formatter_mapping is None:
             daily_formatter = (ModelDataFormatter, {'freq_str': 'D'})
@@ -97,10 +98,16 @@ class EnergyEfficiencyMeter(object):
             caltrack_gas_model = (CaltrackMonthlyModel, {
                 'fit_cdd': False,
                 'grid_search': True,
+                'min_contiguous_months': 12 \
+                    if min_months_for_data_sufficiency is None else \
+                    min_months_for_data_sufficiency
             })
             caltrack_elec_model = (CaltrackMonthlyModel, {
                 'fit_cdd': True,
                 'grid_search': True,
+                'min_contiguous_months': 12 \
+                    if min_months_for_data_sufficiency is None else \
+                    min_months_for_data_sufficiency
             })
             default_model_mapping = {
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '15T'):
