@@ -9,6 +9,8 @@ from eemeter.ee.meter import EnergyEfficiencyMeter
 from eemeter.testing.mocks import MockWeatherClient
 from eemeter.weather import TMY3WeatherSource
 from eemeter.weather import ISDWeatherSource
+from eemeter.modeling.formatters import ModelDataBillingFormatter
+from eemeter.modeling.models import CaltrackMonthlyModel
 
 
 @pytest.fixture
@@ -636,3 +638,75 @@ def test_bad_zipcode(meter_input_bad_zipcode):
         assert len(d['orderable']) == len(d['value']) == len(d['variance'])
 
     json.dumps(results)
+
+def test_custom_evaluate_args(
+        meter_input_monthly,
+        mock_isd_weather_source,
+        mock_tmy3_weather_source):
+
+    meter = EnergyEfficiencyMeter()
+
+    results = meter.evaluate(meter_input_monthly,
+                             model=None,
+                             formatter=None,
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['model_class'] == 'CaltrackMonthlyModel'
+    assert results['model_kwargs'] == {'fit_cdd': True, 'grid_search': True}
+    assert results['formatter_class'] == 'ModelDataBillingFormatter'
+    assert results['formatter_kwargs'] == {}
+
+    results = meter.evaluate(meter_input_monthly,
+                             model=(None, None),
+                             formatter=(None, None),
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['model_class'] == 'CaltrackMonthlyModel'
+    assert results['model_kwargs'] == {'fit_cdd': True, 'grid_search': True}
+    assert results['formatter_class'] == 'ModelDataBillingFormatter'
+    assert results['formatter_kwargs'] == {}
+
+    results = meter.evaluate(meter_input_monthly,
+                             model=('CaltrackMonthlyModel', None),
+                             formatter=('ModelDataBillingFormatter', None),
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['model_class'] == 'CaltrackMonthlyModel'
+    assert results['model_kwargs'] == {}
+    assert results['formatter_class'] == 'ModelDataBillingFormatter'
+    assert results['formatter_kwargs'] == {}
+
+    results = meter.evaluate(meter_input_monthly,
+                             model=(None, {"fit_cdd": False}),
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['model_class'] == 'CaltrackMonthlyModel'
+    assert results['model_kwargs'] == {'fit_cdd': False, 'grid_search': True}
+    assert results['formatter_class'] == 'ModelDataBillingFormatter'
+    assert results['formatter_kwargs'] == {}
+
+    results = meter.evaluate(meter_input_monthly,
+                             model=(None, {"fit_cdd": False}),
+                             formatter=(None, {}),
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['model_class'] == 'CaltrackMonthlyModel'
+    assert results['model_kwargs'] == {'fit_cdd': False, 'grid_search': True}
+    assert results['formatter_class'] == 'ModelDataBillingFormatter'
+    assert results['formatter_kwargs'] == {}
+
+    results = meter.evaluate(meter_input_monthly,
+                             model=(CaltrackMonthlyModel, {"fit_cdd": False}),
+                             formatter=(ModelDataBillingFormatter, {}),
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['model_class'] == 'CaltrackMonthlyModel'
+    assert results['model_kwargs'] == {'fit_cdd': False}
+    assert results['formatter_class'] == 'ModelDataBillingFormatter'
+    assert results['formatter_kwargs'] == {}
