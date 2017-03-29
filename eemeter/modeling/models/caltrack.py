@@ -24,7 +24,9 @@ class CaltrackMonthlyModel(object):
     period in order for the weather normalization to be valid.
     '''
     def __init__(
-            self, fit_cdd=True, grid_search=False, min_contiguous_months=12,
+            self, fit_cdd=True, grid_search=False,
+            min_contiguous_baseline_months=12,
+            min_contiguous_reporting_months=12,
             modeling_period_interpretation='baseline'):
 
         self.fit_cdd = fit_cdd
@@ -40,7 +42,8 @@ class CaltrackMonthlyModel(object):
         self.n = None
         self.input_data = None
         self.fit_bp_hdd, self.fit_bp_cdd = None, None
-        self.min_contiguous_months = min_contiguous_months
+        self.min_contiguous_baseline_months = min_contiguous_baseline_months
+        self.min_contiguous_reporting_months = min_contiguous_reporting_months
         self.modeling_period_interpretation = modeling_period_interpretation
 
         if grid_search:
@@ -190,7 +193,6 @@ class CaltrackMonthlyModel(object):
 
     def meets_sufficiency_or_error(self, df):
         # Caltrack sufficiency requirement of number of contiguous months
-        _n = self.min_contiguous_months
 
         # choose first hdd as a proxy for temperature data
         upd = df['upd'].values
@@ -204,6 +206,7 @@ class CaltrackMonthlyModel(object):
         mp_type = self.modeling_period_interpretation
         if mp_type == 'baseline':
 
+            _n = self.min_contiguous_baseline_months
             # In the baseline period, require the last N months be non-nan.
             last_month_nan = np.isnan(upd[-1])
             direction = "last"
@@ -217,6 +220,7 @@ class CaltrackMonthlyModel(object):
 
         elif mp_type == 'reporting':
 
+            _n = self.min_contiguous_reporting_months
             # In the reporting period, require the first N months be non-nan.
             first_month_nan = np.isnan(df['upd'].values[0])
             direction = "first"
