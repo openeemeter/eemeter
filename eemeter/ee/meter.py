@@ -173,7 +173,7 @@ class EnergyEfficiencyMeter(object):
                 else:
                     FormatterClass = custom_formatter_class
 
-                if custom_formatter_kargs is None:
+                if custom_formatter_kwargs is None:
                     # assume default args don't apply since using custom meter class
                     formatter_kwargs = {}
                 else:
@@ -213,7 +213,7 @@ class EnergyEfficiencyMeter(object):
                 else:
                     ModelClass = custom_model_class
 
-                if custom_model_kargs is None:
+                if custom_model_kwargs is None:
                     # assume default args don't apply since using custom meter class
                     model_kwargs = {}
                 else:
