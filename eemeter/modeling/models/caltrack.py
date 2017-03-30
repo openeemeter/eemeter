@@ -127,8 +127,12 @@ class CaltrackMonthlyModel(object):
                     hdd_data_daily_mean_values[bp].append(thismean)
             else:
                 for bp in self.bp_cdd:
+                    if bp not in cdd_data_daily_mean_values.keys():
+                        cdd_data_daily_mean_values[bp] = []
                     cdd_data_daily_mean_values[bp].append(np.nan)
                 for bp in self.bp_hdd:
+                    if bp not in hdd_data_daily_mean_values.keys():
+                        hdd_data_daily_mean_values[bp] = []
                     hdd_data_daily_mean_values[bp].append(np.nan)
 
         # spread out over the month
