@@ -593,6 +593,70 @@ class EnergyEfficiencyMeter(object):
                     .format(series)
                 )
 
+            if baseline_model_success:
+                if baseline_output.has_key('model_fit') and \
+                   baseline_output['model_fit'].has_key('model_params') and \
+                   baseline_output['model_fit']['model_params'].has_key('hdd_bp'):
+                    series = 'Heating degree day balance point, baseline period'
+                    description = '''Best-fit heating degree day balance point, 
+                                     if any, for baseline model'''
+                    value = baseline_output['model_fit']['model_params']['hdd_bp']
+                    
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [None,]
+                    })
+                if baseline_output.has_key('model_fit') and \
+                   baseline_output['model_fit'].has_key('model_params') and \
+                   baseline_output['model_fit']['model_params'].has_key('cdd_bp'):
+                    series = 'Cooling degree day balance point, baseline period'
+                    description = '''Best-fit cooling degree day balance point, 
+                                     if any, for baseline model'''
+                    value = baseline_output['model_fit']['model_params']['cdd_bp']
+                    
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [None,]
+                    })
+
+            if reporting_model_success:
+                if reporting_output.has_key('model_fit') and \
+                   reporting_output['model_fit'].has_key('model_params') and \
+                   reporting_output['model_fit']['model_params'].has_key('hdd_bp'):
+                    series = 'Heating degree day balance point, reporting period'
+                    description = '''Best-fit heating degree day balance point, 
+                                     if any, for reporting model'''
+                    value = reporting_output['model_fit']['model_params']['hdd_bp']
+                    
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [None,]
+                    })
+                if reporting_output.has_key('model_fit') and \
+                   reporting_output['model_fit'].has_key('model_params') and \
+                   reporting_output['model_fit']['model_params'].has_key('cdd_bp'):
+                    series = 'Cooling degree day balance point, reporting period'
+                    description = '''Best-fit cooling degree day balance point, 
+                                     if any, for reporting model'''
+                    value = reporting_output['model_fit']['model_params']['cdd_bp']
+                    
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [None,]
+                    })
+
             if baseline_model_success and reporting_model_success \
                     and weather_normal_source_success:
                 series = 'Cumulative baseline model minus reporting model, normal year'
