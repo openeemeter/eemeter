@@ -160,7 +160,7 @@ def meter_input_monthly(project_meter_input):
     records = [
         {
             "start": dt.isoformat(),
-            "value": 1.0 if dt.month > 4 or dt.month < 10 else 2.0,
+            "value": 1.0 if (dt.month > 4 and dt.month < 10) else 2.0,
             "estimated": False
         } for dt in record_starts
     ]
