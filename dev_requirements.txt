@@ -1,4 +1,4 @@
-ipykernel==4.5.2
+ipykernel==4.6.0
 lxml==3.7.3
 mock==2.0.0
 nbsphinx==0.2.13
