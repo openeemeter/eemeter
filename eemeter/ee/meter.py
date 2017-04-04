@@ -609,6 +609,24 @@ class EnergyEfficiencyMeter(object):
                             'value': [value,],
                             'variance': [None,]
                     })
+
+                    if baseline_output['model_fit']['model_params'].has_key('coefficients') and \
+                       baseline_output['model_fit']['model_params']['coefficients'].\
+                       has_key('HDD_' + str(value)):
+                        series = 'Best-fit heating coefficient, baseline period'
+                        description = '''Best-fit heating coefficient,
+                                         if any, for baseline model'''
+                        value = baseline_output['model_fit']['model_params']['coefficients']\
+                                               ['HDD_' + str(value)]
+                        
+                        raw_derivatives.append({
+                                'series': series,
+                                'description': description,
+                                'orderable': [None,],
+                                'value': [value,],
+                                'variance': [None,]
+                        })
+
                 if baseline_output.has_key('model_fit') and \
                    baseline_output['model_fit'].has_key('model_params') and \
                    baseline_output['model_fit']['model_params'].has_key('cdd_bp'):
@@ -617,6 +635,39 @@ class EnergyEfficiencyMeter(object):
                                      if any, for baseline model'''
                     value = baseline_output['model_fit']['model_params']['cdd_bp']
                     
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [None,]
+                    })
+
+                    if baseline_output['model_fit']['model_params'].has_key('coefficients') and \
+                       baseline_output['model_fit']['model_params']['coefficients'].\
+                       has_key('CDD_' + str(value)):
+                        series = 'Best-fit cooling coefficient, baseline period'
+                        description = '''Best-fit cooling coefficient,
+                                         if any, for baseline model'''
+                        value = baseline_output['model_fit']['model_params']['coefficients']\
+                                               ['CDD_' + str(value)]
+                        
+                        raw_derivatives.append({
+                                'series': series,
+                                'description': description,
+                                'orderable': [None,],
+                                'value': [value,],
+                                'variance': [None,]
+                        })
+
+                if baseline_output.has_key('model_fit') and \
+                   baseline_output['model_fit'].has_key('model_params') and \
+                   baseline_output['model_fit']['model_params'].has_key('coefficients') and \
+                   baseline_output['model_fit']['model_params']['coefficients'].has_key('Intercept'):
+                    series = 'Best-fit intercept, baseline period'
+                    description = '''Best-fit intercept, if any, for baseline model'''
+                    value = baseline_output['model_fit']['model_params']['coefficients']['Intercept']
+
                     raw_derivatives.append({
                             'series': series,
                             'description': description,
@@ -641,6 +692,24 @@ class EnergyEfficiencyMeter(object):
                             'value': [value,],
                             'variance': [None,]
                     })
+
+                    if reporting_output['model_fit']['model_params'].has_key('coefficients') and \
+                       reporting_output['model_fit']['model_params']['coefficients'].\
+                       has_key('HDD_' + str(value)):
+                        series = 'Best-fit heating coefficient, reporting period'
+                        description = '''Best-fit heating coefficient,
+                                         if any, for reporting model'''
+                        value = reporting_output['model_fit']['model_params']['coefficients']\
+                                                ['HDD_' + str(value)]
+                        
+                        raw_derivatives.append({
+                                'series': series,
+                                'description': description,
+                                'orderable': [None,],
+                                'value': [value,],
+                                'variance': [None,]
+                        })
+
                 if reporting_output.has_key('model_fit') and \
                    reporting_output['model_fit'].has_key('model_params') and \
                    reporting_output['model_fit']['model_params'].has_key('cdd_bp'):
@@ -656,6 +725,40 @@ class EnergyEfficiencyMeter(object):
                             'value': [value,],
                             'variance': [None,]
                     })
+
+                    if reporting_output['model_fit']['model_params'].has_key('coefficients') and \
+                       reporting_output['model_fit']['model_params']['coefficients'].\
+                       has_key('CDD_' + str(value)):
+                        series = 'Best-fit cooling coefficient, reporting period'
+                        description = '''Best-fit cooling coefficient,
+                                         if any, for reporting model'''
+                        value = reporting_output['model_fit']['model_params']['coefficients']\
+                                                ['CDD_' + str(value)]
+                        
+                        raw_derivatives.append({
+                                'series': series,
+                                'description': description,
+                                'orderable': [None,],
+                                'value': [value,],
+                                'variance': [None,]
+                        })
+
+                if reporting_output.has_key('model_fit') and \
+                   reporting_output['model_fit'].has_key('model_params') and \
+                   reporting_output['model_fit']['model_params'].has_key('coefficients') and \
+                   reporting_output['model_fit']['model_params']['coefficients'].has_key('Intercept'):
+                    series = 'Best-fit intercept, reporting period'
+                    description = '''Best-fit intercept, if any, for reporting model'''
+                    value = reporting_output['model_fit']['model_params']['coefficients']['Intercept']
+
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [None,]
+                    })
+
 
             if baseline_model_success and reporting_model_success \
                     and weather_normal_source_success:

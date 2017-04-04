@@ -266,7 +266,7 @@ def test_basic_usage_daily(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 30
+    assert len(derivatives) == 32
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
@@ -312,6 +312,8 @@ def test_basic_usage_daily(
         'Cooling degree day balance point, baseline period',
         'Heating degree day balance point, reporting period',
         'Cooling degree day balance point, reporting period',
+        'Best-fit intercept, baseline period',
+        'Best-fit intercept, reporting period',
     ])
 
     for d in derivatives:
@@ -347,7 +349,7 @@ def test_basic_usage_monthly(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 30 
+    assert len(derivatives) == 34
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
@@ -391,6 +393,10 @@ def test_basic_usage_monthly(
         'Cooling degree day balance point, baseline period',
         'Heating degree day balance point, reporting period',
         'Cooling degree day balance point, reporting period',
+        'Best-fit intercept, baseline period',
+        'Best-fit intercept, reporting period',
+        'Best-fit heating coefficient, baseline period',
+        'Best-fit heating coefficient, reporting period',
     ])
 
     for d in derivatives:
@@ -425,7 +431,7 @@ def test_basic_usage_baseline_only(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 17
+    assert len(derivatives) == 18
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
@@ -469,6 +475,8 @@ def test_basic_usage_baseline_only(
         'Cooling degree day balance point, baseline period',
         #'Heating degree day balance point, reporting period',
         #'Cooling degree day balance point, reporting period',
+        'Best-fit intercept, baseline period',
+        #'Best-fit intercept, reporting period',
     ])
 
     for d in derivatives:
@@ -503,7 +511,7 @@ def test_basic_usage_reporting_only(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 17
+    assert len(derivatives) == 18
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
@@ -549,6 +557,8 @@ def test_basic_usage_reporting_only(
         #'Cooling degree day balance point, baseline period',
         'Heating degree day balance point, reporting period',
         'Cooling degree day balance point, reporting period',
+        #'Best-fit intercept, baseline period',
+        'Best-fit intercept, reporting period',
     ])
 
     for d in derivatives:
