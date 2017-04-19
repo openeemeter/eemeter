@@ -68,7 +68,64 @@ def trace3():
     return EnergyTrace("ELECTRICITY_CONSUMPTION_SUPPLIED", df, unit="KWH")
 
 
-def test_basic_daily(trace1, mock_isd_weather_source):
+@pytest.fixture
+def trace4():
+
+    trace_length = 100
+    data = {
+        "value": [1 for _ in range(trace_length)],
+        "estimated": [False for _ in range(trace_length)]
+    }
+    columns = ["value", "estimated"]
+    index = pd.date_range(
+        start=datetime(2011, 1, 1, tzinfo=pytz.UTC),
+        periods=trace_length,
+        freq='D',
+        tz=pytz.UTC
+    )
+    df = pd.DataFrame(data, index=index, columns=columns)
+    return EnergyTrace("ELECTRICITY_CONSUMPTION_SUPPLIED", df, unit="KWH")
+
+
+@pytest.fixture
+def trace5():
+
+    trace_length = 2400
+    data = {
+        "value": [1 for _ in range(trace_length)],
+        "estimated": [False for _ in range(trace_length)]
+    }
+    columns = ["value", "estimated"]
+    index = pd.date_range(
+        start=datetime(2011, 1, 1, tzinfo=pytz.UTC),
+        periods=trace_length,
+        freq='H',
+        tz=pytz.UTC
+    )
+    df = pd.DataFrame(data, index=index, columns=columns)
+    return EnergyTrace("ELECTRICITY_CONSUMPTION_SUPPLIED", df, unit="KWH")
+
+
+@pytest.fixture
+def trace6():
+
+    trace_length = 9600
+    data = {
+        "value": [1 for _ in range(trace_length)],
+        "estimated": [False for _ in range(trace_length)]
+    }
+    columns = ["value", "estimated"]
+    index = pd.date_range(
+        start=datetime(2011, 1, 1, tzinfo=pytz.UTC),
+        periods=trace_length,
+        freq='15T',
+        tz=pytz.UTC
+    )
+    df = pd.DataFrame(data, index=index, columns=columns)
+    return EnergyTrace("ELECTRICITY_CONSUMPTION_SUPPLIED", df, unit="KWH")
+
+
+def test_basic_monthly(trace1, mock_isd_weather_source):
     mdbf = ModelDataBillingFormatter()
     input_data = mdbf.create_input(
         trace1, mock_isd_weather_source)
@@ -118,3 +175,50 @@ def test_small(trace3, mock_isd_weather_source):
     mdbf = ModelDataBillingFormatter()
     with pytest.raises(ValueError):
         mdbf.create_input(trace3, mock_isd_weather_source)
+
+
+def test_daily(trace4, mock_isd_weather_source):
+    mdbf = ModelDataBillingFormatter()
+    input_data = mdbf.create_input(
+        trace4, mock_isd_weather_source)
+    trace_data, temperature_data = input_data
+    assert trace_data.shape == (100,)
+
+    # TODO determine why this is returning as 2376 instead of 2400 and if it's a problem
+    assert temperature_data.shape == (2400,)
+
+    # for these, see test_basic_monthly for inspiration
+    # TODO: test mdbf.describe_input(input_data)
+    # TODO: test mdbf.get_input_data_mask(input_data)
+    # TODO: test mdbf.daily_trace_data(trace4)
+
+
+def test_hourly(trace5, mock_isd_weather_source):
+    mdbf = ModelDataBillingFormatter()
+    input_data = mdbf.create_input(
+        trace5, mock_isd_weather_source)
+    trace_data, temperature_data = input_data
+    assert trace_data.shape == (2400,)
+
+    # TODO determine why this is returning as 2399 instead of 2400 and if it's a problem
+    assert temperature_data.shape == (2399,)
+
+    # for these, see test_basic_monthly for inspiration
+    # TODO: test mdbf.describe_input(input_data)
+    # TODO: test mdbf.get_input_data_mask(input_data)
+    # TODO: test mdbf.daily_trace_data(trace4)
+
+
+def test_15min(trace6, mock_isd_weather_source):
+    mdbf = ModelDataBillingFormatter()
+
+    # TODO this is failing
+    input_data = mdbf.create_input(
+        trace5, mock_isd_weather_source)
+    trace_data, temperature_data = input_data
+
+    # for these, see test_basic_monthly for inspiration
+    # TODO: test trace_data, temperature_data contents
+    # TODO: test mdbf.describe_input(input_data)
+    # TODO: test mdbf.get_input_data_mask(input_data)
+    # TODO: test mdbf.daily_trace_data(trace4)
