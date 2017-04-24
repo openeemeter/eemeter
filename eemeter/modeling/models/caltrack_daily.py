@@ -36,6 +36,7 @@ class CaltrackDailyModel(object):
         self.r2 = None
         self.rmse = None
         self.cvrmse = None
+        self.nmbe = None
         self.n = None
         self.input_data = None
         self.fit_bp_hdd, self.fit_bp_cdd = None, None
@@ -282,7 +283,7 @@ class CaltrackDailyModel(object):
         try:  # TODO: fix big try block anti-pattern
             for full_hdd_bp in hdd_bps:
                 for full_cdd_bp in cdd_bps:
-                    if full_cdd_bp > full_hdd_bp: continue
+                    if full_cdd_bp < full_hdd_bp: continue
                     full_formula = 'upd ~ CDD_' + full_cdd_bp + \
                                    ' + HDD_' + full_hdd_bp
                     full_mod = smf.ols(formula=full_formula, data=df)
@@ -456,8 +457,10 @@ class CaltrackDailyModel(object):
 
         if y.mean != 0:
             cvrmse = rmse / float(y.values.ravel().mean())
+            nmbe = np.nanmean(model_res.resid) / float(y.values.ravel().mean())
         else:
             cvrmse = np.nan
+            nmbe = np.nan
 
         n = estimated.shape[0]
 
@@ -466,6 +469,7 @@ class CaltrackDailyModel(object):
         self.r2, self.rmse = r2, rmse
         self.model_obj, self.model_res, self.formula = model_obj, model_res, formula
         self.cvrmse = cvrmse
+        self.nmbe = nmbe
         self.fit_bp_hdd, self.fit_bp_cdd = fit_bp_hdd, fit_bp_cdd
         self.n = n
         self.params = {
@@ -481,6 +485,7 @@ class CaltrackDailyModel(object):
             "model_params": self.params,
             "rmse": self.rmse,
             "cvrmse": self.cvrmse,
+            "nmbe": self.nmbe,
             "n": self.n,
         }
         return output
