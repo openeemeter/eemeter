@@ -39,6 +39,24 @@ def hourly_trace():
     return EnergyTrace("ELECTRICITY_CONSUMPTION_SUPPLIED", df, unit="KWH")
 
 
+@pytest.fixture
+def fifteen_min_trace():
+    trace_length = 9600
+    data = {
+        "value": [1 for _ in range(trace_length)],
+        "estimated": [False for _ in range(trace_length)]
+    }
+    columns = ["value", "estimated"]
+    index = pd.date_range(
+        start=datetime(2011, 1, 1, tzinfo=pytz.UTC),
+        periods=trace_length,
+        freq='15T',
+        tz=pytz.UTC
+    )
+    df = pd.DataFrame(data, index=index, columns=columns)
+    return EnergyTrace("ELECTRICITY_CONSUMPTION_SUPPLIED", df, unit="KWH")
+
+
 def test_basic_daily(daily_trace, mock_isd_weather_source):
     mdf = ModelDataFormatter("D")
 
@@ -105,6 +123,18 @@ def test_basic_hourly_to_daily(hourly_trace, mock_isd_weather_source):
     assert df.index.freq == 'D'
     assert_allclose(df.energy, [2])
     assert_allclose(df.tempF, [32.])
+
+
+def test_basic_15min_to_daily(fifteen_min_trace, mock_isd_weather_source):
+    mdf = ModelDataFormatter("D")
+
+    df = mdf.create_input(fifteen_min_trace, mock_isd_weather_source)
+
+    assert all(df.columns == ["energy", "tempF"])
+    assert df.index[0] == datetime(2011, 1, 1, 0, tzinfo=pytz.UTC)
+    assert df.index.freq == 'D'
+    assert df.energy.shape == (100,)
+    assert df.tempF.shape == (100,)
 
 
 def test_daily_to_hourly_fails(daily_trace, mock_isd_weather_source):
