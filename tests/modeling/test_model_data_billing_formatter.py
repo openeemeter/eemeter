@@ -68,7 +68,26 @@ def trace3():
     return EnergyTrace("ELECTRICITY_CONSUMPTION_SUPPLIED", df, unit="KWH")
 
 
-def test_basic_daily(trace1, mock_isd_weather_source):
+@pytest.fixture
+def trace4():
+
+    trace_length = 100
+    data = {
+        "value": [1 for _ in range(trace_length)],
+        "estimated": [False for _ in range(trace_length)]
+    }
+    columns = ["value", "estimated"]
+    index = pd.date_range(
+        start=datetime(2011, 1, 1, tzinfo=pytz.UTC),
+        periods=trace_length,
+        freq='D',
+        tz=pytz.UTC
+    )
+    df = pd.DataFrame(data, index=index, columns=columns)
+    return EnergyTrace("ELECTRICITY_CONSUMPTION_SUPPLIED", df, unit="KWH")
+
+
+def test_basic_monthly(trace1, mock_isd_weather_source):
     mdbf = ModelDataBillingFormatter()
     input_data = mdbf.create_input(
         trace1, mock_isd_weather_source)
@@ -118,3 +137,12 @@ def test_small(trace3, mock_isd_weather_source):
     mdbf = ModelDataBillingFormatter()
     with pytest.raises(ValueError):
         mdbf.create_input(trace3, mock_isd_weather_source)
+
+
+def test_daily(trace4, mock_isd_weather_source):
+    mdbf = ModelDataBillingFormatter()
+    input_data = mdbf.create_input(
+        trace4, mock_isd_weather_source)
+    trace_data, temperature_data = input_data
+    assert trace_data.shape == (100,)
+    assert temperature_data.shape == (100,)
