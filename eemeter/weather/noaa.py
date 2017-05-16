@@ -173,19 +173,28 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
         temperatures : pandas.Series with DatetimeIndex
             Average temperatures over series indexed by :code:`index`.
         '''
+
         if index.shape == (0,):
             return pd.Series([], index=index, dtype=float)
 
-        self._verify_index_presence(index)
+        self._verify_index_presence(index)  # fetches weather data if needed
 
-        if index.freq == 'D':
+        if index.freq is not None:
+            freq = index.freq
+        else:
+            try:
+                freq = pd.infer_freq(index)
+            except ValueError:
+                freq = None
+
+        if freq == 'D':
             return self._daily_indexed_temperatures(index, unit)
-        elif index.freq == 'H':
+        elif freq == 'H':
             return self._hourly_indexed_temperatures(index, unit)
         elif allow_mixed_frequency:
             return self._mixed_frequency_indexed_temperatures(index, unit)
         else:
-            message = 'DatetimeIndex with mixed frequency not supported.'
+            message = 'DatetimeIndex with unknown frequency not supported.'
             raise ValueError(message)
 
     def _daily_indexed_temperatures(self, index, unit):
