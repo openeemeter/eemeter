@@ -593,6 +593,174 @@ class EnergyEfficiencyMeter(object):
                     .format(series)
                 )
 
+            if baseline_model_success:
+
+                if 'model_fit' in baseline_output.keys() and \
+                   'model_params' in baseline_output['model_fit'] and \
+                   'hdd_bp' in baseline_output['model_fit']['model_params']:
+
+                    series = 'Heating degree day balance point, baseline period'
+                    description = '''Best-fit heating degree day balance point,
+                                     if any, for baseline model'''
+                    value = baseline_output['model_fit']['model_params']['hdd_bp']
+
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [None,]
+                    })
+
+                    if 'coefficients' in baseline_output['model_fit']['model_params'] and \
+                       'HDD_' + str(value) in baseline_output['model_fit']['model_params']['coefficients']:
+
+                        series = 'Best-fit heating coefficient, baseline period'
+                        description = '''Best-fit heating coefficient,
+                                         if any, for baseline model'''
+                        value = baseline_output['model_fit']['model_params']['coefficients']\
+                                               ['HDD_' + str(value)]
+
+                        raw_derivatives.append({
+                                'series': series,
+                                'description': description,
+                                'orderable': [None,],
+                                'value': [value,],
+                                'variance': [None,]
+                        })
+
+                if 'model_fit' in baseline_output and \
+                   'model_params' in baseline_output['model_fit'] and \
+                   'cdd_bp' in baseline_output['model_fit']['model_params']:
+                    series = 'Cooling degree day balance point, baseline period'
+                    description = '''Best-fit cooling degree day balance point,
+                                     if any, for baseline model'''
+                    value = baseline_output['model_fit']['model_params']['cdd_bp']
+
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [None,]
+                    })
+
+                    if 'coefficients' in baseline_output['model_fit']['model_params'] and \
+                       'CDD_' + str(value) in baseline_output['model_fit']['model_params']['coefficients']:
+                        series = 'Best-fit cooling coefficient, baseline period'
+                        description = '''Best-fit cooling coefficient,
+                                         if any, for baseline model'''
+                        value = baseline_output['model_fit']['model_params']['coefficients']\
+                                               ['CDD_' + str(value)]
+
+                        raw_derivatives.append({
+                                'series': series,
+                                'description': description,
+                                'orderable': [None,],
+                                'value': [value,],
+                                'variance': [None,]
+                        })
+
+                if 'model_fit' in baseline_output and \
+                   'model_params' in baseline_output['model_fit'] and \
+                   'coefficients' in baseline_output['model_fit']['model_params'] and \
+                   'Intercept' in baseline_output['model_fit']['model_params']['coefficients']:
+                    series = 'Best-fit intercept, baseline period'
+                    description = '''Best-fit intercept, if any, for baseline model'''
+                    value = baseline_output['model_fit']['model_params']['coefficients']['Intercept']
+
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [None,]
+                    })
+
+            if reporting_model_success:
+
+                if 'model_fit' in reporting_output.keys() and \
+                   'model_params' in reporting_output['model_fit'] and \
+                   'hdd_bp' in reporting_output['model_fit']['model_params']:
+
+                    series = 'Heating degree day balance point, reporting period'
+                    description = '''Best-fit heating degree day balance point,
+                                     if any, for reporting model'''
+                    value = reporting_output['model_fit']['model_params']['hdd_bp']
+
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [None,]
+                    })
+
+                    if 'coefficients' in reporting_output['model_fit']['model_params'] and \
+                       'HDD_' + str(value) in reporting_output['model_fit']['model_params']['coefficients']:
+
+                        series = 'Best-fit heating coefficient, reporting period'
+                        description = '''Best-fit heating coefficient,
+                                         if any, for reporting model'''
+                        value = reporting_output['model_fit']['model_params']['coefficients']\
+                                               ['HDD_' + str(value)]
+                        raw_derivatives.append({
+                                'series': series,
+                                'description': description,
+                                'orderable': [None,],
+                                'value': [value,],
+                                'variance': [None,]
+                        })
+
+                if 'model_fit' in reporting_output and \
+                   'model_params' in reporting_output['model_fit'] and \
+                   'cdd_bp' in reporting_output['model_fit']['model_params']:
+
+                    series = 'Cooling degree day balance point, reporting period'
+                    description = '''Best-fit cooling degree day balance point,
+                                     if any, for reporting model'''
+                    value = reporting_output['model_fit']['model_params']['cdd_bp']
+
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [None,]
+                    })
+
+                    if 'coefficients' in reporting_output['model_fit']['model_params'] and \
+                       'CDD_' + str(value) in reporting_output['model_fit']['model_params']['coefficients']:
+                        series = 'Best-fit cooling coefficient, reporting period'
+                        description = '''Best-fit cooling coefficient,
+                                         if any, for reporting model'''
+                        value = reporting_output['model_fit']['model_params']['coefficients']\
+                                               ['CDD_' + str(value)]
+
+                        raw_derivatives.append({
+                                'series': series,
+                                'description': description,
+                                'orderable': [None,],
+                                'value': [value,],
+                                'variance': [None,]
+                        })
+
+                if 'model_fit' in reporting_output and \
+                   'model_params' in reporting_output['model_fit'] and \
+                   'coefficients' in reporting_output['model_fit']['model_params'] and \
+                   'Intercept' in reporting_output['model_fit']['model_params']['coefficients']:
+                    series = 'Best-fit intercept, reporting period'
+                    description = '''Best-fit intercept, if any, for reporting model'''
+                    value = reporting_output['model_fit']['model_params']['coefficients']['Intercept']
+
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [None,]
+                    })
+
             if baseline_model_success and reporting_model_success \
                     and weather_normal_source_success:
                 series = 'Cumulative baseline model minus reporting model, normal year'

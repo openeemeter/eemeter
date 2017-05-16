@@ -49,7 +49,7 @@ def test_basic_daily(daily_trace, mock_isd_weather_source):
     assert df.index[2] == datetime(2000, 1, 3, tzinfo=pytz.UTC)
     assert df.index.freq == 'D'
     assert_allclose(df.energy, [1, 1, np.nan])
-    assert_allclose(df.tempF, [32., 32., 32.])
+    assert_allclose(df.tempF, [35.507344, 35.282373, 35.064391])
 
     description = mdf.describe_input(df)
     assert description.get('start_date') == \
@@ -77,7 +77,7 @@ def test_basic_hourly(hourly_trace, mock_isd_weather_source):
     assert df.index[2] == datetime(2000, 1, 1, 2, tzinfo=pytz.UTC)
     assert df.index.freq == 'H'
     assert_allclose(df.energy, [1, 1, np.nan])
-    assert_allclose(df.tempF, [32., 32., 32.])
+    assert_allclose(df.tempF, [35.617314, 35.607664, 35.598025])
 
     description = mdf.describe_input(df)
     assert description.get('start_date') == \
@@ -104,7 +104,7 @@ def test_basic_hourly_to_daily(hourly_trace, mock_isd_weather_source):
     assert df.index[0] == datetime(2000, 1, 1, 0, tzinfo=pytz.UTC)
     assert df.index.freq == 'D'
     assert_allclose(df.energy, [2])
-    assert_allclose(df.tempF, [32.])
+    assert_allclose(df.tempF, [35.507344])
 
 
 def test_daily_to_hourly_fails(daily_trace, mock_isd_weather_source):
@@ -124,7 +124,7 @@ def test_daily_demand_fixture(daily_trace, mock_isd_weather_source):
     assert df.index[0] == datetime(2000, 1, 1, 0, tzinfo=pytz.UTC)
     assert df.index[2] == datetime(2000, 1, 3, tzinfo=pytz.UTC)
     assert df.index.freq == 'D'
-    assert_allclose(df.tempF, [32., 32., 32.])
+    assert_allclose(df.tempF, [35.507344, 35.282373, 35.064391])
 
 
 def test_hourly_demand_fixture(hourly_trace, mock_isd_weather_source):
@@ -137,7 +137,7 @@ def test_hourly_demand_fixture(hourly_trace, mock_isd_weather_source):
     assert df.index[0] == datetime(2000, 1, 1, 0, tzinfo=pytz.UTC)
     assert df.index[2] == datetime(2000, 1, 1, 2, tzinfo=pytz.UTC)
     assert df.index.freq == 'H'
-    assert_allclose(df.tempF, [32., 32., 32.])
+    assert_allclose(df.tempF, [35.617314, 35.607664, 35.598025])
 
 
 def test_repr():
