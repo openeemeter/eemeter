@@ -209,6 +209,9 @@ class CaltrackDailyModel(object):
         try:  # TODO: fix big try block anti-pattern
             for bp in bps:
                 cdd_formula = 'upd ~ CDD_' + bp
+                if (np.nansum(df['CDD_' + bp] > 0) < 10) or \
+                   (np.nansum(df['CDD_' + bp]) < 20):
+                    continue
                 cdd_mod = smf.ols(formula=cdd_formula, data=df)
                 cdd_res = cdd_mod.fit()
                 cdd_rsquared = cdd_res.rsquared
@@ -244,6 +247,9 @@ class CaltrackDailyModel(object):
         try:  # TODO: fix big try block anti-pattern
             for bp in bps:
                 hdd_formula = 'upd ~ HDD_' + bp
+                if (np.nansum(df['HDD_' + bp] > 0) < 10) or \
+                   (np.nansum(df['HDD_' + bp]) < 20):
+                    continue
                 hdd_mod = smf.ols(formula=hdd_formula, data=df)
                 hdd_res = hdd_mod.fit()
                 hdd_rsquared = hdd_res.rsquared
@@ -286,6 +292,12 @@ class CaltrackDailyModel(object):
                     if full_cdd_bp < full_hdd_bp: continue
                     full_formula = 'upd ~ CDD_' + full_cdd_bp + \
                                    ' + HDD_' + full_hdd_bp
+                    if (np.nansum(df['HDD_' + full_hdd_bp] > 0) < 10) or \
+                       (np.nansum(df['HDD_' + full_hdd_bp]) < 20):
+                        continue
+                    if (np.nansum(df['CDD_' + full_cdd_bp] > 0) < 10) or \
+                       (np.nansum(df['CDD_' + full_cdd_bp]) < 20):
+                        continue
                     full_mod = smf.ols(formula=full_formula, data=df)
                     full_res = full_mod.fit()
                     full_rsquared = full_res.rsquared
