@@ -114,7 +114,7 @@ def test_basic_usage(trace, modeling_period_set, mock_isd_weather_source):
         'modeling_period_1', demand_fixture_data, summed=True)
 
     # predict summed
-    assert_allclose(pred, 5.9939999999999989)
+    assert_allclose(pred, 6.036058206343216)
     assert variance > 0
 
     # bad weather source
