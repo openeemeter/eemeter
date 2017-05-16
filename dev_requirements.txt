@@ -6,7 +6,7 @@ pandoc==1.0.0b2
 pytest==3.0.7
 pytest-flake8==0.8.1
 sphinx==1.6.1
-sphinx-rtd-theme==0.1.9
+sphinx-rtd-theme==0.2.4
 sphinxcontrib-napoleon==0.6.1
 SQLAlchemy==1.1.9
 tox==2.7.0
