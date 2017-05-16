@@ -3,6 +3,7 @@ import traceback
 
 import numpy as np
 
+import eemeter.modeling.exceptions as model_exceptions
 from eemeter.structures import EnergyTrace
 
 logger = logging.getLogger(__name__)
@@ -68,6 +69,23 @@ class SplitModeledEnergyTrace(object):
                 "n_rows": None,
                 "model_fit": {},
             }
+
+            # fail with DataSufficiencyException if bad weather source
+            if weather_source is None:
+                message = (
+                    'No weather source found for trace {} in {} period'
+                    .format(self.trace.trace_id, modeling_period_label)
+                )
+                logger.warn(message)
+                try:
+                    raise model_exceptions.DataSufficiencyException(message)
+                except:
+                    outputs.update({
+                        "status": "FAILURE",
+                        "traceback": traceback.format_exc(),
+                    })
+                    self.fit_outputs[modeling_period_label] = outputs
+                continue
 
             # attempt to create input data
             try:
