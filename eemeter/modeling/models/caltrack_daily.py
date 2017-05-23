@@ -23,7 +23,8 @@ class CaltrackDailyModel(object):
     period in order for the weather normalization to be valid.
     '''
     def __init__(
-            self, fit_cdd=True, grid_search=False, min_contiguous_months=12,
+            self, fit_cdd=True, grid_search=False, min_fraction_coverage=0.9,
+            min_contiguous_months=12,
             modeling_period_interpretation='baseline'):
 
         self.fit_cdd = fit_cdd
@@ -40,6 +41,7 @@ class CaltrackDailyModel(object):
         self.n = None
         self.input_data = None
         self.fit_bp_hdd, self.fit_bp_cdd = None, None
+        self.min_fraction_coverage = min_fraction_coverage
         self.min_contiguous_months = min_contiguous_months
         self.modeling_period_interpretation = modeling_period_interpretation
 
@@ -185,7 +187,10 @@ class CaltrackDailyModel(object):
         return output
 
     def meets_sufficiency_or_error(self, df):
-        # XXX Put in criteria
+        if np.sum(np.isfinite(df['usage'])) < self.min_fraction_coverage * len(df):
+            raise model_exceptions.DataSufficiencyException("Insufficient coverage")
+        if len(df) < self.min_contiguous_months * 30:
+            raise model_exceptions.DataSufficiencyException("Insufficient data")
         return
 
     def _fit_intercept(self, df):
@@ -214,7 +219,7 @@ class CaltrackDailyModel(object):
                     continue
                 cdd_mod = smf.ols(formula=cdd_formula, data=df)
                 cdd_res = cdd_mod.fit()
-                cdd_rsquared = cdd_res.rsquared
+                cdd_rsquared = cdd_res.rsquared_adj
                 if (cdd_rsquared > best_rsquared and
                         cdd_res.params['Intercept'] >= 0 and
                         cdd_res.params['CDD_' + bp] >= 0):
@@ -252,7 +257,7 @@ class CaltrackDailyModel(object):
                     continue
                 hdd_mod = smf.ols(formula=hdd_formula, data=df)
                 hdd_res = hdd_mod.fit()
-                hdd_rsquared = hdd_res.rsquared
+                hdd_rsquared = hdd_res.rsquared_adj
                 if (hdd_rsquared > best_rsquared and
                         hdd_res.params['Intercept'] >= 0 and
                         hdd_res.params['HDD_' + bp] >= 0):
@@ -300,7 +305,7 @@ class CaltrackDailyModel(object):
                         continue
                     full_mod = smf.ols(formula=full_formula, data=df)
                     full_res = full_mod.fit()
-                    full_rsquared = full_res.rsquared
+                    full_rsquared = full_res.rsquared_adj
                     if (full_rsquared > best_rsquared and
                             full_res.params['Intercept'] >= 0 and
                             full_res.params['HDD_' + full_hdd_bp] >= 0 and
