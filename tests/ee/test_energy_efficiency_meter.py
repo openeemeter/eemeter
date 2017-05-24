@@ -10,7 +10,7 @@ from eemeter.testing.mocks import MockWeatherClient
 from eemeter.weather import TMY3WeatherSource
 from eemeter.weather import ISDWeatherSource
 from eemeter.modeling.formatters import ModelDataBillingFormatter
-from eemeter.modeling.models import CaltrackMonthlyModel
+from eemeter.modeling.models import CaltrackMonthlyModel, CaltrackDailyModel
 
 
 @pytest.fixture
@@ -273,7 +273,7 @@ def test_basic_usage_daily(
     assert results['trace_id'] == 'TRACE_1'
     assert results['interval'] == 'daily'
 
-    assert results['model_class'] == 'CaltrackMonthlyModel'
+    assert results['model_class'] == 'CaltrackDailyModel'
     assert results['model_kwargs'] is not None
     assert results['formatter_class'] == 'ModelDataFormatter'
     assert results['formatter_kwargs'] is not None
@@ -440,7 +440,7 @@ def test_basic_usage_baseline_only(
     assert len(results['logs']) == 2
 
     assert results['eemeter_version'] is not None
-    assert results['model_class'] == 'CaltrackMonthlyModel'
+    assert results['model_class'] == 'CaltrackDailyModel'
     assert results['model_kwargs'] is not None
     assert results['formatter_class'] == 'ModelDataFormatter'
     assert results['formatter_kwargs'] is not None
@@ -520,7 +520,7 @@ def test_basic_usage_reporting_only(
     assert len(results['logs']) == 2
 
     assert results['eemeter_version'] is not None
-    assert results['model_class'] == 'CaltrackMonthlyModel'
+    assert results['model_class'] == 'CaltrackDailyModel'
     assert results['model_kwargs'] is not None
     assert results['formatter_class'] == 'ModelDataFormatter'
     assert results['formatter_kwargs'] is not None
