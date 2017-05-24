@@ -83,7 +83,7 @@ def meter_input_daily(project_meter_input):
         } for dt in record_starts
     ]
 
-    trace = _natural_gas_input(records)
+    trace = _electricity_input(records)
     trace.update({'interval': 'daily'})
 
     meter_input = {
