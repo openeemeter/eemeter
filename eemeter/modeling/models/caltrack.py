@@ -25,9 +25,11 @@ class CaltrackMonthlyModel(object):
     period in order for the weather normalization to be valid.
     '''
     def __init__(
-            self, fit_cdd=True, grid_search=False, min_contiguous_months=12,
-            modeling_period_interpretation='baseline', weighted=False):
-
+            self, fit_cdd=True, grid_search=False,
+            min_contiguous_baseline_months=12,
+            min_contiguous_reporting_months=12,
+            modeling_period_interpretation='baseline',
+            weighted=False):
         self.fit_cdd = fit_cdd
         self.grid_search = grid_search
         self.model_freq = pd.tseries.frequencies.MonthEnd()
@@ -41,7 +43,8 @@ class CaltrackMonthlyModel(object):
         self.n = None
         self.input_data = None
         self.fit_bp_hdd, self.fit_bp_cdd = None, None
-        self.min_contiguous_months = min_contiguous_months
+        self.min_contiguous_baseline_months = min_contiguous_baseline_months
+        self.min_contiguous_reporting_months = min_contiguous_reporting_months
         self.modeling_period_interpretation = modeling_period_interpretation
         self.weighted = weighted
 
@@ -126,8 +129,12 @@ class CaltrackMonthlyModel(object):
                     hdd_data_daily_mean_values[bp].append(thismean)
             else:
                 for bp in self.bp_cdd:
+                    if bp not in cdd_data_daily_mean_values.keys():
+                        cdd_data_daily_mean_values[bp] = []
                     cdd_data_daily_mean_values[bp].append(np.nan)
                 for bp in self.bp_hdd:
+                    if bp not in hdd_data_daily_mean_values.keys():
+                        hdd_data_daily_mean_values[bp] = []
                     hdd_data_daily_mean_values[bp].append(np.nan)
 
         # spread out over the month
@@ -283,7 +290,6 @@ class CaltrackMonthlyModel(object):
 
     def meets_sufficiency_or_error(self, df):
         # Caltrack sufficiency requirement of number of contiguous months
-        _n = self.min_contiguous_months
 
         # choose first hdd as a proxy for temperature data
         upd = df['upd'].values
@@ -297,6 +303,7 @@ class CaltrackMonthlyModel(object):
         mp_type = self.modeling_period_interpretation
         if mp_type == 'baseline':
 
+            _n = self.min_contiguous_baseline_months
             # In the baseline period, require the last N months be non-nan.
             last_month_nan = np.isnan(upd[-1])
             direction = "last"
@@ -310,6 +317,7 @@ class CaltrackMonthlyModel(object):
 
         elif mp_type == 'reporting':
 
+            _n = self.min_contiguous_reporting_months
             # In the reporting period, require the first N months be non-nan.
             first_month_nan = np.isnan(df['upd'].values[0])
             direction = "first"

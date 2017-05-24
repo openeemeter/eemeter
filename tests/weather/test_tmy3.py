@@ -23,7 +23,7 @@ def test_hourly_by_index(mock_tmy3_weather_source):
     assert all(temps.index == index)
     assert all(temps.index == index)
     assert temps.shape == (2,)
-    assert_allclose(temps.values, [32, 32])
+    assert_allclose(temps.values, [35.617314, 35.607637])
 
 
 def test_daily_by_index(mock_tmy3_weather_source):
@@ -32,7 +32,7 @@ def test_daily_by_index(mock_tmy3_weather_source):
     assert all(temps.index == index)
     assert all(temps.index == index)
     assert temps.shape == (2,)
-    assert_allclose(temps.values, [32, 32])
+    assert_allclose(temps.values, [35.507046, 35.281477])
 
     # force load from cache
     mock_tmy3_weather_source._load_data()
@@ -50,7 +50,7 @@ def test_cross_year_boundary(mock_tmy3_weather_source):
     assert all(temps.index == index)
     assert all(temps.index == index)
     assert temps.shape == (2,)
-    assert_allclose(temps.values, [32, 32])
+    assert_allclose(temps.values, [35.739576, 35.507046])
 
 
 def test_bad_station():

@@ -114,9 +114,25 @@ def test_basic_usage(trace, modeling_period_set, mock_isd_weather_source):
         'modeling_period_1', demand_fixture_data, summed=True)
 
     # predict summed
-    assert_allclose(pred, 5.9939999999999989)
+    assert_allclose(pred, 6.036058206343216)
     assert variance > 0
 
     # bad weather source
     smet.fit(None)
     assert outputs['modeling_period_1']['status'] == 'FAILURE'
+
+def test_bad_weather_source(trace, modeling_period_set):
+
+    # create SplitModeledEnergyTrace
+    formatter = ModelDataFormatter('D')
+    model_mapping = {
+        'modeling_period_1': SeasonalElasticNetCVModel(65, 65),
+        'modeling_period_2': SeasonalElasticNetCVModel(65, 65),
+    }
+    smet = SplitModeledEnergyTrace(
+        trace, formatter, model_mapping, modeling_period_set)
+
+    # need to see that it gives a data sufficiency exception
+    outputs = smet.fit(None)
+    assert 'DataSufficiencyException' in outputs['modeling_period_1']['traceback']
+    assert 'DataSufficiencyException' in outputs['modeling_period_2']['traceback']

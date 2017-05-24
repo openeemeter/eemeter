@@ -9,6 +9,8 @@ from eemeter.ee.meter import EnergyEfficiencyMeter
 from eemeter.testing.mocks import MockWeatherClient
 from eemeter.weather import TMY3WeatherSource
 from eemeter.weather import ISDWeatherSource
+from eemeter.modeling.formatters import ModelDataBillingFormatter
+from eemeter.modeling.models import CaltrackMonthlyModel
 
 
 @pytest.fixture
@@ -150,15 +152,30 @@ def meter_input_daily_reporting_only(project_meter_input):
 
 
 @pytest.fixture
-def meter_input_monthly(project_meter_input):
+def meter_input_monthly(project_meter_input, ):
 
     record_starts = pd.date_range(
-        '2012-01-01', periods=50, freq='MS', tz=pytz.UTC)
+        '2012-01-01', periods=60, freq='MS', tz=pytz.UTC)
+
+    monthly_heating_cooling_pattern = {
+        1:  31,
+        2:  31,
+        3:  25,
+        4:  13,
+        5:  0,
+        6:  12,
+        7:  19,
+        8:  19,
+        9:  13,
+        10: 1,
+        11: 12,
+        12: 24,
+    }
 
     records = [
         {
             "start": dt.isoformat(),
-            "value": 1.0,
+            "value": monthly_heating_cooling_pattern[dt.month],
             "estimated": False
         } for dt in record_starts
     ]
@@ -264,7 +281,7 @@ def test_basic_usage_daily(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 26
+    assert len(derivatives) == 32
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
@@ -305,6 +322,13 @@ def test_basic_usage_daily(
         'Temperature, reporting period',
         'Temperature, normal year',
         'Masked temperature, reporting period',
+
+        'Heating degree day balance point, baseline period',
+        'Cooling degree day balance point, baseline period',
+        'Heating degree day balance point, reporting period',
+        'Cooling degree day balance point, reporting period',
+        'Best-fit intercept, baseline period',
+        'Best-fit intercept, reporting period',
     ])
 
     for d in derivatives:
@@ -340,7 +364,7 @@ def test_basic_usage_monthly(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 26
+    assert len(derivatives) == 36
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
@@ -379,6 +403,17 @@ def test_basic_usage_monthly(
         'Temperature, reporting period',
         'Temperature, normal year',
         'Masked temperature, reporting period',
+
+        'Heating degree day balance point, baseline period',
+        'Cooling degree day balance point, baseline period',
+        'Heating degree day balance point, reporting period',
+        'Cooling degree day balance point, reporting period',
+        'Best-fit intercept, baseline period',
+        'Best-fit intercept, reporting period',
+        'Best-fit heating coefficient, baseline period',
+        'Best-fit heating coefficient, reporting period',
+        'Best-fit cooling coefficient, baseline period',
+        'Best-fit cooling coefficient, reporting period',
     ])
 
     for d in derivatives:
@@ -413,7 +448,7 @@ def test_basic_usage_baseline_only(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 15
+    assert len(derivatives) == 18
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
@@ -452,6 +487,13 @@ def test_basic_usage_baseline_only(
         'Temperature, reporting period',
         'Temperature, normal year',
         'Masked temperature, reporting period',
+
+        'Heating degree day balance point, baseline period',
+        'Cooling degree day balance point, baseline period',
+        #'Heating degree day balance point, reporting period',
+        #'Cooling degree day balance point, reporting period',
+        'Best-fit intercept, baseline period',
+        #'Best-fit intercept, reporting period',
     ])
 
     for d in derivatives:
@@ -486,7 +528,7 @@ def test_basic_usage_reporting_only(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
-    assert len(derivatives) == 15
+    assert len(derivatives) == 18
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
     assert derivatives[0]['orderable'] == [None]
@@ -527,6 +569,13 @@ def test_basic_usage_reporting_only(
         'Temperature, reporting period',
         'Temperature, normal year',
         'Masked temperature, reporting period',
+
+        #'Heating degree day balance point, baseline period',
+        #'Cooling degree day balance point, baseline period',
+        'Heating degree day balance point, reporting period',
+        'Cooling degree day balance point, reporting period',
+        #'Best-fit intercept, baseline period',
+        'Best-fit intercept, reporting period',
     ])
 
     for d in derivatives:
@@ -636,3 +685,75 @@ def test_bad_zipcode(meter_input_bad_zipcode):
         assert len(d['orderable']) == len(d['value']) == len(d['variance'])
 
     json.dumps(results)
+
+def test_custom_evaluate_args(
+        meter_input_monthly,
+        mock_isd_weather_source,
+        mock_tmy3_weather_source):
+
+    meter = EnergyEfficiencyMeter()
+
+    results = meter.evaluate(meter_input_monthly,
+                             model=None,
+                             formatter=None,
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['model_class'] == 'CaltrackMonthlyModel'
+    assert results['model_kwargs'] == {'fit_cdd': True, 'grid_search': True}
+    assert results['formatter_class'] == 'ModelDataBillingFormatter'
+    assert results['formatter_kwargs'] == {}
+
+    results = meter.evaluate(meter_input_monthly,
+                             model=(None, None),
+                             formatter=(None, None),
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['model_class'] == 'CaltrackMonthlyModel'
+    assert results['model_kwargs'] == {'fit_cdd': True, 'grid_search': True}
+    assert results['formatter_class'] == 'ModelDataBillingFormatter'
+    assert results['formatter_kwargs'] == {}
+
+    results = meter.evaluate(meter_input_monthly,
+                             model=('CaltrackMonthlyModel', None),
+                             formatter=('ModelDataBillingFormatter', None),
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['model_class'] == 'CaltrackMonthlyModel'
+    assert results['model_kwargs'] == {}
+    assert results['formatter_class'] == 'ModelDataBillingFormatter'
+    assert results['formatter_kwargs'] == {}
+
+    results = meter.evaluate(meter_input_monthly,
+                             model=(None, {"fit_cdd": False}),
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['model_class'] == 'CaltrackMonthlyModel'
+    assert results['model_kwargs'] == {'fit_cdd': False, 'grid_search': True}
+    assert results['formatter_class'] == 'ModelDataBillingFormatter'
+    assert results['formatter_kwargs'] == {}
+
+    results = meter.evaluate(meter_input_monthly,
+                             model=(None, {"fit_cdd": False}),
+                             formatter=(None, {}),
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['model_class'] == 'CaltrackMonthlyModel'
+    assert results['model_kwargs'] == {'fit_cdd': False, 'grid_search': True}
+    assert results['formatter_class'] == 'ModelDataBillingFormatter'
+    assert results['formatter_kwargs'] == {}
+
+    results = meter.evaluate(meter_input_monthly,
+                             model=(CaltrackMonthlyModel, {"fit_cdd": False}),
+                             formatter=(ModelDataBillingFormatter, {}),
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['model_class'] == 'CaltrackMonthlyModel'
+    assert results['model_kwargs'] == {'fit_cdd': False}
+    assert results['formatter_class'] == 'ModelDataBillingFormatter'
+    assert results['formatter_kwargs'] == {}

@@ -1,6 +1,7 @@
 import logging
 from collections import OrderedDict, namedtuple
 
+from six import string_types
 import numpy as np
 import pandas as pd
 import pytz
@@ -28,7 +29,6 @@ from eemeter.processors.location import (
 from eemeter.structures import ZIPCodeSite
 
 logger = logging.getLogger(__name__)
-
 
 Derivative = namedtuple('Derivative', [
     'modeling_period_group',
@@ -147,6 +147,87 @@ class EnergyEfficiencyMeter(object):
         self.default_formatter_mapping = default_formatter_mapping
         self.default_model_mapping = default_model_mapping
 
+    def _get_formatter(self, formatter, selector):
+        # get the default mappings
+        default_formatter_class, default_formatter_kwargs = \
+            self.default_formatter_mapping.get(selector, (None, None))
+
+        if formatter is None:
+            # use defaults
+            FormatterClass = default_formatter_class
+            formatter_kwargs = default_formatter_kwargs
+
+        # Use any info provided
+        else:
+            custom_formatter_class, custom_formatter_kwargs = formatter
+
+            if custom_formatter_class is None:
+                # use default formatter
+                FormatterClass = default_formatter_class
+
+                if custom_formatter_kwargs is None:
+                    formatter_kwargs = default_formatter_kwargs
+                else:
+                    formatter_kwargs = default_formatter_kwargs
+                    formatter_kwargs.update(custom_formatter_kwargs)
+            else:
+                # use custom formatter, which may be a string.
+                if isinstance(custom_formatter_class, string_types):
+                    FormatterClass = {
+                        f.__name__: f
+                        for f in [ModelDataFormatter, ModelDataBillingFormatter]
+                    }[custom_formatter_class]
+                else:
+                    FormatterClass = custom_formatter_class
+
+                if custom_formatter_kwargs is None:
+                    # assume default args don't apply since using custom meter class
+                    formatter_kwargs = {}
+                else:
+                    formatter_kwargs = custom_formatter_kwargs
+
+        return FormatterClass, formatter_kwargs
+
+    def _get_model(self, model, selector):
+        # get the default mappings
+        default_model_class, default_model_kwargs = \
+            self.default_model_mapping.get(selector, (None, None))
+
+        if model is None:
+            # use defaults
+            ModelClass = default_model_class
+            model_kwargs = default_model_kwargs
+        # Use any info provided
+        else:
+            custom_model_class, custom_model_kwargs = model
+
+            if custom_model_class is None:
+                # use default model
+                ModelClass = default_model_class
+
+                if custom_model_kwargs is None:
+                    model_kwargs = default_model_kwargs
+                else:
+                    model_kwargs = default_model_kwargs
+                    model_kwargs.update(custom_model_kwargs)
+            else:
+                # use custom model, which may be a string.
+                if isinstance(custom_model_class, string_types):
+                    ModelClass = {
+                        f.__name__: f
+                        for f in [CaltrackMonthlyModel]
+                    }[custom_model_class]
+                else:
+                    ModelClass = custom_model_class
+
+                if custom_model_kwargs is None:
+                    # assume default args don't apply since using custom meter class
+                    model_kwargs = {}
+                else:
+                    model_kwargs = custom_model_kwargs
+
+        return ModelClass, model_kwargs
+
     def evaluate(self, meter_input, formatter=None,
                  model=None, weather_source=None, weather_normal_source=None):
         ''' Main entry point to the meter, which models traces and calculates
@@ -159,10 +240,12 @@ class EnergyEfficiencyMeter(object):
         formatter : tuple of (class, dict), default None
             Formatter for trace and weather data. Used to create input
             for model. If None is provided, will be auto-matched to appropriate
-            default formatter.
+            default formatter. Class name can be provided as a string
+            (class.__name__) or object.
         model : tuple of (class, dict), default None
             Model to use in modeling. If None is provided,
             will be auto-matched to appropriate default model.
+            Class can be provided as a string (class.__name__) or class object.
         weather_source : eemeter.weather.WeatherSource
             Weather source to be used for this meter. Overrides weather source
             found using :code:`project.site`. Useful for test mocking.
@@ -306,49 +389,42 @@ class EnergyEfficiencyMeter(object):
             return output
 
         # Step 4: Determine trace interpretation and frequency
-        if model is None or formatter is None:
-            trace_interpretation = trace.interpretation
-            trace_frequency = get_approximate_frequency(trace)
+        # TODO use trace interval here. And enforce upstream that interval use
+        # pandas interval strings?
+        trace_frequency = get_approximate_frequency(trace)
 
-            if trace_frequency not in ['H', 'D', '15T', '30T']:
-                trace_frequency = None
+        if trace_frequency not in ['H', 'D', '15T', '30T']:
+            trace_frequency = None
 
-            selector = (trace_interpretation, trace_frequency)
+        selector = (trace.interpretation, trace_frequency)
 
         # Step 5: create formatter instance
-        if formatter is None:
-            FormatterClass, formatter_kwargs = \
-                self.default_formatter_mapping.get(selector, (None, None))
-            if FormatterClass is None:
-                message = (
-                    "Default formatter mapping did not find a match for"
-                    " the selector {}".format(selector)
-                )
-                output['status'] = FAILURE
-                output['failure_message'] = message
-                return output
-        else:
-            FormatterClass, formatter_kwargs = formatter
-        formatter_instance = FormatterClass(**formatter_kwargs)
+        FormatterClass, formatter_kwargs = self._get_formatter(formatter, selector)
+        if FormatterClass is None:
+            message = (
+                "Default formatter mapping did not find a match for the"
+                " selector {}".format(selector)
+            )
+            output['status'] = FAILURE
+            output['failure_message'] = message
+            return output
         output["formatter_class"] = FormatterClass.__name__
         output["formatter_kwargs"] = formatter_kwargs
+        formatter_instance = FormatterClass(**formatter_kwargs)
 
         # Step 6: create model instance
-        if model is None:
-            ModelClass, model_kwargs = self.default_model_mapping.get(
-                selector, (None, None))
-            if ModelClass is None:
-                message = (
-                    "Default model mapping did not find a match for the"
-                    " selector {}".format(selector)
-                )
-                output['status'] == FAILURE
-                output['failure_message'] = message
-                return output
-        else:
-            ModelClass, model_kwargs = model
+        ModelClass, model_kwargs = self._get_model(model, selector)
+        if ModelClass is None:
+            message = (
+                "Default model mapping did not find a match for the"
+                " selector {}".format(selector)
+            )
+            output['status'] = FAILURE
+            output['failure_message'] = message
+            return output
         output["model_class"] = ModelClass.__name__
         output["model_kwargs"] = model_kwargs
+
 
         # Step 7: validate modeling period set. Always fails for now, since
         # no models are yet fully structural change analysis aware
@@ -523,6 +599,174 @@ class EnergyEfficiencyMeter(object):
                     'Failed computing derivative (series={})'
                     .format(series)
                 )
+
+            if baseline_model_success:
+
+                if 'model_fit' in baseline_output.keys() and \
+                   'model_params' in baseline_output['model_fit'] and \
+                   'hdd_bp' in baseline_output['model_fit']['model_params']:
+
+                    series = 'Heating degree day balance point, baseline period'
+                    description = '''Best-fit heating degree day balance point,
+                                     if any, for baseline model'''
+                    value = baseline_output['model_fit']['model_params']['hdd_bp']
+
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [None,]
+                    })
+
+                    if 'coefficients' in baseline_output['model_fit']['model_params'] and \
+                       'HDD_' + str(value) in baseline_output['model_fit']['model_params']['coefficients']:
+
+                        series = 'Best-fit heating coefficient, baseline period'
+                        description = '''Best-fit heating coefficient,
+                                         if any, for baseline model'''
+                        value = baseline_output['model_fit']['model_params']['coefficients']\
+                                               ['HDD_' + str(value)]
+
+                        raw_derivatives.append({
+                                'series': series,
+                                'description': description,
+                                'orderable': [None,],
+                                'value': [value,],
+                                'variance': [None,]
+                        })
+
+                if 'model_fit' in baseline_output and \
+                   'model_params' in baseline_output['model_fit'] and \
+                   'cdd_bp' in baseline_output['model_fit']['model_params']:
+                    series = 'Cooling degree day balance point, baseline period'
+                    description = '''Best-fit cooling degree day balance point,
+                                     if any, for baseline model'''
+                    value = baseline_output['model_fit']['model_params']['cdd_bp']
+
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [None,]
+                    })
+
+                    if 'coefficients' in baseline_output['model_fit']['model_params'] and \
+                       'CDD_' + str(value) in baseline_output['model_fit']['model_params']['coefficients']:
+                        series = 'Best-fit cooling coefficient, baseline period'
+                        description = '''Best-fit cooling coefficient,
+                                         if any, for baseline model'''
+                        value = baseline_output['model_fit']['model_params']['coefficients']\
+                                               ['CDD_' + str(value)]
+
+                        raw_derivatives.append({
+                                'series': series,
+                                'description': description,
+                                'orderable': [None,],
+                                'value': [value,],
+                                'variance': [None,]
+                        })
+
+                if 'model_fit' in baseline_output and \
+                   'model_params' in baseline_output['model_fit'] and \
+                   'coefficients' in baseline_output['model_fit']['model_params'] and \
+                   'Intercept' in baseline_output['model_fit']['model_params']['coefficients']:
+                    series = 'Best-fit intercept, baseline period'
+                    description = '''Best-fit intercept, if any, for baseline model'''
+                    value = baseline_output['model_fit']['model_params']['coefficients']['Intercept']
+
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [None,]
+                    })
+
+            if reporting_model_success:
+
+                if 'model_fit' in reporting_output.keys() and \
+                   'model_params' in reporting_output['model_fit'] and \
+                   'hdd_bp' in reporting_output['model_fit']['model_params']:
+
+                    series = 'Heating degree day balance point, reporting period'
+                    description = '''Best-fit heating degree day balance point,
+                                     if any, for reporting model'''
+                    value = reporting_output['model_fit']['model_params']['hdd_bp']
+
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [None,]
+                    })
+
+                    if 'coefficients' in reporting_output['model_fit']['model_params'] and \
+                       'HDD_' + str(value) in reporting_output['model_fit']['model_params']['coefficients']:
+
+                        series = 'Best-fit heating coefficient, reporting period'
+                        description = '''Best-fit heating coefficient,
+                                         if any, for reporting model'''
+                        value = reporting_output['model_fit']['model_params']['coefficients']\
+                                               ['HDD_' + str(value)]
+                        raw_derivatives.append({
+                                'series': series,
+                                'description': description,
+                                'orderable': [None,],
+                                'value': [value,],
+                                'variance': [None,]
+                        })
+
+                if 'model_fit' in reporting_output and \
+                   'model_params' in reporting_output['model_fit'] and \
+                   'cdd_bp' in reporting_output['model_fit']['model_params']:
+
+                    series = 'Cooling degree day balance point, reporting period'
+                    description = '''Best-fit cooling degree day balance point,
+                                     if any, for reporting model'''
+                    value = reporting_output['model_fit']['model_params']['cdd_bp']
+
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [None,]
+                    })
+
+                    if 'coefficients' in reporting_output['model_fit']['model_params'] and \
+                       'CDD_' + str(value) in reporting_output['model_fit']['model_params']['coefficients']:
+                        series = 'Best-fit cooling coefficient, reporting period'
+                        description = '''Best-fit cooling coefficient,
+                                         if any, for reporting model'''
+                        value = reporting_output['model_fit']['model_params']['coefficients']\
+                                               ['CDD_' + str(value)]
+
+                        raw_derivatives.append({
+                                'series': series,
+                                'description': description,
+                                'orderable': [None,],
+                                'value': [value,],
+                                'variance': [None,]
+                        })
+
+                if 'model_fit' in reporting_output and \
+                   'model_params' in reporting_output['model_fit'] and \
+                   'coefficients' in reporting_output['model_fit']['model_params'] and \
+                   'Intercept' in reporting_output['model_fit']['model_params']['coefficients']:
+                    series = 'Best-fit intercept, reporting period'
+                    description = '''Best-fit intercept, if any, for reporting model'''
+                    value = reporting_output['model_fit']['model_params']['coefficients']['Intercept']
+
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None,],
+                            'value': [value,],
+                            'variance': [None,]
+                    })
 
             if baseline_model_success and reporting_model_success \
                     and weather_normal_source_success:

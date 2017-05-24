@@ -305,17 +305,6 @@ formatter.create_input(energy_trace, weather_source)
             unestimated_trace_data.index, "degF", allow_mixed_frequency=True)
         return unestimated_trace_data, temp_data
 
-    def create_billing_period_demand_fixture(self, trace, weather_source):
-        unestimated_trace_data = self._unestimated(trace.data.copy())
-        temp_data = weather_source.indexed_temperatures(
-            unestimated_trace_data.index, "degF", allow_mixed_frequency=True)
-        _ = temp_data.copy()
-        _.index = _.index.droplevel()
-        _ = _.resample('D').mean()
-        retval = temp_data.groupby(level='period').mean().resample('D').ffill()
-        retval = retval.reindex(_.index).ffill().values.flatten()
-        return pd.DataFrame({"tempF": retval}, index=_.index)
-
     def create_demand_fixture(self, index, weather_source):
         '''Creates a :code:`DatetimeIndex` ed dataframe containing formatted
         demand fixture data.
