@@ -26,7 +26,7 @@ class CaltrackMonthlyModel(object):
     '''
     def __init__(
             self, fit_cdd=True, grid_search=False, min_contiguous_months=12,
-            modeling_period_interpretation='baseline'):
+            modeling_period_interpretation='baseline', weighted=False):
 
         self.fit_cdd = fit_cdd
         self.grid_search = grid_search
@@ -43,6 +43,7 @@ class CaltrackMonthlyModel(object):
         self.fit_bp_hdd, self.fit_bp_cdd = None, None
         self.min_contiguous_months = min_contiguous_months
         self.modeling_period_interpretation = modeling_period_interpretation
+        self.weighted = weighted
 
         if grid_search:
             self.bp_cdd = [50, 55, 60, 65, 70, 75, 80, 85]
@@ -414,7 +415,7 @@ class CaltrackMonthlyModel(object):
             int_res,
             int_rsquared,
             int_qualified
-        ) = _fit_intercept(df)
+        ) = _fit_intercept(df, weighted=self.weighted)
 
         # CDD-only
         if self.fit_cdd:
@@ -425,7 +426,7 @@ class CaltrackMonthlyModel(object):
                 cdd_rsquared,
                 cdd_qualified,
                 cdd_bp
-            ) = _fit_cdd_only(df)
+            ) = _fit_cdd_only(df, weighted=self.weighted)
         else:
             cdd_formula = None
             cdd_mod = None
@@ -442,7 +443,7 @@ class CaltrackMonthlyModel(object):
             hdd_rsquared,
             hdd_qualified,
             hdd_bp
-        ) = _fit_hdd_only(df)
+        ) = _fit_hdd_only(df, weighted=self.weighted)
 
         # CDD+HDD
         if self.fit_cdd:
@@ -454,7 +455,7 @@ class CaltrackMonthlyModel(object):
                 full_qualified,
                 full_hdd_bp,
                 full_cdd_bp
-            ) = _fit_full(df)
+            ) = _fit_full(df, weighted=self.weighted)
         else:
             full_formula = None
             full_mod = None
