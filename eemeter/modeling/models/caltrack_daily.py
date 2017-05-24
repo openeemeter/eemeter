@@ -4,7 +4,8 @@ import pandas as pd
 import patsy
 import statsmodels.formula.api as smf
 import eemeter.modeling.exceptions as model_exceptions
-from caltrack_helpers import _fit_intercept, _fit_cdd_only, _fit_hdd_only, _fit_full
+from eemeter.modeling.models.caltrack_helpers import \
+    _fit_intercept, _fit_cdd_only, _fit_hdd_only, _fit_full
 
 class CaltrackDailyModel(object):
     ''' This class implements the two-stage modeling routine agreed upon
