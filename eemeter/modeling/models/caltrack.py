@@ -4,6 +4,7 @@ import pandas as pd
 import patsy
 import statsmodels.formula.api as smf
 import eemeter.modeling.exceptions as model_exceptions
+from caltrack_helpers import _fit_intercept, _fit_cdd_only, _fit_hdd_only, _fit_full
 
 
 class CaltrackMonthlyModel(object):
@@ -396,137 +397,6 @@ class CaltrackMonthlyModel(object):
 
         return
 
-    def _fit_intercept(self, df):
-        int_formula = 'upd ~ 1'
-        try:
-            int_mod = smf.ols(formula=int_formula, data=df)
-            int_res = int_mod.fit()
-        except:  # TODO: catch specific error
-            int_rsquared, int_qualified = 0, False
-            int_formula, int_mod, int_res = None, None, None
-        else:
-            int_rsquared, int_qualified = 0, True
-
-        return int_formula, int_mod, int_res, int_rsquared, int_qualified
-
-    def _fit_cdd_only(self, df):
-
-        bps = [i[4:] for i in df.columns if i[:3] == 'CDD']
-        best_bp, best_rsquared, best_mod, best_res = None, -9e9, None, None
-
-        try:  # TODO: fix big try block anti-pattern
-            for bp in bps:
-                cdd_formula = 'upd ~ CDD_' + bp
-                cdd_mod = smf.ols(formula=cdd_formula, data=df)
-                cdd_res = cdd_mod.fit()
-                cdd_rsquared = cdd_res.rsquared
-                if (cdd_rsquared > best_rsquared and
-                        cdd_res.params['Intercept'] >= 0 and
-                        cdd_res.params['CDD_' + bp] >= 0):
-                    best_bp, best_rsquared = bp, cdd_rsquared
-                    best_mod, best_res = cdd_mod, cdd_res
-            if (best_bp is not None and
-                    (best_res.pvalues['Intercept'] < 0.1) and
-                    (best_res.pvalues['CDD_' + best_bp] < 0.1)):
-                cdd_qualified = True
-                cdd_formula = 'upd ~ CDD_' + best_bp
-                cdd_bp = int(best_bp)
-                cdd_mod, cdd_res, cdd_rsquared = \
-                    best_mod, best_res, best_rsquared
-            else:
-                cdd_rsquared, cdd_qualified = 0, False
-                cdd_formula, cdd_mod, cdd_res = None, None, None
-                cdd_bp = None
-        except:  # TODO: catch specific error
-            cdd_rsquared, cdd_qualified = 0, False
-            cdd_formula, cdd_mod, cdd_res = None, None, None
-            cdd_bp = None
-
-        return cdd_formula, cdd_mod, cdd_res, cdd_rsquared, cdd_qualified, cdd_bp
-
-    def _fit_hdd_only(self, df):
-
-        bps = [i[4:] for i in df.columns if i[:3] == 'HDD']
-        best_bp, best_rsquared, best_mod, best_res = None, -9e9, None, None
-
-        try:  # TODO: fix big try block anti-pattern
-            for bp in bps:
-                hdd_formula = 'upd ~ HDD_' + bp
-                hdd_mod = smf.ols(formula=hdd_formula, data=df)
-                hdd_res = hdd_mod.fit()
-                hdd_rsquared = hdd_res.rsquared
-                if (hdd_rsquared > best_rsquared and
-                        hdd_res.params['Intercept'] >= 0 and
-                        hdd_res.params['HDD_' + bp] >= 0):
-                    best_bp, best_rsquared = bp, hdd_rsquared
-                    best_mod, best_res = hdd_mod, hdd_res
-
-            if (best_bp is not None and
-                    (best_res.pvalues['Intercept'] < 0.1) and
-                    (best_res.pvalues['HDD_' + best_bp] < 0.1)):
-                hdd_qualified = True
-                hdd_formula = 'upd ~ HDD_' + best_bp
-                hdd_bp = int(best_bp)
-                hdd_mod, hdd_res, hdd_rsquared = \
-                    best_mod, best_res, best_rsquared
-            else:
-                hdd_rsquared, hdd_qualified = 0, False
-                hdd_formula, hdd_mod, hdd_res = None, None, None
-                hdd_bp = None
-        except:  # TODO: catch specific error
-            hdd_rsquared, hdd_qualified = 0, False
-            hdd_formula, hdd_mod, hdd_res = None, None, None
-            hdd_bp = None
-
-        return hdd_formula, hdd_mod, hdd_res, hdd_rsquared, hdd_qualified, hdd_bp
-
-    def _fit_full(self, df):
-
-        hdd_bps = [i[4:] for i in df.columns if i[:3] == 'HDD']
-        cdd_bps = [i[4:] for i in df.columns if i[:3] == 'CDD']
-
-        best_hdd_bp, best_cdd_bp, best_rsquared, best_mod, best_res = \
-            None, None, -9e9, None, None
-
-        try:  # TODO: fix big try block anti-pattern
-            for full_hdd_bp in hdd_bps:
-                for full_cdd_bp in cdd_bps:
-                    full_formula = 'upd ~ CDD_' + full_cdd_bp + \
-                                   ' + HDD_' + full_hdd_bp
-                    full_mod = smf.ols(formula=full_formula, data=df)
-                    full_res = full_mod.fit()
-                    full_rsquared = full_res.rsquared
-                    if (full_rsquared > best_rsquared and
-                            full_res.params['Intercept'] >= 0 and
-                            full_res.params['HDD_' + full_hdd_bp] >= 0 and
-                            full_res.params['CDD_' + full_cdd_bp] >= 0):
-                        best_hdd_bp, best_cdd_bp, best_rsquared = \
-                            full_hdd_bp, full_cdd_bp, full_rsquared
-                        best_mod, best_res = full_mod, full_res
-
-            if (best_hdd_bp is not None and
-                    (best_res.pvalues['Intercept'] < 0.1) and
-                    (best_res.pvalues['CDD_' + best_cdd_bp] < 0.1) and
-                    (best_res.pvalues['HDD_' + best_hdd_bp] < 0.1)):
-                full_qualified = True
-                full_formula = 'upd ~ CDD_' + best_cdd_bp + \
-                               ' + HDD_' + best_hdd_bp
-                full_hdd_bp = int(best_hdd_bp)
-                full_cdd_bp = int(best_cdd_bp)
-                full_mod, full_res, full_rsquared = \
-                    best_mod, best_res, best_rsquared
-            else:
-                full_rsquared, full_qualified = 0, False
-                full_formula, full_mod, full_res = None, None, None
-                full_hdd_bp, full_hdd_bp = None, None
-        except:  # TODO: catch specific error
-            full_rsquared, full_qualified = 0, False
-            full_formula, full_mod, full_res = None, None, None
-            full_hdd_bp, full_hdd_bp = None, None
-
-        return full_formula, full_mod, full_res, full_rsquared, full_qualified, full_hdd_bp, full_cdd_bp
-
-
     def fit(self, input_data):
 
         self.input_data = input_data
@@ -544,7 +414,7 @@ class CaltrackMonthlyModel(object):
             int_res,
             int_rsquared,
             int_qualified
-        ) = self._fit_intercept(df)
+        ) = _fit_intercept(df)
 
         # CDD-only
         if self.fit_cdd:
@@ -555,7 +425,7 @@ class CaltrackMonthlyModel(object):
                 cdd_rsquared,
                 cdd_qualified,
                 cdd_bp
-            ) = self._fit_cdd_only(df)
+            ) = _fit_cdd_only(df)
         else:
             cdd_formula = None
             cdd_mod = None
@@ -572,7 +442,7 @@ class CaltrackMonthlyModel(object):
             hdd_rsquared,
             hdd_qualified,
             hdd_bp
-        ) = self._fit_hdd_only(df)
+        ) = _fit_hdd_only(df)
 
         # CDD+HDD
         if self.fit_cdd:
@@ -584,7 +454,7 @@ class CaltrackMonthlyModel(object):
                 full_qualified,
                 full_hdd_bp,
                 full_cdd_bp
-            ) = self._fit_full(df)
+            ) = _fit_full(df)
         else:
             full_formula = None
             full_mod = None
