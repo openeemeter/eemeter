@@ -145,7 +145,8 @@ class NOAAClient(object):
                 temp_C = float(line[87:92]) / 10.
             date_str = line[15:27].decode('utf-8')
             dt = pytz.UTC.localize(datetime.strptime(date_str, "%Y%m%d%H%M"))
-            series[dt] = temp_C
+            if series[dt] is None:
+                series[dt] = temp_C
 
         return series
 
