@@ -302,7 +302,7 @@ class CaltrackDailyModel(object):
             y, X = patsy.dmatrices(
                 full_formula, df, return_type='dataframe')
             estimated = full_res.fittedvalues
-            r2, rmse = full_rsquared, np.sqrt(full_res.mse_total)
+            r2, rmse = full_rsquared, np.sqrt(full_res.ssr/full_res.nobs)
             model_obj, model_res, formula = full_mod, full_res, full_formula
             fit_bp_hdd, fit_bp_cdd = full_hdd_bp, full_cdd_bp
 
@@ -310,7 +310,7 @@ class CaltrackDailyModel(object):
             y, X = patsy.dmatrices(
                 hdd_formula, df, return_type='dataframe')
             estimated = hdd_res.fittedvalues
-            r2, rmse = hdd_rsquared, np.sqrt(hdd_res.mse_total)
+            r2, rmse = hdd_rsquared, np.sqrt(hdd_res.ssr/hdd_res.nobs)
             model_obj, model_res, formula = hdd_mod, hdd_res, hdd_formula
             fit_bp_hdd = hdd_bp
 
@@ -318,7 +318,7 @@ class CaltrackDailyModel(object):
             y, X = patsy.dmatrices(
                 cdd_formula, df, return_type='dataframe')
             estimated = cdd_res.fittedvalues
-            r2, rmse = cdd_rsquared, np.sqrt(cdd_res.mse_total)
+            r2, rmse = cdd_rsquared, np.sqrt(cdd_res.ssr/cdd_res.nobs)
             model_obj, model_res, formula = cdd_mod, cdd_res, cdd_formula
             fit_bp_cdd = cdd_bp
 
@@ -327,7 +327,7 @@ class CaltrackDailyModel(object):
             y, X = patsy.dmatrices(
                 int_formula, df, return_type='dataframe')
             estimated = int_res.fittedvalues
-            r2, rmse = int_rsquared, np.sqrt(int_res.mse_total)
+            r2, rmse = int_rsquared, np.sqrt(int_res.ssr/int_res.nobs)
             model_obj, model_res, formula = int_mod, int_res, int_formula
 
         if y.mean != 0:
