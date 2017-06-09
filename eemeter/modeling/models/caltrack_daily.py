@@ -7,6 +7,7 @@ import eemeter.modeling.exceptions as model_exceptions
 from eemeter.modeling.models.caltrack_helpers import \
     _fit_intercept, _fit_cdd_only, _fit_hdd_only, _fit_full
 
+
 class CaltrackDailyModel(object):
     ''' This class implements the two-stage modeling routine agreed upon
     as part of the Caltrack beta test.
@@ -55,95 +56,6 @@ class CaltrackDailyModel(object):
 
     def __repr__(self):
         return 'CaltrackDailyModel'
-
-    def billing_to_daily(self, trace_and_temp):
-        ''' Helper function to handle monthly billing or other irregular data.
-        '''
-        (energy_data, temp_data) = trace_and_temp
-
-        # Handle empty series
-        if energy_data.empty:
-            raise model_exceptions.DataSufficiencyException("No energy trace data")
-        if temp_data.empty:
-            raise model_exceptions.DataSufficiencyException("No temperature data")
-
-        # Convert billing multiindex to straight index
-        temp_data.index = temp_data.index.droplevel()
-
-        # Resample temperature data to daily
-        temp_data_daily = temp_data.resample('D').apply(np.mean)[0]
-
-        # Drop any duplicate indices
-        energy_data = energy_data[
-            ~energy_data.index.duplicated(keep='last')].sort_index()
-
-        # Check for empty series post-resampling and deduplication
-        if energy_data.empty:
-            raise model_exceptions.DataSufficiencyException(
-                "No energy trace data after deduplication")
-        if temp_data_daily.empty:
-            raise model_exceptions.DataSufficiencyException(
-                "No temperature data after resampling")
-
-        # get daily mean values
-        upd_data_daily_mean_values = [
-            value / (e - s).days for value, s, e in
-            zip(energy_data, energy_data.index, energy_data.index[1:])
-        ] + [np.nan]  # add missing last data point, which is null by convention anyhow
-        usage_data_daily_mean_values = [
-            value for value, s, e in
-            zip(energy_data, energy_data.index, energy_data.index[1:])
-        ] + [np.nan]  # add missing last data point, which is null by convention anyhow
-
-        # Create arrays to hold computed CDD and HDD for each
-        # balance point temperature.
-        cdd = {i: [0] for i in self.bp_cdd}
-        hdd = {i: [0] for i in self.bp_hdd}
-        for bp in self.bp_cdd:
-            cdd[bp] = pd.Series(
-                np.maximum(temp_data_daily - bp, 0),
-                index = temp_data_daily.index)
-        for bp in self.bp_hdd:
-            hdd[bp] = pd.Series(
-                np.maximum(bp - temp_data_daily, 0),
-                index = temp_data_daily.index)
-
-        # spread out over the month
-        upd_data = pd.Series(
-            upd_data_daily_mean_values,
-            index=energy_data.index
-            ).resample('D').ffill()[:-1] 
-        usage_data = pd.Series(
-            usage_data_daily_mean_values,
-            index=energy_data.index
-            ).resample('D').ffill()[:-1] 
-        cdd_data = {}
-        hdd_data = {}
-        for bp in self.bp_cdd:
-            cdd_data[bp] = pd.Series(
-                cdd[bp] + [np.nan],
-                index=energy_data.index
-                ).resample('D').ffill()[:-1] 
-        for bp in self.bp_hdd:
-            hdd_data[bp] = pd.Series(
-                hdd[bp] + [np.nan],
-                index=energy_data.index
-                ).resample('D').ffill()[:-1] 
-        ndays_data = pd.Series(np.isfinite(upd_data) &
-                     np.isfinite(hdd_data[self.bp_hdd[0]]),
-                     dtype=int)
-
-        model_data = {
-            'upd': upd_data,
-            'usage': usage_data,
-            'ndays': ndays_data,
-        }
-        model_data.update({'CDD_' + str(bp): \
-            cdd_data[bp] for bp in cdd_data.keys()})
-        model_data.update({'HDD_' + str(bp): \
-            hdd_data[bp] for bp in hdd_data.keys()})
-
-        return pd.DataFrame(model_data)
 
     def ami_to_daily(self, df):
         ''' Convert from daily usage and temperature to monthly
@@ -199,7 +111,8 @@ class CaltrackDailyModel(object):
 
         self.input_data = input_data
         if isinstance(input_data, tuple):
-            df = self.billing_to_daily(input_data)
+            raise model_exceptions.DataSufficiencyException(\
+                  "Billing data is not appropriate for this model")
         else:
             df = self.ami_to_daily(self.input_data)
         self.df = df

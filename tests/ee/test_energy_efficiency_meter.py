@@ -93,6 +93,31 @@ def meter_input_daily(project_meter_input):
     }
     return meter_input
 
+@pytest.fixture
+def meter_input_daily_elec(project_meter_input):
+
+    record_starts = pd.date_range(
+        '2012-01-01', periods=365 * 4, freq='D', tz=pytz.UTC)
+
+    records = [
+        {
+            "start": dt.isoformat(),
+            "value": 1.0,
+            "estimated": False
+        } for dt in record_starts
+    ]
+
+    trace = _electricity_input(records)
+    trace.update({'interval': 'daily'})
+
+    meter_input = {
+        "type": "SINGLE_TRACE_SIMPLE_PROJECT",
+        "trace": trace,
+        "project": project_meter_input,
+    }
+    return meter_input
+
+
 
 @pytest.fixture
 def meter_input_empty(project_meter_input):
@@ -686,7 +711,7 @@ def test_bad_zipcode(meter_input_bad_zipcode):
 
     json.dumps(results)
 
-def test_custom_evaluate_args(
+def test_custom_evaluate_args_monthly(
         meter_input_monthly,
         mock_isd_weather_source,
         mock_tmy3_weather_source):
@@ -757,3 +782,33 @@ def test_custom_evaluate_args(
     assert results['model_kwargs'] == {'fit_cdd': False}
     assert results['formatter_class'] == 'ModelDataBillingFormatter'
     assert results['formatter_kwargs'] == {}
+
+
+def test_custom_evaluate_args_daily(
+        meter_input_daily_elec,
+        mock_isd_weather_source,
+        mock_tmy3_weather_source):
+
+    meter = EnergyEfficiencyMeter()
+
+    results = meter.evaluate(meter_input_daily_elec,
+                             model=None,
+                             formatter=None,
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['model_class'] == 'CaltrackDailyModel'
+    assert results['model_kwargs'] == {'fit_cdd': True, 'grid_search': True}
+    assert results['formatter_class'] == 'ModelDataFormatter'
+    assert results['formatter_kwargs'] == {'freq_str': 'D'}
+
+    results = meter.evaluate(meter_input_daily_elec,
+                             model=(CaltrackDailyModel, {'fit_cdd': False}),
+                             formatter=None,
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['model_class'] == 'CaltrackDailyModel'
+    assert results['model_kwargs'] == {'fit_cdd': False}
+    assert results['formatter_class'] == 'ModelDataFormatter'
+    assert results['formatter_kwargs'] == {'freq_str': 'D'}
