@@ -7,6 +7,7 @@ import eemeter.modeling.exceptions as model_exceptions
 from eemeter.modeling.models.caltrack_helpers import \
     _fit_intercept, _fit_cdd_only, _fit_hdd_only, _fit_full
 
+
 class CaltrackDailyModel(object):
     ''' This class implements the two-stage modeling routine agreed upon
     as part of the Caltrack beta test.
