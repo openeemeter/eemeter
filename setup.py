@@ -23,7 +23,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'holidays',
-        'lxml <= 3.6.1',
+        'lxml',
         'numpy >= 1.10.2',
         'scipy',
         'pandas >= 0.19.2',
