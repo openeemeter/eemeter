@@ -12,6 +12,6 @@ SQLAlchemy==1.1.9
 tox==2.7.0
 twine==1.8.1
 xlrd==1.0.0
-numpy==1.12.1
+numpy==1.13.0
 statsmodels==0.8.0
 notebook==5.0.0
