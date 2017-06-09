@@ -50,8 +50,8 @@ class CaltrackMonthlyModel(object):
         self.weighted = weighted
 
         if grid_search:
-            self.bp_cdd = [50, 55, 60, 65, 70, 75, 80, 85]
-            self.bp_hdd = [50, 55, 60, 65, 70, 75, 80, 85]
+            self.bp_cdd = range(65,76)
+            self.bp_hdd = range(55,66)
         else:
             self.bp_cdd, self.bp_hdd = [70,], [60,]
 
