@@ -12,7 +12,7 @@ from eemeter.modeling.formatters import (
     ModelDataFormatter,
     ModelDataBillingFormatter,
 )
-from eemeter.modeling.models import CaltrackMonthlyModel
+from eemeter.modeling.models import CaltrackMonthlyModel, CaltrackDailyModel
 from eemeter.modeling.split import SplitModeledEnergyTrace
 from eemeter.io.serializers import (
     deserialize_meter_input,
@@ -102,34 +102,42 @@ class EnergyEfficiencyMeter(object):
                 'fit_cdd': True,
                 'grid_search': True,
             })
+            caltrack_gas_model_daily = (CaltrackDailyModel, {
+                'fit_cdd': False,
+                'grid_search': True,
+            })
+            caltrack_elec_model_daily = (CaltrackDailyModel, {
+                'fit_cdd': True,
+                'grid_search': True,
+            })
             default_model_mapping = {
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '15T'):
-                    caltrack_gas_model,
+                    caltrack_gas_model_daily,
                 ('ELECTRICITY_CONSUMPTION_SUPPLIED', '15T'):
-                    caltrack_elec_model,
+                    caltrack_elec_model_daily,
                 ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', '15T'):
-                    caltrack_elec_model,
+                    caltrack_elec_model_daily,
 
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '30T'):
-                    caltrack_gas_model,
+                    caltrack_gas_model_daily,
                 ('ELECTRICITY_CONSUMPTION_SUPPLIED', '30T'):
-                    caltrack_elec_model,
+                    caltrack_elec_model_daily,
                 ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', '30T'):
-                    caltrack_elec_model,
+                    caltrack_elec_model_daily,
 
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', 'H'):
-                    caltrack_gas_model,
+                    caltrack_gas_model_daily,
                 ('ELECTRICITY_CONSUMPTION_SUPPLIED', 'H'):
-                    caltrack_elec_model,
+                    caltrack_elec_model_daily,
                 ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', 'H'):
-                    caltrack_elec_model,
+                    caltrack_elec_model_daily,
 
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', 'D'):
-                    caltrack_gas_model,
+                    caltrack_gas_model_daily,
                 ('ELECTRICITY_CONSUMPTION_SUPPLIED', 'D'):
-                    caltrack_elec_model,
+                    caltrack_elec_model_daily,
                 ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', 'D'):
-                    caltrack_elec_model,
+                    caltrack_elec_model_daily,
 
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', None):
                     caltrack_gas_model,
