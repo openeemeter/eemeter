@@ -22,6 +22,7 @@ setup(
     keywords='open energy efficiency meter',
     packages=find_packages(),
     install_requires=[
+        'click',
         'holidays',
         'lxml',
         'numpy >= 1.10.2',
@@ -37,4 +38,9 @@ setup(
     package_data={'': ['*.json', '*.gz']},
     setup_requires=['pytest-runner'],
     tests_require=['pytest'],
+    entry_points={
+        'console_scripts': [
+          'eemeter = eemeter.cli:cli',
+        ]
+      },
 )
