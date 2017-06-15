@@ -61,12 +61,12 @@ def project_serializer(zipcode, retrofit_start_date, retrofit_end_date):
     return data
 
 def read_csv(path):
-	result = []
-	with open(path) as f:
-		reader = csv.DictReader(f)
-		for row in reader:
-			result.append(row)
-	return result
+    result = []
+    with open(path) as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            result.append(row)
+    return result
 
 def date_reader(date_format):
     def reader(raw):
@@ -77,56 +77,66 @@ def date_reader(date_format):
 
 iso_8601_reader = date_reader('%Y-%m-%dT%H:%M:%S')
 
+def _analyze(inputs_path):
+    projects = read_csv(os.path.join(inputs_path, 'projects.csv'))
+    traces = read_csv(os.path.join(inputs_path, 'traces.csv'))
+
+    for row in traces:
+        row['start'] = iso_8601_reader(row['start'])
+
+    for row in projects:
+        row['project_start'] = iso_8601_reader(row['project_start'])
+        row['project_end'] = iso_8601_reader(row['project_end'])
+
+    energy_trace = EnergyTrace(
+        records=traces,
+        unit="KWH",
+        interpretation="ELECTRICITY_CONSUMPTION_SUPPLIED",
+        serializer=ArbitraryStartSerializer(),
+        trace_id='123',
+        interval='daily'
+    )
+
+    for project in projects:
+        meter_input = serialize_meter_input(
+            energy_trace, 
+            project['zipcode'],
+            project['project_start'],
+            project['project_end']
+        )
+        ee = EnergyEfficiencyMeter()
+        meter_output = ee.evaluate(meter_input)
+
+                # Compute and output the annualized weather normal
+        awn = [i['value'][0] for i in meter_output['derivatives'] 
+               if i['series']=='Cumulative baseline model minus reporting model, normal year'][0]
+        awn_var = [i['variance'][0] for i in meter_output['derivatives'] 
+               if i['series']=='Cumulative baseline model minus reporting model, normal year'][0]
+        awn_confint = stats.norm.interval(0.68, loc=awn, scale=np.sqrt(awn_var))
+        print("Normal year savings estimate:")
+        print("  {:f}\n  68% confidence interval: ({:f}, {:f})".\
+            format(awn, awn_confint[0], awn_confint[1]))
+
+        # Compute and output the weather normalized reporting period savings
+        rep = [i['value'][0] for i in meter_output['derivatives'] 
+               if i['series']=='Cumulative baseline model minus observed, reporting period'][0]
+        rep_var = [i['variance'][0] for i in meter_output['derivatives'] 
+               if i['series']=='Cumulative baseline model minus observed, reporting period'][0]
+        rep_confint = stats.norm.interval(0.68, loc=rep, scale=np.sqrt(rep_var))
+        print("Reporting period savings estimate:")
+        print("  {:f}\n  68% confidence interval: ({:f}, {:f})".\
+            format(rep, rep_confint[0], rep_confint[1]))
+
+
+@cli.command()
+def sample():
+    path = os.path.realpath(__file__)
+    cwd = os.path.dirname(path)
+    sample_inputs_path = os.path.join(cwd, 'sample_data')
+    _analyze(sample_inputs_path)
+
 @cli.command()
 @click.argument('inputs_path', type=click.Path(exists=True))
 def analyze(inputs_path):
-
-	projects = read_csv(os.path.join(inputs_path, 'projects.csv'))
-	traces = read_csv(os.path.join(inputs_path, 'traces.csv'))
-
-	for row in traces:
-		row['start'] = iso_8601_reader(row['start'])
-
-	for row in projects:
-		row['project_start'] = iso_8601_reader(row['project_start'])
-		row['project_end'] = iso_8601_reader(row['project_end'])
-
-	energy_trace = EnergyTrace(
-	    records=traces,
-	    unit="KWH",
-	    interpretation="ELECTRICITY_CONSUMPTION_SUPPLIED",
-	    serializer=ArbitraryStartSerializer(),
-	    trace_id='123',
-	    interval='daily'
-	)
-
-	for project in projects:
-		meter_input = serialize_meter_input(
-			energy_trace, 
-			project['zipcode'],
-	    	project['project_start'],
-	    	project['project_end']
-	    )
-		ee = EnergyEfficiencyMeter()
-		meter_output = ee.evaluate(meter_input)
-
-                # Compute and output the annualized weather normal
-		awn = [i['value'][0] for i in meter_output['derivatives'] 
-		       if i['series']=='Cumulative baseline model minus reporting model, normal year'][0]
-		awn_var = [i['variance'][0] for i in meter_output['derivatives'] 
-		       if i['series']=='Cumulative baseline model minus reporting model, normal year'][0]
-                awn_confint = stats.norm.interval(0.68, loc=awn, scale=np.sqrt(awn_var))
-		print("Normal year savings estimate:")
-                print("  {:f}\n  68% confidence interval: ({:f}, {:f})".\
-                    format(awn, awn_confint[0], awn_confint[1]))
-
-                # Compute and output the weather normalized reporting period savings
-		rep = [i['value'][0] for i in meter_output['derivatives'] 
-		       if i['series']=='Cumulative baseline model minus observed, reporting period'][0]
-		rep_var = [i['variance'][0] for i in meter_output['derivatives'] 
-		       if i['series']=='Cumulative baseline model minus observed, reporting period'][0]
-                rep_confint = stats.norm.interval(0.68, loc=rep, scale=np.sqrt(rep_var))
-		print("Reporting period savings estimate:")
-                print("  {:f}\n  68% confidence interval: ({:f}, {:f})".\
-                    format(rep, rep_confint[0], rep_confint[1]))
+    _analyze(inputs_path)
 
