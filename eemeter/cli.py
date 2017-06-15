@@ -9,6 +9,8 @@ import eemeter
 from eemeter.structures import EnergyTrace
 from eemeter.io.serializers import ArbitraryStartSerializer
 from eemeter.ee.meter import EnergyEfficiencyMeter
+from scipy import stats
+import numpy as np
 
 @click.group()
 def cli():
@@ -108,8 +110,23 @@ def analyze(inputs_path):
 		ee = EnergyEfficiencyMeter()
 		meter_output = ee.evaluate(meter_input)
 
+                # Compute and output the annualized weather normal
+		awn = [i['value'][0] for i in meter_output['derivatives'] 
+		       if i['series']=='Cumulative baseline model minus reporting model, normal year'][0]
+		awn_var = [i['variance'][0] for i in meter_output['derivatives'] 
+		       if i['series']=='Cumulative baseline model minus reporting model, normal year'][0]
+                awn_confint = stats.norm.interval(0.68, loc=awn, scale=np.sqrt(awn_var))
 		print("Normal year savings estimate:")
-		print([i['value'][0] for i in meter_output['derivatives'] 
-		       if i['series']=='Cumulative baseline model minus reporting model, normal year'][0])
+                print("  {:f}\n  68% confidence interval: ({:f}, {:f})".\
+                    format(awn, awn_confint[0], awn_confint[1]))
 
+                # Compute and output the weather normalized reporting period savings
+		rep = [i['value'][0] for i in meter_output['derivatives'] 
+		       if i['series']=='Cumulative baseline model minus observed, reporting period'][0]
+		rep_var = [i['variance'][0] for i in meter_output['derivatives'] 
+		       if i['series']=='Cumulative baseline model minus observed, reporting period'][0]
+                rep_confint = stats.norm.interval(0.68, loc=rep, scale=np.sqrt(rep_var))
+		print("Reporting period savings estimate:")
+                print("  {:f}\n  68% confidence interval: ({:f}, {:f})".\
+                    format(rep, rep_confint[0], rep_confint[1]))
 
