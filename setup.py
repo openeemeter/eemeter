@@ -23,6 +23,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'click',
+        'dateparser',
         'holidays',
         'lxml',
         'numpy >= 1.10.2',
