@@ -112,7 +112,6 @@ def build_traces(trace_records):
     trace_objects = []
 
     # Split the concatenated traces into individual traces
-    print("Splitting traces")
     for record in trace_records:
         trace_id = record["project_id"] + " " + record["interpretation"]
         if current_trace_id is None:
@@ -128,7 +127,7 @@ def build_traces(trace_records):
     return trace_objects
 
 def run_meter(project, trace_object):
-    print("Running a meter...")
+    print("\n\nRunning a meter for %s %s" % (trace_object.trace_id, trace_object.interpretation))
     meter_input = serialize_meter_input(
         trace_object, 
         project['zipcode'],
@@ -159,11 +158,9 @@ def run_meter(project, trace_object):
     format(rep, rep_confint[0], rep_confint[1]))
 
 def _analyze(inputs_path):
-    print("Reading CSVs")
     projects = read_csv(os.path.join(inputs_path, 'projects.csv'))
     traces = read_csv(os.path.join(inputs_path, 'traces.csv'))
 
-    print("Fixing dates")
     for row in traces:
         row['start'] = flexible_date_reader(row['start'])
 
@@ -171,7 +168,6 @@ def _analyze(inputs_path):
         row['project_start'] = flexible_date_reader(row['project_start'])
         row['project_end'] = flexible_date_reader(row['project_end'])
 
-    print("Building traces")
     trace_objects = build_traces(traces)
 
     for project in projects:
