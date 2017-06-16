@@ -76,10 +76,19 @@ def date_reader(date_format):
         return datetime.datetime.strptime(raw, date_format).replace(tzinfo=pytz.UTC)
     return reader
 
-iso_8601_reader = date_reader('%Y-%m-%d %H:%M:%S')
+date_readers = [
+    date_reader('%Y-%m-%d %H:%M:%S'),
+    date_reader('%Y-%m-%dT%H:%M:%S'),
+    date_reader('%Y-%m-%dT%H:%M:%SZ'),
+]
 
 def flexible_date_reader(raw):
-    return dateparser.parse(raw).replace(tzinfo=pytz.UTC)
+    for reader in date_readers:
+        try:
+            return reader(raw)
+        except:
+            pass
+    raise ValueError("Unable to parse date")
 
 def build_trace(trace_records):
     if trace_records[0]['interpretation'] == 'gas':
@@ -156,11 +165,11 @@ def _analyze(inputs_path):
 
     print("Fixing dates")
     for row in traces:
-        row['start'] = iso_8601_reader(row['start'])
+        row['start'] = flexible_date_reader(row['start'])
 
     for row in projects:
-        row['project_start'] = iso_8601_reader(row['project_start'])
-        row['project_end'] = iso_8601_reader(row['project_end'])
+        row['project_start'] = flexible_date_reader(row['project_start'])
+        row['project_end'] = flexible_date_reader(row['project_end'])
 
     print("Building traces")
     trace_objects = build_traces(traces)
