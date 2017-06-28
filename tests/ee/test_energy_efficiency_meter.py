@@ -812,3 +812,35 @@ def test_custom_evaluate_args_daily(
     assert results['model_kwargs'] == {'fit_cdd': False}
     assert results['formatter_class'] == 'ModelDataFormatter'
     assert results['formatter_kwargs'] == {'freq_str': 'D'}
+
+def test_ignore_extra_args_daily(
+        meter_input_daily_elec,
+        mock_isd_weather_source,
+        mock_tmy3_weather_source):
+
+    meter = EnergyEfficiencyMeter()
+
+    results = meter.evaluate(meter_input_daily_elec,
+                             model=(None, {'fit_cdd': True, 'grid_search': True, 'extra_arg': 'value'}),
+                             formatter=None,
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['model_class'] == 'CaltrackDailyModel'
+    assert results['model_kwargs'] == {'fit_cdd': True, 'grid_search': True, 'extra_arg': 'value'}
+
+def test_ignore_extra_args_monthly(
+        meter_input_monthly,
+        mock_isd_weather_source,
+        mock_tmy3_weather_source):
+
+    meter = EnergyEfficiencyMeter()
+
+    results = meter.evaluate(meter_input_monthly,
+                             model=(None, {'grid_search': True, 'extra_arg': 'value'}),
+                             formatter=None,
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['model_class'] == 'CaltrackMonthlyModel'
+    assert results['model_kwargs'] == {'fit_cdd': True, 'grid_search': True, 'extra_arg': 'value'}
