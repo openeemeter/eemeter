@@ -30,7 +30,7 @@ class CaltrackMonthlyModel(object):
             min_contiguous_baseline_months=12,
             min_contiguous_reporting_months=12,
             modeling_period_interpretation='baseline',
-            weighted=False):
+            weighted=False, **kwargs):
         self.fit_cdd = fit_cdd
         self.grid_search = grid_search
         self.model_freq = pd.tseries.frequencies.MonthEnd()

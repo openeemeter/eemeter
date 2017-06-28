@@ -28,7 +28,7 @@ class CaltrackDailyModel(object):
     def __init__(
             self, fit_cdd=True, grid_search=False, min_fraction_coverage=0.9,
             min_contiguous_months=12,
-            modeling_period_interpretation='baseline'):
+            modeling_period_interpretation='baseline', **kwargs):
 
         self.fit_cdd = fit_cdd
         self.grid_search = grid_search
