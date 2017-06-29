@@ -10,7 +10,7 @@ class MockWeatherClient(object):
         avg_temp = 15
         temp_range = 15
         period_offset = - (2 * np.pi / 3)
-        temp_offsets = np.sin((2* np.pi * np.arange(n) / n) + period_offset)
+        temp_offsets = np.sin((2 * np.pi * np.arange(n) / n) + period_offset)
         return avg_temp + (temp_range * temp_offsets)
 
     def get_gsod_data(self, station, year):

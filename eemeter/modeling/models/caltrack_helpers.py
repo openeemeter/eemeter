@@ -1,9 +1,6 @@
-import copy
 import numpy as np
-import pandas as pd
-import patsy
 import statsmodels.formula.api as smf
-import eemeter.modeling.exceptions as model_exceptions
+
 
 def _fit_intercept(df, weighted=False):
     int_formula = 'upd ~ 1'
@@ -21,6 +18,7 @@ def _fit_intercept(df, weighted=False):
 
     return int_formula, int_mod, int_res, int_rsquared, int_qualified
 
+
 def _fit_cdd_only(df, weighted=False):
 
     bps = [i[4:] for i in df.columns if i[:3] == 'CDD']
@@ -34,7 +32,7 @@ def _fit_cdd_only(df, weighted=False):
                (np.nansum(df['CDD_' + bp]) < 20):
                 continue
             if weighted:
-                candidate_cdd_mod = smf.wls(formula=candidate_cdd_formula, data=df, \
+                candidate_cdd_mod = smf.wls(formula=candidate_cdd_formula, data=df,
                                             weights=df['ndays'])
             else:
                 candidate_cdd_mod = smf.ols(formula=candidate_cdd_formula, data=df)
@@ -55,6 +53,7 @@ def _fit_cdd_only(df, weighted=False):
 
     return best_formula, best_mod, best_res, best_rsquared, cdd_qualified, best_bp
 
+
 def _fit_hdd_only(df, weighted=False):
 
     bps = [i[4:] for i in df.columns if i[:3] == 'HDD']
@@ -68,7 +67,7 @@ def _fit_hdd_only(df, weighted=False):
                (np.nansum(df['HDD_' + bp]) < 20):
                 continue
             if weighted:
-                candidate_hdd_mod = smf.wls(formula=candidate_hdd_formula, data=df, \
+                candidate_hdd_mod = smf.wls(formula=candidate_hdd_formula, data=df,
                                             weights=df['ndays'])
             else:
                 candidate_hdd_mod = smf.ols(formula=candidate_hdd_formula, data=df)
@@ -89,6 +88,7 @@ def _fit_hdd_only(df, weighted=False):
 
     return best_formula, best_mod, best_res, best_rsquared, hdd_qualified, best_bp
 
+
 def _fit_full(df, weighted=False):
 
     hdd_bps = [i[4:] for i in df.columns if i[:3] == 'HDD']
@@ -101,7 +101,8 @@ def _fit_full(df, weighted=False):
     try:  # TODO: fix big try block anti-pattern
         for hdd_bp in hdd_bps:
             for cdd_bp in cdd_bps:
-                if cdd_bp < hdd_bp: continue
+                if cdd_bp < hdd_bp:
+                    continue
                 candidate_full_formula = 'upd ~ CDD_' + cdd_bp + \
                                          ' + HDD_' + hdd_bp
                 if (np.nansum(df['HDD_' + hdd_bp] > 0) < 10) or \
@@ -111,7 +112,7 @@ def _fit_full(df, weighted=False):
                    (np.nansum(df['CDD_' + cdd_bp]) < 20):
                     continue
                 if weighted:
-                    candidate_full_mod = smf.wls(formula=candidate_full_formula, data=df, \
+                    candidate_full_mod = smf.wls(formula=candidate_full_formula, data=df,
                                                  weights=df['ndays'])
                 else:
                     candidate_full_mod = smf.ols(formula=candidate_full_formula, data=df)

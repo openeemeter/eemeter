@@ -2,7 +2,6 @@ import copy
 import numpy as np
 import pandas as pd
 import patsy
-import statsmodels.formula.api as smf
 import eemeter.modeling.exceptions as model_exceptions
 from eemeter.modeling.models.caltrack_helpers import \
     _fit_intercept, _fit_cdd_only, _fit_hdd_only, _fit_full
@@ -50,10 +49,10 @@ class CaltrackMonthlyModel(object):
         self.weighted = weighted
 
         if grid_search:
-            self.bp_cdd = range(65,76)
-            self.bp_hdd = range(55,66)
+            self.bp_cdd = range(65, 76)
+            self.bp_hdd = range(55, 66)
         else:
-            self.bp_cdd, self.bp_hdd = [70,], [60,]
+            self.bp_cdd, self.bp_hdd = [70, ], [60, ]
 
     def __repr__(self):
         return 'CaltrackMonthlyModel'
@@ -104,11 +103,11 @@ class CaltrackMonthlyModel(object):
         for bp in self.bp_cdd:
             cdd[bp] = pd.Series(
                 np.maximum(temp_data_daily - bp, 0),
-                index = temp_data_daily.index)
+                index=temp_data_daily.index)
         for bp in self.bp_hdd:
             hdd[bp] = pd.Series(
                 np.maximum(bp - temp_data_daily, 0),
-                index = temp_data_daily.index)
+                index=temp_data_daily.index)
 
         ndays_data_daily_mean_values = []
         hdd_data_daily_mean_values = {}
@@ -169,13 +168,12 @@ class CaltrackMonthlyModel(object):
             'usage': usage_data,
             'ndays': ndays_data,
         }
-        model_data.update({'CDD_' + str(bp): \
-            cdd_data[bp] for bp in cdd_data.keys()})
-        model_data.update({'HDD_' + str(bp): \
-            hdd_data[bp] for bp in hdd_data.keys()})
+        model_data.update({'CDD_' + str(bp):
+                          cdd_data[bp] for bp in cdd_data.keys()})
+        model_data.update({'HDD_' + str(bp):
+                          hdd_data[bp] for bp in hdd_data.keys()})
 
         return pd.DataFrame(model_data)
-
 
     def add_cols_to_demand_fixture(self, df):
         cdd = {i: [0] for i in self.bp_cdd}
@@ -183,22 +181,21 @@ class CaltrackMonthlyModel(object):
         for bp in self.bp_cdd:
             cdd[bp] = pd.Series(
                 np.maximum(df.tempF - bp, 0),
-                index = df.index)
+                index=df.index)
         for bp in self.bp_hdd:
             hdd[bp] = pd.Series(
                 np.maximum(bp - df.tempF, 0),
-                index = df.index)
+                index=df.index)
         model_data = {
             'upd': np.zeros(len(df.index)),
             'usage': np.zeros(len(df.index)),
             'ndays': np.ones(len(df.index)),
         }
-        model_data.update({'CDD_' + str(bp): \
-            cdd[bp] for bp in cdd.keys()})
-        model_data.update({'HDD_' + str(bp): \
-            hdd[bp] for bp in hdd.keys()})
+        model_data.update({'CDD_' + str(bp):
+                          cdd[bp] for bp in cdd.keys()})
+        model_data.update({'HDD_' + str(bp):
+                          hdd[bp] for bp in hdd.keys()})
         return pd.DataFrame(model_data, index=df.index)
-
 
     def daily_to_monthly_avg(self, df):
         ''' Convert from daily usage and temperature to monthly
@@ -242,8 +239,7 @@ class CaltrackMonthlyModel(object):
             # If this day is valid, add it to the usage and CDD/HDD arrays.
             day_is_valid = (
                 (is_demand_fixture or
-                (np.isfinite(row['energy']) and row['energy']>=0)) and
-                np.isfinite(row['tempF']))
+                 (np.isfinite(row['energy']) and row['energy'] >= 0)) and np.isfinite(row['tempF']))
             if day_is_valid:
                 ndays[-1] = ndays[-1] + 1
                 usage[-1] = usage[-1] + (
@@ -475,10 +471,12 @@ class CaltrackMonthlyModel(object):
             full_cdd_bp = None
 
         # Now we take the best qualified model.
-        if (full_qualified or
+        if (
+            full_qualified or
             hdd_qualified or
             cdd_qualified or
-            int_qualified) is False:
+            int_qualified
+        ) is False:
             raise model_exceptions.ModelFitException(
                 "No candidate model fit to data successfully")
 
@@ -633,7 +631,7 @@ class CaltrackMonthlyModel(object):
                 "Prediction has NaN variances")
 
         if summed:
-        # Sum them up using the number of days in the demand fixture.
+            # Sum them up using the number of days in the demand fixture.
             for i in demand_fixture_data.index:
                 if i not in predicted.index or not np.isfinite(predicted[i]):
                     continue
@@ -649,9 +647,9 @@ class CaltrackMonthlyModel(object):
             input_data = pd.DataFrame({
                 'predicted': predicted,
                 'variance': prediction_var},
-                index = predicted.index)
+                index=predicted.index)
             output_data = self.monthly_avg_to_daily(input_data,
-                index=demand_fixture_index)
+                                                    index=demand_fixture_index)
             predicted = output_data['predicted']
             variance = output_data['variance']
         return predicted, variance
