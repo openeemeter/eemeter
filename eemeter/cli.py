@@ -182,7 +182,7 @@ def sample():
     sample_inputs_path = os.path.join(cwd, 'sample_data')
     print("Going to analyze the sample data set")
     print("The latest documentation of the sample data can be found at:")
-    print("<URL for sample data documentation>")
+    print("<URL for sample data documentation>")    
     _analyze(sample_inputs_path)
 
 @cli.command()
