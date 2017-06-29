@@ -7,15 +7,15 @@ import click
 import pandas as pd
 from scipy import stats
 import numpy as np
-import dateparser
-import eemeter
 from eemeter.structures import EnergyTrace
 from eemeter.io.serializers import ArbitraryStartSerializer
 from eemeter.ee.meter import EnergyEfficiencyMeter
 
+
 @click.group()
 def cli():
     pass
+
 
 def serialize_meter_input(trace, zipcode, retrofit_start_date, retrofit_end_date):
     data = OrderedDict([
