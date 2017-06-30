@@ -7,23 +7,27 @@ import click
 import pandas as pd
 from scipy import stats
 import numpy as np
-import dateparser
-import eemeter
 from eemeter.structures import EnergyTrace
 from eemeter.io.serializers import ArbitraryStartSerializer
 from eemeter.ee.meter import EnergyEfficiencyMeter
+
 
 @click.group()
 def cli():
     pass
 
-def serialize_meter_input(trace, zipcode, retrofit_start_date, retrofit_end_date):
+
+def serialize_meter_input(
+        trace, zipcode, retrofit_start_date, retrofit_end_date):
     data = OrderedDict([
         ("type", "SINGLE_TRACE_SIMPLE_PROJECT"),
         ("trace", trace_serializer(trace)),
-        ("project", project_serializer(zipcode, retrofit_start_date, retrofit_end_date)),
+        ("project", project_serializer(
+            zipcode, retrofit_start_date, retrofit_end_date
+        )),
     ])
     return data
+
 
 def trace_serializer(trace):
     data = OrderedDict([
@@ -43,6 +47,7 @@ def trace_serializer(trace):
     ])
     return data
 
+
 def project_serializer(zipcode, retrofit_start_date, retrofit_end_date):
     data = OrderedDict([
         ("type", "PROJECT_WITH_SINGLE_MODELING_PERIOD_GROUP"),
@@ -61,6 +66,7 @@ def project_serializer(zipcode, retrofit_start_date, retrofit_end_date):
     ])
     return data
 
+
 def read_csv(path):
     result = []
     with open(path) as f:
@@ -69,18 +75,22 @@ def read_csv(path):
             result.append(row)
     return result
 
+
 def date_reader(date_format):
     def reader(raw):
         if raw.strip() == '':
             return None
-        return datetime.datetime.strptime(raw, date_format).replace(tzinfo=pytz.UTC)
+        return datetime.datetime.strptime(raw, date_format)\
+                                .replace(tzinfo=pytz.UTC)
     return reader
+
 
 date_readers = [
     date_reader('%Y-%m-%d %H:%M:%S'),
     date_reader('%Y-%m-%dT%H:%M:%S'),
     date_reader('%Y-%m-%dT%H:%M:%SZ'),
 ]
+
 
 def flexible_date_reader(raw):
     for reader in date_readers:
@@ -89,6 +99,7 @@ def flexible_date_reader(raw):
         except:
             pass
     raise ValueError("Unable to parse date")
+
 
 def build_trace(trace_records):
     if trace_records[0]['interpretation'] == 'gas':
@@ -105,6 +116,7 @@ def build_trace(trace_records):
         trace_id=trace_records[0]['project_id']
     )
     return trace_object
+
 
 def build_traces(trace_records):
     current_trace_id = None
@@ -126,10 +138,13 @@ def build_traces(trace_records):
 
     return trace_objects
 
+
 def run_meter(project, trace_object):
-    print("\n\nRunning a meter for %s %s" % (trace_object.trace_id, trace_object.interpretation))
+    print("\n\nRunning a meter for %s %s" % (
+        trace_object.trace_id, trace_object.interpretation)
+    )
     meter_input = serialize_meter_input(
-        trace_object, 
+        trace_object,
         project['zipcode'],
         project['project_start'],
         project['project_end']
@@ -138,24 +153,29 @@ def run_meter(project, trace_object):
     meter_output = ee.evaluate(meter_input)
 
     # Compute and output the annualized weather normal
-    awn = [i['value'][0] for i in meter_output['derivatives'] 
-       if i['series']=='Cumulative baseline model minus reporting model, normal year'][0]
-    awn_var = [i['variance'][0] for i in meter_output['derivatives'] 
-       if i['series']=='Cumulative baseline model minus reporting model, normal year'][0]
+    series_name = \
+        'Cumulative baseline model minus reporting model, normal year'
+    awn = [i['value'][0] for i in meter_output['derivatives']
+           if i['series'] == series_name][0]
+    awn_var = [i['variance'][0] for i in meter_output['derivatives']
+               if i['series'] == series_name][0]
     awn_confint = stats.norm.interval(0.68, loc=awn, scale=np.sqrt(awn_var))
     print("Normal year savings estimate:")
-    print("  {:f}\n  68% confidence interval: ({:f}, {:f})".\
-    format(awn, awn_confint[0], awn_confint[1]))
+    print("  {:f}\n  68% confidence interval: ({:f}, {:f})".
+          format(awn, awn_confint[0], awn_confint[1]))
 
     # Compute and output the weather normalized reporting period savings
-    rep = [i['value'][0] for i in meter_output['derivatives'] 
-       if i['series']=='Cumulative baseline model minus observed, reporting period'][0]
-    rep_var = [i['variance'][0] for i in meter_output['derivatives'] 
-       if i['series']=='Cumulative baseline model minus observed, reporting period'][0]
+    series_name = \
+        'Cumulative baseline model minus observed, reporting period'
+    rep = [i['value'][0] for i in meter_output['derivatives']
+           if i['series'] == series_name][0]
+    rep_var = [i['variance'][0] for i in meter_output['derivatives']
+               if i['series'] == series_name][0]
     rep_confint = stats.norm.interval(0.68, loc=rep, scale=np.sqrt(rep_var))
     print("Reporting period savings estimate:")
-    print("  {:f}\n  68% confidence interval: ({:f}, {:f})".\
-    format(rep, rep_confint[0], rep_confint[1]))
+    print("  {:f}\n  68% confidence interval: ({:f}, {:f})".
+          format(rep, rep_confint[0], rep_confint[1]))
+
 
 def _analyze(inputs_path):
     projects = read_csv(os.path.join(inputs_path, 'projects.csv'))
@@ -175,6 +195,7 @@ def _analyze(inputs_path):
             if trace_object.trace_id == project['project_id']:
                 run_meter(project, trace_object)
 
+
 @cli.command()
 def sample():
     path = os.path.realpath(__file__)
@@ -182,11 +203,11 @@ def sample():
     sample_inputs_path = os.path.join(cwd, 'sample_data')
     print("Going to analyze the sample data set")
     print("The latest documentation of the sample data can be found at:")
-    print("<URL for sample data documentation>")    
+    print("<URL for sample data documentation>")
     _analyze(sample_inputs_path)
+
 
 @cli.command()
 @click.argument('inputs_path', type=click.Path(exists=True))
 def analyze(inputs_path):
     _analyze(inputs_path)
-

@@ -1,8 +1,6 @@
-import copy
 import numpy as np
 import pandas as pd
 import patsy
-import statsmodels.formula.api as smf
 import eemeter.modeling.exceptions as model_exceptions
 from eemeter.modeling.models.caltrack_helpers import \
     _fit_intercept, _fit_cdd_only, _fit_hdd_only, _fit_full
@@ -50,10 +48,10 @@ class CaltrackDailyModel(object):
         self.modeling_period_interpretation = modeling_period_interpretation
 
         if grid_search:
-            self.bp_cdd = range(65,76)
-            self.bp_hdd = range(55,66)
+            self.bp_cdd = range(65, 76)
+            self.bp_hdd = range(55, 66)
         else:
-            self.bp_cdd, self.bp_hdd = [70,], [60,]
+            self.bp_cdd, self.bp_hdd = [70, ], [60, ]
 
     def __repr__(self):
         return 'CaltrackDailyModel'
@@ -80,16 +78,16 @@ class CaltrackDailyModel(object):
         for bp in self.bp_cdd:
             cdd[bp] = pd.Series(
                 np.maximum(df.tempF - bp, 0),
-                index = df.index)
+                index=df.index)
         for bp in self.bp_hdd:
             hdd[bp] = pd.Series(
                 np.maximum(bp - df.tempF, 0),
-                index = df.index)
+                index=df.index)
 
         # spread out over the month
         ndays = pd.Series((is_demand_fixture or np.isfinite(df.energy)) &
-                np.isfinite(hdd[self.bp_hdd[0]]),
-                dtype=int)
+                          np.isfinite(hdd[self.bp_hdd[0]]),
+                          dtype=int)
 
         # Create output data frame
         if not is_demand_fixture:
@@ -112,7 +110,7 @@ class CaltrackDailyModel(object):
 
         self.input_data = input_data
         if isinstance(input_data, tuple):
-            raise model_exceptions.DataSufficiencyException(\
+            raise model_exceptions.DataSufficiencyException(
                   "Billing data is not appropriate for this model")
         else:
             df = self.ami_to_daily(self.input_data)
@@ -178,10 +176,12 @@ class CaltrackDailyModel(object):
             full_cdd_bp = None
 
         # Now we take the best qualified model.
-        if (full_qualified or
+        if (
+            full_qualified or
             hdd_qualified or
             cdd_qualified or
-            int_qualified) is False:
+            int_qualified
+        ) is False:
             raise model_exceptions.ModelFitException(
                 "No candidate model fit to data successfully")
 
@@ -322,7 +322,6 @@ class CaltrackDailyModel(object):
             # Get prediction errors for each data point
             prediction_var = self.model_res.mse_resid + \
                 (X * np.dot(cov, X.T).T).sum(1)
-            predicted_baseline_use, predicted_baseline_use_var = 0.0, 0.0
         except:
             raise model_exceptions.ModelPredictException(
                 "Prediction failed!")
@@ -334,7 +333,7 @@ class CaltrackDailyModel(object):
             output_data = pd.DataFrame({
                 'predicted': predicted,
                 'variance': prediction_var},
-                index = predicted.index)
+                index=predicted.index)
             predicted = output_data['predicted']
             variance = output_data['variance']
         return predicted, variance

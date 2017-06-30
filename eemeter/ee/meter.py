@@ -426,7 +426,6 @@ class EnergyEfficiencyMeter(object):
         output["model_class"] = ModelClass.__name__
         output["model_kwargs"] = model_kwargs
 
-
         # Step 7: validate modeling period set. Always fails for now, since
         # no models are yet fully structural change analysis aware
         if modeling_period_set is None:
@@ -467,7 +466,6 @@ class EnergyEfficiencyMeter(object):
             reporting_model_success = (reporting_output["status"] == "SUCCESS")
 
             formatter = modeled_trace.formatter
-            unit = modeled_trace.trace.unit
             trace = modeled_trace.trace
 
             # default project dates
@@ -587,8 +585,6 @@ class EnergyEfficiencyMeter(object):
 
             raw_derivatives = []
 
-            serialize_demand_fixture = formatter.serialize_demand_fixture
-
             def serialize_observed(series):
                 return OrderedDict([
                     (start.isoformat(), value)
@@ -615,9 +611,9 @@ class EnergyEfficiencyMeter(object):
                     raw_derivatives.append({
                             'series': series,
                             'description': description,
-                            'orderable': [None,],
-                            'value': [value,],
-                            'variance': [None,]
+                            'orderable': [None, ],
+                            'value': [value, ],
+                            'variance': [None, ]
                     })
 
                     if 'coefficients' in baseline_output['model_fit']['model_params'] and \
@@ -626,15 +622,14 @@ class EnergyEfficiencyMeter(object):
                         series = 'Best-fit heating coefficient, baseline period'
                         description = '''Best-fit heating coefficient,
                                          if any, for baseline model'''
-                        value = baseline_output['model_fit']['model_params']['coefficients']\
-                                               ['HDD_' + str(value)]
+                        value = baseline_output['model_fit']['model_params']['coefficients']['HDD_' + str(value)]
 
                         raw_derivatives.append({
                                 'series': series,
                                 'description': description,
-                                'orderable': [None,],
-                                'value': [value,],
-                                'variance': [None,]
+                                'orderable': [None, ],
+                                'value': [value, ],
+                                'variance': [None, ]
                         })
 
                 if 'model_fit' in baseline_output and \
@@ -648,9 +643,9 @@ class EnergyEfficiencyMeter(object):
                     raw_derivatives.append({
                             'series': series,
                             'description': description,
-                            'orderable': [None,],
-                            'value': [value,],
-                            'variance': [None,]
+                            'orderable': [None, ],
+                            'value': [value, ],
+                            'variance': [None, ]
                     })
 
                     if 'coefficients' in baseline_output['model_fit']['model_params'] and \
@@ -658,15 +653,14 @@ class EnergyEfficiencyMeter(object):
                         series = 'Best-fit cooling coefficient, baseline period'
                         description = '''Best-fit cooling coefficient,
                                          if any, for baseline model'''
-                        value = baseline_output['model_fit']['model_params']['coefficients']\
-                                               ['CDD_' + str(value)]
+                        value = baseline_output['model_fit']['model_params']['coefficients']['CDD_' + str(value)]
 
                         raw_derivatives.append({
                                 'series': series,
                                 'description': description,
-                                'orderable': [None,],
-                                'value': [value,],
-                                'variance': [None,]
+                                'orderable': [None, ],
+                                'value': [value, ],
+                                'variance': [None, ]
                         })
 
                 if 'model_fit' in baseline_output and \
@@ -680,9 +674,9 @@ class EnergyEfficiencyMeter(object):
                     raw_derivatives.append({
                             'series': series,
                             'description': description,
-                            'orderable': [None,],
-                            'value': [value,],
-                            'variance': [None,]
+                            'orderable': [None, ],
+                            'value': [value, ],
+                            'variance': [None, ]
                     })
 
             if reporting_model_success:
@@ -699,9 +693,9 @@ class EnergyEfficiencyMeter(object):
                     raw_derivatives.append({
                             'series': series,
                             'description': description,
-                            'orderable': [None,],
-                            'value': [value,],
-                            'variance': [None,]
+                            'orderable': [None, ],
+                            'value': [value, ],
+                            'variance': [None, ]
                     })
 
                     if 'coefficients' in reporting_output['model_fit']['model_params'] and \
@@ -710,14 +704,13 @@ class EnergyEfficiencyMeter(object):
                         series = 'Best-fit heating coefficient, reporting period'
                         description = '''Best-fit heating coefficient,
                                          if any, for reporting model'''
-                        value = reporting_output['model_fit']['model_params']['coefficients']\
-                                               ['HDD_' + str(value)]
+                        value = reporting_output['model_fit']['model_params']['coefficients']['HDD_' + str(value)]
                         raw_derivatives.append({
                                 'series': series,
                                 'description': description,
-                                'orderable': [None,],
-                                'value': [value,],
-                                'variance': [None,]
+                                'orderable': [None, ],
+                                'value': [value, ],
+                                'variance': [None, ]
                         })
 
                 if 'model_fit' in reporting_output and \
@@ -732,9 +725,9 @@ class EnergyEfficiencyMeter(object):
                     raw_derivatives.append({
                             'series': series,
                             'description': description,
-                            'orderable': [None,],
-                            'value': [value,],
-                            'variance': [None,]
+                            'orderable': [None, ],
+                            'value': [value, ],
+                            'variance': [None, ]
                     })
 
                     if 'coefficients' in reporting_output['model_fit']['model_params'] and \
@@ -742,15 +735,14 @@ class EnergyEfficiencyMeter(object):
                         series = 'Best-fit cooling coefficient, reporting period'
                         description = '''Best-fit cooling coefficient,
                                          if any, for reporting model'''
-                        value = reporting_output['model_fit']['model_params']['coefficients']\
-                                               ['CDD_' + str(value)]
+                        value = reporting_output['model_fit']['model_params']['coefficients']['CDD_' + str(value)]
 
                         raw_derivatives.append({
                                 'series': series,
                                 'description': description,
-                                'orderable': [None,],
-                                'value': [value,],
-                                'variance': [None,]
+                                'orderable': [None, ],
+                                'value': [value, ],
+                                'variance': [None, ]
                         })
 
                 if 'model_fit' in reporting_output and \
@@ -764,9 +756,9 @@ class EnergyEfficiencyMeter(object):
                     raw_derivatives.append({
                             'series': series,
                             'description': description,
-                            'orderable': [None,],
-                            'value': [value,],
-                            'variance': [None,]
+                            'orderable': [None, ],
+                            'value': [value, ],
+                            'variance': [None, ]
                     })
 
             if baseline_model_success and reporting_model_success \
@@ -784,9 +776,9 @@ class EnergyEfficiencyMeter(object):
                     raw_derivatives.append({
                         'series': series,
                         'description': description,
-                        'orderable': [None,],
-                        'value': [value,],
-                        'variance': [variance,]
+                        'orderable': [None, ],
+                        'value': [value, ],
+                        'variance': [variance, ]
                     })
                 except:
                     _report_failed_derivative(series)
@@ -822,9 +814,9 @@ class EnergyEfficiencyMeter(object):
                         raw_derivatives.append({
                             'series': series,
                             'description': description,
-                            'orderable': [None,],
-                            'value': [value,],
-                            'variance': [variance,]
+                            'orderable': [None, ],
+                            'value': [value, ],
+                            'variance': [variance, ]
                         })
                     except:
                         _report_failed_derivative(series)
@@ -856,9 +848,9 @@ class EnergyEfficiencyMeter(object):
                         raw_derivatives.append({
                             'series': series,
                             'description': description,
-                            'orderable': [None,],
-                            'value': [value,],
-                            'variance': [variance,]
+                            'orderable': [None, ],
+                            'value': [value, ],
+                            'variance': [variance, ]
                         })
                     except:
                         _report_failed_derivative(series)
@@ -920,9 +912,9 @@ class EnergyEfficiencyMeter(object):
                         raw_derivatives.append({
                             'series': series,
                             'description': description,
-                            'orderable': [None,],
-                            'value': [value,],
-                            'variance': [variance,]
+                            'orderable': [None, ],
+                            'value': [value, ],
+                            'variance': [variance, ]
                         })
                     except:
                         _report_failed_derivative(series)
@@ -1002,9 +994,9 @@ class EnergyEfficiencyMeter(object):
                         raw_derivatives.append({
                             'series': series,
                             'description': description,
-                            'orderable': [None,],
-                            'value': [value,],
-                            'variance': [variance,]
+                            'orderable': [None, ],
+                            'value': [value, ],
+                            'variance': [variance, ]
                         })
                     except:
                         _report_failed_derivative(series)
@@ -1051,8 +1043,8 @@ class EnergyEfficiencyMeter(object):
                     'series': series,
                     'description': description,
                     'orderable': [None],
-                    'value': [reporting_period_data.sum(),],
-                    'variance': [0,]
+                    'value': [reporting_period_data.sum(), ],
+                    'variance': [0, ]
                 })
             except:
                 _report_failed_derivative(series)
@@ -1101,7 +1093,7 @@ class EnergyEfficiencyMeter(object):
                     'description': description,
                     'orderable': [None],
                     'value': [baseline_period_data.sum()],
-                    'variance': [0,]
+                    'variance': [0, ]
                 })
             except:
                 _report_failed_derivative(series)
