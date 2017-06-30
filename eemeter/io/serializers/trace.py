@@ -204,8 +204,8 @@ class ArbitrarySerializer(BaseSerializer):
         for s, e, v, est in zip(df.index, df.index[1:],
                                 df.value, df.estimated):
             records.append({
-                "start": pytz.UTC.localize(s.to_datetime()),
-                "end": pytz.UTC.localize(e.to_datetime()),
+                "start": pytz.UTC.localize(s.to_pydatetime()),
+                "end": pytz.UTC.localize(e.to_pydatetime()),
                 "value": v,
                 "estimated": bool(est),
             })
@@ -287,7 +287,7 @@ class ArbitraryStartSerializer(BaseSerializer):
         records = []
         for i, row in df.iterrows():
             records.append({
-                "start": pytz.UTC.localize(i.to_datetime()),
+                "start": pytz.UTC.localize(i.to_pydatetime()),
                 "value": row.value,
                 "estimated": bool(row.estimated),
             })
@@ -370,14 +370,14 @@ class ArbitraryEndSerializer(BaseSerializer):
 
         if df.shape[0] > 0:
             records.append({
-                "end": pytz.UTC.localize(df.index[0].to_datetime()),
+                "end": pytz.UTC.localize(df.index[0].to_pydatetime()),
                 "value": np.nan,
                 "estimated": False,
             })
 
             for e, v, est in zip(df.index[1:], df.value, df.estimated):
                 records.append({
-                    "end": pytz.UTC.localize(e.to_datetime()),
+                    "end": pytz.UTC.localize(e.to_pydatetime()),
                     "value": v,
                     "estimated": bool(est),
                 })
