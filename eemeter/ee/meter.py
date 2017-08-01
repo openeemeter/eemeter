@@ -469,8 +469,10 @@ class EnergyEfficiencyMeter(object):
             trace = modeled_trace.trace
 
             # default project dates
+            baseline_start_date = baseline_period.start_date
             baseline_end_date = baseline_period.end_date
             reporting_start_date = reporting_period.start_date
+            reporting_end_date = reporting_period.end_date
 
             # Note: observed data uses project dates, not data dates
             # convert trace data to daily
@@ -478,11 +480,22 @@ class EnergyEfficiencyMeter(object):
             if daily_trace_data.empty:
                 continue
 
-            baseline_period_data = daily_trace_data[:baseline_end_date].copy()
+            if baseline_start_date is None:
+                baseline_period_data = \
+                    daily_trace_data[:baseline_end_date].copy()
+            else:
+                baseline_period_data = \
+                    daily_trace_data[baseline_start_date:baseline_end_date].copy()
+
             project_period_data = \
                 daily_trace_data[baseline_end_date:reporting_start_date].copy()
-            reporting_period_data = \
-                daily_trace_data[reporting_start_date:].copy()
+
+            if reporting_end_date is None:
+                reporting_period_data = \
+                    daily_trace_data[reporting_start_date:].copy()
+            else:
+                reporting_period_data = \
+                    daily_trace_data[reporting_start_date:reporting_end_date].copy()
 
             weather_source_success = (weather_source is not None)
             weather_normal_source_success = (weather_normal_source is not None)

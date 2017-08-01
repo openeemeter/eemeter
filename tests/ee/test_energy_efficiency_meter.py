@@ -50,6 +50,25 @@ def project_meter_input_bad_zipcode():
     }
 
 
+@pytest.fixture
+def project_meter_input_with_period_start_end():
+    return {
+        "type": "PROJECT_WITH_SINGLE_MODELING_PERIOD_GROUP",
+        "zipcode": "91104",
+        "project_id": "PROJECT_1",
+        "modeling_period_group": {
+            "baseline_period": {
+                "start": "2013-01-01T00:00:00+00:00",
+                "end": "2014-01-01T00:00:00+00:00"
+            },
+            "reporting_period": {
+                "start": "2014-02-01T00:00:00+00:00",
+                "end": "2015-02-01T00:00:00+00:00",
+            }
+        }
+    }
+
+
 def _electricity_input(records):
     return {
         "type": "ARBITRARY_START",
@@ -93,6 +112,7 @@ def meter_input_daily(project_meter_input):
     }
     return meter_input
 
+
 @pytest.fixture
 def meter_input_daily_elec(project_meter_input):
 
@@ -116,7 +136,6 @@ def meter_input_daily_elec(project_meter_input):
         "project": project_meter_input,
     }
     return meter_input
-
 
 
 @pytest.fixture
@@ -172,6 +191,32 @@ def meter_input_daily_reporting_only(project_meter_input):
         "type": "SINGLE_TRACE_SIMPLE_PROJECT",
         "trace": _natural_gas_input(records),
         "project": project_meter_input,
+    }
+    return meter_input
+
+
+@pytest.fixture
+def meter_input_daily_with_period_start_end(
+        project_meter_input_with_period_start_end):
+
+    record_starts = pd.date_range(
+        '2012-01-01', periods=365 * 4, freq='D', tz=pytz.UTC)
+
+    records = [
+        {
+            "start": dt.isoformat(),
+            "value": 1.0,
+            "estimated": False
+        } for dt in record_starts
+    ]
+
+    trace = _natural_gas_input(records)
+    trace.update({'interval': 'daily'})
+
+    meter_input = {
+        "type": "SINGLE_TRACE_SIMPLE_PROJECT",
+        "trace": trace,
+        "project": project_meter_input_with_period_start_end,
     }
     return meter_input
 
@@ -306,6 +351,13 @@ def test_basic_usage_daily(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
+
+    baseline_observed = {d['series']:d for d in derivatives}['Observed, baseline period']
+    reporting_observed = {d['series']:d for d in derivatives}['Observed, reporting period']
+
+    assert (baseline_observed['orderable'][0], baseline_observed['orderable'][-1]) == ('2012-01-01T00:00:00+00:00', '2014-01-01T00:00:00+00:00')
+    assert (reporting_observed['orderable'][0], reporting_observed['orderable'][-1]) == ('2014-02-01T00:00:00+00:00', '2015-12-30T00:00:00+00:00')
+
     assert len(derivatives) == 32
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
@@ -389,6 +441,7 @@ def test_basic_usage_monthly(
     assert results['modeled_energy_trace'] is not None
 
     derivatives = results['derivatives']
+
     assert len(derivatives) == 36
     assert derivatives[0]['modeling_period_group'] == \
         ('baseline', 'reporting')
@@ -448,6 +501,7 @@ def test_basic_usage_monthly(
         assert len(d['orderable']) == len(d['value']) == len(d['variance'])
 
     json.dumps(results)
+
 
 def test_basic_usage_baseline_only(
         meter_input_daily_baseline_only,
@@ -528,6 +582,7 @@ def test_basic_usage_baseline_only(
         assert len(d['orderable']) == len(d['value']) == len(d['variance'])
 
     json.dumps(results)
+
 
 def test_basic_usage_reporting_only(
         meter_input_daily_reporting_only,
@@ -611,6 +666,7 @@ def test_basic_usage_reporting_only(
 
     json.dumps(results)
 
+
 def test_basic_usage_empty(
         meter_input_empty,
         mock_isd_weather_source,
@@ -626,6 +682,7 @@ def test_basic_usage_empty(
     assert results['failure_message'] is None
     assert results['modeled_energy_trace'] is not None
     assert len(results['derivatives']) == 0
+
 
 def test_bad_meter_input(mock_isd_weather_source, mock_tmy3_weather_source):
 
@@ -710,6 +767,7 @@ def test_bad_zipcode(meter_input_bad_zipcode):
         assert len(d['orderable']) == len(d['value']) == len(d['variance'])
 
     json.dumps(results)
+
 
 def test_custom_evaluate_args_monthly(
         meter_input_monthly,
@@ -813,6 +871,7 @@ def test_custom_evaluate_args_daily(
     assert results['formatter_class'] == 'ModelDataFormatter'
     assert results['formatter_kwargs'] == {'freq_str': 'D'}
 
+
 def test_ignore_extra_args_daily(
         meter_input_daily_elec,
         mock_isd_weather_source,
@@ -829,6 +888,7 @@ def test_ignore_extra_args_daily(
     assert results['model_class'] == 'CaltrackDailyModel'
     assert results['model_kwargs'] == {'fit_cdd': True, 'grid_search': True, 'extra_arg': 'value'}
 
+
 def test_ignore_extra_args_monthly(
         meter_input_monthly,
         mock_isd_weather_source,
@@ -844,3 +904,97 @@ def test_ignore_extra_args_monthly(
 
     assert results['model_class'] == 'CaltrackMonthlyModel'
     assert results['model_kwargs'] == {'fit_cdd': True, 'grid_search': True, 'extra_arg': 'value'}
+
+
+def test_basic_usage_daily_period_start_end(
+        meter_input_daily_with_period_start_end,
+        mock_isd_weather_source,
+        mock_tmy3_weather_source):
+
+    meter = EnergyEfficiencyMeter()
+
+    results = meter.evaluate(meter_input_daily_with_period_start_end,
+                             weather_source=mock_isd_weather_source,
+                             weather_normal_source=mock_tmy3_weather_source)
+
+    assert results['status'] == 'SUCCESS'
+    assert results['failure_message'] is None
+    assert len(results['logs']) == 2
+
+    assert results['eemeter_version'] is not None
+
+    assert results['project_id'] == 'PROJECT_1'
+    assert results['trace_id'] == 'TRACE_1'
+    assert results['interval'] == 'daily'
+
+    assert results['model_class'] == 'CaltrackDailyModel'
+    assert results['model_kwargs'] is not None
+    assert results['formatter_class'] == 'ModelDataFormatter'
+    assert results['formatter_kwargs'] is not None
+
+    assert results['modeled_energy_trace'] is not None
+
+    derivatives = results['derivatives']
+    assert len(derivatives) == 32
+
+    baseline_observed = {d['series']:d for d in derivatives}['Observed, baseline period']
+    reporting_observed = {d['series']:d for d in derivatives}['Observed, reporting period']
+
+    assert (baseline_observed['orderable'][0], baseline_observed['orderable'][-1]) == ('2013-01-01T00:00:00+00:00', '2014-01-01T00:00:00+00:00')
+    assert (reporting_observed['orderable'][0], reporting_observed['orderable'][-1]) == ('2014-02-01T00:00:00+00:00', '2015-02-01T00:00:00+00:00')
+
+    assert derivatives[0]['modeling_period_group'] == ('baseline', 'reporting')
+    assert derivatives[0]['orderable'] == [None]
+
+    source_series = set([d['series'] for d in derivatives])
+    assert source_series == set([
+        'Cumulative baseline model minus reporting model, normal year',
+        'Cumulative baseline model, normal year',
+        'Baseline model, normal year',
+        'Cumulative reporting model, normal year',
+        'Baseline model minus reporting model, normal year',
+        'Baseline model, normal year',
+        'Reporting model, normal year',
+        'Baseline model, baseline period',
+
+        'Cumulative baseline model minus observed, reporting period',
+        'Cumulative baseline model, reporting period',
+        'Cumulative observed, reporting period',
+        'Baseline model minus observed, reporting period',
+        'Baseline model, reporting period',
+        'Observed, reporting period',
+        'Masked baseline model minus observed, reporting period',
+        'Masked baseline model, reporting period',
+        'Masked observed, reporting period',
+
+        'Baseline model, baseline period',
+        'Reporting model, reporting period',
+
+        'Cumulative observed, baseline period',
+        'Observed, baseline period',
+
+        'Observed, project period',
+
+        'Inclusion mask, baseline period',
+        'Inclusion mask, reporting period',
+
+        'Temperature, baseline period',
+        'Temperature, reporting period',
+        'Temperature, normal year',
+        'Masked temperature, reporting period',
+
+        'Heating degree day balance point, baseline period',
+        'Cooling degree day balance point, baseline period',
+        'Heating degree day balance point, reporting period',
+        'Cooling degree day balance point, reporting period',
+        'Best-fit intercept, baseline period',
+        'Best-fit intercept, reporting period',
+    ])
+
+    for d in derivatives:
+        assert isinstance(d['orderable'], list)
+        assert isinstance(d['value'], list)
+        assert isinstance(d['variance'], list)
+        assert len(d['orderable']) == len(d['value']) == len(d['variance'])
+
+    json.dumps(results)
