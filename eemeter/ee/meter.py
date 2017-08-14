@@ -12,7 +12,7 @@ from eemeter.modeling.formatters import (
     ModelDataFormatter,
     ModelDataBillingFormatter,
 )
-from eemeter.modeling.models import CaltrackMonthlyModel
+from eemeter.modeling.models import CaltrackMonthlyModel, CaltrackDailyModel
 from eemeter.modeling.split import SplitModeledEnergyTrace
 from eemeter.io.serializers import (
     deserialize_meter_input,
@@ -102,34 +102,42 @@ class EnergyEfficiencyMeter(object):
                 'fit_cdd': True,
                 'grid_search': True,
             })
+            caltrack_gas_model_daily = (CaltrackDailyModel, {
+                'fit_cdd': False,
+                'grid_search': True,
+            })
+            caltrack_elec_model_daily = (CaltrackDailyModel, {
+                'fit_cdd': True,
+                'grid_search': True,
+            })
             default_model_mapping = {
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '15T'):
-                    caltrack_gas_model,
+                    caltrack_gas_model_daily,
                 ('ELECTRICITY_CONSUMPTION_SUPPLIED', '15T'):
-                    caltrack_elec_model,
+                    caltrack_elec_model_daily,
                 ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', '15T'):
-                    caltrack_elec_model,
+                    caltrack_elec_model_daily,
 
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '30T'):
-                    caltrack_gas_model,
+                    caltrack_gas_model_daily,
                 ('ELECTRICITY_CONSUMPTION_SUPPLIED', '30T'):
-                    caltrack_elec_model,
+                    caltrack_elec_model_daily,
                 ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', '30T'):
-                    caltrack_elec_model,
+                    caltrack_elec_model_daily,
 
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', 'H'):
-                    caltrack_gas_model,
+                    caltrack_gas_model_daily,
                 ('ELECTRICITY_CONSUMPTION_SUPPLIED', 'H'):
-                    caltrack_elec_model,
+                    caltrack_elec_model_daily,
                 ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', 'H'):
-                    caltrack_elec_model,
+                    caltrack_elec_model_daily,
 
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', 'D'):
-                    caltrack_gas_model,
+                    caltrack_gas_model_daily,
                 ('ELECTRICITY_CONSUMPTION_SUPPLIED', 'D'):
-                    caltrack_elec_model,
+                    caltrack_elec_model_daily,
                 ('ELECTRICITY_ON_SITE_GENERATION_UNCONSUMED', 'D'):
-                    caltrack_elec_model,
+                    caltrack_elec_model_daily,
 
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', None):
                     caltrack_gas_model,
@@ -418,7 +426,6 @@ class EnergyEfficiencyMeter(object):
         output["model_class"] = ModelClass.__name__
         output["model_kwargs"] = model_kwargs
 
-
         # Step 7: validate modeling period set. Always fails for now, since
         # no models are yet fully structural change analysis aware
         if modeling_period_set is None:
@@ -459,12 +466,13 @@ class EnergyEfficiencyMeter(object):
             reporting_model_success = (reporting_output["status"] == "SUCCESS")
 
             formatter = modeled_trace.formatter
-            unit = modeled_trace.trace.unit
             trace = modeled_trace.trace
 
             # default project dates
+            baseline_start_date = baseline_period.start_date
             baseline_end_date = baseline_period.end_date
             reporting_start_date = reporting_period.start_date
+            reporting_end_date = reporting_period.end_date
 
             # Note: observed data uses project dates, not data dates
             # convert trace data to daily
@@ -472,11 +480,22 @@ class EnergyEfficiencyMeter(object):
             if daily_trace_data.empty:
                 continue
 
-            baseline_period_data = daily_trace_data[:baseline_end_date].copy()
+            if baseline_start_date is None:
+                baseline_period_data = \
+                    daily_trace_data[:baseline_end_date].copy()
+            else:
+                baseline_period_data = \
+                    daily_trace_data[baseline_start_date:baseline_end_date].copy()
+
             project_period_data = \
                 daily_trace_data[baseline_end_date:reporting_start_date].copy()
-            reporting_period_data = \
-                daily_trace_data[reporting_start_date:].copy()
+
+            if reporting_end_date is None:
+                reporting_period_data = \
+                    daily_trace_data[reporting_start_date:].copy()
+            else:
+                reporting_period_data = \
+                    daily_trace_data[reporting_start_date:reporting_end_date].copy()
 
             weather_source_success = (weather_source is not None)
             weather_normal_source_success = (weather_normal_source is not None)
@@ -579,8 +598,6 @@ class EnergyEfficiencyMeter(object):
 
             raw_derivatives = []
 
-            serialize_demand_fixture = formatter.serialize_demand_fixture
-
             def serialize_observed(series):
                 return OrderedDict([
                     (start.isoformat(), value)
@@ -592,6 +609,170 @@ class EnergyEfficiencyMeter(object):
                     'Failed computing derivative (series={})'
                     .format(series)
                 )
+
+            if baseline_model_success:
+
+                if 'model_fit' in baseline_output.keys() and \
+                   'model_params' in baseline_output['model_fit'] and \
+                   'hdd_bp' in baseline_output['model_fit']['model_params']:
+
+                    series = 'Heating degree day balance point, baseline period'
+                    description = '''Best-fit heating degree day balance point,
+                                     if any, for baseline model'''
+                    value = baseline_output['model_fit']['model_params']['hdd_bp']
+
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None, ],
+                            'value': [value, ],
+                            'variance': [None, ]
+                    })
+
+                    if 'coefficients' in baseline_output['model_fit']['model_params'] and \
+                       'HDD_' + str(value) in baseline_output['model_fit']['model_params']['coefficients']:
+
+                        series = 'Best-fit heating coefficient, baseline period'
+                        description = '''Best-fit heating coefficient,
+                                         if any, for baseline model'''
+                        value = baseline_output['model_fit']['model_params']['coefficients']['HDD_' + str(value)]
+
+                        raw_derivatives.append({
+                                'series': series,
+                                'description': description,
+                                'orderable': [None, ],
+                                'value': [value, ],
+                                'variance': [None, ]
+                        })
+
+                if 'model_fit' in baseline_output and \
+                   'model_params' in baseline_output['model_fit'] and \
+                   'cdd_bp' in baseline_output['model_fit']['model_params']:
+                    series = 'Cooling degree day balance point, baseline period'
+                    description = '''Best-fit cooling degree day balance point,
+                                     if any, for baseline model'''
+                    value = baseline_output['model_fit']['model_params']['cdd_bp']
+
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None, ],
+                            'value': [value, ],
+                            'variance': [None, ]
+                    })
+
+                    if 'coefficients' in baseline_output['model_fit']['model_params'] and \
+                       'CDD_' + str(value) in baseline_output['model_fit']['model_params']['coefficients']:
+                        series = 'Best-fit cooling coefficient, baseline period'
+                        description = '''Best-fit cooling coefficient,
+                                         if any, for baseline model'''
+                        value = baseline_output['model_fit']['model_params']['coefficients']['CDD_' + str(value)]
+
+                        raw_derivatives.append({
+                                'series': series,
+                                'description': description,
+                                'orderable': [None, ],
+                                'value': [value, ],
+                                'variance': [None, ]
+                        })
+
+                if 'model_fit' in baseline_output and \
+                   'model_params' in baseline_output['model_fit'] and \
+                   'coefficients' in baseline_output['model_fit']['model_params'] and \
+                   'Intercept' in baseline_output['model_fit']['model_params']['coefficients']:
+                    series = 'Best-fit intercept, baseline period'
+                    description = '''Best-fit intercept, if any, for baseline model'''
+                    value = baseline_output['model_fit']['model_params']['coefficients']['Intercept']
+
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None, ],
+                            'value': [value, ],
+                            'variance': [None, ]
+                    })
+
+            if reporting_model_success:
+
+                if 'model_fit' in reporting_output.keys() and \
+                   'model_params' in reporting_output['model_fit'] and \
+                   'hdd_bp' in reporting_output['model_fit']['model_params']:
+
+                    series = 'Heating degree day balance point, reporting period'
+                    description = '''Best-fit heating degree day balance point,
+                                     if any, for reporting model'''
+                    value = reporting_output['model_fit']['model_params']['hdd_bp']
+
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None, ],
+                            'value': [value, ],
+                            'variance': [None, ]
+                    })
+
+                    if 'coefficients' in reporting_output['model_fit']['model_params'] and \
+                       'HDD_' + str(value) in reporting_output['model_fit']['model_params']['coefficients']:
+
+                        series = 'Best-fit heating coefficient, reporting period'
+                        description = '''Best-fit heating coefficient,
+                                         if any, for reporting model'''
+                        value = reporting_output['model_fit']['model_params']['coefficients']['HDD_' + str(value)]
+                        raw_derivatives.append({
+                                'series': series,
+                                'description': description,
+                                'orderable': [None, ],
+                                'value': [value, ],
+                                'variance': [None, ]
+                        })
+
+                if 'model_fit' in reporting_output and \
+                   'model_params' in reporting_output['model_fit'] and \
+                   'cdd_bp' in reporting_output['model_fit']['model_params']:
+
+                    series = 'Cooling degree day balance point, reporting period'
+                    description = '''Best-fit cooling degree day balance point,
+                                     if any, for reporting model'''
+                    value = reporting_output['model_fit']['model_params']['cdd_bp']
+
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None, ],
+                            'value': [value, ],
+                            'variance': [None, ]
+                    })
+
+                    if 'coefficients' in reporting_output['model_fit']['model_params'] and \
+                       'CDD_' + str(value) in reporting_output['model_fit']['model_params']['coefficients']:
+                        series = 'Best-fit cooling coefficient, reporting period'
+                        description = '''Best-fit cooling coefficient,
+                                         if any, for reporting model'''
+                        value = reporting_output['model_fit']['model_params']['coefficients']['CDD_' + str(value)]
+
+                        raw_derivatives.append({
+                                'series': series,
+                                'description': description,
+                                'orderable': [None, ],
+                                'value': [value, ],
+                                'variance': [None, ]
+                        })
+
+                if 'model_fit' in reporting_output and \
+                   'model_params' in reporting_output['model_fit'] and \
+                   'coefficients' in reporting_output['model_fit']['model_params'] and \
+                   'Intercept' in reporting_output['model_fit']['model_params']['coefficients']:
+                    series = 'Best-fit intercept, reporting period'
+                    description = '''Best-fit intercept, if any, for reporting model'''
+                    value = reporting_output['model_fit']['model_params']['coefficients']['Intercept']
+
+                    raw_derivatives.append({
+                            'series': series,
+                            'description': description,
+                            'orderable': [None, ],
+                            'value': [value, ],
+                            'variance': [None, ]
+                    })
 
             if baseline_model_success and reporting_model_success \
                     and weather_normal_source_success:
@@ -608,9 +789,9 @@ class EnergyEfficiencyMeter(object):
                     raw_derivatives.append({
                         'series': series,
                         'description': description,
-                        'orderable': [None,],
-                        'value': [value,],
-                        'variance': [variance,]
+                        'orderable': [None, ],
+                        'value': [value, ],
+                        'variance': [variance, ]
                     })
                 except:
                     _report_failed_derivative(series)
@@ -646,9 +827,9 @@ class EnergyEfficiencyMeter(object):
                         raw_derivatives.append({
                             'series': series,
                             'description': description,
-                            'orderable': [None,],
-                            'value': [value,],
-                            'variance': [variance,]
+                            'orderable': [None, ],
+                            'value': [value, ],
+                            'variance': [variance, ]
                         })
                     except:
                         _report_failed_derivative(series)
@@ -680,9 +861,9 @@ class EnergyEfficiencyMeter(object):
                         raw_derivatives.append({
                             'series': series,
                             'description': description,
-                            'orderable': [None,],
-                            'value': [value,],
-                            'variance': [variance,]
+                            'orderable': [None, ],
+                            'value': [value, ],
+                            'variance': [variance, ]
                         })
                     except:
                         _report_failed_derivative(series)
@@ -744,9 +925,9 @@ class EnergyEfficiencyMeter(object):
                         raw_derivatives.append({
                             'series': series,
                             'description': description,
-                            'orderable': [None,],
-                            'value': [value,],
-                            'variance': [variance,]
+                            'orderable': [None, ],
+                            'value': [value, ],
+                            'variance': [variance, ]
                         })
                     except:
                         _report_failed_derivative(series)
@@ -826,9 +1007,9 @@ class EnergyEfficiencyMeter(object):
                         raw_derivatives.append({
                             'series': series,
                             'description': description,
-                            'orderable': [None,],
-                            'value': [value,],
-                            'variance': [variance,]
+                            'orderable': [None, ],
+                            'value': [value, ],
+                            'variance': [variance, ]
                         })
                     except:
                         _report_failed_derivative(series)
@@ -875,8 +1056,8 @@ class EnergyEfficiencyMeter(object):
                     'series': series,
                     'description': description,
                     'orderable': [None],
-                    'value': [reporting_period_data.sum(),],
-                    'variance': [0,]
+                    'value': [reporting_period_data.sum(), ],
+                    'variance': [0, ]
                 })
             except:
                 _report_failed_derivative(series)
@@ -925,7 +1106,7 @@ class EnergyEfficiencyMeter(object):
                     'description': description,
                     'orderable': [None],
                     'value': [baseline_period_data.sum()],
-                    'variance': [0,]
+                    'variance': [0, ]
                 })
             except:
                 _report_failed_derivative(series)

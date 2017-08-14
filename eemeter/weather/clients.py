@@ -144,8 +144,13 @@ class NOAAClient(object):
             else:
                 temp_C = float(line[87:92]) / 10.
             date_str = line[15:27].decode('utf-8')
-            dt = pytz.UTC.localize(datetime.strptime(date_str, "%Y%m%d%H%M"))
-            series[dt] = temp_C
+
+            # there can be multiple readings per hour, so set all to minute 0
+            dt = pytz.UTC.localize(datetime.strptime(date_str, "%Y%m%d%H%M")).replace(minute=0)
+
+            # only set the temp if it's the first encountered in the hour.
+            if pd.isnull(series.ix[dt]):
+                series[dt] = temp_C
 
         return series
 

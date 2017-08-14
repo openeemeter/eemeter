@@ -2,8 +2,9 @@ import copy
 import numpy as np
 import pandas as pd
 import patsy
-import statsmodels.formula.api as smf
 import eemeter.modeling.exceptions as model_exceptions
+from eemeter.modeling.models.caltrack_helpers import \
+    _fit_intercept, _fit_cdd_only, _fit_hdd_only, _fit_full
 
 
 class CaltrackMonthlyModel(object):
@@ -27,8 +28,8 @@ class CaltrackMonthlyModel(object):
             self, fit_cdd=True, grid_search=False,
             min_contiguous_baseline_months=12,
             min_contiguous_reporting_months=12,
-            modeling_period_interpretation='baseline'):
-
+            modeling_period_interpretation='baseline',
+            weighted=False, **kwargs):  # ignore extra args
         self.fit_cdd = fit_cdd
         self.grid_search = grid_search
         self.model_freq = pd.tseries.frequencies.MonthEnd()
@@ -45,12 +46,13 @@ class CaltrackMonthlyModel(object):
         self.min_contiguous_baseline_months = min_contiguous_baseline_months
         self.min_contiguous_reporting_months = min_contiguous_reporting_months
         self.modeling_period_interpretation = modeling_period_interpretation
+        self.weighted = weighted
 
         if grid_search:
-            self.bp_cdd = [50, 55, 60, 65, 70, 75, 80, 85]
-            self.bp_hdd = [50, 55, 60, 65, 70, 75, 80, 85]
+            self.bp_cdd = range(65, 76)
+            self.bp_hdd = range(55, 66)
         else:
-            self.bp_cdd, self.bp_hdd = [70,], [60,]
+            self.bp_cdd, self.bp_hdd = [70, ], [60, ]
 
     def __repr__(self):
         return 'CaltrackMonthlyModel'
@@ -101,11 +103,11 @@ class CaltrackMonthlyModel(object):
         for bp in self.bp_cdd:
             cdd[bp] = pd.Series(
                 np.maximum(temp_data_daily - bp, 0),
-                index = temp_data_daily.index)
+                index=temp_data_daily.index)
         for bp in self.bp_hdd:
             hdd[bp] = pd.Series(
                 np.maximum(bp - temp_data_daily, 0),
-                index = temp_data_daily.index)
+                index=temp_data_daily.index)
 
         ndays_data_daily_mean_values = []
         hdd_data_daily_mean_values = {}
@@ -166,13 +168,12 @@ class CaltrackMonthlyModel(object):
             'usage': usage_data,
             'ndays': ndays_data,
         }
-        model_data.update({'CDD_' + str(bp): \
-            cdd_data[bp] for bp in cdd_data.keys()})
-        model_data.update({'HDD_' + str(bp): \
-            hdd_data[bp] for bp in hdd_data.keys()})
+        model_data.update({'CDD_' + str(bp):
+                          cdd_data[bp] for bp in cdd_data.keys()})
+        model_data.update({'HDD_' + str(bp):
+                          hdd_data[bp] for bp in hdd_data.keys()})
 
         return pd.DataFrame(model_data)
-
 
     def add_cols_to_demand_fixture(self, df):
         cdd = {i: [0] for i in self.bp_cdd}
@@ -180,22 +181,21 @@ class CaltrackMonthlyModel(object):
         for bp in self.bp_cdd:
             cdd[bp] = pd.Series(
                 np.maximum(df.tempF - bp, 0),
-                index = df.index)
+                index=df.index)
         for bp in self.bp_hdd:
             hdd[bp] = pd.Series(
                 np.maximum(bp - df.tempF, 0),
-                index = df.index)
+                index=df.index)
         model_data = {
             'upd': np.zeros(len(df.index)),
             'usage': np.zeros(len(df.index)),
             'ndays': np.ones(len(df.index)),
         }
-        model_data.update({'CDD_' + str(bp): \
-            cdd[bp] for bp in cdd.keys()})
-        model_data.update({'HDD_' + str(bp): \
-            hdd[bp] for bp in hdd.keys()})
+        model_data.update({'CDD_' + str(bp):
+                          cdd[bp] for bp in cdd.keys()})
+        model_data.update({'HDD_' + str(bp):
+                          hdd[bp] for bp in hdd.keys()})
         return pd.DataFrame(model_data, index=df.index)
-
 
     def daily_to_monthly_avg(self, df):
         ''' Convert from daily usage and temperature to monthly
@@ -239,8 +239,7 @@ class CaltrackMonthlyModel(object):
             # If this day is valid, add it to the usage and CDD/HDD arrays.
             day_is_valid = (
                 (is_demand_fixture or
-                (np.isfinite(row['energy']) and row['energy']>=0)) and
-                np.isfinite(row['tempF']))
+                 (np.isfinite(row['energy']) and row['energy'] >= 0)) and np.isfinite(row['tempF']))
             if day_is_valid:
                 ndays[-1] = ndays[-1] + 1
                 usage[-1] = usage[-1] + (
@@ -404,137 +403,6 @@ class CaltrackMonthlyModel(object):
 
         return
 
-    def _fit_intercept(self, df):
-        int_formula = 'upd ~ 1'
-        try:
-            int_mod = smf.ols(formula=int_formula, data=df)
-            int_res = int_mod.fit()
-        except:  # TODO: catch specific error
-            int_rsquared, int_qualified = 0, False
-            int_formula, int_mod, int_res = None, None, None
-        else:
-            int_rsquared, int_qualified = 0, True
-
-        return int_formula, int_mod, int_res, int_rsquared, int_qualified
-
-    def _fit_cdd_only(self, df):
-
-        bps = [i[4:] for i in df.columns if i[:3] == 'CDD']
-        best_bp, best_rsquared, best_mod, best_res = None, -9e9, None, None
-
-        try:  # TODO: fix big try block anti-pattern
-            for bp in bps:
-                cdd_formula = 'upd ~ CDD_' + bp
-                cdd_mod = smf.ols(formula=cdd_formula, data=df)
-                cdd_res = cdd_mod.fit()
-                cdd_rsquared = cdd_res.rsquared
-                if (cdd_rsquared > best_rsquared and
-                        cdd_res.params['Intercept'] >= 0 and
-                        cdd_res.params['CDD_' + bp] >= 0):
-                    best_bp, best_rsquared = bp, cdd_rsquared
-                    best_mod, best_res = cdd_mod, cdd_res
-            if (best_bp is not None and
-                    (best_res.pvalues['Intercept'] < 0.1) and
-                    (best_res.pvalues['CDD_' + best_bp] < 0.1)):
-                cdd_qualified = True
-                cdd_formula = 'upd ~ CDD_' + best_bp
-                cdd_bp = int(best_bp)
-                cdd_mod, cdd_res, cdd_rsquared = \
-                    best_mod, best_res, best_rsquared
-            else:
-                cdd_rsquared, cdd_qualified = 0, False
-                cdd_formula, cdd_mod, cdd_res = None, None, None
-                cdd_bp = None
-        except:  # TODO: catch specific error
-            cdd_rsquared, cdd_qualified = 0, False
-            cdd_formula, cdd_mod, cdd_res = None, None, None
-            cdd_bp = None
-
-        return cdd_formula, cdd_mod, cdd_res, cdd_rsquared, cdd_qualified, cdd_bp
-
-    def _fit_hdd_only(self, df):
-
-        bps = [i[4:] for i in df.columns if i[:3] == 'HDD']
-        best_bp, best_rsquared, best_mod, best_res = None, -9e9, None, None
-
-        try:  # TODO: fix big try block anti-pattern
-            for bp in bps:
-                hdd_formula = 'upd ~ HDD_' + bp
-                hdd_mod = smf.ols(formula=hdd_formula, data=df)
-                hdd_res = hdd_mod.fit()
-                hdd_rsquared = hdd_res.rsquared
-                if (hdd_rsquared > best_rsquared and
-                        hdd_res.params['Intercept'] >= 0 and
-                        hdd_res.params['HDD_' + bp] >= 0):
-                    best_bp, best_rsquared = bp, hdd_rsquared
-                    best_mod, best_res = hdd_mod, hdd_res
-
-            if (best_bp is not None and
-                    (best_res.pvalues['Intercept'] < 0.1) and
-                    (best_res.pvalues['HDD_' + best_bp] < 0.1)):
-                hdd_qualified = True
-                hdd_formula = 'upd ~ HDD_' + best_bp
-                hdd_bp = int(best_bp)
-                hdd_mod, hdd_res, hdd_rsquared = \
-                    best_mod, best_res, best_rsquared
-            else:
-                hdd_rsquared, hdd_qualified = 0, False
-                hdd_formula, hdd_mod, hdd_res = None, None, None
-                hdd_bp = None
-        except:  # TODO: catch specific error
-            hdd_rsquared, hdd_qualified = 0, False
-            hdd_formula, hdd_mod, hdd_res = None, None, None
-            hdd_bp = None
-
-        return hdd_formula, hdd_mod, hdd_res, hdd_rsquared, hdd_qualified, hdd_bp
-
-    def _fit_full(self, df):
-
-        hdd_bps = [i[4:] for i in df.columns if i[:3] == 'HDD']
-        cdd_bps = [i[4:] for i in df.columns if i[:3] == 'CDD']
-
-        best_hdd_bp, best_cdd_bp, best_rsquared, best_mod, best_res = \
-            None, None, -9e9, None, None
-
-        try:  # TODO: fix big try block anti-pattern
-            for full_hdd_bp in hdd_bps:
-                for full_cdd_bp in cdd_bps:
-                    full_formula = 'upd ~ CDD_' + full_cdd_bp + \
-                                   ' + HDD_' + full_hdd_bp
-                    full_mod = smf.ols(formula=full_formula, data=df)
-                    full_res = full_mod.fit()
-                    full_rsquared = full_res.rsquared
-                    if (full_rsquared > best_rsquared and
-                            full_res.params['Intercept'] >= 0 and
-                            full_res.params['HDD_' + full_hdd_bp] >= 0 and
-                            full_res.params['CDD_' + full_cdd_bp] >= 0):
-                        best_hdd_bp, best_cdd_bp, best_rsquared = \
-                            full_hdd_bp, full_cdd_bp, full_rsquared
-                        best_mod, best_res = full_mod, full_res
-
-            if (best_hdd_bp is not None and
-                    (best_res.pvalues['Intercept'] < 0.1) and
-                    (best_res.pvalues['CDD_' + best_cdd_bp] < 0.1) and
-                    (best_res.pvalues['HDD_' + best_hdd_bp] < 0.1)):
-                full_qualified = True
-                full_formula = 'upd ~ CDD_' + best_cdd_bp + \
-                               ' + HDD_' + best_hdd_bp
-                full_hdd_bp = int(best_hdd_bp)
-                full_cdd_bp = int(best_cdd_bp)
-                full_mod, full_res, full_rsquared = \
-                    best_mod, best_res, best_rsquared
-            else:
-                full_rsquared, full_qualified = 0, False
-                full_formula, full_mod, full_res = None, None, None
-                full_hdd_bp, full_hdd_bp = None, None
-        except:  # TODO: catch specific error
-            full_rsquared, full_qualified = 0, False
-            full_formula, full_mod, full_res = None, None, None
-            full_hdd_bp, full_hdd_bp = None, None
-
-        return full_formula, full_mod, full_res, full_rsquared, full_qualified, full_hdd_bp, full_cdd_bp
-
-
     def fit(self, input_data):
 
         self.input_data = input_data
@@ -552,7 +420,7 @@ class CaltrackMonthlyModel(object):
             int_res,
             int_rsquared,
             int_qualified
-        ) = self._fit_intercept(df)
+        ) = _fit_intercept(df, weighted=self.weighted)
 
         # CDD-only
         if self.fit_cdd:
@@ -563,7 +431,7 @@ class CaltrackMonthlyModel(object):
                 cdd_rsquared,
                 cdd_qualified,
                 cdd_bp
-            ) = self._fit_cdd_only(df)
+            ) = _fit_cdd_only(df, weighted=self.weighted)
         else:
             cdd_formula = None
             cdd_mod = None
@@ -580,7 +448,7 @@ class CaltrackMonthlyModel(object):
             hdd_rsquared,
             hdd_qualified,
             hdd_bp
-        ) = self._fit_hdd_only(df)
+        ) = _fit_hdd_only(df, weighted=self.weighted)
 
         # CDD+HDD
         if self.fit_cdd:
@@ -592,7 +460,7 @@ class CaltrackMonthlyModel(object):
                 full_qualified,
                 full_hdd_bp,
                 full_cdd_bp
-            ) = self._fit_full(df)
+            ) = _fit_full(df, weighted=self.weighted)
         else:
             full_formula = None
             full_mod = None
@@ -603,10 +471,12 @@ class CaltrackMonthlyModel(object):
             full_cdd_bp = None
 
         # Now we take the best qualified model.
-        if (full_qualified or
+        if (
+            full_qualified or
             hdd_qualified or
             cdd_qualified or
-            int_qualified) is False:
+            int_qualified
+        ) is False:
             raise model_exceptions.ModelFitException(
                 "No candidate model fit to data successfully")
 
@@ -641,7 +511,7 @@ class CaltrackMonthlyModel(object):
             y, X = patsy.dmatrices(
                 full_formula, df, return_type='dataframe')
             estimated = full_res.fittedvalues
-            r2, rmse = full_rsquared, np.sqrt(full_res.mse_total)
+            r2, rmse = full_rsquared, np.sqrt(full_res.ssr/full_res.nobs)
             model_obj, model_res, formula = full_mod, full_res, full_formula
             fit_bp_hdd, fit_bp_cdd = full_hdd_bp, full_cdd_bp
 
@@ -649,7 +519,7 @@ class CaltrackMonthlyModel(object):
             y, X = patsy.dmatrices(
                 hdd_formula, df, return_type='dataframe')
             estimated = hdd_res.fittedvalues
-            r2, rmse = hdd_rsquared, np.sqrt(hdd_res.mse_total)
+            r2, rmse = hdd_rsquared, np.sqrt(hdd_res.ssr/hdd_res.nobs)
             model_obj, model_res, formula = hdd_mod, hdd_res, hdd_formula
             fit_bp_hdd = hdd_bp
 
@@ -657,7 +527,7 @@ class CaltrackMonthlyModel(object):
             y, X = patsy.dmatrices(
                 cdd_formula, df, return_type='dataframe')
             estimated = cdd_res.fittedvalues
-            r2, rmse = cdd_rsquared, np.sqrt(cdd_res.mse_total)
+            r2, rmse = cdd_rsquared, np.sqrt(cdd_res.ssr/cdd_res.nobs)
             model_obj, model_res, formula = cdd_mod, cdd_res, cdd_formula
             fit_bp_cdd = cdd_bp
 
@@ -666,7 +536,7 @@ class CaltrackMonthlyModel(object):
             y, X = patsy.dmatrices(
                 int_formula, df, return_type='dataframe')
             estimated = int_res.fittedvalues
-            r2, rmse = int_rsquared, np.sqrt(int_res.mse_total)
+            r2, rmse = int_rsquared, np.sqrt(int_res.ssr/int_res.nobs)
             model_obj, model_res, formula = int_mod, int_res, int_formula
 
         if y.mean != 0:
@@ -761,7 +631,7 @@ class CaltrackMonthlyModel(object):
                 "Prediction has NaN variances")
 
         if summed:
-        # Sum them up using the number of days in the demand fixture.
+            # Sum them up using the number of days in the demand fixture.
             for i in demand_fixture_data.index:
                 if i not in predicted.index or not np.isfinite(predicted[i]):
                     continue
@@ -777,9 +647,9 @@ class CaltrackMonthlyModel(object):
             input_data = pd.DataFrame({
                 'predicted': predicted,
                 'variance': prediction_var},
-                index = predicted.index)
+                index=predicted.index)
             output_data = self.monthly_avg_to_daily(input_data,
-                index=demand_fixture_index)
+                                                    index=demand_fixture_index)
             predicted = output_data['predicted']
             variance = output_data['variance']
         return predicted, variance

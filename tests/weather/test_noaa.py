@@ -28,10 +28,10 @@ def test_gsod_index_daily(mock_gsod_weather_source):
     assert all(temps.index == index)
     assert all(temps.index == index)
     assert temps.shape == (2,)
-    assert_allclose(temps.values, [32, 32])
+    assert_allclose(temps.values, [35.617314, 35.388398])
 
     temps = mock_gsod_weather_source.indexed_temperatures(index, 'degC')
-    assert_allclose(temps.values, [0, 0])
+    assert_allclose(temps.values, [2.009619, 1.882443], rtol=10e-3, atol=10e-3)
 
     with pytest.raises(ValueError):
         mock_gsod_weather_source.indexed_temperatures(index, 'BAD')
@@ -75,7 +75,7 @@ def test_isd_index_hourly(mock_isd_weather_source):
     assert all(temps.index == index)
     assert all(temps.index == index)
     assert temps.shape == (2,)
-    assert_allclose(temps.values, [32, 32])
+    assert_allclose(temps.values, [35.617314, 35.607637])
 
 
 def test_isd_index_daily(mock_isd_weather_source):
@@ -84,7 +84,7 @@ def test_isd_index_daily(mock_isd_weather_source):
     assert all(temps.index == index)
     assert all(temps.index == index)
     assert temps.shape == (2,)
-    assert_allclose(temps.values, [32, 32])
+    assert_allclose(temps.values, [35.507046, 35.281477])
 
 
 def test_isd_index_arbitrary(mock_isd_weather_source):

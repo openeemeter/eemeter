@@ -68,13 +68,13 @@ def test_basic(input_df):
     assert 'intercept' in m.params
     assert 'coefficients' in m.params
     assert m.r2 == 0.0
-    assert_allclose(m.rmse, 0.00100000000, rtol=1e-5, atol=1e-5)
+    assert_allclose(m.rmse, 0.024082522582335276, rtol=1e-5, atol=1e-5)
     assert m.y.shape == (365, 1)
 
     predict, variance = m.predict(input_df, summed=False)
 
     assert predict.shape == (365,)
-    assert_allclose(predict[datetime(2000, 1, 1, tzinfo=pytz.UTC)], 0.9990000)
+    assert_allclose(predict[datetime(2000, 1, 1, tzinfo=pytz.UTC)], 1.003148368585324)
     assert variance > 0
 
     assert m.n == 365
@@ -83,11 +83,11 @@ def test_basic(input_df):
     assert 'intercept' in m.params
     assert 'coefficients' in m.params
     assert m.r2 == 0.0
-    assert_allclose(m.rmse, 0.00100000000, rtol=1e-5, atol=1e-5)
+    assert_allclose(m.rmse, 0.024082522582335276, rtol=1e-5, atol=1e-5)
     assert m.y.shape == (365, 1)
 
     # predict w/ error bootstrapping
     predict, variance = m.predict(input_df)
 
-    assert_allclose(predict, 364.635)
+    assert_allclose(predict, 361.2063769041264)
     assert variance > 0
