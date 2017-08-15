@@ -52,10 +52,13 @@ class EnergyEfficiencyMeter(object):
 
     '''
 
-    def __init__(self, default_model_mapping=None,
-                 default_formatter_mapping=None,
-                 weather_station_mapping='default',
-                 weather_normal_station_mapping='default'):
+    def __init__(self, **kwargs):
+
+        self.kwargs = kwargs
+        default_model_mapping = kwargs.get('default_model_mapping', None)
+        default_formatter_mapping = kwargs.get('default_formatter_mapping', None)
+        weather_station_mapping = kwargs.get('weather_station_mapping', 'default')
+        weather_normal_station_mapping = kwargs.get('weather_normal_station_mapping', 'default')
 
         if default_formatter_mapping is None:
             daily_formatter = (ModelDataFormatter, {'freq_str': 'D'})
@@ -310,6 +313,7 @@ class EnergyEfficiencyMeter(object):
             ("project_id", None),
             ("interval", None),
 
+            ("meter_kwargs", self.kwargs),
             ("model_class", None),
             ("model_kwargs", None),
             ("formatter_class", None),
