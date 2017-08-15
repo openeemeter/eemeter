@@ -15,6 +15,7 @@ from eemeter.weather.location import (
     zipcode_to_lat_lng,
     zipcode_to_usaf_station,
     zipcode_to_tmy3_station,
+    zipcode_to_cz2010_station,
     zipcode_to_climate_zone,
     climate_zone_to_zipcodes,
     climate_zone_to_usaf_stations,
@@ -22,6 +23,7 @@ from eemeter.weather.location import (
     zipcode_is_supported,
     usaf_station_is_supported,
     tmy3_station_is_supported,
+    cz2010_station_is_supported,
     climate_zone_is_supported,
 )
 
@@ -84,6 +86,11 @@ def test_zipcode_to_tmy3_station():
     assert zipcode_to_tmy3_station('94403') == '724940'
 
 
+def test_zipcode_to_cz2010_station():
+    assert zipcode_to_cz2010_station('92311') == '723815'
+    assert zipcode_to_cz2010_station('92886') == '722899'
+
+
 def test_zipcode_to_climate_zone():
     assert zipcode_to_climate_zone('81050') == '4|B|Mixed-Dry'
 
@@ -110,6 +117,11 @@ def test_usaf_station_is_supported():
 
 def test_tmy3_station_is_supported():
     assert tmy3_station_is_supported('724397') is True
+
+
+def test_cz2010_station_is_supported():
+    assert cz2010_station_is_supported('724397') is False
+    assert cz2010_station_is_supported('745160') is True
 
 
 def test_climate_zone_is_supported():
