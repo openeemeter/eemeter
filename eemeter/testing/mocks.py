@@ -33,21 +33,3 @@ class MockWeatherClient(object):
                               freq='H', tz=pytz.UTC)
         temps = self._fake_temps(dates.shape[0])
         return pd.Series(temps, index=dates, dtype=float)
-
-
-class MockModel(object):
-
-    def __init__(self):
-        self.n = 1
-        self.upper = 1
-        self.lower = 1
-        self.input_data = pd.DataFrame()
-
-    def fit(self, df):
-        return {}
-
-    def predict(self, df, params=None, summed=True):
-        if summed:
-            return pd.Series(1, index=df.index).sum(), 1, 1
-        else:
-            return pd.Series(1, index=df.index), 1, 1
