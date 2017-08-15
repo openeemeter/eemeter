@@ -223,6 +223,7 @@ class TMY3Client(object):
 
         return series
 
+
 class CZ2010Client(object):
 
     def __init__(self):

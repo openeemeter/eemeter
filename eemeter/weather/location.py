@@ -410,8 +410,8 @@ def zipcode_to_tmy3_station(zipcode):
 
 
 def zipcode_to_cz2010_station(zipcode):
-    """Return the nearest CZ2010 station (by latitude and longitude centroid) of
-    the ZIP code.
+    """Return the nearest CZ2010 station (by latitude and longitude centroid)
+    of the ZIP code.
 
     Parameters
     ----------
