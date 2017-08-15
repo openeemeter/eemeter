@@ -60,3 +60,10 @@ def test_bad_station():
 
 def test_repr(mock_cz2010_weather_source):
     assert 'CZ2010WeatherSource("724838")' == str(mock_cz2010_weather_source)
+
+
+def test_real_load():
+    ws = CZ2010WeatherSource("725845")
+    assert ws.tempC.shape == (8760,)
+    import pdb; pdb.set_trace()
+    assert ws.tempC.notnull().sum() == 8760

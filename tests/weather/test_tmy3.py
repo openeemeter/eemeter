@@ -60,3 +60,9 @@ def test_bad_station():
 
 def test_repr(mock_tmy3_weather_source):
     assert 'TMY3WeatherSource("724838")' == str(mock_tmy3_weather_source)
+
+
+def test_real_load():
+    ws = TMY3WeatherSource("725090")
+    assert ws.tempC.shape == (8760,)
+    assert ws.tempC.notnull().sum() == 8760
