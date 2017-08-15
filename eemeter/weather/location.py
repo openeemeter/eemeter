@@ -64,6 +64,11 @@ def _load_zipcode_to_tmy3_station_index():
                           'zipcode_tmy3_station.json')
 
 
+def _load_zipcode_to_cz2010_station_index():
+    return _load_resource('zipcode_to_cz2010_station_index',
+                          'zipcode_cz2010_station.json')
+
+
 def _load_zipcode_to_climate_zone_index():
     return _load_resource('zipcode_to_climate_zone_index',
                           'zipcode_climate_zone.json')
@@ -97,6 +102,11 @@ def _load_supported_tmy3_stations_index():
 def _load_supported_usaf_stations_index():
     return _load_resource('supported_usaf_stations_index',
                           'supported_usaf_stations.json')
+
+
+def _load_supported_cz2010_stations_index():
+    return _load_resource('supported_cz2010_stations_index',
+                          'supported_cz2010_stations.json')
 
 
 def _load_supported_climate_zones_index():
@@ -399,6 +409,25 @@ def zipcode_to_tmy3_station(zipcode):
     return _load_zipcode_to_tmy3_station_index().get(zipcode, None)
 
 
+def zipcode_to_cz2010_station(zipcode):
+    """Return the nearest CZ2010 station (by latitude and longitude centroid)
+    of the ZIP code.
+
+    Parameters
+    ----------
+    zipcode : str
+        String representing a USPS ZIP code.
+    use_cz2010 : boolean, default False
+        Use the CZ2010 zipcode to weather station mapping.
+
+    Returns
+    -------
+    station : str
+        String representing a CZ2010 weather station ID
+    """
+    return _load_zipcode_to_cz2010_station_index().get(zipcode, None)
+
+
 def zipcode_to_climate_zone(zipcode):
     """Return the climate zone of the ZIP code (by latitude and longitude
     centroid of ZIP code).
@@ -510,6 +539,22 @@ def tmy3_station_is_supported(station):
         `True` if supported, otherwise `False`.
     """
     return station in _load_supported_tmy3_stations_index()
+
+
+def cz2010_station_is_supported(station):
+    """True if given CZ2010 weather station is supported. USAF IDs.
+
+    Parameters
+    ----------
+    station : str
+        6-digit string representing a weather station.
+
+    Returns
+    -------
+    supported : bool
+        `True` if supported, otherwise `False`.
+    """
+    return station in _load_supported_cz2010_stations_index()
 
 
 def climate_zone_is_supported(climate_zone):

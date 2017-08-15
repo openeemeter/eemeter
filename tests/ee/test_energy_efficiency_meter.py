@@ -343,6 +343,7 @@ def test_basic_usage_daily(
     assert results['trace_id'] == 'TRACE_1'
     assert results['interval'] == 'daily'
 
+    assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackDailyModel'
     assert results['model_kwargs'] is not None
     assert results['formatter_class'] == 'ModelDataFormatter'
@@ -433,6 +434,7 @@ def test_basic_usage_monthly(
     assert len(results['logs']) == 2
 
     assert results['eemeter_version'] is not None
+    assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackMonthlyModel'
     assert results['model_kwargs'] is not None
     assert results['formatter_class'] == 'ModelDataBillingFormatter'
@@ -519,6 +521,7 @@ def test_basic_usage_baseline_only(
     assert len(results['logs']) == 2
 
     assert results['eemeter_version'] is not None
+    assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackDailyModel'
     assert results['model_kwargs'] is not None
     assert results['formatter_class'] == 'ModelDataFormatter'
@@ -600,6 +603,7 @@ def test_basic_usage_reporting_only(
     assert len(results['logs']) == 2
 
     assert results['eemeter_version'] is not None
+    assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackDailyModel'
     assert results['model_kwargs'] is not None
     assert results['formatter_class'] == 'ModelDataFormatter'
@@ -782,6 +786,7 @@ def test_custom_evaluate_args_monthly(
                              weather_source=mock_isd_weather_source,
                              weather_normal_source=mock_tmy3_weather_source)
 
+    assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackMonthlyModel'
     assert results['model_kwargs'] == {'fit_cdd': True, 'grid_search': True}
     assert results['formatter_class'] == 'ModelDataBillingFormatter'
@@ -793,6 +798,7 @@ def test_custom_evaluate_args_monthly(
                              weather_source=mock_isd_weather_source,
                              weather_normal_source=mock_tmy3_weather_source)
 
+    assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackMonthlyModel'
     assert results['model_kwargs'] == {'fit_cdd': True, 'grid_search': True}
     assert results['formatter_class'] == 'ModelDataBillingFormatter'
@@ -804,6 +810,7 @@ def test_custom_evaluate_args_monthly(
                              weather_source=mock_isd_weather_source,
                              weather_normal_source=mock_tmy3_weather_source)
 
+    assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackMonthlyModel'
     assert results['model_kwargs'] == {}
     assert results['formatter_class'] == 'ModelDataBillingFormatter'
@@ -814,6 +821,7 @@ def test_custom_evaluate_args_monthly(
                              weather_source=mock_isd_weather_source,
                              weather_normal_source=mock_tmy3_weather_source)
 
+    assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackMonthlyModel'
     assert results['model_kwargs'] == {'fit_cdd': False, 'grid_search': True}
     assert results['formatter_class'] == 'ModelDataBillingFormatter'
@@ -825,6 +833,7 @@ def test_custom_evaluate_args_monthly(
                              weather_source=mock_isd_weather_source,
                              weather_normal_source=mock_tmy3_weather_source)
 
+    assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackMonthlyModel'
     assert results['model_kwargs'] == {'fit_cdd': False, 'grid_search': True}
     assert results['formatter_class'] == 'ModelDataBillingFormatter'
@@ -836,6 +845,7 @@ def test_custom_evaluate_args_monthly(
                              weather_source=mock_isd_weather_source,
                              weather_normal_source=mock_tmy3_weather_source)
 
+    assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackMonthlyModel'
     assert results['model_kwargs'] == {'fit_cdd': False}
     assert results['formatter_class'] == 'ModelDataBillingFormatter'
@@ -855,6 +865,7 @@ def test_custom_evaluate_args_daily(
                              weather_source=mock_isd_weather_source,
                              weather_normal_source=mock_tmy3_weather_source)
 
+    assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackDailyModel'
     assert results['model_kwargs'] == {'fit_cdd': True, 'grid_search': True}
     assert results['formatter_class'] == 'ModelDataFormatter'
@@ -866,6 +877,7 @@ def test_custom_evaluate_args_daily(
                              weather_source=mock_isd_weather_source,
                              weather_normal_source=mock_tmy3_weather_source)
 
+    assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackDailyModel'
     assert results['model_kwargs'] == {'fit_cdd': False}
     assert results['formatter_class'] == 'ModelDataFormatter'
@@ -885,6 +897,7 @@ def test_ignore_extra_args_daily(
                              weather_source=mock_isd_weather_source,
                              weather_normal_source=mock_tmy3_weather_source)
 
+    assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackDailyModel'
     assert results['model_kwargs'] == {'fit_cdd': True, 'grid_search': True, 'extra_arg': 'value'}
 
@@ -902,6 +915,7 @@ def test_ignore_extra_args_monthly(
                              weather_source=mock_isd_weather_source,
                              weather_normal_source=mock_tmy3_weather_source)
 
+    assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackMonthlyModel'
     assert results['model_kwargs'] == {'fit_cdd': True, 'grid_search': True, 'extra_arg': 'value'}
 
@@ -927,6 +941,7 @@ def test_basic_usage_daily_period_start_end(
     assert results['trace_id'] == 'TRACE_1'
     assert results['interval'] == 'daily'
 
+    assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackDailyModel'
     assert results['model_kwargs'] is not None
     assert results['formatter_class'] == 'ModelDataFormatter'
@@ -998,3 +1013,21 @@ def test_basic_usage_daily_period_start_end(
         assert len(d['orderable']) == len(d['value']) == len(d['variance'])
 
     json.dumps(results)
+
+
+def test_meter_settings_cz2010(meter_input_daily):
+    meter = EnergyEfficiencyMeter(
+        weather_station_mapping='CZ2010',
+        weather_normal_station_mapping='CZ2010'
+    )
+    assert meter.weather_station_mapping == 'CZ2010'
+    assert meter.weather_normal_station_mapping == 'CZ2010'
+
+    results = meter.evaluate(meter_input_daily)
+    assert results['logs'][0] == 'Using weather_source ISDWeatherSource("722874")'
+    assert results['logs'][1] == 'Using weather_normal_source CZ2010WeatherSource("722874")'
+    assert results['status'] == 'SUCCESS'
+    assert results['meter_kwargs'] == {
+        'weather_station_mapping': 'CZ2010',
+        'weather_normal_station_mapping': 'CZ2010'
+    }

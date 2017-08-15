@@ -27,27 +27,9 @@ class MockWeatherClient(object):
         temps = self._fake_temps(dates.shape[0])
         return pd.Series(temps, index=dates, dtype=float)
 
-    def get_tmy3_data(self, station):
+    def get_hourly_weather_normal_data(self, station):
         dates = pd.date_range("1900-01-01 00:00",
                               "1900-12-31 23:00",
                               freq='H', tz=pytz.UTC)
         temps = self._fake_temps(dates.shape[0])
         return pd.Series(temps, index=dates, dtype=float)
-
-
-class MockModel(object):
-
-    def __init__(self):
-        self.n = 1
-        self.upper = 1
-        self.lower = 1
-        self.input_data = pd.DataFrame()
-
-    def fit(self, df):
-        return {}
-
-    def predict(self, df, params=None, summed=True):
-        if summed:
-            return pd.Series(1, index=df.index).sum(), 1, 1
-        else:
-            return pd.Series(1, index=df.index), 1, 1
