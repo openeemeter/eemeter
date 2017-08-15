@@ -998,3 +998,17 @@ def test_basic_usage_daily_period_start_end(
         assert len(d['orderable']) == len(d['value']) == len(d['variance'])
 
     json.dumps(results)
+
+
+def test_meter_settings_cz2010(meter_input_daily):
+    meter = EnergyEfficiencyMeter(
+        weather_station_mapping='CZ2010',
+        weather_normal_station_mapping='CZ2010'
+    )
+    assert meter.weather_station_mapping == 'CZ2010'
+    assert meter.weather_normal_station_mapping == 'CZ2010'
+
+    results = meter.evaluate(meter_input_daily)
+    assert results['logs'][0] == 'Using weather_source ISDWeatherSource("722874")'
+    assert results['logs'][1] == 'Using weather_normal_source CZ2010WeatherSource("722874")'
+    assert results['status'] == 'SUCCESS'

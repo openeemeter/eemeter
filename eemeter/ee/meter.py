@@ -53,7 +53,9 @@ class EnergyEfficiencyMeter(object):
     '''
 
     def __init__(self, default_model_mapping=None,
-                 default_formatter_mapping=None):
+                 default_formatter_mapping=None,
+                 weather_station_mapping='default',
+                 weather_normal_station_mapping='default'):
 
         if default_formatter_mapping is None:
             daily_formatter = (ModelDataFormatter, {'freq_str': 'D'})
@@ -147,6 +149,24 @@ class EnergyEfficiencyMeter(object):
 
         self.default_formatter_mapping = default_formatter_mapping
         self.default_model_mapping = default_model_mapping
+
+        if weather_station_mapping not in ['default', 'CZ2010']:
+            raise ValueError(
+                'weather_station_mapping="{}" not recognized.'
+                ' Use "default" or "CZ2010".'
+                .format(weather_station_mapping)
+            )
+        else:
+            self.weather_station_mapping = weather_station_mapping
+
+        if weather_normal_station_mapping not in ['default', 'CZ2010']:
+            raise ValueError(
+                'weather_normal_station_mapping="{}" not recognized.'
+                ' Use "default" or "CZ2010".'
+                .format(weather_normal_station_mapping)
+            )
+        else:
+            self.weather_normal_station_mapping = weather_normal_station_mapping
 
     def _get_formatter(self, formatter, selector):
         # get the default mappings
@@ -338,7 +358,9 @@ class EnergyEfficiencyMeter(object):
 
         # Step 2: Match weather
         if weather_source is None:
-            weather_source = get_weather_source(site)
+            use_cz2010 = (self.weather_station_mapping == 'CZ2010')
+            weather_source = get_weather_source(site, use_cz2010=use_cz2010)
+
             if weather_source is None:
                 message = (
                     "Could not find weather normal source matching site {}"
@@ -356,7 +378,9 @@ class EnergyEfficiencyMeter(object):
         logger.debug(message)
 
         if weather_normal_source is None:
-            weather_normal_source = get_weather_normal_source(site)
+
+            use_cz2010 = (self.weather_normal_station_mapping == 'CZ2010')
+            weather_normal_source = get_weather_normal_source(site, use_cz2010=use_cz2010)
             if weather_normal_source is None:
                 message = (
                     "Could not find weather normal source matching site {}"

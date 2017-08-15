@@ -3,9 +3,11 @@ import logging
 from eemeter.weather.location import (
     zipcode_to_usaf_station,
     zipcode_to_tmy3_station,
+    zipcode_to_cz2010_station,
 )
 from eemeter.weather.noaa import ISDWeatherSource
 from eemeter.weather.tmy3 import TMY3WeatherSource
+from eemeter.weather.cz2010 import CZ2010WeatherSource
 
 logger = logging.getLogger(__name__)
 
@@ -17,16 +19,23 @@ def get_weather_source(site, use_cz2010=False):
     ----------
     site : eemeter.structures.ZIPCodeSite
         Site to match to weather source data.
+    use_cz2010 : boolean, default False
+        Indicates whether or not to use CZ2010 mapping.
 
     Returns
     -------
-    weather_source : eemeter.weather.ISDWeatherSource
+    weather_source : eemeter.weather.ISDWeatherSource or None
         Closest data-validated weather source in the same climate zone as
-        project ZIP code, if available.
+        project ZIP code, if available. If use_cz2010 is set, returns
+        the ISDWeatherSource corresponding with the cz2010 station mapping.
+        If no station can be found, returns None.
     '''
 
     zipcode = site.zipcode
-    station = zipcode_to_usaf_station(zipcode, use_cz2010=use_cz2010)
+    if use_cz2010:
+        station = zipcode_to_cz2010_station(zipcode)
+    else:
+        station = zipcode_to_usaf_station(zipcode)
 
     if station is None:
         logger.error(
@@ -61,38 +70,63 @@ def get_weather_normal_source(site, use_cz2010=False):
     ----------
     site : eemeter.structures.ZIPCodeSite
         Site to match to weather source data.
+    use_cz2010 : boolean, default False
+        Indicates whether or not to use CZ2010 mapping.
 
     Returns
     -------
-    weather_source : eemeter.weather.TMY3WeatherSource
-        Closest data-validated weather source in the same climate zone as
-        project ZIP code, if available.
+    weather_normal_source : eemeter.weather.TMY3WeatherSource or eemeter.weather.CZ2010WeatherSource or None
+        Closest data-validated TMY3 weather normal source in the same climate zone as
+        project ZIP code, if available. If use_cz2010 is True, returns the
+        corresponding CZ2010WeatherSource.
+        If no station can be found, returns None.
     '''
 
     zipcode = site.zipcode
-    station = zipcode_to_tmy3_station(zipcode, use_cz2010=use_cz2010)
+
+    if use_cz2010:
+        station = zipcode_to_cz2010_station(zipcode)
+        station_type = 'CZ2010'
+    else:
+        station = zipcode_to_tmy3_station(zipcode)
+        station_type = 'TMY3'
 
     if station is None:
         logger.error(
-            "Could not find appropriate TMY3 station for zipcode {}."
-            .format(zipcode)
+            'Could not find appropriate {} weather normal station'
+            ' for zipcode {}.'
+            .format(station_type, zipcode)
         )
         return None
 
     logger.debug(
-        "Mapped ZIP code {} to TMY3 station {}"
-        .format(zipcode, station)
+        'Mapped ZIP code {} to {} station {}'
+        .format(zipcode, station_type, station)
     )
 
-    try:
-        weather_normal_source = TMY3WeatherSource(station)
-    except ValueError:
-        logger.error(
-            "Could not create TMY3WeatherSource for station {}."
-            .format(station)
-        )
-        return None
+    if use_cz2010:
+        try:
+            weather_normal_source = CZ2010WeatherSource(station)
+        except ValueError:
+            logger.error(
+                "Could not create CZ2010WeatherSource for station {}."
+                .format(station)
+            )
+            return None
+    else:
 
-    logger.debug("Created TMY3WeatherSource using station {}".format(station))
+        try:
+            weather_normal_source = TMY3WeatherSource(station)
+        except ValueError:
+            logger.error(
+                'Could not create TMY3WeatherSource for station {}.'
+                .format(station)
+            )
+            return None
+
+    logger.debug(
+        'Created {}WeatherSource using station {}'
+        .format(station_type, station)
+    )
 
     return weather_normal_source

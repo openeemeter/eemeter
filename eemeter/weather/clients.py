@@ -167,7 +167,7 @@ class TMY3Client(object):
                 self.station_index = set(json.loads(f.read().decode("utf-8")))
         return self.station_index
 
-    def get_tmy3_data(self, station):
+    def get_hourly_weather_normal_data(self, station):
 
         self._load_station_index()
 
@@ -183,6 +183,81 @@ class TMY3Client(object):
         url = (
             "http://rredc.nrel.gov/solar/old_data/nsrdb/"
             "1991-2005/data/tmy3/{}TYA.CSV".format(station)
+        )
+        r = requests.get(url)
+
+        index = pd.date_range("1900-01-01 00:00", "1900-12-31 23:00",
+                              freq='H', tz=pytz.UTC)
+        series = pd.Series(None, index=index, dtype=float)
+
+        if r.status_code == 200:
+
+            lines = r.text.splitlines()
+
+            utc_offset_str = lines[0].split(',')[3]
+            utc_offset = timedelta(seconds=3600 * float(utc_offset_str))
+
+            for line in lines[2:]:
+                row = line.split(",")
+                month = row[0][0:2]
+                day = row[0][3:5]
+                hour = int(row[1][0:2]) - 1
+
+                # YYYYMMDDHH
+                date_string = "1900{}{}{:02d}".format(month, day, hour)
+
+                dt = datetime.strptime(date_string, "%Y%m%d%H") - utc_offset
+
+                # Only a little redundant to make year 1900 again - matters for
+                # first or last few hours of the year depending UTC on offset
+                dt = pytz.UTC.localize(dt.replace(year=1900))
+                temp_C = float(row[31])
+
+                series[dt] = temp_C
+
+        else:
+            message = (
+                "Station {} was not found. Tried url {}.".format(station, url)
+            )
+            warnings.warn(message)
+
+        return series
+
+class CZ2010Client(object):
+
+    def __init__(self):
+        self.station_index = None
+
+    def _load_station_index(self):
+        if self.station_index is None:
+            with resource_stream('eemeter.resources',
+                                 'supported_cz2010_stations.json') as f:
+                self.station_index = set(json.loads(f.read().decode("utf-8")))
+        return self.station_index
+
+    def get_hourly_weather_normal_data(self, station):
+
+        # Note: at time of writing, this loading code is exactly the same
+        # as the TMY3 loading code. No detectable difference in the format
+        # for these purposes (i.e., getting temperature). The only difference
+        # is the URL from which the data is pulled.
+
+        self._load_station_index()
+
+        if station not in self.station_index:
+            message = (
+                "Station {} is not a CZ2010 station."
+                " See eemeter/resources/supported_cz2010_stations.json for a"
+                " complete list of stations."
+                .format(station)
+            )
+            raise ValueError(message)
+
+        # NOTE: This URL is hardcoded but the data may not always be available
+        # from this source. Set with env variable instead?
+        url = (
+            "https://storage.googleapis.com/oee-cz2010/csv/{}_CZ2010.CSV"
+            .format(station)
         )
         r = requests.get(url)
 
