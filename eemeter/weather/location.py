@@ -66,7 +66,7 @@ def _load_zipcode_to_tmy3_station_index():
 
 def _load_zipcode_to_cz2010_station_index():
     return _load_resource('zipcode_to_cz2010_station_index',
-                           'zipcode_cz2010_station.json')
+                          'zipcode_cz2010_station.json')
 
 
 def _load_zipcode_to_climate_zone_index():
