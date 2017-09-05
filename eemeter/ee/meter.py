@@ -28,6 +28,46 @@ from eemeter.processors.location import (
 )
 from eemeter.structures import ZIPCodeSite
 
+from eemeter.ee.derivatives import (
+    unpack,
+    hdd_balance_point_baseline,
+    hdd_coefficient_baseline,
+    cdd_balance_point_baseline,
+    cdd_coefficient_baseline,
+    intercept_baseline,
+    hdd_balance_point_reporting,
+    hdd_coefficient_reporting,
+    cdd_balance_point_reporting,
+    cdd_coefficient_reporting,
+    intercept_reporting,
+    cumulative_baseline_model_minus_reporting_model_normal_year,
+    baseline_model_minus_reporting_model_normal_year,
+    cumulative_baseline_model_normal_year,
+    baseline_model_normal_year,
+    cumulative_baseline_model_reporting_period,
+    baseline_model_reporting_period,
+    masked_baseline_model_reporting_period,
+    cumulative_baseline_model_minus_observed_reporting_period,
+    baseline_model_minus_observed_reporting_period,
+    masked_baseline_model_minus_observed_reporting_period,
+    baseline_model_baseline_period,
+    cumulative_reporting_model_normal_year,
+    reporting_model_normal_year,
+    reporting_model_reporting_period,
+    cumulative_observed_reporting_period,
+    observed_reporting_period,
+    masked_observed_reporting_period,
+    cumulative_observed_baseline_period,
+    observed_baseline_period,
+    observed_project_period,
+    temperature_baseline_period,
+    temperature_reporting_period,
+    masked_temperature_reporting_period,
+    temperature_normal_year,
+    baseline_mask,
+    reporting_mask
+)
+
 logger = logging.getLogger(__name__)
 
 Derivative = namedtuple('Derivative', [
@@ -485,780 +525,50 @@ class EnergyEfficiencyMeter(object):
         derivatives = []
         for ((baseline_label, reporting_label),
              (baseline_period, reporting_period)) in \
-                modeling_period_set.iter_modeling_period_groups():
-
-            baseline_output = modeled_trace.fit_outputs[baseline_label]
-            reporting_output = modeled_trace.fit_outputs[reporting_label]
-
-            baseline_model_success = (baseline_output["status"] == "SUCCESS")
-            reporting_model_success = (reporting_output["status"] == "SUCCESS")
-
-            formatter = modeled_trace.formatter
-            trace = modeled_trace.trace
-
-            # default project dates
-            baseline_start_date = baseline_period.start_date
-            baseline_end_date = baseline_period.end_date
-            reporting_start_date = reporting_period.start_date
-            reporting_end_date = reporting_period.end_date
-
-            # Note: observed data uses project dates, not data dates
-            # convert trace data to daily
-            daily_trace_data = formatter.daily_trace_data(trace)
-            if daily_trace_data.empty:
-                continue
-
-            if baseline_start_date is None:
-                baseline_period_data = \
-                    daily_trace_data[:baseline_end_date].copy()
-            else:
-                baseline_period_data = \
-                    daily_trace_data[baseline_start_date:baseline_end_date].copy()
-
-            project_period_data = \
-                daily_trace_data[baseline_end_date:reporting_start_date].copy()
-
-            if reporting_end_date is None:
-                reporting_period_data = \
-                    daily_trace_data[reporting_start_date:].copy()
-            else:
-                reporting_period_data = \
-                    daily_trace_data[reporting_start_date:reporting_end_date].copy()
-
-            weather_source_success = (weather_source is not None)
-            weather_normal_source_success = (weather_normal_source is not None)
-
-            # annualized fixture
-            if weather_normal_source_success:
-                normal_index = pd.date_range(
-                    '2015-01-01', freq='D', periods=365, tz=pytz.UTC)
-                annualized_daily_fixture = formatter.create_demand_fixture(
-                    normal_index, weather_normal_source)
-
-            # find start and end dates of reporting data
-            if not reporting_period_data.empty:
-                reporting_data_start_date = reporting_period_data.index[0]
-                reporting_data_end_date = reporting_period_data.index[-1]
-            else:
-                reporting_data_start_date = reporting_start_date
-                reporting_data_end_date = reporting_start_date
-
-            if not baseline_period_data.empty:
-                baseline_data_start_date = baseline_period_data.index[0]
-                baseline_data_end_date = baseline_period_data.index[-1]
-            else:
-                baseline_data_start_date = baseline_end_date
-                baseline_data_end_date = baseline_end_date
-
-            baseline_model = modeled_trace.model_mapping[baseline_label]
-            reporting_model = modeled_trace.model_mapping[reporting_label]
-
-            # reporting period fixture
-            if None not in (
-                    reporting_data_start_date, reporting_data_end_date) and weather_source_success:
-
-                if reporting_data_start_date == reporting_data_end_date:
-                    reporting_period_daily_index = pd.Series([])
-                else:
-                    reporting_period_daily_index = pd.date_range(
-                        start=reporting_data_start_date,
-                        end=reporting_data_end_date,
-                        freq='D',
-                        tz=pytz.UTC)
-
-                reporting_period_daily_fixture = formatter.create_demand_fixture(
-                    reporting_period_daily_index, weather_source)
-                reporting_period_fixture_success = True
-                if len(reporting_period_daily_fixture) == 0:
-                    reporting_period_fixture_success = False
-
-                if baseline_data_start_date == baseline_data_end_date:
-                    baseline_period_daily_index = pd.Series([])
-                else:
-                    baseline_period_daily_index = pd.date_range(
-                        start=baseline_data_start_date,
-                        end=baseline_data_end_date,
-                        freq='D',
-                        tz=pytz.UTC)
-
-                baseline_period_daily_fixture = formatter.create_demand_fixture(
-                    baseline_period_daily_index, weather_source)
-                baseline_period_fixture_success = True
-                if len(baseline_period_daily_fixture) == 0:
-                    baseline_period_fixture_success = False
-
-                # Apply mask which indicates where data is missing (with daily
-                # resolution)
-                unmasked_reporting_period_daily_fixture = \
-                    reporting_period_daily_fixture.copy()
-                if 'input_mask' in reporting_output.keys():
-                    reporting_mask = reporting_output['input_mask']
-                    for i, mask in reporting_mask.iteritems():
-                        if pd.isnull(mask):
-                            reporting_period_daily_fixture[i] = np.nan
-                else:
-                    reporting_mask = pd.Series([])
-
-                unmasked_baseline_period_daily_fixture = \
-                    baseline_period_daily_fixture.copy()
-                if 'input_mask' in baseline_output.keys():
-                    baseline_mask = baseline_output['input_mask']
-                    for i, mask in baseline_mask.iteritems():
-                        if pd.isnull(mask):
-                            baseline_period_daily_fixture[i] = np.nan
-                else:
-                    baseline_mask = pd.Series([])
-
-            else:
-                reporting_mask = pd.Series([])
-                baseline_mask = pd.Series([])
-
-            def subtract_value_variance_tuple(tuple1, tuple2):
-                (val1, var1), (val2, var2) = tuple1, tuple2
-                try:
-                    assert val1 is not None
-                    assert val2 is not None
-                    assert var1 is not None
-                    assert var2 is not None
-                except:
-                    return (None, None)
-                return (val1 - val2, (var1**2 + var2**2)**0.5)
-
+             modeling_period_set.iter_modeling_period_groups():
             raw_derivatives = []
-
-            def serialize_observed(series):
-                return OrderedDict([
-                    (start.isoformat(), value)
-                    for start, value in series.iteritems()
-                ])
-
-            def _report_failed_derivative(series):
-                logger.warning(
-                    'Failed computing derivative (series={})'
-                    .format(series)
-                )
-
-            if baseline_model_success:
-
-                if 'model_fit' in baseline_output.keys() and \
-                   'model_params' in baseline_output['model_fit'] and \
-                   'hdd_bp' in baseline_output['model_fit']['model_params']:
-
-                    series = 'Heating degree day balance point, baseline period'
-                    description = '''Best-fit heating degree day balance point,
-                                     if any, for baseline model'''
-                    value = baseline_output['model_fit']['model_params']['hdd_bp']
-
-                    raw_derivatives.append({
-                            'series': series,
-                            'description': description,
-                            'orderable': [None, ],
-                            'value': [value, ],
-                            'variance': [None, ]
-                    })
-
-                    if 'coefficients' in baseline_output['model_fit']['model_params'] and \
-                       'HDD_' + str(value) in baseline_output['model_fit']['model_params']['coefficients']:
-
-                        series = 'Best-fit heating coefficient, baseline period'
-                        description = '''Best-fit heating coefficient,
-                                         if any, for baseline model'''
-                        value = baseline_output['model_fit']['model_params']['coefficients']['HDD_' + str(value)]
-
-                        raw_derivatives.append({
-                                'series': series,
-                                'description': description,
-                                'orderable': [None, ],
-                                'value': [value, ],
-                                'variance': [None, ]
-                        })
-
-                if 'model_fit' in baseline_output and \
-                   'model_params' in baseline_output['model_fit'] and \
-                   'cdd_bp' in baseline_output['model_fit']['model_params']:
-                    series = 'Cooling degree day balance point, baseline period'
-                    description = '''Best-fit cooling degree day balance point,
-                                     if any, for baseline model'''
-                    value = baseline_output['model_fit']['model_params']['cdd_bp']
-
-                    raw_derivatives.append({
-                            'series': series,
-                            'description': description,
-                            'orderable': [None, ],
-                            'value': [value, ],
-                            'variance': [None, ]
-                    })
-
-                    if 'coefficients' in baseline_output['model_fit']['model_params'] and \
-                       'CDD_' + str(value) in baseline_output['model_fit']['model_params']['coefficients']:
-                        series = 'Best-fit cooling coefficient, baseline period'
-                        description = '''Best-fit cooling coefficient,
-                                         if any, for baseline model'''
-                        value = baseline_output['model_fit']['model_params']['coefficients']['CDD_' + str(value)]
-
-                        raw_derivatives.append({
-                                'series': series,
-                                'description': description,
-                                'orderable': [None, ],
-                                'value': [value, ],
-                                'variance': [None, ]
-                        })
-
-                if 'model_fit' in baseline_output and \
-                   'model_params' in baseline_output['model_fit'] and \
-                   'coefficients' in baseline_output['model_fit']['model_params'] and \
-                   'Intercept' in baseline_output['model_fit']['model_params']['coefficients']:
-                    series = 'Best-fit intercept, baseline period'
-                    description = '''Best-fit intercept, if any, for baseline model'''
-                    value = baseline_output['model_fit']['model_params']['coefficients']['Intercept']
-
-                    raw_derivatives.append({
-                            'series': series,
-                            'description': description,
-                            'orderable': [None, ],
-                            'value': [value, ],
-                            'variance': [None, ]
-                    })
-
-            if reporting_model_success:
-
-                if 'model_fit' in reporting_output.keys() and \
-                   'model_params' in reporting_output['model_fit'] and \
-                   'hdd_bp' in reporting_output['model_fit']['model_params']:
-
-                    series = 'Heating degree day balance point, reporting period'
-                    description = '''Best-fit heating degree day balance point,
-                                     if any, for reporting model'''
-                    value = reporting_output['model_fit']['model_params']['hdd_bp']
-
-                    raw_derivatives.append({
-                            'series': series,
-                            'description': description,
-                            'orderable': [None, ],
-                            'value': [value, ],
-                            'variance': [None, ]
-                    })
-
-                    if 'coefficients' in reporting_output['model_fit']['model_params'] and \
-                       'HDD_' + str(value) in reporting_output['model_fit']['model_params']['coefficients']:
-
-                        series = 'Best-fit heating coefficient, reporting period'
-                        description = '''Best-fit heating coefficient,
-                                         if any, for reporting model'''
-                        value = reporting_output['model_fit']['model_params']['coefficients']['HDD_' + str(value)]
-                        raw_derivatives.append({
-                                'series': series,
-                                'description': description,
-                                'orderable': [None, ],
-                                'value': [value, ],
-                                'variance': [None, ]
-                        })
-
-                if 'model_fit' in reporting_output and \
-                   'model_params' in reporting_output['model_fit'] and \
-                   'cdd_bp' in reporting_output['model_fit']['model_params']:
-
-                    series = 'Cooling degree day balance point, reporting period'
-                    description = '''Best-fit cooling degree day balance point,
-                                     if any, for reporting model'''
-                    value = reporting_output['model_fit']['model_params']['cdd_bp']
-
-                    raw_derivatives.append({
-                            'series': series,
-                            'description': description,
-                            'orderable': [None, ],
-                            'value': [value, ],
-                            'variance': [None, ]
-                    })
-
-                    if 'coefficients' in reporting_output['model_fit']['model_params'] and \
-                       'CDD_' + str(value) in reporting_output['model_fit']['model_params']['coefficients']:
-                        series = 'Best-fit cooling coefficient, reporting period'
-                        description = '''Best-fit cooling coefficient,
-                                         if any, for reporting model'''
-                        value = reporting_output['model_fit']['model_params']['coefficients']['CDD_' + str(value)]
-
-                        raw_derivatives.append({
-                                'series': series,
-                                'description': description,
-                                'orderable': [None, ],
-                                'value': [value, ],
-                                'variance': [None, ]
-                        })
-
-                if 'model_fit' in reporting_output and \
-                   'model_params' in reporting_output['model_fit'] and \
-                   'coefficients' in reporting_output['model_fit']['model_params'] and \
-                   'Intercept' in reporting_output['model_fit']['model_params']['coefficients']:
-                    series = 'Best-fit intercept, reporting period'
-                    description = '''Best-fit intercept, if any, for reporting model'''
-                    value = reporting_output['model_fit']['model_params']['coefficients']['Intercept']
-
-                    raw_derivatives.append({
-                            'series': series,
-                            'description': description,
-                            'orderable': [None, ],
-                            'value': [value, ],
-                            'variance': [None, ]
-                    })
-
-            if baseline_model_success and reporting_model_success \
-                    and weather_normal_source_success:
-                series = 'Cumulative baseline model minus reporting model, normal year'
-                description = '''Total predicted usage according to the baseline model
-                                 over the normal weather year, minus the total predicted
-                                 usage according to the reporting model over the normal
-                                 weather year. Days for which normal year weather data
-                                 does not exist are removed.'''
-                try:
-                    value, variance = subtract_value_variance_tuple(
-                        baseline_model.predict(annualized_daily_fixture, summed=True),
-                        reporting_model.predict(annualized_daily_fixture, summed=True))
-                    raw_derivatives.append({
-                        'series': series,
-                        'description': description,
-                        'orderable': [None, ],
-                        'value': [value, ],
-                        'variance': [variance, ]
-                    })
-                except:
-                    _report_failed_derivative(series)
-
-                series = 'Baseline model minus reporting model, normal year'
-                description = '''Predicted usage according to the baseline model
-                                 over the normal weather year, minus the predicted
-                                 usage according to the reporting model over the normal
-                                 weather year.'''
-                try:
-                    value, variance = subtract_value_variance_tuple(
-                        baseline_model.predict(annualized_daily_fixture, summed=False),
-                        reporting_model.predict(annualized_daily_fixture, summed=False))
-                    raw_derivatives.append({
-                        'series': series,
-                        'description': description,
-                        'orderable': [i.isoformat() for i in annualized_daily_fixture.index],
-                        'value': value.tolist(),
-                        'variance': variance.tolist()
-                    })
-                except:
-                    _report_failed_derivative(series)
-
-            if baseline_model_success:
-                if weather_normal_source_success:
-                    series = 'Cumulative baseline model, normal year'
-                    description = '''Total predicted usage according to the baseline model
-                                     over the normal weather year. Days for which normal
-                                     year weather data does not exist are removed.'''
-                    try:
-                        value, variance = baseline_model.predict(
-                                    annualized_daily_fixture, summed=True)
-                        raw_derivatives.append({
-                            'series': series,
-                            'description': description,
-                            'orderable': [None, ],
-                            'value': [value, ],
-                            'variance': [variance, ]
-                        })
-                    except:
-                        _report_failed_derivative(series)
-
-                    series = 'Baseline model, normal year'
-                    description = '''Predicted usage according to the baseline model
-                                     over the normal weather year.'''
-                    try:
-                        value, variance = baseline_model.predict(
-                                    annualized_daily_fixture, summed=False)
-                        raw_derivatives.append({
-                            'series': series,
-                            'description': description,
-                            'orderable': [i.isoformat() for i in annualized_daily_fixture.index],
-                            'value': value.tolist(),
-                            'variance': variance.tolist()
-                        })
-                    except:
-                        _report_failed_derivative(series)
-
-                if weather_source_success and reporting_period_fixture_success:
-                    series = 'Cumulative baseline model, reporting period'
-                    description = '''Total predicted usage according to the baseline model
-                                     over the reporting period. Days for which reporting
-                                     period weather data does not exist are removed.'''
-                    try:
-                        value, variance = baseline_model.predict(
-                                reporting_period_daily_fixture, summed=True)
-                        raw_derivatives.append({
-                            'series': series,
-                            'description': description,
-                            'orderable': [None, ],
-                            'value': [value, ],
-                            'variance': [variance, ]
-                        })
-                    except:
-                        _report_failed_derivative(series)
-
-                    series = 'Baseline model, reporting period'
-                    description = '''Predicted usage according to the baseline model
-                                     over the reporting period.'''
-                    try:
-                        value, variance = baseline_model.predict(
-                                reporting_period_daily_fixture, summed=False)
-                        raw_derivatives.append({
-                            'series': series,
-                            'description': description,
-                            'orderable': [i.isoformat() for i in reporting_period_daily_fixture.index],
-                            'value': value.tolist(),
-                            'variance': variance.tolist()
-                        })
-                    except:
-                        _report_failed_derivative(series)
-
-                    series = 'Masked baseline model, reporting period'
-                    description = '''Predicted usage according to the baseline model
-                                     over the reporting period, null where values are
-                                     missing in either the observed usage or
-                                     temperature data.'''
-
-                    try:
-                        value, variance = baseline_model.predict(
-                                reporting_period_daily_fixture, summed=False)
-
-                        raw_derivatives.append({
-                            'series': series,
-                            'description': description,
-                            'orderable': [i.isoformat() for i in reporting_period_daily_fixture.index],
-                            'value': [
-                                v if not reporting_mask.get(i, True) else None
-                                for i, v in value.iteritems()
-                            ],
-                            'variance': [
-                                v if not reporting_mask.get(i, True) else None
-                                for i, v in variance.iteritems()
-                            ],
-                        })
-
-                    except:
-                        _report_failed_derivative(series)
-
-                    series = 'Cumulative baseline model minus observed, reporting period'
-                    description = '''Total predicted usage according to the baseline model
-                                     minus observed usage over the reporting period.
-                                     Days for which reporting period weather data or usage
-                                     do not exist are removed.'''
-                    try:
-                        value, variance = subtract_value_variance_tuple(
-                                baseline_model.predict(
-                                    reporting_period_daily_fixture, summed=True),
-                                (reporting_period_data.sum(), 0)
-                            )
-                        raw_derivatives.append({
-                            'series': series,
-                            'description': description,
-                            'orderable': [None, ],
-                            'value': [value, ],
-                            'variance': [variance, ]
-                        })
-                    except:
-                        _report_failed_derivative(series)
-
-                    series = 'Baseline model minus observed, reporting period'
-                    description = '''Predicted usage according to the baseline model
-                                     minus observed usage over the reporting period.'''
-                    try:
-                        value, variance = subtract_value_variance_tuple(
-                                baseline_model.predict(
-                                    reporting_period_daily_fixture, summed=False),
-                                (reporting_period_data, 0)
-                            )
-                        raw_derivatives.append({
-                            'series': series,
-                            'description': description,
-                            'orderable': [i.isoformat() for i in reporting_period_daily_fixture.index],
-                            'value': value.tolist(),
-                            'variance': variance.tolist()
-                        })
-                    except:
-                        _report_failed_derivative(series)
-
-                    series = 'Masked baseline model minus observed, reporting period'
-                    description = '''Predicted usage according to the baseline model
-                                     minus observed usage over the reporting period,
-                                     null where values are missing in either
-                                     the observed usage or temperature data.'''
-                    try:
-                        value, variance = subtract_value_variance_tuple(
-                                baseline_model.predict(
-                                    reporting_period_daily_fixture, summed=False),
-                                (reporting_period_data, 0)
-                            )
-                        raw_derivatives.append({
-                            'series': series,
-                            'description': description,
-                            'orderable': [i.isoformat() for i in reporting_period_daily_fixture.index],
-                            'value': [
-                                v if not reporting_mask.get(i, True) else None
-                                for i, v in value.iteritems()
-                            ],
-                            'variance': [
-                                v if not reporting_mask.get(i, True) else None
-                                for i, v in variance.iteritems()
-                            ],
-                        })
-                    except:
-                        _report_failed_derivative(series)
-
-                if weather_source_success and baseline_period_fixture_success:
-                    series = 'Baseline model, baseline period'
-                    description = '''Predicted usage according to the baseline model
-                                     over the baseline period.'''
-                    try:
-                        value, variance = baseline_model.predict(
-                                baseline_period_daily_fixture, summed=False)
-                        raw_derivatives.append({
-                            'series': series,
-                            'description': description,
-                            'orderable': [i.isoformat() for i in baseline_period_daily_fixture.index],
-                            'value': value.tolist(),
-                            'variance': variance.tolist()
-                        })
-                    except:
-                        _report_failed_derivative(series)
-
-            if reporting_model_success:
-                if weather_normal_source_success:
-                    series = 'Cumulative reporting model, normal year'
-                    description = '''Total predicted usage according to the reporting model
-                                     over the reporting period.  Days for which normal year
-                                     weather data does not exist are removed.'''
-                    try:
-                        value, variance = reporting_model.predict(
-                                    annualized_daily_fixture, summed=True)
-                        raw_derivatives.append({
-                            'series': series,
-                            'description': description,
-                            'orderable': [None, ],
-                            'value': [value, ],
-                            'variance': [variance, ]
-                        })
-                    except:
-                        _report_failed_derivative(series)
-
-                    series = 'Reporting model, normal year'
-                    description = '''Predicted usage according to the reporting model
-                                     over the reporting period.'''
-                    try:
-                        value, variance = reporting_model.predict(
-                                    annualized_daily_fixture, summed=False)
-                        raw_derivatives.append({
-                            'series': series,
-                            'description': description,
-                            'orderable': [i.isoformat() for i in annualized_daily_fixture.index],
-                            'value': value.tolist(),
-                            'variance': variance.tolist()
-                        })
-                    except:
-                        _report_failed_derivative(series)
-
-                if weather_source_success and reporting_period_fixture_success:
-                    series = 'Reporting model, reporting period'
-                    description = '''Predicted usage according to the reporting model
-                                     over the reporting period.'''
-                    try:
-                        value, variance = reporting_model.predict(
-                                reporting_period_daily_fixture, summed=False)
-                        raw_derivatives.append({
-                            'series': series,
-                            'description': description,
-                            'orderable': [i.isoformat() for i in reporting_period_daily_fixture.index],
-                            'value': value.tolist(),
-                            'variance': variance.tolist()
-                        })
-                    except:
-                        _report_failed_derivative(series)
-
-            series = 'Cumulative observed, reporting period'
-            description = '''Total observed usage over the reporting period.
-                             Days for which weather data does not exist
-                             are NOT removed.'''
-            try:
-                raw_derivatives.append({
-                    'series': series,
-                    'description': description,
-                    'orderable': [None],
-                    'value': [reporting_period_data.sum(), ],
-                    'variance': [0, ]
-                })
-            except:
-                _report_failed_derivative(series)
-
-            series = 'Observed, reporting period'
-            description = '''Observed usage over the reporting period.'''
-            try:
-                raw_derivatives.append({
-                    'series': series,
-                    'description': description,
-                    'orderable': [i.isoformat() for i in reporting_period_data.index],
-                    'value': reporting_period_data.values.tolist(),
-                    'variance': [0 for _ in range(reporting_period_data.shape[0])]
-                })
-            except:
-                _report_failed_derivative(series)
-
-            series = 'Masked observed, reporting period'
-            description = '''Observed usage over the reporting period,
-                             null where values are missing in either
-                             the observed usage or temperature data.'''
-            try:
-                raw_derivatives.append({
-                    'series': series,
-                    'description': description,
-                    'orderable': [i.isoformat() for i in reporting_period_data.index],
-                    'value': [
-                        v if not reporting_mask.get(i, True) else None
-                        for i, v in reporting_period_data.iteritems()
-                    ],
-                    'variance': [
-                        0 if not reporting_mask.get(i, True) else None
-                        for i, v in reporting_period_data.iteritems()
-                    ],
-                })
-            except:
-                _report_failed_derivative(series)
-
-            series = 'Cumulative observed, baseline period'
-            description = '''Total observed usage over the baseline period.
-                             Days for which weather data does not exist
-                             are NOT removed.'''
-            try:
-                raw_derivatives.append({
-                    'series': series,
-                    'description': description,
-                    'orderable': [None],
-                    'value': [baseline_period_data.sum()],
-                    'variance': [0, ]
-                })
-            except:
-                _report_failed_derivative(series)
-
-            series = 'Observed, baseline period'
-            description = '''Observed usage over the baseline period.'''
-            try:
-                raw_derivatives.append({
-                    'series': series,
-                    'description': description,
-                    'orderable': [i.isoformat() for i in baseline_period_data.index],
-                    'value': baseline_period_data.values.tolist(),
-                    'variance': [0 for _ in range(baseline_period_data.shape[0])]
-                })
-            except:
-                _report_failed_derivative(series)
-
-            series = 'Observed, project period'
-            description = '''Observed usage over the project period.'''
-            try:
-                raw_derivatives.append({
-                    'series': series,
-                    'description': description,
-                    'orderable': [i.isoformat() for i in project_period_data.index],
-                    'value': project_period_data.values.tolist(),
-                    'variance': [0 for _ in range(project_period_data.shape[0])]
-                })
-            except:
-                _report_failed_derivative(series)
-
-            if weather_source_success:
-                series = 'Temperature, baseline period'
-                description = '''Observed temperature (degF) over the baseline period.'''
-                try:
-                    raw_derivatives.append({
-                        'series': series,
-                        'description': description,
-                        'orderable': [
-                            i.isoformat() for i in unmasked_baseline_period_daily_fixture.index],
-                        'value': unmasked_baseline_period_daily_fixture['tempF'].values.tolist(),
-                        'variance': [0 for _ in range(unmasked_baseline_period_daily_fixture['tempF'].shape[0])]
-                    })
-                except:
-                    _report_failed_derivative(series)
-
-                series = 'Temperature, reporting period'
-                description = '''Observed temperature (degF) over the reporting period.'''
-                try:
-                    raw_derivatives.append({
-                        'series': series,
-                        'description': description,
-                        'orderable': [
-                            i.isoformat() for i in unmasked_reporting_period_daily_fixture.index],
-                        'value': unmasked_reporting_period_daily_fixture['tempF'].values.tolist(),
-                        'variance': [0 for _ in range(unmasked_reporting_period_daily_fixture['tempF'].shape[0])]
-                    })
-                except:
-                    _report_failed_derivative(series)
-
-                series = 'Masked temperature, reporting period'
-                description = '''Observed temperature (degF) over the reporting
-                                 period, null where values are missing in either
-                                 the observed usage or temperature data.'''
-                try:
-                    raw_derivatives.append({
-                        'series': series,
-                        'description': description,
-                        'orderable': [
-                            i.isoformat() for i in unmasked_reporting_period_daily_fixture.index],
-                        'value': [
-                            v if not reporting_mask.get(i, True) else None
-                            for i, v in unmasked_reporting_period_daily_fixture['tempF'].iteritems()
-                        ],
-                        'variance': [
-                            0 if not reporting_mask.get(i, True) else None
-                            for i, v in unmasked_reporting_period_daily_fixture['tempF'].iteritems()
-                        ],
-                    })
-                except:
-                    _report_failed_derivative(series)
-
-            if weather_normal_source_success:
-                series = 'Temperature, normal year'
-                description = '''Observed temperature (degF) over the normal year.'''
-                try:
-                    raw_derivatives.append({
-                        'series': series,
-                        'description': description,
-                        'orderable': [
-                            i.isoformat() for i in annualized_daily_fixture.index],
-                        'value': annualized_daily_fixture['tempF'].values.tolist(),
-                        'variance': [0 for _ in range(annualized_daily_fixture['tempF'].shape[0])]
-                    })
-                except:
-                    _report_failed_derivative(series)
-
-            series = 'Inclusion mask, baseline period'
-            description = '''Mask for baseline period data which is included in
-                             model and savings cumulatives.'''
-            try:
-                raw_derivatives.append({
-                    'series': series,
-                    'description': description,
-                    'orderable': [i.isoformat() for i in baseline_mask.index],
-                    'value': [bool(v) for v in baseline_mask.values],
-                    'variance': [0 for _ in range(baseline_mask.shape[0])]
-                })
-            except:
-                _report_failed_derivative(series)
-
-            series = 'Inclusion mask, reporting period'
-            description = '''Mask for reporting period data which is included in
-                             model and savings cumulatives.'''
-            try:
-                raw_derivatives.append({
-                    'series': series,
-                    'description': description,
-                    'orderable': [i.isoformat() for i in reporting_mask.index],
-                    'value': [bool(v) for v in reporting_mask.values],
-                    'variance': [0 for _ in range(reporting_mask.shape[0])]
-                })
-            except:
-                _report_failed_derivative(series)
-
+            deriv_input = unpack(modeled_trace, baseline_label, reporting_label,
+                                 baseline_period, reporting_period, 
+                                 weather_source, weather_normal_source)
+            if deriv_input is None:
+                continue
+            raw_derivatives.append(hdd_balance_point_baseline(deriv_input))
+            raw_derivatives.append(hdd_coefficient_baseline(deriv_input))
+            raw_derivatives.append(cdd_balance_point_baseline(deriv_input))
+            raw_derivatives.append(cdd_coefficient_baseline(deriv_input))
+            raw_derivatives.append(intercept_baseline(deriv_input))
+            raw_derivatives.append(hdd_balance_point_reporting(deriv_input))
+            raw_derivatives.append(hdd_coefficient_reporting(deriv_input))
+            raw_derivatives.append(cdd_balance_point_reporting(deriv_input))
+            raw_derivatives.append(cdd_coefficient_reporting(deriv_input))
+            raw_derivatives.append(intercept_reporting(deriv_input))
+            raw_derivatives.append(cumulative_baseline_model_minus_reporting_model_normal_year(deriv_input))
+            raw_derivatives.append(baseline_model_minus_reporting_model_normal_year(deriv_input))
+            raw_derivatives.append(cumulative_baseline_model_normal_year(deriv_input))
+            raw_derivatives.append(baseline_model_normal_year(deriv_input))
+            raw_derivatives.append(cumulative_baseline_model_reporting_period(deriv_input))
+            raw_derivatives.append(baseline_model_reporting_period(deriv_input))
+            raw_derivatives.append(masked_baseline_model_reporting_period(deriv_input))
+            raw_derivatives.append(cumulative_baseline_model_minus_observed_reporting_period(deriv_input))
+            raw_derivatives.append(baseline_model_minus_observed_reporting_period(deriv_input))
+            raw_derivatives.append(masked_baseline_model_minus_observed_reporting_period(deriv_input))
+            raw_derivatives.append(baseline_model_baseline_period(deriv_input))
+            raw_derivatives.append(cumulative_reporting_model_normal_year(deriv_input))
+            raw_derivatives.append(reporting_model_normal_year(deriv_input))
+            raw_derivatives.append(reporting_model_reporting_period(deriv_input))
+            raw_derivatives.append(cumulative_observed_reporting_period(deriv_input))
+            raw_derivatives.append(observed_reporting_period(deriv_input))
+            raw_derivatives.append(masked_observed_reporting_period(deriv_input))
+            raw_derivatives.append(cumulative_observed_baseline_period(deriv_input))
+            raw_derivatives.append(observed_baseline_period(deriv_input))
+            raw_derivatives.append(observed_project_period(deriv_input))
+            raw_derivatives.append(temperature_baseline_period(deriv_input))
+            raw_derivatives.append(temperature_reporting_period(deriv_input))
+            raw_derivatives.append(masked_temperature_reporting_period(deriv_input))
+            raw_derivatives.append(temperature_normal_year(deriv_input))
+            raw_derivatives.append(baseline_mask(deriv_input))
+            raw_derivatives.append(reporting_mask(deriv_input))
+    
             derivatives += [
                 Derivative(
                     (baseline_label, reporting_label),
@@ -1268,7 +578,7 @@ class EnergyEfficiencyMeter(object):
                     d['value'],
                     d['variance'],
                 )
-                for d in raw_derivatives
+                for d in raw_derivatives if d is not None
             ]
 
         output["derivatives"] = serialize_derivatives(derivatives)
