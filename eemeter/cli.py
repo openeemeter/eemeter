@@ -230,7 +230,7 @@ def add_model_stats(
         return out_data
 
     out_data['Model'].append(alt_name)
-    out_data['Savings_Estimate'].append('${:,.0f}'.format(n))
+    out_data['Savings_Estimate'].append('{:,.0f} kWh'.format(n))
     out_data['68%_Confidence_Interval'].append(
             '({:.0f},{:.0f})'.format(conf_lb, conf_ub))
 
