@@ -176,6 +176,8 @@ def run_meter(project, trace_object):
     print("  {:f}\n  68% confidence interval: ({:f}, {:f})".
           format(rep, rep_confint[0], rep_confint[1]))
 
+    return meter_output
+
 
 def _analyze(inputs_path):
     projects = read_csv(os.path.join(inputs_path, 'projects.csv'))
@@ -190,10 +192,13 @@ def _analyze(inputs_path):
 
     trace_objects = build_traces(traces)
 
+    meter_output_list = list()
     for project in projects:
         for trace_object in trace_objects:
             if trace_object.trace_id == project['project_id']:
-                run_meter(project, trace_object)
+                meter_output_list.append(run_meter(project, trace_object))
+
+    return meter_output_list
 
 
 @cli.command()

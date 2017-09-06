@@ -81,6 +81,8 @@ def unpack(modeled_trace, baseline_label, reporting_label,
             '2015-01-01', freq='D', periods=365, tz=pytz.UTC)
         annualized_daily_fixture = formatter.create_demand_fixture(
             normal_index, weather_normal_source)
+    else:
+        annualized_daily_fixture = None
 
     # find start and end dates of reporting data
     if not reporting_period_data.empty:
@@ -159,6 +161,12 @@ def unpack(modeled_trace, baseline_label, reporting_label,
     else:
         reporting_mask = pd.Series([])
         baseline_mask = pd.Series([])
+        baseline_period_daily_fixture = None
+        reporting_period_daily_fixture = None
+        unmasked_baseline_period_daily_fixture = None
+        unmasked_reporting_period_daily_fixture = None
+        baseline_period_fixture_success = False
+        reporting_period_fixture_success = False
     return {
             'formatter': formatter,
             'trace': trace,
@@ -534,7 +542,7 @@ def baseline_model_minus_reporting_model_normal_year(deriv_input):
         return {
                 'series': series,
                 'description': description,
-                'orderable': [i.isoformat() for i in annualized_daily_fixture.index],
+                'orderable': [i.isoformat() for i in deriv_input['annualized_daily_fixture'].index],
                 'value': value.tolist(),
                 'variance': variance.tolist()
                }
@@ -583,7 +591,7 @@ def baseline_model_normal_year(deriv_input):
         return {
                 'series': series,
                 'description': description,
-                'orderable': [i.isoformat() for i in annualized_daily_fixture.index],
+                'orderable': [i.isoformat() for i in deriv_input['annualized_daily_fixture'].index],
                 'value': value.tolist(),
                 'variance': variance.tolist()
                }
@@ -634,7 +642,7 @@ def baseline_model_reporting_period(deriv_input):
         return {
                 'series': series,
                 'description': description,
-                'orderable': [i.isoformat() for i in reporting_period_daily_fixture.index],
+                'orderable': [i.isoformat() for i in deriv_input['reporting_period_daily_fixture'].index],
                 'value': value.tolist(),
                 'variance': variance.tolist()
                }
@@ -725,7 +733,7 @@ def baseline_model_minus_observed_reporting_period(deriv_input):
         return {
                 'series': series,
                 'description': description,
-                'orderable': [i.isoformat() for i in reporting_period_daily_fixture.index],
+                'orderable': [i.isoformat() for i in deriv_input['reporting_period_daily_fixture'].index],
                 'value': value.tolist(),
                 'variance': variance.tolist()
                }
@@ -783,7 +791,7 @@ def baseline_model_baseline_period(deriv_input):
         return {
                 'series': series,
                 'description': description,
-                'orderable': [i.isoformat() for i in baseline_period_daily_fixture.index],
+                'orderable': [i.isoformat() for i in deriv_input['baseline_period_daily_fixture'].index],
                 'value': value.tolist(),
                 'variance': variance.tolist()
                }
@@ -832,7 +840,7 @@ def reporting_model_normal_year(deriv_input):
         return {
                 'series': series,
                 'description': description,
-                'orderable': [i.isoformat() for i in annualized_daily_fixture.index],
+                'orderable': [i.isoformat() for i in deriv_input['annualized_daily_fixture'].index],
                 'value': value.tolist(),
                 'variance': variance.tolist()
                }
@@ -856,7 +864,7 @@ def reporting_model_reporting_period(deriv_input):
         return {
                 'series': series,
                 'description': description,
-                'orderable': [i.isoformat() for i in reporting_period_daily_fixture.index],
+                'orderable': [i.isoformat() for i in deriv_input['reporting_period_daily_fixture'].index],
                 'value': value.tolist(),
                 'variance': variance.tolist()
                }
