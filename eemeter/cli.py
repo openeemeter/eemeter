@@ -156,25 +156,56 @@ def run_meter(project, trace_object):
     series_name = \
         'Cumulative baseline model minus reporting model, normal year'
     awn = [i['value'][0] for i in meter_output['derivatives']
-           if i['series'] == series_name][0]
+           if i['series'] == series_name]
+    if len(awn) > 0:
+        awn = awn[0]
+    else:
+        awn = None
     awn_var = [i['variance'][0] for i in meter_output['derivatives']
-               if i['series'] == series_name][0]
-    awn_confint = stats.norm.interval(0.68, loc=awn, scale=np.sqrt(awn_var))
-    print("Normal year savings estimate:")
-    print("  {:f}\n  68% confidence interval: ({:f}, {:f})".
-          format(awn, awn_confint[0], awn_confint[1]))
+               if i['series'] == series_name]
+    if len(awn_var) > 0:
+        awn_var = awn_var[0]
+    else:
+        awn_var = None
+    if awn is not None and awn_var is not None:
+        awn_confint = stats.norm.interval(0.68, loc=awn, scale=np.sqrt(awn_var))
+
+    if len(awn_confint) > 1:
+        print("Normal year savings estimate:")
+        print("  {:f}\n  68% confidence interval: ({:f}, {:f})".
+              format(awn, awn_confint[0], awn_confint[1]))
+    else:
+        print("Normal year savings estimates not computed due to error:")
+        print(meter_output['failure_message'])
 
     # Compute and output the weather normalized reporting period savings
     series_name = \
         'Cumulative baseline model minus observed, reporting period'
     rep = [i['value'][0] for i in meter_output['derivatives']
-           if i['series'] == series_name][0]
+           if i['series'] == series_name]
+    if len(rep) > 0:
+        rep = rep[0]
+    else:
+        rep = None
     rep_var = [i['variance'][0] for i in meter_output['derivatives']
-               if i['series'] == series_name][0]
-    rep_confint = stats.norm.interval(0.68, loc=rep, scale=np.sqrt(rep_var))
-    print("Reporting period savings estimate:")
-    print("  {:f}\n  68% confidence interval: ({:f}, {:f})".
-          format(rep, rep_confint[0], rep_confint[1]))
+               if i['series'] == series_name]
+    if len(rep_var) > 0:
+        rep_var = rep_var[0]
+    else:
+        rep_var = None
+
+    if rep is not None and rep_var is not None:
+        rep_confint = stats.norm.interval(0.68, loc=rep, scale=np.sqrt(rep_var))
+    else:
+        rep_confint = []
+
+    if len(rep_confint) > 1:
+        print("Reporting period savings estimate:")
+        print("  {:f}\n  68% confidence interval: ({:f}, {:f})".
+              format(rep, rep_confint[0], rep_confint[1]))
+    else:
+        print("Reporting period savings estimates not computed due to error:")
+        print(meter_output['failure_message'])
 
     return meter_output
 
