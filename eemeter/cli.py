@@ -220,6 +220,18 @@ def run_meter(project, trace_object):
 
 
 def _analyze(inputs_path):
+    projects, trace_objects = _load_projects_and_traces(inputs_path)
+
+    meter_output_list = list()
+    for project in projects:
+        for trace_object in trace_objects:
+            if trace_object.trace_id == project['project_id']:
+                meter_output_list.append(run_meter(project, trace_object))
+
+    return meter_output_list
+
+
+def _load_projects_and_traces(inputs_path):
     projects = read_csv(os.path.join(inputs_path, 'projects.csv'))
     traces = read_csv(os.path.join(inputs_path, 'traces.csv'))
 
@@ -231,24 +243,21 @@ def _analyze(inputs_path):
         row['project_end'] = flexible_date_reader(row['project_end'])
 
     trace_objects = build_traces(traces)
+    return projects, trace_objects
 
-    meter_output_list = list()
-    for project in projects:
-        for trace_object in trace_objects:
-            if trace_object.trace_id == project['project_id']:
-                meter_output_list.append(run_meter(project, trace_object))
 
-    return meter_output_list
+def _get_sample_inputs_path():
+    path = os.path.realpath(__file__)
+    cwd = os.path.dirname(path)
+    sample_inputs_path = os.path.join(cwd, 'sample_data')
+    return sample_inputs_path
 
 
 @cli.command()
 def sample():
-    path = os.path.realpath(__file__)
-    cwd = os.path.dirname(path)
-    sample_inputs_path = os.path.join(cwd, 'sample_data')
+    sample_inputs_path = _get_sample_inputs_path()
     print("Going to analyze the sample data set")
-    print("The latest documentation of the sample data can be found at:")
-    print("<URL for sample data documentation>")
+    print("")
     _analyze(sample_inputs_path)
 
 
