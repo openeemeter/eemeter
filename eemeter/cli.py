@@ -86,6 +86,8 @@ def date_reader(date_format):
 
 
 date_readers = [
+    date_reader('%Y-%m-%d'),
+    date_reader('%m/%d/%Y'),
     date_reader('%Y-%m-%d %H:%M:%S'),
     date_reader('%Y-%m-%dT%H:%M:%S'),
     date_reader('%Y-%m-%dT%H:%M:%SZ'),
@@ -128,6 +130,7 @@ def build_traces(trace_records):
         trace_id = record["project_id"] + " " + record["interpretation"]
         if current_trace_id is None:
             current_trace_id = trace_id
+            current_trace.append(record)
         elif current_trace_id == trace_id:
             current_trace.append(record)
         else:
@@ -167,6 +170,7 @@ def run_meter(project, trace_object):
         awn_var = awn_var[0]
     else:
         awn_var = None
+    awn_confint = []
     if awn is not None and awn_var is not None:
         awn_confint = stats.norm.interval(0.68, loc=awn, scale=np.sqrt(awn_var))
 
@@ -176,7 +180,12 @@ def run_meter(project, trace_object):
               format(awn, awn_confint[0], awn_confint[1]))
     else:
         print("Normal year savings estimates not computed due to error:")
-        print(meter_output['failure_message'])
+        bl_traceback = meter_output['modeled_energy_trace']['fits']['baseline']['traceback']
+        rp_traceback = meter_output['modeled_energy_trace']['fits']['reporting']['traceback']
+        if bl_traceback is not None:
+            print(bl_traceback)
+        if rp_traceback is not None:
+            print(rp_traceback)
 
     # Compute and output the weather normalized reporting period savings
     series_name = \
@@ -193,7 +202,7 @@ def run_meter(project, trace_object):
         rep_var = rep_var[0]
     else:
         rep_var = None
-
+    rep_confint = []
     if rep is not None and rep_var is not None:
         rep_confint = stats.norm.interval(0.68, loc=rep, scale=np.sqrt(rep_var))
     else:
@@ -205,7 +214,7 @@ def run_meter(project, trace_object):
               format(rep, rep_confint[0], rep_confint[1]))
     else:
         print("Reporting period savings estimates not computed due to error:")
-        print(meter_output['failure_message'])
+        print(meter_output['modeled_energy_trace']['fits']['baseline']['traceback'])
 
     return meter_output
 
