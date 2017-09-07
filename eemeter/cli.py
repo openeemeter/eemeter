@@ -160,7 +160,8 @@ def run_meter(project, trace_object, options=None):
 
     ee = EnergyEfficiencyMeter()
 
-    if 'ignore_data_sufficiency' in options.keys() and \
+    if options is not None and \
+       'ignore_data_sufficiency' in options.keys() and \
        options['ignore_data_sufficiency'] == True:
         trace_frequency = get_approximate_frequency(trace_object)
         if trace_frequency not in ['H', 'D', '15T', '30T']:
