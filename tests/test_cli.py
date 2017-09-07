@@ -1,6 +1,5 @@
 from click.testing import CliRunner
 from eemeter import cli
-import os
 
 def test_cli():
     runner = CliRunner()
