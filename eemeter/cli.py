@@ -305,6 +305,7 @@ def _analyze(inputs_path, show_all, tablefmt):
     trace_objects = build_traces(traces)
     meter_output_list = list()
 
+    meter_output_list = list()
     for project in projects:
         for trace_object in trace_objects:
             if trace_object.trace_id == project['project_id']:
