@@ -35,6 +35,7 @@ setup(
         'scikit-learn',
         'statsmodels >= 0.8.0rc1',
         'SQLAlchemy',
+        'tabulate',
     ],
     package_data={'': ['*.json', '*.gz']},
     setup_requires=['pytest-runner'],
