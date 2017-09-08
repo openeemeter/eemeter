@@ -178,6 +178,7 @@ def run_meter(project, trace_object):
 
     return meter_output
 
+
 def _analyze(inputs_path):
     projects = read_csv(os.path.join(inputs_path, 'projects.csv'))
     traces = read_csv(os.path.join(inputs_path, 'traces.csv'))
