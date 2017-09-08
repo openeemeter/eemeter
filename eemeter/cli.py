@@ -19,7 +19,50 @@ from eemeter.modeling.models.caltrack import CaltrackMonthlyModel
 
 @click.group()
 def cli():
-    pass
+    '''
+       \b
+       Example usage:
+           eemeter analyze /path/to/input/data
+       Or:
+           eemeter sample 
+
+       The latter will use the example dataset included in the Python package 
+       in the subdirectory "eemeter/sample_data".
+
+       This command will analyze a set of "traces," i.e. time series
+       of energy usage, using the eemeter. The input directory should
+       contain two files: projects.csv, and traces.csv.
+     
+       projects.csv specifies the project locations and the start and end
+       dates of the interventions to be analyzed:
+
+       \b
+           project_id, zipcode, project_start, project_end
+           ABC, 60640, 2015-12-31 00:00:00, 2016-01-01 00:00:00 
+           ...
+
+       traces.csv contains the usage time series
+
+       \b
+           start, value, project_id, interpretation
+           2015-01-01 00:00:00, 0.61683272591, ABC, gas
+           ...
+
+       Several common date/time formats are accepted. The project_id is a 
+       freeform string, and the interpretation should be "electricity" or 
+       "gas".
+
+       The most commonly-used outputs will be displayed on the terminal;
+       a more complete set of outputs may be requested by adding the
+       argument "--full-output". By default, the full output (if requested)
+       is placed in the directory "eemeter_output"; this may be overridden
+       using the argument "--output-dir=/path/to/output".
+
+       By default, the eemter will impose a 12-month requirement on both
+       the pre- and post-intervention usage time series. To ignore this
+       requirement, pass the option "--ignore-data-sufficiency".
+       
+    '''
 
 def slugify(value):
     """
