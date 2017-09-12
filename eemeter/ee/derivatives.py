@@ -32,7 +32,8 @@ logger = logging.getLogger(__name__)
 
 def unpack(modeled_trace, baseline_label, reporting_label,
            baseline_period, reporting_period,
-           weather_source, weather_normal_source):
+           weather_source, weather_normal_source,
+           derivative_freq='D'):
 
     baseline_output = modeled_trace.fit_outputs[baseline_label]
     reporting_output = modeled_trace.fit_outputs[reporting_label]
@@ -51,26 +52,32 @@ def unpack(modeled_trace, baseline_label, reporting_label,
 
     # Note: observed data uses project dates, not data dates
     # convert trace data to daily
-    daily_trace_data = formatter.daily_trace_data(trace)
-    if daily_trace_data.empty:
+    if derivative_freq == 'H':
+        trace_data = formatter.hourly_trace_data(trace)
+        normalyear_periods = 365*24
+    else:
+        derivative_freq = 'D'
+        trace_data = formatter.daily_trace_data(trace)
+        normalyear_periods = 365
+    if trace_data.empty:
         return None
 
     if baseline_start_date is None:
         baseline_period_data = \
-            daily_trace_data[:baseline_end_date].copy()
+            trace_data[:baseline_end_date].copy()
     else:
         baseline_period_data = \
-            daily_trace_data[baseline_start_date:baseline_end_date].copy()
+            trace_data[baseline_start_date:baseline_end_date].copy()
 
     project_period_data = \
-        daily_trace_data[baseline_end_date:reporting_start_date].copy()
+        trace_data[baseline_end_date:reporting_start_date].copy()
 
     if reporting_end_date is None:
         reporting_period_data = \
-            daily_trace_data[reporting_start_date:].copy()
+            trace_data[reporting_start_date:].copy()
     else:
         reporting_period_data = \
-            daily_trace_data[reporting_start_date:reporting_end_date].copy()
+            trace_data[reporting_start_date:reporting_end_date].copy()
 
     weather_source_success = (weather_source is not None)
     weather_normal_source_success = (weather_normal_source is not None)
@@ -78,11 +85,12 @@ def unpack(modeled_trace, baseline_label, reporting_label,
     # annualized fixture
     if weather_normal_source_success:
         normal_index = pd.date_range(
-            '2015-01-01', freq='D', periods=365, tz=pytz.UTC)
-        annualized_daily_fixture = formatter.create_demand_fixture(
+            '2015-01-01', freq=derivative_freq, periods=normalyear_periods, 
+            tz=pytz.UTC)
+        annualized_fixture = formatter.create_demand_fixture(
             normal_index, weather_normal_source)
     else:
-        annualized_daily_fixture = None
+        annualized_fixture = None
 
     # find start and end dates of reporting data
     if not reporting_period_data.empty:
@@ -107,64 +115,64 @@ def unpack(modeled_trace, baseline_label, reporting_label,
             reporting_data_start_date, reporting_data_end_date) and weather_source_success:
 
         if reporting_data_start_date == reporting_data_end_date:
-            reporting_period_daily_index = pd.Series([])
+            reporting_period_index = pd.Series([])
         else:
-            reporting_period_daily_index = pd.date_range(
+            reporting_period_index = pd.date_range(
                 start=reporting_data_start_date,
                 end=reporting_data_end_date,
-                freq='D',
+                freq=derivative_freq,
                 tz=pytz.UTC)
 
-        reporting_period_daily_fixture = formatter.create_demand_fixture(
-            reporting_period_daily_index, weather_source)
+        reporting_period_fixture = formatter.create_demand_fixture(
+            reporting_period_index, weather_source)
         reporting_period_fixture_success = True
-        if len(reporting_period_daily_fixture) == 0:
+        if len(reporting_period_fixture) == 0:
             reporting_period_fixture_success = False
 
         if baseline_data_start_date == baseline_data_end_date:
-            baseline_period_daily_index = pd.Series([])
+            baseline_period_index = pd.Series([])
         else:
-            baseline_period_daily_index = pd.date_range(
+            baseline_period_index = pd.date_range(
                 start=baseline_data_start_date,
                 end=baseline_data_end_date,
-                freq='D',
+                freq=derivative_freq,
                 tz=pytz.UTC)
 
-        baseline_period_daily_fixture = formatter.create_demand_fixture(
-            baseline_period_daily_index, weather_source)
+        baseline_period_fixture = formatter.create_demand_fixture(
+            baseline_period_index, weather_source)
         baseline_period_fixture_success = True
-        if len(baseline_period_daily_fixture) == 0:
+        if len(baseline_period_fixture) == 0:
             baseline_period_fixture_success = False
 
         # Apply mask which indicates where data is missing (with daily
         # resolution)
-        unmasked_reporting_period_daily_fixture = \
-            reporting_period_daily_fixture.copy()
+        unmasked_reporting_period_fixture = \
+            reporting_period_fixture.copy()
         if 'input_mask' in reporting_output.keys():
             reporting_mask = reporting_output['input_mask']
             for i, mask in reporting_mask.iteritems():
                 if pd.isnull(mask):
-                    reporting_period_daily_fixture[i] = np.nan
+                    reporting_period_fixture[i] = np.nan
         else:
             reporting_mask = pd.Series([])
 
-        unmasked_baseline_period_daily_fixture = \
-            baseline_period_daily_fixture.copy()
+        unmasked_baseline_period_fixture = \
+            baseline_period_fixture.copy()
         if 'input_mask' in baseline_output.keys():
             baseline_mask = baseline_output['input_mask']
             for i, mask in baseline_mask.iteritems():
                 if pd.isnull(mask):
-                    baseline_period_daily_fixture[i] = np.nan
+                    baseline_period_fixture[i] = np.nan
         else:
             baseline_mask = pd.Series([])
 
     else:
         reporting_mask = pd.Series([])
         baseline_mask = pd.Series([])
-        baseline_period_daily_fixture = None
-        reporting_period_daily_fixture = None
-        unmasked_baseline_period_daily_fixture = None
-        unmasked_reporting_period_daily_fixture = None
+        baseline_period_fixture = None
+        reporting_period_fixture = None
+        unmasked_baseline_period_fixture = None
+        unmasked_reporting_period_fixture = None
         baseline_period_fixture_success = False
         reporting_period_fixture_success = False
     return {
@@ -187,17 +195,17 @@ def unpack(modeled_trace, baseline_label, reporting_label,
             'reporting_period_data': reporting_period_data, 
             'weather_source_success': weather_source_success,
             'weather_normal_source_success': weather_normal_source_success,
-            'annualized_daily_fixture': annualized_daily_fixture,
+            'annualized_fixture': annualized_fixture,
             'baseline_model': baseline_model,
             'reporting_model': reporting_model,
-            'baseline_period_daily_fixture': baseline_period_daily_fixture,
+            'baseline_period_fixture': baseline_period_fixture,
             'baseline_period_fixture_success': baseline_period_fixture_success,
-            'reporting_period_daily_fixture': reporting_period_daily_fixture,
+            'reporting_period_fixture': reporting_period_fixture,
             'reporting_period_fixture_success': reporting_period_fixture_success,
             'baseline_mask': baseline_mask,
             'reporting_mask': reporting_mask,
-            'unmasked_baseline_period_daily_fixture': unmasked_baseline_period_daily_fixture,
-            'unmasked_reporting_period_daily_fixture': unmasked_reporting_period_daily_fixture,
+            'unmasked_baseline_period_fixture': unmasked_baseline_period_fixture,
+            'unmasked_reporting_period_fixture': unmasked_reporting_period_fixture,
             }
 
 def subtract_value_variance_tuple(tuple1, tuple2):
@@ -507,10 +515,10 @@ def cumulative_baseline_model_minus_reporting_model_normal_year(deriv_input):
         _report_failed_derivative(series)
         return None
 
-    try:
+    if True: #try:
         value, variance = subtract_value_variance_tuple(
-            deriv_input['baseline_model'].predict(deriv_input['annualized_daily_fixture'], summed=True),
-            deriv_input['reporting_model'].predict(deriv_input['annualized_daily_fixture'], summed=True))
+            deriv_input['baseline_model'].predict(deriv_input['annualized_fixture'], summed=True),
+            deriv_input['reporting_model'].predict(deriv_input['annualized_fixture'], summed=True))
         return {
                 'series': series,
                 'description': description,
@@ -518,7 +526,7 @@ def cumulative_baseline_model_minus_reporting_model_normal_year(deriv_input):
                 'value': [value, ],
                 'variance': [variance, ]
                }
-    except:
+    else: #except:
         _report_failed_derivative(series)
         return None
 
@@ -537,12 +545,12 @@ def baseline_model_minus_reporting_model_normal_year(deriv_input):
 
     try:
         value, variance = subtract_value_variance_tuple(
-            deriv_input['baseline_model'].predict(deriv_input['annualized_daily_fixture'], summed=False),
-            deriv_input['reporting_model'].predict(deriv_input['annualized_daily_fixture'], summed=False))
+            deriv_input['baseline_model'].predict(deriv_input['annualized_fixture'], summed=False),
+            deriv_input['reporting_model'].predict(deriv_input['annualized_fixture'], summed=False))
         return {
                 'series': series,
                 'description': description,
-                'orderable': [i.isoformat() for i in deriv_input['annualized_daily_fixture'].index],
+                'orderable': [i.isoformat() for i in deriv_input['annualized_fixture'].index],
                 'value': value.tolist(),
                 'variance': variance.tolist()
                }
@@ -563,7 +571,7 @@ def cumulative_baseline_model_normal_year(deriv_input):
 
     try:
         value, variance = deriv_input['baseline_model'].predict(
-                          deriv_input['annualized_daily_fixture'], summed=True)
+                          deriv_input['annualized_fixture'], summed=True)
         return {
                 'series': series,
                 'description': description,
@@ -587,11 +595,11 @@ def baseline_model_normal_year(deriv_input):
 
     try:
         value, variance = deriv_input['baseline_model'].predict(
-                    deriv_input['annualized_daily_fixture'], summed=False)
+                    deriv_input['annualized_fixture'], summed=False)
         return {
                 'series': series,
                 'description': description,
-                'orderable': [i.isoformat() for i in deriv_input['annualized_daily_fixture'].index],
+                'orderable': [i.isoformat() for i in deriv_input['annualized_fixture'].index],
                 'value': value.tolist(),
                 'variance': variance.tolist()
                }
@@ -613,7 +621,7 @@ def cumulative_baseline_model_reporting_period(deriv_input):
 
     try:
         value, variance = deriv_input['baseline_model'].predict(
-                          deriv_input['reporting_period_daily_fixture'], summed=True)
+                          deriv_input['reporting_period_fixture'], summed=True)
         return {
                 'series': series,
                 'description': description,
@@ -636,17 +644,17 @@ def baseline_model_reporting_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
-    try:
+    if True: #try
         value, variance = deriv_input['baseline_model'].predict(
-                          deriv_input['reporting_period_daily_fixture'], summed=False)
+                          deriv_input['reporting_period_fixture'], summed=False)
         return {
                 'series': series,
                 'description': description,
-                'orderable': [i.isoformat() for i in deriv_input['reporting_period_daily_fixture'].index],
+                'orderable': [i.isoformat() for i in deriv_input['reporting_period_fixture'].index],
                 'value': value.tolist(),
                 'variance': variance.tolist()
                }
-    except:
+    else:#except:
         _report_failed_derivative(series)
         return None
 
@@ -665,11 +673,11 @@ def masked_baseline_model_reporting_period(deriv_input):
 
     try:
         value, variance = deriv_input['baseline_model'].predict(
-                          deriv_input['reporting_period_daily_fixture'], summed=False)
+                          deriv_input['reporting_period_fixture'], summed=False)
         return {
                 'series': series,
                 'description': description,
-                'orderable': [i.isoformat() for i in deriv_input['reporting_period_daily_fixture'].index],
+                'orderable': [i.isoformat() for i in deriv_input['reporting_period_fixture'].index],
                 'value': [
                     v if not deriv_input['reporting_mask'].get(i, True) else None
                     for i, v in value.iteritems()
@@ -699,7 +707,7 @@ def cumulative_baseline_model_minus_observed_reporting_period(deriv_input):
     try:
         value, variance = subtract_value_variance_tuple(
                 deriv_input['baseline_model'].predict(
-                    deriv_input['reporting_period_daily_fixture'], summed=True),
+                    deriv_input['reporting_period_fixture'], summed=True),
                 (deriv_input['reporting_period_data'].sum(), 0)
             )
         return {
@@ -726,14 +734,14 @@ def baseline_model_minus_observed_reporting_period(deriv_input):
     try:
         value, variance = subtract_value_variance_tuple(
                 deriv_input['baseline_model'].predict(
-                    deriv_input['reporting_period_daily_fixture'], summed=False),
+                    deriv_input['reporting_period_fixture'], summed=False),
                 (deriv_input['reporting_period_data'], 0)
             )
 
         return {
                 'series': series,
                 'description': description,
-                'orderable': [i.isoformat() for i in deriv_input['reporting_period_daily_fixture'].index],
+                'orderable': [i.isoformat() for i in deriv_input['reporting_period_fixture'].index],
                 'value': value.tolist(),
                 'variance': variance.tolist()
                }
@@ -756,13 +764,13 @@ def masked_baseline_model_minus_observed_reporting_period(deriv_input):
     try:
         value, variance = subtract_value_variance_tuple(
                 deriv_input['baseline_model'].predict(
-                    deriv_input['reporting_period_daily_fixture'], summed=False),
+                    deriv_input['reporting_period_fixture'], summed=False),
                 (deriv_input['reporting_period_data'], 0)
             )
         return {
                 'series': series,
                 'description': description,
-                'orderable': [i.isoformat() for i in deriv_input['reporting_period_daily_fixture'].index],
+                'orderable': [i.isoformat() for i in deriv_input['reporting_period_fixture'].index],
                 'value': [
                     v if not deriv_input['reporting_mask'].get(i, True) else None
                     for i, v in value.iteritems()
@@ -787,11 +795,11 @@ def baseline_model_baseline_period(deriv_input):
         return None
     try:
         value, variance = deriv_input['baseline_model'].predict(
-                          deriv_input['baseline_period_daily_fixture'], summed=False)
+                          deriv_input['baseline_period_fixture'], summed=False)
         return {
                 'series': series,
                 'description': description,
-                'orderable': [i.isoformat() for i in deriv_input['baseline_period_daily_fixture'].index],
+                'orderable': [i.isoformat() for i in deriv_input['baseline_period_fixture'].index],
                 'value': value.tolist(),
                 'variance': variance.tolist()
                }
@@ -812,7 +820,7 @@ def cumulative_reporting_model_normal_year(deriv_input):
 
     try:
         value, variance = deriv_input['reporting_model'].predict(
-                    deriv_input['annualized_daily_fixture'], summed=True)
+                    deriv_input['annualized_fixture'], summed=True)
         return {
                 'series': series,
                 'description': description,
@@ -836,11 +844,11 @@ def reporting_model_normal_year(deriv_input):
 
     try:
         value, variance = deriv_input['reporting_model'].predict(
-                    deriv_input['annualized_daily_fixture'], summed=False)
+                    deriv_input['annualized_fixture'], summed=False)
         return {
                 'series': series,
                 'description': description,
-                'orderable': [i.isoformat() for i in deriv_input['annualized_daily_fixture'].index],
+                'orderable': [i.isoformat() for i in deriv_input['annualized_fixture'].index],
                 'value': value.tolist(),
                 'variance': variance.tolist()
                }
@@ -860,11 +868,11 @@ def reporting_model_reporting_period(deriv_input):
 
     try:
         value, variance = deriv_input['reporting_model'].predict(
-                deriv_input['reporting_period_daily_fixture'], summed=False)
+                deriv_input['reporting_period_fixture'], summed=False)
         return {
                 'series': series,
                 'description': description,
-                'orderable': [i.isoformat() for i in deriv_input['reporting_period_daily_fixture'].index],
+                'orderable': [i.isoformat() for i in deriv_input['reporting_period_fixture'].index],
                 'value': value.tolist(),
                 'variance': variance.tolist()
                }
@@ -989,9 +997,9 @@ def temperature_baseline_period(deriv_input):
                 'series': series,
                 'description': description,
                 'orderable': [
-                    i.isoformat() for i in deriv_input['unmasked_baseline_period_daily_fixture'].index],
-                'value': deriv_input['unmasked_baseline_period_daily_fixture']['tempF'].values.tolist(),
-                'variance': [0 for _ in range(deriv_input['unmasked_baseline_period_daily_fixture']['tempF'].shape[0])]
+                    i.isoformat() for i in deriv_input['unmasked_baseline_period_fixture'].index],
+                'value': deriv_input['unmasked_baseline_period_fixture']['tempF'].values.tolist(),
+                'variance': [0 for _ in range(deriv_input['unmasked_baseline_period_fixture']['tempF'].shape[0])]
                }
     except:
         _report_failed_derivative(series)
@@ -1010,9 +1018,9 @@ def temperature_reporting_period(deriv_input):
                 'series': series,
                 'description': description,
                 'orderable': [
-                    i.isoformat() for i in deriv_input['unmasked_reporting_period_daily_fixture'].index],
-                'value': deriv_input['unmasked_reporting_period_daily_fixture']['tempF'].values.tolist(),
-                'variance': [0 for _ in range(deriv_input['unmasked_reporting_period_daily_fixture']['tempF'].shape[0])]
+                    i.isoformat() for i in deriv_input['unmasked_reporting_period_fixture'].index],
+                'value': deriv_input['unmasked_reporting_period_fixture']['tempF'].values.tolist(),
+                'variance': [0 for _ in range(deriv_input['unmasked_reporting_period_fixture']['tempF'].shape[0])]
                }
     except:
         _report_failed_derivative(series)
@@ -1033,14 +1041,14 @@ def masked_temperature_reporting_period(deriv_input):
                 'series': series,
                 'description': description,
                 'orderable': [
-                    i.isoformat() for i in deriv_input['unmasked_reporting_period_daily_fixture'].index],
+                    i.isoformat() for i in deriv_input['unmasked_reporting_period_fixture'].index],
                 'value': [
                     v if not deriv_input['reporting_mask'].get(i, True) else None
-                    for i, v in deriv_input['unmasked_reporting_period_daily_fixture']['tempF'].iteritems()
+                    for i, v in deriv_input['unmasked_reporting_period_fixture']['tempF'].iteritems()
                 ],
                 'variance': [
                     0 if not deriv_input['reporting_mask'].get(i, True) else None
-                    for i, v in deriv_input['unmasked_reporting_period_daily_fixture']['tempF'].iteritems()
+                    for i, v in deriv_input['unmasked_reporting_period_fixture']['tempF'].iteritems()
                 ]
                }
     except:
@@ -1059,9 +1067,9 @@ def temperature_normal_year(deriv_input):
                 'series': series,
                 'description': description,
                 'orderable': [
-                    i.isoformat() for i in deriv_input['annualized_daily_fixture'].index],
-                'value': deriv_input['annualized_daily_fixture']['tempF'].values.tolist(),
-                'variance': [0 for _ in range(deriv_input['annualized_daily_fixture']['tempF'].shape[0])]
+                    i.isoformat() for i in deriv_input['annualized_fixture'].index],
+                'value': deriv_input['annualized_fixture']['tempF'].values.tolist(),
+                'variance': [0 for _ in range(deriv_input['annualized_fixture']['tempF'].shape[0])]
                }
     except:
         _report_failed_derivative(series)

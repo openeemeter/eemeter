@@ -1,8 +1,8 @@
 from collections import OrderedDict
 import datetime
 import pytz
-import csv
-import os
+import csv, json
+import os, sys, errno
 import click
 import pandas as pd
 from scipy import stats
@@ -21,8 +21,60 @@ from eemeter.modeling.formatters import ModelDataFormatter
 
 @click.group()
 def cli():
-    pass
+    '''
+       \b
+       Example usage:
+           eemeter analyze /path/to/input/data
+       Or:
+           eemeter sample 
 
+       The latter will use the example dataset included in the Python package 
+       in the subdirectory "eemeter/sample_data".
+
+       This command will analyze a set of "traces," i.e. time series
+       of energy usage, using the eemeter. The input directory should
+       contain two files: projects.csv, and traces.csv.
+     
+       projects.csv specifies the project locations and the start and end
+       dates of the interventions to be analyzed:
+
+       \b
+           project_id, zipcode, project_start, project_end
+           ABC, 60640, 2015-12-31 00:00:00, 2016-01-01 00:00:00 
+           ...
+
+       traces.csv contains the usage time series
+
+       \b
+           start, value, project_id, interpretation
+           2015-01-01 00:00:00, 0.61683272591, ABC, gas
+           ...
+
+       Several common date/time formats are accepted. The project_id is a 
+       freeform string, and the interpretation should be "electricity" or 
+       "gas".
+
+       The most commonly-used outputs will be displayed on the terminal;
+       a more complete set of outputs may be requested by adding the
+       argument "--full-output". By default, the full output (if requested)
+       is placed in the directory "eemeter_output"; this may be overridden
+       using the argument "--output-dir=/path/to/output".
+
+       By default, the eemter will impose a 12-month requirement on both
+       the pre- and post-intervention usage time series. To ignore this
+       requirement, pass the option "--ignore-data-sufficiency".
+       
+    '''
+
+def slugify(value):
+    """
+    Normalizes string, converts to lowercase, removes non-alpha characters,
+    and converts spaces to underscores.
+    """
+    value = value.strip().lower()
+    value = value.replace(',', '')
+    value = value.replace(' ', '_')
+    return value
 
 def serialize_meter_input(
         trace, zipcode, retrofit_start_date, retrofit_end_date):
@@ -149,41 +201,54 @@ def build_traces(trace_records):
     return trace_objects
 
 
-def run_meter(project, trace_object, options=None):
-    print("\n\nRunning a meter for %s %s" % (
-        trace_object.trace_id, trace_object.interpretation)
-    )
-    meter_input = serialize_meter_input(
-        trace_object,
-        project['zipcode'],
-        project['project_start'],
-        project['project_end']
-    )
+def full_output(meter_output, dirname, trace_id):
+    cwd = os.getcwd()
+    if not os.path.exists(dirname):
+        try:
+            os.mkdir(dirname)
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                raise
+    try:
+        os.chdir(dirname)
+    except:
+        print("WARNING: Cannot go to output directory "+dirname)
+        os.chdir(cwd)
+        return
+    try:
+        os.mkdir(trace_id)
+    except OSError as exc:
+        if exc.errno != errno.EEXIST:
+            raise
+    try:
+        os.chdir(trace_id)
+    except:
+        print("WARNING: Cannot create trace output directory "+trace_id)
+        os.chdir(cwd)
+        return
 
-    ee = EnergyEfficiencyMeter()
+    with open('output.json', 'w') as f:
+        json.dump(meter_output, f)
 
-    if options is not None and \
-       'ignore_data_sufficiency' in options.keys() and \
-       options['ignore_data_sufficiency'] == True:
-        trace_frequency = get_approximate_frequency(trace_object)
-        if trace_frequency not in ['H', 'D', '15T', '30T']:
-             trace_frequency = None
-        selector = (trace_object.interpretation, trace_frequency)
-        model = ee._get_model(None, selector)
-    
-        model_class, model_kwargs = model
-    
-        if model_class == CaltrackMonthlyModel:
-            model_kwargs['min_contiguous_baseline_months'] = 0
-            model_kwargs['min_contiguous_reporting_months'] = 0
-        else:
-            model_kwargs['min_contiguous_months'] = 0
+    with open('log', 'w') as f:
+        for line in meter_output['logs']:
+            f.write(line + '\n')
 
-    meter_output = ee.evaluate(meter_input, 
-                               formatter = (ModelDataFormatter, {'freq_str': 'D'}),
-                               model = (HourlyLoadProfileModel, { 'fit_cdd': True, 'grid_search': True, })
-                              )
+    for derivative in meter_output['derivatives']:
+        series_name = slugify(derivative['series'])
+        with open(series_name, 'w') as f:
+            fcsv = csv.writer(f)
+            fcsv.writerow(['Orderable', 'Value', 'Variance'])
+            for o, v, va in zip(derivative['orderable'], 
+                                derivative['value'], 
+                                derivative['variance']):
+                fcsv.writerow([o, v, va])
 
+    print("Created full output in "+os.getcwd())
+    os.chdir(cwd)
+
+
+def basic_output(meter_output):
     # Compute and output the annualized weather normal
     series_name = \
         'Cumulative baseline model minus reporting model, normal year'
@@ -245,6 +310,51 @@ def run_meter(project, trace_object, options=None):
         print("Reporting period savings estimates not computed due to error:")
         print(meter_output['modeled_energy_trace']['fits']['baseline']['traceback'])
 
+
+
+def run_meter(project, trace_object, options=None):
+    print("\n\nRunning a meter for %s %s" % (
+        trace_object.trace_id, trace_object.interpretation)
+    )
+    meter_input = serialize_meter_input(
+        trace_object,
+        project['zipcode'],
+        project['project_start'],
+        project['project_end']
+    )
+
+    ee = EnergyEfficiencyMeter()
+
+    if options is not None and \
+       'ignore_data_sufficiency' in options.keys() and \
+       options['ignore_data_sufficiency'] == True:
+        trace_frequency = get_approximate_frequency(trace_object)
+        if trace_frequency not in ['H', 'D', '15T', '30T']:
+             trace_frequency = None
+        selector = (trace_object.interpretation, trace_frequency)
+        model = ee._get_model(None, selector)
+    
+        model_class, model_kwargs = model
+    
+        if model_class == CaltrackMonthlyModel:
+            model_kwargs['min_contiguous_baseline_months'] = 0
+            model_kwargs['min_contiguous_reporting_months'] = 0
+        else:
+            model_kwargs['min_contiguous_months'] = 0
+
+    #meter_output = ee.evaluate(meter_input, 
+    #    formatter = (ModelDataFormatter, {'freq_str': 'H'}),
+    #    model = (HourlyLoadProfileModel, { 'fit_cdd': False, 'grid_search': True, })
+    #    )
+    meter_output = ee.evaluate(meter_input)
+    basic_output(meter_output)
+
+    if options is not None and \
+       'full_output' in options.keys() and \
+       options['full_output']:
+        trace_output_dir = trace_object.trace_id + '.' + \
+                           trace_object.interpretation
+        full_output(meter_output, options['output_dir'], trace_output_dir)
     return meter_output
 
 
@@ -283,17 +393,27 @@ def _get_sample_inputs_path():
 
 
 @cli.command()
-def sample():
+@click.option('--full-output', is_flag=True, default=False,
+              help='Create full eemeter output files')
+@click.option('--output-dir', default='eemeter_output',
+              help='Directory in which to put the full eemeter output.')
+def sample(full_output, output_dir):
     sample_inputs_path = _get_sample_inputs_path()
+    options = { 'full_output': full_output, 'output_dir': output_dir } 
     print("Going to analyze the sample data set")
     print("")
-    _analyze(sample_inputs_path)
+    _analyze(sample_inputs_path, options)
 
 
 @cli.command()
 @click.argument('inputs_path', type=click.Path(exists=True))
 @click.option('--ignore-data-sufficiency', is_flag=True,
               help='Ignore the data sufficiency requirements.')
-def analyze(inputs_path, ignore_data_sufficiency):
-    options = { 'ignore_data_sufficiency': ignore_data_sufficiency } 
+@click.option('--full-output', is_flag=True, default=False,
+              help='Create full eemeter output files')
+@click.option('--output-dir', default='eemeter_output',
+              help='Directory in which to put the full eemeter output.')
+def analyze(inputs_path, ignore_data_sufficiency, full_output, output_dir):
+    options = { 'ignore_data_sufficiency': ignore_data_sufficiency,
+                'full_output': full_output, 'output_dir': output_dir } 
     _analyze(inputs_path, options=options)
