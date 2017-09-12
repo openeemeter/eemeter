@@ -15,6 +15,8 @@ from eemeter.processors.dispatchers import (
 )
 from eemeter.modeling.models.caltrack_daily import CaltrackDailyModel
 from eemeter.modeling.models.caltrack import CaltrackMonthlyModel
+from eemeter.modeling.models.hourly_load_profile import HourlyLoadProfileModel
+from eemeter.modeling.formatters import ModelDataFormatter
 
 
 @click.group()
@@ -160,7 +162,8 @@ def run_meter(project, trace_object, options=None):
 
     ee = EnergyEfficiencyMeter()
 
-    if 'ignore_data_sufficiency' in options.keys() and \
+    if options is not None and \
+       'ignore_data_sufficiency' in options.keys() and \
        options['ignore_data_sufficiency'] == True:
         trace_frequency = get_approximate_frequency(trace_object)
         if trace_frequency not in ['H', 'D', '15T', '30T']:
@@ -176,7 +179,10 @@ def run_meter(project, trace_object, options=None):
         else:
             model_kwargs['min_contiguous_months'] = 0
 
-    meter_output = ee.evaluate(meter_input)
+    meter_output = ee.evaluate(meter_input, 
+                               formatter = (ModelDataFormatter, {'freq_str': 'D'}),
+                               model = (HourlyLoadProfileModel, { 'fit_cdd': True, 'grid_search': True, })
+                              )
 
     # Compute and output the annualized weather normal
     series_name = \
