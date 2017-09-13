@@ -372,6 +372,8 @@ def _analyze(inputs_path, options=None):
 
     return meter_output_list
 
+    return meter_output
+
 
 def _load_projects_and_traces(inputs_path):
     projects = read_csv(os.path.join(inputs_path, 'projects.csv'))
@@ -385,7 +387,14 @@ def _load_projects_and_traces(inputs_path):
         row['project_end'] = flexible_date_reader(row['project_end'])
 
     trace_objects = build_traces(traces)
-    return projects, trace_objects
+
+    meter_output_list = []
+    for project in projects:
+        for trace_object in trace_objects:
+            if trace_object.trace_id == project['project_id']:
+                meter_output_list.append(run_meter(project, trace_object))
+
+    return meter_output_list
 
 
 def _get_sample_inputs_path():
