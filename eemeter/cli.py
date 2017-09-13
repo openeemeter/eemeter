@@ -366,13 +366,14 @@ def _analyze(inputs_path, options=None):
     for project in projects:
         for trace_object in trace_objects:
             if trace_object.trace_id == project['project_id']:
-                meter_output_list.append(run_meter(project,
-                                                   trace_object,
-                                                   options=options))
+                meter_outputs = run_meter(
+                    project,
+                    trace_object,
+                    options=options
+                )
+                meter_output_list.append(meter_outputs)
 
     return meter_output_list
-
-    return meter_output
 
 
 def _load_projects_and_traces(inputs_path):
@@ -388,13 +389,7 @@ def _load_projects_and_traces(inputs_path):
 
     trace_objects = build_traces(traces)
 
-    meter_output_list = []
-    for project in projects:
-        for trace_object in trace_objects:
-            if trace_object.trace_id == project['project_id']:
-                meter_output_list.append(run_meter(project, trace_object))
-
-    return meter_output_list
+    return projects, trace_objects
 
 
 def _get_sample_inputs_path():
