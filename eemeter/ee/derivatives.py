@@ -1,34 +1,12 @@
 import logging
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 
-from six import string_types
 import numpy as np
 import pandas as pd
 import pytz
-from functools import reduce
-
-from eemeter import get_version
-from eemeter.modeling.formatters import (
-    ModelDataFormatter,
-    ModelDataBillingFormatter,
-)
-from eemeter.modeling.models import CaltrackMonthlyModel, CaltrackDailyModel
-from eemeter.modeling.split import SplitModeledEnergyTrace
-from eemeter.io.serializers import (
-    deserialize_meter_input,
-    serialize_derivatives,
-    serialize_split_modeled_energy_trace,
-)
-from eemeter.processors.dispatchers import (
-    get_approximate_frequency,
-)
-from eemeter.processors.location import (
-    get_weather_normal_source,
-    get_weather_source,
-)
-from eemeter.structures import ZIPCodeSite
 
 logger = logging.getLogger(__name__)
+
 
 def unpack(modeled_trace, baseline_label, reporting_label,
            baseline_period, reporting_period,
@@ -182,9 +160,9 @@ def unpack(modeled_trace, baseline_label, reporting_label,
             'reporting_end_date': reporting_end_date,
             'reporting_data_start_date': reporting_data_start_date,
             'reporting_data_end_date': reporting_data_end_date,
-            'baseline_period_data': baseline_period_data, 
-            'project_period_data': project_period_data, 
-            'reporting_period_data': reporting_period_data, 
+            'baseline_period_data': baseline_period_data,
+            'project_period_data': project_period_data,
+            'reporting_period_data': reporting_period_data,
             'weather_source_success': weather_source_success,
             'weather_normal_source_success': weather_normal_source_success,
             'annualized_daily_fixture': annualized_daily_fixture,
@@ -199,6 +177,7 @@ def unpack(modeled_trace, baseline_label, reporting_label,
             'unmasked_baseline_period_daily_fixture': unmasked_baseline_period_daily_fixture,
             'unmasked_reporting_period_daily_fixture': unmasked_reporting_period_daily_fixture,
             }
+
 
 def subtract_value_variance_tuple(tuple1, tuple2):
     (val1, var1), (val2, var2) = tuple1, tuple2
@@ -218,11 +197,13 @@ def serialize_observed(series):
         for start, value in series.iteritems()
     ])
 
+
 def _report_failed_derivative(series):
     logger.warning(
         'Failed computing derivative (series={})'
         .format(series)
     )
+
 
 def hdd_balance_point_baseline(deriv_input):
     series = 'Heating degree day balance point, baseline period'
@@ -250,6 +231,7 @@ def hdd_balance_point_baseline(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def hdd_coefficient_baseline(deriv_input):
     series = 'Best-fit heating coefficient, baseline period'
     description = '''Best-fit heating coefficient,
@@ -264,9 +246,9 @@ def hdd_coefficient_baseline(deriv_input):
        'hdd_bp' in deriv_input['baseline_output']['model_fit']['model_params'] and \
        'coefficients' in deriv_input['baseline_output']['model_fit']['model_params'] and \
        'HDD_' + str(deriv_input['baseline_output']['model_fit']['model_params']['hdd_bp']) \
-           in deriv_input['baseline_output']['model_fit']['model_params']['coefficients']:
-        value = deriv_input['baseline_output']['model_fit']['model_params']['coefficients']\
-                ['HDD_' + str(deriv_input['baseline_output']['model_fit']['model_params']['hdd_bp'])]
+            in deriv_input['baseline_output']['model_fit']['model_params']['coefficients']:
+        value = deriv_input['baseline_output']['model_fit']['model_params']['coefficients'][
+            'HDD_' + str(deriv_input['baseline_output']['model_fit']['model_params']['hdd_bp'])]
 
         return {
                 'series': series,
@@ -278,6 +260,7 @@ def hdd_coefficient_baseline(deriv_input):
     else:
         _report_failed_derivative(series)
         return None
+
 
 def cdd_balance_point_baseline(deriv_input):
     series = 'Cooling degree day balance point, baseline period'
@@ -304,6 +287,7 @@ def cdd_balance_point_baseline(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def cdd_coefficient_baseline(deriv_input):
     series = 'Best-fit cooling coefficient, baseline period'
     description = '''Best-fit cooling coefficient,
@@ -318,9 +302,9 @@ def cdd_coefficient_baseline(deriv_input):
        'cdd_bp' in deriv_input['baseline_output']['model_fit']['model_params'] and \
        'coefficients' in deriv_input['baseline_output']['model_fit']['model_params'] and \
        'CDD_' + str(deriv_input['baseline_output']['model_fit']['model_params']['cdd_bp']) \
-           in deriv_input['baseline_output']['model_fit']['model_params']['coefficients']:
-        value = deriv_input['baseline_output']['model_fit']['model_params']['coefficients']\
-                ['CDD_' + str(deriv_input['baseline_output']['model_fit']['model_params']['cdd_bp'])]
+            in deriv_input['baseline_output']['model_fit']['model_params']['coefficients']:
+        value = deriv_input['baseline_output']['model_fit']['model_params']['coefficients'][
+            'CDD_' + str(deriv_input['baseline_output']['model_fit']['model_params']['cdd_bp'])]
 
         return {
                 'series': series,
@@ -332,6 +316,7 @@ def cdd_coefficient_baseline(deriv_input):
     else:
         _report_failed_derivative(series)
         return None
+
 
 def intercept_baseline(deriv_input):
     series = 'Best-fit intercept, baseline period'
@@ -357,6 +342,7 @@ def intercept_baseline(deriv_input):
     else:
         _report_failed_derivative(series)
         return None
+
 
 def hdd_balance_point_reporting(deriv_input):
     series = 'Heating degree day balance point, reporting period'
@@ -384,6 +370,7 @@ def hdd_balance_point_reporting(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def hdd_coefficient_reporting(deriv_input):
     series = 'Best-fit heating coefficient, reporting period'
     description = '''Best-fit heating coefficient,
@@ -398,9 +385,9 @@ def hdd_coefficient_reporting(deriv_input):
        'hdd_bp' in deriv_input['reporting_output']['model_fit']['model_params'] and \
        'coefficients' in deriv_input['reporting_output']['model_fit']['model_params'] and \
        'HDD_' + str(deriv_input['reporting_output']['model_fit']['model_params']['hdd_bp']) \
-           in deriv_input['reporting_output']['model_fit']['model_params']['coefficients']:
-        value = deriv_input['reporting_output']['model_fit']['model_params']['coefficients']\
-                ['HDD_' + str(deriv_input['reporting_output']['model_fit']['model_params']['hdd_bp'])]
+            in deriv_input['reporting_output']['model_fit']['model_params']['coefficients']:
+        value = deriv_input['reporting_output']['model_fit']['model_params']['coefficients'][
+            'HDD_' + str(deriv_input['reporting_output']['model_fit']['model_params']['hdd_bp'])]
 
         return {
                 'series': series,
@@ -412,6 +399,7 @@ def hdd_coefficient_reporting(deriv_input):
     else:
         _report_failed_derivative(series)
         return None
+
 
 def cdd_balance_point_reporting(deriv_input):
     series = 'Cooling degree day balance point, reporting period'
@@ -438,6 +426,7 @@ def cdd_balance_point_reporting(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def cdd_coefficient_reporting(deriv_input):
     series = 'Best-fit cooling coefficient, reporting period'
     description = '''Best-fit cooling coefficient,
@@ -452,9 +441,9 @@ def cdd_coefficient_reporting(deriv_input):
        'cdd_bp' in deriv_input['reporting_output']['model_fit']['model_params'] and \
        'coefficients' in deriv_input['reporting_output']['model_fit']['model_params'] and \
        'CDD_' + str(deriv_input['reporting_output']['model_fit']['model_params']['cdd_bp']) \
-           in deriv_input['reporting_output']['model_fit']['model_params']['coefficients']:
-        value = deriv_input['reporting_output']['model_fit']['model_params']['coefficients']\
-                ['CDD_' + str(deriv_input['reporting_output']['model_fit']['model_params']['cdd_bp'])]
+            in deriv_input['reporting_output']['model_fit']['model_params']['coefficients']:
+        value = deriv_input['reporting_output']['model_fit']['model_params']['coefficients'][
+            'CDD_' + str(deriv_input['reporting_output']['model_fit']['model_params']['cdd_bp'])]
 
         return {
                 'series': series,
@@ -466,6 +455,7 @@ def cdd_coefficient_reporting(deriv_input):
     else:
         _report_failed_derivative(series)
         return None
+
 
 def intercept_reporting(deriv_input):
     series = 'Best-fit intercept, reporting period'
@@ -522,6 +512,7 @@ def cumulative_baseline_model_minus_reporting_model_normal_year(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def baseline_model_minus_reporting_model_normal_year(deriv_input):
     series = 'Baseline model minus reporting model, normal year'
     description = '''Predicted usage according to the baseline model
@@ -550,6 +541,7 @@ def baseline_model_minus_reporting_model_normal_year(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def cumulative_baseline_model_normal_year(deriv_input):
     series = 'Cumulative baseline model, normal year'
     description = '''Total predicted usage according to the baseline model
@@ -575,6 +567,7 @@ def cumulative_baseline_model_normal_year(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def baseline_model_normal_year(deriv_input):
     series = 'Baseline model, normal year'
     description = '''Predicted usage according to the baseline model
@@ -598,6 +591,7 @@ def baseline_model_normal_year(deriv_input):
     except:
         _report_failed_derivative(series)
         return None
+
 
 def cumulative_baseline_model_reporting_period(deriv_input):
     series = 'Cumulative baseline model, reporting period'
@@ -625,6 +619,7 @@ def cumulative_baseline_model_reporting_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def baseline_model_reporting_period(deriv_input):
     series = 'Baseline model, reporting period'
     description = '''Predicted usage according to the baseline model
@@ -649,6 +644,7 @@ def baseline_model_reporting_period(deriv_input):
     except:
         _report_failed_derivative(series)
         return None
+
 
 def masked_baseline_model_reporting_period(deriv_input):
     series = 'Masked baseline model, reporting period'
@@ -683,6 +679,7 @@ def masked_baseline_model_reporting_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def cumulative_baseline_model_minus_observed_reporting_period(deriv_input):
     series = 'Cumulative baseline model minus observed, reporting period'
     description = '''Total predicted usage according to the baseline model
@@ -713,6 +710,7 @@ def cumulative_baseline_model_minus_observed_reporting_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def baseline_model_minus_observed_reporting_period(deriv_input):
     series = 'Baseline model minus observed, reporting period'
     description = '''Predicted usage according to the baseline model
@@ -740,6 +738,7 @@ def baseline_model_minus_observed_reporting_period(deriv_input):
     except:
         _report_failed_derivative(series)
         return None
+
 
 def masked_baseline_model_minus_observed_reporting_period(deriv_input):
     series = 'Masked baseline model minus observed, reporting period'
@@ -776,6 +775,7 @@ def masked_baseline_model_minus_observed_reporting_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def baseline_model_baseline_period(deriv_input):
     series = 'Baseline model, baseline period'
     description = '''Predicted usage according to the baseline model
@@ -799,12 +799,13 @@ def baseline_model_baseline_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def cumulative_reporting_model_normal_year(deriv_input):
     series = 'Cumulative reporting model, normal year'
     description = '''Total predicted usage according to the reporting model
                      over the reporting period.  Days for which normal year
                      weather data does not exist are removed.'''
-    
+
     if (not deriv_input['weather_normal_source_success']) or \
        (not deriv_input['reporting_model_success']):
         _report_failed_derivative(series)
@@ -823,6 +824,7 @@ def cumulative_reporting_model_normal_year(deriv_input):
     except:
         _report_failed_derivative(series)
         return None
+
 
 def reporting_model_normal_year(deriv_input):
     series = 'Reporting model, normal year'
@@ -848,6 +850,7 @@ def reporting_model_normal_year(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def reporting_model_reporting_period(deriv_input):
     series = 'Reporting model, reporting period'
     description = '''Predicted usage according to the reporting model
@@ -872,6 +875,7 @@ def reporting_model_reporting_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def cumulative_observed_reporting_period(deriv_input):
     series = 'Cumulative observed, reporting period'
     description = '''Total observed usage over the reporting period.
@@ -890,6 +894,7 @@ def cumulative_observed_reporting_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def observed_reporting_period(deriv_input):
     series = 'Observed, reporting period'
     description = '''Observed usage over the reporting period.'''
@@ -904,6 +909,7 @@ def observed_reporting_period(deriv_input):
     except:
         _report_failed_derivative(series)
         return None
+
 
 def masked_observed_reporting_period(deriv_input):
     series = 'Masked observed, reporting period'
@@ -928,6 +934,7 @@ def masked_observed_reporting_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def cumulative_observed_baseline_period(deriv_input):
     series = 'Cumulative observed, baseline period'
     description = '''Total observed usage over the baseline period.
@@ -946,6 +953,7 @@ def cumulative_observed_baseline_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def observed_baseline_period(deriv_input):
     series = 'Observed, baseline period'
     description = '''Observed usage over the baseline period.'''
@@ -961,6 +969,7 @@ def observed_baseline_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def observed_project_period(deriv_input):
     series = 'Observed, project period'
     description = '''Observed usage over the project period.'''
@@ -975,6 +984,7 @@ def observed_project_period(deriv_input):
     except:
         _report_failed_derivative(series)
         return None
+
 
 def temperature_baseline_period(deriv_input):
     series = 'Temperature, baseline period'
@@ -996,6 +1006,7 @@ def temperature_baseline_period(deriv_input):
     except:
         _report_failed_derivative(series)
         return None
+
 
 def temperature_reporting_period(deriv_input):
     series = 'Temperature, reporting period'
@@ -1047,6 +1058,7 @@ def masked_temperature_reporting_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def temperature_normal_year(deriv_input):
     series = 'Temperature, normal year'
     description = '''Observed temperature (degF) over the normal year.'''
@@ -1067,6 +1079,7 @@ def temperature_normal_year(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def baseline_mask(deriv_input):
     series = 'Inclusion mask, baseline period'
     description = '''Mask for baseline period data which is included in
@@ -1083,6 +1096,7 @@ def baseline_mask(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def reporting_mask(deriv_input):
     series = 'Inclusion mask, reporting period'
     description = '''Mask for reporting period data which is included in
@@ -1098,4 +1112,3 @@ def reporting_mask(deriv_input):
     except:
         _report_failed_derivative(series)
         return None
-
