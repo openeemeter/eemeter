@@ -51,7 +51,7 @@ class DayOfWeekBasedLinearRegression(object):
         if 'tempF' not in df:
             raise ValueError("tempF column not in Dataframe")
 
-        hdd = np.maximum(df.tempF - self.hdd_base_temp, 0)
+        hdd = np.maximum(self.hdd_base_temp - df.tempF, 0)
         df_with_hdd = df.assign(hdd=hdd)
         return df_with_hdd
 
@@ -59,7 +59,7 @@ class DayOfWeekBasedLinearRegression(object):
         if 'tempF' not in df:
             raise ValueError("tempF column not in Dataframe")
 
-        cdd = np.maximum(self.cdd_base_temp - df.tempF, 0)
+        cdd = np.maximum(df.tempF - self.cdd_base_temp, 0)
         df_with_cdd = df.assign(cdd=cdd)
         return df_with_cdd
 
