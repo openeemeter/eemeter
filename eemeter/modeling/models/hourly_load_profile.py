@@ -1,6 +1,5 @@
-import numpy as np
 import pandas as pd
-import patsy, datetime
+import datetime
 import eemeter.modeling.exceptions as model_exceptions
 from eemeter.modeling.models.caltrack_daily import CaltrackDailyModel
 
@@ -10,7 +9,7 @@ class HourlyLoadProfileModel(object):
             self, fit_cdd=True, grid_search=False, min_fraction_coverage=0.9,
             min_contiguous_months=12,
             modeling_period_interpretation='baseline',
-            **kwargs): 
+            **kwargs):
 
         self.fit_cdd = fit_cdd
         self.grid_search = grid_search
@@ -29,10 +28,10 @@ class HourlyLoadProfileModel(object):
         self.min_contiguous_months = min_contiguous_months
         self.modeling_period_interpretation = modeling_period_interpretation
         self.caltrack_model = CaltrackDailyModel(
-            fit_cdd = fit_cdd, grid_search = grid_search,
-            min_fraction_coverage = min_fraction_coverage,
-            min_contiguous_months = min_contiguous_months,
-            modeling_period_interpretation = modeling_period_interpretation)
+            fit_cdd=fit_cdd, grid_search=grid_search,
+            min_fraction_coverage=min_fraction_coverage,
+            min_contiguous_months=min_contiguous_months,
+            modeling_period_interpretation=modeling_period_interpretation)
 
     def __repr__(self):
         return 'HourlyLoadProfileModel'
@@ -42,9 +41,9 @@ class HourlyLoadProfileModel(object):
             raise model_exceptions.DataSufficiencyException(
                   "Billing data is not appropriate for this model")
         self.input_data = input_data
-        input_data_daily = input_data.resample('D').apply({'energy': pd.Series.sum,
-                                                          'tempF': pd.Series.mean})
-        caltrack_model_output = self.caltrack_model.fit(input_data_daily)
+        input_data_daily = input_data.resample('D').apply(
+            {'energy': pd.Series.sum, 'tempF': pd.Series.mean})
+        self.caltrack_model.fit(input_data_daily)
 
         self.params = {
             "coefficients": self.caltrack_model.model_res.params.to_dict(),
@@ -92,30 +91,33 @@ class HourlyLoadProfileModel(object):
         if params is None:
             params = self.params
 
-        df_daily, _ = self.caltrack_model.predict(demand_fixture_data.resample('D').mean(), 
-                                                  summed=False)
+        df_daily, _ = self.caltrack_model.predict(
+            demand_fixture_data.resample('D').mean(),
+            summed=False)
         output_data = pd.DataFrame({
             'predicted': demand_fixture_data.tempF * 0.,
             'variance': demand_fixture_data.tempF * 0.},
             index=demand_fixture_data.index)
 
-        ii = self.input_data.groupby([self.input_data.index.month, 
-                                      self.input_data.index.dayofweek < 5, 
-                                      self.input_data.index.hour]).energy.mean()
-        jj = self.input_data.groupby([self.input_data.index.month, 
-                                      self.input_data.index.dayofweek < 5, 
+        ii = self.input_data.groupby([self.input_data.index.month,
+                                      self.input_data.index.dayofweek < 5,
+                                      self.input_data.index.hour
+                                      ]).energy.mean()
+        jj = self.input_data.groupby([self.input_data.index.month,
+                                      self.input_data.index.dayofweek < 5,
                                       self.input_data.index.hour]).energy.std()
-        output_data.predicted = ii.loc[zip(output_data.index.month, 
-                                           output_data.index.dayofweek < 5, 
+        output_data.predicted = ii.loc[zip(output_data.index.month,
+                                           output_data.index.dayofweek < 5,
                                            output_data.index.hour)].values
-        output_data.variance = jj.loc[zip(output_data.index.month, 
-                                          output_data.index.dayofweek < 5, 
+        output_data.variance = jj.loc[zip(output_data.index.month,
+                                          output_data.index.dayofweek < 5,
                                           output_data.index.hour)].values
         output_data_daily = output_data.predicted.resample('D').sum()
         output_factors = df_daily / output_data_daily
         nextday = df_daily.index[-1] + datetime.timedelta(days=1)
-        output_factors = output_factors.append(pd.Series([0.], 
-                                               index=pd.date_range(nextday, nextday)))
+        output_factors = output_factors.append(pd.Series([0.],
+                                               index=pd.date_range(nextday,
+                                                                   nextday)))
         output_factors = output_factors.resample('H').ffill()[:-1]
         output_data['predicted'] = output_data['predicted'] * output_factors
         output_data['variance'] = output_data['variance'] * output_factors**2
