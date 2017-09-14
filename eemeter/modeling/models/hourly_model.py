@@ -173,9 +173,9 @@ class DayOfWeekBasedLinearRegression(object):
         # A Series DS
         variance_series = self.compute_variance(test_df)
         if summed:
-            predicted = np.sum(prediction)
+            prediction = np.sum(prediction)
             variance = np.sum(variance_series)
-        return predicted, variance
+        return prediction, variance
 
 
     def forecast(self, df):
