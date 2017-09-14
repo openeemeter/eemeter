@@ -95,13 +95,13 @@ def unpack(modeled_trace, baseline_label, reporting_label,
     # annualized fixture
     if weather_normal_source_success:
         normal_index = pd.date_range(
-            '2015-01-01', freq=derivative_freq, periods=normalyear_periods, 
+            '2015-01-01', freq=derivative_freq, periods=normalyear_periods,
             tz=pytz.UTC)
         annualized_fixture = formatter.create_demand_fixture(
             normal_index, weather_normal_source)
         if hourly_trace_data is not None:
             normal_index = pd.date_range(
-                '2015-01-01', freq='H', periods=normalyear_periods, 
+                '2015-01-01', freq='H', periods=normalyear_periods,
                 tz=pytz.UTC)
             hourly_annualized_fixture = formatter.create_demand_fixture(
                 normal_index, weather_normal_source)
@@ -110,7 +110,6 @@ def unpack(modeled_trace, baseline_label, reporting_label,
     else:
         annualized_fixture = None
         hourly_annualized_fixture = None
-
 
     # find start and end dates of reporting data
     if not reporting_period_data.empty:
@@ -133,7 +132,7 @@ def unpack(modeled_trace, baseline_label, reporting_label,
     # reporting period fixture
     if None not in (
         reporting_data_start_date, reporting_data_end_date) and \
-        weather_source_success:
+            weather_source_success:
 
         if reporting_data_start_date == reporting_data_end_date:
             reporting_period_index = pd.Series([])
@@ -180,7 +179,7 @@ def unpack(modeled_trace, baseline_label, reporting_label,
 
     if None not in (
         baseline_data_start_date, baseline_data_end_date) and \
-        weather_source_success:
+            weather_source_success:
 
         if baseline_data_start_date == baseline_data_end_date:
             baseline_period_index = pd.Series([])
@@ -580,7 +579,7 @@ def cumulative_baseline_model_minus_reporting_model_normal_year(deriv_input):
         _report_failed_derivative(series)
         return None
 
-    if True: #try:
+    try:
         value, variance = subtract_value_variance_tuple(
             deriv_input['baseline_model'].predict(deriv_input['annualized_fixture'], summed=True),
             deriv_input['reporting_model'].predict(deriv_input['annualized_fixture'], summed=True))
@@ -591,7 +590,7 @@ def cumulative_baseline_model_minus_reporting_model_normal_year(deriv_input):
                 'value': [value, ],
                 'variance': [variance, ]
                }
-    else: #except:
+    except:
         _report_failed_derivative(series)
         return None
 
@@ -714,7 +713,7 @@ def baseline_model_reporting_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
-    if True: #try
+    try:
         value, variance = deriv_input['baseline_model'].predict(
                           deriv_input['reporting_period_fixture'], summed=False)
         return {
@@ -724,7 +723,7 @@ def baseline_model_reporting_period(deriv_input):
                 'value': value.tolist(),
                 'variance': variance.tolist()
                }
-    else:#except:
+    except:
         _report_failed_derivative(series)
         return None
 
@@ -1210,7 +1209,7 @@ def normal_year_resource_curve(deriv_input):
         _report_failed_derivative(series)
         return None
 
-    if True: #try:
+    try:
         baseline_data_frame = pd.DataFrame(
             {'energy': deriv_input['hourly_baseline_period_data'].values},
             index=deriv_input['hourly_baseline_period_data'].index)
@@ -1219,7 +1218,7 @@ def normal_year_resource_curve(deriv_input):
         baseline_load_profile_model.input_data = baseline_data_frame
         baseline_load_profile, baseline_var = baseline_load_profile_model.predict(
             deriv_input['hourly_annualized_fixture'], summed=False)
-    
+
         reporting_data_frame = pd.DataFrame(
             {'energy': deriv_input['hourly_reporting_period_data'].values},
             index=deriv_input['hourly_reporting_period_data'].index)
@@ -1239,7 +1238,7 @@ def normal_year_resource_curve(deriv_input):
                 'value': [v for v in resource_curve.values],
                 'variance': [v for v in resource_curve_var.values]
                }
-    else: #except:
+    except:
         _report_failed_derivative(series)
         return None
 
@@ -1257,7 +1256,7 @@ def reporting_period_resource_curve(deriv_input):
         _report_failed_derivative(series)
         return None
 
-    if True: #try:
+    try:
         baseline_data_frame = pd.DataFrame(
             {'energy': deriv_input['hourly_baseline_period_data'].values},
             index=deriv_input['hourly_baseline_period_data'].index)
@@ -1266,7 +1265,7 @@ def reporting_period_resource_curve(deriv_input):
         baseline_load_profile_model.input_data = baseline_data_frame
         baseline_load_profile, baseline_var = baseline_load_profile_model.predict(
             deriv_input['hourly_reporting_period_fixture'], summed=False)
-    
+
         reporting_data_frame = pd.DataFrame(
             {'energy': deriv_input['hourly_reporting_period_data'].values},
             index=deriv_input['hourly_reporting_period_data'].index)
@@ -1286,6 +1285,6 @@ def reporting_period_resource_curve(deriv_input):
                 'value': [v for v in resource_curve.values],
                 'variance': [v for v in resource_curve_var.values]
                }
-    else: #except:
+    except:
         _report_failed_derivative(series)
         return None
