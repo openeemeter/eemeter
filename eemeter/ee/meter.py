@@ -65,7 +65,9 @@ from eemeter.ee.derivatives import (
     masked_temperature_reporting_period,
     temperature_normal_year,
     baseline_mask,
-    reporting_mask
+    reporting_mask,
+    normal_year_resource_curve,
+    reporting_period_resource_curve
 )
 
 logger = logging.getLogger(__name__)
@@ -573,8 +575,10 @@ class EnergyEfficiencyMeter(object):
             raw_derivatives.append(masked_temperature_reporting_period(deriv_input))
             raw_derivatives.append(temperature_normal_year(deriv_input))
             raw_derivatives.append(baseline_mask(deriv_input))
-            raw_derivatives.append(reporting_mask(deriv_input))
-    
+            raw_derivatives.append(reporting_mask(deriv_input)) 
+            raw_derivatives.append(normal_year_resource_curve(deriv_input))
+            raw_derivatives.append(reporting_period_resource_curve(deriv_input))
+
             derivatives += [
                 Derivative(
                     (baseline_label, reporting_label),

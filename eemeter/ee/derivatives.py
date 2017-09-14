@@ -1,38 +1,18 @@
 import logging
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 
-from six import string_types
 import numpy as np
 import pandas as pd
 import pytz
-from functools import reduce
 
-from eemeter import get_version
-from eemeter.modeling.formatters import (
-    ModelDataFormatter,
-    ModelDataBillingFormatter,
-)
-from eemeter.modeling.models import (
-    CaltrackMonthlyModel,
-    CaltrackDailyModel,
-    HourlyLoadProfileModel
-)
-from eemeter.modeling.split import SplitModeledEnergyTrace
-from eemeter.io.serializers import (
-    deserialize_meter_input,
-    serialize_derivatives,
-    serialize_split_modeled_energy_trace,
-)
 from eemeter.processors.dispatchers import (
     get_approximate_frequency,
 )
-from eemeter.processors.location import (
-    get_weather_normal_source,
-    get_weather_source,
-)
-from eemeter.structures import ZIPCodeSite
+
+from eemeter.modeling.models import HourlyLoadProfileModel
 
 logger = logging.getLogger(__name__)
+
 
 def unpack(modeled_trace, baseline_label, reporting_label,
            baseline_period, reporting_period,
@@ -78,12 +58,16 @@ def unpack(modeled_trace, baseline_label, reporting_label,
         if hourly_trace_data is not None:
             hourly_baseline_period_data = \
                 hourly_trace_data[:baseline_end_date].copy()
+        else:
+            hourly_baseline_period_data = None
     else:
         baseline_period_data = \
             trace_data[baseline_start_date:baseline_end_date].copy()
         if hourly_trace_data is not None:
             hourly_baseline_period_data = \
                 hourly_trace_data[baseline_start_date:baseline_end_date].copy()
+        else:
+            hourly_baseline_period_data = None
 
     project_period_data = \
         trace_data[baseline_end_date:reporting_start_date].copy()
@@ -94,12 +78,16 @@ def unpack(modeled_trace, baseline_label, reporting_label,
         if hourly_trace_data is not None:
             hourly_reporting_period_data = \
                 hourly_trace_data[reporting_start_date:].copy()
+        else:
+            hourly_reporting_period_data = None
     else:
         reporting_period_data = \
             trace_data[reporting_start_date:reporting_end_date].copy()
         if hourly_trace_data is not None:
             hourly_reporting_period_data = \
                 hourly_trace_data[reporting_start_date:reporting_end_date].copy()
+        else:
+            hourly_reporting_period_data = None
 
     weather_source_success = (weather_source is not None)
     weather_normal_source_success = (weather_normal_source is not None)
@@ -117,8 +105,11 @@ def unpack(modeled_trace, baseline_label, reporting_label,
                 tz=pytz.UTC)
             hourly_annualized_fixture = formatter.create_demand_fixture(
                 normal_index, weather_normal_source)
+        else:
+            hourly_annualized_fixture = None
     else:
         annualized_fixture = None
+        hourly_annualized_fixture = None
 
 
     # find start and end dates of reporting data
@@ -141,7 +132,8 @@ def unpack(modeled_trace, baseline_label, reporting_label,
 
     # reporting period fixture
     if None not in (
-            reporting_data_start_date, reporting_data_end_date) and weather_source_success:
+        reporting_data_start_date, reporting_data_end_date) and \
+        weather_source_success:
 
         if reporting_data_start_date == reporting_data_end_date:
             reporting_period_index = pd.Series([])
@@ -164,8 +156,31 @@ def unpack(modeled_trace, baseline_label, reporting_label,
                 freq='H',
                 tz=pytz.UTC)
             hourly_reporting_period_fixture = formatter.create_demand_fixture(
-                reporting_period_index, weather_normal_source)
+                reporting_period_index, weather_source)
+        else:
+            hourly_reporting_period_fixture = None
+
+        # Apply mask which indicates where data is missing (with daily
+        # resolution)
+        unmasked_reporting_period_fixture = \
+            reporting_period_fixture.copy()
+        if 'input_mask' in reporting_output.keys():
+            reporting_mask = reporting_output['input_mask']
+            for i, mask in reporting_mask.iteritems():
+                if pd.isnull(mask):
+                    reporting_period_fixture[i] = np.nan
+        else:
+            reporting_mask = pd.Series([])
     else:
+        reporting_mask = pd.Series([])
+        reporting_period_fixture = None
+        unmasked_reporting_period_fixture = None
+        reporting_period_fixture_success = False
+        hourly_reporting_period_fixture = None
+
+    if None not in (
+        baseline_data_start_date, baseline_data_end_date) and \
+        weather_source_success:
 
         if baseline_data_start_date == baseline_data_end_date:
             baseline_period_index = pd.Series([])
@@ -188,19 +203,9 @@ def unpack(modeled_trace, baseline_label, reporting_label,
                 freq='H',
                 tz=pytz.UTC)
             hourly_baseline_period_fixture = formatter.create_demand_fixture(
-                baseline_period_index, weather_normal_source)
-
-        # Apply mask which indicates where data is missing (with daily
-        # resolution)
-        unmasked_reporting_period_fixture = \
-            reporting_period_fixture.copy()
-        if 'input_mask' in reporting_output.keys():
-            reporting_mask = reporting_output['input_mask']
-            for i, mask in reporting_mask.iteritems():
-                if pd.isnull(mask):
-                    reporting_period_fixture[i] = np.nan
+                baseline_period_index, weather_source)
         else:
-            reporting_mask = pd.Series([])
+            hourly_baseline_period_fixture = None
 
         unmasked_baseline_period_fixture = \
             baseline_period_fixture.copy()
@@ -213,14 +218,11 @@ def unpack(modeled_trace, baseline_label, reporting_label,
             baseline_mask = pd.Series([])
 
     else:
-        reporting_mask = pd.Series([])
+        unmasked_baseline_period_fixture = None
         baseline_mask = pd.Series([])
         baseline_period_fixture = None
-        reporting_period_fixture = None
-        unmasked_baseline_period_fixture = None
-        unmasked_reporting_period_fixture = None
         baseline_period_fixture_success = False
-        reporting_period_fixture_success = False
+        hourly_baseline_period_fixture = None
     return {
             'formatter': formatter,
             'trace': trace,
@@ -236,9 +238,9 @@ def unpack(modeled_trace, baseline_label, reporting_label,
             'reporting_end_date': reporting_end_date,
             'reporting_data_start_date': reporting_data_start_date,
             'reporting_data_end_date': reporting_data_end_date,
-            'baseline_period_data': baseline_period_data, 
-            'project_period_data': project_period_data, 
-            'reporting_period_data': reporting_period_data, 
+            'baseline_period_data': baseline_period_data,
+            'project_period_data': project_period_data,
+            'reporting_period_data': reporting_period_data,
             'weather_source_success': weather_source_success,
             'weather_normal_source_success': weather_normal_source_success,
             'annualized_fixture': annualized_fixture,
@@ -259,6 +261,7 @@ def unpack(modeled_trace, baseline_label, reporting_label,
             'hourly_annualized_fixture': hourly_annualized_fixture,
             }
 
+
 def subtract_value_variance_tuple(tuple1, tuple2):
     (val1, var1), (val2, var2) = tuple1, tuple2
     try:
@@ -277,11 +280,13 @@ def serialize_observed(series):
         for start, value in series.iteritems()
     ])
 
+
 def _report_failed_derivative(series):
     logger.warning(
         'Failed computing derivative (series={})'
         .format(series)
     )
+
 
 def hdd_balance_point_baseline(deriv_input):
     series = 'Heating degree day balance point, baseline period'
@@ -309,6 +314,7 @@ def hdd_balance_point_baseline(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def hdd_coefficient_baseline(deriv_input):
     series = 'Best-fit heating coefficient, baseline period'
     description = '''Best-fit heating coefficient,
@@ -323,9 +329,9 @@ def hdd_coefficient_baseline(deriv_input):
        'hdd_bp' in deriv_input['baseline_output']['model_fit']['model_params'] and \
        'coefficients' in deriv_input['baseline_output']['model_fit']['model_params'] and \
        'HDD_' + str(deriv_input['baseline_output']['model_fit']['model_params']['hdd_bp']) \
-           in deriv_input['baseline_output']['model_fit']['model_params']['coefficients']:
-        value = deriv_input['baseline_output']['model_fit']['model_params']['coefficients']\
-                ['HDD_' + str(deriv_input['baseline_output']['model_fit']['model_params']['hdd_bp'])]
+            in deriv_input['baseline_output']['model_fit']['model_params']['coefficients']:
+        value = deriv_input['baseline_output']['model_fit']['model_params']['coefficients'][
+            'HDD_' + str(deriv_input['baseline_output']['model_fit']['model_params']['hdd_bp'])]
 
         return {
                 'series': series,
@@ -337,6 +343,7 @@ def hdd_coefficient_baseline(deriv_input):
     else:
         _report_failed_derivative(series)
         return None
+
 
 def cdd_balance_point_baseline(deriv_input):
     series = 'Cooling degree day balance point, baseline period'
@@ -363,6 +370,7 @@ def cdd_balance_point_baseline(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def cdd_coefficient_baseline(deriv_input):
     series = 'Best-fit cooling coefficient, baseline period'
     description = '''Best-fit cooling coefficient,
@@ -377,9 +385,9 @@ def cdd_coefficient_baseline(deriv_input):
        'cdd_bp' in deriv_input['baseline_output']['model_fit']['model_params'] and \
        'coefficients' in deriv_input['baseline_output']['model_fit']['model_params'] and \
        'CDD_' + str(deriv_input['baseline_output']['model_fit']['model_params']['cdd_bp']) \
-           in deriv_input['baseline_output']['model_fit']['model_params']['coefficients']:
-        value = deriv_input['baseline_output']['model_fit']['model_params']['coefficients']\
-                ['CDD_' + str(deriv_input['baseline_output']['model_fit']['model_params']['cdd_bp'])]
+            in deriv_input['baseline_output']['model_fit']['model_params']['coefficients']:
+        value = deriv_input['baseline_output']['model_fit']['model_params']['coefficients'][
+            'CDD_' + str(deriv_input['baseline_output']['model_fit']['model_params']['cdd_bp'])]
 
         return {
                 'series': series,
@@ -391,6 +399,7 @@ def cdd_coefficient_baseline(deriv_input):
     else:
         _report_failed_derivative(series)
         return None
+
 
 def intercept_baseline(deriv_input):
     series = 'Best-fit intercept, baseline period'
@@ -416,6 +425,7 @@ def intercept_baseline(deriv_input):
     else:
         _report_failed_derivative(series)
         return None
+
 
 def hdd_balance_point_reporting(deriv_input):
     series = 'Heating degree day balance point, reporting period'
@@ -443,6 +453,7 @@ def hdd_balance_point_reporting(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def hdd_coefficient_reporting(deriv_input):
     series = 'Best-fit heating coefficient, reporting period'
     description = '''Best-fit heating coefficient,
@@ -457,9 +468,9 @@ def hdd_coefficient_reporting(deriv_input):
        'hdd_bp' in deriv_input['reporting_output']['model_fit']['model_params'] and \
        'coefficients' in deriv_input['reporting_output']['model_fit']['model_params'] and \
        'HDD_' + str(deriv_input['reporting_output']['model_fit']['model_params']['hdd_bp']) \
-           in deriv_input['reporting_output']['model_fit']['model_params']['coefficients']:
-        value = deriv_input['reporting_output']['model_fit']['model_params']['coefficients']\
-                ['HDD_' + str(deriv_input['reporting_output']['model_fit']['model_params']['hdd_bp'])]
+            in deriv_input['reporting_output']['model_fit']['model_params']['coefficients']:
+        value = deriv_input['reporting_output']['model_fit']['model_params']['coefficients'][
+            'HDD_' + str(deriv_input['reporting_output']['model_fit']['model_params']['hdd_bp'])]
 
         return {
                 'series': series,
@@ -471,6 +482,7 @@ def hdd_coefficient_reporting(deriv_input):
     else:
         _report_failed_derivative(series)
         return None
+
 
 def cdd_balance_point_reporting(deriv_input):
     series = 'Cooling degree day balance point, reporting period'
@@ -497,6 +509,7 @@ def cdd_balance_point_reporting(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def cdd_coefficient_reporting(deriv_input):
     series = 'Best-fit cooling coefficient, reporting period'
     description = '''Best-fit cooling coefficient,
@@ -511,9 +524,9 @@ def cdd_coefficient_reporting(deriv_input):
        'cdd_bp' in deriv_input['reporting_output']['model_fit']['model_params'] and \
        'coefficients' in deriv_input['reporting_output']['model_fit']['model_params'] and \
        'CDD_' + str(deriv_input['reporting_output']['model_fit']['model_params']['cdd_bp']) \
-           in deriv_input['reporting_output']['model_fit']['model_params']['coefficients']:
-        value = deriv_input['reporting_output']['model_fit']['model_params']['coefficients']\
-                ['CDD_' + str(deriv_input['reporting_output']['model_fit']['model_params']['cdd_bp'])]
+            in deriv_input['reporting_output']['model_fit']['model_params']['coefficients']:
+        value = deriv_input['reporting_output']['model_fit']['model_params']['coefficients'][
+            'CDD_' + str(deriv_input['reporting_output']['model_fit']['model_params']['cdd_bp'])]
 
         return {
                 'series': series,
@@ -525,6 +538,7 @@ def cdd_coefficient_reporting(deriv_input):
     else:
         _report_failed_derivative(series)
         return None
+
 
 def intercept_reporting(deriv_input):
     series = 'Best-fit intercept, reporting period'
@@ -581,6 +595,7 @@ def cumulative_baseline_model_minus_reporting_model_normal_year(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def baseline_model_minus_reporting_model_normal_year(deriv_input):
     series = 'Baseline model minus reporting model, normal year'
     description = '''Predicted usage according to the baseline model
@@ -609,6 +624,7 @@ def baseline_model_minus_reporting_model_normal_year(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def cumulative_baseline_model_normal_year(deriv_input):
     series = 'Cumulative baseline model, normal year'
     description = '''Total predicted usage according to the baseline model
@@ -634,6 +650,7 @@ def cumulative_baseline_model_normal_year(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def baseline_model_normal_year(deriv_input):
     series = 'Baseline model, normal year'
     description = '''Predicted usage according to the baseline model
@@ -657,6 +674,7 @@ def baseline_model_normal_year(deriv_input):
     except:
         _report_failed_derivative(series)
         return None
+
 
 def cumulative_baseline_model_reporting_period(deriv_input):
     series = 'Cumulative baseline model, reporting period'
@@ -684,6 +702,7 @@ def cumulative_baseline_model_reporting_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def baseline_model_reporting_period(deriv_input):
     series = 'Baseline model, reporting period'
     description = '''Predicted usage according to the baseline model
@@ -708,6 +727,7 @@ def baseline_model_reporting_period(deriv_input):
     else:#except:
         _report_failed_derivative(series)
         return None
+
 
 def masked_baseline_model_reporting_period(deriv_input):
     series = 'Masked baseline model, reporting period'
@@ -742,6 +762,7 @@ def masked_baseline_model_reporting_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def cumulative_baseline_model_minus_observed_reporting_period(deriv_input):
     series = 'Cumulative baseline model minus observed, reporting period'
     description = '''Total predicted usage according to the baseline model
@@ -772,6 +793,7 @@ def cumulative_baseline_model_minus_observed_reporting_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def baseline_model_minus_observed_reporting_period(deriv_input):
     series = 'Baseline model minus observed, reporting period'
     description = '''Predicted usage according to the baseline model
@@ -799,6 +821,7 @@ def baseline_model_minus_observed_reporting_period(deriv_input):
     except:
         _report_failed_derivative(series)
         return None
+
 
 def masked_baseline_model_minus_observed_reporting_period(deriv_input):
     series = 'Masked baseline model minus observed, reporting period'
@@ -835,6 +858,7 @@ def masked_baseline_model_minus_observed_reporting_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def baseline_model_baseline_period(deriv_input):
     series = 'Baseline model, baseline period'
     description = '''Predicted usage according to the baseline model
@@ -858,12 +882,13 @@ def baseline_model_baseline_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def cumulative_reporting_model_normal_year(deriv_input):
     series = 'Cumulative reporting model, normal year'
     description = '''Total predicted usage according to the reporting model
                      over the reporting period.  Days for which normal year
                      weather data does not exist are removed.'''
-    
+
     if (not deriv_input['weather_normal_source_success']) or \
        (not deriv_input['reporting_model_success']):
         _report_failed_derivative(series)
@@ -882,6 +907,7 @@ def cumulative_reporting_model_normal_year(deriv_input):
     except:
         _report_failed_derivative(series)
         return None
+
 
 def reporting_model_normal_year(deriv_input):
     series = 'Reporting model, normal year'
@@ -907,6 +933,7 @@ def reporting_model_normal_year(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def reporting_model_reporting_period(deriv_input):
     series = 'Reporting model, reporting period'
     description = '''Predicted usage according to the reporting model
@@ -931,6 +958,7 @@ def reporting_model_reporting_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def cumulative_observed_reporting_period(deriv_input):
     series = 'Cumulative observed, reporting period'
     description = '''Total observed usage over the reporting period.
@@ -949,6 +977,7 @@ def cumulative_observed_reporting_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def observed_reporting_period(deriv_input):
     series = 'Observed, reporting period'
     description = '''Observed usage over the reporting period.'''
@@ -963,6 +992,7 @@ def observed_reporting_period(deriv_input):
     except:
         _report_failed_derivative(series)
         return None
+
 
 def masked_observed_reporting_period(deriv_input):
     series = 'Masked observed, reporting period'
@@ -987,6 +1017,7 @@ def masked_observed_reporting_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def cumulative_observed_baseline_period(deriv_input):
     series = 'Cumulative observed, baseline period'
     description = '''Total observed usage over the baseline period.
@@ -1005,6 +1036,7 @@ def cumulative_observed_baseline_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def observed_baseline_period(deriv_input):
     series = 'Observed, baseline period'
     description = '''Observed usage over the baseline period.'''
@@ -1020,6 +1052,7 @@ def observed_baseline_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def observed_project_period(deriv_input):
     series = 'Observed, project period'
     description = '''Observed usage over the project period.'''
@@ -1034,6 +1067,7 @@ def observed_project_period(deriv_input):
     except:
         _report_failed_derivative(series)
         return None
+
 
 def temperature_baseline_period(deriv_input):
     series = 'Temperature, baseline period'
@@ -1055,6 +1089,7 @@ def temperature_baseline_period(deriv_input):
     except:
         _report_failed_derivative(series)
         return None
+
 
 def temperature_reporting_period(deriv_input):
     series = 'Temperature, reporting period'
@@ -1106,6 +1141,7 @@ def masked_temperature_reporting_period(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def temperature_normal_year(deriv_input):
     series = 'Temperature, normal year'
     description = '''Observed temperature (degF) over the normal year.'''
@@ -1126,6 +1162,7 @@ def temperature_normal_year(deriv_input):
         _report_failed_derivative(series)
         return None
 
+
 def baseline_mask(deriv_input):
     series = 'Inclusion mask, baseline period'
     description = '''Mask for baseline period data which is included in
@@ -1141,6 +1178,7 @@ def baseline_mask(deriv_input):
     except:
         _report_failed_derivative(series)
         return None
+
 
 def reporting_mask(deriv_input):
     series = 'Inclusion mask, reporting period'
@@ -1159,3 +1197,95 @@ def reporting_mask(deriv_input):
         return None
 
 
+def normal_year_resource_curve(deriv_input):
+    series = 'Resource curve, normal year'
+    description = '''Hourly baseline load profile minus hourly reporting
+                   load profile, normal year'''
+
+    if (deriv_input['hourly_annualized_fixture'] is None) or \
+       (deriv_input['hourly_baseline_period_data'] is None) or \
+       (deriv_input['hourly_reporting_period_data'] is None) or \
+       (not deriv_input['baseline_model_success']) or \
+       (not deriv_input['reporting_model_success']):
+        _report_failed_derivative(series)
+        return None
+
+    if True: #try:
+        baseline_data_frame = pd.DataFrame(
+            {'energy': deriv_input['hourly_baseline_period_data'].values},
+            index=deriv_input['hourly_baseline_period_data'].index)
+        baseline_load_profile_model = HourlyLoadProfileModel()
+        baseline_load_profile_model.caltrack_model = deriv_input['baseline_model']
+        baseline_load_profile_model.input_data = baseline_data_frame
+        baseline_load_profile, baseline_var = baseline_load_profile_model.predict(
+            deriv_input['hourly_annualized_fixture'], summed=False)
+    
+        reporting_data_frame = pd.DataFrame(
+            {'energy': deriv_input['hourly_reporting_period_data'].values},
+            index=deriv_input['hourly_reporting_period_data'].index)
+        reporting_load_profile_model = HourlyLoadProfileModel()
+        reporting_load_profile_model.caltrack_model = deriv_input['reporting_model']
+        reporting_load_profile_model.input_data = reporting_data_frame
+        reporting_load_profile, reporting_var = reporting_load_profile_model.predict(
+            deriv_input['hourly_annualized_fixture'], summed=False)
+
+        resource_curve = baseline_load_profile - reporting_load_profile
+        resource_curve_var = reporting_var + baseline_var
+
+        return {
+                'series': series,
+                'description': description,
+                'orderable': [i.isoformat() for i in resource_curve.index],
+                'value': [v for v in resource_curve.values],
+                'variance': [v for v in resource_curve_var.values]
+               }
+    else: #except:
+        _report_failed_derivative(series)
+        return None
+
+
+def reporting_period_resource_curve(deriv_input):
+    series = 'Resource curve, reporting period'
+    description = '''Hourly baseline load profile minus hourly reporting
+                   load profile, reporting period'''
+
+    if (deriv_input['hourly_reporting_period_fixture'] is None) or \
+       (deriv_input['hourly_baseline_period_data'] is None) or \
+       (deriv_input['hourly_reporting_period_data'] is None) or \
+       (not deriv_input['baseline_model_success']) or \
+       (not deriv_input['reporting_model_success']):
+        _report_failed_derivative(series)
+        return None
+
+    if True: #try:
+        baseline_data_frame = pd.DataFrame(
+            {'energy': deriv_input['hourly_baseline_period_data'].values},
+            index=deriv_input['hourly_baseline_period_data'].index)
+        baseline_load_profile_model = HourlyLoadProfileModel()
+        baseline_load_profile_model.caltrack_model = deriv_input['baseline_model']
+        baseline_load_profile_model.input_data = baseline_data_frame
+        baseline_load_profile, baseline_var = baseline_load_profile_model.predict(
+            deriv_input['hourly_reporting_period_fixture'], summed=False)
+    
+        reporting_data_frame = pd.DataFrame(
+            {'energy': deriv_input['hourly_reporting_period_data'].values},
+            index=deriv_input['hourly_reporting_period_data'].index)
+        reporting_load_profile_model = HourlyLoadProfileModel()
+        reporting_load_profile_model.caltrack_model = deriv_input['reporting_model']
+        reporting_load_profile_model.input_data = reporting_data_frame
+        reporting_load_profile, reporting_var = reporting_load_profile_model.predict(
+            deriv_input['hourly_reporting_period_fixture'], summed=False)
+
+        resource_curve = baseline_load_profile - reporting_load_profile
+        resource_curve_var = reporting_var + baseline_var
+
+        return {
+                'series': series,
+                'description': description,
+                'orderable': [i.isoformat() for i in resource_curve.index],
+                'value': [v for v in resource_curve.values],
+                'variance': [v for v in resource_curve_var.values]
+               }
+    else: #except:
+        _report_failed_derivative(series)
+        return None
