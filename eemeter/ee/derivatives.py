@@ -12,7 +12,11 @@ from eemeter.modeling.formatters import (
     ModelDataFormatter,
     ModelDataBillingFormatter,
 )
-from eemeter.modeling.models import CaltrackMonthlyModel, CaltrackDailyModel
+from eemeter.modeling.models import (
+    CaltrackMonthlyModel,
+    CaltrackDailyModel,
+    HourlyLoadProfileModel
+)
 from eemeter.modeling.split import SplitModeledEnergyTrace
 from eemeter.io.serializers import (
     deserialize_meter_input,
@@ -62,12 +66,24 @@ def unpack(modeled_trace, baseline_label, reporting_label,
     if trace_data.empty:
         return None
 
+    trace_frequency = get_approximate_frequency(trace)
+    if trace_frequency in ['H', '15T', '30T']:
+        hourly_trace_data = formatter.hourly_trace_data(trace)
+    else:
+        hourly_trace_data = None
+
     if baseline_start_date is None:
         baseline_period_data = \
             trace_data[:baseline_end_date].copy()
+        if hourly_trace_data is not None:
+            hourly_baseline_period_data = \
+                hourly_trace_data[:baseline_end_date].copy()
     else:
         baseline_period_data = \
             trace_data[baseline_start_date:baseline_end_date].copy()
+        if hourly_trace_data is not None:
+            hourly_baseline_period_data = \
+                hourly_trace_data[baseline_start_date:baseline_end_date].copy()
 
     project_period_data = \
         trace_data[baseline_end_date:reporting_start_date].copy()
@@ -75,9 +91,15 @@ def unpack(modeled_trace, baseline_label, reporting_label,
     if reporting_end_date is None:
         reporting_period_data = \
             trace_data[reporting_start_date:].copy()
+        if hourly_trace_data is not None:
+            hourly_reporting_period_data = \
+                hourly_trace_data[reporting_start_date:].copy()
     else:
         reporting_period_data = \
             trace_data[reporting_start_date:reporting_end_date].copy()
+        if hourly_trace_data is not None:
+            hourly_reporting_period_data = \
+                hourly_trace_data[reporting_start_date:reporting_end_date].copy()
 
     weather_source_success = (weather_source is not None)
     weather_normal_source_success = (weather_normal_source is not None)
@@ -89,8 +111,15 @@ def unpack(modeled_trace, baseline_label, reporting_label,
             tz=pytz.UTC)
         annualized_fixture = formatter.create_demand_fixture(
             normal_index, weather_normal_source)
+        if hourly_trace_data is not None:
+            normal_index = pd.date_range(
+                '2015-01-01', freq='H', periods=normalyear_periods, 
+                tz=pytz.UTC)
+            hourly_annualized_fixture = formatter.create_demand_fixture(
+                normal_index, weather_normal_source)
     else:
         annualized_fixture = None
+
 
     # find start and end dates of reporting data
     if not reporting_period_data.empty:
@@ -128,6 +157,15 @@ def unpack(modeled_trace, baseline_label, reporting_label,
         reporting_period_fixture_success = True
         if len(reporting_period_fixture) == 0:
             reporting_period_fixture_success = False
+        if hourly_trace_data is not None:
+            reporting_period_index = pd.date_range(
+                start=reporting_data_start_date,
+                end=reporting_data_end_date,
+                freq='H',
+                tz=pytz.UTC)
+            hourly_reporting_period_fixture = formatter.create_demand_fixture(
+                reporting_period_index, weather_normal_source)
+    else:
 
         if baseline_data_start_date == baseline_data_end_date:
             baseline_period_index = pd.Series([])
@@ -143,6 +181,14 @@ def unpack(modeled_trace, baseline_label, reporting_label,
         baseline_period_fixture_success = True
         if len(baseline_period_fixture) == 0:
             baseline_period_fixture_success = False
+        if hourly_trace_data is not None:
+            baseline_period_index = pd.date_range(
+                start=baseline_data_start_date,
+                end=baseline_data_end_date,
+                freq='H',
+                tz=pytz.UTC)
+            hourly_baseline_period_fixture = formatter.create_demand_fixture(
+                baseline_period_index, weather_normal_source)
 
         # Apply mask which indicates where data is missing (with daily
         # resolution)
@@ -206,6 +252,11 @@ def unpack(modeled_trace, baseline_label, reporting_label,
             'reporting_mask': reporting_mask,
             'unmasked_baseline_period_fixture': unmasked_baseline_period_fixture,
             'unmasked_reporting_period_fixture': unmasked_reporting_period_fixture,
+            'hourly_baseline_period_data': hourly_baseline_period_data,
+            'hourly_reporting_period_data': hourly_reporting_period_data,
+            'hourly_baseline_period_fixture': hourly_baseline_period_fixture,
+            'hourly_reporting_period_fixture': hourly_reporting_period_fixture,
+            'hourly_annualized_fixture': hourly_annualized_fixture,
             }
 
 def subtract_value_variance_tuple(tuple1, tuple2):
@@ -1106,4 +1157,5 @@ def reporting_mask(deriv_input):
     except:
         _report_failed_derivative(series)
         return None
+
 
