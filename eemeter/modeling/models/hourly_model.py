@@ -171,29 +171,10 @@ class DayOfWeekBasedLinearRegression(object):
         prediction.sort_index()
 
         # A Series DS
-        variance_series = self.compute_variance(test_df)
+        variance = self.compute_variance(test_df)
         if summed:
             prediction = np.sum(prediction)
-            variance = np.sum(variance_series)
+            variance = np.sum(variance)
         return prediction, variance
 
 
-    def forecast(self, df):
-        """
-        Takes as input dataframe indexed with hour as frequency
-        and with column tempF with hourly temparatures.
-        """
-        test_df = self.add_time_day(df)
-        test_df = self.add_cdd(test_df)
-        test_df = self.add_hdd(test_df)
-        weekday_df = test_df.loc[test_df['day_of_week'].isin(self.weekdays)]
-        weekday_pred = self.model_res_weekday.predict(weekday_df)
-
-        weekend_df = test_df.loc[test_df['day_of_week'].isin(self.weekends)]
-        weekend_pred = self.model_res_weekend.predict(weekend_df)
-
-        # A series DS
-        prediction = pd.concat([weekday_pred, weekend_pred])
-        prediction.sort_index()
-
-        return prediction
