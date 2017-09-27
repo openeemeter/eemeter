@@ -3,6 +3,7 @@ import numpy as np
 import statsmodels.formula.api as smf
 import patsy
 
+
 class DayOfWeekBasedLinearRegression(object):
     """
     A simple regression model based on "Day of Week", Temparature and hour
@@ -42,7 +43,7 @@ class DayOfWeekBasedLinearRegression(object):
             hour_of_day.append(str(index.hour))
             day_of_week.append(str(index.dayofweek))
 
-        new_df = df.assign(hour_of_day = hour_of_day,
+        new_df = df.assign(hour_of_day=hour_of_day,
                            day_of_week=day_of_week)
 
         return new_df
@@ -74,7 +75,6 @@ class DayOfWeekBasedLinearRegression(object):
 
     def fit(self, df):
         """
-
         Parameters
         ----------
         df A dataframe indexed by hour as frequency and with tempF (hourly temp)
@@ -107,7 +107,6 @@ class DayOfWeekBasedLinearRegression(object):
             self.model_weekend = None
             self.model_res_weekend = None
 
-
     def compute_variance(self, df):
         weekday_df = df.loc[df['day_of_week'].isin(self.weekdays)]
         weekend_df = df.loc[df['day_of_week'].isin(self.weekends)]
@@ -118,19 +117,16 @@ class DayOfWeekBasedLinearRegression(object):
 
         cov = self.model_res_weekday.cov_params()
 
-        weekday_var = self.model_res_weekday.mse_resid + \
-                      (weekday_X * np.dot(cov, weekday_X.T).T).sum(1)
+        weekday_var = self.model_res_weekday.mse_resid + (weekday_X * np.dot(cov, weekday_X.T).T).sum(1)
 
         _, weekend_X = patsy.dmatrices(self.formula,
                                        weekend_df,
                                        return_type='dataframe')
 
         cov = self.model_res_weekend.cov_params()
-        weekend_var = self.model_res_weekend.mse_resid + \
-                      (weekend_X * np.dot(cov, weekend_X.T).T).sum(1)
-
+        weekend_var = self.model_res_weekend.mse_resid + (weekend_X *
+                                                          np.dot(cov, weekend_X.T).T).sum(1)
         weekend_var = pd.Series(weekend_var, index=weekend_df.index)
-
         weekday_var = pd.Series(weekday_var, index=weekday_df.index)
 
         variance_df = pd.concat([weekday_var, weekend_var])
@@ -156,15 +152,13 @@ class DayOfWeekBasedLinearRegression(object):
         # is not there then we just construct dummy here so that
         # compute_variance succeed.
         if 'energy' not in test_df:
-          test_df = test_df.assign(energy=[0.0 for xx in test_df['tempF']])
-
+            test_df = test_df.assign(energy=[0.0 for xx in test_df['tempF']])
 
         weekday_df = test_df.loc[test_df['day_of_week'].isin(self.weekdays)]
         weekday_pred = self.model_res_weekday.predict(weekday_df)
 
         weekend_df = test_df.loc[test_df['day_of_week'].isin(self.weekends)]
         weekend_pred = self.model_res_weekend.predict(weekend_df)
-
 
         # A series DS
         prediction = pd.concat([weekday_pred, weekend_pred])
@@ -176,5 +170,3 @@ class DayOfWeekBasedLinearRegression(object):
             prediction = np.sum(prediction)
             variance = np.sum(variance)
         return prediction, variance
-
-
