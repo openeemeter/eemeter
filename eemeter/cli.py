@@ -342,10 +342,6 @@ def run_meter(project, trace_object, options=None):
         else:
             model_kwargs['min_contiguous_months'] = 0
 
-    #meter_output = ee.evaluate(meter_input, 
-    #    formatter = (ModelDataFormatter, {'freq_str': 'H'}),
-    #    model = (HourlyLoadProfileModel, { 'fit_cdd': False, 'grid_search': True, })
-    #    )
     meter_output = ee.evaluate(meter_input)
     basic_output(meter_output)
 
