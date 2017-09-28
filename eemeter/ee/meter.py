@@ -576,7 +576,7 @@ class EnergyEfficiencyMeter(object):
                 masked_temperature_reporting_period(deriv_input),
                 temperature_normal_year(deriv_input),
                 baseline_mask(deriv_input),
-                reporting_mask(deriv_input)) 
+                reporting_mask(deriv_input),
                 normal_year_resource_curve(deriv_input),
                 reporting_period_resource_curve(deriv_input)
                 ])
