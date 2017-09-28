@@ -16,8 +16,6 @@ from eemeter.processors.dispatchers import (
     get_approximate_frequency,
 )
 from eemeter.modeling.models.caltrack import CaltrackMonthlyModel
-from eemeter.modeling.models.hourly_load_profile import HourlyLoadProfileModel
-from eemeter.modeling.formatters import ModelDataFormatter
 
 
 @click.group()
