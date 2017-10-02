@@ -2,7 +2,7 @@ ipykernel==4.6.1
 lxml==3.8.0
 mock==2.0.0
 nbsphinx==0.2.14
-pandoc==1.0.0b2
+pandoc==1.0.0b3
 pytest==3.2.0
 pytest-flake8==0.8.1
 sphinx==1.6.3
