@@ -9,7 +9,12 @@ from eemeter.processors.dispatchers import (
     get_approximate_frequency,
 )
 
+from eemeter.processors.location import (
+    get_co2_source,
+)
+
 from eemeter.modeling.models import HourlyLoadProfileModel
+from scipy import interpolate
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +22,7 @@ logger = logging.getLogger(__name__)
 def unpack(modeled_trace, baseline_label, reporting_label,
            baseline_period, reporting_period,
            weather_source, weather_normal_source,
-           derivative_freq='D'):
+           site, derivative_freq='D'):
 
     baseline_output = modeled_trace.fit_outputs[baseline_label]
     reporting_output = modeled_trace.fit_outputs[reporting_label]
@@ -27,6 +32,8 @@ def unpack(modeled_trace, baseline_label, reporting_label,
 
     formatter = modeled_trace.formatter
     trace = modeled_trace.trace
+
+    co2_source = get_co2_source(site)
 
     # default project dates
     baseline_start_date = baseline_period.start_date
@@ -101,7 +108,7 @@ def unpack(modeled_trace, baseline_label, reporting_label,
             normal_index, weather_normal_source)
         if hourly_trace_data is not None:
             normal_index = pd.date_range(
-                '2015-01-01', freq='H', periods=normalyear_periods,
+                '2015-01-01', freq='H', periods=365*24,
                 tz=pytz.UTC)
             hourly_annualized_fixture = formatter.create_demand_fixture(
                 normal_index, weather_normal_source)
@@ -258,6 +265,7 @@ def unpack(modeled_trace, baseline_label, reporting_label,
             'hourly_baseline_period_fixture': hourly_baseline_period_fixture,
             'hourly_reporting_period_fixture': hourly_reporting_period_fixture,
             'hourly_annualized_fixture': hourly_annualized_fixture,
+            'co2_source': co2_source,
             }
 
 
@@ -1288,3 +1296,50 @@ def reporting_period_resource_curve(deriv_input):
     except:
         _report_failed_derivative(series)
         return None
+
+
+def normal_year_co2_avoided(deriv_input, resource_curve):
+    series = 'CO2 avoided emissions, normal year'
+    description = '''Avoided CO2 emissions based on normal year
+                   resource curve'''
+
+    avert = deriv_input['co2_source']
+
+    if (resource_curve is None) or (avert is None):
+        _report_failed_derivative(series)
+        return None
+
+    #try:
+    if True:
+        co2_by_load = avert.get_co2_by_load()
+        load_by_hour = avert.get_load_by_hour()
+        load_by_hour = load_by_hour[~(
+            (load_by_hour.index.day==29) &
+            (load_by_hour.index.month==2))]
+
+        # Calculate the pre-intervention CO2 emissions
+        f = interpolate.interp1d(co2_by_load.index, co2_by_load.values)
+        co2_pre = f(load_by_hour.values)
+
+        # Calculate the post-internention load and CO2 emissions
+        print load_by_hour
+        print resource_curve
+        load_post = load_by_hour.values - resource_curve.values
+        co2_post = f(load_post)
+
+        # Return the savings
+        avoided_emissions = pd.Series(co2_pre - co2_post,
+                                      index=load_by_hour.index)
+
+        return {
+                'series': series,
+                'description': description,
+                'orderable': [i.isoformat() for i in avoided_emissions.index],
+                'value': [v for v in avoided_emissions.values],
+                'variance': [None for v in avoided_emissions.values]
+               }
+    #except:
+    else:
+        _report_failed_derivative(series)
+        return None
+
