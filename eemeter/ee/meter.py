@@ -68,6 +68,8 @@ from eemeter.ee.derivatives import (
     normal_year_co2_avoided
 )
 
+import pandas as pd
+
 logger = logging.getLogger(__name__)
 
 Derivative = namedtuple('Derivative', [
