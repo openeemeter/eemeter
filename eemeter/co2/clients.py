@@ -1,34 +1,28 @@
-import gzip
 from io import BytesIO
-import json
 import logging
-from pkg_resources import resource_stream
-import warnings
-from datetime import datetime, timedelta
+from datetime import datetime
 
-import pytz
 import pandas as pd
-import requests
-import shutil
-
-logger = logging.getLogger(__name__)
 
 import requests
 import zipfile
 import xlrd
 
+logger = logging.getLogger(__name__)
+
 AVERT_NAMES = {
-    'CA': ['California', 'california',],
-    'EMW': ['Great Lakes - Mid-Atlantic', 'great_lakes_-_mid-atlantic',],
-    'LMW': ['Lower Midwest', 'lower_midwest',],
-    'NE': ['Northeast', 'northeast',],
-    'NW': ['Northwest', 'northwest',],
-    'RM': ['Rocky Mountains', 'rocky_mountains',],
-    'SE': ['Southeast', 'southeast',],
-    'SW': ['Southwest', 'southwest',],
-    'TX': ['Texas', 'texas',],
-    'UMW': ['Upper Midwest', 'upper_midwest',],
+    'CA': ['California', 'california'],
+    'EMW': ['Great Lakes - Mid-Atlantic', 'great_lakes_-_mid-atlantic'],
+    'LMW': ['Lower Midwest', 'lower_midwest'],
+    'NE': ['Northeast', 'northeast'],
+    'NW': ['Northwest', 'northwest'],
+    'RM': ['Rocky Mountains', 'rocky_mountains'],
+    'SE': ['Southeast', 'southeast'],
+    'SW': ['Southwest', 'southwest'],
+    'TX': ['Texas', 'texas'],
+    'UMW': ['Upper Midwest', 'upper_midwest']
 }
+
 
 class AVERTClient(object):
 
@@ -43,7 +37,6 @@ class AVERTClient(object):
 
         url = 'https://www.epa.gov/sites/production/files/2017-07/' +\
               'avert_regional_data_files_{}_-_07-31-17.zip'.format(year)
-        local_filename = '{}.zip'.format(year)
         r = requests.get(url, stream=True)
         z = zipfile.ZipFile(BytesIO(r.content))
         fname_to_extract = None
@@ -63,10 +56,9 @@ class AVERTClient(object):
         region_lcase = AVERT_NAMES[region][1]
         url = 'https://www.epa.gov/sites/production/files/2017-07/' +\
               'avert_rdf_2016_epa_netgen_pm25_{}.xlsx'.format(region_lcase)
-        local_filename = '{}.zip'.format(year)
         r = requests.get(url, stream=True)
         return r.content
-    
+
     def read_rdf_file(self, year, region):
         '''Read in an XLS file produced by the DOE AVERT
         team to calculate carbon avoidance'''
@@ -75,20 +67,20 @@ class AVERTClient(object):
             streamdata = self._retrieve_file(year, region)
         else:
             streamdata = self._retrieve_from_zipfile(year, region)
-    
+
         # Open the workbook
         wb = xlrd.open_workbook(file_contents=streamdata)
-    
+
         # Find the sheet with the actual data in it
         maxsheet, maxcol = -1, -1
         for idx in range(wb.nsheets):
             if wb.sheet_by_index(idx).ncols > maxcol:
                 maxsheet, maxcol = idx, wb.sheet_by_index(idx).ncols
         sheet = wb.sheet_by_index(maxsheet)
-    
+
         # Find the number of load bins
         nbins = maxcol - 15
-    
+
         # Grab the load bins, and sum up the CO2 emissions per bin
         load_bins = sheet.row_values(1)[15:15+nbins]
         co2_sums = []
@@ -96,10 +88,10 @@ class AVERTClient(object):
             this_co2_sum = sum([i for i in sheet.col_values(col)[10004:11999]
                                 if i != ''])
             co2_sums.append(this_co2_sum)
-    
+
         # Make the CO2 per bin into a series
         co2_by_load = pd.Series(co2_sums, index=load_bins)
-    
+
         # Now read in the regional load by hour
         idx = 3
         timestamp, regional_load = [], []
@@ -120,10 +112,9 @@ class AVERTClient(object):
             timestamp.append(ts)
             regional_load.append(rl)
             idx = idx + 1
-    
+
         # Convert it to a series
         load_by_hour = pd.Series(regional_load, index=timestamp)
-    
+
         # And return the two series.
         return co2_by_load, load_by_hour
-

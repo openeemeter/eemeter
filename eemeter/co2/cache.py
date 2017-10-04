@@ -7,9 +7,8 @@ from sqlalchemy import (
     Column,
     Integer,
     String,
-    DateTime,
 )
-from sqlalchemy.sql import select, func
+from sqlalchemy.sql import select
 import pandas as pd
 
 
@@ -60,15 +59,20 @@ class SqlCO2Store(object):
         return result.fetchone() is not None
 
     def save_json(self, year, region, co2_by_load, load_by_hour):
-        co2_by_load = json.dumps({str(k): v for k, v in co2_by_load.to_dict().iteritems()})
-        load_by_hour = json.dumps({str(k): v for k, v in load_by_hour.to_dict().iteritems()})
+        co2_by_load = json.dumps({str(k): v for k, v in
+                                  co2_by_load.to_dict().iteritems()})
+        load_by_hour = json.dumps({str(k): v for k, v in
+                                   load_by_hour.to_dict().iteritems()})
         if self.key_exists(year, region):
             s = self.items.update().where(
-                (self.items.c.year == year) & (self.items.c.region == region)).values(
-                year=year, region=region, co2_by_load=co2_by_load, load_by_hour=load_by_hour)
+                (self.items.c.year == year) &
+                (self.items.c.region == region)).values(
+                year=year, region=region, co2_by_load=co2_by_load,
+                load_by_hour=load_by_hour)
         else:
             s = self.items.insert().values(
-                year=year, region=region, co2_by_load=co2_by_load, load_by_hour=load_by_hour)
+                year=year, region=region, co2_by_load=co2_by_load,
+                load_by_hour=load_by_hour)
         s.execute()
 
     def retrieve_co2_by_load(self, year, region):

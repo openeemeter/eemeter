@@ -1,7 +1,4 @@
-from datetime import datetime, timedelta
 import logging
-
-import pandas as pd
 
 from .clients import AVERTClient
 from .cache import SqlCO2Store
@@ -21,11 +18,11 @@ class AVERTSource(object):
 
     def _check_for_data(self):
         if not self.co2_store.key_exists(self.year, self.region):
-           co2_by_load, load_by_hour = self.client.read_rdf_file(
-               self.year, self.region)
-           self.co2_store.save_json(self.year, self.region,
-               co2_by_load, load_by_hour)
-               
+            co2_by_load, load_by_hour = self.client.read_rdf_file(
+                self.year, self.region)
+            self.co2_store.save_json(self.year, self.region,
+                                     co2_by_load, load_by_hour)
+
     def get_co2_by_load(self):
         return self.co2_store.retrieve_co2_by_load(self.year, self.region)
 
