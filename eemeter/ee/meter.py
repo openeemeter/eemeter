@@ -2,9 +2,6 @@ import logging
 from collections import OrderedDict, namedtuple
 
 from six import string_types
-import numpy as np
-import pandas as pd
-import pytz
 from functools import reduce
 
 from eemeter import get_version
@@ -527,63 +524,68 @@ class EnergyEfficiencyMeter(object):
         # Step 9: for each modeling period group, create derivatives
         derivative_freq = 'D'
         if 'freq_str' in formatter_kwargs.keys() and \
-            formatter_kwargs['freq_str'] == 'H':
+                formatter_kwargs['freq_str'] == 'H':
             derivative_freq = 'H'
 
         derivatives = []
         for ((baseline_label, reporting_label),
-             (baseline_period, reporting_period)) in \
-             modeling_period_set.iter_modeling_period_groups():
+                (baseline_period, reporting_period)) in \
+                modeling_period_set.iter_modeling_period_groups():
             raw_derivatives = []
             deriv_input = unpack(modeled_trace, baseline_label, reporting_label,
-                                 baseline_period, reporting_period, 
-                                 weather_source, weather_normal_source, site,
-                                 derivative_freq=derivative_freq)
+                                 baseline_period, reporting_period,
+                                 weather_source, weather_normal_source,
+                                 site, derivative_freq=derivative_freq)
             if deriv_input is None:
                 continue
-            raw_derivatives.append(hdd_balance_point_baseline(deriv_input))
-            raw_derivatives.append(hdd_coefficient_baseline(deriv_input))
-            raw_derivatives.append(cdd_balance_point_baseline(deriv_input))
-            raw_derivatives.append(cdd_coefficient_baseline(deriv_input))
-            raw_derivatives.append(intercept_baseline(deriv_input))
-            raw_derivatives.append(hdd_balance_point_reporting(deriv_input))
-            raw_derivatives.append(hdd_coefficient_reporting(deriv_input))
-            raw_derivatives.append(cdd_balance_point_reporting(deriv_input))
-            raw_derivatives.append(cdd_coefficient_reporting(deriv_input))
-            raw_derivatives.append(intercept_reporting(deriv_input))
-            raw_derivatives.append(cumulative_baseline_model_minus_reporting_model_normal_year(deriv_input))
-            raw_derivatives.append(baseline_model_minus_reporting_model_normal_year(deriv_input))
-            raw_derivatives.append(cumulative_baseline_model_normal_year(deriv_input))
-            raw_derivatives.append(baseline_model_normal_year(deriv_input))
-            raw_derivatives.append(cumulative_baseline_model_reporting_period(deriv_input))
-            raw_derivatives.append(baseline_model_reporting_period(deriv_input))
-            raw_derivatives.append(masked_baseline_model_reporting_period(deriv_input))
-            raw_derivatives.append(cumulative_baseline_model_minus_observed_reporting_period(deriv_input))
-            raw_derivatives.append(baseline_model_minus_observed_reporting_period(deriv_input))
-            raw_derivatives.append(masked_baseline_model_minus_observed_reporting_period(deriv_input))
-            raw_derivatives.append(baseline_model_baseline_period(deriv_input))
-            raw_derivatives.append(cumulative_reporting_model_normal_year(deriv_input))
-            raw_derivatives.append(reporting_model_normal_year(deriv_input))
-            raw_derivatives.append(reporting_model_reporting_period(deriv_input))
-            raw_derivatives.append(cumulative_observed_reporting_period(deriv_input))
-            raw_derivatives.append(observed_reporting_period(deriv_input))
-            raw_derivatives.append(masked_observed_reporting_period(deriv_input))
-            raw_derivatives.append(cumulative_observed_baseline_period(deriv_input))
-            raw_derivatives.append(observed_baseline_period(deriv_input))
-            raw_derivatives.append(observed_project_period(deriv_input))
-            raw_derivatives.append(temperature_baseline_period(deriv_input))
-            raw_derivatives.append(temperature_reporting_period(deriv_input))
-            raw_derivatives.append(masked_temperature_reporting_period(deriv_input))
-            raw_derivatives.append(temperature_normal_year(deriv_input))
-            raw_derivatives.append(baseline_mask(deriv_input))
-            raw_derivatives.append(reporting_mask(deriv_input)) 
+            raw_derivatives.extend([
+                hdd_balance_point_baseline(deriv_input),
+                hdd_coefficient_baseline(deriv_input),
+                cdd_balance_point_baseline(deriv_input),
+                cdd_coefficient_baseline(deriv_input),
+                intercept_baseline(deriv_input),
+                hdd_balance_point_reporting(deriv_input),
+                hdd_coefficient_reporting(deriv_input),
+                cdd_balance_point_reporting(deriv_input),
+                cdd_coefficient_reporting(deriv_input),
+                intercept_reporting(deriv_input),
+                cumulative_baseline_model_minus_reporting_model_normal_year(deriv_input),
+                baseline_model_minus_reporting_model_normal_year(deriv_input),
+                cumulative_baseline_model_normal_year(deriv_input),
+                baseline_model_normal_year(deriv_input),
+                cumulative_baseline_model_reporting_period(deriv_input),
+                baseline_model_reporting_period(deriv_input),
+                masked_baseline_model_reporting_period(deriv_input),
+                cumulative_baseline_model_minus_observed_reporting_period(deriv_input),
+                baseline_model_minus_observed_reporting_period(deriv_input),
+                masked_baseline_model_minus_observed_reporting_period(deriv_input),
+                baseline_model_baseline_period(deriv_input),
+                cumulative_reporting_model_normal_year(deriv_input),
+                reporting_model_normal_year(deriv_input),
+                reporting_model_reporting_period(deriv_input),
+                cumulative_observed_reporting_period(deriv_input),
+                observed_reporting_period(deriv_input),
+                masked_observed_reporting_period(deriv_input),
+                cumulative_observed_baseline_period(deriv_input),
+                observed_baseline_period(deriv_input),
+                observed_project_period(deriv_input),
+                temperature_baseline_period(deriv_input),
+                temperature_reporting_period(deriv_input),
+                masked_temperature_reporting_period(deriv_input),
+                temperature_normal_year(deriv_input),
+                baseline_mask(deriv_input),
+                reporting_mask(deriv_input),
+                reporting_period_resource_curve(deriv_input)
+                ])
+
             resource_curve_normal_year = normal_year_resource_curve(deriv_input)
-            raw_derivatives.append(resource_curve_normal_year)
+            raw_derivatives.extend([resource_curve_normal_year,])
+
             resource_curve_normal_year = pd.Series(
                 resource_curve_normal_year['value'],
                 index = pd.to_datetime(resource_curve_normal_year['orderable']))
-            raw_derivatives.append(reporting_period_resource_curve(deriv_input))
-            raw_derivatives.append(normal_year_co2_avoided(deriv_input, resource_curve_normal_year))
+            raw_derivatives.extend([normal_year_co2_avoided(
+                deriv_input, resource_curve_normal_year),])
 
             derivatives += [
                 Derivative(

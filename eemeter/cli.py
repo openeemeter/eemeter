@@ -1,8 +1,10 @@
 from collections import OrderedDict
 import datetime
 import pytz
-import csv, json
-import os, sys, errno
+import csv
+import json
+import os
+import errno
 import click
 import pandas as pd
 from scipy import stats
@@ -13,10 +15,7 @@ from eemeter.ee.meter import EnergyEfficiencyMeter
 from eemeter.processors.dispatchers import (
     get_approximate_frequency,
 )
-from eemeter.modeling.models.caltrack_daily import CaltrackDailyModel
 from eemeter.modeling.models.caltrack import CaltrackMonthlyModel
-from eemeter.modeling.models.hourly_load_profile import HourlyLoadProfileModel
-from eemeter.modeling.formatters import ModelDataFormatter
 
 
 @click.group()
@@ -26,21 +25,21 @@ def cli():
        Example usage:
            eemeter analyze /path/to/input/data
        Or:
-           eemeter sample 
+           eemeter sample
 
-       The latter will use the example dataset included in the Python package 
+       The latter will use the example dataset included in the Python package
        in the subdirectory "eemeter/sample_data".
 
        This command will analyze a set of "traces," i.e. time series
        of energy usage, using the eemeter. The input directory should
        contain two files: projects.csv, and traces.csv.
-     
+
        projects.csv specifies the project locations and the start and end
        dates of the interventions to be analyzed:
 
        \b
            project_id, zipcode, project_start, project_end
-           ABC, 60640, 2015-12-31 00:00:00, 2016-01-01 00:00:00 
+           ABC, 60640, 2015-12-31 00:00:00, 2016-01-01 00:00:00
            ...
 
        traces.csv contains the usage time series
@@ -50,8 +49,8 @@ def cli():
            2015-01-01 00:00:00, 0.61683272591, ABC, gas
            ...
 
-       Several common date/time formats are accepted. The project_id is a 
-       freeform string, and the interpretation should be "electricity" or 
+       Several common date/time formats are accepted. The project_id is a
+       freeform string, and the interpretation should be "electricity" or
        "gas".
 
        The most commonly-used outputs will be displayed on the terminal;
@@ -63,8 +62,9 @@ def cli():
        By default, the eemter will impose a 12-month requirement on both
        the pre- and post-intervention usage time series. To ignore this
        requirement, pass the option "--ignore-data-sufficiency".
-       
+
     '''
+
 
 def slugify(value):
     """
@@ -75,6 +75,7 @@ def slugify(value):
     value = value.replace(',', '')
     value = value.replace(' ', '_')
     return value
+
 
 def serialize_meter_input(
         trace, zipcode, retrofit_start_date, retrofit_end_date):
@@ -239,8 +240,8 @@ def full_output(meter_output, dirname, trace_id):
         with open(series_name, 'w') as f:
             fcsv = csv.writer(f)
             fcsv.writerow(['Orderable', 'Value', 'Variance'])
-            for o, v, va in zip(derivative['orderable'], 
-                                derivative['value'], 
+            for o, v, va in zip(derivative['orderable'],
+                                derivative['value'],
                                 derivative['variance']):
                 fcsv.writerow([o, v, va])
 
@@ -266,7 +267,8 @@ def basic_output(meter_output):
         awn_var = None
     awn_confint = []
     if awn is not None and awn_var is not None:
-        awn_confint = stats.norm.interval(0.68, loc=awn, scale=np.sqrt(awn_var))
+        awn_confint = stats.norm.interval(0.68, loc=awn,
+                                          scale=np.sqrt(awn_var))
 
     if len(awn_confint) > 1:
         print("Normal year savings estimate:")
@@ -274,8 +276,10 @@ def basic_output(meter_output):
               format(awn, awn_confint[0], awn_confint[1]))
     else:
         print("Normal year savings estimates not computed due to error:")
-        bl_traceback = meter_output['modeled_energy_trace']['fits']['baseline']['traceback']
-        rp_traceback = meter_output['modeled_energy_trace']['fits']['reporting']['traceback']
+        bl_traceback = meter_output[
+                'modeled_energy_trace']['fits']['baseline']['traceback']
+        rp_traceback = meter_output[
+                'modeled_energy_trace']['fits']['reporting']['traceback']
         if bl_traceback is not None:
             print(bl_traceback)
         if rp_traceback is not None:
@@ -298,7 +302,8 @@ def basic_output(meter_output):
         rep_var = None
     rep_confint = []
     if rep is not None and rep_var is not None:
-        rep_confint = stats.norm.interval(0.68, loc=rep, scale=np.sqrt(rep_var))
+        rep_confint = stats.norm.interval(0.68, loc=rep,
+                                          scale=np.sqrt(rep_var))
     else:
         rep_confint = []
 
@@ -308,8 +313,8 @@ def basic_output(meter_output):
               format(rep, rep_confint[0], rep_confint[1]))
     else:
         print("Reporting period savings estimates not computed due to error:")
-        print(meter_output['modeled_energy_trace']['fits']['baseline']['traceback'])
-
+        print(meter_output['modeled_energy_trace']['fits'][
+                           'baseline']['traceback'])
 
 
 def run_meter(project, trace_object, options=None):
@@ -326,26 +331,22 @@ def run_meter(project, trace_object, options=None):
     ee = EnergyEfficiencyMeter()
 
     if options is not None and \
-       'ignore_data_sufficiency' in options.keys() and \
-       options['ignore_data_sufficiency'] == True:
+            'ignore_data_sufficiency' in options.keys() and \
+            options['ignore_data_sufficiency'] is True:
         trace_frequency = get_approximate_frequency(trace_object)
         if trace_frequency not in ['H', 'D', '15T', '30T']:
-             trace_frequency = None
+            trace_frequency = None
         selector = (trace_object.interpretation, trace_frequency)
         model = ee._get_model(None, selector)
-    
+
         model_class, model_kwargs = model
-    
+
         if model_class == CaltrackMonthlyModel:
             model_kwargs['min_contiguous_baseline_months'] = 0
             model_kwargs['min_contiguous_reporting_months'] = 0
         else:
             model_kwargs['min_contiguous_months'] = 0
 
-    #meter_output = ee.evaluate(meter_input, 
-    #    formatter = (ModelDataFormatter, {'freq_str': 'H'}),
-    #    model = (HourlyLoadProfileModel, { 'fit_cdd': False, 'grid_search': True, })
-    #    )
     meter_output = ee.evaluate(meter_input)
     basic_output(meter_output)
 
@@ -365,7 +366,12 @@ def _analyze(inputs_path, options=None):
     for project in projects:
         for trace_object in trace_objects:
             if trace_object.trace_id == project['project_id']:
-                meter_output_list.append(run_meter(project, trace_object, options=options))
+                meter_outputs = run_meter(
+                    project,
+                    trace_object,
+                    options=options
+                )
+                meter_output_list.append(meter_outputs)
 
     return meter_output_list
 
@@ -382,6 +388,7 @@ def _load_projects_and_traces(inputs_path):
         row['project_end'] = flexible_date_reader(row['project_end'])
 
     trace_objects = build_traces(traces)
+
     return projects, trace_objects
 
 
@@ -399,7 +406,7 @@ def _get_sample_inputs_path():
               help='Directory in which to put the full eemeter output.')
 def sample(full_output, output_dir):
     sample_inputs_path = _get_sample_inputs_path()
-    options = { 'full_output': full_output, 'output_dir': output_dir } 
+    options = {'full_output': full_output, 'output_dir': output_dir}
     print("Going to analyze the sample data set")
     print("")
     _analyze(sample_inputs_path, options)
@@ -414,6 +421,6 @@ def sample(full_output, output_dir):
 @click.option('--output-dir', default='eemeter_output',
               help='Directory in which to put the full eemeter output.')
 def analyze(inputs_path, ignore_data_sufficiency, full_output, output_dir):
-    options = { 'ignore_data_sufficiency': ignore_data_sufficiency,
-                'full_output': full_output, 'output_dir': output_dir } 
+    options = {'ignore_data_sufficiency': ignore_data_sufficiency,
+               'full_output': full_output, 'output_dir': output_dir}
     _analyze(inputs_path, options=options)
