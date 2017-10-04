@@ -583,11 +583,12 @@ class EnergyEfficiencyMeter(object):
             resource_curve_normal_year = normal_year_resource_curve(deriv_input)
             raw_derivatives.extend([resource_curve_normal_year,])
 
-            resource_curve_normal_year = pd.Series(
-                resource_curve_normal_year['value'],
-                index = pd.to_datetime(resource_curve_normal_year['orderable']))
-            raw_derivatives.extend([normal_year_co2_avoided(
-                deriv_input, resource_curve_normal_year),])
+            if resource_curve_normal_year is not None:
+                resource_curve_normal_year = pd.Series(
+                    resource_curve_normal_year['value'],
+                    index = pd.to_datetime(resource_curve_normal_year['orderable']))
+                raw_derivatives.extend([normal_year_co2_avoided(
+                    deriv_input, resource_curve_normal_year),])
 
             derivatives += [
                 Derivative(
