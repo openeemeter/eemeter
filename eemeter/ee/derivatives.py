@@ -1321,14 +1321,12 @@ def normal_year_co2_avoided(deriv_input, resource_curve):
         co2_pre = f(load_by_hour.values)
 
         # Calculate the post-internention load and CO2 emissions
-        print load_by_hour
-        print resource_curve
         load_post = load_by_hour.values - resource_curve.values
         co2_post = f(load_post)
 
         # Return the savings
         avoided_emissions = pd.Series(co2_pre - co2_post,
-                                      index=load_by_hour.index)
+                                      index=resource_curve.index)
 
         return {
                 'series': series,
