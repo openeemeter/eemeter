@@ -60,9 +60,9 @@ class SqlCO2Store(object):
 
     def save_json(self, year, region, co2_by_load, load_by_hour):
         co2_by_load = json.dumps({str(k): v for k, v in
-                                  co2_by_load.to_dict().iteritems()})
+                                  co2_by_load.to_dict().items()})
         load_by_hour = json.dumps({str(k): v for k, v in
-                                   load_by_hour.to_dict().iteritems()})
+                                   load_by_hour.to_dict().items()})
         if self.key_exists(year, region):
             s = self.items.update().where(
                 (self.items.c.year == year) &
