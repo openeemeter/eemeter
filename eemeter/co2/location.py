@@ -1,5 +1,4 @@
 import json
-import numpy as np
 from pkg_resources import resource_stream
 
 
@@ -23,9 +22,11 @@ def _load_zipcode_to_avert_region():
     return _load_resource('zipcode_to_avert_region',
                           'zipcode_avert_region.json')
 
+
 def _load_supported_zipcodes_index():
     return _load_resource('supported_zipcodes_index',
                           'supported_zipcodes.json')
+
 
 def zipcode_to_avert_region(zipcode):
     """Return the latitude and longitude centroid of a particular ZIP code.

@@ -1313,8 +1313,8 @@ def normal_year_co2_avoided(deriv_input, resource_curve):
         co2_by_load = avert.get_co2_by_load()
         load_by_hour = avert.get_load_by_hour()
         load_by_hour = load_by_hour[~(
-            (load_by_hour.index.day==29) &
-            (load_by_hour.index.month==2))]
+            (load_by_hour.index.day == 29) &
+            (load_by_hour.index.month == 2))]
 
         # Calculate the pre-intervention CO2 emissions
         f = interpolate.interp1d(co2_by_load.index, co2_by_load.values)
@@ -1338,4 +1338,3 @@ def normal_year_co2_avoided(deriv_input, resource_curve):
     except:
         _report_failed_derivative(series)
         return None
-
