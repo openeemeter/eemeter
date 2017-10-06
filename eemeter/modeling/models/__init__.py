@@ -11,5 +11,5 @@ __all__ = (
     'SeasonalElasticNetCVModel',
     'BillingElasticNetCVModel',
     'HourlyLoadProfileModel',
-    'DayOfWeekBasedLinearRegression'
+    'DayOfWeekBasedLinearRegression',
 )

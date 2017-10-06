@@ -106,12 +106,12 @@ class HourlyLoadProfileModel(object):
         jj = self.input_data.groupby([self.input_data.index.month,
                                       self.input_data.index.dayofweek < 5,
                                       self.input_data.index.hour]).energy.std()
-        output_data.predicted = ii.loc[zip(output_data.index.month,
-                                           output_data.index.dayofweek < 5,
-                                           output_data.index.hour)].values
-        output_data.variance = jj.loc[zip(output_data.index.month,
-                                          output_data.index.dayofweek < 5,
-                                          output_data.index.hour)].values
+        output_data.predicted = ii.loc[list(zip(output_data.index.month,
+                                                output_data.index.dayofweek < 5,
+                                                output_data.index.hour))].values
+        output_data.variance = jj.loc[list(zip(output_data.index.month,
+                                               output_data.index.dayofweek < 5,
+                                               output_data.index.hour))].values
         output_data_daily = output_data.predicted.resample('D').sum()
         output_factors = df_daily / output_data_daily
         nextday = df_daily.index[-1] + datetime.timedelta(days=1)
