@@ -189,6 +189,23 @@ class ModelDataFormatter(FormatterBase):
         '''
         return trace.data.value.resample('D').sum()  # discard 'estimated' col
 
+    def hourly_trace_data(self, trace):
+        ''' Transforms a trace for this formatter to an hourly series
+        '''
+        if trace.data.empty:
+            return pd.Series([])
+        data = [
+            value / ((e - s).seconds/3600.) for value, s, e in
+            zip(trace.data.value, trace.data.index, trace.data.index[1:])
+        ] + [np.nan]  # add missing last data point
+
+        retval = pd.Series(data, index=trace.data.index)
+        retval = retval[
+            ~retval.index.duplicated(keep='last')].sort_index()
+        retval = retval.resample('H').ffill()
+        return retval
+        return trace.data.value.resample('H').sum()  # discard 'estimated' col
+
 
 class ModelDataBillingFormatter(FormatterBase):
     ''' Formatter for model data of unknown or unpredictable frequency.
@@ -401,4 +418,20 @@ formatter.create_input(energy_trace, weather_source)
         retval = retval[
             ~retval.index.duplicated(keep='last')].sort_index()
         retval = retval.resample('D').ffill()
+        return retval
+
+    def hourly_trace_data(self, trace):
+        ''' Transforms a trace for this formatter to a hourly series
+        '''
+        if trace.data.empty:
+            return pd.Series([])
+        data = [
+            value / ((e - s).seconds/3600.) for value, s, e in
+            zip(trace.data.value, trace.data.index, trace.data.index[1:])
+        ] + [np.nan]  # add missing last data point
+
+        retval = pd.Series(data, index=trace.data.index)
+        retval = retval[
+            ~retval.index.duplicated(keep='last')].sort_index()
+        retval = retval.resample('H').ffill()
         return retval
