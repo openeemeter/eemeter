@@ -101,7 +101,7 @@ def unpack(modeled_trace, baseline_label, reporting_label,
             normal_index, weather_normal_source)
         if hourly_trace_data is not None:
             normal_index = pd.date_range(
-                '2015-01-01', freq='H', periods=365*24,
+                '2015-01-01', freq='H', periods=normalyear_periods,
                 tz=pytz.UTC)
             hourly_annualized_fixture = formatter.create_demand_fixture(
                 normal_index, weather_normal_source)

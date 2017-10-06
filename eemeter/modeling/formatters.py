@@ -421,7 +421,17 @@ formatter.create_input(energy_trace, weather_source)
         return retval
 
     def hourly_trace_data(self, trace):
-        ''' Billing data generally cannot be usefully transformed
-            into an hourly series, so return an empty series.
+        ''' Transforms a trace for this formatter to a hourly series
         '''
-        return pd.Series([])
+        if trace.data.empty:
+            return pd.Series([])
+        data = [
+            value / ((e - s).seconds/3600.) for value, s, e in
+            zip(trace.data.value, trace.data.index, trace.data.index[1:])
+        ] + [np.nan]  # add missing last data point
+
+        retval = pd.Series(data, index=trace.data.index)
+        retval = retval[
+            ~retval.index.duplicated(keep='last')].sort_index()
+        retval = retval.resample('H').ffill()
+        return retval

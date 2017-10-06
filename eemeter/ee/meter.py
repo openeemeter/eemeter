@@ -576,7 +576,7 @@ class EnergyEfficiencyMeter(object):
                 reporting_mask(deriv_input),
                 normal_year_resource_curve(deriv_input),
                 reporting_period_resource_curve(deriv_input)
-                ])
+            ])
 
             derivatives += [
                 Derivative(
