@@ -2,9 +2,6 @@ import logging
 from collections import OrderedDict, namedtuple
 
 from six import string_types
-import numpy as np
-import pandas as pd
-import pytz
 from functools import reduce
 
 from eemeter import get_version
@@ -526,16 +523,16 @@ class EnergyEfficiencyMeter(object):
         # Step 9: for each modeling period group, create derivatives
         derivative_freq = 'D'
         if 'freq_str' in formatter_kwargs.keys() and \
-            formatter_kwargs['freq_str'] == 'H':
+                formatter_kwargs['freq_str'] == 'H':
             derivative_freq = 'H'
 
         derivatives = []
         for ((baseline_label, reporting_label),
-             (baseline_period, reporting_period)) in \
-             modeling_period_set.iter_modeling_period_groups():
+                (baseline_period, reporting_period)) in \
+                modeling_period_set.iter_modeling_period_groups():
             raw_derivatives = []
             deriv_input = unpack(modeled_trace, baseline_label, reporting_label,
-                                 baseline_period, reporting_period, 
+                                 baseline_period, reporting_period,
                                  weather_source, weather_normal_source,
                                  derivative_freq=derivative_freq)
             if deriv_input is None:
@@ -575,7 +572,7 @@ class EnergyEfficiencyMeter(object):
             raw_derivatives.append(masked_temperature_reporting_period(deriv_input))
             raw_derivatives.append(temperature_normal_year(deriv_input))
             raw_derivatives.append(baseline_mask(deriv_input))
-            raw_derivatives.append(reporting_mask(deriv_input)) 
+            raw_derivatives.append(reporting_mask(deriv_input))
             raw_derivatives.append(normal_year_resource_curve(deriv_input))
             raw_derivatives.append(reporting_period_resource_curve(deriv_input))
 
