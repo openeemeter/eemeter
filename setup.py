@@ -36,7 +36,7 @@ setup(
         'statsmodels >= 0.8.0rc1',
         'SQLAlchemy',
     ],
-    package_data={'': ['*.json', '*.gz']},
+    package_data={'': ['*.json', '*.gz', '*.csv']},
     setup_requires=['pytest-runner'],
     tests_require=['pytest'],
     entry_points={
