@@ -1,7 +1,3 @@
-import tempfile
-
-from numpy.testing import assert_allclose
-import pandas as pd
 import pytest
 
 from eemeter.co2.avert import AVERTSource
@@ -10,7 +6,6 @@ from eemeter.testing import MockAVERTClient
 
 @pytest.fixture
 def mock_avert_source():
-    tmp_url = "sqlite:///{}/co2_cache.db".format(tempfile.mkdtemp())
     cs = AVERTSource(2016, 'UMW')
     cs.client = MockAVERTClient()
     return cs

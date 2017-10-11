@@ -1,5 +1,4 @@
 from eemeter.co2.clients import AVERTClient
-import pandas as pd
 
 
 def test_rdf_data():

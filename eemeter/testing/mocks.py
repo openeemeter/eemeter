@@ -34,6 +34,7 @@ class MockWeatherClient(object):
         temps = self._fake_temps(dates.shape[0])
         return pd.Series(temps, index=dates, dtype=float)
 
+
 class MockAVERTClient(object):
 
     def _fake_loads(self, n):
@@ -49,5 +50,6 @@ class MockAVERTClient(object):
                               "{}-12-31 23:00".format(year),
                               freq='D', tz=pytz.UTC)
         loads = self._fake_loads(dates.shape[0])
-        co2_by_load = pd.Series(np.arange(0,60000,1000.), np.arange(0,60000,1000.))
+        co2_by_load = pd.Series(np.arange(0, 60000, 1000.),
+                                np.arange(0, 60000, 1000.))
         return co2_by_load, pd.Series(loads, index=dates, dtype=float)
