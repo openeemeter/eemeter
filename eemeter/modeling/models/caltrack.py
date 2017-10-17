@@ -26,8 +26,14 @@ class CaltrackMonthlyModel(object):
     '''
     def __init__(
             self, fit_cdd=True, grid_search=False,
+            hdd_candidate_bp_range=range(65, 76),
+            cdd_candidate_bp_range=range(55, 66),
+            hdd_fixed_bp=70.,
+            cdd_fixed_bp=60.,
             min_contiguous_baseline_months=12,
             min_contiguous_reporting_months=12,
+            max_baseline_months=None,
+            max_reporting_months=None,
             modeling_period_interpretation='baseline',
             weighted=False, **kwargs):  # ignore extra args
         self.fit_cdd = fit_cdd
@@ -45,14 +51,16 @@ class CaltrackMonthlyModel(object):
         self.fit_bp_hdd, self.fit_bp_cdd = None, None
         self.min_contiguous_baseline_months = min_contiguous_baseline_months
         self.min_contiguous_reporting_months = min_contiguous_reporting_months
+        self.max_baseline_months = max_baseline_months
+        self.max_reporting_months = max_reporting_months
         self.modeling_period_interpretation = modeling_period_interpretation
         self.weighted = weighted
 
         if grid_search:
-            self.bp_cdd = range(65, 76)
-            self.bp_hdd = range(55, 66)
+            self.bp_cdd = cdd_candidate_bp_range
+            self.bp_hdd = hdd_candidate_bp_range
         else:
-            self.bp_cdd, self.bp_hdd = [70, ], [60, ]
+            self.bp_cdd, self.bp_hdd = [cdd_fixed_bp, ], [hdd_fixed_bp, ]
 
     def __repr__(self):
         return 'CaltrackMonthlyModel'
@@ -410,6 +418,20 @@ class CaltrackMonthlyModel(object):
             df = self.billing_to_monthly_avg(input_data)
         else:
             df = self.daily_to_monthly_avg(self.input_data)
+
+        if self.modeling_period_interpretation == 'baseline' and \
+           self.max_baseline_months is not None:
+            if np.isnan(df.ix[-1]['upd']):
+                df = df[-self.max_baseline_months - 1:]
+            else:
+                df = df[-self.max_baseline_months:]
+
+        if self.modeling_period_interpretation == 'reporting' and \
+           self.max_reporting_months is not None:
+            if np.isnan(df.ix[0]['upd']):
+                df = df[:self.max_reporting_months + 1]
+            else:
+                df = df[:self.max_reporting_months]
 
         self.meets_sufficiency_or_error(df)
 

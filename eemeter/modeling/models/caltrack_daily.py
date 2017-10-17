@@ -25,7 +25,14 @@ class CaltrackDailyModel(object):
     '''
     def __init__(
             self, fit_cdd=True, grid_search=False, min_fraction_coverage=0.9,
-            min_contiguous_months=12,
+            hdd_candidate_bp_range=range(65, 76),
+            cdd_candidate_bp_range=range(55, 66),
+            hdd_fixed_bp=70.,
+            cdd_fixed_bp=60.,
+            min_contiguous_baseline_months=12,
+            min_contiguous_reporting_months=12,
+            max_baseline_months=None,
+            max_reporting_months=None,
             modeling_period_interpretation='baseline',
             **kwargs):  # ignore extra args
 
@@ -44,14 +51,17 @@ class CaltrackDailyModel(object):
         self.input_data = None
         self.fit_bp_hdd, self.fit_bp_cdd = None, None
         self.min_fraction_coverage = min_fraction_coverage
-        self.min_contiguous_months = min_contiguous_months
+        self.min_contiguous_baseline_months = min_contiguous_baseline_months
+        self.min_contiguous_reporting_months = min_contiguous_reporting_months
+        self.max_baseline_months = max_baseline_months
+        self.max_reporting_months = max_reporting_months
         self.modeling_period_interpretation = modeling_period_interpretation
 
         if grid_search:
-            self.bp_cdd = range(65, 76)
-            self.bp_hdd = range(55, 66)
+            self.bp_cdd = cdd_candidate_bp_range
+            self.bp_hdd = hdd_candidate_bp_range
         else:
-            self.bp_cdd, self.bp_hdd = [70, ], [60, ]
+            self.bp_cdd, self.bp_hdd = [cdd_fixed_bp, ], [hdd_fixed_bp, ]
 
     def __repr__(self):
         return 'CaltrackDailyModel'
@@ -100,10 +110,78 @@ class CaltrackDailyModel(object):
         return output
 
     def meets_sufficiency_or_error(self, df):
-        if np.sum(np.isfinite(df['usage'])) < self.min_fraction_coverage * len(df):
-            raise model_exceptions.DataSufficiencyException("Insufficient coverage")
-        if len(df) < self.min_contiguous_months * 30:
-            raise model_exceptions.DataSufficiencyException("Insufficient data")
+        # Caltrack sufficiency requirement of number of contiguous months
+
+        # choose first hdd as a proxy for temperature data
+        upd = df['upd'].values
+
+        reason = None
+        mp_type = self.modeling_period_interpretation
+        if mp_type == 'baseline':
+
+            _n = self.min_contiguous_baseline_months * 30
+            # In the baseline period, require the last N months be non-nan.
+            last_day_nan = np.isnan(upd[-1])
+            direction = "last"
+
+            if last_day_nan:
+                upd_contig = upd[-(_n+1):-1]
+            else:
+                upd_contig = upd[-_n:]
+
+        elif mp_type == 'reporting':
+
+            _n = self.min_contiguous_reporting_months * 30
+            # In the reporting period, require the first N months be non-nan.
+            first_day_nan = np.isnan(df['upd'].values[0])
+            direction = "first"
+
+            if first_day_nan:
+                upd_contig = upd[1:_n+1]
+            else:
+                upd_contig = upd[:_n]
+        else:
+            raise ValueError(
+                'Unexpected modeling period interpretation {}'
+                .format(mp_type)
+            )
+
+        n_months = len(upd_contig) / 30
+        if n_months < (_n / 30):
+            reason = (
+                'The {direction} {req} months of a {mp} period must have'
+                ' non-NaN energy and temperature values. In this case, there'
+                ' were only {n} months in the series.'
+                .format(
+                    direction=direction,
+                    req=(_n / 30),
+                    mp=mp_type,
+                    n=n_months
+                )
+            )
+        else:
+            if np.sum(np.isfinite(df['usage'])) < self.min_fraction_coverage * len(df):
+                reason = (
+                    'The {mp} period must have at least {fc}'
+                    ' fractional coverage of energy and temperature data.'
+                    ' In this case, it only has {afc} coverage.'
+                    .format(
+                        mp=mp_type,
+                        fc=self.min_fraction_coverage,
+                        afc=np.sum(np.isfinite(df['usage'])) / float(len(df))
+                    )
+                )
+
+        if reason is not None:
+            raise model_exceptions.DataSufficiencyException(
+                'Data does not meet minimum contiguous months requirement. {}'
+                .format(reason)
+            )
+
+        if not np.nansum(upd) > 0.01:
+            raise model_exceptions.DataSufficiencyException(
+                "Energy trace data is all or nearly all zero")
+
         return
 
     def fit(self, input_data):
@@ -115,6 +193,20 @@ class CaltrackDailyModel(object):
         else:
             df = self.ami_to_daily(self.input_data)
         self.df = df
+
+        if self.modeling_period_interpretation == 'baseline' and \
+           self.max_baseline_months is not None:
+            if np.isnan(df.ix[-1]['upd']):
+                df = df[-self.max_baseline_months * 30 - 1:]
+            else:
+                df = df[-self.max_baseline_months * 30:]
+
+        if self.modeling_period_interpretation == 'reporting' and \
+           self.max_reporting_months is not None:
+            if np.isnan(df.ix[0]['upd']):
+                df = df[:self.max_reporting_months * 30 + 1]
+            else:
+                df = df[:self.max_reporting_months * 30]
 
         self.meets_sufficiency_or_error(df)
 
