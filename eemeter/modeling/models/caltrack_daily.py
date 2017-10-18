@@ -25,10 +25,10 @@ class CaltrackDailyModel(object):
     '''
     def __init__(
             self, fit_cdd=True, grid_search=False, min_fraction_coverage=0.9,
-            hdd_candidate_bp_range=range(65, 76),
-            cdd_candidate_bp_range=range(55, 66),
-            hdd_fixed_bp=70.,
-            cdd_fixed_bp=60.,
+            cdd_candidate_bp_range=range(65, 76),
+            hdd_candidate_bp_range=range(55, 66),
+            cdd_fixed_bp=70.,
+            hdd_fixed_bp=60.,
             min_contiguous_baseline_months=12,
             min_contiguous_reporting_months=12,
             max_baseline_months=None,
