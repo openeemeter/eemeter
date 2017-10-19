@@ -19,7 +19,7 @@ def _fit_intercept(df, weighted=False):
     return int_formula, int_mod, int_res, int_rsquared, int_qualified
 
 
-def _fit_cdd_only(df, weighted=False):
+def _fit_cdd_only(df, weighted=False, pvalue_cutoff=0.1):
 
     bps = [i[4:] for i in df.columns if i[:3] == 'CDD']
     best_bp, best_rsquared, best_mod, best_res = None, -9e9, None, None
@@ -41,7 +41,7 @@ def _fit_cdd_only(df, weighted=False):
             if (candidate_cdd_rsquared > best_rsquared and
                     candidate_cdd_res.params['Intercept'] >= 0 and
                     candidate_cdd_res.params['CDD_' + bp] >= 0 and
-                    candidate_cdd_res.pvalues['CDD_' + bp] < 0.1):
+                    candidate_cdd_res.pvalues['CDD_' + bp] < pvalue_cutoff):
                 best_bp, best_rsquared = int(bp), candidate_cdd_rsquared
                 best_mod, best_res = candidate_cdd_mod, candidate_cdd_res
                 cdd_qualified = True
@@ -54,7 +54,7 @@ def _fit_cdd_only(df, weighted=False):
     return best_formula, best_mod, best_res, best_rsquared, cdd_qualified, best_bp
 
 
-def _fit_hdd_only(df, weighted=False):
+def _fit_hdd_only(df, weighted=False, pvalue_cutoff=0.1):
 
     bps = [i[4:] for i in df.columns if i[:3] == 'HDD']
     best_bp, best_rsquared, best_mod, best_res = None, -9e9, None, None
@@ -76,7 +76,7 @@ def _fit_hdd_only(df, weighted=False):
             if (candidate_hdd_rsquared > best_rsquared and
                     candidate_hdd_res.params['Intercept'] >= 0 and
                     candidate_hdd_res.params['HDD_' + bp] >= 0 and
-                    candidate_hdd_res.pvalues['HDD_' + bp] < 0.1):
+                    candidate_hdd_res.pvalues['HDD_' + bp] < pvalue_cutoff):
                 best_bp, best_rsquared = int(bp), candidate_hdd_rsquared
                 best_mod, best_res = candidate_hdd_mod, candidate_hdd_res
                 hdd_qualified = True
@@ -89,7 +89,7 @@ def _fit_hdd_only(df, weighted=False):
     return best_formula, best_mod, best_res, best_rsquared, hdd_qualified, best_bp
 
 
-def _fit_full(df, weighted=False):
+def _fit_full(df, weighted=False, pvalue_cutoff=0.1):
 
     hdd_bps = [i[4:] for i in df.columns if i[:3] == 'HDD']
     cdd_bps = [i[4:] for i in df.columns if i[:3] == 'CDD']
@@ -122,8 +122,8 @@ def _fit_full(df, weighted=False):
                         candidate_full_res.params['Intercept'] >= 0 and
                         candidate_full_res.params['HDD_' + hdd_bp] >= 0 and
                         candidate_full_res.params['CDD_' + cdd_bp] >= 0 and
-                        candidate_full_res.pvalues['HDD_' + hdd_bp] < 0.1 and
-                        candidate_full_res.pvalues['CDD_' + cdd_bp] < 0.1):
+                        candidate_full_res.pvalues['HDD_' + hdd_bp] < pvalue_cutoff and
+                        candidate_full_res.pvalues['CDD_' + cdd_bp] < pvalue_cutoff):
                     best_hdd_bp, best_cdd_bp, best_rsquared = \
                         int(hdd_bp), int(cdd_bp), candidate_full_rsquared
                     best_mod, best_res = candidate_full_mod, candidate_full_res

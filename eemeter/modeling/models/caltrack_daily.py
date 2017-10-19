@@ -25,15 +25,16 @@ class CaltrackDailyModel(object):
     '''
     def __init__(
             self, fit_cdd=True, grid_search=False, min_fraction_coverage=0.9,
-            hdd_candidate_bp_range=range(65, 76),
-            cdd_candidate_bp_range=range(55, 66),
-            hdd_fixed_bp=70.,
-            cdd_fixed_bp=60.,
+            cdd_candidate_bp_range=range(65, 76),
+            hdd_candidate_bp_range=range(55, 66),
+            cdd_fixed_bp=70.,
+            hdd_fixed_bp=60.,
             min_contiguous_baseline_months=12,
             min_contiguous_reporting_months=12,
             max_baseline_months=None,
             max_reporting_months=None,
             modeling_period_interpretation='baseline',
+            pvalue_cutoff=0.1,
             **kwargs):  # ignore extra args
 
         self.fit_cdd = fit_cdd
@@ -56,6 +57,7 @@ class CaltrackDailyModel(object):
         self.max_baseline_months = max_baseline_months
         self.max_reporting_months = max_reporting_months
         self.modeling_period_interpretation = modeling_period_interpretation
+        self.pvalue_cutoff=pvalue_cutoff
 
         if grid_search:
             self.bp_cdd = cdd_candidate_bp_range
@@ -228,7 +230,7 @@ class CaltrackDailyModel(object):
                 cdd_rsquared,
                 cdd_qualified,
                 cdd_bp
-            ) = _fit_cdd_only(df)
+            ) = _fit_cdd_only(df, pvalue_cutoff=self.pvalue_cutoff)
         else:
             cdd_formula = None
             cdd_mod = None
@@ -245,7 +247,7 @@ class CaltrackDailyModel(object):
             hdd_rsquared,
             hdd_qualified,
             hdd_bp
-        ) = _fit_hdd_only(df)
+        ) = _fit_hdd_only(df, pvalue_cutoff=self.pvalue_cutoff)
 
         # CDD+HDD
         if self.fit_cdd:
@@ -257,7 +259,7 @@ class CaltrackDailyModel(object):
                 full_qualified,
                 full_hdd_bp,
                 full_cdd_bp
-            ) = _fit_full(df)
+            ) = _fit_full(df, pvalue_cutoff=self.pvalue_cutoff)
         else:
             full_formula = None
             full_mod = None
