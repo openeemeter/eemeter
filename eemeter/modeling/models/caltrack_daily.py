@@ -57,7 +57,7 @@ class CaltrackDailyModel(object):
         self.max_baseline_months = max_baseline_months
         self.max_reporting_months = max_reporting_months
         self.modeling_period_interpretation = modeling_period_interpretation
-        self.pvalue_cutoff=pvalue_cutoff
+        self.pvalue_cutoff = pvalue_cutoff
 
         if grid_search:
             self.bp_cdd = cdd_candidate_bp_range
