@@ -9,11 +9,7 @@ from eemeter.modeling.formatters import (
     ModelDataFormatter,
     ModelDataBillingFormatter,
 )
-from eemeter.modeling.models import (
-    CaltrackMonthlyModel,
-    CaltrackDailyModel,
-    DayOfWeekBasedLinearRegression,
-    HourlyLoadProfileModel)
+from eemeter.modeling.models import (CaltrackMonthlyModel, CaltrackDailyModel, DayOfWeekBasedLinearRegression)
 
 from eemeter.modeling.split import SplitModeledEnergyTrace
 from eemeter.io.serializers import (
