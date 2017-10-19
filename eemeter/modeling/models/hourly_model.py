@@ -34,7 +34,7 @@ class DayOfWeekBasedLinearRegression(object):
         self.cdd_base_temp = cdd_base_temp
         self.hdd_base_temp = hdd_base_temp
 
-        #Following attributes are not use but adding it here to make it similar to other
+        # Following attributes are not used but adding it here, so as to make it similar to other
         # Model initialization.
         self.fit_cdd = fit_cdd
         self.fit_hdff = fit_hdd
