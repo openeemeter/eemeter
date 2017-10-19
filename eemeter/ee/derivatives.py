@@ -108,7 +108,7 @@ def unpack(modeled_trace, baseline_label, reporting_label,
             normal_index, weather_normal_source)
         if hourly_trace_data is not None:
             normal_index = pd.date_range(
-                '2015-01-01', freq='H', periods=normalyear_periods,
+                '2015-01-01', freq='H', periods=365*24,
                 tz=pytz.UTC)
             hourly_annualized_fixture = formatter.create_demand_fixture(
                 normal_index, weather_normal_source)
@@ -1309,7 +1309,7 @@ def normal_year_co2_avoided(deriv_input, resource_curve):
         _report_failed_derivative(series)
         return None
 
-    try:
+    if 1:# try:
         co2_by_load = avert.get_co2_by_load()
         load_by_hour = avert.get_load_by_hour()
         load_by_hour = load_by_hour[~(
@@ -1335,6 +1335,6 @@ def normal_year_co2_avoided(deriv_input, resource_curve):
                 'value': [v for v in avoided_emissions.values],
                 'variance': [None for v in avoided_emissions.values]
                }
-    except:
+    else:#except:
         _report_failed_derivative(series)
         return None
