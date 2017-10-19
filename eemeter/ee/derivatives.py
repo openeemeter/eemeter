@@ -1309,7 +1309,7 @@ def normal_year_co2_avoided(deriv_input, resource_curve):
         _report_failed_derivative(series)
         return None
 
-    if 1:# try:
+    try:
         co2_by_load = avert.get_co2_by_load()
         load_by_hour = avert.get_load_by_hour()
         load_by_hour = load_by_hour[~(
@@ -1335,6 +1335,6 @@ def normal_year_co2_avoided(deriv_input, resource_curve):
                 'value': [v for v in avoided_emissions.values],
                 'variance': [None for v in avoided_emissions.values]
                }
-    else:#except:
+    except:
         _report_failed_derivative(series)
         return None
