@@ -16,7 +16,7 @@ Make sure you have the latest version:
 .. code-block:: python
 
     >>> import eemeter; eemeter.get_version()
-    '1.2.0'
+    '1.2.1'
 
 The `eemeter` package itself does not use C extensions. However, some eemeter
 dependencies do. These can be a bit trickier to install. If issues arise when

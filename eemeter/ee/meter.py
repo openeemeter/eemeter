@@ -578,7 +578,7 @@ class EnergyEfficiencyMeter(object):
                 baseline_mask(deriv_input),
                 reporting_mask(deriv_input),
                 reporting_period_resource_curve(deriv_input)
-                ])
+            ])
 
             resource_curve_normal_year = normal_year_resource_curve(deriv_input)
             raw_derivatives.extend([resource_curve_normal_year])
