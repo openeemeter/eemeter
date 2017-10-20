@@ -13,8 +13,9 @@ class DayOfWeekBasedLinearRegression(object):
     The fit function takes as input a dataframe indexed with hourly timestamps
     and tempF as column which contain hourly temparatures.
     """
-    def __init__(self, cdd_base_temp=70,
-                 hdd_base_temp=60):
+    def __init__(self, cdd_base_temp=70, hdd_base_temp=60, fit_cdd=True, fit_hdd=True, grid_search=False,
+                 min_fraction_coverage=0.9, min_contiguous_months=1, modeling_period_interpretation='baseline',
+                 **kwargs):
         self.model_weekday = None
         self.model_res_weekday = None
         self.model_weekend = None
@@ -25,6 +26,15 @@ class DayOfWeekBasedLinearRegression(object):
         self.weekends = ['5', '6']
         self.cdd_base_temp = cdd_base_temp
         self.hdd_base_temp = hdd_base_temp
+
+        # Following attributes are not used but adding it here, so as to make it similar to other
+        # Model initialization.
+        self.fit_cdd = fit_cdd
+        self.fit_hdff = fit_hdd
+        self.grid_search = grid_search
+        self.min_fraction_coverage = min_fraction_coverage,
+        self.min_contiguous_months = min_contiguous_months
+        self.modeling_period_interpretation = modeling_period_interpretation
 
     def add_time_day(self, df):
         """

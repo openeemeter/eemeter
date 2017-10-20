@@ -9,7 +9,8 @@ from eemeter.modeling.formatters import (
     ModelDataFormatter,
     ModelDataBillingFormatter,
 )
-from eemeter.modeling.models import CaltrackMonthlyModel, CaltrackDailyModel
+from eemeter.modeling.models import CaltrackMonthlyModel, CaltrackDailyModel, DayOfWeekBasedLinearRegression
+
 from eemeter.modeling.split import SplitModeledEnergyTrace
 from eemeter.io.serializers import (
     deserialize_meter_input,
@@ -154,6 +155,11 @@ class EnergyEfficiencyMeter(object):
                 'fit_cdd': True,
                 'grid_search': True,
             })
+            day_of_week_elec_model_daily = (DayOfWeekBasedLinearRegression, {
+                'fit_cdd': True,
+                'grid_search': True,
+            })
+
             default_model_mapping = {
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '15T'):
                     caltrack_gas_model_daily,
@@ -187,6 +193,9 @@ class EnergyEfficiencyMeter(object):
                     caltrack_gas_model,
                 ('ELECTRICITY_CONSUMPTION_SUPPLIED', None):
                     caltrack_elec_model,
+
+                ('DAY_OF_WEEK_ELECTRICITY_CONSUMPTION_SUPPLIED', None):
+                    day_of_week_elec_model_daily,
             }
 
         self.default_formatter_mapping = default_formatter_mapping
