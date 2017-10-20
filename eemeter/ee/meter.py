@@ -287,7 +287,7 @@ class EnergyEfficiencyMeter(object):
                 if isinstance(custom_model_class, string_types):
                     ModelClass = {
                         f.__name__: f
-                        for f in [CaltrackMonthlyModel]
+                        for f in [CaltrackMonthlyModel, DayOfWeekBasedLinearRegression]
                     }[custom_model_class]
                 else:
                     ModelClass = custom_model_class
