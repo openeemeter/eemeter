@@ -245,6 +245,7 @@ class EnergyEfficiencyMeter(object):
             else:
                 # use custom formatter, which may be a string.
                 if isinstance(custom_formatter_class, string_types):
+
                     FormatterClass = {
                         f.__name__: f
                         for f in [ModelDataFormatter, ModelDataBillingFormatter]
@@ -285,10 +286,13 @@ class EnergyEfficiencyMeter(object):
             else:
                 # use custom model, which may be a string.
                 if isinstance(custom_model_class, string_types):
-                    ModelClass = {
+                    class_name_map = {
                         f.__name__: f
                         for f in [CaltrackMonthlyModel, DayOfWeekBasedLinearRegression]
-                    }[custom_model_class]
+                    }
+                    logger.info("Custom Model Class Name: ", custom_model_class,
+                                " :: Model Class Name Mapping:", str(class_name_map))
+                    ModelClass = class_name_map[custom_model_class]
                 else:
                     ModelClass = custom_model_class
 
