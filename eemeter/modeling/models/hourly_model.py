@@ -136,7 +136,7 @@ class DayOfWeekBasedLinearRegression(object):
             "rmse": weekday_model_stats.get('rmse', np.nan),
             "cvrmse": weekday_model_stats.get('rmse', np.nan),
             "nmbe": np.nan,
-            "n":  len(self.train_df)
+            "n":  len(train_df)
         }
         return output
 
