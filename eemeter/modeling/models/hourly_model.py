@@ -75,13 +75,14 @@ class DayOfWeekBasedLinearRegression(object):
         return df_with_cdd
 
     def get_model_stats(self,
-                          model_res):
+                        model_res):
         if not model_res:
-            return  {}
+            return {}
         rmse = np.sqrt(model_res.ssr/model_res.nobs)
-        return {"intercept: ", model_res.params['Intercept'],
-                "r2 ", model_res.rsquared_adj,
-                "rmse :", rmse}
+        result = {"intercept" : model_res.params['Intercept'],
+                  "r2" : model_res.rsquared_adj,
+                  "rmse" : rmse}
+        return result
 
     def fit(self, df):
         """
@@ -130,12 +131,12 @@ class DayOfWeekBasedLinearRegression(object):
         #weekend_model_stats = self.get_model_stats(self.model_res_weekend)
 
         output = {
-            "r2": weekday_model_stats.get('r2', 0.0),
+            "r2": weekday_model_stats.get('r2', np.nan),
             "model_params": params,
-            "rmse": weekday_model_stats.get('rmse', 0.0),
-            "cvrmse": weekday_model_stats.get('rmse', 0.0),
+            "rmse": weekday_model_stats.get('rmse', np.nan),
+            "cvrmse": weekday_model_stats.get('rmse', np.nan),
             "nmbe": np.nan,
-            "n":  len(self.train_df) ,
+            "n":  len(self.train_df)
         }
         return output
 
