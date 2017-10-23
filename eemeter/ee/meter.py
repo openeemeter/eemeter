@@ -290,8 +290,6 @@ class EnergyEfficiencyMeter(object):
                         f.__name__: f
                         for f in [CaltrackMonthlyModel, DayOfWeekBasedLinearRegression]
                     }
-                    logger.info("Custom Model Class Name: ", custom_model_class,
-                                " :: Model Class Name Mapping:", str(class_name_map))
                     ModelClass = class_name_map[custom_model_class]
                 else:
                     ModelClass = custom_model_class
