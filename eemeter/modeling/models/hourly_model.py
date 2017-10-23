@@ -74,14 +74,14 @@ class DayOfWeekBasedLinearRegression(object):
         df_with_cdd = df.assign(cdd=cdd)
         return df_with_cdd
 
-    def print_model_stats(self,
+    def get_model_stats(self,
                           model_res):
         if not model_res:
-            return
+            return  {}
         rmse = np.sqrt(model_res.ssr/model_res.nobs)
-        print("Intercept: ", model_res.params['Intercept'],
-              "R2 ", model_res.rsquared_adj,
-              "RMSE :", rmse)
+        return {"intercept: ", model_res.params['Intercept'],
+                "r2 ", model_res.rsquared_adj,
+                "rmse :", rmse}
 
     def fit(self, df):
         """
@@ -116,6 +116,29 @@ class DayOfWeekBasedLinearRegression(object):
         except ValueError:
             self.model_weekend = None
             self.model_res_weekend = None
+
+        params = {
+            "coefficients": self.model_res_weekday.params.to_dict(),
+            "coefficients_weekend": self.model_res_weekend.params.to_dict(),
+            "formula": self.formula,
+            "cdd_bp": self.cdd_base_temp,
+            "hdd_bp": self.hdd_base_temp,
+            "X_design_info": ''
+        }
+
+        weekday_model_stats = self.get_model_stats(self.model_res_weekday)
+        #weekend_model_stats = self.get_model_stats(self.model_res_weekend)
+
+        output = {
+            "r2": weekday_model_stats.get('r2', 0.0),
+            "model_params": params,
+            "rmse": weekday_model_stats.get('rmse', 0.0),
+            "cvrmse": weekday_model_stats.get('rmse', 0.0),
+            "nmbe": np.nan,
+            "n":  len(self.train_df) ,
+        }
+        return output
+
 
     def compute_variance(self, df):
         weekday_df = df.loc[df['day_of_week'].isin(self.weekdays)]
