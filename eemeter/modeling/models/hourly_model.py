@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import statsmodels.formula.api as smf
 import patsy
+import eemeter.modeling.exceptions as model_exceptions
 
 
 class DayOfWeekBasedLinearRegression(object):
@@ -75,14 +76,27 @@ class DayOfWeekBasedLinearRegression(object):
         return df_with_cdd
 
     def get_model_stats(self,
-                        model_res):
+                        model_res, df):
         if not model_res:
             return {}
         rmse = np.sqrt(model_res.ssr/model_res.nobs)
+        cvrmse = rmse / df['energy'].mean()
+        nmbe = np.nanmean(model_res.resid) /df['energy'].mean()
+
         result = {"intercept" : model_res.params['Intercept'],
                   "r2" : model_res.rsquared_adj,
-                  "rmse" : rmse}
+                  "rmse" : rmse,
+                  'cvrmse' : cvrmse,
+                  'nmbe' : nmbe}
         return result
+
+    def meets_sufficiency_or_error(self, df):
+        if np.sum(np.isfinite(df['energy'])) < self.min_fraction_coverage * len(df):
+            raise model_exceptions.DataSufficiencyException("Insufficient coverage")
+        if len(df) < self.min_contiguous_months * 30 * 24:
+            raise model_exceptions.\
+                DataSufficiencyException("Min Contigous Month criteria not satisifed: Min Months Reqd:  " +
+                                         str(self.min_contiguous_months))
 
     def fit(self, df):
         """
@@ -96,6 +110,8 @@ class DayOfWeekBasedLinearRegression(object):
         -------
         """
         train_df = self.add_time_day(df)
+        self.meets_sufficiency_or_error(train_df)
+
         weekday_df = train_df.loc[train_df['day_of_week'].isin(self.weekdays)]
         weekday_df = self.add_cdd(weekday_df)
         weekday_df = self.add_hdd(weekday_df)
@@ -127,15 +143,32 @@ class DayOfWeekBasedLinearRegression(object):
             "X_design_info": ''
         }
 
-        weekday_model_stats = self.get_model_stats(self.model_res_weekday)
-        #weekend_model_stats = self.get_model_stats(self.model_res_weekend)
+        weekday_model_stats = self.get_model_stats(self.model_res_weekday, weekday_df)
+        weekend_model_stats = self.get_model_stats(self.model_res_weekend, weekend_df)
+        weekend_r2 = weekend_model_stats.get('r2', np.nan)
+        weekday_r2 = weekday_model_stats.get('r2', np.nan)
+        r2 = np.nan
+        if not np.isnan(weekday_r2) and not np.isnan(weekend_r2):
+            r2 = (weekday_r2 + weekend_r2) / 2.0
+
+        weekend_rmse = weekend_model_stats.get('rmse', np.nan)
+        weekday_rmse = weekday_model_stats.get('rmse', np.nan)
+        rmse = np.nan
+        cvrmse = np.nan
+        nmbe = np.nan
+        if not np.isnan(weekday_rmse) and not np.isnan(weekend_rmse):
+            rmse = (weekend_rmse + weekday_rmse) / 2.0
+            cvrmse = (weekend_model_stats.get('cvrmse') + weekday_model_stats.get('cvrmse')) / 2.0
+            nmbe = (weekend_model_stats.get('cvrmse') + weekday_model_stats.get('cvrmse')) / 2.0
 
         output = {
-            "r2": weekday_model_stats.get('r2', np.nan),
+            "r2": r2,
             "model_params": params,
-            "rmse": weekday_model_stats.get('rmse', np.nan),
-            "cvrmse": weekday_model_stats.get('rmse', np.nan),
-            "nmbe": np.nan,
+            "rmse": rmse,
+            "cvrmse": cvrmse,
+            "nmbe": nmbe,
+            'weekday_rmse' : weekday_rmse,
+            'weekend_rmse' : weekend_rmse,
             "n":  len(train_df)
         }
         return output
