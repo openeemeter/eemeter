@@ -91,8 +91,6 @@ class DayOfWeekBasedLinearRegression(object):
         return result
 
     def meets_sufficiency_or_error(self, df):
-        if np.sum(np.isfinite(df['energy'])) < self.min_fraction_coverage * len(df):
-            raise model_exceptions.DataSufficiencyException("Insufficient coverage")
         if len(df) < self.min_contiguous_months * 30 * 24:
             raise model_exceptions.\
                 DataSufficiencyException("Min Contigous Month criteria not satisifed: Min Months Reqd:  " +
