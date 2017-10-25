@@ -8,6 +8,9 @@ import pytest
 import pandas as pd
 import pytz
 import tempfile
+import eemeter.modeling.exceptions as model_exceptions
+
+MIN_CONTIGUOUS_MONTHS = 0
 
 @pytest.fixture
 def mock_isd_weather_source():
@@ -65,7 +68,7 @@ def test_add_cdd(input_df):
     assert 'cdd' in cdd_val
 
 def test_predict(input_df):
-    model = DayOfWeekBasedLinearRegression()
+    model = DayOfWeekBasedLinearRegression(min_contiguous_months=MIN_CONTIGUOUS_MONTHS)
     model.fit(input_df)
 
     # Test cases on the output data types of predict function.
@@ -83,7 +86,9 @@ def test_predict(input_df):
     # consumed in input_df dataframe is always 1.0, please take a look at hourly_trace_with_dummy_energy function
     assert prediction[0].item() > 0.95 and prediction[0].item()  < 2.0
 
-
-
-
+def test_min_contiguous_months(input_df):
+    min_contiguous_months = 9
+    model = DayOfWeekBasedLinearRegression(min_contiguous_months=min_contiguous_months)
+    with pytest.raises(model_exceptions.DataSufficiencyException) as sufficiency_exception:
+        model.fit(input_df)
 

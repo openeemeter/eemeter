@@ -81,13 +81,13 @@ class DayOfWeekBasedLinearRegression(object):
             return {}
         rmse = np.sqrt(model_res.ssr/model_res.nobs)
         cvrmse = rmse / df['energy'].mean()
-        nmbe = np.nanmean(model_res.resid) /df['energy'].mean()
+        nmbe = np.nanmean(model_res.resid) / df['energy'].mean()
 
-        result = {"intercept" : model_res.params['Intercept'],
-                  "r2" : model_res.rsquared_adj,
-                  "rmse" : rmse,
-                  'cvrmse' : cvrmse,
-                  'nmbe' : nmbe}
+        result = {"intercept": model_res.params['Intercept'],
+                  "r2": model_res.rsquared_adj,
+                  "rmse": rmse,
+                  'cvrmse': cvrmse,
+                  'nmbe': nmbe}
         return result
 
     def meets_sufficiency_or_error(self, df):
@@ -165,12 +165,11 @@ class DayOfWeekBasedLinearRegression(object):
             "rmse": rmse,
             "cvrmse": cvrmse,
             "nmbe": nmbe,
-            'weekday_rmse' : weekday_rmse,
-            'weekend_rmse' : weekend_rmse,
+            'weekday_rmse': weekday_rmse,
+            'weekend_rmse': weekend_rmse,
             "n":  len(train_df)
         }
         return output
-
 
     def compute_variance(self, df):
         weekday_df = df.loc[df['day_of_week'].isin(self.weekdays)]
