@@ -5,6 +5,9 @@ from eemeter.modeling.models.billing import BillingElasticNetCVModel
 from eemeter.modeling.models.hourly_load_profile import HourlyLoadProfileModel
 from eemeter.modeling.models.hourly_model import DayOfWeekBasedLinearRegression
 
+GAS_ENERGY = 'NATURAL_GAS_CONSUMPTION_SUPPLIED'
+ELECTRICITY_ENERGY = 'ELECTRICITY_CONSUMPTION_SUPPLIED'
+
 __all__ = (
     'CaltrackMonthlyModel',
     'CaltrackDailyModel',
@@ -12,4 +15,5 @@ __all__ = (
     'BillingElasticNetCVModel',
     'HourlyLoadProfileModel',
     'DayOfWeekBasedLinearRegression',
+    'SavingsPredictionModel'
 )
