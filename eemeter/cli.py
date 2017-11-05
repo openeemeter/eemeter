@@ -3,12 +3,15 @@ import datetime
 import pytz
 import csv
 import json
+import logging
 import os
 import errno
 import click
 import pandas as pd
 from scipy import stats
 import numpy as np
+
+from eemeter.log import setup_logging
 from eemeter.structures import EnergyTrace
 from eemeter.io.serializers import ArbitraryStartSerializer
 from eemeter.ee.meter import EnergyEfficiencyMeter
@@ -17,9 +20,15 @@ from eemeter.processors.dispatchers import (
 )
 from eemeter.modeling.models.caltrack import CaltrackMonthlyModel
 
+logger = logging.getLogger(__name__)
+
 
 @click.group()
-def cli():
+@click.option('--log-config', help='override eemeter logging config file. accepts json files.')
+@click.option('--log-console', is_flag=True, default=False,
+              help="allow logging handlers named like 'console'")
+@click.option('--log-level', help='override eemeter logging level.')
+def cli(log_config, log_level, log_console):
     '''
        \b
        Example usage:
@@ -64,6 +73,10 @@ def cli():
        requirement, pass the option "--ignore-data-sufficiency".
 
     '''
+    if log_config:
+        setup_logging(log_config, eemeter_log_level=log_level, allow_console_logging=log_console)
+    else:
+        setup_logging(eemeter_log_level=log_level, allow_console_logging=log_console)
 
 
 def slugify(value):
