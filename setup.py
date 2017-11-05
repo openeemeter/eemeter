@@ -37,7 +37,7 @@ setup(
         'SQLAlchemy',
     ],
     package_data={'': ['*.json', '*.gz', '*.csv']},
-    setup_requires=['pytest-runner'],
+    setup_requires=[],
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
