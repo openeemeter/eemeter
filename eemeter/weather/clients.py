@@ -1,4 +1,10 @@
-import ftplib
+""" Various clients for getting public weather data over the public Internet.
+
+TODO: consider authentication of who's on other end of these URLs.
+This would be to protect against MITM as well as DNS level attacks like DNS spoofing.
+(Not covered by DNS alone, nor HTTP nor FTP. DNSSEC could help but is not widespread yet).
+"""
+import ftplib  # nosec
 import gzip
 from io import BytesIO
 import json
@@ -22,9 +28,15 @@ class NOAAClient(object):
         self.station_index = None  # lazily load
 
     def _get_ftp_connection(self):
+        """
+        Security note: `bandit` would (appropriately) flag these FTP usages as a *potential*
+        security issue. Namely this is an issue for private data transmitted over FTP (plaintext).
+        However we have to accept this flaw because (a) NOAA doesn't have FTPS nor SFTP, and
+        (b) the information in this case is safe to transmit in plaintext (not private at all).
+        """
         for _ in range(self.n_tries):
             try:
-                ftp = ftplib.FTP("ftp.ncdc.noaa.gov")
+                ftp = ftplib.FTP("ftp.ncdc.noaa.gov")  # nosec
             except ftplib.all_errors as e:
                 logger.warn("FTP connection issue: %s", e)
             else:

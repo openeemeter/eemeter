@@ -26,6 +26,7 @@ setup(
         'dateparser',
         'holidays',
         'lxml',
+        'defusedxml',
         'numpy >= 1.10.2',
         'scipy',
         'pandas >= 0.19.2',

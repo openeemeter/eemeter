@@ -1,9 +1,14 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
-from lxml import etree
 import pytz
 import six
 import warnings
+
+from defusedxml.lxml import (
+    fromstring as etree_fromstring,
+    parse as etree_parse,
+    tostring as etree_tostring
+)
 
 from eemeter.structures import EnergyTrace
 from eemeter.io.serializers import ArbitrarySerializer
@@ -459,10 +464,10 @@ class ESPIUsageParser(object):
 
     def __init__(self, xml):
         try:
-            self.root = etree.parse(xml)  # xml is file path or file object
+            self.root = etree_parse(xml)  # xml is file path or file object
         except IOError:
             if isinstance(xml, six.string_types + (six.binary_type,)):
-                self.root = etree.fromstring(xml)  # xml is a string.
+                self.root = etree_fromstring(xml)  # xml is a string.
         self.timezone = self._get_timezone()
 
     def has_solar(self):
@@ -706,7 +711,7 @@ class ESPIUsageParser(object):
                     message = (
                         "Could not find the ReadingType for the IntervalBlock"
                         " element {} using the MeterReading ID {}."
-                        .format(etree.tostring(entry), meter_reading_id)
+                        .format(etree_tostring(entry), meter_reading_id)
                     )
                     warnings.warn(message)
 
