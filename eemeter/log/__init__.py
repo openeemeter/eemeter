@@ -45,10 +45,10 @@ def setup_logging(
     if eemeter_log_level is not None:
         try:
             our_logger.setLevel(logging.getLevelName(eemeter_log_level.upper()))
-        except:
-            our_logger.error("could not set logging level to {!r}. "
-                             "please use a standard Python logging level.".format(
-                eemeter_log_level))
+        except ValueError:
+            our_logger.error(
+                    "could not set logging level to {!r}. "
+                    "please use a standard Python logging level.".format(eemeter_log_level))
             raise
 
     if not allow_console_logging:
