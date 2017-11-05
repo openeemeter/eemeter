@@ -4,6 +4,7 @@ mock==2.0.0
 nbsphinx==0.2.14
 pandoc==1.0.0b3
 pytest==3.2.3
+pytest-xdist==1.20.1
 pytest-flake8==0.8.1
 sphinx==1.6.4
 sphinx-rtd-theme==0.2.4

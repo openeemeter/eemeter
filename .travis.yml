@@ -1,3 +1,10 @@
+env:
+  global:
+    # <CodeClimate>
+    # TODO(eemeter): Register on Code Climate, replace this with your CC_TEST_REPORTER_ID from https://docs.codeclimate.com/docs/travis-ci-test-coverage
+    - CC_TEST_REPORTER_ID=787a2f89b15c637323c7340d65ec17e898ac44480706b4b4122ea040c2a88f1d
+    # </CodeClimate>
+
 sudo: false
 
 cache:
@@ -24,8 +31,18 @@ install:
   - pip install tox-travis
   - pip install coveralls
 
+before_script:
+  # <CodeClimate>
+  - '[ "$TRAVIS_PULL_REQUEST" == "false" ] && curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter'
+  - '[ "$TRAVIS_PULL_REQUEST" == "false" ] && chmod +x ./cc-test-reporter'
+  - '[ "$TRAVIS_PULL_REQUEST" == "false" ] && ./cc-test-reporter before-build'
+  # </CodeClimate>
+
 script:
   - tox
 
 after_script:
   - coveralls
+  # <CodeClimate>
+  - '[ "$TRAVIS_PULL_REQUEST" == "false" ] && ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT'
+  # </CodeClimate>
