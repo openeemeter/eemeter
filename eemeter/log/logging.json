@@ -1,0 +1,77 @@
+{
+  "formatters": {
+    "simple": {
+      "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    },
+    "verbose": {
+      "format": "%(levelname)-8s %(asctime)s %(name)s L%(lineno)s | %(funcName)s | %(message)s"
+    }
+  },
+  "handlers": {
+    "console": {
+      "class": "logging.StreamHandler",
+      "formatter": "verbose",
+      "level": "DEBUG",
+      "stream": "ext://sys.stderr"
+    },
+    "file_debug": {
+      "backupCount": 2,
+      "class": "logging.handlers.RotatingFileHandler",
+      "encoding": "utf8",
+      "filename": "/tmp/eemeter.debug.log",
+      "formatter": "verbose",
+      "level": "DEBUG",
+      "maxBytes": 10485760
+    },
+    "file_info": {
+      "backupCount": 2,
+      "class": "logging.handlers.RotatingFileHandler",
+      "encoding": "utf8",
+      "filename": "/tmp/eemeter.info.log",
+      "formatter": "simple",
+      "level": "INFO",
+      "maxBytes": 10485760
+    },
+    "file_error": {
+      "backupCount": 2,
+      "class": "logging.handlers.RotatingFileHandler",
+      "encoding": "utf8",
+      "filename": "/tmp/eemeter.error.log",
+      "formatter": "verbose",
+      "level": "ERROR",
+      "maxBytes": 10485760
+    }
+  },
+  "loggers": {
+    "eemeter": {
+      "handlers": [
+        "console",
+        "file_debug",
+        "file_info",
+        "file_error"
+      ],
+      "level": "INFO",
+      "propagate": false
+    },
+    "py.warnings": {
+      "handlers": [
+        "console",
+        "file_debug",
+        "file_info",
+        "file_error"
+      ],
+      "level": "INFO",
+      "propagate": false
+    }
+  },
+  "root": {
+    "handlers": [
+      "console",
+      "file_debug",
+      "file_info",
+      "file_error"
+    ],
+    "level": "INFO"
+  },
+  "version": 1
+}
