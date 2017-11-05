@@ -8,18 +8,16 @@ import json
 import logging
 import logging.config
 import os
-import sys
-import warnings
-
 
 HERE = os.path.abspath(os.path.dirname(__file__))
+DEFAULT_LOGGING_CONFIG_PATH = os.path.join(HERE, "logging.json")
 
 EEMETER_LOGGER_NAME = 'eemeter'  # This needs to match the top package name.
 EEMETER_LOGGER_HAS_BEEN_SET_UP = False
 
 
 def setup_logging(
-        path_to_logging_json=os.path.join(HERE, "logging.json"),
+        path_to_logging_json=DEFAULT_LOGGING_CONFIG_PATH,
         eemeter_log_level=None,
         allow_console_logging=True):
     """ Setup logging configuration from file.
@@ -29,7 +27,7 @@ def setup_logging(
     path_to_logging_json : str
         Optional path to custom logging configuration json file. passed to dictConfig()
     eemeter_log_level : str
-        Optional override for eemeter logging level. (Cascades to eemeter.*)
+        Optional override for eemeter logging level, such as "DEBUG". (Cascades to eemeter.*)
     allow_console_logging : bool
         If not True, then all logging handlers with 'console' in the name will be disabled.
     """
@@ -49,13 +47,36 @@ def setup_logging(
             our_logger.setLevel(logging.getLevelName(eemeter_log_level.upper()))
         except:
             our_logger.error("could not set logging level to {!r}. "
-                         "please use a standard Python logging level.".format(eemeter_log_level))
+                             "please use a standard Python logging level.".format(
+                eemeter_log_level))
             raise
 
     if not allow_console_logging:
         for _logger in (our_logger, logging.getLogger('py.warnings')):
-            handlers = [h for h in _logger.handlers if not 'console' in h.get_name().lower()]
+            handlers = [h for h in _logger.handlers if 'console' not in h.get_name().lower()]
             _logger.handlers = handlers
 
     EEMETER_LOGGER_HAS_BEEN_SET_UP = True
     return our_logger
+
+
+def disable_file_logging():
+    """ Disable all logging handlers that appear to be FileHandler variants.
+
+    A utility mainly for test suite, where we prefer console output, as py.test captures all
+    console output then presents it when relevant; and to avoid mixing normal & test logs.
+    """
+    loggers = logging.Logger.manager.loggerDict.values()
+    for logger in loggers:
+        if hasattr(logger, 'log'):  # skip logging.PlaceHolder instances, etc.
+            handlers = []
+            for handler in logger.handlers:
+                if not handler:
+                    pass
+                elif issubclass(handler.__class__, logging.FileHandler):
+                    pass
+                elif 'file' in (handler.get_name() or '').lower():
+                    pass
+                else:
+                    handlers.append(handler)
+            logger.handlers = handlers
