@@ -33,9 +33,9 @@ install:
 
 before_script:
   # <CodeClimate>
-  - [ "$TRAVIS_PULL_REQUEST" == "false" ] && curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter
-  - [ "$TRAVIS_PULL_REQUEST" == "false" ] && chmod +x ./cc-test-reporter
-  - [ "$TRAVIS_PULL_REQUEST" == "false" ] && ./cc-test-reporter before-build
+  - '[ "$TRAVIS_PULL_REQUEST" == "false" ] && curl -L https://codeclimate.com/downloads/test-reporter/test-reporter-latest-linux-amd64 > ./cc-test-reporter'
+  - '[ "$TRAVIS_PULL_REQUEST" == "false" ] && chmod +x ./cc-test-reporter'
+  - '[ "$TRAVIS_PULL_REQUEST" == "false" ] && ./cc-test-reporter before-build'
   # </CodeClimate>
 
 script:
@@ -44,5 +44,5 @@ script:
 after_script:
   - coveralls
   # <CodeClimate>
-  - [ "$TRAVIS_PULL_REQUEST" == "false" ] && ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT
+  - '[ "$TRAVIS_PULL_REQUEST" == "false" ] && ./cc-test-reporter after-build --exit-code $TRAVIS_TEST_RESULT'
   # </CodeClimate>
