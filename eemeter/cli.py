@@ -3,6 +3,7 @@ import datetime
 import pytz
 import csv
 import json
+import logging
 import os
 import errno
 import click
@@ -16,6 +17,11 @@ from eemeter.processors.dispatchers import (
     get_approximate_frequency,
 )
 from eemeter.modeling.models.caltrack import CaltrackMonthlyModel
+
+logger = logging.getLogger(__name__)
+
+EXIT_CODE_SUCCESS = 0  # on Linux and 'most systems' exit status of 0 means success.
+EXIT_CODE_FAILURE = 1
 
 
 @click.group()
@@ -409,7 +415,8 @@ def sample(full_output, output_dir):
     options = {'full_output': full_output, 'output_dir': output_dir}
     print("Going to analyze the sample data set")
     print("")
-    _analyze(sample_inputs_path, options)
+    sample_result = _analyze(sample_inputs_path, options)
+    return EXIT_CODE_SUCCESS if sample_result else EXIT_CODE_FAILURE
 
 
 @cli.command()
