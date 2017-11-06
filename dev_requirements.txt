@@ -5,6 +5,8 @@ nbsphinx==0.2.14
 pandoc==1.0.0b3
 pytest==3.2.3
 pytest-flake8==0.8.1
+pytest-socket==0.2
+pytest-xdist==1.20.1
 sphinx==1.6.4
 sphinx-rtd-theme==0.2.4
 sphinxcontrib-napoleon==0.6.1
