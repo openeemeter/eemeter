@@ -21,6 +21,11 @@ class NOAAClient(object):
         self.ftp = None  # lazily load
         self.station_index = None  # lazily load
 
+        # Used only from manual usage, to 'record out' a response for later use in testing.
+        # See '_retrieve_file_lines()' method here for implementation details.
+        # See 'test_noaa_client.py' __main__ block, for usage example.
+        self._dump_retrieved_lines_to_jsonl_file = None
+
     def _get_ftp_connection(self):
         for _ in range(self.n_tries):
             try:
@@ -59,7 +64,7 @@ class NOAAClient(object):
         return potential_station_ids
 
     def _retreive_file_lines(self, filename_format, station, year):
-        string = BytesIO()
+        bytes_io = BytesIO()
 
         if self.ftp is None:
             self.ftp = self._get_ftp_connection()
@@ -67,7 +72,7 @@ class NOAAClient(object):
         for station_id in self._get_potential_station_ids(station):
             filename = filename_format.format(station=station_id, year=year)
             try:
-                self.ftp.retrbinary('RETR {}'.format(filename), string.write)
+                self.ftp.retrbinary('RETR {}'.format(filename), bytes_io.write)
             except (IOError, ftplib.error_perm) as e1:
                 logger.warn(
                     "Failed FTP RETR for station {}: {}."
@@ -75,6 +80,7 @@ class NOAAClient(object):
                     .format(station_id, e1)
                 )
             except (ftplib.error_temp, EOFError) as e2:
+                # TODO(hangtwenty) refactor to a helper, decorate w/ funcy.retry() (with backoff)
                 # Bad connection. attempt to reconnect.
                 logger.warn(
                     "Failed FTP RETR for station {}: {}."
@@ -85,7 +91,7 @@ class NOAAClient(object):
                 self.ftp = self._get_ftp_connection()
                 try:
                     self.ftp.retrbinary('RETR {}'.format(filename),
-                                        string.write)
+                                        bytes_io.write)
                 except (IOError, ftplib.error_perm) as e3:
                     logger.warn(
                         "Failed FTP RETR for station {}: {}."
@@ -102,10 +108,33 @@ class NOAAClient(object):
             .format(filename)
         )
 
-        string.seek(0)
-        f = gzip.GzipFile(fileobj=string)
-        lines = f.readlines()
-        string.close()
+        if self._dump_retrieved_lines_to_jsonl_file:
+            import base64
+            import copy
+            import json
+            raw_copy = copy.copy(bytes_io)
+            raw_copy.seek(0)
+            logger.warning("APPENDING: {}".format(self._dump_retrieved_lines_to_jsonl_file))
+            with open(self._dump_retrieved_lines_to_jsonl_file, 'a+') as f:
+                # noinspection PyUnboundLocalVariable
+                record = json.dumps({
+                    'station': station,
+                    'year': station,
+                    'response': {
+                        'raw_base64': base64.b64encode(raw_copy.read()),
+                    }
+                }, indent=None)
+                f.write(record.strip() + '\n')
+
+        bytes_io.seek(0)
+        try:
+            f = gzip.GzipFile(fileobj=bytes_io)
+            lines = f.readlines()
+        finally:
+            f.close()
+            del f
+        bytes_io.close()
+
         return lines
 
     def get_gsod_data(self, station, year):
