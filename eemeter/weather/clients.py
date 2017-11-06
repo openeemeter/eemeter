@@ -3,6 +3,7 @@ import gzip
 from io import BytesIO
 import json
 import logging
+import time
 from pkg_resources import resource_stream
 import warnings
 from datetime import datetime, timedelta
@@ -24,7 +25,7 @@ class NOAAClient(object):
         # Used only from manual usage, to 'record out' a response for later use in testing.
         # See '_retrieve_file_lines()' method here for implementation details.
         # See 'test_noaa_client.py' __main__ block, for usage example.
-        self._dump_retrieved_lines_to_jsonl_file = None
+        self._dump_responses_to_jsonl_path = None
 
     def _get_ftp_connection(self):
         for _ in range(self.n_tries):
@@ -63,79 +64,110 @@ class NOAAClient(object):
             potential_station_ids = [station]
         return potential_station_ids
 
-    def _retreive_file_lines(self, filename_format, station, year):
-        bytes_io = BytesIO()
+    def _retreive_file_lines(self, filename_format, station, year, attempts=3):
+        """ retrieve the file from NOAA, un-gzip, and return list of lines
+        """
+        station_ids = self._get_potential_station_ids(station)
 
+        if not station_ids:
+            raise ValueError("no potential station IDs to try")
+
+        bytes_io = None
+        for attempt in xrange(attempts):
+            if attempt > 0:
+                logger.debug('sleeping before re-attempt...')
+                backoff_multiplier = 0.6
+                time.sleep(attempt * backoff_multiplier)
+            bytes_io, successful = self._retrieve_file(filename_format, station_ids, year)
+            if successful:
+                break
+
+        if bytes_io is None:
+            raise ValueError('could not get data from NOAA')
+
+        # Used only from manual usage, to 'record out' a response for later use in testing.
+        # See 'test_noaa_client.py' __main__ block, for usage example.
+        if self._dump_responses_to_jsonl_path:
+            import base64
+            import copy
+            import json
+            raw_copy = copy.copy(bytes_io)
+            raw_copy.seek(0)
+            logger.warning("APPENDING: {}".format(self._dump_responses_to_jsonl_path))
+            with open(self._dump_responses_to_jsonl_path, 'a+') as f:
+                # noinspection PyUnboundLocalVariable
+                record = json.dumps({
+                    # the arguments to _retrieve_file
+                    'filename_format': filename_format,
+                    'station_ids': station_ids,  # a list with >=1 item
+                    'year': year,
+                    # the response that _retrieve_file returns
+                    'response_base64': base64.b64encode(raw_copy.read()),
+                }, indent=None)
+                f.write(record.strip() + '\n')
+
+        bytes_io.seek(0)
+        f = gzip.GzipFile(fileobj=bytes_io)
+        lines = f.readlines()
+        f.close()
+        bytes_io.close()
+
+        return lines
+
+    def _retrieve_file(self, filename_format, station_ids, year):
+        """ retrieve the raw file from NOAA. don't call this directly, use _retrieve_file_lines.
+
+        returns tuple: (BytesIO(<raw_response>), True if successful)
+        """
         if self.ftp is None:
             self.ftp = self._get_ftp_connection()
-
-        for station_id in self._get_potential_station_ids(station):
+        bytes_io = None
+        successful = False
+        for station_id in station_ids:
             filename = filename_format.format(station=station_id, year=year)
             try:
+                bytes_io = BytesIO()  # fresh upon each attempt
                 self.ftp.retrbinary('RETR {}'.format(filename), bytes_io.write)
+                successful = True
             except (IOError, ftplib.error_perm) as e1:
                 logger.warn(
-                    "Failed FTP RETR for station {}: {}."
-                    " Not attempting reconnect."
-                    .format(station_id, e1)
+                        "Failed FTP RETR for station {}: {}."
+                        " Not attempting reconnect."
+                            .format(station_id, e1)
                 )
+                # TODO(eemeter) shouldn't we `raise` here? (leave it to caller to swallow?)
             except (ftplib.error_temp, EOFError) as e2:
-                # TODO(hangtwenty) refactor to a helper, decorate w/ funcy.retry() (with backoff)
-                # Bad connection. attempt to reconnect.
                 logger.warn(
-                    "Failed FTP RETR for station {}: {}."
-                    " Attempting reconnect."
-                    .format(station_id, e2)
+                        "Failed FTP RETR for station {}: {}."
+                        " Attempting reconnect."
+                            .format(station_id, e2)
                 )
                 self.ftp.close()
                 self.ftp = self._get_ftp_connection()
                 try:
-                    self.ftp.retrbinary('RETR {}'.format(filename),
-                                        bytes_io.write)
+                    bytes_io = BytesIO()
+                    self.ftp.retrbinary('RETR {}'.format(filename), bytes_io.write)
+                    successful = True
                 except (IOError, ftplib.error_perm) as e3:
                     logger.warn(
-                        "Failed FTP RETR for station {}: {}."
-                        " Trying another station id."
-                        .format(station_id, e3)
+                            "Failed FTP RETR for station {}: {}."
+                            " Trying another station id."
+                                .format(station_id, e3)
                     )
                 else:
                     break
             else:
                 break
 
-        logger.info(
-            'Successfully retrieved ftp://ftp.ncdc.noaa.gov{}'
-            .format(filename)
+            logger.info(
+                    'Successfully retrieved ftp://ftp.ncdc.noaa.gov{}'
+                        .format(filename)
+            )
+
+        return (
+            bytes_io or BytesIO(),  # even if failed/empty, return BytesIO instance.
+            successful
         )
-
-        if self._dump_retrieved_lines_to_jsonl_file:
-            import base64
-            import copy
-            import json
-            raw_copy = copy.copy(bytes_io)
-            raw_copy.seek(0)
-            logger.warning("APPENDING: {}".format(self._dump_retrieved_lines_to_jsonl_file))
-            with open(self._dump_retrieved_lines_to_jsonl_file, 'a+') as f:
-                # noinspection PyUnboundLocalVariable
-                record = json.dumps({
-                    'station': station,
-                    'year': station,
-                    'response': {
-                        'raw_base64': base64.b64encode(raw_copy.read()),
-                    }
-                }, indent=None)
-                f.write(record.strip() + '\n')
-
-        bytes_io.seek(0)
-        try:
-            f = gzip.GzipFile(fileobj=bytes_io)
-            lines = f.readlines()
-        finally:
-            f.close()
-            del f
-        bytes_io.close()
-
-        return lines
 
     def get_gsod_data(self, station, year):
 
