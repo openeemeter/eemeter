@@ -9,7 +9,7 @@ from eemeter.modeling.formatters import (
     ModelDataFormatter,
     ModelDataBillingFormatter,
 )
-from eemeter.modeling.models import CaltrackMonthlyModel, CaltrackDailyModel, DayOfWeekBasedLinearRegression
+from eemeter.modeling.models import CaltrackMonthlyModel, CaltrackDailyModel, HourlyDayOfWeekModel
 
 from eemeter.modeling.split import SplitModeledEnergyTrace
 from eemeter.io.serializers import (
@@ -155,7 +155,7 @@ class EnergyEfficiencyMeter(object):
                 'fit_cdd': True,
                 'grid_search': True,
             })
-            day_of_week_elec_model_daily = (DayOfWeekBasedLinearRegression, {
+            day_of_week_elec_model_daily = (HourlyDayOfWeekModel, {
                 'fit_cdd': True,
                 'grid_search': True,
             })
@@ -288,7 +288,7 @@ class EnergyEfficiencyMeter(object):
                 if isinstance(custom_model_class, string_types):
                     class_name_map = {
                         f.__name__: f
-                        for f in [CaltrackMonthlyModel, DayOfWeekBasedLinearRegression]
+                        for f in [CaltrackMonthlyModel, HourlyDayOfWeekModel]
                     }
                     ModelClass = class_name_map[custom_model_class]
                 else:

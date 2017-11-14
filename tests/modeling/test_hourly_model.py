@@ -2,15 +2,13 @@ from eemeter.weather import ISDWeatherSource
 from eemeter.testing.mocks import MockWeatherClient
 from eemeter.modeling.formatters import ModelDataFormatter
 
-from eemeter.modeling.models import DayOfWeekBasedLinearRegression
+from eemeter.modeling.models import HourlyDayOfWeekModel
 import numpy as np
 import pytest
 import pandas as pd
 import pytz
 import tempfile
 import eemeter.modeling.exceptions as model_exceptions
-
-MIN_CONTIGUOUS_MONTHS = 0
 
 @pytest.fixture
 def mock_isd_weather_source():
@@ -37,7 +35,7 @@ def test_add_time_day():
     # 2017-09-18 ==> Monday
     date_hr_timestamp = pd.date_range('2017-09-16', periods=72, freq='H', tz=pytz.UTC)
     df = pd.DataFrame( {'energy' : [1.0 for xx in date_hr_timestamp]} , index=date_hr_timestamp)
-    day_of_week = DayOfWeekBasedLinearRegression()
+    day_of_week = HourlyDayOfWeekModel()
     returned_df = day_of_week.add_time_day(df)
     assert 'hour_of_day' in returned_df
     assert 'day_of_week' in returned_df
@@ -58,17 +56,17 @@ def test_add_time_day():
 
 
 def test_add_hdd(input_df):
-    hdd_function = DayOfWeekBasedLinearRegression()
+    hdd_function = HourlyDayOfWeekModel()
     hdd_val= hdd_function.add_hdd(input_df)
     assert 'hdd' in hdd_val
 
 def test_add_cdd(input_df):
-    cdd_function = DayOfWeekBasedLinearRegression()
+    cdd_function = HourlyDayOfWeekModel()
     cdd_val= cdd_function.add_cdd(input_df)
     assert 'cdd' in cdd_val
 
 def test_predict(input_df):
-    model = DayOfWeekBasedLinearRegression(min_contiguous_months=MIN_CONTIGUOUS_MONTHS)
+    model = HourlyDayOfWeekModel(min_contiguous_months=0)
     model.fit(input_df)
 
     # Test cases on the output data types of predict function.
@@ -88,7 +86,7 @@ def test_predict(input_df):
 
 def test_min_contiguous_months(input_df):
     min_contiguous_months = 9
-    model = DayOfWeekBasedLinearRegression(min_contiguous_months=min_contiguous_months)
+    model = HourlyDayOfWeekModel(min_contiguous_months=min_contiguous_months)
     with pytest.raises(model_exceptions.DataSufficiencyException) as sufficiency_exception:
         model.fit(input_df)
 
