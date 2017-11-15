@@ -2,9 +2,10 @@ import pandas as pd
 import numpy as np
 import statsmodels.formula.api as smf
 import patsy
+import eemeter.modeling.exceptions as model_exceptions
 
 
-class DayOfWeekBasedLinearRegression(object):
+class HourlyDayOfWeekModel(object):
     """
     A simple regression model based on "Day of Week", Temparature and hour
     of day features.
@@ -13,8 +14,9 @@ class DayOfWeekBasedLinearRegression(object):
     The fit function takes as input a dataframe indexed with hourly timestamps
     and tempF as column which contain hourly temparatures.
     """
-    def __init__(self, cdd_base_temp=70,
-                 hdd_base_temp=60):
+    def __init__(self, cdd_base_temp=70, hdd_base_temp=60, fit_cdd=True, fit_hdd=True, grid_search=False,
+                 min_fraction_coverage=0.9, min_contiguous_months=1, modeling_period_interpretation='baseline',
+                 **kwargs):
         self.model_weekday = None
         self.model_res_weekday = None
         self.model_weekend = None
@@ -25,6 +27,15 @@ class DayOfWeekBasedLinearRegression(object):
         self.weekends = ['5', '6']
         self.cdd_base_temp = cdd_base_temp
         self.hdd_base_temp = hdd_base_temp
+
+        # Following attributes are not used but adding it here, so as to make it similar to other
+        # Model initialization.
+        self.fit_cdd = fit_cdd
+        self.fit_hdff = fit_hdd
+        self.grid_search = grid_search
+        self.min_fraction_coverage = min_fraction_coverage,
+        self.min_contiguous_months = min_contiguous_months
+        self.modeling_period_interpretation = modeling_period_interpretation
 
     def add_time_day(self, df):
         """
@@ -50,7 +61,7 @@ class DayOfWeekBasedLinearRegression(object):
 
     def add_hdd(self, df):
         if 'tempF' not in df:
-            raise ValueError("tempF column not in Dataframe")
+            raise ValueError('tempF column not in Dataframe')
 
         hdd = np.maximum(self.hdd_base_temp - df.tempF, 0)
         df_with_hdd = df.assign(hdd=hdd)
@@ -58,20 +69,32 @@ class DayOfWeekBasedLinearRegression(object):
 
     def add_cdd(self, df):
         if 'tempF' not in df:
-            raise ValueError("tempF column not in Dataframe")
+            raise ValueError('tempF column not in Dataframe')
 
         cdd = np.maximum(df.tempF - self.cdd_base_temp, 0)
         df_with_cdd = df.assign(cdd=cdd)
         return df_with_cdd
 
-    def print_model_stats(self,
-                          model_res):
+    def get_model_stats(self,
+                        model_res, df):
         if not model_res:
-            return
+            return {}
         rmse = np.sqrt(model_res.ssr/model_res.nobs)
-        print("Intercept: ", model_res.params['Intercept'],
-              "R2 ", model_res.rsquared_adj,
-              "RMSE :", rmse)
+        cvrmse = rmse / df['energy'].mean()
+        nmbe = np.nanmean(model_res.resid) / df['energy'].mean()
+
+        result = {'intercept': model_res.params['Intercept'],
+                  'r2': model_res.rsquared_adj,
+                  'rmse': rmse,
+                  'cvrmse': cvrmse,
+                  'nmbe': nmbe}
+        return result
+
+    def meets_sufficiency_or_error(self, df):
+        if len(df) < self.min_contiguous_months * 30 * 24:
+            raise model_exceptions.\
+                DataSufficiencyException("Min Contigous Month criteria not satisifed: Min Months Reqd:  " +
+                                         str(self.min_contiguous_months))
 
     def fit(self, df):
         """
@@ -85,6 +108,8 @@ class DayOfWeekBasedLinearRegression(object):
         -------
         """
         train_df = self.add_time_day(df)
+        self.meets_sufficiency_or_error(train_df)
+
         weekday_df = train_df.loc[train_df['day_of_week'].isin(self.weekdays)]
         weekday_df = self.add_cdd(weekday_df)
         weekday_df = self.add_hdd(weekday_df)
@@ -106,6 +131,45 @@ class DayOfWeekBasedLinearRegression(object):
         except ValueError:
             self.model_weekend = None
             self.model_res_weekend = None
+
+        params = {
+            "coefficients": self.model_res_weekday.params.to_dict(),
+            "coefficients_weekend": self.model_res_weekend.params.to_dict(),
+            "formula": self.formula,
+            "cdd_bp": self.cdd_base_temp,
+            "hdd_bp": self.hdd_base_temp,
+            "X_design_info": ''
+        }
+
+        weekday_model_stats = self.get_model_stats(self.model_res_weekday, weekday_df)
+        weekend_model_stats = self.get_model_stats(self.model_res_weekend, weekend_df)
+        weekend_r2 = weekend_model_stats.get('r2', np.nan)
+        weekday_r2 = weekday_model_stats.get('r2', np.nan)
+        r2 = np.nan
+        if not np.isnan(weekday_r2) and not np.isnan(weekend_r2):
+            r2 = (weekday_r2 + weekend_r2) / 2.0
+
+        weekend_rmse = weekend_model_stats.get('rmse', np.nan)
+        weekday_rmse = weekday_model_stats.get('rmse', np.nan)
+        rmse = np.nan
+        cvrmse = np.nan
+        nmbe = np.nan
+        if not np.isnan(weekday_rmse) and not np.isnan(weekend_rmse):
+            rmse = (weekend_rmse + weekday_rmse) / 2.0
+            cvrmse = (weekend_model_stats.get('cvrmse') + weekday_model_stats.get('cvrmse')) / 2.0
+            nmbe = (weekend_model_stats.get('cvrmse') + weekday_model_stats.get('cvrmse')) / 2.0
+
+        output = {
+            'r2': r2,
+            'model_params': params,
+            'rmse': rmse,
+            'cvrmse': cvrmse,
+            'nmbe': nmbe,
+            'weekday_rmse': weekday_rmse,
+            'weekend_rmse': weekend_rmse,
+            'n':  len(train_df)
+        }
+        return output
 
     def compute_variance(self, df):
         weekday_df = df.loc[df['day_of_week'].isin(self.weekdays)]
