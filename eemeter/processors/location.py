@@ -5,9 +5,11 @@ from eemeter.weather.location import (
     zipcode_to_tmy3_station,
     zipcode_to_cz2010_station,
 )
+from eemeter.co2.location import zipcode_to_avert_region
 from eemeter.weather.noaa import ISDWeatherSource
 from eemeter.weather.tmy3 import TMY3WeatherSource
 from eemeter.weather.cz2010 import CZ2010WeatherSource
+from eemeter.co2.avert import AVERTSource
 
 logger = logging.getLogger(__name__)
 
@@ -130,3 +132,33 @@ def get_weather_normal_source(site, use_cz2010=False):
     )
 
     return weather_normal_source
+
+
+def get_co2_source(site, use_year=2016):
+    zipcode = site.zipcode
+    region = zipcode_to_avert_region(zipcode)
+
+    if region is None:
+        logger.error(
+            "Could not find AVERT region for zipcode {}."
+            .format(zipcode)
+        )
+        return None
+
+    logger.debug(
+        "Mapped ZIP code {} to AVERT region {}"
+        .format(zipcode, region)
+    )
+
+    try:
+        avert_source = AVERTSource(use_year, region)
+    except ValueError:
+        logger.error(
+            "Could not create AVERTSource for region {}."
+            .format(region)
+        )
+        return None
+
+    logger.debug("Created AVERTSource using region {}".format(region))
+
+    return avert_source
