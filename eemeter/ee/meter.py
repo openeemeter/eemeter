@@ -9,7 +9,7 @@ from eemeter.modeling.formatters import (
     ModelDataFormatter,
     ModelDataBillingFormatter,
 )
-from eemeter.modeling.models import CaltrackMonthlyModel, CaltrackDailyModel, DayOfWeekBasedLinearRegression
+from eemeter.modeling.models import CaltrackMonthlyModel, CaltrackDailyModel, HourlyDayOfWeekModel
 
 from eemeter.modeling.split import SplitModeledEnergyTrace
 from eemeter.io.serializers import (
@@ -65,8 +65,11 @@ from eemeter.ee.derivatives import (
     baseline_mask,
     reporting_mask,
     normal_year_resource_curve,
-    reporting_period_resource_curve
+    reporting_period_resource_curve,
+    normal_year_co2_avoided
 )
+
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +158,7 @@ class EnergyEfficiencyMeter(object):
                 'fit_cdd': True,
                 'grid_search': True,
             })
-            day_of_week_elec_model_daily = (DayOfWeekBasedLinearRegression, {
+            day_of_week_elec_model_daily = (HourlyDayOfWeekModel, {
                 'fit_cdd': True,
                 'grid_search': True,
             })
@@ -245,6 +248,7 @@ class EnergyEfficiencyMeter(object):
             else:
                 # use custom formatter, which may be a string.
                 if isinstance(custom_formatter_class, string_types):
+
                     FormatterClass = {
                         f.__name__: f
                         for f in [ModelDataFormatter, ModelDataBillingFormatter]
@@ -285,10 +289,11 @@ class EnergyEfficiencyMeter(object):
             else:
                 # use custom model, which may be a string.
                 if isinstance(custom_model_class, string_types):
-                    ModelClass = {
+                    class_name_map = {
                         f.__name__: f
-                        for f in [CaltrackMonthlyModel, DayOfWeekBasedLinearRegression]
-                    }[custom_model_class]
+                        for f in [CaltrackMonthlyModel, HourlyDayOfWeekModel]
+                    }
+                    ModelClass = class_name_map[custom_model_class]
                 else:
                     ModelClass = custom_model_class
 
@@ -543,7 +548,7 @@ class EnergyEfficiencyMeter(object):
             deriv_input = unpack(modeled_trace, baseline_label, reporting_label,
                                  baseline_period, reporting_period,
                                  weather_source, weather_normal_source,
-                                 derivative_freq=derivative_freq)
+                                 site, derivative_freq=derivative_freq)
             if deriv_input is None:
                 continue
             raw_derivatives.extend([
@@ -583,9 +588,18 @@ class EnergyEfficiencyMeter(object):
                 temperature_normal_year(deriv_input),
                 baseline_mask(deriv_input),
                 reporting_mask(deriv_input),
-                normal_year_resource_curve(deriv_input),
                 reporting_period_resource_curve(deriv_input)
             ])
+
+            resource_curve_normal_year = normal_year_resource_curve(deriv_input)
+            raw_derivatives.extend([resource_curve_normal_year])
+
+            if resource_curve_normal_year is not None:
+                resource_curve_normal_year = pd.Series(
+                    resource_curve_normal_year['value'],
+                    index=pd.to_datetime(resource_curve_normal_year['orderable']))
+                raw_derivatives.extend([normal_year_co2_avoided(
+                    deriv_input, resource_curve_normal_year)])
 
             derivatives += [
                 Derivative(
