@@ -9,7 +9,8 @@ from eemeter.modeling.formatters import (
     ModelDataFormatter,
     ModelDataBillingFormatter,
 )
-from eemeter.modeling.models import CaltrackMonthlyModel, CaltrackDailyModel
+from eemeter.modeling.models import CaltrackMonthlyModel, CaltrackDailyModel, HourlyDayOfWeekModel
+
 from eemeter.modeling.split import SplitModeledEnergyTrace
 from eemeter.io.serializers import (
     deserialize_meter_input,
@@ -157,6 +158,11 @@ class EnergyEfficiencyMeter(object):
                 'fit_cdd': True,
                 'grid_search': True,
             })
+            day_of_week_elec_model_daily = (HourlyDayOfWeekModel, {
+                'fit_cdd': True,
+                'grid_search': True,
+            })
+
             default_model_mapping = {
                 ('NATURAL_GAS_CONSUMPTION_SUPPLIED', '15T'):
                     caltrack_gas_model_daily,
@@ -190,6 +196,9 @@ class EnergyEfficiencyMeter(object):
                     caltrack_gas_model,
                 ('ELECTRICITY_CONSUMPTION_SUPPLIED', None):
                     caltrack_elec_model,
+
+                ('DAY_OF_WEEK_ELECTRICITY_CONSUMPTION_SUPPLIED', None):
+                    day_of_week_elec_model_daily,
             }
 
         self.default_formatter_mapping = default_formatter_mapping
@@ -239,6 +248,7 @@ class EnergyEfficiencyMeter(object):
             else:
                 # use custom formatter, which may be a string.
                 if isinstance(custom_formatter_class, string_types):
+
                     FormatterClass = {
                         f.__name__: f
                         for f in [ModelDataFormatter, ModelDataBillingFormatter]
@@ -279,10 +289,11 @@ class EnergyEfficiencyMeter(object):
             else:
                 # use custom model, which may be a string.
                 if isinstance(custom_model_class, string_types):
-                    ModelClass = {
+                    class_name_map = {
                         f.__name__: f
-                        for f in [CaltrackMonthlyModel]
-                    }[custom_model_class]
+                        for f in [CaltrackMonthlyModel, HourlyDayOfWeekModel]
+                    }
+                    ModelClass = class_name_map[custom_model_class]
                 else:
                     ModelClass = custom_model_class
 
