@@ -7,7 +7,7 @@ Open Energy Efficiency Meter
 Documentation
 -------------
 
-Docs on [RTD](http://eemeter.readthedocs.org/en/latest/).
+See [openee.io](https://www.openee.io/open-source/get-started).
 
 Dev Installation
 ----------------
