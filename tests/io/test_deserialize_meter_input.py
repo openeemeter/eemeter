@@ -54,6 +54,8 @@ def test_basic_usage(meter_input):
                       ModelingPeriodSet)
     assert isinstance(result["project"]["zipcode"],
                       str)
+    baseline_period = result['project']['modeling_period_set'].modeling_periods['baseline']
+    assert baseline_period.end_date.tzinfo == pytz.utc
 
 
 def test_missing_type(meter_input):
