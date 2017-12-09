@@ -1,3 +1,6 @@
+import dateutil.parser
+import pytz
+
 from .trace import (
     ArbitrarySerializer,
     ArbitraryStartSerializer,
@@ -8,8 +11,6 @@ from eemeter.structures import (
     ModelingPeriod,
     ModelingPeriodSet
 )
-
-import dateutil.parser
 
 
 def deserialize_meter_input(meter_input):
@@ -223,11 +224,11 @@ def _deserialize_single_modeling_period_group(modeling_period_group):
     else:
         start_date = baseline_period.get("start", None)
         if start_date is not None:
-            start_date = dateutil.parser.parse(start_date)
+            start_date = dateutil.parser.parse(start_date).astimezone(pytz.utc)
 
         end_date = baseline_period.get("end", None)
         if end_date is not None:
-            end_date = dateutil.parser.parse(end_date)
+            end_date = dateutil.parser.parse(end_date).astimezone(pytz.utc)
 
         baseline = ModelingPeriod(
             "BASELINE",
@@ -247,11 +248,11 @@ def _deserialize_single_modeling_period_group(modeling_period_group):
     else:
         start_date = reporting_period.get("start", None)
         if start_date is not None:
-            start_date = dateutil.parser.parse(start_date)
+            start_date = dateutil.parser.parse(start_date).astimezone(pytz.utc)
 
         end_date = reporting_period.get("end", None)
         if end_date is not None:
-            end_date = dateutil.parser.parse(end_date)
+            end_date = dateutil.parser.parse(end_date).astimezone(pytz.utc)
 
         reporting = ModelingPeriod(
             "REPORTING",
