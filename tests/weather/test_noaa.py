@@ -122,6 +122,25 @@ def test_bad_isd_station():
 def test_isd_repr(mock_isd_weather_source):
     assert str(mock_isd_weather_source) == 'ISDWeatherSource("722880")'
 
+
 def test_not_mocked():
     ws = ISDWeatherSource('722880')
     ws.add_year_range(2011, 2011)
+
+
+def test_load_cached(monkeypatch):
+    f = tempfile.NamedTemporaryFile()
+    monkeypatch.setenv('EEMETER_WEATHER_CACHE_URL', 'sqlite:///{}'.format(f.name))
+
+    ws = ISDWeatherSource('722880')
+    ws.client = MockWeatherClient()
+    assert ws.tempC.empty
+    ws.add_year(2015)
+    assert not ws.tempC.empty
+
+    ws = ISDWeatherSource('722880')
+    assert ws.tempC.empty
+    ws.load_cached(2013, 2017)
+    assert not ws.tempC.empty
+
+    f.close()
