@@ -309,6 +309,12 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
     def _merge_series(self, a, b):
         return a.append(b).sort_index().resample(self.freq).mean()
 
+    def load_cached(self, year_from, year_to):
+        for year in range(year_from, year_to):
+            if self._year_saved(year):
+                cached_series = self.load_series(year)
+                self.tempC = self._merge_series(self.tempC, cached_series)
+
 
 class GSODWeatherSource(NOAAWeatherSourceBase):
     ''' The :code:`GSODWeatherSource` draws weather data from the NOAA
