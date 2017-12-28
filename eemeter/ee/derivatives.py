@@ -16,6 +16,7 @@ from eemeter.processors.location import (
 from eemeter.modeling.models import HourlyLoadProfileModel
 from scipy import interpolate
 
+logging.basicConfig()
 logger = logging.getLogger(__name__)
 
 

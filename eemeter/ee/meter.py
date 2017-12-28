@@ -71,6 +71,7 @@ from eemeter.ee.derivatives import (
 
 import pandas as pd
 
+logging.basicConfig()
 logger = logging.getLogger(__name__)
 
 Derivative = namedtuple('Derivative', [
