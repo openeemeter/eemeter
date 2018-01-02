@@ -229,7 +229,7 @@ class SplitModeledEnergyTrace(object):
         # require NaN last data point as cap
         if filtered_df.shape[0] > 0:
             last_index = filtered_df.index[-1]
-            filtered_df.set_value(last_index, 'value', np.nan)
-            filtered_df.set_value(last_index, 'estimated', False)
+            filtered_df.at[last_index, 'value'] = np.nan
+            filtered_df.at[last_index, 'estimated'] = False
 
         return filtered_df
