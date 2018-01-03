@@ -43,16 +43,16 @@ def test_add_time_day():
     # Testing day of week columns
     # 2017-09-16 is Saturday and so day of week value of the first row
     # in returned_df should be 5
-    assert  returned_df.get_value(returned_df.index[0], 'day_of_week') == '5'
+    assert returned_df.at[returned_df.index[0], 'day_of_week'] == '5'
     #2017-09-19 is Monday and so day of week value of last row should 0
-    assert returned_df.get_value(returned_df.index[-1], 'day_of_week') == '0'
+    assert returned_df.at[returned_df.index[-1], 'day_of_week'] == '0'
     # 2017-09-18 is Sunday, day_of_week should be 6
-    assert returned_df.get_value(returned_df.index[25], 'day_of_week') == '6'
+    assert returned_df.at[returned_df.index[25], 'day_of_week'] == '6'
 
     # First hour of 2017-09-16
-    assert returned_df.get_value(returned_df.index[1], 'hour_of_day') == '1'
+    assert returned_df.at[returned_df.index[1], 'hour_of_day'] == '1'
     # Second hour of 2017-09-16
-    assert returned_df.get_value(returned_df.index[2], 'hour_of_day') == '2'
+    assert returned_df.at[returned_df.index[2], 'hour_of_day'] == '2'
 
 
 def test_add_hdd(input_df):
