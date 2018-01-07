@@ -9,7 +9,7 @@ To build documentation, make sure that dev requirements are installed:
 
     $ pip install -r dev_requirements.txt
 
-You will also need to [install pandoc](http://pandoc.org/installing.html) to build docs locally.
+You will also need to `install pandoc <http://pandoc.org/installing.html>`_ to build docs locally.
 
 And run the following from the root project directory.
 
