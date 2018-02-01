@@ -1,14 +1,17 @@
 from collections import OrderedDict
-import datetime
-import pytz
 import csv
-import json
-import os
+import datetime
 import errno
+import json
+import logging
+import os
+
 import click
+import pytz
 import pandas as pd
 from scipy import stats
 import numpy as np
+
 from eemeter.structures import EnergyTrace
 from eemeter.io.serializers import ArbitraryStartSerializer
 from eemeter.ee.meter import EnergyEfficiencyMeter
@@ -16,6 +19,9 @@ from eemeter.processors.dispatchers import (
     get_approximate_frequency,
 )
 from eemeter.modeling.models.caltrack import CaltrackMonthlyModel
+
+
+logging.basicConfig()
 
 
 @click.group()
