@@ -291,7 +291,7 @@ class EnergyEfficiencyMeter(object):
                 if isinstance(custom_model_class, string_types):
                     class_name_map = {
                         f.__name__: f
-                        for f in [CaltrackMonthlyModel, HourlyDayOfWeekModel]
+                        for f in [CaltrackMonthlyModel, CaltrackDailyModel, HourlyDayOfWeekModel]
                     }
                     ModelClass = class_name_map[custom_model_class]
                 else:
