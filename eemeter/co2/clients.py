@@ -70,6 +70,8 @@ class AVERTClient(object):
 
         if not streamdata:
             # return empty series
+            logging.info("Could not fine weather data for Year: " +
+                         year + " and Region " + region)
             return pd.Series(), pd.Series()
         # Open the workbook
         wb = xlrd.open_workbook(file_contents=streamdata)
