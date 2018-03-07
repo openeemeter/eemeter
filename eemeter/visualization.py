@@ -77,7 +77,7 @@ def plot_energy_signature(
     Returns
     -------
     ax : :any:`matplotlib.axes.Axes`
-        Matplotlib axes
+        Matplotlib axes.
     '''
     try:
         import matplotlib.pyplot as plt
@@ -132,7 +132,7 @@ def plot_candidate(
     Returns
     -------
     ax : :any:`matplotlib.axes.Axes`
-        Matplotlib axes
+        Matplotlib axes.
     '''
     if temp_range is None:
         temp_min, temp_max = 30, 90
@@ -206,7 +206,7 @@ def plot_model_fit(
     Returns
     -------
     ax : :any:`matplotlib.axes.Axes`
-        Matplotlib axes
+        Matplotlib axes.
     '''
     daily_temp = temp_data.resample('D').mean()
     temp_range = daily_temp.min(), daily_temp.max()

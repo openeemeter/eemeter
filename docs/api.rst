@@ -1,12 +1,3 @@
-.. spelling::
-
-   Matplotlib
-   cdd
-   gzipped
-   hdd
-   metadata
-   serializable
-
 API Docs
 ========
 
