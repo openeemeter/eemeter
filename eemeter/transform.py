@@ -109,12 +109,12 @@ def merge_temperature_data(
     ''' Merge meter data of any frequency with hourly temperature data to make
     a dataset to feed to models.
 
-    Creates a dataframe with the same index as the meter data.
+    Creates a :any:`pandas.DataFrame` with the same index as the meter data.
 
     Parameters
     ----------
     meter_data : :any:`pandas.DataFrame`
-        Dataframe with :any:`pandas.DatetimeIndex` and a column with the name
+        DataFrame with :any:`pandas.DatetimeIndex` and a column with the name
         ``value``.
     temperature_data : :any:`pandas.Series`
         Series with :any:`pandas.DatetimeIndex` with hourly (``'H'``) frequency
@@ -228,7 +228,7 @@ def billing_as_daily(df, value_col='value'):
 
 
 def day_counts(series):
-    '''Days between index datetimes as a :any:`pandas.Series`.
+    '''Days between index datetime values as a :any:`pandas.Series`.
 
     Parameters
     ----------

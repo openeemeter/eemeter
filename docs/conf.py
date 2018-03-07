@@ -184,7 +184,7 @@ texinfo_documents = [
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
     'pandas': ('https://pandas.pydata.org/pandas-docs/stable', None),
-    'eeweather': ('https://eeweather.readthedocs.io/en/latest/', None),
+    'eeweather': ('http://eeweather.openee.io/en/latest/', None),
     'matplotlib': ('https://matplotlib.org/', None),
 }
 

@@ -3,6 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+.. spelling::
+
+   CDD
+
 EEmeter: tools for calculating metered energy savings
 =====================================================
 
@@ -52,7 +56,7 @@ Features
 - Flexible sources of temperature data. See :any:`EEweather <eeweather:index>`.
 - Model serialization
 - First-class warnings reporting
-- Pandas dataframe support
+- Pandas DataFrame support
 - Visualization tools
 
 Command-line Usage

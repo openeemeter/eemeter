@@ -1,3 +1,12 @@
+.. spelling::
+
+   Matplotlib
+   cdd
+   gzipped
+   hdd
+   metadata
+   serializable
+
 API Docs
 ========
 
@@ -42,8 +51,8 @@ CalTRACK methods
 .. autofunction:: eemeter.select_best_candidate
 
 
-Data tranformation utilities
-----------------------------
+Data transformation utilities
+-----------------------------
 
 .. autofunction:: eemeter.billing_as_daily
 

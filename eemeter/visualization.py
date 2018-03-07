@@ -16,9 +16,9 @@ def plot_time_series(meter_data, temperature_data, **kwargs):
     Parameters
     ----------
     meter_data : :any:`pandas.DataFrame`
-        A timeseries-indexed dataframe of meter data with the column ``value``.
+        A :any:`pandas.DatetimeIndex`-indexed DataFrame of meter data with the column ``value``.
     temperature_data : :any:`pandas.Series`
-        A timeseries-indexed series of temperature data.
+        A :any:`pandas.DatetimeIndex`-indexed Series of temperature data.
     **kwargs
         Arbitrary keyword arguments to pass to
         :any:`plt.subplots <matplotlib.pyplot.subplots>`
@@ -59,10 +59,10 @@ def plot_energy_signature(
     Parameters
     ----------
     meter_data : :any:`pandas.DataFrame`
-        A timeseries-indexed dataframe of meter data with the column ``value``.
+        A :any:`pandas.DatetimeIndex`-indexed DataFrame of meter data with the column ``value``.
     temperature_data : :any:`pandas.Series`
-        A timeseries-indexed series of temperature data.
-    temp_col : :str:, default ``'temperature_mean'``
+        A :any:`pandas.DatetimeIndex`-indexed Series of temperature data.
+    temp_col : :any:`str`, default ``'temperature_mean'``
         The name of the temperature column.
     ax : :any:`matplotlib.axes.Axes`
         The axis on which to plot.
@@ -184,7 +184,7 @@ def plot_model_fit(
     Parameters
     ----------
     meter_data : :any:`pandas.DataFrame`
-        A meter data dataframe with ``value`` column.
+        A meter data DataFrame with ``value`` column.
     temperature_data : :any:`pandas.Series`
         A temperature data series.
     model_fit : :any:`eemeter.ModelFit`

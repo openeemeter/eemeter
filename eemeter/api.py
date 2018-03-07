@@ -31,7 +31,7 @@ class CandidateModel(object):
         A function of the following form:
         ``predict_func(candidate_model, inputs) -> outputs``
     model_params : :any:`dict`, default :any:`None`
-        A flat dictionary of model parameters which must be serializeable
+        A flat dictionary of model parameters which must be serializable
         using the :any:`json.dumps` method.
     model : :any:`object`
         The raw model (if any) used in fitting. Not serialized.
@@ -116,7 +116,7 @@ class DataSufficiency(object):
     warnings : :any:`list` of :any:`eemeter.EEMeterWarning`
         A list of any warnings reported during the check for baseline data sufficiency.
     settings : :any:`dict`
-        A dictionary of settings (keyword args) used.
+        A dictionary of settings (keyword arguments) used.
     '''
 
     def __init__(

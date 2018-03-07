@@ -50,7 +50,7 @@ def predict_caltrack_daily(
 ):
     ''' CalTRACK predict method.
 
-    Given a set model type, params, and daily temperatures, return model
+    Given a set model type, parameters, and daily temperatures, return model
     predictions.
 
     Parameters
@@ -331,7 +331,7 @@ def get_intercept_only_candidate_models(data):
     Parameters
     ----------
     data : :any:`pandas.DataFrame`
-        A dataframe containing at least the column ``meter_value``.
+        A DataFrame containing at least the column ``meter_value``.
         DataFrames of this form can be made using the
         :any:`eemeter.merge_temperature_data` method.
 
@@ -372,7 +372,7 @@ def get_single_cdd_only_candidate_model(
     Parameters
     ----------
     data : :any:`pandas.DataFrame`
-        A dataframe containing at least the column ``meter_value`` and
+        A DataFrame containing at least the column ``meter_value`` and
         ``cdd_<balance_point>``
         DataFrames of this form can be made using the
         :any:`eemeter.merge_temperature_data` method.
@@ -462,7 +462,7 @@ def get_cdd_only_candidate_models(
     Parameters
     ----------
     data : :any:`pandas.DataFrame`
-        A dataframe containing at least the column ``meter_value`` and 1 to n
+        A DataFrame containing at least the column ``meter_value`` and 1 to n
         columns with names of the form ``cdd_<balance_point>``. All columns
         with names of this form will be used to fit a candidate model.
         DataFrames of this form can be made using the
@@ -502,7 +502,7 @@ def get_single_hdd_only_candidate_model(
     Parameters
     ----------
     data : :any:`pandas.DataFrame`
-        A dataframe containing at least the column ``meter_value`` and
+        A DataFrame containing at least the column ``meter_value`` and
         ``hdd_<balance_point>``
         DataFrames of this form can be made using the
         :any:`eemeter.merge_temperature_data` method.
@@ -591,7 +591,7 @@ def get_hdd_only_candidate_models(
     Parameters
     ----------
     data : :any:`pandas.DataFrame`
-        A dataframe containing at least the column ``meter_value`` and 1 to n
+        A DataFrame containing at least the column ``meter_value`` and 1 to n
         columns with names of the form ``hdd_<balance_point>``. All columns
         with names of this form will be used to fit a candidate model.
         DataFrames of this form can be made using the
@@ -634,7 +634,7 @@ def get_single_cdd_hdd_candidate_model(
     Parameters
     ----------
     data : :any:`pandas.DataFrame`
-        A dataframe containing at least the column ``meter_value`` and
+        A DataFrame containing at least the column ``meter_value`` and
         ``hdd_<heating_balance_point>`` and ``cdd_<cooling_balance_point>``
         DataFrames of this form can be made using the
         :any:`eemeter.merge_temperature_data` method.
@@ -750,7 +750,7 @@ def get_cdd_hdd_candidate_models(
     Parameters
     ----------
     data : :any:`pandas.DataFrame`
-        A dataframe containing at least the column ``meter_value`` and 1 to n
+        A DataFrame containing at least the column ``meter_value`` and 1 to n
         columns each of the form ``hdd_<heating_balance_point>``
         and ``cdd_<cooling_balance_point>``. DataFrames of this form can be
         made using the :any:`eemeter.merge_temperature_data` method.
@@ -844,7 +844,7 @@ def caltrack_daily_method(
     Parameters
     ----------
     data : :any:`pandas.DataFrame`
-        A dataframe containing at least the column ``meter_value`` and 1 to n
+        A DataFrame containing at least the column ``meter_value`` and 1 to n
         columns each of the form ``hdd_<heating_balance_point>``
         and ``cdd_<cooling_balance_point>``. DataFrames of this form can be
         made using the :any:`eemeter.merge_temperature_data` method.
@@ -971,7 +971,7 @@ def caltrack_daily_sufficiency_criteria(
     Parameters
     ----------
     data_quality : :any:`pandas.DataFrame`
-        A dataframe containing at least the column ``meter_value`` and the two
+        A DataFrame containing at least the column ``meter_value`` and the two
         columns ``temperature_null``, containing a count of null hourly
         temperature values for each meter value, and ``temperature_not_null``,
         containing a count of not-null hourly temperature values for each

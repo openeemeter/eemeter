@@ -192,7 +192,7 @@ def meter_data_to_csv(meter_data, path_or_buf):
     Parameters
     ----------
     meter_data : :any:`pandas.DataFrame`
-        Meter data dataframe with ``'value'`` column and
+        Meter data DataFrame with ``'value'`` column and
         :any:`pandas.DatetimeIndex`.
     path_or_buf : :any:`str` or file handle, default None
         File path or object, if None is provided the result is returned as a string.

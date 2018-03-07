@@ -9,7 +9,7 @@ File format specification for io methods
 About the CalTRACK methods
 --------------------------
 
-link to Caltrack repo
+link to CalTRACK repository
 
 Explain how models work
 
