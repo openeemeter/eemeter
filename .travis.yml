@@ -5,6 +5,11 @@ cache:
     - $HOME/.pip-cache/
     - .tox
 
+addons:
+  apt:
+    packages:
+      - libenchant-dev
+
 language: python
 
 python:
