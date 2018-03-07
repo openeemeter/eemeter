@@ -1,1 +1,2 @@
-recursive-include eemeter/sample_data *
+include README.rst LICENSE pytest.ini sample/*
+recursive-include tests *.py

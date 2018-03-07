@@ -1,4 +1,0 @@
-conda:
-  file: rtd-conda-environment.yml
-python:
-   setup_py_install: true

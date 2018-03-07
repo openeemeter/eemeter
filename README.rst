@@ -1,8 +1,3 @@
-.. eemeter documentation master file, created by
-   sphinx-quickstart on Tue Feb 13 17:38:45 2018.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 EEmeter: tools for calculating metered energy savings
 =====================================================
 
@@ -49,7 +44,7 @@ Features
   - CalTRACK Daily Method
   - CalTRACK Monthly Method
 
-- Flexible sources of temperature data. See :any:`EEweather <eeweather:index>`.
+- Flexible sources of temperature data. See `EEweather <https://eeweather.readthedocs.io>`_.
 - Model serialization
 - First-class warnings reporting
 - Pandas dataframe support
@@ -68,20 +63,10 @@ Save output::
 
     $ eemeter caltrack --sample=il-electricity-cdd-only-billing_monthly --output-file=/path/to/output.json
 
-Load custom data (see :any:`eemeter.meter_data_from_csv` and :any:`eemeter.temperature_data_from_csv` for formatting)::
+Load custom data (see ``eemeter.meter_data_from_csv`` and ``eemeter.temperature_data_from_csv`` for formatting)::
 
     $ eemeter caltrack --meter-file=/path/to/meter/data.csv --temperature-file=/path/to/temperature/data.csv
 
 Do not fit CDD-based candidate models (intended for gas data)::
 
     $ eemeter caltrack --sample=il-gas-hdd-only-billing_bimonthly --no-fit-cdd
-
-Usage Guides
-------------
-
-.. toctree::
-   :maxdepth: 2
-
-   basics
-   advanced
-   api
