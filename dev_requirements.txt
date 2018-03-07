@@ -10,7 +10,7 @@ sphinx-rtd-theme==0.2.4
 sphinxcontrib-napoleon==0.6.1
 SQLAlchemy==1.1.15
 tox==2.9.1
-twine==1.9.1
+twine==1.10.0
 xlrd==1.1.0
 numpy==1.13.3
 statsmodels==0.8.0
