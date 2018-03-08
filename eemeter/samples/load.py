@@ -30,7 +30,7 @@ def samples():
         List of sample identifiers for use with :any:`eemeter.load_sample`.
     '''
     sample_metadata = _load_sample_metadata()
-    return list(sample_metadata.keys())
+    return list(sorted(sample_metadata.keys()))
 
 
 def load_sample(sample):
