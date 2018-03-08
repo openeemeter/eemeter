@@ -71,6 +71,13 @@ Data loading
 
 .. autofunction:: eemeter.temperature_data_to_csv
 
+Sample Data
+-----------
+
+.. autofunction:: eemeter.samples
+
+.. autofunction:: eemeter.load_sample
+
 
 Visualization
 -------------

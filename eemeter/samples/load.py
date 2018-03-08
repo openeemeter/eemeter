@@ -22,11 +22,32 @@ def _load_sample_metadata():
 
 
 def samples():
+    ''' Load a list of sample data identifiers.
+
+    Returns
+    -------
+    samples : :any:`list` of :any:`str`
+        List of sample identifiers for use with :any:`eemeter.load_sample`.
+    '''
     sample_metadata = _load_sample_metadata()
     return list(sample_metadata.keys())
 
 
 def load_sample(sample):
+    ''' Load meter data, temperature data, and metadata for associated with a
+    particular sample identifier. Note: samples are simulated, not real, data.
+
+    Parameters
+    ----------
+    sample : :any:`str`
+        Identifier of sample. Complete list can be obtained with
+        :any:`eemeter.samples`.
+
+    Returns
+    -------
+    meter_data, temperature_data, metadata : :any:`tuple` of :any:`pandas.DataFrame`, :any:`pandas.Series`, and :any:`dict`
+        Meter data, temperature data, and metadata for this sample identifier.
+    '''
     sample_metadata = _load_sample_metadata()
     metadata = sample_metadata.get(sample)
     if metadata is None:
