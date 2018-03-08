@@ -28,7 +28,7 @@ def plot_time_series(meter_data, temperature_data, **kwargs):
     axes : :any:`tuple` of :any:`matplotlib.axes.Axes`
         Tuple of ``(ax_meter_data, ax_temperature_data)``.
     '''
-    #TODO include image in docs.
+    # TODO(philngo): include image in docs.
     try:
         import matplotlib.pyplot as plt
     except ImportError:  # pragma: no cover

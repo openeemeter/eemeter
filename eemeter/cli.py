@@ -95,6 +95,7 @@ def _get_data(
 def caltrack(
     sample, meter_file, temperature_file, output_file, show_candidates, fit_cdd,
 ):
+    # TODO(philngo): add project dates and baseline period/reporting period.
 
     heating_balance_points = range(55, 66)
     cooling_balance_points = range(65, 76)
