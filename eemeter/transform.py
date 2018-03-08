@@ -33,78 +33,97 @@ def _matching_groups(index, df):
     return groups
 
 
-def _hdd_cdd_agg_funcs(
-    heating_balance_points, cooling_balance_points, degree_day_method
+def _degree_day_columns(
+    heating_balance_points, cooling_balance_points, degree_day_method,
+    percent_hourly_coverage_per_day,
 ):
+
     if degree_day_method == 'hourly':
-        def _heating_degree_days(balance_point, temps):
-            return np.maximum(balance_point - temps, 0).sum() / 24.0
-        def _cooling_degree_days(balance_point, temps):
-            return np.maximum(temps - balance_point, 0).sum() / 24.0
+
+        def _compute_columns(temps):
+            n_temps = temps.shape[0]
+            n_temps_kept = temps.count()
+            cdd_cols = {
+                'cdd_%s' % bp: np.maximum(temps - bp, 0).mean()
+                for bp in cooling_balance_points
+            }
+            hdd_cols = {
+                'hdd_%s' % bp: np.maximum(bp - temps, 0).mean()
+                for bp in heating_balance_points
+            }
+            count_cols = {
+                'n_hours_kept': n_temps_kept,
+                'n_hours_dropped': n_temps - n_temps_kept,
+            }
+
+            columns = count_cols
+            columns.update(cdd_cols)
+            columns.update(hdd_cols)
+            return columns
+
+    n_limit = 24 * percent_hourly_coverage_per_day
 
     if degree_day_method == 'daily':
-        def _heating_degree_days(balance_point, temps):
-            count = temps.shape[0]
-            days = count / 24.0
-            if days > 1:
-                # don't use resample b/c it always picks midnight as day start
-                day_groups = np.floor(np.arange(count) / 24)
-                daily_temps = temps.groupby(day_groups).agg(['mean', 'count'])
-                # drop days with less than 22 ppoints
-                daily_temps = daily_temps['mean'][daily_temps['count'] > 22]
-                return np.maximum(balance_point - daily_temps, 0).mean() * days
-            else:
-                return np.maximum(balance_point - temps.mean(), 0) * days
-        def _cooling_degree_days(balance_point, temps):
-            count = temps.shape[0]
-            days = count / 24.0
-            if days > 1:
-                # don't use resample b/c it always picks midnight as day start
-                day_groups = np.floor(np.arange(count) / 24)
-                daily_temps = temps.groupby(day_groups).agg(['mean', 'count'])
-                # drop days with less than 22 ppoints
-                daily_temps = daily_temps['mean'][daily_temps['count'] > 22]
-                return np.maximum(daily_temps - balance_point, 0).mean() * days
-            else:
-                return np.maximum(temps.mean() - balance_point, 0) * days
 
-    agg_funcs = []
-    agg_funcs.extend([
-        (
-            'hdd_{}'.format(balance_point),
-            partial(_heating_degree_days, balance_point)
-        )
-        for balance_point in heating_balance_points
-    ])
-    agg_funcs.extend([
-        (
-            'cdd_{}'.format(balance_point),
-            partial(_cooling_degree_days, balance_point)
-        )
-        for balance_point in cooling_balance_points
-    ])
+        def _compute_columns(temps):
+            count = temps.shape[0]
+
+            if count > 24:
+                day_groups = np.floor(np.arange(count) / 24)
+                daily_temps = temps.groupby(day_groups).agg(['mean', 'count'])
+                n_days_total = daily_temps.shape[0]
+                daily_temps = daily_temps['mean'][daily_temps['count'] > n_limit]
+                n_days_kept = daily_temps.shape[0]
+                count_cols = {
+                    'n_days_kept': n_days_kept,
+                    'n_days_dropped': n_days_total - n_days_kept,
+                }
+                cdd_cols = {
+                    'cdd_%s' % bp: np.maximum(daily_temps - bp, 0).mean()
+                    for bp in cooling_balance_points
+                }
+                hdd_cols = {
+                    'hdd_%s' % bp: np.maximum(bp - daily_temps, 0).mean()
+                    for bp in heating_balance_points
+                }
+            else:  # faster route for daily case, should have same effect.
+                if count > n_limit:
+                    count_cols = {
+                        'n_days_kept': 1,
+                        'n_days_dropped': 0,
+                    }
+                    mean_temp = temps.mean()
+                else:
+                    count_cols = {
+                        'n_days_kept': 0,
+                        'n_days_dropped': 1,
+                    }
+                    mean_temp = np.nan
+
+                cdd_cols = {
+                    'cdd_%s' % bp: np.maximum(mean_temp - bp, 0)
+                    for bp in cooling_balance_points
+                }
+                hdd_cols = {
+                    'hdd_%s' % bp: np.maximum(bp - mean_temp, 0)
+                    for bp in heating_balance_points
+                }
+
+            columns = count_cols
+            columns.update(cdd_cols)
+            columns.update(hdd_cols)
+            return columns
+
+    agg_funcs = [
+        ('degree_day_columns', _compute_columns)
+    ]
     return agg_funcs
 
 
-def _hdd_cdd_column_renames(heating_balance_points, cooling_balance_points):
-    column_renames = {
-        ('temp', 'hdd_{}'.format(bp)): 'hdd_{}'.format(bp)
-        for bp in heating_balance_points
-    }
-    column_renames.update({
-        ('temp', 'cdd_{}'.format(bp)): 'cdd_{}'.format(bp)
-        for bp in cooling_balance_points
-    })
-    return column_renames
-
-
 def merge_temperature_data(
-    meter_data, temperature_data,
-    heating_balance_points=None,
-    cooling_balance_points=None,
-    data_quality=False,
-    temperature_mean=True,
-    degree_day_method='daily',
+    meter_data, temperature_data, heating_balance_points=None,
+    cooling_balance_points=None, data_quality=False, temperature_mean=True,
+    degree_day_method='daily', percent_hourly_coverage_per_day=0.5
 ):
     ''' Merge meter data of any frequency with hourly temperature data to make
     a dataset to feed to models.
@@ -131,13 +150,16 @@ def merge_temperature_data(
         If True, compute temperature means for each meter period.
     degree_day_method : :any:`str`, ``'daily'`` or ``'hourly'``
         The method to use in calculating degree days.
+    percent_hourly_coverage_per_day : :any:`str`, optional
+        Percent hourly temperature coverage per day for heating and cooling
+        degree days to not be dropped.
 
     Returns
     -------
     data : :any:`pandas.DataFrame`
         A dataset with the specified parameters.
     '''
-    # TODO(philngo): write fast route for hourly meter data + hourly temp data
+    # # TODO(philngo): write fast route for hourly meter data + hourly temp data
 
     temp_agg_funcs = []
     temp_agg_column_renames = {}
@@ -161,15 +183,15 @@ def merge_temperature_data(
             raise ValueError('method not supported: {}'.format(degree_day_method))
 
         # heating/cooling degree day aggregations
-        temp_agg_funcs.extend(_hdd_cdd_agg_funcs(
+        temp_agg_funcs.extend(_degree_day_columns(
             heating_balance_points=heating_balance_points,
             cooling_balance_points=cooling_balance_points,
             degree_day_method=degree_day_method,
+            percent_hourly_coverage_per_day=percent_hourly_coverage_per_day,
         ))
-        temp_agg_column_renames.update(_hdd_cdd_column_renames(
-            heating_balance_points=heating_balance_points,
-            cooling_balance_points=cooling_balance_points,
-        ))
+        temp_agg_column_renames.update({
+            ('temp', 'degree_day_columns'): 'degree_day_columns',
+        })
 
     if data_quality:
         temp_agg_funcs.extend([
@@ -195,6 +217,14 @@ def merge_temperature_data(
     df = pd.concat(dfs_to_merge, axis=1).rename(
         columns=temp_agg_column_renames
     )
+
+    # expand degree_day_columns
+    if 'degree_day_columns' in df:
+        df = pd.concat([
+            df.drop(['degree_day_columns'], axis=1),
+            df['degree_day_columns'].apply(pd.Series)
+        ], axis=1)
+
     return df
 
 
