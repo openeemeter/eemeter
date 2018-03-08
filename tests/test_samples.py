@@ -11,22 +11,22 @@ from eemeter import (
 
 def test_samples():
     assert samples() == [
-        'il-electricity-cdd-hdd-hourly',
-        'il-electricity-cdd-hdd-daily',
-        'il-electricity-cdd-hdd-billing_monthly',
         'il-electricity-cdd-hdd-billing_bimonthly',
-        'il-electricity-cdd-only-hourly',
-        'il-electricity-cdd-only-daily',
-        'il-electricity-cdd-only-billing_monthly',
+        'il-electricity-cdd-hdd-billing_monthly',
+        'il-electricity-cdd-hdd-daily',
+        'il-electricity-cdd-hdd-hourly',
         'il-electricity-cdd-only-billing_bimonthly',
-        'il-gas-hdd-only-hourly',
-        'il-gas-hdd-only-daily',
-        'il-gas-hdd-only-billing_monthly',
+        'il-electricity-cdd-only-billing_monthly',
+        'il-electricity-cdd-only-daily',
+        'il-electricity-cdd-only-hourly',
         'il-gas-hdd-only-billing_bimonthly',
-        'il-gas-intercept-only-hourly',
-        'il-gas-intercept-only-daily',
+        'il-gas-hdd-only-billing_monthly',
+        'il-gas-hdd-only-daily',
+        'il-gas-hdd-only-hourly',
+        'il-gas-intercept-only-billing_bimonthly',
         'il-gas-intercept-only-billing_monthly',
-        'il-gas-intercept-only-billing_bimonthly'
+        'il-gas-intercept-only-daily',
+        'il-gas-intercept-only-hourly',
     ]
 
 
