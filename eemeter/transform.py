@@ -213,6 +213,8 @@ def billing_as_daily(df, value_col='value'):
     df : :any:`pandas.DataFrame`
         Daily-frequency data with average daily billing usage for each day.
     '''
+    # TODO(philngo): incorporate this directly into merge_temperature_data
+
     # dont affect the original data
     df = df.copy()
 
@@ -240,6 +242,8 @@ def day_counts(series):
         A :any:`pandas.Series` with counts of days between periods. Counts are
         given on start dates of periods.
     '''
+    # TODO(philngo): incorporate this directly into merge_temperature_data
+
     # dont affect the original data
     series = series.copy()
 

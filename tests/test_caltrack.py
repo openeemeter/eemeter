@@ -820,7 +820,7 @@ def test_caltrack_daily_sufficiency_criteria_pass():
         'start': pd.date_range(
             start='2016-01-02', periods=2, freq='D').tz_localize('UTC'),
     }).set_index('start')
-    requested_start = pd.Timestamp('2016-01-02').tz_localize('UTC')
+    requested_start = pd.Timestamp('2016-01-02').tz_localize('UTC').to_pydatetime()
     requested_end = pd.Timestamp('2016-01-03').tz_localize('UTC')
     data_sufficiency = caltrack_daily_sufficiency_criteria(
         data_quality, requested_start, requested_end, min_days=1,

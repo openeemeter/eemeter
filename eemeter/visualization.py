@@ -97,6 +97,8 @@ def plot_energy_signature(
         temp_col = 'temperature_mean'
 
     ax.scatter(df[temp_col], df.meter_value, **kwargs)
+    ax.set_xlabel('Temperature')
+    ax.set_ylabel('Energy Use')
 
     if title is not None:
         ax.set_title(title)
@@ -176,17 +178,13 @@ def plot_candidate(
 
 
 def plot_model_fit(
-    meter_data, temp_data, model_fit, ax=None, title=None, figsize=None,
-    with_candidates=False, candidate_alpha=None, color=None
+    model_fit, ax=None, title=None, figsize=None, with_candidates=False,
+    candidate_alpha=None, temp_range=None
 ):
     ''' Plot a model fit.
 
     Parameters
     ----------
-    meter_data : :any:`pandas.DataFrame`
-        A meter data DataFrame with ``value`` column.
-    temperature_data : :any:`pandas.Series`
-        A temperature data series.
     model_fit : :any:`eemeter.ModelFit`
         The model fit to plot.
     ax : :any:`matplotlib.axes.Axes`, optional
@@ -200,17 +198,13 @@ def plot_model_fit(
     candidate_alpha : :any:`float` between 0 and 1
         Transparency at which to plot candidate models. 0 fully transparent,
         1 fully opaque.
-    color : :any:`str`
-        Color of energy signature plot.
 
     Returns
     -------
     ax : :any:`matplotlib.axes.Axes`
         Matplotlib axes.
     '''
-    daily_temp = temp_data.resample('D').mean()
-    temp_range = daily_temp.min(), daily_temp.max()
-
+    # TODO(philngo): the model fit object should probably own this.
     try:
         import matplotlib.pyplot as plt
     except ImportError:  # pragma: no cover
@@ -222,7 +216,9 @@ def plot_model_fit(
     if ax is None:
         fig, ax = plt.subplots(figsize=figsize)
 
-    plot_energy_signature(meter_data, temp_data, ax=ax, color=color)
+    if temp_range is None:
+        temp_range = (20, 90)
+
     if with_candidates:
         for candidate in model_fit.candidates:
             plot_candidate(candidate, ax=ax, temp_range=temp_range, alpha=candidate_alpha)

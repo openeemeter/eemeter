@@ -100,8 +100,6 @@ def test_plot_candidate_error():
 
 
 def test_plot_model_fit(il_electricity_cdd_hdd_daily, predict_func):
-    meter_data = il_electricity_cdd_hdd_daily['meter_data']
-    temperature_data = il_electricity_cdd_hdd_daily['temperature_data']
     candidate_model = CandidateModel(
         model_type='model_type',
         formula='formula',
@@ -115,12 +113,9 @@ def test_plot_model_fit(il_electricity_cdd_hdd_daily, predict_func):
         candidates=[candidate_model],
     )
     ax = plot_model_fit(
-        meter_data, temperature_data, model_fit, title='title',
-        with_candidates=True)
+        model_fit, title='title', with_candidates=True)
     data = ax.lines[0].get_xydata()
-    assert data.shape == (91, 2)
+    assert data.shape == (70, 2)
     data = ax.lines[1].get_xydata()
-    assert data.shape == (91, 2)
-    data = ax.collections[0].get_offsets()
-    assert data.shape == (810, 2)
+    assert data.shape == (70, 2)
     assert ax.get_title() == 'title'

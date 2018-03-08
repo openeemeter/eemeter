@@ -2,6 +2,7 @@ from collections import Counter
 
 import numpy as np
 import pandas as pd
+import pytz
 import statsmodels.formula.api as smf
 import traceback
 
@@ -1022,14 +1023,14 @@ def caltrack_daily_sufficiency_criteria(
 
     if requested_start is not None:
         # check for gap at beginning
-        requested_start = requested_start.tz_convert('UTC')
+        requested_start = requested_start.astimezone(pytz.UTC)
         n_days_start_gap = (data_start - requested_start).days
     else:
         n_days_start_gap = 0
 
     if requested_end is not None:
         # check for gap at end
-        requested_end = requested_end.tz_convert('UTC')
+        requested_end = requested_end.astimezone(pytz.UTC)
         n_days_end_gap = (requested_end - data_end).days
     else:
         n_days_end_gap = 0

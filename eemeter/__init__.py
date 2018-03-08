@@ -63,6 +63,10 @@ from .visualization import (
     plot_model_fit,
     plot_time_series,
 )
+from .samples.load import (
+    samples,
+    load_sample,
+)
 
 def get_version():
     return __version__
