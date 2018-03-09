@@ -882,6 +882,8 @@ def caltrack_daily_method(
         for more details.
     '''
 
+    # TODO(philngo): allow specifying a weights column.
+
     if data.empty:
         return ModelFit(
             status='NO DATA',

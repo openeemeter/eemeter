@@ -52,10 +52,44 @@ def test_merge_temperature_data_hourly_hourly_degree_days(il_electricity_cdd_hdd
     assert round(df.n_hours_dropped.mean(), 2) == 0
 
 
-def test_merge_temperature_data_hourly_daily_degree_days_fail(il_electricity_cdd_hdd_hourly):
+def test_merge_temperature_data_hourly_hourly_degree_days_use_mean_false(
+    il_electricity_cdd_hdd_hourly
+):
     # pick a slice with both hdd and cdd
-    meter_data = il_electricity_cdd_hdd_hourly['meter_data']['2016-03-01':'2016-07-01']
-    temperature_data = il_electricity_cdd_hdd_hourly['temperature_data']['2016-03-01':'2016-07-01']
+    meter_data = il_electricity_cdd_hdd_hourly['meter_data']\
+        ['2016-03-01':'2016-07-01']
+    temperature_data = il_electricity_cdd_hdd_hourly['temperature_data']\
+        ['2016-03-01':'2016-07-01']
+    df = merge_temperature_data(
+        meter_data, temperature_data,
+        heating_balance_points=[60, 61],
+        cooling_balance_points=[65, 66],
+        temperature_mean=False,
+        degree_day_method='hourly',
+        use_mean_daily_values=False,
+    )
+    assert df.shape == (2952, 7)
+    assert list(sorted(df.columns)) == [
+        'cdd_65', 'cdd_66', 'hdd_60', 'hdd_61', 'meter_value', 'n_hours_dropped',
+        'n_hours_kept',
+    ]
+    assert round(df.meter_value.sum()) == round(meter_data.value.sum()) == 2914.0
+    assert round(df.hdd_60.mean(), 2) == 0.22
+    assert round(df.hdd_61.mean(), 2) == 0.24
+    assert round(df.cdd_65.mean(), 2) == 0.2
+    assert round(df.cdd_66.mean(), 2) == 0.18
+    assert round(df.n_hours_kept.mean(), 2) == 1.0
+    assert round(df.n_hours_dropped.mean(), 2) == 0
+
+
+def test_merge_temperature_data_hourly_daily_degree_days_fail(
+    il_electricity_cdd_hdd_hourly
+):
+    # pick a slice with both hdd and cdd
+    meter_data = il_electricity_cdd_hdd_hourly['meter_data']\
+        ['2016-03-01':'2016-07-01']
+    temperature_data = il_electricity_cdd_hdd_hourly['temperature_data']\
+        ['2016-03-01':'2016-07-01']
 
     with pytest.raises(ValueError):
         merge_temperature_data(
@@ -66,10 +100,14 @@ def test_merge_temperature_data_hourly_daily_degree_days_fail(il_electricity_cdd
         )
 
 
-def test_merge_temperature_data_hourly_bad_degree_days(il_electricity_cdd_hdd_hourly):
+def test_merge_temperature_data_hourly_bad_degree_days(
+    il_electricity_cdd_hdd_hourly
+):
     # pick a slice with both hdd and cdd
-    meter_data = il_electricity_cdd_hdd_hourly['meter_data']['2016-03-01':'2016-07-01']
-    temperature_data = il_electricity_cdd_hdd_hourly['temperature_data']['2016-03-01':'2016-07-01']
+    meter_data = il_electricity_cdd_hdd_hourly['meter_data']\
+        ['2016-03-01':'2016-07-01']
+    temperature_data = il_electricity_cdd_hdd_hourly['temperature_data']\
+        ['2016-03-01':'2016-07-01']
 
     with pytest.raises(ValueError):
         merge_temperature_data(
@@ -82,8 +120,10 @@ def test_merge_temperature_data_hourly_bad_degree_days(il_electricity_cdd_hdd_ho
 
 def test_merge_temperature_data_hourly_data_quality(il_electricity_cdd_hdd_hourly):
     # pick a slice with both hdd and cdd
-    meter_data = il_electricity_cdd_hdd_hourly['meter_data']['2016-03-01':'2016-07-01']
-    temperature_data = il_electricity_cdd_hdd_hourly['temperature_data']['2016-03-01':'2016-07-01']
+    meter_data = il_electricity_cdd_hdd_hourly['meter_data']\
+        ['2016-03-01':'2016-07-01']
+    temperature_data = il_electricity_cdd_hdd_hourly['temperature_data']\
+        ['2016-03-01':'2016-07-01']
 
     df = merge_temperature_data(
         meter_data, temperature_data, temperature_mean=False,
@@ -132,6 +172,33 @@ def test_merge_temperature_data_daily_daily_degree_days(il_electricity_cdd_hdd_d
     assert round(df.n_days_dropped.mean(), 2) == 0
 
 
+def test_merge_temperature_data_daily_daily_degree_days_use_mean_false(
+    il_electricity_cdd_hdd_daily
+):
+    meter_data = il_electricity_cdd_hdd_daily['meter_data']
+    temperature_data = il_electricity_cdd_hdd_daily['temperature_data']
+    df = merge_temperature_data(
+        meter_data, temperature_data,
+        heating_balance_points=[60, 61],
+        cooling_balance_points=[65, 66],
+        temperature_mean=False,
+        degree_day_method='daily',
+        use_mean_daily_values=False,
+    )
+    assert df.shape == (810, 7)
+    assert list(sorted(df.columns)) == [
+        'cdd_65', 'cdd_66', 'hdd_60', 'hdd_61', 'meter_value', 'n_days_dropped',
+        'n_days_kept',
+    ]
+    assert round(df.meter_value.sum()) == round(meter_data.value.sum()) == 21926.0
+    assert round(df.hdd_60.mean(), 2) == 11.05
+    assert round(df.hdd_61.mean(), 2) == 11.61
+    assert round(df.cdd_65.mean(), 2) == 3.61
+    assert round(df.cdd_66.mean(), 2) == 3.25
+    assert round(df.n_days_kept.mean(), 2) == 1
+    assert round(df.n_days_dropped.mean(), 2) == 0
+
+
 def test_merge_temperature_data_daily_hourly_degree_days(il_electricity_cdd_hdd_daily):
     meter_data = il_electricity_cdd_hdd_daily['meter_data']
     temperature_data = il_electricity_cdd_hdd_daily['temperature_data']
@@ -150,6 +217,33 @@ def test_merge_temperature_data_daily_hourly_degree_days(il_electricity_cdd_hdd_
     assert round(df.meter_value.sum()) == round(meter_data.value.sum()) == 21926.0
     assert round(df.hdd_60.mean(), 2) == 11.48
     assert round(df.hdd_61.mean(), 2) == 12.06
+    assert round(df.cdd_65.mean(), 2) == 4.04
+    assert round(df.cdd_66.mean(), 2) == 3.69
+    assert round(df.n_hours_kept.mean(), 2) == 23.97
+    assert round(df.n_hours_dropped.mean(), 2) == 0
+
+
+def test_merge_temperature_data_daily_hourly_degree_days_use_mean_false(
+    il_electricity_cdd_hdd_daily
+):
+    meter_data = il_electricity_cdd_hdd_daily['meter_data']
+    temperature_data = il_electricity_cdd_hdd_daily['temperature_data']
+    df = merge_temperature_data(
+        meter_data, temperature_data,
+        heating_balance_points=[60, 61],
+        cooling_balance_points=[65, 66],
+        temperature_mean=False,
+        degree_day_method='hourly',
+        use_mean_daily_values=False,
+    )
+    assert df.shape == (810, 7)
+    assert list(sorted(df.columns)) == [
+        'cdd_65', 'cdd_66', 'hdd_60', 'hdd_61', 'meter_value', 'n_hours_dropped',
+        'n_hours_kept',
+    ]
+    assert round(df.meter_value.sum()) == round(meter_data.value.sum()) == 21926.0
+    assert round(df.hdd_60.mean(), 2) == 11.43
+    assert round(df.hdd_61.mean(), 2) == 12.01
     assert round(df.cdd_65.mean(), 2) == 4.04
     assert round(df.cdd_66.mean(), 2) == 3.69
     assert round(df.n_hours_kept.mean(), 2) == 23.97
@@ -185,18 +279,21 @@ def test_merge_temperature_data_daily_data_quality(il_electricity_cdd_hdd_daily)
     assert round(df.temperature_null.mean(), 2) == 0.00
 
 
-def test_merge_temperature_data_billing_monthly_temp_mean(il_electricity_cdd_hdd_billing_monthly):
+def test_merge_temperature_data_billing_monthly_temp_mean(
+    il_electricity_cdd_hdd_billing_monthly
+):
     meter_data = il_electricity_cdd_hdd_billing_monthly['meter_data']
     temperature_data = il_electricity_cdd_hdd_billing_monthly['temperature_data']
     df = merge_temperature_data(meter_data, temperature_data)
     assert df.shape == (27, 2)
     assert list(df.columns) == ['meter_value', 'temperature_mean']
-    assert round(meter_data.value.sum()) == round(df.meter_value.sum()) == 21290.0
+    assert round(df.meter_value.sum()) == 703.0 != round(meter_data.value.sum())
     assert round(df.temperature_mean.mean()) == 54.0
 
 
 def test_merge_temperature_data_billing_monthly_daily_degree_days(
-        il_electricity_cdd_hdd_billing_monthly):
+    il_electricity_cdd_hdd_billing_monthly
+):
     meter_data = il_electricity_cdd_hdd_billing_monthly['meter_data']
     temperature_data = il_electricity_cdd_hdd_billing_monthly['temperature_data']
     df = merge_temperature_data(
@@ -211,11 +308,38 @@ def test_merge_temperature_data_billing_monthly_daily_degree_days(
         'cdd_65', 'cdd_66', 'hdd_60', 'hdd_61', 'meter_value', 'n_days_dropped',
         'n_days_kept',
     ]
-    assert round(df.meter_value.sum()) == round(meter_data.value.sum()) == 21290.0
+    assert round(df.meter_value.sum()) == 703.0 != round(meter_data.value.sum())
     assert round(df.hdd_60.mean(), 2) == 11.42
     assert round(df.hdd_61.mean(), 2) == 12.0
     assert round(df.cdd_65.mean(), 2) == 3.54
     assert round(df.cdd_66.mean(), 2) == 3.19
+    assert round(df.n_days_kept.mean(), 2) == 29.96
+    assert round(df.n_days_dropped.mean(), 2) == 0.04
+
+
+def test_merge_temperature_data_billing_monthly_daily_degree_days_use_mean_false(
+    il_electricity_cdd_hdd_billing_monthly
+):
+    meter_data = il_electricity_cdd_hdd_billing_monthly['meter_data']
+    temperature_data = il_electricity_cdd_hdd_billing_monthly['temperature_data']
+    df = merge_temperature_data(
+        meter_data, temperature_data,
+        heating_balance_points=[60, 61],
+        cooling_balance_points=[65, 66],
+        temperature_mean=False,
+        degree_day_method='daily',
+        use_mean_daily_values=False,
+    )
+    assert df.shape == (27, 7)
+    assert list(sorted(df.columns)) == [
+        'cdd_65', 'cdd_66', 'hdd_60', 'hdd_61', 'meter_value', 'n_days_dropped',
+        'n_days_kept',
+    ]
+    assert round(df.meter_value.sum()) == round(meter_data.value.sum()) == 21290.0
+    assert round(df.hdd_60.mean(), 2) == 332.23
+    assert round(df.hdd_61.mean(), 2) == 349.34
+    assert round(df.cdd_65.mean(), 2) == 108.42
+    assert round(df.cdd_66.mean(), 2) == 97.58
     assert round(df.n_days_kept.mean(), 2) == 29.96
     assert round(df.n_days_dropped.mean(), 2) == 0.04
 
@@ -236,11 +360,37 @@ def test_merge_temperature_data_billing_monthly_hourly_degree_days(
         'cdd_65', 'cdd_66', 'hdd_60', 'hdd_61', 'meter_value', 'n_hours_dropped',
         'n_hours_kept',
     ]
-    assert round(df.meter_value.sum()) == round(meter_data.value.sum()) == 21290.0
+    assert round(df.meter_value.sum()) == 703.0 != round(meter_data.value.sum())
     assert round(df.hdd_60.mean(), 2) == 11.8
     assert round(df.hdd_61.mean(), 2) == 12.38
     assert round(df.cdd_65.mean(), 2) == 3.96
     assert round(df.cdd_66.mean(), 2) == 3.62
+    assert round(df.n_hours_kept.mean(), 2) == 719.15
+    assert round(df.n_hours_dropped.mean(), 2) == 0
+
+
+def test_merge_temperature_data_billing_monthly_hourly_degree_days_use_mean_false(
+        il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly['meter_data']
+    temperature_data = il_electricity_cdd_hdd_billing_monthly['temperature_data']
+    df = merge_temperature_data(
+        meter_data, temperature_data,
+        heating_balance_points=[60, 61],
+        cooling_balance_points=[65, 66],
+        temperature_mean=False,
+        degree_day_method='hourly',
+        use_mean_daily_values=False,
+    )
+    assert df.shape == (27, 7)
+    assert list(sorted(df.columns)) == [
+        'cdd_65', 'cdd_66', 'hdd_60', 'hdd_61', 'meter_value', 'n_hours_dropped',
+        'n_hours_kept',
+    ]
+    assert round(df.meter_value.sum()) == round(meter_data.value.sum()) == 21290.0
+    assert round(df.hdd_60.mean(), 2) == 343.01
+    assert round(df.hdd_61.mean(), 2) == 360.19
+    assert round(df.cdd_65.mean(), 2) == 121.29
+    assert round(df.cdd_66.mean(), 2) == 110.83
     assert round(df.n_hours_kept.mean(), 2) == 719.15
     assert round(df.n_hours_dropped.mean(), 2) == 0
 
@@ -271,7 +421,7 @@ def test_merge_temperature_data_billing_monthly_data_quality(
     assert list(df.columns) == [
         'meter_value', 'temperature_not_null', 'temperature_null',
     ]
-    assert round(df.meter_value.sum()) == round(meter_data.value.sum()) == 21290.0
+    assert round(df.meter_value.sum()) == 703.0 != round(meter_data.value.sum())
     assert round(df.temperature_not_null.mean(), 2) == 719.15
     assert round(df.temperature_null.mean(), 2) == 0.0
 
@@ -283,7 +433,7 @@ def test_merge_temperature_data_billing_bimonthly_temp_mean(
     df = merge_temperature_data(meter_data, temperature_data)
     assert df.shape == (14, 2)
     assert list(df.columns) == ['meter_value', 'temperature_mean']
-    assert round(df.meter_value.sum()) == round(meter_data.value.sum()) == 21564.0
+    assert round(df.meter_value.sum()) == 352.0 != round(meter_data.value.sum())
     assert round(df.temperature_mean.mean()) == 53.0
 
 
@@ -303,7 +453,7 @@ def test_merge_temperature_data_billing_bimonthly_daily_degree_days(
         'cdd_65', 'cdd_66', 'hdd_60', 'hdd_61', 'meter_value', 'n_days_dropped',
         'n_days_kept',
     ]
-    assert round(df.meter_value.sum()) == round(meter_data.value.sum()) == 21564.0
+    assert round(df.meter_value.sum()) == 352.0 != round(meter_data.value.sum())
     assert round(df.hdd_60.mean(), 2) == 12.72
     assert round(df.hdd_61.mean(), 2) == 13.32
     assert round(df.cdd_65.mean(), 2) == 3.39
@@ -328,7 +478,7 @@ def test_merge_temperature_data_billing_bimonthly_hourly_degree_days(
         'cdd_65', 'cdd_66', 'hdd_60', 'hdd_61', 'meter_value', 'n_hours_dropped',
         'n_hours_kept',
     ]
-    assert round(df.meter_value.sum()) == round(meter_data.value.sum()) == 21564.0
+    assert round(df.meter_value.sum()) == 352.0 != round(meter_data.value.sum())
     assert round(df.hdd_60.mean(), 2) == 13.08
     assert round(df.hdd_61.mean(), 2) == 13.69
     assert round(df.cdd_65.mean(), 2) == 3.78
@@ -363,7 +513,7 @@ def test_merge_temperature_data_billing_bimonthly_data_quality(
     assert list(df.columns) == [
         'meter_value', 'temperature_not_null', 'temperature_null',
     ]
-    assert round(df.meter_value.sum()) == round(meter_data.value.sum()) == 21564.0
+    assert round(df.meter_value.sum()) == 352.0 != round(meter_data.value.sum())
     assert round(df.temperature_not_null.mean(), 2) == 1386.93
     assert round(df.temperature_null.mean(), 2) == 0.0
 

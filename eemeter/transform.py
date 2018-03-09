@@ -35,25 +35,30 @@ def _matching_groups(index, df):
 
 def _degree_day_columns(
     heating_balance_points, cooling_balance_points, degree_day_method,
-    percent_hourly_coverage_per_day,
+    percent_hourly_coverage_per_day, use_mean_daily_values,
 ):
+    # TODO(philngo): can this be refactored to be a more general without losing
+    # on performance?
 
     if degree_day_method == 'hourly':
-
         def _compute_columns(temps):
             n_temps = temps.shape[0]
             n_temps_kept = temps.count()
-            cdd_cols = {
-                'cdd_%s' % bp: np.maximum(temps - bp, 0).mean()
-                for bp in cooling_balance_points
-            }
-            hdd_cols = {
-                'hdd_%s' % bp: np.maximum(bp - temps, 0).mean()
-                for bp in heating_balance_points
-            }
             count_cols = {
                 'n_hours_kept': n_temps_kept,
                 'n_hours_dropped': n_temps - n_temps_kept,
+            }
+            if use_mean_daily_values:
+                n_days = 1
+            else:
+                n_days = n_temps / 24.0
+            cdd_cols = {
+                'cdd_%s' % bp: np.maximum(temps - bp, 0).mean() * n_days
+                for bp in cooling_balance_points
+            }
+            hdd_cols = {
+                'hdd_%s' % bp: np.maximum(bp - temps, 0).mean() * n_days
+                for bp in heating_balance_points
             }
 
             columns = count_cols
@@ -64,11 +69,10 @@ def _degree_day_columns(
     n_limit = 24 * percent_hourly_coverage_per_day
 
     if degree_day_method == 'daily':
-
         def _compute_columns(temps):
             count = temps.shape[0]
-
             if count > 24:
+
                 day_groups = np.floor(np.arange(count) / 24)
                 daily_temps = temps.groupby(day_groups).agg(['mean', 'count'])
                 n_days_total = daily_temps.shape[0]
@@ -78,15 +82,22 @@ def _degree_day_columns(
                     'n_days_kept': n_days_kept,
                     'n_days_dropped': n_days_total - n_days_kept,
                 }
+
+                if use_mean_daily_values:
+                    n_days = 1
+                else:
+                    n_days = n_days_total
+
                 cdd_cols = {
-                    'cdd_%s' % bp: np.maximum(daily_temps - bp, 0).mean()
+                    'cdd_%s' % bp: np.maximum(daily_temps - bp, 0).mean() * n_days
                     for bp in cooling_balance_points
                 }
                 hdd_cols = {
-                    'hdd_%s' % bp: np.maximum(bp - daily_temps, 0).mean()
+                    'hdd_%s' % bp: np.maximum(bp - daily_temps, 0).mean() * n_days
                     for bp in heating_balance_points
                 }
             else:  # faster route for daily case, should have same effect.
+
                 if count > n_limit:
                     count_cols = {
                         'n_days_kept': 1,
@@ -114,16 +125,15 @@ def _degree_day_columns(
             columns.update(hdd_cols)
             return columns
 
-    agg_funcs = [
-        ('degree_day_columns', _compute_columns)
-    ]
+    agg_funcs = [('degree_day_columns', _compute_columns)]
     return agg_funcs
 
 
 def merge_temperature_data(
     meter_data, temperature_data, heating_balance_points=None,
     cooling_balance_points=None, data_quality=False, temperature_mean=True,
-    degree_day_method='daily', percent_hourly_coverage_per_day=0.5
+    degree_day_method='daily', percent_hourly_coverage_per_day=0.5,
+    use_mean_daily_values=True,
 ):
     ''' Merge meter data of any frequency with hourly temperature data to make
     a dataset to feed to models.
@@ -153,13 +163,16 @@ def merge_temperature_data(
     percent_hourly_coverage_per_day : :any:`str`, optional
         Percent hourly temperature coverage per day for heating and cooling
         degree days to not be dropped.
+    use_mean_daily_values : :any:`bool`
+        If True, meter and degree day values should be mean daily values, not
+        totals. If False, totals will be used instead.
 
     Returns
     -------
     data : :any:`pandas.DataFrame`
         A dataset with the specified parameters.
     '''
-    # # TODO(philngo): write fast route for hourly meter data + hourly temp data
+    # TODO(philngo): write fast route for hourly meter data + hourly temp data
 
     temp_agg_funcs = []
     temp_agg_column_renames = {}
@@ -188,6 +201,7 @@ def merge_temperature_data(
             cooling_balance_points=cooling_balance_points,
             degree_day_method=degree_day_method,
             percent_hourly_coverage_per_day=percent_hourly_coverage_per_day,
+            use_mean_daily_values=use_mean_daily_values,
         ))
         temp_agg_column_renames.update({
             ('temp', 'degree_day_columns'): 'degree_day_columns',
@@ -217,6 +231,10 @@ def merge_temperature_data(
     df = pd.concat(dfs_to_merge, axis=1).rename(
         columns=temp_agg_column_renames
     )
+
+    # convert to average daily values.
+    if use_mean_daily_values and meter_data.index.freq is None:
+        df['meter_value'] = df.meter_value / day_counts(df.meter_value)
 
     # expand degree_day_columns
     if 'degree_day_columns' in df:
