@@ -836,8 +836,8 @@ def select_best_candidate(candidate_models):
 
 def caltrack_daily_method(
     data, fit_cdd=True, minimum_non_zero_cdd=10, minimum_non_zero_hdd=10,
-    minimum_total_cdd=20, minimum_total_hdd=20, beta_cdd_maximum_p_value=0.1,
-    beta_hdd_maximum_p_value=0.1, fit_intercept_only=True, fit_cdd_only=True,
+    minimum_total_cdd=20, minimum_total_hdd=20, beta_cdd_maximum_p_value=1,
+    beta_hdd_maximum_p_value=1, fit_intercept_only=True, fit_cdd_only=True,
     fit_hdd_only=True, fit_cdd_hdd=True,
 ):
     ''' CalTRACK daily method.
@@ -861,9 +861,11 @@ def caltrack_daily_method(
     minimum_total_hdd : :any:`float`, optional
         Minimum allowable total sum of heating degree day values.
     beta_cdd_maximum_p_value : :any:`float`, optional
-        The maximum allowable p-value of the beta cdd parameter.
+        The maximum allowable p-value of the beta cdd parameter. The default
+        value is the most permissive possible (i.e., 1).
     beta_hdd_maximum_p_value : :any:`float`, optional
-        The maximum allowable p-value of the beta hdd parameter.
+        The maximum allowable p-value of the beta hdd parameter. The default
+        value is the most permissive possible (i.e., 1).
     fit_intercept_only : :any:`bool`, optional
         If True, fit and consider intercept_only model candidates.
     fit_cdd_only : :any:`bool`, optional
