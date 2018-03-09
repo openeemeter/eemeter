@@ -326,7 +326,7 @@ def get_fit_failed_candidate_model(model_type, formula):
     )
 
 
-def get_intercept_only_candidate_models(data):
+def get_intercept_only_candidate_models(data, weights_col):
     ''' Return a list of a single candidate intercept-only model.
 
     Parameters
@@ -335,6 +335,8 @@ def get_intercept_only_candidate_models(data):
         A DataFrame containing at least the column ``meter_value``.
         DataFrames of this form can be made using the
         :any:`eemeter.merge_temperature_data` method.
+    weights_col : :any:`str` or None
+        The name of the column (if any) in ``data`` to use as weights.
 
     Returns
     -------
@@ -344,8 +346,13 @@ def get_intercept_only_candidate_models(data):
     model_type = 'intercept_only'
     formula = 'meter_value ~ 1'
 
+    if weights_col is None:
+        weights = 1
+    else:
+        weights = data[weights_col]
+
     try:
-        model = smf.ols(formula=formula, data=data)
+        model = smf.wls(formula=formula, data=data, weights=weights)
     except Exception as e:
         return [get_fit_failed_candidate_model(model_type, formula)]
 
@@ -365,7 +372,7 @@ def get_intercept_only_candidate_models(data):
 
 def get_single_cdd_only_candidate_model(
     data, minimum_non_zero_cdd, minimum_total_cdd, beta_cdd_maximum_p_value,
-    balance_point
+    weights_col, balance_point
 ):
     ''' Return a single candidate cdd-only model for a particular balance
     point.
@@ -383,6 +390,8 @@ def get_single_cdd_only_candidate_model(
         Minimum allowable total sum of cooling degree day values.
     beta_cdd_maximum_p_value : :any:`float`
         The maximum allowable p-value of the beta cdd parameter.
+    weights_col : :any:`str` or None
+        The name of the column (if any) in ``data`` to use as weights.
     balance_point : :any:`float`
         The cooling balance point for this model.
 
@@ -413,8 +422,13 @@ def get_single_cdd_only_candidate_model(
             warnings=degree_day_warnings,
         )
 
+    if weights_col is None:
+        weights = 1
+    else:
+        weights = data[weights_col]
+
     try:
-        model = smf.ols(formula=formula, data=data)
+        model = smf.wls(formula=formula, data=data, weights=weights)
     except Exception as e:
         return get_fit_failed_candidate_model(model_type, formula)
 
@@ -457,6 +471,7 @@ def get_single_cdd_only_candidate_model(
 
 def get_cdd_only_candidate_models(
     data, minimum_non_zero_cdd, minimum_total_cdd, beta_cdd_maximum_p_value,
+    weights_col,
 ):
     ''' Return a list of all possible candidate cdd-only models.
 
@@ -474,6 +489,8 @@ def get_cdd_only_candidate_models(
         Minimum allowable total sum of cooling degree day values.
     beta_cdd_maximum_p_value : :any:`float`
         The maximum allowable p-value of the beta cdd parameter.
+    weights_col : :any:`str` or None
+        The name of the column (if any) in ``data`` to use as weights.
 
     Returns
     -------
@@ -486,7 +503,7 @@ def get_cdd_only_candidate_models(
     candidate_models = [
         get_single_cdd_only_candidate_model(
             data, minimum_non_zero_cdd, minimum_total_cdd,
-            beta_cdd_maximum_p_value, balance_point
+            beta_cdd_maximum_p_value, weights_col, balance_point
         )
         for balance_point in balance_points
     ]
@@ -495,7 +512,7 @@ def get_cdd_only_candidate_models(
 
 def get_single_hdd_only_candidate_model(
     data, minimum_non_zero_hdd, minimum_total_hdd, beta_hdd_maximum_p_value,
-    balance_point
+    weights_col, balance_point,
 ):
     ''' Return a single candidate hdd-only model for a particular balance
     point.
@@ -513,6 +530,8 @@ def get_single_hdd_only_candidate_model(
         Minimum allowable total sum of heating degree day values.
     beta_hdd_maximum_p_value : :any:`float`
         The maximum allowable p-value of the beta hdd parameter.
+    weights_col : :any:`str` or None
+        The name of the column (if any) in ``data`` to use as weights.
     balance_point : :any:`float`
         The heating balance point for this model.
 
@@ -543,8 +562,13 @@ def get_single_hdd_only_candidate_model(
             warnings=degree_day_warnings,
         )
 
+    if weights_col is None:
+        weights = 1
+    else:
+        weights = data[weights_col]
+
     try:
-        model = smf.ols(formula=formula, data=data)
+        model = smf.wls(formula=formula, data=data, weights=weights)
     except Exception as e:
         return get_fit_failed_candidate_model(model_type, formula)
 
@@ -587,6 +611,7 @@ def get_single_hdd_only_candidate_model(
 
 def get_hdd_only_candidate_models(
     data, minimum_non_zero_hdd, minimum_total_hdd, beta_hdd_maximum_p_value,
+    weights_col,
 ):
     '''
     Parameters
@@ -603,6 +628,8 @@ def get_hdd_only_candidate_models(
         Minimum allowable total sum of heating degree day values.
     beta_hdd_maximum_p_value : :any:`float`
         The maximum allowable p-value of the beta hdd parameter.
+    weights_col : :any:`str` or None
+        The name of the column (if any) in ``data`` to use as weights.
 
     Returns
     -------
@@ -616,8 +643,8 @@ def get_hdd_only_candidate_models(
 
     candidate_models = [
         get_single_hdd_only_candidate_model(
-            data, minimum_non_zero_hdd, minimum_total_hdd, beta_hdd_maximum_p_value,
-            balance_point
+            data, minimum_non_zero_hdd, minimum_total_hdd,
+            beta_hdd_maximum_p_value, weights_col, balance_point
         )
         for balance_point in balance_points
     ]
@@ -627,7 +654,7 @@ def get_hdd_only_candidate_models(
 def get_single_cdd_hdd_candidate_model(
     data, minimum_non_zero_cdd, minimum_non_zero_hdd, minimum_total_cdd,
     minimum_total_hdd, beta_cdd_maximum_p_value, beta_hdd_maximum_p_value,
-    cooling_balance_point, heating_balance_point,
+    weights_col, cooling_balance_point, heating_balance_point,
 ):
     ''' Return a single candidate cdd_hdd model for a particular selection
     of cooling balance point and heating balance point
@@ -651,6 +678,8 @@ def get_single_cdd_hdd_candidate_model(
         The maximum allowable p-value of the beta cdd parameter.
     beta_hdd_maximum_p_value : :any:`float`
         The maximum allowable p-value of the beta hdd parameter.
+    weights_col : :any:`str` or None
+        The name of the column (if any) in ``data`` to use as weights.
     cooling_balance_point : :any:`float`
         The cooling balance point for this model.
     heating_balance_point : :any:`float`
@@ -692,8 +721,13 @@ def get_single_cdd_hdd_candidate_model(
             warnings=degree_day_warnings,
         )
 
+    if weights_col is None:
+        weights = 1
+    else:
+        weights = data[weights_col]
+
     try:
-        model = smf.ols(formula=formula, data=data)
+        model = smf.wls(formula=formula, data=data, weights=weights)
     except Exception as e:
         return get_fit_failed_candidate_model(model_type, formula)
 
@@ -744,6 +778,7 @@ def get_single_cdd_hdd_candidate_model(
 def get_cdd_hdd_candidate_models(
     data, minimum_non_zero_cdd, minimum_non_zero_hdd, minimum_total_cdd,
     minimum_total_hdd, beta_cdd_maximum_p_value, beta_hdd_maximum_p_value,
+    weights_col,
 ):
     ''' Return a list of candidate cdd_hdd models for a particular selection
     of cooling balance point and heating balance point
@@ -767,6 +802,8 @@ def get_cdd_hdd_candidate_models(
         The maximum allowable p-value of the beta cdd parameter.
     beta_hdd_maximum_p_value : :any:`float`
         The maximum allowable p-value of the beta hdd parameter.
+    weights_col : :any:`str` or None
+        The name of the column (if any) in ``data`` to use as weights.
 
     Returns
     -------
@@ -784,7 +821,7 @@ def get_cdd_hdd_candidate_models(
         get_single_cdd_hdd_candidate_model(
             data, minimum_non_zero_cdd, minimum_non_zero_hdd,
             minimum_total_cdd, minimum_total_hdd, beta_cdd_maximum_p_value,
-            beta_hdd_maximum_p_value, cooling_balance_point,
+            beta_hdd_maximum_p_value, weights_col, cooling_balance_point,
             heating_balance_point,
         )
         for cooling_balance_point in cooling_balance_points
@@ -837,8 +874,8 @@ def select_best_candidate(candidate_models):
 def caltrack_daily_method(
     data, fit_cdd=True, minimum_non_zero_cdd=10, minimum_non_zero_hdd=10,
     minimum_total_cdd=20, minimum_total_hdd=20, beta_cdd_maximum_p_value=1,
-    beta_hdd_maximum_p_value=1, fit_intercept_only=True, fit_cdd_only=True,
-    fit_hdd_only=True, fit_cdd_hdd=True,
+    beta_hdd_maximum_p_value=1, weights_col=None, fit_intercept_only=True, fit_cdd_only=True,
+    fit_hdd_only=True, fit_cdd_hdd=True
 ):
     ''' CalTRACK daily method.
 
@@ -866,6 +903,8 @@ def caltrack_daily_method(
     beta_hdd_maximum_p_value : :any:`float`, optional
         The maximum allowable p-value of the beta hdd parameter. The default
         value is the most permissive possible (i.e., 1).
+    weights_col : :any:`str` or None, optional
+        The name of the column (if any) in ``data`` to use as weights.
     fit_intercept_only : :any:`bool`, optional
         If True, fit and consider intercept_only model candidates.
     fit_cdd_only : :any:`bool`, optional
@@ -902,7 +941,9 @@ def caltrack_daily_method(
     candidates = []
 
     if fit_intercept_only:
-        candidates.extend(get_intercept_only_candidate_models(data))
+        candidates.extend(get_intercept_only_candidate_models(
+            data, weights_col=weights_col,
+        ))
 
     if fit_hdd_only:
         candidates.extend(get_hdd_only_candidate_models(
@@ -910,6 +951,7 @@ def caltrack_daily_method(
             minimum_non_zero_hdd=minimum_non_zero_hdd,
             minimum_total_hdd=minimum_total_hdd,
             beta_hdd_maximum_p_value=beta_hdd_maximum_p_value,
+            weights_col=weights_col,
         ))
 
     # cdd models ignored for gas
@@ -920,6 +962,7 @@ def caltrack_daily_method(
                 minimum_non_zero_cdd=minimum_non_zero_cdd,
                 minimum_total_cdd=minimum_total_cdd,
                 beta_cdd_maximum_p_value=beta_cdd_maximum_p_value,
+                weights_col=weights_col,
             ))
 
         if fit_cdd_hdd:
@@ -931,6 +974,7 @@ def caltrack_daily_method(
                 minimum_total_hdd=minimum_total_hdd,
                 beta_cdd_maximum_p_value=beta_cdd_maximum_p_value,
                 beta_hdd_maximum_p_value=beta_hdd_maximum_p_value,
+                weights_col=weights_col,
             ))
 
     # find best candidate result

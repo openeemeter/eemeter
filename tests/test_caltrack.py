@@ -316,11 +316,12 @@ def test_get_parameter_p_value_too_high_warning_fail():
     }
 
 
-def test_get_intercept_only_candidate_models_ok(daily_temperature):
+def test_get_intercept_only_candidate_models_qualified(daily_temperature):
     data = pd.DataFrame({
-        'meter_value': np.tile(1, (10,)),
+        'meter_value': np.arange(10),
     })
-    candidate_models = get_intercept_only_candidate_models(data)
+    candidate_models = get_intercept_only_candidate_models(
+        data, weights_col=None)
     assert len(candidate_models) == 1
     model = candidate_models[0]
     assert model.model_type == 'intercept_only'
@@ -329,8 +330,30 @@ def test_get_intercept_only_candidate_models_ok(daily_temperature):
     assert model.model is not None
     assert model.result is not None
     assert list(sorted(model.model_params.keys())) == ['intercept']
-    assert round(model.model_params['intercept'], 2) == 1.0
-    assert round(model.predict(daily_temperature).sum(), 2) == 60.0
+    assert round(model.model_params['intercept'], 2) == 4.5
+    assert round(model.predict(daily_temperature).sum(), 2) == 270.0
+    assert model.r_squared == 0
+    assert model.warnings == []
+    assert json.dumps(model.json()) is not None
+
+
+def test_get_intercept_only_candidate_models_qualified_with_weights(daily_temperature):
+    data = pd.DataFrame({
+        'meter_value': np.arange(10),
+        'weights': np.arange(10),
+    })
+    candidate_models = get_intercept_only_candidate_models(
+        data, 'weights')
+    assert len(candidate_models) == 1
+    model = candidate_models[0]
+    assert model.model_type == 'intercept_only'
+    assert model.formula == 'meter_value ~ 1'
+    assert model.status == 'QUALIFIED'
+    assert model.model is not None
+    assert model.result is not None
+    assert list(sorted(model.model_params.keys())) == ['intercept']
+    assert round(model.model_params['intercept'], 2) == 6.33
+    assert round(model.predict(daily_temperature).sum(), 2) == 380.0
     assert model.r_squared == 0
     assert model.warnings == []
     assert json.dumps(model.json()) is not None
@@ -340,7 +363,8 @@ def test_get_intercept_only_candidate_models_error():
     data = pd.DataFrame({
         'meter_value': [],
     })
-    candidate_models = get_intercept_only_candidate_models(data)
+    candidate_models = get_intercept_only_candidate_models(
+        data, weights_col=None)
     assert len(candidate_models) == 1
     model = candidate_models[0]
     assert len(model.warnings) == 1
@@ -361,8 +385,7 @@ def test_get_cdd_only_candidate_models_qualified(daily_temperature):
         'cdd_65': [0, 0.1, 0, 5],
     })
     candidate_models = get_cdd_only_candidate_models(
-        data, 1, 1, 0.1,
-    )
+        data, 1, 1, 0.1, None)
     assert len(candidate_models) == 1
     model = candidate_models[0]
     assert model.model_type == 'cdd_only'
@@ -382,13 +405,40 @@ def test_get_cdd_only_candidate_models_qualified(daily_temperature):
     assert json.dumps(model.json()) is not None
 
 
+def test_get_cdd_only_candidate_models_qualified_with_weights(daily_temperature):
+    data = pd.DataFrame({
+        'meter_value': [1, 1, 1, 6],
+        'cdd_65': [0, 0.1, 0, 5],
+        'weights': [1, 100, 1, 1],
+    })
+    candidate_models = get_cdd_only_candidate_models(
+        data, 1, 1, 0.1, 'weights')
+    assert len(candidate_models) == 1
+    model = candidate_models[0]
+    assert model.model_type == 'cdd_only'
+    assert model.formula == 'meter_value ~ cdd_65'
+    assert model.status == 'QUALIFIED'
+    assert model.model is not None
+    assert model.result is not None
+    assert list(sorted(model.model_params.keys())) == [
+        'beta_cdd', 'cooling_balance_point', 'intercept',
+    ]
+    assert round(model.model_params['beta_cdd'], 2) == 1.02
+    assert round(model.model_params['cooling_balance_point'], 2) == 65
+    assert round(model.model_params['intercept'], 2) == 0.9
+    assert round(model.predict(daily_temperature).sum(), 2) == 359.76
+    assert round(model.r_squared, 2) == 1.00
+    assert model.warnings == []
+    assert json.dumps(model.json()) is not None
+
+
 def test_get_cdd_only_candidate_models_not_attempted():
     data = pd.DataFrame({
         'meter_value': [1, 1, 1, 6],
         'cdd_65': [0, 0.1, 0, 5],
     })
     candidate_models = get_cdd_only_candidate_models(
-        data, 10, 10, 0.1,
+        data, 10, 10, 0.1, None,
     )
     assert len(candidate_models) == 1
     model = candidate_models[0]
@@ -411,7 +461,7 @@ def test_get_cdd_only_candidate_models_disqualified(daily_temperature):
         'cdd_65': [0, 0.1, 0, 5],
     })
     candidate_models = get_cdd_only_candidate_models(
-        data, 1, 1, 0.0,
+        data, 1, 1, 0.0, None
     )
     assert len(candidate_models) == 1
     model = candidate_models[0]
@@ -437,7 +487,7 @@ def test_get_cdd_only_candidate_models_error():
         'meter_value': [],
         'cdd_65': [],
     })
-    candidate_models = get_cdd_only_candidate_models(data, 0, 0, 0.1)
+    candidate_models = get_cdd_only_candidate_models(data, 0, 0, 0.1, None)
     assert len(candidate_models) == 1
     model = candidate_models[0]
     assert len(model.warnings) == 1
@@ -458,7 +508,7 @@ def test_get_hdd_only_candidate_models_qualified(daily_temperature):
         'hdd_65': [0, 0.1, 0, 5],
     })
     candidate_models = get_hdd_only_candidate_models(
-        data, 1, 1, 0.1,
+        data, 1, 1, 0.1, None
     )
     assert len(candidate_models) == 1
     model = candidate_models[0]
@@ -479,13 +529,41 @@ def test_get_hdd_only_candidate_models_qualified(daily_temperature):
     assert json.dumps(model.json()) is not None
 
 
+def test_get_hdd_only_candidate_models_qualified_with_weights(daily_temperature):
+    data = pd.DataFrame({
+        'meter_value': [1, 1, 1, 6],
+        'hdd_65': [0, 0.1, 0, 5],
+        'weights': [1, 100, 1, 1],
+    })
+    candidate_models = get_hdd_only_candidate_models(
+        data, 1, 1, 0.1, 'weights'
+    )
+    assert len(candidate_models) == 1
+    model = candidate_models[0]
+    assert model.model_type == 'hdd_only'
+    assert model.formula == 'meter_value ~ hdd_65'
+    assert model.status == 'QUALIFIED'
+    assert model.model is not None
+    assert model.result is not None
+    assert list(sorted(model.model_params.keys())) == [
+        'beta_hdd', 'heating_balance_point', 'intercept',
+    ]
+    assert round(model.model_params['beta_hdd'], 2) == 1.02
+    assert round(model.model_params['heating_balance_point'], 2) == 65
+    assert round(model.model_params['intercept'], 2) == 0.9
+    assert round(model.predict(daily_temperature).sum(), 2) == 696.08
+    assert round(model.r_squared, 2) == 1.00
+    assert model.warnings == []
+    assert json.dumps(model.json()) is not None
+
+
 def test_get_hdd_only_candidate_models_not_attempted():
     data = pd.DataFrame({
         'meter_value': [1, 1, 1, 6],
         'hdd_65': [0, 0.1, 0, 5],
     })
     candidate_models = get_hdd_only_candidate_models(
-        data, 10, 10, 0.1,
+        data, 10, 10, 0.1, None
     )
     assert len(candidate_models) == 1
     model = candidate_models[0]
@@ -508,7 +586,7 @@ def test_get_hdd_only_candidate_models_disqualified(daily_temperature):
         'hdd_65': [0, 0.1, 0, 5],
     })
     candidate_models = get_hdd_only_candidate_models(
-        data, 1, 1, 0.0,
+        data, 1, 1, 0.0, None
     )
     assert len(candidate_models) == 1
     model = candidate_models[0]
@@ -534,7 +612,8 @@ def test_get_hdd_only_candidate_models_error():
         'meter_value': [],
         'hdd_65': [],
     })
-    candidate_models = get_hdd_only_candidate_models(data, 0, 0, 0.1)
+    candidate_models = get_hdd_only_candidate_models(
+        data, 0, 0, 0.1, None)
     assert len(candidate_models) == 1
     model = candidate_models[0]
     assert len(model.warnings) == 1
@@ -553,10 +632,10 @@ def test_get_cdd_hdd_candidate_models_qualified(daily_temperature):
     data = pd.DataFrame({
         'meter_value': [6, 1, 1, 6],
         'cdd_65': [5, 0, 0.1, 0],
-        'hdd_65': [0, 0.1, 0, 5],
+        'hdd_65': [0, 0.1, 0.1, 5],
     })
     candidate_models = get_cdd_hdd_candidate_models(
-        data, 1, 1, 1, 1, 0.1, 0.1,
+        data, 1, 1, 1, 1, 0.1, 0.1, None
     )
     assert len(candidate_models) == 1
     model = candidate_models[0]
@@ -569,12 +648,44 @@ def test_get_cdd_hdd_candidate_models_qualified(daily_temperature):
         'beta_cdd', 'beta_hdd', 'cooling_balance_point',
         'heating_balance_point', 'intercept',
     ]
-    assert round(model.model_params['beta_cdd'], 2) == 1.02
-    assert round(model.model_params['beta_hdd'], 2) == 1.02
+    assert round(model.model_params['beta_cdd'], 2) == 1.03
+    assert round(model.model_params['beta_hdd'], 2) == 1.03
     assert round(model.model_params['cooling_balance_point'], 2) == 65
     assert round(model.model_params['heating_balance_point'], 2) == 65
-    assert round(model.model_params['intercept'], 2) == 0.9
-    assert round(model.predict(daily_temperature).sum(), 2) == 1002.86
+    assert round(model.model_params['intercept'], 2) == 0.85
+    assert round(model.predict(daily_temperature).sum(), 2) == 1009.35
+    assert round(model.r_squared, 2) == 1.00
+    assert model.warnings == []
+    assert json.dumps(model.json()) is not None
+
+
+def test_get_cdd_hdd_candidate_models_qualified_with_weights(daily_temperature):
+    data = pd.DataFrame({
+        'meter_value': [6, 1, 1, 6],
+        'cdd_65': [5, 0, 0.1, 0],
+        'hdd_65': [0, 0.1, 0.1, 5],
+        'weights': [1, 1, 100, 1],
+    })
+    candidate_models = get_cdd_hdd_candidate_models(
+        data, 1, 1, 1, 1, 0.1, 0.1, 'weights'
+    )
+    assert len(candidate_models) == 1
+    model = candidate_models[0]
+    assert model.model_type == 'cdd_hdd'
+    assert model.formula == 'meter_value ~ cdd_65 + hdd_65'
+    assert model.status == 'QUALIFIED'
+    assert model.model is not None
+    assert model.result is not None
+    assert list(sorted(model.model_params.keys())) == [
+        'beta_cdd', 'beta_hdd', 'cooling_balance_point',
+        'heating_balance_point', 'intercept',
+    ]
+    assert round(model.model_params['beta_cdd'], 2) == 1.04
+    assert round(model.model_params['beta_hdd'], 2) == 1.04
+    assert round(model.model_params['cooling_balance_point'], 2) == 65
+    assert round(model.model_params['heating_balance_point'], 2) == 65
+    assert round(model.model_params['intercept'], 2) == 0.79
+    assert round(model.predict(daily_temperature).sum(), 2) == 1015.97
     assert round(model.r_squared, 2) == 1.00
     assert model.warnings == []
     assert json.dumps(model.json()) is not None
@@ -587,7 +698,7 @@ def test_get_cdd_hdd_candidate_models_not_attempted():
         'hdd_65': [0, 0.1, 0, 5],
     })
     candidate_models = get_cdd_hdd_candidate_models(
-        data, 10, 10, 10, 10, 0.1, 0.1,
+        data, 10, 10, 10, 10, 0.1, 0.1, None
     )
     assert len(candidate_models) == 1
     model = candidate_models[0]
@@ -611,7 +722,7 @@ def test_get_cdd_hdd_candidate_models_disqualified(daily_temperature):
         'hdd_65': [0, 0.1, 0, 5],
     })
     candidate_models = get_cdd_hdd_candidate_models(
-        data, 1, 1, 1, 1, 0.0, 0.0,
+        data, 1, 1, 1, 1, 0.0, 0.0, None
     )
     assert len(candidate_models) == 1
     model = candidate_models[0]
@@ -641,7 +752,8 @@ def test_get_cdd_hdd_candidate_models_error():
         'hdd_65': [],
         'cdd_65': [],
     })
-    candidate_models = get_cdd_hdd_candidate_models(data, 0, 0, 0, 0, 0.1, 0.1)
+    candidate_models = get_cdd_hdd_candidate_models(
+        data, 0, 0, 0, 0, 0.1, 0.1, None)
     assert len(candidate_models) == 1
     model = candidate_models[0]
     assert len(model.warnings) == 1
