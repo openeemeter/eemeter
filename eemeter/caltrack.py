@@ -6,24 +6,29 @@ import pytz
 import statsmodels.formula.api as smf
 import traceback
 
-from eemeter import (
-    DataSufficiency,
-    ModelFit,
+from .api import (
     CandidateModel,
+    DataSufficiency,
     EEMeterWarning,
+    ModelFit,
 )
-from eemeter.transform import day_counts
-
-from eemeter.exceptions import (
+from .exceptions import (
     MissingModelParameterError,
     UnrecognizedModelTypeError,
+)
+from .transform import (
+    day_counts,
+    merge_temperature_data,
 )
 
 
 __all__ = (
-    'caltrack_daily_sufficiency_criteria'
-    'caltrack_daily_method',
-    'predict_caltrack_daily',
+    'caltrack_method',
+    'caltrack_sufficiency_criteria',
+    'caltrack_metered_savings',
+    'caltrack_modeled_savings',
+    'caltrack_predict',
+    'plot_caltrack_candidate',
     'get_too_few_non_zero_degree_day_warning',
     'get_total_degree_day_too_low_warning',
     'get_parameter_negative_warning',
@@ -36,6 +41,27 @@ __all__ = (
 )
 
 
+def _candidate_model_factory(
+    model_type, formula, status, warnings=None, model_params=None,
+    model=None, result=None, r_squared=None, use_predict_func=True
+):
+    if use_predict_func:
+        predict_func = caltrack_predict
+    else:
+        predict_func = None
+
+    return CandidateModel(
+        model_type=model_type,
+        formula=formula,
+        status=status,
+        warnings=warnings,
+        predict_func=predict_func,
+        plot_func=plot_caltrack_candidate,
+        model_params=model_params, model=model, result=result,
+        r_squared=r_squared,
+    )
+
+
 def _get_parameter_or_raise(model_type, model_params, param):
     try:
         return model_params[param]
@@ -46,8 +72,8 @@ def _get_parameter_or_raise(model_type, model_params, param):
         )
 
 
-def predict_caltrack_daily(
-    model_type, model_params, daily_temperature, disaggregated=False
+def caltrack_predict(
+    model_type, model_params, data, disaggregated=False
 ):
     ''' CalTRACK predict method.
 
@@ -60,9 +86,13 @@ def predict_caltrack_daily(
         Model type (e.g., ``'cdd_hdd'``).
     model_params : :any:`dict`
         Parameters as stored in :any:`eemeter.CandidateModel.model_params`.
-    daily_temperature : :any:`pandas.Series`
-        A pandas series of daily temperature values.
-    disaggregated : :any:`bool`
+    data : :any:`pandas.DataFrame`
+        Data over which to predict. Assumed to be like the format of the data used
+        for fitting, although it need only have the columns. If not giving data
+        with a `pandas.DatetimeIndex` it must have the column `n_days`,
+        representing the number of days per prediction period (otherwise
+        inferred from DatetimeIndex).
+    disaggregated : :any:`bool`, optional
         If True, return results as a :any:`pandas.DataFrame` with columns
         ``'base_load'``, ``'heating_load'``, and ``'cooling_load'``
 
@@ -72,11 +102,24 @@ def predict_caltrack_daily(
         Returns results as series unless ``disaggregated=True``.
     '''
 
+    zeros = pd.Series(0, index=data.index)
+
+    if isinstance(data.index, pd.DatetimeIndex):
+        days = day_counts(zeros)
+    elif 'n_days' in data:
+        days = data.n_days
+    else:
+        raise ValueError(
+            '`data` must have either a pandas.DatetimeIndex or the column `n_days`'
+        )
+
     # TODO(philngo): handle different degree day methods and hourly temperatures
     if model_type in ['intercept_only', 'hdd_only', 'cdd_only', 'cdd_hdd']:
         intercept = _get_parameter_or_raise(
             model_type, model_params, 'intercept')
-        base_load = daily_temperature * 0 + intercept
+        base_load = intercept * days
+    elif model_type is None:
+        raise ValueError('Model not valid for prediction: model_type=None')
     else:
         raise UnrecognizedModelTypeError(
             'invalid caltrack model type: {}'.format(model_type)
@@ -87,20 +130,22 @@ def predict_caltrack_daily(
             model_type, model_params, 'beta_hdd')
         heating_balance_point = _get_parameter_or_raise(
             model_type, model_params, 'heating_balance_point')
-        hdd = np.maximum(heating_balance_point - daily_temperature, 0)
+        hdd_column_name = 'hdd_%s' % heating_balance_point
+        hdd = data[hdd_column_name]
         heating_load = hdd * beta_hdd
     else:
-        heating_load = daily_temperature * 0
+        heating_load = zeros
 
     if model_type in ['cdd_only', 'cdd_hdd']:
         beta_cdd = _get_parameter_or_raise(
             model_type, model_params, 'beta_cdd')
         cooling_balance_point = _get_parameter_or_raise(
             model_type, model_params, 'cooling_balance_point')
-        cdd = np.maximum(daily_temperature - cooling_balance_point, 0)
+        cdd_column_name = 'cdd_%s' % cooling_balance_point
+        cdd = data[cdd_column_name]
         cooling_load = cdd * beta_cdd
     else:
-        cooling_load = daily_temperature * 0
+        cooling_load = zeros
 
     if disaggregated:
         return pd.DataFrame({
@@ -312,18 +357,14 @@ def get_fit_failed_candidate_model(model_type, formula):
         Candidate model instance with status ``'ERROR'``, and warning with
         traceback.
     '''
-    return CandidateModel(
-        model_type=model_type,
-        formula=formula,
-        status='ERROR',
-        warnings=[EEMeterWarning(
-            qualified_name='eemeter.caltrack_daily.{}.model_fit'.format(model_type),
-            description=(
-                'Error encountered in statsmodels.formula.api.ols method. (Empty data?)'
-            ),
-            data={'traceback': traceback.format_exc()}
-        )],
-    )
+    warnings = [EEMeterWarning(
+        qualified_name='eemeter.caltrack_daily.{}.model_fit'.format(model_type),
+        description=(
+            'Error encountered in statsmodels.formula.api.ols method. (Empty data?)'
+        ),
+        data={'traceback': traceback.format_exc()}
+    )]
+    return _candidate_model_factory(model_type, formula, 'ERROR', warnings)
 
 
 def get_intercept_only_candidate_models(data, weights_col):
@@ -358,11 +399,8 @@ def get_intercept_only_candidate_models(data, weights_col):
 
     result = model.fit()
     model_params = {'intercept': result.params['Intercept']}
-    return [CandidateModel(
-        model_type=model_type,
-        formula=formula,
-        status='QUALIFIED',
-        predict_func=predict_caltrack_daily,
+    return [_candidate_model_factory(
+        model_type, formula, 'QUALIFIED',
         model_params=model_params,
         model=model,
         result=result,
@@ -415,11 +453,9 @@ def get_single_cdd_only_candidate_model(
     ))
 
     if len(degree_day_warnings) > 0:
-        return CandidateModel(
-            model_type=model_type,
-            formula=formula,
-            status='NOT ATTEMPTED',
-            warnings=degree_day_warnings,
+        return _candidate_model_factory(
+            model_type, formula, 'NOT ATTEMPTED',
+            warnings=degree_day_warnings, use_predict_func=False
         )
 
     if weights_col is None:
@@ -456,16 +492,12 @@ def get_single_cdd_only_candidate_model(
     else:
         status = 'QUALIFIED'
 
-    return CandidateModel(
-        model_type=model_type,
-        formula=formula,
-        status=status,
-        predict_func=predict_caltrack_daily,
+    return _candidate_model_factory(
+        model_type, formula, status, warnings=model_warnings,
         model_params=model_params,
         model=model,
         result=result,
         r_squared=r_squared,
-        warnings=model_warnings,
     )
 
 
@@ -555,11 +587,9 @@ def get_single_hdd_only_candidate_model(
     ))
 
     if len(degree_day_warnings) > 0:
-        return CandidateModel(
-            model_type=model_type,
-            formula=formula,
-            status='NOT ATTEMPTED',
-            warnings=degree_day_warnings,
+        return _candidate_model_factory(
+            model_type, formula, 'NOT ATTEMPTED',
+            warnings=degree_day_warnings, use_predict_func=False
         )
 
     if weights_col is None:
@@ -596,16 +626,10 @@ def get_single_hdd_only_candidate_model(
     else:
         status = 'QUALIFIED'
 
-    return CandidateModel(
-        model_type=model_type,
-        formula=formula,
-        status=status,
-        predict_func=predict_caltrack_daily,
-        model_params=model_params,
-        model=model,
-        result=result,
+    return _candidate_model_factory(
+        model_type, formula, status, warnings=model_warnings,
+        model_params=model_params, model=model, result=result,
         r_squared=r_squared,
-        warnings=model_warnings,
     )
 
 
@@ -714,11 +738,9 @@ def get_single_cdd_hdd_candidate_model(
     ))
 
     if len(degree_day_warnings) > 0:
-        return CandidateModel(
-            model_type=model_type,
-            formula=formula,
-            status='NOT ATTEMPTED',
-            warnings=degree_day_warnings,
+        return _candidate_model_factory(
+            model_type, formula, 'NOT ATTEMPTED',
+            warnings=degree_day_warnings, use_predict_func=False
         )
 
     if weights_col is None:
@@ -762,16 +784,10 @@ def get_single_cdd_hdd_candidate_model(
     else:
         status = 'QUALIFIED'
 
-    return CandidateModel(
-        model_type=model_type,
-        formula=formula,
-        status=status,
-        predict_func=predict_caltrack_daily,
-        model_params=model_params,
-        model=model,
-        result=result,
+    return _candidate_model_factory(
+        model_type, formula, status, warnings=model_warnings,
+        model_params=model_params, model=model, result=result,
         r_squared=r_squared,
-        warnings=model_warnings,
     )
 
 
@@ -871,11 +887,12 @@ def select_best_candidate(candidate_models):
     return best_candidate, []
 
 
-def caltrack_daily_method(
-    data, fit_cdd=True, minimum_non_zero_cdd=10, minimum_non_zero_hdd=10,
-    minimum_total_cdd=20, minimum_total_hdd=20, beta_cdd_maximum_p_value=1,
-    beta_hdd_maximum_p_value=1, weights_col=None, fit_intercept_only=True, fit_cdd_only=True,
-    fit_hdd_only=True, fit_cdd_hdd=True
+def caltrack_method(
+    data, fit_cdd=True, use_billing_presets=False, minimum_non_zero_cdd=10,
+    minimum_non_zero_hdd=10, minimum_total_cdd=20, minimum_total_hdd=20,
+    beta_cdd_maximum_p_value=1, beta_hdd_maximum_p_value=1, weights_col=None,
+    fit_intercept_only=True, fit_cdd_only=True, fit_hdd_only=True,
+    fit_cdd_hdd=True
 ):
     ''' CalTRACK daily method.
 
@@ -889,6 +906,9 @@ def caltrack_daily_method(
     fit_cdd : :any:`bool`, optional
         If True, fit CDD models unless overridden by ``fit_cdd_only`` or
         ``fit_cdd_hdd`` flags. Should be set to ``False`` for gas meter data.
+    use_billing_presets : :any:`bool`, optional
+        Use presets appropriate for billing models. Otherwise defaults are
+        appropriate for daily models.
     minimum_non_zero_cdd : :any:`int`, optional
         Minimum allowable number of non-zero cooling degree day values.
     minimum_non_zero_hdd : :any:`int`, optional
@@ -899,10 +919,12 @@ def caltrack_daily_method(
         Minimum allowable total sum of heating degree day values.
     beta_cdd_maximum_p_value : :any:`float`, optional
         The maximum allowable p-value of the beta cdd parameter. The default
-        value is the most permissive possible (i.e., 1).
+        value is the most permissive possible (i.e., 1). This is here
+        for backwards compatibility with CalTRACK 1.0 methods.
     beta_hdd_maximum_p_value : :any:`float`, optional
         The maximum allowable p-value of the beta hdd parameter. The default
-        value is the most permissive possible (i.e., 1).
+        value is the most permissive possible (i.e., 1). This is here
+        for backwards compatibility with CalTRACK 1.0 methods.
     weights_col : :any:`str` or None, optional
         The name of the column (if any) in ``data`` to use as weights.
     fit_intercept_only : :any:`bool`, optional
@@ -922,15 +944,18 @@ def caltrack_daily_method(
         Results of running CalTRACK daily method. See :any:`eemeter.ModelFit`
         for more details.
     '''
-
-    # TODO(philngo): allow specifying a weights column.
+    if use_billing_presets:
+        minimum_non_zero_cdd = 0
+        minimum_non_zero_hdd = 0
+        minimum_total_cdd = 0
+        minimum_total_hdd = 0
 
     if data.empty:
         return ModelFit(
             status='NO DATA',
-            method_name='caltrack_daily_method',
+            method_name='caltrack_method',
             warnings=[EEMeterWarning(
-                qualified_name='eemeter.caltrack_daily_method.no_data',
+                qualified_name='eemeter.caltrack_method.no_data',
                 description=(
                     'No data available. Cannot fit model.'
                 ),
@@ -991,7 +1016,7 @@ def caltrack_daily_method(
 
     model_result = ModelFit(
         status=status,
-        method_name='caltrack_daily_method',
+        method_name='caltrack_method',
         model=best_candidate,
         candidates=candidates,
         r_squared=r_squared,
@@ -1010,7 +1035,7 @@ def caltrack_daily_method(
     return model_result
 
 
-def caltrack_daily_sufficiency_criteria(
+def caltrack_sufficiency_criteria(
     data_quality, requested_start, requested_end, min_days=365,
     min_fraction_daily_coverage=0.9,
     min_fraction_daily_temperature_hourly_coverage=0.9,
@@ -1050,14 +1075,14 @@ def caltrack_daily_sufficiency_criteria(
     data_sufficiency : :any:`eemeter.DataSufficiency`
         The an object containing sufficiency status and warnings for this data.
     '''
-    criteria_name = 'caltrack_daily_sufficiency_criteria'
+    criteria_name = 'caltrack_sufficiency_criteria'
 
     if data_quality.empty:
         return DataSufficiency(
             status='NO DATA',
             criteria_name=criteria_name,
             warnings=[EEMeterWarning(
-                qualified_name='eemeter.caltrack_daily_sufficiency_criteria.no_data',
+                qualified_name='eemeter.caltrack_sufficiency_criteria.no_data',
                 description=(
                     'No data available.'
                 ),
@@ -1087,7 +1112,7 @@ def caltrack_daily_sufficiency_criteria(
     if n_days_end_gap < 0:
         non_critical_warnings.append(EEMeterWarning(
             qualified_name=(
-                'eemeter.caltrack_daily_sufficiency_criteria'
+                'eemeter.caltrack_sufficiency_criteria'
                 '.extra_data_after_requested_end_date'
             ),
             description=(
@@ -1103,7 +1128,7 @@ def caltrack_daily_sufficiency_criteria(
     if n_days_start_gap < 0:
         non_critical_warnings.append(EEMeterWarning(
             qualified_name=(
-                'eemeter.caltrack_daily_sufficiency_criteria'
+                'eemeter.caltrack_sufficiency_criteria'
                 '.extra_data_before_requested_start_date'
             ),
             description=(
@@ -1126,7 +1151,7 @@ def caltrack_daily_sufficiency_criteria(
     if n_negative_meter_values > 0:
         critical_warnings.append(EEMeterWarning(
             qualified_name=(
-                'eemeter.caltrack_daily_sufficiency_criteria'
+                'eemeter.caltrack_sufficiency_criteria'
                 '.negative_meter_values'
             ),
             description=(
@@ -1165,7 +1190,7 @@ def caltrack_daily_sufficiency_criteria(
     if n_days_total < min_days:
         critical_warnings.append(EEMeterWarning(
             qualified_name=(
-                'eemeter.caltrack_daily_sufficiency_criteria'
+                'eemeter.caltrack_sufficiency_criteria'
                 '.too_few_total_days'
             ),
             description=(
@@ -1180,7 +1205,7 @@ def caltrack_daily_sufficiency_criteria(
     if fraction_valid_days < min_fraction_daily_coverage:
         critical_warnings.append(EEMeterWarning(
             qualified_name=(
-                'eemeter.caltrack_daily_sufficiency_criteria'
+                'eemeter.caltrack_sufficiency_criteria'
                 '.too_many_days_with_missing_data'
             ),
             description=(
@@ -1196,7 +1221,7 @@ def caltrack_daily_sufficiency_criteria(
     if fraction_valid_meter_value_days < min_fraction_daily_coverage:
         critical_warnings.append(EEMeterWarning(
             qualified_name=(
-                'eemeter.caltrack_daily_sufficiency_criteria'
+                'eemeter.caltrack_sufficiency_criteria'
                 '.too_many_days_with_missing_meter_data'
             ),
             description=(
@@ -1211,7 +1236,7 @@ def caltrack_daily_sufficiency_criteria(
     if fraction_valid_temperature_days < min_fraction_daily_coverage:
         critical_warnings.append(EEMeterWarning(
             qualified_name=(
-                'eemeter.caltrack_daily_sufficiency_criteria'
+                'eemeter.caltrack_sufficiency_criteria'
                 '.too_many_days_with_missing_temperature_data'
             ),
             description=(
@@ -1241,3 +1266,324 @@ def caltrack_daily_sufficiency_criteria(
                 min_fraction_daily_temperature_hourly_coverage,
         }
     )
+
+
+def caltrack_metered_savings(
+    baseline_model, reporting_meter_data, temperature_data,
+    degree_day_method='daily', with_disaggregated=False,
+):
+    ''' Compute modeled savings, i.e., savings in which baseline and reporting
+    usage values are based on models. This is appropriate for annualizing or
+    weather normalizing models.
+
+    Parameters
+    ----------
+    baseline_model : :any:`eemeter.CandidateModel`
+        Model to use for predicting pre-intervention usage.
+    reporting_meter_data : :any:`pandas.DataFrame`
+        The observed reporting period data. Savings will be computed for the
+        periods supplied in the reporting period data.
+    temperature_data : :any:`pandas.Series`
+        Hourly-frequency timeseries of temperature data during the reporting
+        period.
+    degree_day_method : :any:`str`, optional
+        The method to use to calculate degree days using hourly temperature
+        data. Can be either ``'hourly'`` or ``'daily'``.
+    with_disaggregated : :any:`bool`, optional
+        If True, calculate baseline counterfactual disaggregated usage
+        estimates. Savings cannot be disaggregated for metered savings. For
+        that, use :any:`eemeter.caltrack_modeled_savings`.
+
+    Returns
+    -------
+    results : :any:`pandas.DataFrame`
+        DataFrame with metered savings, indexed with
+        ``reporting_meter_data.index``. Will include the following columns:
+
+        - ``counterfactual_usage`` (baseline model projected into reporting period)
+        - ``reporting_observed`` (given by reporting_meter_data)
+        - ``metered_savings``
+
+        If `with_disaggregated` is set to True, the following columns will also
+        be in the results DataFrame:
+
+        - ``counterfactual_base_load``
+        - ``counterfactual_heating_load``
+        - ``counterfactual_cooling_load``
+
+    '''
+    model_params = baseline_model.model_params
+    if model_params is None:
+        raise MissingModelParameterError(
+            'baseline model has no model_params attribute.'
+        )
+
+    cooling_balance_points = []
+    heating_balance_points = []
+    if 'cooling_balance_point' in model_params:
+        cooling_balance_points.append(model_params['cooling_balance_point'])
+    if 'heating_balance_point' in model_params:
+        heating_balance_points.append(model_params['heating_balance_point'])
+
+    reporting_data = merge_temperature_data(
+        reporting_meter_data, temperature_data,
+        heating_balance_points=heating_balance_points,
+        cooling_balance_points=cooling_balance_points,
+        degree_day_method=degree_day_method,
+        use_mean_daily_values=False,
+    )
+    if degree_day_method == 'daily':
+        reporting_data['n_days'] = (
+            reporting_data.n_days_kept + reporting_data.n_days_dropped)
+    else:
+        reporting_data['n_days'] = (
+            reporting_data.n_hours_kept + reporting_data.n_hours_dropped) / 24
+
+    counterfactual_usage = baseline_model.predict(reporting_data)\
+        .rename('counterfactual_usage')
+
+    def metered_savings_func(row):
+        return row.counterfactual_usage - row.reporting_observed
+
+    results = reporting_meter_data \
+        .rename(columns={'value': 'reporting_observed'}) \
+        .join(counterfactual_usage) \
+        .assign(metered_savings=metered_savings_func)
+
+    if with_disaggregated:
+        counterfactual_usage_disaggregated = baseline_model.predict(
+            reporting_data, disaggregated=True,
+        ).rename(columns={
+            'base_load': 'counterfactual_base_load',
+            'heating_load': 'counterfactual_heating_load',
+            'cooling_load': 'counterfactual_cooling_load',
+        })
+        results = results.join(counterfactual_usage_disaggregated)
+
+    return results.dropna().reindex(results.index)
+
+
+def caltrack_modeled_savings(
+    baseline_model, reporting_model, result_index, temperature_data,
+    degree_day_method='daily', with_disaggregated=False,
+):
+    ''' Compute modeled savings, i.e., savings in which baseline and reporting
+    usage values are based on models. This is appropriate for annualizing or
+    weather normalizing models.
+
+    Parameters
+    ----------
+    baseline_model : :any:`eemeter.CandidateModel`
+        Model to use for predicting pre-intervention usage.
+    reporting_model : :any:`eemeter.CandidateModel`
+        Model to use for predicting post-intervention usage.
+    result_index : :any:`pandas.DatetimeIndex`
+        The dates for which usage should be modeled.
+    temperature_data : :any:`pandas.Series`
+        Hourly-frequency timeseries of temperature data during the modeled
+        period.
+    degree_day_method : :any:`str`, optional
+        The method to use to calculate degree days using hourly temperature
+        data. Can be either ``'hourly'`` or ``'daily'``.
+    with_disaggregated : :any:`bool`, optional
+        If True, calculate modeled disaggregated usage estimates and savings.
+
+    Returns
+    -------
+    results : :any:`pandas.DataFrame`
+        DataFrame with modeled savings, indexed with the result_index. Will
+        include the following columns:
+
+        - ``modeled_baseline_usage``
+        - ``modeled_reporting_usage``
+        - ``modeled_savings``
+
+        If `with_disaggregated` is set to True, the following columns will also
+        be in the results DataFrame:
+
+        - ``modeled_baseline_base_load``
+        - ``modeled_baseline_cooling_load``
+        - ``modeled_baseline_heating_load``
+        - ``modeled_reporting_base_load``
+        - ``modeled_reporting_cooling_load``
+        - ``modeled_reporting_heating_load``
+        - ``modeled_base_load_savings``
+        - ``modeled_cooling_load_savings``
+        - ``modeled_heating_load_savings``
+    '''
+    baseline_model_params = baseline_model.model_params
+    if baseline_model_params is None:
+        raise MissingModelParameterError(
+            'baseline_model.model_params is None.'
+        )
+
+    reporting_model_params = reporting_model.model_params
+    if reporting_model_params is None:
+        raise MissingModelParameterError(
+            'reporting_model.model_params is None.'
+        )
+
+    cooling_balance_points = []
+    heating_balance_points = []
+
+    if 'cooling_balance_point' in baseline_model_params:
+        cooling_balance_points.append(baseline_model_params['cooling_balance_point'])
+    if 'heating_balance_point' in baseline_model_params:
+        heating_balance_points.append(baseline_model_params['heating_balance_point'])
+
+    if 'cooling_balance_point' in reporting_model_params:
+        cooling_balance_points.append(reporting_model_params['cooling_balance_point'])
+    if 'heating_balance_point' in reporting_model_params:
+        heating_balance_points.append(reporting_model_params['heating_balance_point'])
+
+    # There is probably a cleaner way to do this and it likely involves making
+    # merge_temperature_data more flexible.
+    meter_data_hack = pd.DataFrame({'value': 0}, index=result_index)
+    meter_data_hack.iloc[-1] = np.nan
+
+    design_matrix = merge_temperature_data(
+        meter_data_hack, temperature_data,
+        heating_balance_points=heating_balance_points,
+        cooling_balance_points=cooling_balance_points,
+        degree_day_method=degree_day_method,
+        use_mean_daily_values=False,
+    )
+
+    if degree_day_method == 'daily':
+        design_matrix['n_days'] = (
+            design_matrix.n_days_kept + design_matrix.n_days_dropped)
+    else:
+        design_matrix['n_days'] = (
+            design_matrix.n_hours_kept + design_matrix.n_hours_dropped) / 24
+
+    modeled_baseline_usage = baseline_model.predict(design_matrix)\
+        .to_frame('modeled_baseline_usage')
+
+    modeled_reporting_usage = reporting_model.predict(design_matrix)\
+        .rename('modeled_reporting_usage')
+
+    def modeled_savings_func(row):
+        return row.modeled_baseline_usage - row.modeled_reporting_usage
+
+    results = modeled_baseline_usage \
+        .join(modeled_reporting_usage) \
+        .assign(modeled_savings=modeled_savings_func)
+
+    if with_disaggregated:
+
+        modeled_baseline_usage_disaggregated = baseline_model.predict(
+            design_matrix, disaggregated=True
+        ).rename(columns={
+            'base_load': 'modeled_baseline_base_load',
+            'heating_load': 'modeled_baseline_heating_load',
+            'cooling_load': 'modeled_baseline_cooling_load',
+        })
+
+        modeled_reporting_usage_disaggregated = reporting_model.predict(
+            design_matrix, disaggregated=True
+        ).rename(columns={
+            'base_load': 'modeled_reporting_base_load',
+            'heating_load': 'modeled_reporting_heating_load',
+            'cooling_load': 'modeled_reporting_cooling_load',
+        })
+
+        def modeled_base_load_savings_func(row):
+            return row.modeled_baseline_base_load - row.modeled_reporting_base_load
+        def modeled_heating_load_savings_func(row):
+            return row.modeled_baseline_heating_load - row.modeled_reporting_heating_load
+        def modeled_cooling_load_savings_func(row):
+            return row.modeled_baseline_cooling_load - row.modeled_reporting_cooling_load
+
+        results = results.join(modeled_baseline_usage_disaggregated) \
+            .join(modeled_reporting_usage_disaggregated) \
+            .assign(
+                modeled_base_load_savings=modeled_base_load_savings_func,
+                modeled_heating_load_savings=modeled_heating_load_savings_func,
+                modeled_cooling_load_savings=modeled_cooling_load_savings_func,
+            )
+
+    return results.dropna().reindex(results.index)
+
+
+def plot_caltrack_candidate(
+    candidate, best=False, ax=None, title=None, figsize=None, temp_range=None,
+    alpha=None, **kwargs
+):
+    ''' Plot a CalTRACK candidate model.
+
+    Parameters
+    ----------
+    candidate : :any:`eemeter.CandidateModel`
+        A candidate model with a predict function.
+    best : :any:`bool`, optional
+        Whether this is the best candidate or not.
+    ax : :any:`matplotlib.axes.Axes`, optional
+        Existing axes to plot on.
+    title : :any:`str`, optional
+        Chart title.
+    figsize : :any:`tuple`, optional
+        (width, height) of chart.
+    temp_range : :any:`tuple`, optional
+        (min, max) temperatures to plot model.
+    alpha : :any:`float` between 0 and 1, optional
+        Transparency, 0 fully transparent, 1 fully opaque.
+    **kwargs
+        Keyword arguments for :any:`matplotlib.axes.Axes.plot`
+
+    Returns
+    -------
+    ax : :any:`matplotlib.axes.Axes`
+        Matplotlib axes.
+    '''
+    try:
+        import matplotlib.pyplot as plt
+    except ImportError:  # pragma: no cover
+        raise ImportError('matplotlib is required for plotting.')
+
+    if figsize is None:
+        figsize = (10, 4)
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=figsize)
+
+    if candidate.status == 'QUALIFIED':
+        color = 'C2'
+    elif candidate.status == 'DISQUALIFIED':
+        color = 'C3'
+    else:
+        return
+
+    if best:
+        color = 'C1'
+        alpha = 1
+
+    temp_min, temp_max = (30, 90) if temp_range is None else temp_range
+
+    temps = np.arange(temp_min, temp_max)
+
+    data = {'n_days': np.ones(temps.shape)}
+
+    heating_balance_point = candidate.model_params.get('heating_balance_point')
+    if heating_balance_point is not None:
+        hdd_column_name = 'hdd_%s' % heating_balance_point
+        data.update({hdd_column_name: np.maximum(heating_balance_point - temps, 0)})
+
+    cooling_balance_point = candidate.model_params.get('cooling_balance_point')
+    if cooling_balance_point is not None:
+        cdd_column_name = 'cdd_%s' % cooling_balance_point
+        data.update({cdd_column_name: np.maximum(temps - cooling_balance_point, 0)})
+
+    prediction = candidate.predict(pd.DataFrame(data))
+
+    plot_kwargs = {
+        'color': color,
+        'alpha': alpha or 0.3,
+    }
+    plot_kwargs.update(kwargs)
+
+    ax.plot(temps, prediction, **plot_kwargs)
+
+    if title is not None:
+        ax.set_title(title)
+
+    return ax

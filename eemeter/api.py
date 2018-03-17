@@ -30,6 +30,9 @@ class CandidateModel(object):
     predict_func : :any:`callable`
         A function of the following form:
         ``predict_func(candidate_model, inputs) -> outputs``
+    plot_func : :any:`callable`
+        A function of the following form:
+        ``plot_func(candidate_model, inputs) -> outputs``
     model_params : :any:`dict`, default :any:`None`
         A flat dictionary of model parameters which must be serializable
         using the :any:`json.dumps` method.
@@ -44,8 +47,9 @@ class CandidateModel(object):
     '''
 
     def __init__(
-        self, model_type, formula, status, predict_func=None, model_params=None,
-        model=None, result=None, r_squared=None, warnings=None
+        self, model_type, formula, status, predict_func=None, plot_func=None,
+        model_params=None, model=None, result=None, r_squared=None,
+        warnings=None
     ):
         self.model_type = model_type
         self.formula = formula
@@ -54,6 +58,7 @@ class CandidateModel(object):
         self.result = result
         self.r_squared = r_squared
         self.predict_func = predict_func
+        self.plot_func = plot_func
 
         if model_params is None:
             model_params = {}
@@ -98,6 +103,17 @@ class CandidateModel(object):
         else:
             return self.predict_func(
                 self.model_type, self.model_params, *args, **kwargs)
+
+    def plot(self, *args, **kwargs):
+        ''' Predict for this model. Arguments may vary by model type.
+        '''
+        if self.plot_func is None:
+            raise ValueError(
+                'This candidate model cannot be used for plotting because'
+                ' the plot_func attr is not set.'
+            )
+        else:
+            return self.plot_func(self, *args, **kwargs)
 
 
 class DataSufficiency(object):
@@ -280,3 +296,52 @@ class ModelFit(object):
                 for candidate in self.candidates
             ]
         return data
+
+    def plot(
+        self, ax=None, title=None, figsize=None, with_candidates=False,
+        candidate_alpha=None, temp_range=None
+    ):
+        ''' Plot a model fit.
+
+        Parameters
+        ----------
+        ax : :any:`matplotlib.axes.Axes`, optional
+            Existing axes to plot on.
+        title : :any:`str`, optional
+            Chart title.
+        figsize : :any:`tuple`, optional
+            (width, height) of chart.
+        with_candidates : :any:`bool`
+            If True, also plot candidate models.
+        candidate_alpha : :any:`float` between 0 and 1
+            Transparency at which to plot candidate models. 0 fully transparent,
+            1 fully opaque.
+
+        Returns
+        -------
+        ax : :any:`matplotlib.axes.Axes`
+            Matplotlib axes.
+        '''
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:  # pragma: no cover
+            raise ImportError('matplotlib is required for plotting.')
+
+        if figsize is None:
+            figsize = (10, 4)
+
+        if ax is None:
+            fig, ax = plt.subplots(figsize=figsize)
+
+        if temp_range is None:
+            temp_range = (20, 90)
+
+        if with_candidates:
+            for candidate in self.candidates:
+                candidate.plot(ax=ax, temp_range=temp_range, alpha=candidate_alpha)
+        self.model.plot(ax=ax, best=True, temp_range=temp_range)
+
+        if title is not None:
+            ax.set_title(title)
+
+        return ax

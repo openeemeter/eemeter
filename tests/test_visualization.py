@@ -7,10 +7,9 @@ matplotlib.use('Agg')
 from eemeter import (
     CandidateModel,
     ModelFit,
-    plot_candidate,
     plot_energy_signature,
-    plot_model_fit,
     plot_time_series,
+    plot_caltrack_candidate,
 )
 
 
@@ -40,63 +39,85 @@ def test_plot_energy_signature(il_electricity_cdd_hdd_daily):
     assert ax.get_title() == 'title'
 
 
-def test_plot_candidate_qualified(predict_func):
+def test_plot_caltrack_kcandidate_qualified(predict_func):
     candidate_model = CandidateModel(
         model_type='model_type',
         formula='formula',
         status='QUALIFIED',
         predict_func=predict_func,
+        plot_func=plot_caltrack_candidate,
     )
-    ax = plot_candidate(candidate_model, title='title')
+    ax = candidate_model.plot(candidate_model, title='title')
     data = ax.lines[0].get_xydata()
     assert data.shape == (60, 2)
     assert ax.get_title() == 'title'
 
 
-def test_plot_candidate_disqualified(predict_func):
+def test_plot_caltrack_candidate_disqualified(predict_func):
     candidate_model = CandidateModel(
         model_type='model_type',
         formula='formula',
         status='DISQUALIFIED',
         predict_func=predict_func,
+        plot_func=plot_caltrack_candidate,
     )
-    ax = plot_candidate(candidate_model)
+    ax = candidate_model.plot()
     data = ax.lines[0].get_xydata()
     assert data.shape == (60, 2)
 
 
-def test_plot_candidate_with_range(predict_func):
+def test_plot_caltrack_candidate_with_range(predict_func):
     candidate_model = CandidateModel(
         model_type='model_type',
         formula='formula',
         status='QUALIFIED',
         predict_func=predict_func,
+        plot_func=plot_caltrack_candidate,
     )
-    ax = plot_candidate(candidate_model, temp_range=(10, 20))
+    ax = candidate_model.plot(temp_range=(10, 20))
     data = ax.lines[0].get_xydata()
     assert data.shape == (10, 2)
 
 
-def test_plot_candidate_best(predict_func):
+def test_plot_caltrack_candidate_best(predict_func):
     candidate_model = CandidateModel(
         model_type='model_type',
         formula='formula',
         status='QUALIFIED',
         predict_func=predict_func,
+        plot_func=plot_caltrack_candidate,
     )
-    ax = plot_candidate(candidate_model, best=True)
+    ax = candidate_model.plot(best=True)
     data = ax.lines[0].get_xydata()
     assert data.shape == (60, 2)
 
 
-def test_plot_candidate_error():
+def test_plot_caltrack_candidate_error():
     candidate_model = CandidateModel(
         model_type='model_type',
         formula='formula',
         status='ERROR',
+        plot_func=plot_caltrack_candidate,
     )
-    ax = plot_candidate(candidate_model)
+    ax = candidate_model.plot()
     assert ax is None
+
+
+def test_plot_caltrack_candidate_hdd_cdd_model(predict_func):
+    candidate_model = CandidateModel(
+        model_type='model_type',
+        formula='formula',
+        status='QUALIFIED',
+        predict_func=predict_func,
+        plot_func=plot_caltrack_candidate,
+        model_params={
+            'heating_balance_point': 65,
+            'cooling_balance_point': 65,
+        },
+    )
+    ax = candidate_model.plot()
+    data = ax.lines[0].get_xydata()
+    assert data.shape == (60, 2)
 
 
 def test_plot_model_fit(il_electricity_cdd_hdd_daily, predict_func):
@@ -105,6 +126,7 @@ def test_plot_model_fit(il_electricity_cdd_hdd_daily, predict_func):
         formula='formula',
         status='QUALIFIED',
         predict_func=predict_func,
+        plot_func=plot_caltrack_candidate,
     )
     model_fit = ModelFit(
         status='status',
@@ -112,8 +134,8 @@ def test_plot_model_fit(il_electricity_cdd_hdd_daily, predict_func):
         model=candidate_model,
         candidates=[candidate_model],
     )
-    ax = plot_model_fit(
-        model_fit, title='title', with_candidates=True)
+    ax = model_fit.plot(
+        title='title', with_candidates=True)
     data = ax.lines[0].get_xydata()
     assert data.shape == (70, 2)
     data = ax.lines[1].get_xydata()

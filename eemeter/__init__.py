@@ -22,17 +22,20 @@ from .api import (
     ModelFit,
 )
 from .caltrack import (
-    caltrack_daily_method,
-    caltrack_daily_sufficiency_criteria,
-    predict_caltrack_daily,
-    get_too_few_non_zero_degree_day_warning,
-    get_total_degree_day_too_low_warning,
-    get_parameter_negative_warning,
-    get_parameter_p_value_too_high_warning,
-    get_intercept_only_candidate_models,
+    caltrack_method,
+    caltrack_sufficiency_criteria,
+    caltrack_metered_savings,
+    caltrack_modeled_savings,
+    caltrack_predict,
+    get_cdd_hdd_candidate_models,
     get_cdd_only_candidate_models,
     get_hdd_only_candidate_models,
-    get_cdd_hdd_candidate_models,
+    get_intercept_only_candidate_models,
+    get_parameter_negative_warning,
+    get_parameter_p_value_too_high_warning,
+    get_too_few_non_zero_degree_day_warning,
+    get_total_degree_day_too_low_warning,
+    plot_caltrack_candidate,
     select_best_candidate,
 )
 from .exceptions import (
@@ -43,11 +46,12 @@ from .exceptions import (
     UnrecognizedModelTypeError,
 )
 from .transform import (
-    billing_as_daily,
+    as_freq,
+    day_counts,
     get_baseline_data,
     get_reporting_data,
     merge_temperature_data,
-    day_counts,
+    remove_duplicates,
 )
 from .io import (
     meter_data_from_csv,
@@ -58,9 +62,7 @@ from .io import (
     temperature_data_to_csv,
 )
 from .visualization import (
-    plot_candidate,
     plot_energy_signature,
-    plot_model_fit,
     plot_time_series,
 )
 from .samples.load import (

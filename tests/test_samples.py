@@ -37,6 +37,7 @@ def test_load_sample_hourly():
     assert meter_data.shape == (19417, 1)
     assert meter_data.index.freq == 'H'
     assert temperature_data.shape == (19417,)
+    assert temperature_data.index.freq == 'H'
     assert metadata == {
         'annual_baseline_base_load': 2000.0,
         'annual_baseline_cooling_load': 4000.0,
@@ -69,6 +70,7 @@ def test_load_sample_daily():
     assert meter_data.shape == (810, 1)
     assert meter_data.index.freq == 'D'
     assert temperature_data.shape == (19417,)
+    assert temperature_data.index.freq == 'H'
     assert metadata is not None
 
 
@@ -79,6 +81,7 @@ def test_load_sample_billing_monthly():
     assert meter_data.shape == (27, 1)
     assert meter_data.index.freq is None
     assert temperature_data.shape == (19417,)
+    assert temperature_data.index.freq == 'H'
     assert metadata is not None
 
 

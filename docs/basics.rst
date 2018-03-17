@@ -163,7 +163,7 @@ provide a ``cdd_<>`` or ``hdd_<>`` column.
 
 Armed with this DataFrame (:any:`eemeter.merge_temperature_data` is a utility
 that simplifies the process of creating this DataFrame), you can use
-:any:`eemeter.caltrack_daily_method` or (TODO) to fit a model.
+:any:`eemeter.caltrack_method` or (TODO) to fit a model.
 
 You may also wish to filter your data to a baseline period or a reporting
 period. To do so, use :any:`eemeter.get_baseline_data` or
@@ -171,28 +171,45 @@ period. To do so, use :any:`eemeter.get_baseline_data` or
 
     >>> baseline_data = eemeter.get_baseline_data(data, end=<baseline end date>, max_days=365)
 
-CalTRACK Daily
-//////////////
+CalTRACK Daily Methods
+----------------------
 
-Running caltrack daily::
+Running caltrack daily methods::
 
-    >>> model_fit = ``eemeter.caltrack_daily_method(data)``
+    >>> model_fit = eemeter.caltrack_method(data)
+
+CalTRACK Billing Methods
+------------------------
+
+Running caltrack billing methods::
+
+    >>> model_fit = eemeter.caltrack_method(data, use_billing_preset=True)
+
+It is essential that the data used in the CalTRACK billing methods is
+*average daily* period usage (UPDm) and degree day values.
+
+Data with this property is created by default by the
+:any:`eemeter.merge_temperature_data` method, but can be controlled explicitly
+with the ``use_mean_daily_values`` flag of that method.
 
 
 Using the CLI
 -------------
 
-More in-depth info on CLI usage
+More in-depth info on CLI usage.
+
 
 Visualization
 -------------
 
-Visualization tricks
+Plotting results and models.
+
 
 Obtaining weather data
 ----------------------
 
 Weather data can be obtained using the :any:`EEweather <eeweather:index>` package.
+
 
 Using with anaconda
 -------------------

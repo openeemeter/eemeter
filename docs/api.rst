@@ -17,11 +17,15 @@ Results
 CalTRACK methods
 ----------------
 
-.. autofunction:: eemeter.caltrack_daily_method
+.. autofunction:: eemeter.caltrack_method
 
-.. autofunction:: eemeter.caltrack_daily_sufficiency_criteria
+.. autofunction:: eemeter.caltrack_sufficiency_criteria
 
-.. autofunction:: eemeter.predict_caltrack_daily
+.. autofunction:: eemeter.caltrack_metered_savings
+
+.. autofunction:: eemeter.caltrack_modeled_savings
+
+.. autofunction:: eemeter.caltrack_predict
 
 .. autofunction:: eemeter.get_too_few_non_zero_degree_day_warning
 
@@ -45,7 +49,7 @@ CalTRACK methods
 Data transformation utilities
 -----------------------------
 
-.. autofunction:: eemeter.billing_as_daily
+.. autofunction:: eemeter.as_freq
 
 .. autofunction:: eemeter.day_counts
 
@@ -54,6 +58,8 @@ Data transformation utilities
 .. autofunction:: eemeter.get_reporting_data
 
 .. autofunction:: eemeter.merge_temperature_data
+
+.. autofunction:: eemeter.remove_duplicates
 
 
 Data loading
@@ -71,6 +77,7 @@ Data loading
 
 .. autofunction:: eemeter.temperature_data_to_csv
 
+
 Sample Data
 -----------
 
@@ -85,10 +92,6 @@ Visualization
 .. autofunction:: eemeter.plot_time_series
 
 .. autofunction:: eemeter.plot_energy_signature
-
-.. autofunction:: eemeter.plot_model_fit
-
-.. autofunction:: eemeter.plot_candidate
 
 
 Warnings

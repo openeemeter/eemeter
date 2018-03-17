@@ -48,6 +48,16 @@ def test_candidate_model_with_predict_func():
     assert candidate_model.predict('a') == 'a'
 
 
+def test_candidate_model_with_no_plot_func():
+    candidate_model = CandidateModel(
+        model_type='model_type',
+        formula='formula',
+        status='status',
+    )
+    with pytest.raises(ValueError):
+        candidate_model.plot('a')
+
+
 def test_candidate_model_json_with_warning():
     eemeter_warning = EEMeterWarning(
         qualified_name='qualified_name',

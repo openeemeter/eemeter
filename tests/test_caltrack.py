@@ -6,10 +6,12 @@ import pytest
 
 from eemeter import (
     CandidateModel,
-    caltrack_daily_method,
-    caltrack_daily_sufficiency_criteria,
-    merge_temperature_data,
+    caltrack_method,
+    caltrack_sufficiency_criteria,
+    caltrack_metered_savings,
+    caltrack_modeled_savings,
     get_baseline_data,
+    merge_temperature_data,
 )
 from eemeter.caltrack import (
     get_intercept_only_candidate_models,
@@ -20,7 +22,7 @@ from eemeter.caltrack import (
     get_cdd_only_candidate_models,
     get_hdd_only_candidate_models,
     get_cdd_hdd_candidate_models,
-    predict_caltrack_daily,
+    caltrack_predict,
     select_best_candidate,
 )
 from eemeter.exceptions import (
@@ -29,18 +31,43 @@ from eemeter.exceptions import (
 )
 
 @pytest.fixture
-def candidate_model_no_model():
+def candidate_model_no_model_status():
     return CandidateModel(
-        model_type=None,
+        model_type='',
         formula='formula',
         status='NO MODEL',
     )
 
 
-def test_predict_caltrack_daily_no_model(candidate_model_no_model):
-    with pytest.raises(ValueError):
-        candidate_model_no_model.predict(pd.Series([0]))
+@pytest.fixture
+def candidate_model_no_model_none():
+    return CandidateModel(
+        model_type=None,
+        formula='formula',
+        status='QUALIFIED',
+        predict_func=caltrack_predict,
+        model_params={
+            'intercept': 1,
+        }
+    )
 
+
+def test_caltrack_predict_no_model_status(candidate_model_no_model_status):
+    df = pd.DataFrame({
+        'value': np.arange(30.0, 90.0),
+        'n_days': 1,
+    })
+    with pytest.raises(ValueError):
+        candidate_model_no_model_status.predict(df)
+
+
+def test_caltrack_predict_no_model_none(candidate_model_no_model_none):
+    df = pd.DataFrame({
+        'value': np.arange(30.0, 90.0),
+        'n_days': 1,
+    })
+    with pytest.raises(ValueError):
+        candidate_model_no_model_none.predict(df)
 
 @pytest.fixture
 def candidate_model_intercept_only():
@@ -48,32 +75,55 @@ def candidate_model_intercept_only():
         model_type='intercept_only',
         formula='formula',
         status='QUALIFIED',
-        predict_func=predict_caltrack_daily,
+        predict_func=caltrack_predict,
         model_params={
             'intercept': 1,
         }
     )
 
 
-@pytest.fixture
-def daily_temperature():
-    return pd.Series(np.arange(30, 90)).astype(float)
+def test_caltrack_predict_no_index_or_n_days(candidate_model_intercept_only):
+    df = pd.DataFrame([np.arange(30, 90)]).astype(float)
+    with pytest.raises(ValueError):
+        candidate_model_intercept_only.predict(df)
 
 
-def test_predict_caltrack_daily_intercept_only(
-    candidate_model_intercept_only, daily_temperature
-):
-    prediction = candidate_model_intercept_only.predict(daily_temperature)
+def test_caltrack_predict_n_days(candidate_model_intercept_only):
+    df = pd.DataFrame({
+        'value': np.arange(30.0, 90.0),
+        'n_days': 1,
+    })
+    prediction = candidate_model_intercept_only.predict(df)
     assert prediction.sum() == 60
 
 
-def test_predict_caltrack_daily_intercept_only_disaggregated(
-    candidate_model_intercept_only, daily_temperature
+@pytest.fixture
+def design_matrix():
+    days = pd.date_range('2011-01-01', freq='D', periods=60, tz='UTC')
+    meter_data = pd.DataFrame({'value': 1}, index=days)
+    temperature_data = pd.Series(np.arange(30.0, 90.0), index=days) \
+        .asfreq('H').ffill()
+    return merge_temperature_data(
+        meter_data, temperature_data,
+        heating_balance_points=[60, 65],
+        cooling_balance_points=[65, 70],
+    )
+
+
+def test_caltrack_predict_intercept_only(
+    candidate_model_intercept_only, design_matrix
+):
+    prediction = candidate_model_intercept_only.predict(design_matrix)
+    assert prediction.sum() == 59
+
+
+def test_caltrack_predict_intercept_only_disaggregated(
+    candidate_model_intercept_only, design_matrix
 ):
     prediction = candidate_model_intercept_only.predict(
-        daily_temperature, disaggregated=True
+        design_matrix, disaggregated=True
     )
-    assert prediction.base_load.sum() == 60
+    assert prediction.base_load.sum() == 59
     assert prediction.heating_load.sum() == 0
     assert prediction.cooling_load.sum() == 0
 
@@ -84,14 +134,15 @@ def candidate_model_missing_params():
         model_type='intercept_only',
         formula='formula',
         status='QUALIFIED',
-        predict_func=predict_caltrack_daily,
+        predict_func=caltrack_predict,
         model_params={}
     )
 
 
-def test_predict_caltrack_daily_missing_params(candidate_model_missing_params):
+def test_caltrack_predict_missing_params(
+        candidate_model_missing_params, design_matrix):
     with pytest.raises(MissingModelParameterError):
-        candidate_model_missing_params.predict(pd.Series([0]))
+        candidate_model_missing_params.predict(design_matrix)
 
 
 @pytest.fixture
@@ -100,7 +151,7 @@ def candidate_model_cdd_only():
         model_type='cdd_only',
         formula='formula',
         status='QUALIFIED',
-        predict_func=predict_caltrack_daily,
+        predict_func=caltrack_predict,
         model_params={
             'intercept': 1,
             'beta_cdd': 1,
@@ -109,22 +160,22 @@ def candidate_model_cdd_only():
     )
 
 
-def test_predict_caltrack_daily_cdd_only(
-    candidate_model_cdd_only, daily_temperature
+def test_caltrack_predict_cdd_only(
+    candidate_model_cdd_only, design_matrix
 ):
-    prediction = candidate_model_cdd_only.predict(daily_temperature)
-    assert prediction.sum() == 360
+    prediction = candidate_model_cdd_only.predict(design_matrix)
+    assert prediction.sum() == 335
 
 
-def test_predict_caltrack_daily_cdd_only_disaggregated(
-    candidate_model_cdd_only, daily_temperature
+def test_caltrack_predict_cdd_only_disaggregated(
+    candidate_model_cdd_only, design_matrix
 ):
     prediction = candidate_model_cdd_only.predict(
-        daily_temperature, disaggregated=True
+        design_matrix, disaggregated=True
     )
-    assert prediction.base_load.sum() == 60
+    assert prediction.base_load.sum() == 59
     assert prediction.heating_load.sum() == 0
-    assert prediction.cooling_load.sum() == 300
+    assert prediction.cooling_load.sum() == 276
 
 
 @pytest.fixture
@@ -133,7 +184,7 @@ def candidate_model_hdd_only():
         model_type='hdd_only',
         formula='formula',
         status='QUALIFIED',
-        predict_func=predict_caltrack_daily,
+        predict_func=caltrack_predict,
         model_params={
             'intercept': 1,
             'beta_hdd': 1,
@@ -142,20 +193,20 @@ def candidate_model_hdd_only():
     )
 
 
-def test_predict_caltrack_daily_hdd_only(
-    candidate_model_hdd_only, daily_temperature
+def test_caltrack_predict_hdd_only(
+    candidate_model_hdd_only, design_matrix
 ):
-    prediction = candidate_model_hdd_only.predict(daily_temperature)
-    assert prediction.sum() == 690.0
+    prediction = candidate_model_hdd_only.predict(design_matrix)
+    assert prediction.sum() == 689.0
 
 
-def test_predict_caltrack_daily_hdd_only_disaggregated(
-    candidate_model_hdd_only, daily_temperature
+def test_caltrack_predict_hdd_only_disaggregated(
+    candidate_model_hdd_only, design_matrix
 ):
     prediction = candidate_model_hdd_only.predict(
-        daily_temperature, disaggregated=True
+        design_matrix, disaggregated=True
     )
-    assert prediction.base_load.sum() == 60
+    assert prediction.base_load.sum() == 59.0
     assert prediction.heating_load.sum() == 630.0
     assert prediction.cooling_load.sum() == 0
 
@@ -166,7 +217,7 @@ def candidate_model_cdd_hdd():
         model_type='cdd_hdd',
         formula='formula',
         status='QUALIFIED',
-        predict_func=predict_caltrack_daily,
+        predict_func=caltrack_predict,
         model_params={
             'intercept': 1,
             'beta_hdd': 1,
@@ -177,22 +228,22 @@ def candidate_model_cdd_hdd():
     )
 
 
-def test_predict_caltrack_daily_cdd_hdd(
-    candidate_model_cdd_hdd, daily_temperature
+def test_caltrack_predict_cdd_hdd(
+    candidate_model_cdd_hdd, design_matrix
 ):
-    prediction = candidate_model_cdd_hdd.predict(daily_temperature)
-    assert prediction.sum() == 715.0
+    prediction = candidate_model_cdd_hdd.predict(design_matrix)
+    assert prediction.sum() == 695.0
 
 
-def test_predict_caltrack_daily_cdd_hdd_disaggregated(
-    candidate_model_cdd_hdd, daily_temperature
+def test_caltrack_predict_cdd_hdd_disaggregated(
+    candidate_model_cdd_hdd, design_matrix
 ):
     prediction = candidate_model_cdd_hdd.predict(
-        daily_temperature, disaggregated=True
+        design_matrix, disaggregated=True
     )
-    assert prediction.base_load.sum() == 60
+    assert prediction.base_load.sum() == 59
     assert prediction.heating_load.sum() == 465.0
-    assert prediction.cooling_load.sum() == 190.0
+    assert prediction.cooling_load.sum() == 171.0
 
 
 @pytest.fixture
@@ -201,14 +252,15 @@ def candidate_model_bad_model_type():
         model_type='unknown',
         formula='formula',
         status='QUALIFIED',
-        predict_func=predict_caltrack_daily,
+        predict_func=caltrack_predict,
         model_params={}
     )
 
 
-def test_predict_caltrack_daily_bad_model_type(candidate_model_bad_model_type):
+def test_caltrack_predict_bad_model_type(
+        candidate_model_bad_model_type, design_matrix):
     with pytest.raises(UnrecognizedModelTypeError):
-        candidate_model_bad_model_type.predict(pd.Series([0]))
+        candidate_model_bad_model_type.predict(design_matrix)
 
 
 def test_get_too_few_non_zero_degree_day_warning_ok():
@@ -316,7 +368,7 @@ def test_get_parameter_p_value_too_high_warning_fail():
     }
 
 
-def test_get_intercept_only_candidate_models_qualified(daily_temperature):
+def test_get_intercept_only_candidate_models_qualified(design_matrix):
     data = pd.DataFrame({
         'meter_value': np.arange(10),
     })
@@ -331,13 +383,15 @@ def test_get_intercept_only_candidate_models_qualified(daily_temperature):
     assert model.result is not None
     assert list(sorted(model.model_params.keys())) == ['intercept']
     assert round(model.model_params['intercept'], 2) == 4.5
-    assert round(model.predict(daily_temperature).sum(), 2) == 270.0
+    assert round(model.predict(design_matrix).sum(), 2) == 265.5
     assert model.r_squared == 0
     assert model.warnings == []
     assert json.dumps(model.json()) is not None
 
 
-def test_get_intercept_only_candidate_models_qualified_with_weights(daily_temperature):
+def test_get_intercept_only_candidate_models_qualified_with_weights(
+    design_matrix
+):
     data = pd.DataFrame({
         'meter_value': np.arange(10),
         'weights': np.arange(10),
@@ -353,7 +407,7 @@ def test_get_intercept_only_candidate_models_qualified_with_weights(daily_temper
     assert model.result is not None
     assert list(sorted(model.model_params.keys())) == ['intercept']
     assert round(model.model_params['intercept'], 2) == 6.33
-    assert round(model.predict(daily_temperature).sum(), 2) == 380.0
+    assert round(model.predict(design_matrix).sum(), 2) == 373.67
     assert model.r_squared == 0
     assert model.warnings == []
     assert json.dumps(model.json()) is not None
@@ -373,13 +427,14 @@ def test_get_intercept_only_candidate_models_error():
         'eemeter.caltrack_daily.intercept_only.model_fit'
     )
     assert warning.description == (
-        'Error encountered in statsmodels.formula.api.ols method. (Empty data?)'
+        'Error encountered in statsmodels.formula.api.ols method.'
+        ' (Empty data?)'
     )
     assert list(sorted(warning.data.keys())) == ['traceback']
     assert warning.data['traceback'] is not None
 
 
-def test_get_cdd_only_candidate_models_qualified(daily_temperature):
+def test_get_cdd_only_candidate_models_qualified(design_matrix):
     data = pd.DataFrame({
         'meter_value': [1, 1, 1, 6],
         'cdd_65': [0, 0.1, 0, 5],
@@ -399,13 +454,13 @@ def test_get_cdd_only_candidate_models_qualified(daily_temperature):
     assert round(model.model_params['beta_cdd'], 2) == 1.01
     assert round(model.model_params['cooling_balance_point'], 2) == 65
     assert round(model.model_params['intercept'], 2) == 0.97
-    assert round(model.predict(daily_temperature).sum(), 2) == 359.92
+    assert round(model.predict(design_matrix).sum(), 2) == 334.8
     assert round(model.r_squared, 2) == 1.00
     assert model.warnings == []
     assert json.dumps(model.json()) is not None
 
 
-def test_get_cdd_only_candidate_models_qualified_with_weights(daily_temperature):
+def test_get_cdd_only_candidate_models_qualified_with_weights(design_matrix):
     data = pd.DataFrame({
         'meter_value': [1, 1, 1, 6],
         'cdd_65': [0, 0.1, 0, 5],
@@ -426,7 +481,7 @@ def test_get_cdd_only_candidate_models_qualified_with_weights(daily_temperature)
     assert round(model.model_params['beta_cdd'], 2) == 1.02
     assert round(model.model_params['cooling_balance_point'], 2) == 65
     assert round(model.model_params['intercept'], 2) == 0.9
-    assert round(model.predict(daily_temperature).sum(), 2) == 359.76
+    assert round(model.predict(design_matrix).sum(), 2) == 334.4
     assert round(model.r_squared, 2) == 1.00
     assert model.warnings == []
     assert json.dumps(model.json()) is not None
@@ -455,7 +510,7 @@ def test_get_cdd_only_candidate_models_not_attempted():
     assert json.dumps(model.json()) is not None
 
 
-def test_get_cdd_only_candidate_models_disqualified(daily_temperature):
+def test_get_cdd_only_candidate_models_disqualified(design_matrix):
     data = pd.DataFrame({
         'meter_value': [1, 1, 1, -4],
         'cdd_65': [0, 0.1, 0, 5],
@@ -476,7 +531,7 @@ def test_get_cdd_only_candidate_models_disqualified(daily_temperature):
     assert round(model.model_params['beta_cdd'], 2) == -1.01
     assert round(model.model_params['cooling_balance_point'], 2) == 65
     assert round(model.model_params['intercept'], 2) == 1.03
-    assert round(model.predict(daily_temperature).sum(), 2) == -239.92
+    assert round(model.predict(design_matrix).sum(), 2) == -216.8
     assert round(model.r_squared, 2) == 1.00
     assert len(model.warnings) == 2
     assert json.dumps(model.json()) is not None
@@ -496,13 +551,14 @@ def test_get_cdd_only_candidate_models_error():
         'eemeter.caltrack_daily.cdd_only.model_fit'
     )
     assert warning.description == (
-        'Error encountered in statsmodels.formula.api.ols method. (Empty data?)'
+        'Error encountered in statsmodels.formula.api.ols method.'
+        ' (Empty data?)'
     )
     assert list(sorted(warning.data.keys())) == ['traceback']
     assert warning.data['traceback'] is not None
 
 
-def test_get_hdd_only_candidate_models_qualified(daily_temperature):
+def test_get_hdd_only_candidate_models_qualified(design_matrix):
     data = pd.DataFrame({
         'meter_value': [1, 1, 1, 6],
         'hdd_65': [0, 0.1, 0, 5],
@@ -523,13 +579,13 @@ def test_get_hdd_only_candidate_models_qualified(daily_temperature):
     assert round(model.model_params['beta_hdd'], 2) == 1.01
     assert round(model.model_params['heating_balance_point'], 2) == 65
     assert round(model.model_params['intercept'], 2) == 0.97
-    assert round(model.predict(daily_temperature).sum(), 2) == 692.01
+    assert round(model.predict(design_matrix).sum(), 2) == 691.05
     assert round(model.r_squared, 2) == 1.00
     assert model.warnings == []
     assert json.dumps(model.json()) is not None
 
 
-def test_get_hdd_only_candidate_models_qualified_with_weights(daily_temperature):
+def test_get_hdd_only_candidate_models_qualified_with_weights(design_matrix):
     data = pd.DataFrame({
         'meter_value': [1, 1, 1, 6],
         'hdd_65': [0, 0.1, 0, 5],
@@ -551,7 +607,7 @@ def test_get_hdd_only_candidate_models_qualified_with_weights(daily_temperature)
     assert round(model.model_params['beta_hdd'], 2) == 1.02
     assert round(model.model_params['heating_balance_point'], 2) == 65
     assert round(model.model_params['intercept'], 2) == 0.9
-    assert round(model.predict(daily_temperature).sum(), 2) == 696.08
+    assert round(model.predict(design_matrix).sum(), 2) == 695.18
     assert round(model.r_squared, 2) == 1.00
     assert model.warnings == []
     assert json.dumps(model.json()) is not None
@@ -580,7 +636,7 @@ def test_get_hdd_only_candidate_models_not_attempted():
     assert json.dumps(model.json()) is not None
 
 
-def test_get_hdd_only_candidate_models_disqualified(daily_temperature):
+def test_get_hdd_only_candidate_models_disqualified(design_matrix):
     data = pd.DataFrame({
         'meter_value': [1, 1, 1, -4],
         'hdd_65': [0, 0.1, 0, 5],
@@ -601,7 +657,7 @@ def test_get_hdd_only_candidate_models_disqualified(daily_temperature):
     assert round(model.model_params['beta_hdd'], 2) == -1.01
     assert round(model.model_params['heating_balance_point'], 2) == 65
     assert round(model.model_params['intercept'], 2) == 1.03
-    assert round(model.predict(daily_temperature).sum(), 2) == -572.01
+    assert round(model.predict(design_matrix).sum(), 2) == -573.05
     assert round(model.r_squared, 2) == 1.00
     assert len(model.warnings) == 2
     assert json.dumps(model.json()) is not None
@@ -622,13 +678,14 @@ def test_get_hdd_only_candidate_models_error():
         'eemeter.caltrack_daily.hdd_only.model_fit'
     )
     assert warning.description == (
-        'Error encountered in statsmodels.formula.api.ols method. (Empty data?)'
+        'Error encountered in statsmodels.formula.api.ols method.'
+        ' (Empty data?)'
     )
     assert list(sorted(warning.data.keys())) == ['traceback']
     assert warning.data['traceback'] is not None
 
 
-def test_get_cdd_hdd_candidate_models_qualified(daily_temperature):
+def test_get_cdd_hdd_candidate_models_qualified(design_matrix):
     data = pd.DataFrame({
         'meter_value': [6, 1, 1, 6],
         'cdd_65': [5, 0, 0.1, 0],
@@ -653,13 +710,13 @@ def test_get_cdd_hdd_candidate_models_qualified(daily_temperature):
     assert round(model.model_params['cooling_balance_point'], 2) == 65
     assert round(model.model_params['heating_balance_point'], 2) == 65
     assert round(model.model_params['intercept'], 2) == 0.85
-    assert round(model.predict(daily_temperature).sum(), 2) == 1009.35
+    assert round(model.predict(design_matrix).sum(), 2) == 983.77
     assert round(model.r_squared, 2) == 1.00
     assert model.warnings == []
     assert json.dumps(model.json()) is not None
 
 
-def test_get_cdd_hdd_candidate_models_qualified_with_weights(daily_temperature):
+def test_get_cdd_hdd_candidate_models_qualified_with_weights(design_matrix):
     data = pd.DataFrame({
         'meter_value': [6, 1, 1, 6],
         'cdd_65': [5, 0, 0.1, 0],
@@ -685,7 +742,7 @@ def test_get_cdd_hdd_candidate_models_qualified_with_weights(daily_temperature):
     assert round(model.model_params['cooling_balance_point'], 2) == 65
     assert round(model.model_params['heating_balance_point'], 2) == 65
     assert round(model.model_params['intercept'], 2) == 0.79
-    assert round(model.predict(daily_temperature).sum(), 2) == 1015.97
+    assert round(model.predict(design_matrix).sum(), 2) == 990.2
     assert round(model.r_squared, 2) == 1.00
     assert model.warnings == []
     assert json.dumps(model.json()) is not None
@@ -715,7 +772,7 @@ def test_get_cdd_hdd_candidate_models_not_attempted():
     assert json.dumps(model.json()) is not None
 
 
-def test_get_cdd_hdd_candidate_models_disqualified(daily_temperature):
+def test_get_cdd_hdd_candidate_models_disqualified(design_matrix):
     data = pd.DataFrame({
         'meter_value': [-4, 1, 1, -4],
         'cdd_65': [5, 0, 0.1, 0],
@@ -740,7 +797,7 @@ def test_get_cdd_hdd_candidate_models_disqualified(daily_temperature):
     assert round(model.model_params['cooling_balance_point'], 2) == 65
     assert round(model.model_params['heating_balance_point'], 2) == 65
     assert round(model.model_params['intercept'], 2) == 1.1
-    assert round(model.predict(daily_temperature).sum(), 2) == -882.86
+    assert round(model.predict(design_matrix).sum(), 2) == -859.47
     assert round(model.r_squared, 2) == 1.00
     assert len(model.warnings) == 4
     assert json.dumps(model.json()) is not None
@@ -762,7 +819,8 @@ def test_get_cdd_hdd_candidate_models_error():
         'eemeter.caltrack_daily.cdd_hdd.model_fit'
     )
     assert warning.description == (
-        'Error encountered in statsmodels.formula.api.ols method. (Empty data?)'
+        'Error encountered in statsmodels.formula.api.ols method.'
+        ' (Empty data?)'
     )
     assert list(sorted(warning.data.keys())) == ['traceback']
     assert warning.data['traceback'] is not None
@@ -832,19 +890,19 @@ def test_select_best_candidate_none(
     assert warning.data == {'status_count:DISQUALIFIED': 1}
 
 
-def test_caltrack_daily_method_empty():
+def test_caltrack_method_empty():
     data = pd.DataFrame({
         'meter_value': [],
         'hdd_65': [],
         'cdd_65': [],
     })
-    model_fit = caltrack_daily_method(data)
-    assert model_fit.method_name == 'caltrack_daily_method'
+    model_fit = caltrack_method(data)
+    assert model_fit.method_name == 'caltrack_method'
     assert model_fit.status == 'NO DATA'
     assert len(model_fit.warnings) == 1
     warning = model_fit.warnings[0]
     assert warning.qualified_name == (
-        'eemeter.caltrack_daily_method.no_data'
+        'eemeter.caltrack_method.no_data'
     )
     assert warning.description == (
         'No data available. Cannot fit model.'
@@ -862,13 +920,13 @@ def cdd_hdd_h60_c65(il_electricity_cdd_hdd_daily):
         heating_balance_points=[60],
         cooling_balance_points=[65],
     )
-    baseline_data = get_baseline_data(
+    baseline_data, warnings = get_baseline_data(
         data, end=blackout_start_date)
     return baseline_data
 
 
-def test_caltrack_daily_method_cdd_hdd(cdd_hdd_h60_c65):
-    model_fit = caltrack_daily_method(cdd_hdd_h60_c65)
+def test_caltrack_method_cdd_hdd(cdd_hdd_h60_c65, design_matrix):
+    model_fit = caltrack_method(cdd_hdd_h60_c65)
     assert len(model_fit.candidates) == 4
     assert model_fit.candidates[0].model_type == 'intercept_only'
     assert model_fit.candidates[1].model_type == 'hdd_only'
@@ -876,21 +934,36 @@ def test_caltrack_daily_method_cdd_hdd(cdd_hdd_h60_c65):
     assert model_fit.candidates[3].model_type == 'cdd_hdd'
     assert model_fit.model.status == 'QUALIFIED'
     assert model_fit.model.model_type == 'cdd_hdd'
-    prediction = model_fit.model.predict(cdd_hdd_h60_c65.temperature_mean)
-    assert round(prediction.sum()) == 10421.0
+    prediction = model_fit.model.predict(design_matrix)
+    assert round(prediction.sum()) == 1629.0
 
 
-def test_caltrack_daily_method_no_model():
+def test_caltrack_method_cdd_hdd_use_billing_presets(
+    cdd_hdd_h60_c65, design_matrix
+):
+    model_fit = caltrack_method(cdd_hdd_h60_c65, use_billing_presets=True)
+    assert len(model_fit.candidates) == 4
+    assert model_fit.candidates[0].model_type == 'intercept_only'
+    assert model_fit.candidates[1].model_type == 'hdd_only'
+    assert model_fit.candidates[2].model_type == 'cdd_only'
+    assert model_fit.candidates[3].model_type == 'cdd_hdd'
+    assert model_fit.model.status == 'QUALIFIED'
+    assert model_fit.model.model_type == 'cdd_hdd'
+    prediction = model_fit.model.predict(design_matrix)
+    assert round(prediction.sum()) == 1629.0
+
+
+def test_caltrack_method_no_model():
     data = pd.DataFrame({
         'meter_value': [4, 1, 1, 4],
         'cdd_65': [5, 0, 0.1, 0],
         'hdd_65': [0, 0.1, 0, 5],
     })
-    model_fit = caltrack_daily_method(
+    model_fit = caltrack_method(
         data, fit_hdd_only=False, fit_cdd_hdd=False, fit_cdd_only=False,
         fit_intercept_only=False
     )
-    assert model_fit.method_name == 'caltrack_daily_method'
+    assert model_fit.method_name == 'caltrack_method'
     assert model_fit.status == 'NO MODEL'
     assert len(model_fit.warnings) == 1
     warning = model_fit.warnings[0]
@@ -903,28 +976,28 @@ def test_caltrack_daily_method_no_model():
     assert warning.data == {}
 
 
-def test_caltrack_daily_sufficiency_criteria_no_data():
+def test_caltrack_sufficiency_criteria_no_data():
     data_quality = pd.DataFrame({
         'meter_value': [],
         'temperature_not_null': [],
         'temperature_null': [],
     })
-    data_sufficiency = caltrack_daily_sufficiency_criteria(
+    data_sufficiency = caltrack_sufficiency_criteria(
         data_quality, None, None)
     assert data_sufficiency.status == 'NO DATA'
     assert data_sufficiency.criteria_name == (
-        'caltrack_daily_sufficiency_criteria'
+        'caltrack_sufficiency_criteria'
     )
     assert len(data_sufficiency.warnings) == 1
     warning = data_sufficiency.warnings[0]
     assert warning.qualified_name == (
-        'eemeter.caltrack_daily_sufficiency_criteria.no_data'
+        'eemeter.caltrack_sufficiency_criteria.no_data'
     )
     assert warning.description == 'No data available.'
     assert warning.data == {}
 
 
-def test_caltrack_daily_sufficiency_criteria_pass():
+def test_caltrack_sufficiency_criteria_pass():
     data_quality = pd.DataFrame({
         'meter_value': [1, 1],
         'temperature_not_null': [1, 1],
@@ -932,16 +1005,17 @@ def test_caltrack_daily_sufficiency_criteria_pass():
         'start': pd.date_range(
             start='2016-01-02', periods=2, freq='D').tz_localize('UTC'),
     }).set_index('start')
-    requested_start = pd.Timestamp('2016-01-02').tz_localize('UTC').to_pydatetime()
+    requested_start = pd.Timestamp('2016-01-02') \
+        .tz_localize('UTC').to_pydatetime()
     requested_end = pd.Timestamp('2016-01-03').tz_localize('UTC')
-    data_sufficiency = caltrack_daily_sufficiency_criteria(
+    data_sufficiency = caltrack_sufficiency_criteria(
         data_quality, requested_start, requested_end, min_days=1,
         min_fraction_daily_coverage=0.9,
         min_fraction_daily_temperature_hourly_coverage=0.9,
     )
     assert data_sufficiency.status == 'PASS'
     assert data_sufficiency.criteria_name == (
-        'caltrack_daily_sufficiency_criteria'
+        'caltrack_sufficiency_criteria'
     )
     assert data_sufficiency.warnings == []
     assert data_sufficiency.settings == {
@@ -951,7 +1025,7 @@ def test_caltrack_daily_sufficiency_criteria_pass():
     }
 
 
-def test_caltrack_daily_sufficiency_criteria_fail_no_gap():
+def test_caltrack_sufficiency_criteria_fail_no_gap():
     data_quality = pd.DataFrame({
         'meter_value': [np.nan, 1],
         'temperature_not_null': [1, 5],
@@ -961,20 +1035,20 @@ def test_caltrack_daily_sufficiency_criteria_fail_no_gap():
     }).set_index('start')
     requested_start = pd.Timestamp('2016-01-02').tz_localize('UTC')
     requested_end = pd.Timestamp('2016-01-04').tz_localize('UTC')
-    data_sufficiency = caltrack_daily_sufficiency_criteria(
+    data_sufficiency = caltrack_sufficiency_criteria(
         data_quality, requested_start, requested_end, min_days=3,
         min_fraction_daily_coverage=0.9,
         min_fraction_daily_temperature_hourly_coverage=0.9,
     )
     assert data_sufficiency.status == 'FAIL'
     assert data_sufficiency.criteria_name == (
-        'caltrack_daily_sufficiency_criteria'
+        'caltrack_sufficiency_criteria'
     )
     assert len(data_sufficiency.warnings) == 4
 
     warning0 = data_sufficiency.warnings[0]
     assert warning0.qualified_name == (
-        'eemeter.caltrack_daily_sufficiency_criteria.too_few_total_days'
+        'eemeter.caltrack_sufficiency_criteria.too_few_total_days'
     )
     assert warning0.description == (
         'Smaller total data span than the allowable minimum.'
@@ -983,7 +1057,7 @@ def test_caltrack_daily_sufficiency_criteria_fail_no_gap():
 
     warning1 = data_sufficiency.warnings[1]
     assert warning1.qualified_name == (
-        'eemeter.caltrack_daily_sufficiency_criteria.'
+        'eemeter.caltrack_sufficiency_criteria.'
         'too_many_days_with_missing_data'
     )
     assert warning1.description == (
@@ -993,7 +1067,7 @@ def test_caltrack_daily_sufficiency_criteria_fail_no_gap():
 
     warning2 = data_sufficiency.warnings[2]
     assert warning2.qualified_name == (
-        'eemeter.caltrack_daily_sufficiency_criteria.'
+        'eemeter.caltrack_sufficiency_criteria.'
         'too_many_days_with_missing_meter_data'
     )
     assert warning2.description == (
@@ -1004,16 +1078,19 @@ def test_caltrack_daily_sufficiency_criteria_fail_no_gap():
 
     warning3 = data_sufficiency.warnings[3]
     assert warning3.qualified_name == (
-        'eemeter.caltrack_daily_sufficiency_criteria.'
+        'eemeter.caltrack_sufficiency_criteria.'
         'too_many_days_with_missing_temperature_data'
     )
     assert warning3.description == (
         'Too many days in data have missing temperature data.'
     )
-    assert warning3.data == {'n_days_total': 2, 'n_valid_temperature_data_days': 1}
+    assert warning3.data == {
+        'n_days_total': 2,
+        'n_valid_temperature_data_days': 1
+    }
 
 
-def test_caltrack_daily_sufficiency_criteria_pass_no_requested_start_end():
+def test_caltrack_sufficiency_criteria_pass_no_requested_start_end():
     data_quality = pd.DataFrame({
         'meter_value': [1, 1],
         'temperature_not_null': [1, 1],
@@ -1021,19 +1098,19 @@ def test_caltrack_daily_sufficiency_criteria_pass_no_requested_start_end():
         'start': pd.date_range(
             start='2016-01-02', periods=2, freq='D').tz_localize('UTC'),
     }).set_index('start')
-    data_sufficiency = caltrack_daily_sufficiency_criteria(
+    data_sufficiency = caltrack_sufficiency_criteria(
         data_quality, None, None, min_days=1,
         min_fraction_daily_coverage=0.9,
         min_fraction_daily_temperature_hourly_coverage=0.9,
     )
     assert data_sufficiency.status == 'PASS'
     assert data_sufficiency.criteria_name == (
-        'caltrack_daily_sufficiency_criteria'
+        'caltrack_sufficiency_criteria'
     )
     assert len(data_sufficiency.warnings) == 0
 
 
-def test_caltrack_daily_sufficiency_criteria_fail_with_requested_start_end():
+def test_caltrack_sufficiency_criteria_fail_with_requested_start_end():
     data_quality = pd.DataFrame({
         'meter_value': [1, 1],
         'temperature_not_null': [1, 1],
@@ -1043,20 +1120,20 @@ def test_caltrack_daily_sufficiency_criteria_fail_with_requested_start_end():
     }).set_index('start')
     requested_start = pd.Timestamp('2016-01-01').tz_localize('UTC')
     requested_end = pd.Timestamp('2016-01-04').tz_localize('UTC')
-    data_sufficiency = caltrack_daily_sufficiency_criteria(
+    data_sufficiency = caltrack_sufficiency_criteria(
         data_quality, requested_start, requested_end, min_days=2,
         min_fraction_daily_coverage=0.9,
         min_fraction_daily_temperature_hourly_coverage=0.9,
     )
     assert data_sufficiency.status == 'FAIL'
     assert data_sufficiency.criteria_name == (
-        'caltrack_daily_sufficiency_criteria'
+        'caltrack_sufficiency_criteria'
     )
     assert len(data_sufficiency.warnings) == 3
 
     warning0 = data_sufficiency.warnings[0]
     assert warning0.qualified_name == (
-        'eemeter.caltrack_daily_sufficiency_criteria.'
+        'eemeter.caltrack_sufficiency_criteria.'
         'too_many_days_with_missing_data'
     )
     assert warning0.description == (
@@ -1066,7 +1143,7 @@ def test_caltrack_daily_sufficiency_criteria_fail_with_requested_start_end():
 
     warning1 = data_sufficiency.warnings[1]
     assert warning1.qualified_name == (
-        'eemeter.caltrack_daily_sufficiency_criteria.'
+        'eemeter.caltrack_sufficiency_criteria.'
         'too_many_days_with_missing_meter_data'
     )
     assert warning1.description == (
@@ -1076,16 +1153,19 @@ def test_caltrack_daily_sufficiency_criteria_fail_with_requested_start_end():
 
     warning2 = data_sufficiency.warnings[2]
     assert warning2.qualified_name == (
-        'eemeter.caltrack_daily_sufficiency_criteria.'
+        'eemeter.caltrack_sufficiency_criteria.'
         'too_many_days_with_missing_temperature_data'
     )
     assert warning2.description == (
         'Too many days in data have missing temperature data.'
     )
-    assert warning2.data == {'n_days_total': 3, 'n_valid_temperature_data_days': 1}
+    assert warning2.data == {
+        'n_days_total': 3,
+        'n_valid_temperature_data_days': 1
+    }
 
 
-def test_caltrack_daily_sufficiency_criteria_too_much_data():
+def test_caltrack_sufficiency_criteria_too_much_data():
     data_quality = pd.DataFrame({
         'meter_value': [1, 1, 1],
         'temperature_not_null': [1, 1, 1],
@@ -1095,7 +1175,7 @@ def test_caltrack_daily_sufficiency_criteria_too_much_data():
     }).set_index('start')
     requested_start = pd.Timestamp('2016-01-03').tz_localize('UTC')
     requested_end = pd.Timestamp('2016-01-03').tz_localize('UTC')
-    data_sufficiency = caltrack_daily_sufficiency_criteria(
+    data_sufficiency = caltrack_sufficiency_criteria(
         data_quality, requested_start, requested_end, min_days=2,
         min_fraction_daily_coverage=0.9,
         min_fraction_daily_temperature_hourly_coverage=0.9,
@@ -1105,7 +1185,7 @@ def test_caltrack_daily_sufficiency_criteria_too_much_data():
 
     warning0 = data_sufficiency.warnings[0]
     assert warning0.qualified_name == (
-        'eemeter.caltrack_daily_sufficiency_criteria.'
+        'eemeter.caltrack_sufficiency_criteria.'
         'extra_data_after_requested_end_date'
     )
     assert warning0.description == (
@@ -1118,7 +1198,7 @@ def test_caltrack_daily_sufficiency_criteria_too_much_data():
 
     warning1 = data_sufficiency.warnings[1]
     assert warning1.qualified_name == (
-        'eemeter.caltrack_daily_sufficiency_criteria.'
+        'eemeter.caltrack_sufficiency_criteria.'
         'extra_data_before_requested_start_date'
     )
     assert warning1.description == (
@@ -1130,7 +1210,7 @@ def test_caltrack_daily_sufficiency_criteria_too_much_data():
     }
 
 
-def test_caltrack_daily_sufficiency_criteria_negative_values():
+def test_caltrack_sufficiency_criteria_negative_values():
     data_quality = pd.DataFrame({
         'meter_value': [-1, 1, 1],
         'temperature_not_null': [1, 1, 1],
@@ -1138,7 +1218,7 @@ def test_caltrack_daily_sufficiency_criteria_negative_values():
         'start': pd.date_range(
             start='2016-01-02', periods=3, freq='D').tz_localize('UTC'),
     }).set_index('start')
-    data_sufficiency = caltrack_daily_sufficiency_criteria(
+    data_sufficiency = caltrack_sufficiency_criteria(
         data_quality, None, None, min_days=1,
         min_fraction_daily_coverage=0.9,
         min_fraction_daily_temperature_hourly_coverage=0.9,
@@ -1148,7 +1228,7 @@ def test_caltrack_daily_sufficiency_criteria_negative_values():
 
     warning0 = data_sufficiency.warnings[0]
     assert warning0.qualified_name == (
-        'eemeter.caltrack_daily_sufficiency_criteria.negative_meter_values'
+        'eemeter.caltrack_sufficiency_criteria.negative_meter_values'
     )
     assert warning0.description == (
         'Found negative meter data values, which may indicate presence of'
@@ -1157,7 +1237,7 @@ def test_caltrack_daily_sufficiency_criteria_negative_values():
     assert warning0.data == {'n_negative_meter_values': 1}
 
 
-def test_caltrack_daily_sufficiency_criteria_handle_single_input():
+def test_caltrack_sufficiency_criteria_handle_single_input():
     # just make sure this case is handled.
     data_quality = pd.DataFrame({
         'meter_value': [1],
@@ -1166,7 +1246,7 @@ def test_caltrack_daily_sufficiency_criteria_handle_single_input():
         'start': pd.date_range(
             start='2016-01-02', periods=1, freq='D').tz_localize('UTC'),
     }).set_index('start')
-    data_sufficiency = caltrack_daily_sufficiency_criteria(
+    data_sufficiency = caltrack_sufficiency_criteria(
         data_quality, None, None, min_days=0,
         min_fraction_daily_coverage=0.9,
         min_fraction_daily_temperature_hourly_coverage=0.9,
@@ -1174,3 +1254,165 @@ def test_caltrack_daily_sufficiency_criteria_handle_single_input():
 
     assert data_sufficiency.status == 'FAIL'
     assert len(data_sufficiency.warnings) == 3
+
+
+@pytest.fixture
+def baseline_model(cdd_hdd_h60_c65):
+    model_fit = caltrack_method(cdd_hdd_h60_c65)
+    return model_fit.model
+
+
+@pytest.fixture
+def reporting_model(cdd_hdd_h60_c65):
+    model_fit = caltrack_method(cdd_hdd_h60_c65)
+    return model_fit.model
+
+
+@pytest.fixture
+def reporting_meter_data():
+    index = pd.date_range('2011-01-01', freq='D', periods=60, tz='UTC')
+    return pd.DataFrame({'value': 1}, index=index)
+
+
+@pytest.fixture
+def reporting_temperature_data():
+    index = pd.date_range('2011-01-01', freq='D', periods=60, tz='UTC')
+    return pd.Series(np.arange(30.0, 90.0), index=index).asfreq('H').ffill()
+
+
+def test_caltrack_metered_savings_cdd_hdd(
+    baseline_model, reporting_meter_data, reporting_temperature_data
+):
+
+    results = caltrack_metered_savings(
+        baseline_model, reporting_meter_data, reporting_temperature_data,
+        degree_day_method='daily'
+    )
+    assert list(results.columns) == [
+        'reporting_observed', 'counterfactual_usage', 'metered_savings'
+    ]
+    assert round(results.metered_savings.sum(), 2) == 1569.57
+
+
+def test_caltrack_metered_savings_cdd_hdd_hourly_degree_days(
+    baseline_model, reporting_meter_data, reporting_temperature_data
+):
+
+    results = caltrack_metered_savings(
+        baseline_model, reporting_meter_data, reporting_temperature_data,
+        degree_day_method='hourly'
+    )
+    assert list(results.columns) == [
+        'reporting_observed', 'counterfactual_usage', 'metered_savings'
+    ]
+    assert round(results.metered_savings.sum(), 2) == 1569.57
+
+
+def test_caltrack_metered_savings_cdd_hdd_no_params(
+    baseline_model, reporting_meter_data, reporting_temperature_data
+):
+    baseline_model.model_params = None
+    with pytest.raises(MissingModelParameterError):
+        caltrack_metered_savings(
+            baseline_model, reporting_meter_data, reporting_temperature_data,
+            degree_day_method='daily'
+        )
+
+
+def test_caltrack_metered_savings_cdd_hdd_with_disaggregated(
+    baseline_model, reporting_meter_data, reporting_temperature_data
+):
+
+    results = caltrack_metered_savings(
+        baseline_model, reporting_meter_data, reporting_temperature_data,
+        degree_day_method='daily', with_disaggregated=True
+    )
+    assert list(results.columns) == [
+        'reporting_observed',
+        'counterfactual_usage',
+        'metered_savings',
+        'counterfactual_base_load',
+        'counterfactual_cooling_load',
+        'counterfactual_heating_load'
+    ]
+
+
+def test_caltrack_modeled_savings_cdd_hdd(
+    baseline_model, reporting_model, reporting_meter_data,
+    reporting_temperature_data
+):
+    # using reporting data for convenience, but intention is to use normal data
+    results = caltrack_modeled_savings(
+        baseline_model, reporting_model, reporting_meter_data.index,
+        reporting_temperature_data, degree_day_method='daily'
+    )
+    assert list(results.columns) == [
+        'modeled_baseline_usage', 'modeled_reporting_usage', 'modeled_savings'
+    ]
+    assert round(results.modeled_savings.sum(), 2) == 0.0
+
+
+def test_caltrack_modeled_savings_cdd_hdd_hourly_degree_days(
+    baseline_model, reporting_model, reporting_meter_data,
+    reporting_temperature_data
+):
+    # using reporting data for convenience, but intention is to use normal data
+    results = caltrack_modeled_savings(
+        baseline_model, reporting_model, reporting_meter_data.index,
+        reporting_temperature_data, degree_day_method='hourly'
+    )
+    assert list(results.columns) == [
+        'modeled_baseline_usage', 'modeled_reporting_usage', 'modeled_savings'
+    ]
+    assert round(results.modeled_savings.sum(), 2) == 0.0
+
+
+def test_caltrack_modeled_savings_cdd_hdd_baseline_model_no_params(
+    baseline_model, reporting_model, reporting_meter_data,
+    reporting_temperature_data
+):
+    baseline_model.model_params = None
+    with pytest.raises(MissingModelParameterError):
+        caltrack_modeled_savings(
+            baseline_model, reporting_model, reporting_meter_data.index,
+            reporting_temperature_data, degree_day_method='daily'
+        )
+
+
+def test_caltrack_modeled_savings_cdd_hdd_reporting_model_no_params(
+    baseline_model, reporting_model, reporting_meter_data,
+    reporting_temperature_data
+):
+    reporting_model.model_params = None
+    with pytest.raises(MissingModelParameterError):
+        caltrack_modeled_savings(
+            baseline_model, reporting_model, reporting_meter_data.index,
+            reporting_temperature_data, degree_day_method='daily'
+        )
+
+
+def test_caltrack_modeled_savings_cdd_hdd_with_disaggregated(
+    baseline_model, reporting_model, reporting_meter_data,
+    reporting_temperature_data
+):
+
+    # using reporting data for convenience, but intention is to use normal data
+    results = caltrack_modeled_savings(
+        baseline_model, reporting_model, reporting_meter_data.index,
+        reporting_temperature_data, degree_day_method='daily',
+        with_disaggregated=True
+    )
+    assert list(results.columns) == [
+        'modeled_baseline_usage',
+        'modeled_reporting_usage',
+        'modeled_savings',
+        'modeled_baseline_base_load',
+        'modeled_baseline_cooling_load',
+        'modeled_baseline_heating_load',
+        'modeled_reporting_base_load',
+        'modeled_reporting_cooling_load',
+        'modeled_reporting_heating_load',
+        'modeled_base_load_savings',
+        'modeled_heating_load_savings',
+        'modeled_cooling_load_savings'
+    ]

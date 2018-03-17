@@ -71,7 +71,8 @@ def load_sample(sample):
 
     temperature_filename = metadata['temperature_filename']
     with resource_stream('eemeter.samples', temperature_filename) as f:
-        temperature_data = temperature_data_from_csv(f, gzipped=True)
+        temperature_data = temperature_data_from_csv(
+            f, gzipped=True, freq='hourly')
 
     metadata['blackout_start_date'] = pytz.UTC.localize(
         parse_date(metadata['blackout_start_date']))

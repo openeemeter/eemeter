@@ -4,7 +4,7 @@ import json
 import click
 
 from eemeter import (
-    caltrack_daily_method,
+    caltrack_method,
     meter_data_from_csv,
     temperature_data_from_csv,
     merge_temperature_data,
@@ -74,7 +74,8 @@ def _get_data(
 
     if temperature_file is not None:
         gzipped = temperature_file.name.endswith('.gz')
-        temperature_data = temperature_data_from_csv(temperature_file, gzipped=gzipped)
+        temperature_data = temperature_data_from_csv(
+            temperature_file, gzipped=gzipped, freq='hourly')
     else:
         raise click.ClickException('Temperature data not specified.')
 
@@ -96,6 +97,7 @@ def caltrack(
     sample, meter_file, temperature_file, output_file, show_candidates, fit_cdd,
 ):
     # TODO(philngo): add project dates and baseline period/reporting period.
+    # TODO(philngo): complain about temperature data that isn't daily
 
     heating_balance_points = range(55, 66)
     cooling_balance_points = range(65, 76)
@@ -104,7 +106,7 @@ def caltrack(
         sample, meter_file, temperature_file, heating_balance_points,
         cooling_balance_points
     )
-    model_fit = caltrack_daily_method(data, fit_cdd=fit_cdd)
+    model_fit = caltrack_method(data, fit_cdd=fit_cdd)
     json_str = json.dumps(model_fit.json(with_candidates=show_candidates), indent=2)
 
     if output_file is None:

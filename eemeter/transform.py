@@ -5,19 +5,24 @@ import numpy as np
 import pandas as pd
 import pytz
 
-from .exceptions import NoBaselineDataError, NoReportingDataError
+from .exceptions import (
+    NoBaselineDataError,
+    NoReportingDataError,
+)
+from .api import EEMeterWarning
 
 
 __all__ = (
-    'billing_as_daily',
+    'as_freq',
+    'day_counts',
     'get_baseline_data',
     'get_reporting_data',
     'merge_temperature_data',
-    'day_counts',
+    'remove_duplicates',
 )
 
 
-def _matching_groups(index, df):
+def _matching_groups(index, df, tolerance):
     # convert index to df for use with merge_asof
     index_df = pd.DataFrame({'index_col': index}, index=index)
 
@@ -27,8 +32,8 @@ def _matching_groups(index, df):
     #   2) group by meter_index, and take the mean, ignoring all columns except
     #      the temperature column.
     groups = pd.merge_asof(
-        left=df, right=index_df,
-        left_index=True, right_index=True,
+        left=df, right=index_df, left_index=True, right_index=True,
+        tolerance=tolerance
     ).groupby('index_col')
     return groups
 
@@ -124,6 +129,7 @@ def _degree_day_columns(
             columns.update(cdd_cols)
             columns.update(hdd_cols)
             return columns
+    # TODO(philngo): option to ignore the count columns?
 
     agg_funcs = [('degree_day_columns', _compute_columns)]
     return agg_funcs
@@ -133,7 +139,7 @@ def merge_temperature_data(
     meter_data, temperature_data, heating_balance_points=None,
     cooling_balance_points=None, data_quality=False, temperature_mean=True,
     degree_day_method='daily', percent_hourly_coverage_per_day=0.5,
-    use_mean_daily_values=True,
+    use_mean_daily_values=True, tolerance=None
 ):
     ''' Merge meter data of any frequency with hourly temperature data to make
     a dataset to feed to models.
@@ -163,16 +169,27 @@ def merge_temperature_data(
     percent_hourly_coverage_per_day : :any:`str`, optional
         Percent hourly temperature coverage per day for heating and cooling
         degree days to not be dropped.
-    use_mean_daily_values : :any:`bool`
+    use_mean_daily_values : :any:`bool`, optional
         If True, meter and degree day values should be mean daily values, not
         totals. If False, totals will be used instead.
+    tolerance : :any:`pandas.Timedelta`, optional
+        Do not merge more than this amount of temperature data beyond this limit.
 
     Returns
     -------
     data : :any:`pandas.DataFrame`
         A dataset with the specified parameters.
     '''
-    # TODO(philngo): write fast route for hourly meter data + hourly temp data
+    # TODO(philngo): write fast route for hourly meter data + hourly temp data,
+    #   possibly using pd.align or pd.reindex
+    # TODO(philngo): think about providing some presets
+
+    if temperature_data.index.freq != 'H':
+        raise ValueError(
+            "temperature_data.index must have hourly frequency (freq='H')."
+            " Found: {}"
+            .format(temperature_data.index.freq)
+        )
 
     temp_agg_funcs = []
     temp_agg_column_renames = {}
@@ -181,6 +198,9 @@ def merge_temperature_data(
         heating_balance_points = []
     if cooling_balance_points is None:
         cooling_balance_points = []
+
+    if tolerance is None and meter_data.index.freq is not None:
+        tolerance = pd.Timedelta(meter_data.index.freq)
 
     if not (heating_balance_points == [] and cooling_balance_points == []):
 
@@ -225,7 +245,7 @@ def merge_temperature_data(
 
     # aggregate temperatures
     temp_df = temperature_data.to_frame('temp')
-    temp_groups = _matching_groups(meter_data.index, temp_df)
+    temp_groups = _matching_groups(meter_data.index, temp_df, tolerance)
     dfs_to_merge.append(temp_groups.agg({'temp': temp_agg_funcs}))
 
     df = pd.concat(dfs_to_merge, axis=1).rename(
@@ -243,38 +263,78 @@ def merge_temperature_data(
             df['degree_day_columns'].apply(pd.Series)
         ], axis=1)
 
-    return df
+    return df.dropna().reindex(df.index)
 
 
-def billing_as_daily(df, value_col='value'):
-    ''' Convert billing period data to daily using daily period averages.
+def remove_duplicates(df_or_series):
+    ''' Remove duplicate rows or values by keeping the first of each duplicate.
 
     Parameters
     ----------
-    df : :any:`pandas.DataFrame`
-        Data to convert from billing to daily frequency.
-    value_col : :any:`str`, optional
-        Name of value column of which the mean will be taken.
+    df_or_series : :any:`pandas.DataFrame` or :any:`pandas.Series`
+        Pandas object from which to drop duplicate index values.
 
     Returns
     -------
-    df : :any:`pandas.DataFrame`
-        Daily-frequency data with average daily billing usage for each day.
+    deduplicated : :any:`pandas.DataFrame` or :any:`pandas.Series`
+        The deduplicated pandas object.
     '''
-    # TODO(philngo): incorporate this directly into merge_temperature_data
+    return df_or_series[~df_or_series.index.duplicated(keep='first')]
 
-    # dont affect the original data
-    df = df.copy()
 
-    # convert to period mean
-    df[value_col].iloc[:-1] = df[value_col].iloc[:-1] / (df.iloc[1:].index - df.iloc[:-1].index).days
+def as_freq(meter_data_series, freq, atomic_freq='1 Min'):
+    '''Resample meter data to a different frequency.
 
-    # last value is not kept.
-    df[value_col].iloc[-1] = np.nan
+    This method can be used to upsample or downsample meter data. The
+    assumption it makes to do so is that meter data is constant and averaged
+    over the given periods. For instance, to convert billing-period data to
+    daily data, this method first upsamples to the atomic frequency
+    (1 minute freqency, by default), "spreading" usage evenly across all
+    minutes in each period. Then it downsamples to hourly frequency and
+    returns that result.
 
-    df = df.resample('D').ffill()
+    **Caveats**:
 
-    return df
+     - This method gives a fair amount of flexibility in
+       resampling as long as you are OK with the assumption that usage is
+       constant over the period (this assumption is generally broken in
+       observed data at large enough frequencies, so this caveat should not be
+       taken lightly).
+
+     - This method should not be used for sampled (e.g., temperature data)
+       rather than recorded data (e.g., meter data), as sampled data cannot be
+       "spread" in the same way.
+
+    Parameters
+    ----------
+    meter_data_series : :any:`pandas.Series`
+        Meter data to resample. should have a :any:`pandas.DatetimeIndex`.
+    freq : :any:`str`
+        The frequency to resample to. This should be given in a form recognized
+        by the :any:`pandas.Series.resample` method.
+    atomic_freq : :any:`str`, optional
+        The "atomic" frequency of the intermediate data form. This can be
+        adjusted to a higher atomic frequency to increase speed or memory
+        performance.
+
+    Returns
+    -------
+    resampled_meter_data : :any:`pandas.Series`
+        Meter data resampled to the given frequency.
+    '''
+    if not isinstance(meter_data_series, pd.Series):
+        raise ValueError(
+            'expected series, got object with class {}'
+            .format(meter_data_series.__class__)
+        )
+    series = remove_duplicates(meter_data_series)
+    target_freq = pd.Timedelta(atomic_freq)
+    timedeltas = (series.index[1:] - series.index[:-1]).append(pd.TimedeltaIndex([pd.NaT]))
+    spread_factor = target_freq.total_seconds() / timedeltas.total_seconds()
+    series_spread = series * spread_factor
+    atomic_series = series_spread.asfreq(atomic_freq, method='ffill')
+    resampled = atomic_series.resample(freq).sum()
+    return resampled
 
 
 def day_counts(series):
@@ -295,12 +355,13 @@ def day_counts(series):
     # dont affect the original data
     series = series.copy()
 
-    series.iloc[:-1] = (series.index[1:] - series.index[:-1]).days
-    series.iloc[-1] = np.nan
-    return series
+    timedeltas = (series.index[1:] - series.index[:-1]).append(pd.TimedeltaIndex([pd.NaT]))
+    timedelta_days = timedeltas.total_seconds() / (60 * 60 * 24)
+
+    return pd.Series(timedelta_days, index=series.index)
 
 
-def get_baseline_data(data, start=None, end=None, max_days=365):
+def get_baseline_data(data, start=None, end=None, max_days=365, whole_periods=True):
     ''' Filter down to baseline period data.
 
     Parameters
@@ -309,15 +370,15 @@ def get_baseline_data(data, start=None, end=None, max_days=365):
         The data to filter to baseline data. This data will be filtered down
         to an acceptable baseline period according to the dates passed as
         `start` and `end`, or the maximum period specified with `max_days`.
-    start : datetime.datetime
+    start : :any:`datetime.datetime`
         A timezone-aware datetime that represents the earliest allowable start
         date for the baseline data. The stricter of this or `max_days` is used
         to determine the earliest allowable baseline period date.
-    end : datetime.datetime
+    end : :any:`datetime.datetime`
         A timezone-aware datetime that represents the latest allowable end
         date for the baseline data, i.e., the latest date for which data is
         available before the intervention begins.
-    max_days : int
+    max_days : :any:`int`
         The maximum length of the period. Ignored if `end` is not set.
         The stricter of this or `start` is used to determine the earliest
         allowable baseline period date.
@@ -328,28 +389,60 @@ def get_baseline_data(data, start=None, end=None, max_days=365):
         Data for only the specified baseline period.
     '''
 
+    start_inf = False
     if start is None:
         # py datetime min/max are out of range of pd.Timestamp min/max
         start = pytz.UTC.localize(pd.Timestamp.min)
+        start_inf = True
 
+    end_inf = False
     if end is None:
         end = pytz.UTC.localize(pd.Timestamp.max)
+        end_inf = True
     else:
         if max_days is not None:
             min_start = end - timedelta(days=max_days)
             if start < min_start:
                 start = min_start
 
-    baseline_data = data[start:end]
+    warnings = []
+    # warn if there is a gap at end
+    data_end = data.index.max()
+    if not end_inf and data_end < end:
+        warnings.append(EEMeterWarning(
+            qualified_name='eemeter.get_baseline_data.gap_at_baseline_end',
+            description=(
+                'Data does not have coverage at requested baseline end date.'
+            ),
+            data={
+                'requested_end': end.isoformat(),
+                'data_end': data_end.isoformat(),
+            },
+        ))
 
-    # TODO(philngo): report warnings about gaps at end
+    # warn if there is a gap at start
+    data_start = data.index.min()
+    if not start_inf and start < data_start:
+        warnings.append(EEMeterWarning(
+            qualified_name='eemeter.get_baseline_data.gap_at_baseline_start',
+            description=(
+                'Data does not have coverage at requested baseline start date.'
+            ),
+            data={
+                'requested_start': start.isoformat(),
+                'data_start': data_start.isoformat(),
+            },
+        ))
 
-    # TODO(philngo): should this be a minimum of two or three datapoints to
-    # prevent fitting errors?
+    # copying prevents setting on slice warnings
+    baseline_data = data[start:end].copy()
+
     if baseline_data.empty:
         raise NoBaselineDataError()
 
-    return baseline_data
+    baseline_data.iloc[-1] = np.nan
+
+    return baseline_data, warnings
 
 
 def get_reporting_data(data, start=None, end=None, max_days=365):
@@ -379,26 +472,60 @@ def get_reporting_data(data, start=None, end=None, max_days=365):
     reporting_data : :any:`pandas.DataFrame`
         Data for only the specified reporting period.
     '''
+    # TODO(philngo): use default max_days None? Maybe too symmetrical with
+    # get_baseline_data?
 
-    # TODO(philngo): report warnings about gaps at start
-
+    end_inf = False
     if end is None:
         # py datetime min/max are out of range of pd.Timestamp min/max
         end = pytz.UTC.localize(pd.Timestamp.max)
+        end_inf = True
 
+    start_inf = False
     if start is None:
         start = pytz.UTC.localize(pd.Timestamp.min)
+        start_inf = True
     else:
         if max_days is not None:
             max_end = start + timedelta(days=max_days)
             if end > max_end:
                 end = max_end
 
-    reporting_data = data[start:end]
+    warnings = []
+    # warn if there is a gap at end
+    data_end = data.index.max()
+    if not end_inf and data_end < end:
+        warnings.append(EEMeterWarning(
+            qualified_name='eemeter.get_reporting_data.gap_at_reporting_end',
+            description=(
+                'Data does not have coverage at requested reporting end date.'
+            ),
+            data={
+                'requested_end': end.isoformat(),
+                'data_end': data_end.isoformat(),
+            },
+        ))
 
-    # TODO(philngo): should this be a minimum of two or three datapoints to
-    # prevent fitting errors?
+    # warn if there is a gap at start
+    data_start = data.index.min()
+    if not start_inf and start < data_start:
+        warnings.append(EEMeterWarning(
+            qualified_name='eemeter.get_reporting_data.gap_at_reporting_start',
+            description=(
+                'Data does not have coverage at requested reporting start date.'
+            ),
+            data={
+                'requested_start': start.isoformat(),
+                'data_start': data_start.isoformat(),
+            },
+        ))
+
+    # copying prevents setting on slice warnings
+    reporting_data = data[start:end].copy()
+
     if reporting_data.empty:
         raise NoReportingDataError()
 
-    return reporting_data
+    reporting_data.iloc[-1] = np.nan
+
+    return reporting_data, warnings
