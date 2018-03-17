@@ -39,7 +39,7 @@ def test_plot_energy_signature(il_electricity_cdd_hdd_daily):
     assert ax.get_title() == 'title'
 
 
-def test_plot_caltrack_kcandidate_qualified(predict_func):
+def test_plot_caltrack_candidate_qualified(predict_func):
     candidate_model = CandidateModel(
         model_type='model_type',
         formula='formula',

@@ -16,48 +16,31 @@ def sample_metadata():
     return metadata
 
 
-@pytest.fixture
-def il_electricity_cdd_hdd_hourly():
-    meter_data, temperature_data, metadata = \
-        load_sample('il-electricity-cdd-hdd-hourly')
+def _from_sample(sample):
+    meter_data, temperature_data, metadata = load_sample(sample)
     return {
         'meter_data': meter_data,
         'temperature_data': temperature_data,
         'blackout_start_date': metadata['blackout_start_date'],
         'blackout_end_date': metadata['blackout_end_date'],
     }
+
+
+@pytest.fixture
+def il_electricity_cdd_hdd_hourly():
+    return _from_sample('il-electricity-cdd-hdd-hourly')
 
 
 @pytest.fixture
 def il_electricity_cdd_hdd_daily():
-    meter_data, temperature_data, metadata = \
-        load_sample('il-electricity-cdd-hdd-daily')
-    return {
-        'meter_data': meter_data,
-        'temperature_data': temperature_data,
-        'blackout_start_date': metadata['blackout_start_date'],
-        'blackout_end_date': metadata['blackout_end_date'],
-    }
+    return _from_sample('il-electricity-cdd-hdd-daily')
 
 
 @pytest.fixture
 def il_electricity_cdd_hdd_billing_monthly():
-    meter_data, temperature_data, metadata = \
-        load_sample('il-electricity-cdd-hdd-billing_monthly')
-    return {
-        'meter_data': meter_data,
-        'temperature_data': temperature_data,
-        'blackout_start_date': metadata['blackout_start_date'],
-        'blackout_end_date': metadata['blackout_end_date'],
-    }
+    return _from_sample('il-electricity-cdd-hdd-billing_monthly')
+
 
 @pytest.fixture
 def il_electricity_cdd_hdd_billing_bimonthly():
-    meter_data, temperature_data, metadata = \
-        load_sample('il-electricity-cdd-hdd-billing_bimonthly')
-    return {
-        'meter_data': meter_data,
-        'temperature_data': temperature_data,
-        'blackout_start_date': metadata['blackout_start_date'],
-        'blackout_end_date': metadata['blackout_end_date'],
-    }
+    return _from_sample('il-electricity-cdd-hdd-billing_bimonthly')
