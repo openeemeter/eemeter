@@ -26,9 +26,16 @@ class CaltrackMonthlyModel(object):
     '''
     def __init__(
             self, fit_cdd=True, grid_search=False,
+            cdd_candidate_bp_range=range(65, 76),
+            hdd_candidate_bp_range=range(55, 66),
+            cdd_fixed_bp=70.,
+            hdd_fixed_bp=60.,
             min_contiguous_baseline_months=12,
             min_contiguous_reporting_months=12,
+            max_baseline_months=None,
+            max_reporting_months=None,
             modeling_period_interpretation='baseline',
+            pvalue_cutoff=0.1,
             weighted=False, **kwargs):  # ignore extra args
         self.fit_cdd = fit_cdd
         self.grid_search = grid_search
@@ -45,14 +52,17 @@ class CaltrackMonthlyModel(object):
         self.fit_bp_hdd, self.fit_bp_cdd = None, None
         self.min_contiguous_baseline_months = min_contiguous_baseline_months
         self.min_contiguous_reporting_months = min_contiguous_reporting_months
+        self.max_baseline_months = max_baseline_months
+        self.max_reporting_months = max_reporting_months
         self.modeling_period_interpretation = modeling_period_interpretation
+        self.pvalue_cutoff = pvalue_cutoff
         self.weighted = weighted
 
         if grid_search:
-            self.bp_cdd = range(65, 76)
-            self.bp_hdd = range(55, 66)
+            self.bp_cdd = cdd_candidate_bp_range
+            self.bp_hdd = hdd_candidate_bp_range
         else:
-            self.bp_cdd, self.bp_hdd = [70, ], [60, ]
+            self.bp_cdd, self.bp_hdd = [cdd_fixed_bp, ], [hdd_fixed_bp, ]
 
     def __repr__(self):
         return 'CaltrackMonthlyModel'
@@ -411,6 +421,20 @@ class CaltrackMonthlyModel(object):
         else:
             df = self.daily_to_monthly_avg(self.input_data)
 
+        if self.modeling_period_interpretation == 'baseline' and \
+           self.max_baseline_months is not None:
+            if np.isnan(df.ix[-1]['upd']):
+                df = df[-self.max_baseline_months - 1:]
+            else:
+                df = df[-self.max_baseline_months:]
+
+        if self.modeling_period_interpretation == 'reporting' and \
+           self.max_reporting_months is not None:
+            if np.isnan(df.ix[0]['upd']):
+                df = df[:self.max_reporting_months + 1]
+            else:
+                df = df[:self.max_reporting_months]
+
         self.meets_sufficiency_or_error(df)
 
         # Fit the intercept-only model
@@ -431,7 +455,7 @@ class CaltrackMonthlyModel(object):
                 cdd_rsquared,
                 cdd_qualified,
                 cdd_bp
-            ) = _fit_cdd_only(df, weighted=self.weighted)
+            ) = _fit_cdd_only(df, weighted=self.weighted, pvalue_cutoff=self.pvalue_cutoff)
         else:
             cdd_formula = None
             cdd_mod = None
@@ -448,7 +472,7 @@ class CaltrackMonthlyModel(object):
             hdd_rsquared,
             hdd_qualified,
             hdd_bp
-        ) = _fit_hdd_only(df, weighted=self.weighted)
+        ) = _fit_hdd_only(df, weighted=self.weighted, pvalue_cutoff=self.pvalue_cutoff)
 
         # CDD+HDD
         if self.fit_cdd:
@@ -460,7 +484,7 @@ class CaltrackMonthlyModel(object):
                 full_qualified,
                 full_hdd_bp,
                 full_cdd_bp
-            ) = _fit_full(df, weighted=self.weighted)
+            ) = _fit_full(df, weighted=self.weighted, pvalue_cutoff=self.pvalue_cutoff)
         else:
             full_formula = None
             full_mod = None
