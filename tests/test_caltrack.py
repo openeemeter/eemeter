@@ -1402,17 +1402,17 @@ def test_caltrack_modeled_savings_cdd_hdd_with_disaggregated(
         reporting_temperature_data, degree_day_method='daily',
         with_disaggregated=True
     )
-    assert list(results.columns) == [
-        'modeled_baseline_usage',
-        'modeled_reporting_usage',
-        'modeled_savings',
+    assert list(sorted(results.columns)) == [
+        'modeled_base_load_savings',
         'modeled_baseline_base_load',
         'modeled_baseline_cooling_load',
         'modeled_baseline_heating_load',
+        'modeled_baseline_usage',
+        'modeled_cooling_load_savings',
+        'modeled_heating_load_savings',
         'modeled_reporting_base_load',
         'modeled_reporting_cooling_load',
         'modeled_reporting_heating_load',
-        'modeled_base_load_savings',
-        'modeled_heating_load_savings',
-        'modeled_cooling_load_savings'
+        'modeled_reporting_usage',
+        'modeled_savings',
     ]
