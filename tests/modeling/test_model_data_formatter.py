@@ -66,7 +66,7 @@ def test_basic_daily(daily_trace, mock_isd_weather_source):
     assert df.index[0] == datetime(2000, 1, 1, tzinfo=pytz.UTC)
     assert df.index[2] == datetime(2000, 1, 3, tzinfo=pytz.UTC)
     assert df.index.freq == 'D'
-    assert_allclose(df.energy, [1, 1, np.nan])
+    assert_allclose(df.energy, [1, 1, 0.])
     assert_allclose(df.tempF, [35.507344, 35.282373, 35.064391])
 
     description = mdf.describe_input(df)
@@ -78,7 +78,7 @@ def test_basic_daily(daily_trace, mock_isd_weather_source):
 
     missing = mdf.get_input_data_mask(df)
     assert missing.shape[0] == 3
-    assert missing.sum() == 1
+    assert missing.sum() == 0
 
     daily = mdf.daily_trace_data(daily_trace)
     assert daily.shape[0] == 3
@@ -94,7 +94,7 @@ def test_basic_hourly(hourly_trace, mock_isd_weather_source):
     assert df.index[0] == datetime(2000, 1, 1, 0, tzinfo=pytz.UTC)
     assert df.index[2] == datetime(2000, 1, 1, 2, tzinfo=pytz.UTC)
     assert df.index.freq == 'H'
-    assert_allclose(df.energy, [1, 1, np.nan])
+    assert_allclose(df.energy, [1, 1, 0])
     assert_allclose(df.tempF, [35.617314, 35.607664, 35.598025])
 
     description = mdf.describe_input(df)
@@ -106,7 +106,7 @@ def test_basic_hourly(hourly_trace, mock_isd_weather_source):
 
     missing = mdf.get_input_data_mask(df)
     assert missing.shape == (3,)
-    assert sum(missing) == 1
+    assert sum(missing) == 0
 
     daily = mdf.daily_trace_data(hourly_trace)
     assert daily.shape[0] == 1
