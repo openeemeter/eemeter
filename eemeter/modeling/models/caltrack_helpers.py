@@ -19,7 +19,7 @@ def _fit_intercept(df, weighted=False):
     return int_formula, int_mod, int_res, int_rsquared, int_qualified
 
 
-def _fit_cdd_only(df, weighted=False):
+def _fit_cdd_only(df, weighted=False, billing=False):
 
     bps = [i[4:] for i in df.columns if i[:3] == 'CDD']
     best_bp, best_rsquared, best_mod, best_res = None, -9e9, None, None
@@ -28,9 +28,10 @@ def _fit_cdd_only(df, weighted=False):
     try:  # TODO: fix big try block anti-pattern
         for bp in bps:
             candidate_cdd_formula = 'upd ~ CDD_' + bp
-            if (np.nansum(df['CDD_' + bp] > 0) < 10) or \
-               (np.nansum(df['CDD_' + bp]) < 20):
-                continue
+            if not billing:
+                if (np.nansum(df['CDD_' + bp] > 0) < 10) or \
+                   (np.nansum(df['CDD_' + bp]) < 20):
+                    continue
             if weighted:
                 candidate_cdd_mod = smf.wls(formula=candidate_cdd_formula, data=df,
                                             weights=df['ndays'])
@@ -54,7 +55,7 @@ def _fit_cdd_only(df, weighted=False):
     return best_formula, best_mod, best_res, best_rsquared, cdd_qualified, best_bp
 
 
-def _fit_hdd_only(df, weighted=False):
+def _fit_hdd_only(df, weighted=False, billing=False):
 
     bps = [i[4:] for i in df.columns if i[:3] == 'HDD']
     best_bp, best_rsquared, best_mod, best_res = None, -9e9, None, None
@@ -63,9 +64,10 @@ def _fit_hdd_only(df, weighted=False):
     try:  # TODO: fix big try block anti-pattern
         for bp in bps:
             candidate_hdd_formula = 'upd ~ HDD_' + bp
-            if (np.nansum(df['HDD_' + bp] > 0) < 10) or \
-               (np.nansum(df['HDD_' + bp]) < 20):
-                continue
+            if not billing:
+                if (np.nansum(df['HDD_' + bp] > 0) < 10) or \
+                   (np.nansum(df['HDD_' + bp]) < 20):
+                    continue
             if weighted:
                 candidate_hdd_mod = smf.wls(formula=candidate_hdd_formula, data=df,
                                             weights=df['ndays'])
@@ -89,7 +91,7 @@ def _fit_hdd_only(df, weighted=False):
     return best_formula, best_mod, best_res, best_rsquared, hdd_qualified, best_bp
 
 
-def _fit_full(df, weighted=False):
+def _fit_full(df, weighted=False, billing=False):
 
     hdd_bps = [i[4:] for i in df.columns if i[:3] == 'HDD']
     cdd_bps = [i[4:] for i in df.columns if i[:3] == 'CDD']
@@ -105,12 +107,13 @@ def _fit_full(df, weighted=False):
                     continue
                 candidate_full_formula = 'upd ~ CDD_' + cdd_bp + \
                                          ' + HDD_' + hdd_bp
-                if (np.nansum(df['HDD_' + hdd_bp] > 0) < 10) or \
-                   (np.nansum(df['HDD_' + hdd_bp]) < 20):
-                    continue
-                if (np.nansum(df['CDD_' + cdd_bp] > 0) < 10) or \
-                   (np.nansum(df['CDD_' + cdd_bp]) < 20):
-                    continue
+                if not billing:
+                    if (np.nansum(df['HDD_' + hdd_bp] > 0) < 10) or \
+                       (np.nansum(df['HDD_' + hdd_bp]) < 20):
+                        continue
+                    if (np.nansum(df['CDD_' + cdd_bp] > 0) < 10) or \
+                       (np.nansum(df['CDD_' + cdd_bp]) < 20):
+                        continue
                 if weighted:
                     candidate_full_mod = smf.wls(formula=candidate_full_formula, data=df,
                                                  weights=df['ndays'])

@@ -431,7 +431,7 @@ class CaltrackMonthlyModel(object):
                 cdd_rsquared,
                 cdd_qualified,
                 cdd_bp
-            ) = _fit_cdd_only(df, weighted=self.weighted)
+            ) = _fit_cdd_only(df, weighted=self.weighted, billing=True)
         else:
             cdd_formula = None
             cdd_mod = None
@@ -448,7 +448,7 @@ class CaltrackMonthlyModel(object):
             hdd_rsquared,
             hdd_qualified,
             hdd_bp
-        ) = _fit_hdd_only(df, weighted=self.weighted)
+        ) = _fit_hdd_only(df, weighted=self.weighted, billing=True)
 
         # CDD+HDD
         if self.fit_cdd:
@@ -460,7 +460,7 @@ class CaltrackMonthlyModel(object):
                 full_qualified,
                 full_hdd_bp,
                 full_cdd_bp
-            ) = _fit_full(df, weighted=self.weighted)
+            ) = _fit_full(df, weighted=self.weighted, billing=True)
         else:
             full_formula = None
             full_mod = None
