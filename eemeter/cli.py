@@ -20,6 +20,11 @@ from eemeter.processors.dispatchers import (
 )
 from eemeter.modeling.models.caltrack import CaltrackMonthlyModel
 
+logger = logging.getLogger(__name__)
+
+EXIT_CODE_SUCCESS = 0  # on Linux and 'most systems' exit status of 0 means success.
+EXIT_CODE_FAILURE = 1
+
 
 logging.basicConfig()
 
@@ -415,7 +420,8 @@ def sample(full_output, output_dir):
     options = {'full_output': full_output, 'output_dir': output_dir}
     print("Going to analyze the sample data set")
     print("")
-    _analyze(sample_inputs_path, options)
+    sample_result = _analyze(sample_inputs_path, options)
+    return EXIT_CODE_SUCCESS if sample_result else EXIT_CODE_FAILURE
 
 
 @cli.command()
