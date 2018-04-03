@@ -51,7 +51,7 @@ We use docker for development. To get started with docker, see
 Fork and clone a local copy of the repository::
 
     $ git clone git@github.com:YOURUSERNAME/eemeter.git eemeter
-    $ cd scipy
+    $ cd eemeter
     $ git remote add upstream git://github.com/openeemeter/eemeter.git
 
 Then try one of the following:
