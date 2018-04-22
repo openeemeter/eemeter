@@ -226,7 +226,7 @@ class HourlyDayOfWeekModel(object):
 
         # A series DS
         prediction = pd.concat([weekday_pred, weekend_pred])
-        prediction.sort_index()
+        prediction.sort_index(inplace=True)
 
         # A Series DS
         variance = self.compute_variance(test_df)
