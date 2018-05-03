@@ -1037,10 +1037,15 @@ def caltrack_method(
 
 def caltrack_sufficiency_criteria(
     data_quality, requested_start, requested_end, min_days=365,
-    min_fraction_daily_coverage=0.9,
+    min_fraction_daily_coverage=0.9,  # TODO: needs to be per year
     min_fraction_daily_temperature_hourly_coverage=0.9,
 ):
     '''CalTRACK daily data sufficiency criteria.
+
+    .. note::
+
+        For CalTRACK compliance, ``min_fraction_daily_coverage`` must be set
+        at ``0.9`` (section 2.2.1.2).
 
     Parameters
     ----------

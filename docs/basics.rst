@@ -167,7 +167,11 @@ ranges, you can use the following::
 Running the CalTRACK methods
 ----------------------------
 
-End-to-end running CalTRACK methods.
+.. note::
+
+    For complete compliance with CalTRACK methods, please ensure that input
+    data meets requirements in section 2.1 of the CalTRACK methods
+    specification and uses settings defined in :doc:`caltrack_compliance`.
 
 To run the CalTRACK daily or billing methods, you need a :any:`pandas.DataFrame` with
 the following columns:
