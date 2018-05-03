@@ -1038,7 +1038,7 @@ def caltrack_method(
 def caltrack_sufficiency_criteria(
     data_quality, requested_start, requested_end, min_days=365,
     min_fraction_daily_coverage=0.9,
-    min_fraction_daily_temperature_hourly_coverage=0.9,
+    min_fraction_hourly_temperature_coverage_per_period=0.9,
 ):
     '''CalTRACK daily data sufficiency criteria.
 
@@ -1065,10 +1065,10 @@ def caltrack_sufficiency_criteria(
     min_fraction_daily_coverage : :any:, optional
         Minimum fraction of days of data in total data extent for which data
         must be available.
-    min_fraction_daily_temperature_hourly_coverage=0.9,
+    min_fraction_hourly_temperature_coverage_per_period=0.9,
         Minimum fraction of hours of temperature data coverage in a particular
-        day. Anything below this number and the whole day is considered
-        invalid.
+        period. Anything below this causes the whole period to be considered
+        considered missing.
 
     Returns
     -------
@@ -1165,14 +1165,18 @@ def caltrack_sufficiency_criteria(
 
     # TODO(philngo): detect and report unsorted or repeated values.
 
+    # create masks showing which daily or billing periods meet criteria
     valid_meter_value_rows = data_quality.meter_value.notnull()
     valid_temperature_rows = (
         data_quality.temperature_not_null /
         (data_quality.temperature_not_null + data_quality.temperature_null)
-    ) > min_fraction_daily_temperature_hourly_coverage
+    ) > min_fraction_hourly_temperature_coverage_per_period
     valid_rows = valid_meter_value_rows & valid_temperature_rows
+
+    # get number of days per period - for daily this should be a series of ones
     row_day_counts = day_counts(data_quality.meter_value)
 
+    # apply masks, giving total
     n_valid_meter_value_days = int((valid_meter_value_rows * row_day_counts).sum())
     n_valid_temperature_days = int((valid_temperature_rows * row_day_counts).sum())
     n_valid_days = int((valid_rows * row_day_counts).sum())
@@ -1262,8 +1266,8 @@ def caltrack_sufficiency_criteria(
         settings={
             'min_days': min_days,
             'min_fraction_daily_coverage': min_fraction_daily_coverage,
-            'min_fraction_daily_temperature_hourly_coverage':
-                min_fraction_daily_temperature_hourly_coverage,
+            'min_fraction_hourly_temperature_coverage_per_period':
+                min_fraction_hourly_temperature_coverage_per_period,
         }
     )
 

@@ -1011,7 +1011,7 @@ def test_caltrack_sufficiency_criteria_pass():
     data_sufficiency = caltrack_sufficiency_criteria(
         data_quality, requested_start, requested_end, min_days=1,
         min_fraction_daily_coverage=0.9,
-        min_fraction_daily_temperature_hourly_coverage=0.9,
+        min_fraction_hourly_temperature_coverage_per_period=0.9,
     )
     assert data_sufficiency.status == 'PASS'
     assert data_sufficiency.criteria_name == (
@@ -1021,7 +1021,7 @@ def test_caltrack_sufficiency_criteria_pass():
     assert data_sufficiency.settings == {
         'min_days': 1,
         'min_fraction_daily_coverage': 0.9,
-        'min_fraction_daily_temperature_hourly_coverage': 0.9
+        'min_fraction_hourly_temperature_coverage_per_period': 0.9
     }
 
 
@@ -1038,7 +1038,7 @@ def test_caltrack_sufficiency_criteria_fail_no_gap():
     data_sufficiency = caltrack_sufficiency_criteria(
         data_quality, requested_start, requested_end, min_days=3,
         min_fraction_daily_coverage=0.9,
-        min_fraction_daily_temperature_hourly_coverage=0.9,
+        min_fraction_hourly_temperature_coverage_per_period=0.9,
     )
     assert data_sufficiency.status == 'FAIL'
     assert data_sufficiency.criteria_name == (
@@ -1101,7 +1101,7 @@ def test_caltrack_sufficiency_criteria_pass_no_requested_start_end():
     data_sufficiency = caltrack_sufficiency_criteria(
         data_quality, None, None, min_days=1,
         min_fraction_daily_coverage=0.9,
-        min_fraction_daily_temperature_hourly_coverage=0.9,
+        min_fraction_hourly_temperature_coverage_per_period=0.9,
     )
     assert data_sufficiency.status == 'PASS'
     assert data_sufficiency.criteria_name == (
@@ -1123,7 +1123,7 @@ def test_caltrack_sufficiency_criteria_fail_with_requested_start_end():
     data_sufficiency = caltrack_sufficiency_criteria(
         data_quality, requested_start, requested_end, min_days=2,
         min_fraction_daily_coverage=0.9,
-        min_fraction_daily_temperature_hourly_coverage=0.9,
+        min_fraction_hourly_temperature_coverage_per_period=0.9,
     )
     assert data_sufficiency.status == 'FAIL'
     assert data_sufficiency.criteria_name == (
@@ -1178,7 +1178,7 @@ def test_caltrack_sufficiency_criteria_too_much_data():
     data_sufficiency = caltrack_sufficiency_criteria(
         data_quality, requested_start, requested_end, min_days=2,
         min_fraction_daily_coverage=0.9,
-        min_fraction_daily_temperature_hourly_coverage=0.9,
+        min_fraction_hourly_temperature_coverage_per_period=0.9,
     )
     assert data_sufficiency.status == 'PASS'
     assert len(data_sufficiency.warnings) == 2
@@ -1221,7 +1221,7 @@ def test_caltrack_sufficiency_criteria_negative_values():
     data_sufficiency = caltrack_sufficiency_criteria(
         data_quality, None, None, min_days=1,
         min_fraction_daily_coverage=0.9,
-        min_fraction_daily_temperature_hourly_coverage=0.9,
+        min_fraction_hourly_temperature_coverage_per_period=0.9,
     )
     assert data_sufficiency.status == 'FAIL'
     assert len(data_sufficiency.warnings) == 1
@@ -1249,7 +1249,7 @@ def test_caltrack_sufficiency_criteria_handle_single_input():
     data_sufficiency = caltrack_sufficiency_criteria(
         data_quality, None, None, min_days=0,
         min_fraction_daily_coverage=0.9,
-        min_fraction_daily_temperature_hourly_coverage=0.9,
+        min_fraction_hourly_temperature_coverage_per_period=0.9,
     )
 
     assert data_sufficiency.status == 'FAIL'
