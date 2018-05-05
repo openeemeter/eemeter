@@ -1045,7 +1045,10 @@ def caltrack_sufficiency_criteria(
     .. note::
 
         For CalTRACK compliance, ``min_fraction_daily_coverage`` must be set
-        at ``0.9`` (section 2.2.1.2).
+        at ``0.9`` (section 2.2.1.2), and requested_start and requested_end must
+        not be None (section 2.2.4).
+
+    TODO: add warning for outliers (CalTrack 2.3.6)
 
     Parameters
     ----------
@@ -1115,6 +1118,7 @@ def caltrack_sufficiency_criteria(
 
     non_critical_warnings = []
     if n_days_end_gap < 0:
+        # CalTRACK 2.2.4
         non_critical_warnings.append(EEMeterWarning(
             qualified_name=(
                 'eemeter.caltrack_sufficiency_criteria'
@@ -1131,6 +1135,7 @@ def caltrack_sufficiency_criteria(
         n_days_end_gap = 0
 
     if n_days_start_gap < 0:
+        # CalTRACK 2.2.4
         non_critical_warnings.append(EEMeterWarning(
             qualified_name=(
                 'eemeter.caltrack_sufficiency_criteria'
@@ -1154,6 +1159,7 @@ def caltrack_sufficiency_criteria(
         data_quality.meter_value[data_quality.meter_value < 0].shape[0]
 
     if n_negative_meter_values > 0:
+        #CalTrack 2.3.5
         critical_warnings.append(EEMeterWarning(
             qualified_name=(
                 'eemeter.caltrack_sufficiency_criteria'

@@ -153,7 +153,10 @@ def merge_temperature_data(
     .. note::
 
         For CalTRACK compliance, ``percent_hourly_coverage_per_day`` must be
-        set to ``0.5`` (section 2.2.2.3).
+        set to ``0.5`` (section 2.2.2.3), cooling_balance_points must be
+        range(30,90,X) and heating_balance_points must be range(30,90,X)
+        where X is either 1, 2, or 3. For natural gas meter use data,
+        the cooling_balance_points should be None.
 
     Parameters
     ----------
@@ -288,6 +291,7 @@ def remove_duplicates(df_or_series):
     deduplicated : :any:`pandas.DataFrame` or :any:`pandas.Series`
         The deduplicated pandas object.
     '''
+    # CalTrack 2.3.2.2
     return df_or_series[~df_or_series.index.duplicated(keep='first')]
 
 
