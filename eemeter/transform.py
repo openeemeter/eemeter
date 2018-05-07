@@ -385,8 +385,8 @@ def get_baseline_data(data, start=None, end=None, max_days=365):
 
     Returns
     -------
-    baseline_data : :any:`pandas.DataFrame`
-        Data for only the specified baseline period.
+    baseline_data, warnings : :any:`tuple` of (:any:`pandas.DataFrame` or :any:`pandas.Series`, :any:`list` of :any:`eemeter.EEMeterWarning`)
+        Data for only the specified baseline period and any associated warnings.
     '''
 
     start_inf = False
@@ -469,8 +469,8 @@ def get_reporting_data(data, start=None, end=None, max_days=365):
 
     Returns
     -------
-    reporting_data : :any:`pandas.DataFrame`
-        Data for only the specified reporting period.
+    reporting_data, warnings : :any:`tuple` of (:any:`pandas.DataFrame` or :any:`pandas.Series`, :any:`list` of :any:`eemeter.EEMeterWarning`)
+        Data for only the specified reporting period and any associated warnings.
     '''
     # TODO(philngo): use default max_days None? Maybe too symmetrical with
     # get_baseline_data?
