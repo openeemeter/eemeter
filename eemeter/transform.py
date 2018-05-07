@@ -308,7 +308,7 @@ def as_freq(meter_data_series, freq, atomic_freq='1 Min'):
     Parameters
     ----------
     meter_data_series : :any:`pandas.Series`
-        Meter data to resample. should have a :any:`pandas.DatetimeIndex`.
+        Meter data to resample. Should have a :any:`pandas.DatetimeIndex`.
     freq : :any:`str`
         The frequency to resample to. This should be given in a form recognized
         by the :any:`pandas.Series.resample` method.
