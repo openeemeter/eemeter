@@ -361,7 +361,7 @@ def day_counts(series):
     return pd.Series(timedelta_days, index=series.index)
 
 
-def get_baseline_data(data, start=None, end=None, max_days=365, whole_periods=True):
+def get_baseline_data(data, start=None, end=None, max_days=365):
     ''' Filter down to baseline period data.
 
     Parameters
