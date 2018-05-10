@@ -35,6 +35,12 @@ CalTRACK methods
 
 .. autofunction:: eemeter.get_parameter_p_value_too_high_warning
 
+.. autofunction:: eemeter.get_single_cdd_only_candidate_model
+
+.. autofunction:: eemeter.get_single_hdd_only_candidate_model
+
+.. autofunction:: eemeter.get_single_cdd_hdd_candidate_model
+
 .. autofunction:: eemeter.get_intercept_only_candidate_models
 
 .. autofunction:: eemeter.get_cdd_only_candidate_models
