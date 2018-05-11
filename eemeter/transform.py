@@ -350,7 +350,7 @@ def as_freq(meter_data_series, freq, atomic_freq='1 Min'):
     Parameters
     ----------
     meter_data_series : :any:`pandas.Series`
-        Meter data to resample. should have a :any:`pandas.DatetimeIndex`.
+        Meter data to resample. Should have a :any:`pandas.DatetimeIndex`.
     freq : :any:`str`
         The frequency to resample to. This should be given in a form recognized
         by the :any:`pandas.Series.resample` method.
@@ -404,7 +404,7 @@ def day_counts(series):
     return pd.Series(timedelta_days, index=series.index)
 
 
-def get_baseline_data(data, start=None, end=None, max_days=365, whole_periods=True):
+def get_baseline_data(data, start=None, end=None, max_days=365):
     ''' Filter down to baseline period data.
 
     .. note::
@@ -432,8 +432,8 @@ def get_baseline_data(data, start=None, end=None, max_days=365, whole_periods=Tr
 
     Returns
     -------
-    baseline_data : :any:`pandas.DataFrame`
-        Data for only the specified baseline period.
+    baseline_data, warnings : :any:`tuple` of (:any:`pandas.DataFrame` or :any:`pandas.Series`, :any:`list` of :any:`eemeter.EEMeterWarning`)
+        Data for only the specified baseline period and any associated warnings.
     '''
 
     start_inf = False
@@ -516,8 +516,8 @@ def get_reporting_data(data, start=None, end=None, max_days=365):
 
     Returns
     -------
-    reporting_data : :any:`pandas.DataFrame`
-        Data for only the specified reporting period.
+    reporting_data, warnings : :any:`tuple` of (:any:`pandas.DataFrame` or :any:`pandas.Series`, :any:`list` of :any:`eemeter.EEMeterWarning`)
+        Data for only the specified reporting period and any associated warnings.
     '''
     # TODO(philngo): use default max_days None? Maybe too symmetrical with
     # get_baseline_data?
