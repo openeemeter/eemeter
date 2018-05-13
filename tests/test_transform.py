@@ -31,8 +31,11 @@ def test_merge_temperature_data_hourly_temp_mean(il_electricity_cdd_hdd_hourly):
     temperature_data = il_electricity_cdd_hdd_hourly['temperature_data']['2016-03-01':'2016-07-01']
     df = merge_temperature_data(
         meter_data, temperature_data)
-    assert df.shape == (2952, 2)
-    assert list(df.columns) == ['meter_value', 'temperature_mean']
+    assert df.shape == (2952, 4)
+    assert list(df.columns) == [
+        'meter_value', 'temperature_mean', 'n_days_dropped', 'n_days_kept',
+    ]
+
     assert round(df.meter_value.sum()) == round(meter_data.value.sum()) == 2914.0
     assert round(df.temperature_mean.mean()) == 62.0
 
@@ -139,9 +142,10 @@ def test_merge_temperature_data_hourly_data_quality(il_electricity_cdd_hdd_hourl
         meter_data, temperature_data, temperature_mean=False,
         data_quality=True,
     )
-    assert df.shape == (2952, 3)
+    assert df.shape == (2952, 5)
     assert list(df.columns) == [
         'meter_value', 'temperature_not_null', 'temperature_null',
+        'n_days_dropped', 'n_days_kept',
     ]
     assert round(df.meter_value.sum()) == round(meter_data.value.sum()) == 2914.0
     assert round(df.temperature_not_null.mean(), 2) == 1.0
@@ -152,8 +156,11 @@ def test_merge_temperature_data_daily_temp_mean(il_electricity_cdd_hdd_daily):
     meter_data = il_electricity_cdd_hdd_daily['meter_data']
     temperature_data = il_electricity_cdd_hdd_daily['temperature_data']
     df = merge_temperature_data(meter_data, temperature_data)
-    assert df.shape == (810, 2)
-    assert list(df.columns) == ['meter_value', 'temperature_mean']
+    assert df.shape == (810, 4)
+    assert list(df.columns) == [
+        'meter_value', 'temperature_mean', 'n_days_dropped', 'n_days_kept',
+    ]
+
     assert round(df.meter_value.sum()) == round(meter_data.value.sum()) == 21926.0
     assert round(df.temperature_mean.mean()) == 55.0
 
@@ -170,8 +177,8 @@ def test_merge_temperature_data_daily_daily_degree_days(il_electricity_cdd_hdd_d
     )
     assert df.shape == (810, 7)
     assert list(sorted(df.columns)) == [
-        'cdd_65', 'cdd_66', 'hdd_60', 'hdd_61', 'meter_value', 'n_days_dropped',
-        'n_days_kept',
+        'cdd_65', 'cdd_66', 'hdd_60', 'hdd_61', 'meter_value',
+        'n_days_dropped', 'n_days_kept',
     ]
     assert round(df.meter_value.sum()) == round(meter_data.value.sum()) == 21926.0
     assert round(df.hdd_60.mean(), 2) == 11.05
@@ -280,9 +287,10 @@ def test_merge_temperature_data_daily_data_quality(il_electricity_cdd_hdd_daily)
         temperature_mean=False,
         data_quality=True,
     )
-    assert df.shape == (810, 3)
+    assert df.shape == (810, 5)
     assert list(df.columns) == [
         'meter_value', 'temperature_not_null', 'temperature_null',
+        'n_days_dropped', 'n_days_kept',
     ]
     assert round(df.meter_value.sum()) == round(meter_data.value.sum()) == 21926.0
     assert round(df.temperature_not_null.mean(), 2) == 23.97
@@ -295,8 +303,10 @@ def test_merge_temperature_data_billing_monthly_temp_mean(
     meter_data = il_electricity_cdd_hdd_billing_monthly['meter_data']
     temperature_data = il_electricity_cdd_hdd_billing_monthly['temperature_data']
     df = merge_temperature_data(meter_data, temperature_data)
-    assert df.shape == (27, 2)
-    assert list(df.columns) == ['meter_value', 'temperature_mean']
+    assert df.shape == (27, 4)
+    assert list(df.columns) == [
+        'meter_value', 'temperature_mean', 'n_days_dropped', 'n_days_kept'
+    ]
     assert round(df.meter_value.sum()) == 703.0 != round(meter_data.value.sum())
     assert round(df.temperature_mean.mean()) == 55.0
 
@@ -427,9 +437,10 @@ def test_merge_temperature_data_billing_monthly_data_quality(
         temperature_mean=False,
         data_quality=True,
     )
-    assert df.shape == (27, 3)
+    assert df.shape == (27, 5)
     assert list(df.columns) == [
         'meter_value', 'temperature_not_null', 'temperature_null',
+        'n_days_dropped', 'n_days_kept',
     ]
     assert round(df.meter_value.sum()) == 703.0 != round(meter_data.value.sum())
     assert round(df.temperature_not_null.mean(), 2) == 729.23
@@ -441,8 +452,10 @@ def test_merge_temperature_data_billing_bimonthly_temp_mean(
     meter_data = il_electricity_cdd_hdd_billing_bimonthly['meter_data']
     temperature_data = il_electricity_cdd_hdd_billing_bimonthly['temperature_data']
     df = merge_temperature_data(meter_data, temperature_data)
-    assert df.shape == (14, 2)
-    assert list(df.columns) == ['meter_value', 'temperature_mean']
+    assert df.shape == (14, 4)
+    assert list(df.columns) == [
+        'meter_value', 'temperature_mean', 'n_days_dropped', 'n_days_kept'
+    ]
     assert round(df.meter_value.sum()) == 352.0 != round(meter_data.value.sum())
     assert round(df.temperature_mean.mean()) == 55.0
 
@@ -519,9 +532,10 @@ def test_merge_temperature_data_billing_bimonthly_data_quality(
         temperature_mean=False,
         data_quality=True,
     )
-    assert df.shape == (14, 3)
+    assert df.shape == (14, 5)
     assert list(df.columns) == [
         'meter_value', 'temperature_not_null', 'temperature_null',
+        'n_days_dropped', 'n_days_kept',
     ]
     assert round(df.meter_value.sum()) == 352.0 != round(meter_data.value.sum())
     assert round(df.temperature_not_null.mean(), 2) == 1478.77

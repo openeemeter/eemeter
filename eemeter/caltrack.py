@@ -1343,7 +1343,7 @@ def caltrack_metered_savings(
         reporting_data['n_days'] = (
             reporting_data.n_hours_kept + reporting_data.n_hours_dropped) / 24
 
-    counterfactual_usage = baseline_model.predict(reporting_data)\
+    counterfactual_usage = baseline_model.predict(reporting_data) \
         .rename('counterfactual_usage')
 
     def metered_savings_func(row):

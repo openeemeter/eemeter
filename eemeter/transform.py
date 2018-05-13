@@ -203,7 +203,6 @@ def merge_temperature_data(
         tolerance = pd.Timedelta(meter_data.index.freq)
 
     if not (heating_balance_points == [] and cooling_balance_points == []):
-
         if degree_day_method == 'hourly':
             pass
         elif degree_day_method == 'daily':
@@ -215,17 +214,17 @@ def merge_temperature_data(
         else:
             raise ValueError('method not supported: {}'.format(degree_day_method))
 
-        # heating/cooling degree day aggregations
-        temp_agg_funcs.extend(_degree_day_columns(
-            heating_balance_points=heating_balance_points,
-            cooling_balance_points=cooling_balance_points,
-            degree_day_method=degree_day_method,
-            percent_hourly_coverage_per_day=percent_hourly_coverage_per_day,
-            use_mean_daily_values=use_mean_daily_values,
-        ))
-        temp_agg_column_renames.update({
-            ('temp', 'degree_day_columns'): 'degree_day_columns',
-        })
+    # heating/cooling degree day aggregations. Needed for n_days fields as well.
+    temp_agg_funcs.extend(_degree_day_columns(
+        heating_balance_points=heating_balance_points,
+        cooling_balance_points=cooling_balance_points,
+        degree_day_method=degree_day_method,
+        percent_hourly_coverage_per_day=percent_hourly_coverage_per_day,
+        use_mean_daily_values=use_mean_daily_values,
+    ))
+    temp_agg_column_renames.update({
+        ('temp', 'degree_day_columns'): 'degree_day_columns',
+    })
 
     if data_quality:
         temp_agg_funcs.extend([
