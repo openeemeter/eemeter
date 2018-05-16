@@ -19,6 +19,13 @@ Dev Installation
     (eemeter)$ pip install -r dev_requirements.txt
     (eemeter)$ workon # gives you access to virtualenv py.test executable
 
+Docker Installation
+----------------
+
+    $ git clone https://github.com/openeemeter/eemeter
+    $ cd eemeter
+    $ docker-compose build
+
 Testing
 -------
 
@@ -26,6 +33,10 @@ This library uses the py.test framework. To develop locally, clone the repo,
 and in a virtual environment execute the following commands:
 
     $ py.test
+
+Alternatively, to run tests through docker, execute the following commands: 
+
+    $ docker-compose run test
 
 If you run into problems with the py.test executable, please ensure that you
 are using the virtualenv py.test:
