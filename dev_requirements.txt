@@ -15,3 +15,4 @@ xlrd==1.1.0
 numpy==1.13.3
 statsmodels==0.8.0
 notebook==5.2.1
+pytest-xdist==1.22.2
