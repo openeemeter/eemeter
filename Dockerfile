@@ -13,3 +13,5 @@ COPY eemeter/ /app/eemeter/
 COPY scripts/ /scripts/
 RUN set -ex && pip install -r dev_requirements.txt
 RUN set -ex && pip install -e /app
+
+WORKDIR /app
