@@ -142,7 +142,6 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
                         "{} performed initial fetch/cache of {} data."
                         .format(self, year)
                     )
-
             self.tempC = self._merge_series(self.tempC, new_series)
 
     def _get_cache_key(self, year):
@@ -177,7 +176,11 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
         if index.shape == (0,):
             return pd.Series([], index=index, dtype=float)
 
-        self._verify_index_presence(index)  # fetches weather data if needed
+        #self._verify_index_presence(index)  # fetches weather data if needed
+        years = sorted(index.groupby(index.year).keys())
+        start = pd.to_datetime(datetime(years[0],1,1), utc=True)
+        end = pd.to_datetime(datetime(years[-1],12,31,23,59), utc=True)
+        self.tempC = self._load_data(start, end)
 
         if index.freq is not None:
             freq = index.freq
@@ -363,6 +366,9 @@ class GSODWeatherSource(NOAAWeatherSourceBase):
     def _fetch_year(self, year):
         return self.client.get_gsod_data(self.station, year)
 
+    def _load_data(self, start, end):
+        return self.client.load_gsod_data_eeweather(
+            self.station, start, end)
 
 class ISDWeatherSource(NOAAWeatherSourceBase):
     ''' The :code:`ISDWeatherSource` draws weather data from the NOAA
@@ -425,6 +431,10 @@ class ISDWeatherSource(NOAAWeatherSourceBase):
 
     def _fetch_year(self, year):
         return self.client.get_isd_data(self.station, year)
+
+    def _load_data(self, start, end):
+        return self.client.load_isd_data_eeweather(
+            self.station, start, end)
 
     def _hourly_indexed_temperatures(self, index, unit):
         tempC = self.tempC.resample(self.freq).mean()[index]

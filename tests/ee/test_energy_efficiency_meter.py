@@ -11,6 +11,46 @@ from eemeter.weather import TMY3WeatherSource
 from eemeter.weather import ISDWeatherSource
 from eemeter.modeling.formatters import ModelDataBillingFormatter
 from eemeter.modeling.models import CaltrackMonthlyModel, CaltrackDailyModel
+from eeweather.testing import (
+    MockNOAAFTPConnectionProxy,
+    MockKeyValueStoreProxy,
+    MockTMY3RequestProxy,
+    MockCZ2010RequestProxy,
+)
+
+
+@pytest.fixture
+def monkeypatch_noaa_ftp(monkeypatch):
+    monkeypatch.setattr(
+        'eeweather.connections.noaa_ftp_connection_proxy',
+        MockNOAAFTPConnectionProxy()
+    )
+
+
+@pytest.fixture
+def monkeypatch_tmy3_request(monkeypatch):
+    monkeypatch.setattr(
+        'eeweather.connections.csv_request_proxy',
+        MockTMY3RequestProxy()
+    )
+
+
+@pytest.fixture
+def monkeypatch_cz2010_request(monkeypatch):
+    monkeypatch.setattr(
+        'eeweather.connections.csv_request_proxy',
+        MockCZ2010RequestProxy()
+    )
+
+
+@pytest.fixture
+def monkeypatch_key_value_store(monkeypatch):
+    key_value_store_proxy = MockKeyValueStoreProxy()
+    monkeypatch.setattr(
+        'eeweather.connections.key_value_store_proxy',
+        key_value_store_proxy
+    )
+
 
 
 @pytest.fixture
@@ -332,25 +372,9 @@ def meter_input_bad_zipcode(project_meter_input_bad_zipcode):
     return meter_input
 
 
-@pytest.fixture
-def mock_isd_weather_source():
-    tmp_url = "sqlite:///{}/weather_cache.db".format(tempfile.mkdtemp())
-    ws = ISDWeatherSource('722880', tmp_url)
-    ws.client = MockWeatherClient()
-    return ws
-
-
-@pytest.fixture
-def mock_tmy3_weather_source():
-    tmp_url = "sqlite:///{}/weather_cache.db".format(tempfile.mkdtemp())
-    ws = TMY3WeatherSource('724838', tmp_url, preload=False)
-    ws.client = MockWeatherClient()
-    ws._load_data()
-    return ws
-
-
 def test_basic_usage_daily(
-        meter_input_daily, mock_isd_weather_source, mock_tmy3_weather_source):
+        meter_input_daily, monkeypatch_noaa_ftp, monkeypatch_tmy3_request,
+        monkeypatch_key_value_store):
 
     meter = EnergyEfficiencyMeter()
 
@@ -1040,7 +1064,10 @@ def test_basic_usage_daily_period_start_end(
     json.dumps(results)
 
 
-def test_meter_settings_cz2010(meter_input_daily):
+def test_meter_settings_cz2010(meter_input_daily,
+        monkeypatch_noaa_ftp
+        monkeypatch_cz2010_request,
+        monkeypatch_key_value_store):
     meter = EnergyEfficiencyMeter(
         weather_station_mapping='CZ2010',
         weather_normal_station_mapping='CZ2010'
@@ -1049,8 +1076,8 @@ def test_meter_settings_cz2010(meter_input_daily):
     assert meter.weather_normal_station_mapping == 'CZ2010'
 
     results = meter.evaluate(meter_input_daily)
-    assert results['logs'][0] == 'Using weather_source ISDWeatherSource("722874")'
-    assert results['logs'][1] == 'Using weather_normal_source CZ2010WeatherSource("722874")'
+    assert results['logs'][0] == 'Using weather_source 722874'
+    assert results['logs'][1] == 'Using weather_normal_source 722874'
     assert results['status'] == 'SUCCESS'
     assert results['meter_kwargs'] == {
         'weather_station_mapping': 'CZ2010',

@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 import pytz
 import pandas as pd
 import requests
+import eeweather
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +109,10 @@ class NOAAClient(object):
         string.close()
         return lines
 
+    def load_gsod_data_eeweather(self, station, start, end):
+        return eeweather.load_gsod_daily_temp_data(
+            station, start, end)
+
     def get_gsod_data(self, station, year):
 
         filename_format = '/pub/data/gsod/{year}/{station}-{year}.op.gz'
@@ -127,6 +132,10 @@ class NOAAClient(object):
             series[dt] = temp_C
 
         return series
+
+    def load_isd_data_eeweather(self, station, start, end):
+        return eeweather.load_isd_hourly_temp_data(
+            station, start, end)
 
     def get_isd_data(self, station, year):
 
@@ -180,14 +189,16 @@ class TMY3Client(object):
             )
             raise ValueError(message)
 
+        index = pd.date_range("1900-01-01 00:00", "1900-12-31 23:00",
+                              freq='H', tz=pytz.UTC)
+        return eeweather.load_tmy3_hourly_temp_data(
+            station, index[0], index[-1])
+        '''
         url = (
             "http://rredc.nrel.gov/solar/old_data/nsrdb/"
             "1991-2005/data/tmy3/{}TYA.CSV".format(station)
         )
         r = requests.get(url)
-
-        index = pd.date_range("1900-01-01 00:00", "1900-12-31 23:00",
-                              freq='H', tz=pytz.UTC)
         series = pd.Series(None, index=index, dtype=float)
 
         if r.status_code == 200:
@@ -214,7 +225,6 @@ class TMY3Client(object):
                 temp_C = float(row[31])
 
                 series[dt] = temp_C
-
         else:
             message = (
                 "Station {} was not found. Tried url {}.".format(station, url)
@@ -222,6 +232,7 @@ class TMY3Client(object):
             warnings.warn(message)
 
         return series
+        '''
 
 
 class CZ2010Client(object):
@@ -254,6 +265,13 @@ class CZ2010Client(object):
             )
             raise ValueError(message)
 
+        index = pd.date_range("1900-01-01 00:00", "1900-12-31 23:00",
+                              freq='H', tz=pytz.UTC)
+
+        return eeweather.load_cz2010_hourly_temp_data(
+            station, index[0], index[-1])
+
+        '''
         # NOTE: This URL is hardcoded but the data may not always be available
         # from this source. Set with env variable instead?
         url = (
@@ -262,8 +280,6 @@ class CZ2010Client(object):
         )
         r = requests.get(url)
 
-        index = pd.date_range("1900-01-01 00:00", "1900-12-31 23:00",
-                              freq='H', tz=pytz.UTC)
         series = pd.Series(None, index=index, dtype=float)
 
         if r.status_code == 200:
@@ -296,5 +312,5 @@ class CZ2010Client(object):
                 "Station {} was not found. Tried url {}.".format(station, url)
             )
             warnings.warn(message)
-
         return series
+        '''

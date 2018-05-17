@@ -1,4 +1,5 @@
 import logging
+from eeweather.stations import ISDStation
 
 from eemeter.weather.location import (
     zipcode_to_usaf_station,
@@ -52,7 +53,7 @@ def get_weather_source(site, use_cz2010=False):
     )
 
     try:
-        weather_source = ISDWeatherSource(station)
+        weather_source = ISDStation(station)
     except ValueError:
         logger.error(
             "Could not create ISDWeatherSource for station {}."
@@ -106,28 +107,17 @@ def get_weather_normal_source(site, use_cz2010=False):
         .format(zipcode, station_type, station)
     )
 
-    if use_cz2010:
-        try:
-            weather_normal_source = CZ2010WeatherSource(station)
-        except ValueError:
-            logger.error(
-                "Could not create CZ2010WeatherSource for station {}."
-                .format(station)
-            )
-            return None
-    else:
-
-        try:
-            weather_normal_source = TMY3WeatherSource(station)
-        except ValueError:
-            logger.error(
-                'Could not create TMY3WeatherSource for station {}.'
-                .format(station)
-            )
-            return None
+    try:
+        weather_normal_source = ISDStation(station)
+    except ValueError:
+        logger.error(
+            "Could not create ISDStation for station {}."
+            .format(station)
+        )
+        return None
 
     logger.debug(
-        'Created {}WeatherSource using station {}'
+        'Created ISDStation for normalized weather using station {}'
         .format(station_type, station)
     )
 

@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 def unpack(modeled_trace, baseline_label, reporting_label,
            baseline_period, reporting_period,
            weather_source, weather_normal_source,
-           site, derivative_freq='D'):
+           use_cz2010, site, derivative_freq='D'):
 
     baseline_output = modeled_trace.fit_outputs[baseline_label]
     reporting_output = modeled_trace.fit_outputs[reporting_label]

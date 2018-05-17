@@ -9,8 +9,8 @@ Documentation
 
 See [openee.io](https://www.openee.io/open-source/get-started).
 
-Dev Installation
-----------------
+Dev Installation (OSX)
+----------------------
 
     $ git clone https://github.com/openeemeter/eemeter
     $ cd eemeter
@@ -18,6 +18,16 @@ Dev Installation
     (eemeter)$ pip install -e .
     (eemeter)$ pip install -r dev_requirements.txt
     (eemeter)$ workon # gives you access to virtualenv py.test executable
+
+Dev Installation (Linux)
+----------------------
+
+    $ git clone https://github.com/openeemeter/eemeter
+    $ cd eemeter
+    $ virtualenv eemeter
+    $ source eemeter/bin/activate
+    (eemeter)$ pip install -r dev_requirements.txt
+    (eemeter)$ pip install -e .
 
 Docker Installation
 ----------------

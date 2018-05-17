@@ -116,11 +116,14 @@ class ModelDataFormatter(FormatterBase):
             )
 
         energy = trace.data.value.resample(self.freq_str).sum()
-        tempF = weather_source.indexed_temperatures(energy.index, "degF")
+        tempC = weather_source.load_isd_daily_temp_data(
+            energy.index[0], energy.index[-1])
+        tempF = tempC * 1.8 + 32
         return pd.DataFrame({"energy": energy, "tempF": tempF},
                             columns=["energy", "tempF"])
 
-    def create_demand_fixture(self, index, weather_source):
+    def create_demand_fixture(self, index, weather_source,
+        normalized=False, use_cz2010=False):
         '''Creates a :code:`DatetimeIndex` ed dataframe containing formatted
         demand fixture data.
 
@@ -130,6 +133,8 @@ class ModelDataFormatter(FormatterBase):
             The desired index for demand fixture data.
         weather_source : eemeter.weather.WeatherSourceBase
             The source of weather fixture data.
+        normalized : Whether to return normalized or real data.
+        use_cz2010: Whether to return normalized data from CZ2010 or to
 
         Returns
         -------
@@ -137,7 +142,19 @@ class ModelDataFormatter(FormatterBase):
             Predictably formatted input data. This data should be directly
             usable as input to applicable model.predict() methods.
         '''
-        tempF = weather_source.indexed_temperatures(index, "degF")
+
+        start = index[0]
+        end = index[-1]
+        if normalized:
+            if use_cz2010:
+                tempC = weather_source.load_cz2010_hourly_temp_data(
+                    start, end)
+            else:
+                tempC = weather_source.load_tmy3_hourly_temp_data(
+                    start, end)
+        else:
+            tempC = weather_source.load_isd_hourly_temp_data(start, end)
+        tempF = tempC * 1.8 + 32
         return pd.DataFrame({"tempF": tempF})
 
     def _get_start_date(self, input_data):
@@ -322,7 +339,8 @@ formatter.create_input(energy_trace, weather_source)
             unestimated_trace_data.index, "degF", allow_mixed_frequency=True)
         return unestimated_trace_data, temp_data
 
-    def create_demand_fixture(self, index, weather_source):
+    def create_demand_fixture(self, index, weather_source,
+        normalized=False, use_cz2010=False):
         '''Creates a :code:`DatetimeIndex` ed dataframe containing formatted
         demand fixture data.
 
@@ -332,6 +350,9 @@ formatter.create_input(energy_trace, weather_source)
             The desired index for demand fixture data.
         weather_source : eemeter.weather.WeatherSourceBase
             The source of weather fixture data.
+        normalized : Whether to return normalized or real data.
+        use_cz2010: Whether to return normalized data from CZ2010 or to
+            instead use TMY3. Ignored unless normalized=True.
 
         Returns
         -------
@@ -339,7 +360,19 @@ formatter.create_input(energy_trace, weather_source)
             Predictably formatted input data. This data should be directly
             usable as input to applicable model.predict() methods.
         '''
-        tempF = weather_source.indexed_temperatures(index, "degF")
+
+        start = index[0]
+        end = index[-1]
+        if normalized:
+            if use_cz2010:
+                tempC = weather_source.load_cz2010_hourly_temp_data(
+                    start, end)
+            else:
+                tempC = weather_source.load_tmy3_hourly_temp_data(
+                    start, end)
+        else:
+            tempC = weather_source.load_isd_hourly_temp_data(start, end)
+        tempF = tempC * 1.8 + 32
         return pd.DataFrame({"tempF": tempF})
 
     def _get_start_date(self, input_data):
