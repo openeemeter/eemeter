@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 def unpack(modeled_trace, baseline_label, reporting_label,
            baseline_period, reporting_period,
            weather_source, weather_normal_source,
-           use_cz2010, site, derivative_freq='D'):
+           site, use_cz2010, derivative_freq='D'):
 
     baseline_output = modeled_trace.fit_outputs[baseline_label]
     reporting_output = modeled_trace.fit_outputs[reporting_label]
@@ -105,13 +105,15 @@ def unpack(modeled_trace, baseline_label, reporting_label,
             '2015-01-01', freq=derivative_freq, periods=normalyear_periods,
             tz=pytz.UTC)
         annualized_fixture = formatter.create_demand_fixture(
-            normal_index, weather_normal_source)
+            normal_index, weather_normal_source, normalized=True,
+            use_cz2010=use_cz2010)
         if hourly_trace_data is not None:
             normal_index = pd.date_range(
                 '2015-01-01', freq='H', periods=365*24,
                 tz=pytz.UTC)
             hourly_annualized_fixture = formatter.create_demand_fixture(
-                normal_index, weather_normal_source)
+                normal_index, weather_normal_source, normalized=True,
+                use_cz2010=use_cz2010)
         else:
             hourly_annualized_fixture = None
     else:
@@ -151,7 +153,8 @@ def unpack(modeled_trace, baseline_label, reporting_label,
                 tz=pytz.UTC)
 
         reporting_period_fixture = formatter.create_demand_fixture(
-            reporting_period_index, weather_source)
+            reporting_period_index, weather_source, normalized=False,
+            use_cz2010=use_cz2010)
         reporting_period_fixture_success = True
         if len(reporting_period_fixture) == 0:
             reporting_period_fixture_success = False
@@ -162,7 +165,8 @@ def unpack(modeled_trace, baseline_label, reporting_label,
                 freq='H',
                 tz=pytz.UTC)
             hourly_reporting_period_fixture = formatter.create_demand_fixture(
-                reporting_period_index, weather_source)
+                reporting_period_index, weather_source, normalized=False,
+                use_cz2010=use_cz2010)
         else:
             hourly_reporting_period_fixture = None
 
@@ -198,7 +202,8 @@ def unpack(modeled_trace, baseline_label, reporting_label,
                 tz=pytz.UTC)
 
         baseline_period_fixture = formatter.create_demand_fixture(
-            baseline_period_index, weather_source)
+            baseline_period_index, weather_source, normalized=False,
+            use_cz2010=use_cz2010)
         baseline_period_fixture_success = True
         if len(baseline_period_fixture) == 0:
             baseline_period_fixture_success = False
@@ -209,7 +214,8 @@ def unpack(modeled_trace, baseline_label, reporting_label,
                 freq='H',
                 tz=pytz.UTC)
             hourly_baseline_period_fixture = formatter.create_demand_fixture(
-                baseline_period_index, weather_source)
+                baseline_period_index, weather_source, normalized=False,
+                use_cz2010=use_cz2010)
         else:
             hourly_baseline_period_fixture = None
 

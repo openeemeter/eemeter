@@ -414,8 +414,8 @@ class EnergyEfficiencyMeter(object):
         )
 
         # Step 2: Match weather
+        use_cz2010 = (self.weather_station_mapping == 'CZ2010')
         if weather_source is None:
-            use_cz2010 = (self.weather_station_mapping == 'CZ2010')
             weather_source = get_weather_source(site, use_cz2010=use_cz2010)
 
             if weather_source is None:
@@ -426,10 +426,10 @@ class EnergyEfficiencyMeter(object):
                 weather_source_station = None
             else:
                 message = "Using weather_source {}".format(weather_source)
-                weather_source_station = weather_source.usaf_id
+                weather_source_station = weather_source.station
         else:
             message = "Using supplied weather_source"
-            weather_source_station = weather_source.usaf_id
+            weather_source_station = weather_source.station
         output['weather_source_station'] = weather_source_station
         output['logs'].append(message)
         logger.debug(message)
@@ -449,10 +449,10 @@ class EnergyEfficiencyMeter(object):
                     "Using weather_normal_source {}"
                     .format(weather_normal_source)
                 )
-                weather_normal_source_station = weather_normal_source.usaf_id
+                weather_normal_source_station = weather_normal_source.station
         else:
             message = "Using supplied weather_normal_source"
-            weather_normal_source_station = weather_normal_source.usaf_id
+            weather_normal_source_station = weather_normal_source.station
         output['weather_normal_source_station'] = weather_normal_source_station
         output['logs'].append(message)
         logger.debug(message)
@@ -530,7 +530,8 @@ class EnergyEfficiencyMeter(object):
         modeled_trace = SplitModeledEnergyTrace(
             trace, formatter_instance, model_mapping, modeling_period_set)
 
-        modeled_trace.fit(weather_source)
+        modeled_trace.fit(weather_source, normalized=False,
+            use_cz2010=use_cz2010)
         output["modeled_energy_trace"] = \
             serialize_split_modeled_energy_trace(modeled_trace)
 
@@ -548,7 +549,7 @@ class EnergyEfficiencyMeter(object):
             deriv_input = unpack(modeled_trace, baseline_label, reporting_label,
                                  baseline_period, reporting_period,
                                  weather_source, weather_normal_source,
-                                 use_cz2010, site,
+                                 site, use_cz2010,
                                  derivative_freq=derivative_freq)
             if deriv_input is None:
                 continue

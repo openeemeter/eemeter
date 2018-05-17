@@ -7,6 +7,7 @@ from collections import OrderedDict
 import pandas as pd
 import numpy as np
 from pandas.tseries.frequencies import to_offset
+from eemeter.weather.eeweather_wrapper import indexed_temperatures
 
 
 class FormatterBase(object):
@@ -91,7 +92,7 @@ class ModelDataFormatter(FormatterBase):
     def __repr__(self):
         return 'ModelDataFormatter("{}")'.format(self.freq_str)
 
-    def create_input(self, trace, weather_source):
+    def create_input(self, trace, weather_source, normalized, use_cz2010):
         '''Creates a :code:`DatetimeIndex` ed dataframe containing formatted
         model input data formatted as follows.
 
@@ -116,14 +117,14 @@ class ModelDataFormatter(FormatterBase):
             )
 
         energy = trace.data.value.resample(self.freq_str).sum()
-        tempC = weather_source.load_isd_daily_temp_data(
-            energy.index[0], energy.index[-1])
-        tempF = tempC * 1.8 + 32
+        tempF = indexed_temperatures(weather_source.station,
+            energy.index, "degF",
+            normalized=normalized, use_cz2010=use_cz2010)
         return pd.DataFrame({"energy": energy, "tempF": tempF},
                             columns=["energy", "tempF"])
 
-    def create_demand_fixture(self, index, weather_source,
-        normalized=False, use_cz2010=False):
+    def create_demand_fixture(self, index, weather_source, normalized,
+        use_cz2010):
         '''Creates a :code:`DatetimeIndex` ed dataframe containing formatted
         demand fixture data.
 
@@ -133,8 +134,6 @@ class ModelDataFormatter(FormatterBase):
             The desired index for demand fixture data.
         weather_source : eemeter.weather.WeatherSourceBase
             The source of weather fixture data.
-        normalized : Whether to return normalized or real data.
-        use_cz2010: Whether to return normalized data from CZ2010 or to
 
         Returns
         -------
@@ -142,19 +141,8 @@ class ModelDataFormatter(FormatterBase):
             Predictably formatted input data. This data should be directly
             usable as input to applicable model.predict() methods.
         '''
-
-        start = index[0]
-        end = index[-1]
-        if normalized:
-            if use_cz2010:
-                tempC = weather_source.load_cz2010_hourly_temp_data(
-                    start, end)
-            else:
-                tempC = weather_source.load_tmy3_hourly_temp_data(
-                    start, end)
-        else:
-            tempC = weather_source.load_isd_hourly_temp_data(start, end)
-        tempF = tempC * 1.8 + 32
+        tempF = indexed_temperatures(weather_source.station, index, "degF",
+        normalized=normalized, use_cz2010=use_cz2010)
         return pd.DataFrame({"tempF": tempF})
 
     def _get_start_date(self, input_data):
@@ -302,7 +290,7 @@ formatter.create_input(energy_trace, weather_source)
         index, values = zip(*yielded)
         return pd.Series(values, index=index)
 
-    def create_input(self, trace, weather_source):
+    def create_input(self, trace, weather_source, normalized, use_cz2010):
         '''Creates two :code:`DatetimeIndex` ed dataframes containing formatted
         model input data formatted as follows.
 
@@ -335,12 +323,13 @@ formatter.create_input(energy_trace, weather_source)
             model.fit() methods.
         '''
         unestimated_trace_data = self._unestimated(trace.data.copy())
-        temp_data = weather_source.indexed_temperatures(
-            unestimated_trace_data.index, "degF", allow_mixed_frequency=True)
+        temp_data = indexed_temperatures(weather_source.station,
+            unestimated_trace_data.index, "degF", allow_mixed_frequency=True,
+            normalized=normalized, use_cz2010=use_cz2010)
         return unestimated_trace_data, temp_data
 
-    def create_demand_fixture(self, index, weather_source,
-        normalized=False, use_cz2010=False):
+    def create_demand_fixture(self, index, weather_source, normalized,
+        use_cz2010):
         '''Creates a :code:`DatetimeIndex` ed dataframe containing formatted
         demand fixture data.
 
@@ -350,9 +339,6 @@ formatter.create_input(energy_trace, weather_source)
             The desired index for demand fixture data.
         weather_source : eemeter.weather.WeatherSourceBase
             The source of weather fixture data.
-        normalized : Whether to return normalized or real data.
-        use_cz2010: Whether to return normalized data from CZ2010 or to
-            instead use TMY3. Ignored unless normalized=True.
 
         Returns
         -------
@@ -360,19 +346,8 @@ formatter.create_input(energy_trace, weather_source)
             Predictably formatted input data. This data should be directly
             usable as input to applicable model.predict() methods.
         '''
-
-        start = index[0]
-        end = index[-1]
-        if normalized:
-            if use_cz2010:
-                tempC = weather_source.load_cz2010_hourly_temp_data(
-                    start, end)
-            else:
-                tempC = weather_source.load_tmy3_hourly_temp_data(
-                    start, end)
-        else:
-            tempC = weather_source.load_isd_hourly_temp_data(start, end)
-        tempF = tempC * 1.8 + 32
+        tempF = indexed_temperatures(weather_source.station, index, "degF",
+            normalized=normalized, use_cz2010=use_cz2010)
         return pd.DataFrame({"tempF": tempF})
 
     def _get_start_date(self, input_data):

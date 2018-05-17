@@ -155,7 +155,8 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
     def _year_saved(self, year):
         return self.json_store.key_exists(self._get_cache_key(year))
 
-    def indexed_temperatures(self, index, unit, allow_mixed_frequency=False):
+    def indexed_temperatures(self, index, unit,
+        allow_mixed_frequency=False):
         ''' Return average temperatures over the given index.
 
         Parameters
@@ -176,11 +177,7 @@ class NOAAWeatherSourceBase(WeatherSourceBase):
         if index.shape == (0,):
             return pd.Series([], index=index, dtype=float)
 
-        #self._verify_index_presence(index)  # fetches weather data if needed
-        years = sorted(index.groupby(index.year).keys())
-        start = pd.to_datetime(datetime(years[0],1,1), utc=True)
-        end = pd.to_datetime(datetime(years[-1],12,31,23,59), utc=True)
-        self.tempC = self._load_data(start, end)
+        self._verify_index_presence(index)  # fetches weather data if needed
 
         if index.freq is not None:
             freq = index.freq
