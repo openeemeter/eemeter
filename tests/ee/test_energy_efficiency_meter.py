@@ -479,9 +479,7 @@ def test_basic_usage_monthly(
         monkeypatch_temperature_data):
 
     meter = EnergyEfficiencyMeter()
-    results = meter.evaluate(meter_input_monthly,
-                             weather_source=mock_isd_weather_source,
-                             weather_normal_source=mock_tmy3_weather_source)
+    results = meter.evaluate(meter_input_monthly)
     assert results['status'] == 'SUCCESS'
     assert results['failure_message'] is None
     assert len(results['logs']) == 2
