@@ -16,8 +16,6 @@ from eeweather.testing import (
 
 from eemeter.ee.meter import EnergyEfficiencyMeter
 from eemeter.testing.mocks import MockWeatherClient
-from eemeter.weather import TMY3WeatherSource
-from eemeter.weather import ISDWeatherSource
 from eemeter.modeling.formatters import ModelDataBillingFormatter
 from eemeter.modeling.models import CaltrackMonthlyModel, CaltrackDailyModel
 
@@ -363,31 +361,12 @@ def meter_input_bad_zipcode(project_meter_input_bad_zipcode):
     return meter_input
 
 
-@pytest.fixture
-def mock_isd_weather_source():
-    tmp_url = "sqlite:///{}/weather_cache.db".format(tempfile.mkdtemp())
-    ws = ISDWeatherSource('722880', tmp_url)
-    ws.client = MockWeatherClient()
-    return ws
-
-
-@pytest.fixture
-def mock_tmy3_weather_source():
-    tmp_url = "sqlite:///{}/weather_cache.db".format(tempfile.mkdtemp())
-    ws = TMY3WeatherSource('724838', tmp_url, preload=False)
-    ws.client = MockWeatherClient()
-    ws._load_data()
-    return ws
-
-
 def test_basic_usage_daily(
-        meter_input_daily, mock_isd_weather_source, mock_tmy3_weather_source):
+        meter_input_daily, monkeypatch_temperature_data):
 
     meter = EnergyEfficiencyMeter()
 
-    results = meter.evaluate(meter_input_daily,
-                             weather_source=mock_isd_weather_source,
-                             weather_normal_source=mock_tmy3_weather_source)
+    results = meter.evaluate(meter_input_daily)
 
     assert results['status'] == 'SUCCESS'
     assert results['failure_message'] is None
@@ -558,14 +537,11 @@ def test_basic_usage_monthly(
 
 def test_basic_usage_baseline_only(
         meter_input_daily_baseline_only,
-        mock_isd_weather_source,
-        mock_tmy3_weather_source):
+        monkeypatch_temperature_data):
 
     meter = EnergyEfficiencyMeter()
 
-    results = meter.evaluate(meter_input_daily_baseline_only,
-                             weather_source=mock_isd_weather_source,
-                             weather_normal_source=mock_tmy3_weather_source)
+    results = meter.evaluate(meter_input_daily_baseline_only)
 
     assert results['status'] == 'SUCCESS'
     assert results['failure_message'] is None
@@ -640,14 +616,11 @@ def test_basic_usage_baseline_only(
 
 def test_basic_usage_reporting_only(
         meter_input_daily_reporting_only,
-        mock_isd_weather_source,
-        mock_tmy3_weather_source):
+        monkeypatch_temperature_data):
 
     meter = EnergyEfficiencyMeter()
 
-    results = meter.evaluate(meter_input_daily_reporting_only,
-                             weather_source=mock_isd_weather_source,
-                             weather_normal_source=mock_tmy3_weather_source)
+    results = meter.evaluate(meter_input_daily_reporting_only)
 
     assert results['status'] == 'SUCCESS'
     assert results['failure_message'] is None
@@ -724,14 +697,11 @@ def test_basic_usage_reporting_only(
 
 def test_basic_usage_empty(
         meter_input_empty,
-        mock_isd_weather_source,
-        mock_tmy3_weather_source):
+        monkeypatch_temperature_data):
 
     meter = EnergyEfficiencyMeter()
 
-    results = meter.evaluate(meter_input_empty,
-                             weather_source=mock_isd_weather_source,
-                             weather_normal_source=mock_tmy3_weather_source)
+    results = meter.evaluate(meter_input_empty)
 
     assert results['status'] == 'SUCCESS'
     assert results['failure_message'] is None
@@ -739,27 +709,22 @@ def test_basic_usage_empty(
     assert len(results['derivatives']) == 0
 
 
-def test_bad_meter_input(mock_isd_weather_source, mock_tmy3_weather_source):
+def test_bad_meter_input(monkeypatch_temperature_data):
 
     meter = EnergyEfficiencyMeter()
 
-    results = meter.evaluate({},
-                             weather_source=mock_isd_weather_source,
-                             weather_normal_source=mock_tmy3_weather_source)
+    results = meter.evaluate({})
 
     assert results['status'] == 'FAILURE'
     assert results['failure_message'].startswith("Meter input")
 
 
 def test_strange_interpretation(meter_input_strange_interpretation,
-                                mock_isd_weather_source,
-                                mock_tmy3_weather_source):
+                                monkeypatch_temperature_data):
 
     meter = EnergyEfficiencyMeter()
 
-    results = meter.evaluate(meter_input_strange_interpretation,
-                             weather_source=mock_isd_weather_source,
-                             weather_normal_source=mock_tmy3_weather_source)
+    results = meter.evaluate(meter_input_strange_interpretation)
 
     assert results['status'] == 'FAILURE'
     assert results['failure_message'].startswith("Default formatter")
@@ -826,16 +791,13 @@ def test_bad_zipcode(meter_input_bad_zipcode):
 
 def test_custom_evaluate_args_monthly(
         meter_input_monthly,
-        mock_isd_weather_source,
-        mock_tmy3_weather_source):
+        monkeypatch_temperature_data):
 
     meter = EnergyEfficiencyMeter()
 
     results = meter.evaluate(meter_input_monthly,
                              model=None,
-                             formatter=None,
-                             weather_source=mock_isd_weather_source,
-                             weather_normal_source=mock_tmy3_weather_source)
+                             formatter=None)
 
     assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackMonthlyModel'
@@ -845,9 +807,7 @@ def test_custom_evaluate_args_monthly(
 
     results = meter.evaluate(meter_input_monthly,
                              model=(None, None),
-                             formatter=(None, None),
-                             weather_source=mock_isd_weather_source,
-                             weather_normal_source=mock_tmy3_weather_source)
+                             formatter=(None, None))
 
     assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackMonthlyModel'
@@ -857,9 +817,7 @@ def test_custom_evaluate_args_monthly(
 
     results = meter.evaluate(meter_input_monthly,
                              model=('CaltrackMonthlyModel', None),
-                             formatter=('ModelDataBillingFormatter', None),
-                             weather_source=mock_isd_weather_source,
-                             weather_normal_source=mock_tmy3_weather_source)
+                             formatter=('ModelDataBillingFormatter', None))
 
     assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackMonthlyModel'
@@ -868,9 +826,7 @@ def test_custom_evaluate_args_monthly(
     assert results['formatter_kwargs'] == {}
 
     results = meter.evaluate(meter_input_monthly,
-                             model=(None, {"fit_cdd": False}),
-                             weather_source=mock_isd_weather_source,
-                             weather_normal_source=mock_tmy3_weather_source)
+                             model=(None, {"fit_cdd": False}))
 
     assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackMonthlyModel'
@@ -880,9 +836,7 @@ def test_custom_evaluate_args_monthly(
 
     results = meter.evaluate(meter_input_monthly,
                              model=(None, {"fit_cdd": False}),
-                             formatter=(None, {}),
-                             weather_source=mock_isd_weather_source,
-                             weather_normal_source=mock_tmy3_weather_source)
+                             formatter=(None, {}))
 
     assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackMonthlyModel'
@@ -892,9 +846,7 @@ def test_custom_evaluate_args_monthly(
 
     results = meter.evaluate(meter_input_monthly,
                              model=(CaltrackMonthlyModel, {"fit_cdd": False}),
-                             formatter=(ModelDataBillingFormatter, {}),
-                             weather_source=mock_isd_weather_source,
-                             weather_normal_source=mock_tmy3_weather_source)
+                             formatter=(ModelDataBillingFormatter, {}))
 
     assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackMonthlyModel'
@@ -905,16 +857,13 @@ def test_custom_evaluate_args_monthly(
 
 def test_custom_evaluate_args_daily(
         meter_input_daily_elec,
-        mock_isd_weather_source,
-        mock_tmy3_weather_source):
+        monkeypatch_temperature_data):
 
     meter = EnergyEfficiencyMeter()
 
     results = meter.evaluate(meter_input_daily_elec,
                              model=None,
-                             formatter=None,
-                             weather_source=mock_isd_weather_source,
-                             weather_normal_source=mock_tmy3_weather_source)
+                             formatter=None)
 
     assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackDailyModel'
@@ -924,9 +873,7 @@ def test_custom_evaluate_args_daily(
 
     results = meter.evaluate(meter_input_daily_elec,
                              model=(CaltrackDailyModel, {'fit_cdd': False}),
-                             formatter=None,
-                             weather_source=mock_isd_weather_source,
-                             weather_normal_source=mock_tmy3_weather_source)
+                             formatter=None)
 
     assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackDailyModel'
@@ -937,16 +884,13 @@ def test_custom_evaluate_args_daily(
 
 def test_ignore_extra_args_daily(
         meter_input_daily_elec,
-        mock_isd_weather_source,
-        mock_tmy3_weather_source):
+        monkeypatch_temperature_data):
 
     meter = EnergyEfficiencyMeter()
 
     results = meter.evaluate(meter_input_daily_elec,
                              model=(None, {'fit_cdd': True, 'grid_search': True, 'extra_arg': 'value'}),
-                             formatter=None,
-                             weather_source=mock_isd_weather_source,
-                             weather_normal_source=mock_tmy3_weather_source)
+                             formatter=None)
 
     assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackDailyModel'
@@ -955,16 +899,13 @@ def test_ignore_extra_args_daily(
 
 def test_ignore_extra_args_monthly(
         meter_input_monthly,
-        mock_isd_weather_source,
-        mock_tmy3_weather_source):
+        monkeypatch_temperature_data):
 
     meter = EnergyEfficiencyMeter()
 
     results = meter.evaluate(meter_input_monthly,
                              model=(None, {'grid_search': True, 'extra_arg': 'value'}),
-                             formatter=None,
-                             weather_source=mock_isd_weather_source,
-                             weather_normal_source=mock_tmy3_weather_source)
+                             formatter=None)
 
     assert results['meter_kwargs'] == {}
     assert results['model_class'] == 'CaltrackMonthlyModel'
@@ -973,14 +914,11 @@ def test_ignore_extra_args_monthly(
 
 def test_basic_usage_daily_period_start_end(
         meter_input_daily_with_period_start_end,
-        mock_isd_weather_source,
-        mock_tmy3_weather_source):
+        monkeypatch_temperature_data):
 
     meter = EnergyEfficiencyMeter()
 
-    results = meter.evaluate(meter_input_daily_with_period_start_end,
-                             weather_source=mock_isd_weather_source,
-                             weather_normal_source=mock_tmy3_weather_source)
+    results = meter.evaluate(meter_input_daily_with_period_start_end)
 
     assert results['status'] == 'SUCCESS'
     assert results['failure_message'] is None
@@ -1085,99 +1023,9 @@ def test_meter_settings_cz2010(meter_input_daily):
 
 
 def test_basic_usage_hourly(
-        meter_input_hourly, mock_isd_weather_source, mock_tmy3_weather_source):
+        meter_input_hourly, monkeypatch_temperature_data):
 
     meter = EnergyEfficiencyMeter()
 
-    results = meter.evaluate(meter_input_hourly,
-                             weather_source=mock_isd_weather_source,
-                             weather_normal_source=mock_tmy3_weather_source)
-
-    assert results['status'] == 'SUCCESS'
-    assert results['failure_message'] is None
-    assert len(results['logs']) == 2
-
-    assert results['eemeter_version'] is not None
-
-    assert results['project_id'] == 'PROJECT_1'
-    assert results['trace_id'] == 'TRACE_1'
-    assert results['interval'] == 'hourly'
-
-    assert results['meter_kwargs'] == {}
-    assert results['model_class'] == 'CaltrackDailyModel'
-    assert results['model_kwargs'] is not None
-    assert results['formatter_class'] == 'ModelDataFormatter'
-    assert results['formatter_kwargs'] is not None
-
-    assert results['modeled_energy_trace'] is not None
-
-    derivatives = results['derivatives']
-
-    baseline_observed = {d['series']:d for d in derivatives}['Observed, baseline period']
-    reporting_observed = {d['series']:d for d in derivatives}['Observed, reporting period']
-
-    assert (baseline_observed['orderable'][0], baseline_observed['orderable'][-1]) == ('2012-01-01T00:00:00+00:00', '2014-01-01T00:00:00+00:00')
-    assert (reporting_observed['orderable'][0], reporting_observed['orderable'][-1]) == ('2014-02-01T00:00:00+00:00', '2015-12-30T00:00:00+00:00')
-
-    assert len(derivatives) == 35
-    assert derivatives[0]['modeling_period_group'] == \
-        ('baseline', 'reporting')
-    assert derivatives[0]['orderable'] == [None]
-
-    source_series = set([d['series'] for d in derivatives])
-    assert source_series == set([
-        'Cumulative baseline model minus reporting model, normal year',
-        'Cumulative baseline model, normal year',
-        'Baseline model, normal year',
-        'Cumulative reporting model, normal year',
-        'Baseline model minus reporting model, normal year',
-        'Baseline model, normal year',
-        'Reporting model, normal year',
-        'Baseline model, baseline period',
-
-        'Cumulative baseline model minus observed, reporting period',
-        'Cumulative baseline model, reporting period',
-        'Cumulative observed, reporting period',
-        'Baseline model minus observed, reporting period',
-        'Baseline model, reporting period',
-        'Observed, reporting period',
-        'Masked baseline model minus observed, reporting period',
-        'Masked baseline model, reporting period',
-        'Masked observed, reporting period',
-
-        'Baseline model, baseline period',
-        'Reporting model, reporting period',
-
-        'Cumulative observed, baseline period',
-        'Observed, baseline period',
-
-        'Observed, project period',
-
-        'Inclusion mask, baseline period',
-        'Inclusion mask, reporting period',
-
-        'Temperature, baseline period',
-        'Temperature, reporting period',
-        'Temperature, normal year',
-        'Masked temperature, reporting period',
-
-        'Heating degree day balance point, baseline period',
-        'Cooling degree day balance point, baseline period',
-        'Heating degree day balance point, reporting period',
-        'Cooling degree day balance point, reporting period',
-        'Best-fit intercept, baseline period',
-        'Best-fit intercept, reporting period',
-
-        'Resource curve, normal year',
-        'Resource curve, reporting period',
-        'CO2 avoided emissions, normal year',
-    ])
-
-    for d in derivatives:
-        assert isinstance(d['orderable'], list)
-        assert isinstance(d['value'], list)
-        assert isinstance(d['variance'], list)
-        assert len(d['orderable']) == len(d['value']) == len(d['variance'])
-
-    json.dumps(results)
-
+    with pytest.raises(ValueError):
+        results = meter.evaluate(meter_input_hourly)

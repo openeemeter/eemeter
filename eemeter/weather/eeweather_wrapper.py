@@ -1,7 +1,4 @@
 import pandas as pd
-from eemeter.weather.noaa import ISDWeatherSource
-from eemeter.weather.tmy3 import TMY3WeatherSource
-from eemeter.weather.cz2010 import CZ2010WeatherSource
 from datetime import datetime
 import eeweather
 import eemeter
