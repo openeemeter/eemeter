@@ -6,7 +6,7 @@ from eemeter.weather.location import (
     zipcode_to_cz2010_station,
 )
 from eemeter.co2.location import zipcode_to_avert_region
-from eemeter.weather.base import WeatherSource
+from eemeter.weather.eeweather_wrapper import WeatherSource
 from eemeter.co2.avert import AVERTSource
 
 logger = logging.getLogger(__name__)

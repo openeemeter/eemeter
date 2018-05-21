@@ -7,7 +7,6 @@ from collections import OrderedDict
 import pandas as pd
 import numpy as np
 from pandas.tseries.frequencies import to_offset
-from eemeter.weather.eeweather_wrapper import indexed_temperatures
 
 
 class FormatterBase(object):
@@ -117,7 +116,7 @@ class ModelDataFormatter(FormatterBase):
             )
 
         energy = trace.data.value.resample(self.freq_str).sum()
-        tempF = indexed_temperatures(weather_source.station,
+        tempF = weather_source.indexed_temperatures(
             energy.index, "degF",
             normalized=normalized, use_cz2010=use_cz2010)
         return pd.DataFrame({"energy": energy, "tempF": tempF},
@@ -141,7 +140,7 @@ class ModelDataFormatter(FormatterBase):
             Predictably formatted input data. This data should be directly
             usable as input to applicable model.predict() methods.
         '''
-        tempF = indexed_temperatures(weather_source.station, index, "degF",
+        tempF = weather_source.indexed_temperatures(index, "degF",
         normalized=normalized, use_cz2010=use_cz2010)
         return pd.DataFrame({"tempF": tempF})
 
@@ -323,7 +322,7 @@ formatter.create_input(energy_trace, weather_source)
             model.fit() methods.
         '''
         unestimated_trace_data = self._unestimated(trace.data.copy())
-        temp_data = indexed_temperatures(weather_source.station,
+        temp_data = weather_source.indexed_temperatures(
             unestimated_trace_data.index, "degF", allow_mixed_frequency=True,
             normalized=normalized, use_cz2010=use_cz2010)
         return unestimated_trace_data, temp_data
@@ -346,7 +345,7 @@ formatter.create_input(energy_trace, weather_source)
             Predictably formatted input data. This data should be directly
             usable as input to applicable model.predict() methods.
         '''
-        tempF = indexed_temperatures(weather_source.station, index, "degF",
+        tempF = weather_source.indexed_temperatures(index, "degF",
             normalized=normalized, use_cz2010=use_cz2010)
         return pd.DataFrame({"tempF": tempF})
 

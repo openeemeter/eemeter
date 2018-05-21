@@ -423,14 +423,14 @@ class EnergyEfficiencyMeter(object):
                     "Could not find weather normal source matching site {}"
                     .format(site)
                 )
-                weather_source_station = None
+                weather_source_usaf_id = None
             else:
                 message = "Using weather_source {}".format(weather_source)
-                weather_source_station = weather_source.station
+                weather_source_usaf_id = weather_source.usaf_id
         else:
             message = "Using supplied weather_source"
-            weather_source_station = weather_source.station
-        output['weather_source_station'] = weather_source_station
+            weather_source_usaf_id = weather_source.usaf_id
+        output['weather_source_station'] = weather_source_usaf_id
         output['logs'].append(message)
         logger.debug(message)
 
@@ -443,17 +443,17 @@ class EnergyEfficiencyMeter(object):
                     "Could not find weather normal source matching site {}"
                     .format(site)
                 )
-                weather_normal_source_station = None
+                weather_normal_source_usaf_id = None
             else:
                 message = (
                     "Using weather_normal_source {}"
                     .format(weather_normal_source)
                 )
-                weather_normal_source_station = weather_normal_source.station
+                weather_normal_source_usaf_id = weather_normal_source.usaf_id
         else:
             message = "Using supplied weather_normal_source"
-            weather_normal_source_station = weather_normal_source.station
-        output['weather_normal_source_station'] = weather_normal_source_station
+            weather_normal_source_usaf_id = weather_normal_source.usaf_id
+        output['weather_normal_source_station'] = weather_normal_source_usaf_id
         output['logs'].append(message)
         logger.debug(message)
 
