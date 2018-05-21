@@ -8,8 +8,28 @@ import pytz
 from eemeter.modeling.models.billing import BillingElasticNetCVModel
 from eemeter.modeling.formatters import ModelDataBillingFormatter
 from eemeter.structures import EnergyTrace
-from eemeter.weather import ISDWeatherSource
-from eemeter.testing.mocks import MockWeatherClient
+
+
+def _fake_temps(usaf_id, start, end, normalized, use_cz2010):
+    # sinusoidal fake temperatures in degC
+    dates = pd.date_range(start, end, freq='H', tz=pytz.UTC)
+    num_years = end.year - start.year + 1
+    n = dates.shape[0]
+    avg_temp = 15
+    temp_range = 15
+    period_offset = - (2 * np.pi / 3)
+    temp_offsets = np.sin(
+        (2 * np.pi * num_years * np.arange(n) / n) + period_offset)
+    temps = avg_temp + (temp_range * temp_offsets)
+    return pd.Series(temps, index=dates, dtype=float)
+
+
+@pytest.fixture
+def monkeypatch_temperature_data(monkeypatch):
+    monkeypatch.setattr(
+        'eemeter.weather.eeweather_wrapper._get_temperature_data_eeweather',
+        _fake_temps
+    )
 
 
 @pytest.fixture
@@ -28,20 +48,11 @@ def trace():
         unit="THERM", data=data)
 
 
-@pytest.fixture
-def mock_isd_weather_source():
-    tmp_url = "sqlite:///{}/weather_cache.db".format(tempfile.mkdtemp())
-    ws = ISDWeatherSource("722880", tmp_url)
-    ws.client = MockWeatherClient()
-    return ws
-
-
-def test_basic_usage(trace, mock_isd_weather_source):
+def test_basic_usage(trace, monkeypatch_temperature_data):
     formatter = ModelDataBillingFormatter()
     model = BillingElasticNetCVModel(65, 65)
 
-    formatted_input_data = formatter.create_input(
-        trace, mock_isd_weather_source)
+    formatted_input_data = formatter.create_input(trace)
 
     outputs = model.fit(formatted_input_data)
     assert 'upper' in outputs
@@ -54,16 +65,14 @@ def test_basic_usage(trace, mock_isd_weather_source):
 
     index = pd.date_range(
         '2011-01-01', freq='H', periods=365 * 24, tz=pytz.UTC)
-    formatted_predict_data = formatter.create_demand_fixture(
-        index, mock_isd_weather_source)
+    formatted_predict_data = formatter.create_demand_fixture(index)
 
     outputs, variance = model.predict(formatted_predict_data, summed=False)
     assert outputs.shape == (365,)
     assert variance > 0
 
     index = pd.date_range('2011-01-01', freq='D', periods=365, tz=pytz.UTC)
-    formatted_predict_data = formatter.create_demand_fixture(
-        index, mock_isd_weather_source)
+    formatted_predict_data = formatter.create_demand_fixture(index)
 
     outputs, variance = model.predict(formatted_predict_data, summed=False)
     assert outputs.shape == (365,)

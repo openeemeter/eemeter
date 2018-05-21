@@ -15,7 +15,6 @@ from eeweather.testing import (
 )
 
 from eemeter.ee.meter import EnergyEfficiencyMeter
-from eemeter.testing.mocks import MockWeatherClient
 from eemeter.modeling.formatters import ModelDataBillingFormatter
 from eemeter.modeling.models import CaltrackMonthlyModel, CaltrackDailyModel
 
@@ -34,13 +33,13 @@ def _fake_temps(usaf_id, start, end, normalized, use_cz2010):
     return pd.Series(temps, index=dates, dtype=float)
 
 
-
 @pytest.fixture
 def monkeypatch_temperature_data(monkeypatch):
     monkeypatch.setattr(
         'eemeter.weather.eeweather_wrapper._get_temperature_data_eeweather',
         _fake_temps
     )
+
 
 @pytest.fixture
 def project_meter_input():

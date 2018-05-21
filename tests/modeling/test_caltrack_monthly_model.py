@@ -7,8 +7,6 @@ import numpy as np
 from numpy.testing import assert_allclose
 import pytz
 
-from eemeter.weather import ISDWeatherSource
-from eemeter.testing.mocks import MockWeatherClient
 from eemeter.modeling.formatters import (
     ModelDataFormatter,
     ModelDataBillingFormatter
@@ -20,12 +18,26 @@ from eemeter.structures import EnergyTrace
 from eemeter.modeling.models import CaltrackMonthlyModel
 
 
+def _fake_temps(usaf_id, start, end, normalized, use_cz2010):
+    # sinusoidal fake temperatures in degC
+    dates = pd.date_range(start, end, freq='H', tz=pytz.UTC)
+    num_years = end.year - start.year + 1
+    n = dates.shape[0]
+    avg_temp = 15
+    temp_range = 15
+    period_offset = - (2 * np.pi / 3)
+    temp_offsets = np.sin(
+        (2 * np.pi * num_years * np.arange(n) / n) + period_offset)
+    temps = avg_temp + (temp_range * temp_offsets)
+    return pd.Series(temps, index=dates, dtype=float)
+
+
 @pytest.fixture
-def mock_isd_weather_source():
-    tmp_url = "sqlite:///{}/weather_cache.db".format(tempfile.mkdtemp())
-    ws = ISDWeatherSource("722880", tmp_url)
-    ws.client = MockWeatherClient()
-    return ws
+def monkeypatch_temperature_data(monkeypatch):
+    monkeypatch.setattr(
+        'eemeter.weather.eeweather_wrapper._get_temperature_data_eeweather',
+        _fake_temps
+    )
 
 
 @pytest.fixture
@@ -62,15 +74,15 @@ def billing_trace():
 
 
 @pytest.fixture
-def input_df(mock_isd_weather_source, daily_trace):
+def input_df(monkeypatch_temperature_data, daily_trace):
     mdf = ModelDataFormatter("D")
-    return mdf.create_input(daily_trace, mock_isd_weather_source)
+    return mdf.create_input(daily_trace)
 
 
 @pytest.fixture
-def input_billing_df(mock_isd_weather_source, billing_trace):
+def input_billing_df(monkeypatch_temperature_data, billing_trace):
     mdbf = ModelDataBillingFormatter()
-    return mdbf.create_input(billing_trace, mock_isd_weather_source)
+    return mdbf.create_input(billing_trace)
 
 def test_sufficiency_criteria():
     m_baseline = CaltrackMonthlyModel(
@@ -255,7 +267,7 @@ def test_fit_cdd_false(input_df):
     assert variance > 0
 
 
-def test_basic_billing(input_billing_df, mock_isd_weather_source):
+def test_basic_billing(input_billing_df, monkeypatch_temperature_data):
     m = CaltrackMonthlyModel(fit_cdd=True)
     assert str(m).startswith("Caltrack")
     assert m.n is None
@@ -278,8 +290,7 @@ def test_basic_billing(input_billing_df, mock_isd_weather_source):
 
     index = pd.date_range('2011-01-01', freq='D', periods=365, tz=pytz.UTC)
     formatter = ModelDataBillingFormatter()
-    formatted_predict_data = formatter.create_demand_fixture(
-        index, mock_isd_weather_source)
+    formatted_predict_data = formatter.create_demand_fixture(index)
 
     outputs, variance = m.predict(formatted_predict_data, summed=False)
     assert outputs.shape == (365,)

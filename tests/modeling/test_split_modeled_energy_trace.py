@@ -15,8 +15,29 @@ from eemeter.structures import (
     ModelingPeriod,
     ModelingPeriodSet,
 )
-from eemeter.testing.mocks import MockWeatherClient
-from eemeter.weather import ISDWeatherSource
+from eemeter.weather import WeatherSource
+
+
+def _fake_temps(usaf_id, start, end, normalized, use_cz2010):
+    # sinusoidal fake temperatures in degC
+    dates = pd.date_range(start, end, freq='H', tz=pytz.UTC)
+    num_years = end.year - start.year + 1
+    n = dates.shape[0]
+    avg_temp = 15
+    temp_range = 15
+    period_offset = - (2 * np.pi / 3)
+    temp_offsets = np.sin(
+        (2 * np.pi * num_years * np.arange(n) / n) + period_offset)
+    temps = avg_temp + (temp_range * temp_offsets)
+    return pd.Series(temps, index=dates, dtype=float)
+
+
+@pytest.fixture
+def monkeypatch_temperature_data(monkeypatch):
+    monkeypatch.setattr(
+        'eemeter.weather.eeweather_wrapper._get_temperature_data_eeweather',
+        _fake_temps
+    )
 
 
 @pytest.fixture
@@ -29,14 +50,6 @@ def trace():
     index = pd.date_range('2000-01-01', periods=365, freq='D', tz=pytz.UTC)
     df = pd.DataFrame(data, index=index, columns=columns)
     return EnergyTrace("ELECTRICITY_CONSUMPTION_SUPPLIED", df, unit="KWH")
-
-
-@pytest.fixture
-def mock_isd_weather_source():
-    tmp_url = "sqlite:///{}/weather_cache.db".format(tempfile.mkdtemp())
-    ws = ISDWeatherSource("722880", tmp_url)
-    ws.client = MockWeatherClient()
-    return ws
 
 
 @pytest.fixture
@@ -61,7 +74,7 @@ def modeling_period_set():
     return ModelingPeriodSet(modeling_periods, grouping)
 
 
-def test_basic_usage(trace, modeling_period_set, mock_isd_weather_source):
+def test_basic_usage(trace, modeling_period_set, monkeypatch_temperature_data):
 
     # create SplitModeledEnergyTrace
     formatter = ModelDataFormatter('D')
@@ -73,7 +86,7 @@ def test_basic_usage(trace, modeling_period_set, mock_isd_weather_source):
         trace, formatter, model_mapping, modeling_period_set)
 
     # fit normally
-    outputs = smet.fit(mock_isd_weather_source)
+    outputs = smet.fit()
     assert 'modeling_period_1' in smet.fit_outputs
     assert 'modeling_period_2' in smet.fit_outputs
     assert len(smet.fit_outputs) == 2

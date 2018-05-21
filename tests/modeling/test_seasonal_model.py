@@ -7,19 +7,31 @@ import numpy as np
 from numpy.testing import assert_allclose
 import pytz
 
-from eemeter.weather import ISDWeatherSource
-from eemeter.testing.mocks import MockWeatherClient
 from eemeter.modeling.formatters import ModelDataFormatter
 from eemeter.structures import EnergyTrace
 from eemeter.modeling.models import SeasonalElasticNetCVModel
 
 
+def _fake_temps(usaf_id, start, end, normalized, use_cz2010):
+    # sinusoidal fake temperatures in degC
+    dates = pd.date_range(start, end, freq='H', tz=pytz.UTC)
+    num_years = end.year - start.year + 1
+    n = dates.shape[0]
+    avg_temp = 15
+    temp_range = 15
+    period_offset = - (2 * np.pi / 3)
+    temp_offsets = np.sin(
+        (2 * np.pi * num_years * np.arange(n) / n) + period_offset)
+    temps = avg_temp + (temp_range * temp_offsets)
+    return pd.Series(temps, index=dates, dtype=float)
+
+
 @pytest.fixture
-def mock_isd_weather_source():
-    tmp_url = "sqlite:///{}/weather_cache.db".format(tempfile.mkdtemp())
-    ws = ISDWeatherSource("722880", tmp_url)
-    ws.client = MockWeatherClient()
-    return ws
+def monkeypatch_temperature_data(monkeypatch):
+    monkeypatch.setattr(
+        'eemeter.weather.eeweather_wrapper._get_temperature_data_eeweather',
+        _fake_temps
+    )
 
 
 @pytest.fixture
@@ -35,9 +47,9 @@ def daily_trace():
 
 
 @pytest.fixture
-def input_df(mock_isd_weather_source, daily_trace):
+def input_df(monkeypatch_temperature_data, daily_trace):
     mdf = ModelDataFormatter("D")
-    return mdf.create_input(daily_trace, mock_isd_weather_source)
+    return mdf.create_input(daily_trace)
 
 
 def test_basic(input_df):

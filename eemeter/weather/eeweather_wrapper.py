@@ -100,12 +100,8 @@ class WeatherSource(object):
         return self._unit_convert(tempC, unit)
 
     def _hourly_indexed_temperatures(self, index, unit):
-        message = (
-            'DatetimeIndex frequency "H" not supported,'
-            ' please resample to at least daily frequency ("D").'
-            .format(index.freq)
-        )
-        raise ValueError(message)
+        tempC = self.tempC.resample('H').mean()[index]
+        return self._unit_convert(tempC, unit)
 
     def _mixed_frequency_indexed_temperatures(self, index, unit):
         min_period = self._get_min_period(index)

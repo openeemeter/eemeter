@@ -22,8 +22,28 @@ from eemeter.modeling.models import (
     BillingElasticNetCVModel,
 )
 from eemeter.modeling.split import SplitModeledEnergyTrace
-from eemeter.testing import MockWeatherClient
-from eemeter.weather import ISDWeatherSource
+
+
+def _fake_temps(usaf_id, start, end, normalized, use_cz2010):
+    # sinusoidal fake temperatures in degC
+    dates = pd.date_range(start, end, freq='H', tz=pytz.UTC)
+    num_years = end.year - start.year + 1
+    n = dates.shape[0]
+    avg_temp = 15
+    temp_range = 15
+    period_offset = - (2 * np.pi / 3)
+    temp_offsets = np.sin(
+        (2 * np.pi * num_years * np.arange(n) / n) + period_offset)
+    temps = avg_temp + (temp_range * temp_offsets)
+    return pd.Series(temps, index=dates, dtype=float)
+
+
+@pytest.fixture
+def monkeypatch_temperature_data(monkeypatch):
+    monkeypatch.setattr(
+        'eemeter.weather.eeweather_wrapper._get_temperature_data_eeweather',
+        _fake_temps
+    )
 
 
 @pytest.fixture
@@ -51,14 +71,6 @@ def monthly_trace():
 
 
 @pytest.fixture
-def mock_isd_weather_source():
-    tmp_url = "sqlite:///{}/weather_cache.db".format(tempfile.mkdtemp())
-    ws = ISDWeatherSource("722880", tmp_url)
-    ws.client = MockWeatherClient()
-    return ws
-
-
-@pytest.fixture
 def modeling_period_set():
     modeling_period_1 = ModelingPeriod(
         "BASELINE",
@@ -82,7 +94,7 @@ def modeling_period_set():
 
 @pytest.fixture
 def split_modeled_energy_trace_daily(daily_trace, modeling_period_set,
-                                     mock_isd_weather_source):
+                                     monkeypatch_temperature_data):
 
     # create SplitModeledEnergyTrace
     formatter = ModelDataFormatter('D')
@@ -93,13 +105,13 @@ def split_modeled_energy_trace_daily(daily_trace, modeling_period_set,
     smet = SplitModeledEnergyTrace(
         daily_trace, formatter, model_mapping, modeling_period_set)
 
-    smet.fit(mock_isd_weather_source)
+    smet.fit()
     return smet
 
 
 @pytest.fixture
 def split_modeled_energy_trace_monthly(monthly_trace, modeling_period_set,
-                                       mock_isd_weather_source):
+                                       monkeypatch_temperature_data):
 
     # create SplitModeledEnergyTrace
     formatter = ModelDataBillingFormatter()
@@ -110,7 +122,7 @@ def split_modeled_energy_trace_monthly(monthly_trace, modeling_period_set,
     smet = SplitModeledEnergyTrace(
         monthly_trace, formatter, model_mapping, modeling_period_set)
 
-    smet.fit(mock_isd_weather_source)
+    smet.fit()
     return smet
 
 
