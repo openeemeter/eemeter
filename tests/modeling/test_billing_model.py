@@ -8,6 +8,7 @@ import pytz
 from eemeter.modeling.models.billing import BillingElasticNetCVModel
 from eemeter.modeling.formatters import ModelDataBillingFormatter
 from eemeter.structures import EnergyTrace
+from eemeter.weather import WeatherSource
 
 
 def _fake_temps(usaf_id, start, end, normalized, use_cz2010):
@@ -33,6 +34,12 @@ def monkeypatch_temperature_data(monkeypatch):
 
 
 @pytest.fixture
+def mock_isd_weather_source():
+    ws = WeatherSource('722880', False, False)
+    return ws
+
+
+@pytest.fixture
 def trace():
     index = pd.date_range('6/6/2012','6/6/2013',freq='M',
         tz=pytz.UTC)
@@ -48,11 +55,13 @@ def trace():
         unit="THERM", data=data)
 
 
-def test_basic_usage(trace, monkeypatch_temperature_data):
+def test_basic_usage(trace, monkeypatch_temperature_data,
+    mock_isd_weather_source):
     formatter = ModelDataBillingFormatter()
     model = BillingElasticNetCVModel(65, 65)
 
-    formatted_input_data = formatter.create_input(trace)
+    formatted_input_data = formatter.create_input(trace,
+        mock_isd_weather_source)
 
     outputs = model.fit(formatted_input_data)
     assert 'upper' in outputs
@@ -65,14 +74,16 @@ def test_basic_usage(trace, monkeypatch_temperature_data):
 
     index = pd.date_range(
         '2011-01-01', freq='H', periods=365 * 24, tz=pytz.UTC)
-    formatted_predict_data = formatter.create_demand_fixture(index)
+    formatted_predict_data = formatter.create_demand_fixture(index,
+        mock_isd_weather_source)
 
     outputs, variance = model.predict(formatted_predict_data, summed=False)
     assert outputs.shape == (365,)
     assert variance > 0
 
     index = pd.date_range('2011-01-01', freq='D', periods=365, tz=pytz.UTC)
-    formatted_predict_data = formatter.create_demand_fixture(index)
+    formatted_predict_data = formatter.create_demand_fixture(index,
+        mock_isd_weather_source)
 
     outputs, variance = model.predict(formatted_predict_data, summed=False)
     assert outputs.shape == (365,)

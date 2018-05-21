@@ -10,6 +10,7 @@ import pytz
 from eemeter.modeling.formatters import ModelDataFormatter
 from eemeter.structures import EnergyTrace
 from eemeter.modeling.models import SeasonalElasticNetCVModel
+from eemeter.weather import WeatherSource
 
 
 def _fake_temps(usaf_id, start, end, normalized, use_cz2010):
@@ -35,6 +36,12 @@ def monkeypatch_temperature_data(monkeypatch):
 
 
 @pytest.fixture
+def mock_isd_weather_source():
+    ws = WeatherSource('722880', False, False)
+    return ws
+
+
+@pytest.fixture
 def daily_trace():
     data = {
         "value": np.tile(1, (365,)),
@@ -47,9 +54,10 @@ def daily_trace():
 
 
 @pytest.fixture
-def input_df(monkeypatch_temperature_data, daily_trace):
+def input_df(monkeypatch_temperature_data, daily_trace,
+    mock_isd_weather_source):
     mdf = ModelDataFormatter("D")
-    return mdf.create_input(daily_trace)
+    return mdf.create_input(daily_trace, mock_isd_weather_source)
 
 
 def test_basic(input_df):

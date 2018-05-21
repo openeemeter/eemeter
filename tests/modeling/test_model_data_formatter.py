@@ -9,6 +9,7 @@ import pytz
 
 from eemeter.modeling.formatters import ModelDataFormatter
 from eemeter.structures import EnergyTrace
+from eemeter.weather import WeatherSource
 
 
 def _fake_temps(usaf_id, start, end, normalized, use_cz2010):
@@ -31,6 +32,12 @@ def monkeypatch_temperature_data(monkeypatch):
         'eemeter.weather.eeweather_wrapper._get_temperature_data_eeweather',
         _fake_temps
     )
+
+
+@pytest.fixture
+def mock_isd_weather_source():
+    ws = WeatherSource('722880', False, False)
+    return ws
 
 
 @pytest.fixture
@@ -69,10 +76,11 @@ def fifteen_min_trace():
     return EnergyTrace("ELECTRICITY_CONSUMPTION_SUPPLIED", df, unit="KWH")
 
 
-def test_basic_daily(daily_trace, monkeypatch_temperature_data):
+def test_basic_daily(daily_trace, monkeypatch_temperature_data,
+    mock_isd_weather_source):
     mdf = ModelDataFormatter("D")
 
-    df = mdf.create_input(daily_trace)
+    df = mdf.create_input(daily_trace, mock_isd_weather_source)
 
     assert all(df.columns == ["energy", "tempF"])
     assert df.index[0] == datetime(2000, 1, 1, tzinfo=pytz.UTC)
@@ -97,10 +105,11 @@ def test_basic_daily(daily_trace, monkeypatch_temperature_data):
     assert_allclose(daily_trace.data.value.sum(), daily.sum())
 
 
-def test_basic_hourly(hourly_trace, monkeypatch_temperature_data):
+def test_basic_hourly(hourly_trace, monkeypatch_temperature_data,
+    mock_isd_weather_source):
     mdf = ModelDataFormatter("H")
 
-    df = mdf.create_input(hourly_trace)
+    df = mdf.create_input(hourly_trace, mock_isd_weather_source)
 
     assert all(df.columns == ["energy", "tempF"])
     assert df.index[0] == datetime(2000, 1, 1, 0, tzinfo=pytz.UTC)
@@ -125,10 +134,11 @@ def test_basic_hourly(hourly_trace, monkeypatch_temperature_data):
     assert_allclose(hourly_trace.data.value.sum(), daily.sum())
 
 
-def test_basic_hourly_to_daily(hourly_trace, monkeypatch_temperature_data):
+def test_basic_hourly_to_daily(hourly_trace, monkeypatch_temperature_data,
+    mock_isd_weather_source):
     mdf = ModelDataFormatter("D")
 
-    df = mdf.create_input(hourly_trace)
+    df = mdf.create_input(hourly_trace, mock_isd_weather_source)
 
     assert all(df.columns == ["energy", "tempF"])
     assert df.index[0] == datetime(2000, 1, 1, 0, tzinfo=pytz.UTC)
@@ -137,10 +147,11 @@ def test_basic_hourly_to_daily(hourly_trace, monkeypatch_temperature_data):
     assert_allclose(df.tempF, [35.507344])
 
 
-def test_basic_15min_to_daily(fifteen_min_trace, monkeypatch_temperature_data):
+def test_basic_15min_to_daily(fifteen_min_trace, monkeypatch_temperature_data,
+    mock_isd_weather_source):
     mdf = ModelDataFormatter("D")
 
-    df = mdf.create_input(fifteen_min_trace)
+    df = mdf.create_input(fifteen_min_trace, mock_isd_weather_source)
 
     assert all(df.columns == ["energy", "tempF"])
     assert df.index[0] == datetime(2011, 1, 1, 0, tzinfo=pytz.UTC)
@@ -149,16 +160,19 @@ def test_basic_15min_to_daily(fifteen_min_trace, monkeypatch_temperature_data):
     assert df.tempF.shape == (100,)
 
 
-def test_daily_to_hourly_fails(daily_trace, monkeypatch_temperature_data):
+def test_daily_to_hourly_fails(daily_trace, monkeypatch_temperature_data,
+    mock_isd_weather_source):
     mdf = ModelDataFormatter("H")
 
     with pytest.raises(ValueError):
-        mdf.create_input(daily_trace)
+        mdf.create_input(daily_trace, mock_isd_weather_source)
 
-def test_daily_demand_fixture(daily_trace, monkeypatch_temperature_data):
+def test_daily_demand_fixture(daily_trace, monkeypatch_temperature_data,
+    mock_isd_weather_source):
     mdf = ModelDataFormatter("D")
 
-    df = mdf.create_demand_fixture(daily_trace.data.index)
+    df = mdf.create_demand_fixture(daily_trace.data.index,
+        mock_isd_weather_source)
 
     assert all(df.columns == ["tempF"])
     assert df.index[0] == datetime(2000, 1, 1, 0, tzinfo=pytz.UTC)
@@ -167,10 +181,12 @@ def test_daily_demand_fixture(daily_trace, monkeypatch_temperature_data):
     assert_allclose(df.tempF, [35.507344, 35.282373, 35.064391])
 
 
-def test_hourly_demand_fixture(hourly_trace, monkeypatch_temperature_data):
+def test_hourly_demand_fixture(hourly_trace, monkeypatch_temperature_data,
+    mock_isd_weather_source):
     mdf = ModelDataFormatter("H")
 
-    df = mdf.create_demand_fixture(hourly_trace.data.index)
+    df = mdf.create_demand_fixture(hourly_trace.data.index,
+        mock_isd_weather_source)
     assert all(df.columns == ["tempF"])
     assert df.index[0] == datetime(2000, 1, 1, 0, tzinfo=pytz.UTC)
     assert df.index[2] == datetime(2000, 1, 1, 2, tzinfo=pytz.UTC)

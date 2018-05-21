@@ -33,6 +33,12 @@ def _fake_temps(usaf_id, start, end, normalized, use_cz2010):
 
 
 @pytest.fixture
+def mock_isd_weather_source():
+    ws = WeatherSource('722880', False, False)
+    return ws
+
+
+@pytest.fixture
 def monkeypatch_temperature_data(monkeypatch):
     monkeypatch.setattr(
         'eemeter.weather.eeweather_wrapper._get_temperature_data_eeweather',
@@ -74,7 +80,8 @@ def modeling_period_set():
     return ModelingPeriodSet(modeling_periods, grouping)
 
 
-def test_basic_usage(trace, modeling_period_set, monkeypatch_temperature_data):
+def test_basic_usage(trace, modeling_period_set, monkeypatch_temperature_data,
+    mock_isd_weather_source):
 
     # create SplitModeledEnergyTrace
     formatter = ModelDataFormatter('D')
@@ -86,7 +93,7 @@ def test_basic_usage(trace, modeling_period_set, monkeypatch_temperature_data):
         trace, formatter, model_mapping, modeling_period_set)
 
     # fit normally
-    outputs = smet.fit()
+    outputs = smet.fit(mock_isd_weather_source)
     assert 'modeling_period_1' in smet.fit_outputs
     assert 'modeling_period_2' in smet.fit_outputs
     assert len(smet.fit_outputs) == 2

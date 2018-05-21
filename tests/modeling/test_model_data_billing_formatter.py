@@ -9,6 +9,7 @@ import pytz
 
 from eemeter.modeling.formatters import ModelDataBillingFormatter
 from eemeter.structures import EnergyTrace
+from eemeter.weather import WeatherSource
 
 
 def _fake_temps(usaf_id, start, end, normalized, use_cz2010):
@@ -31,6 +32,12 @@ def monkeypatch_temperature_data(monkeypatch):
         'eemeter.weather.eeweather_wrapper._get_temperature_data_eeweather',
         _fake_temps
     )
+
+
+@pytest.fixture
+def mock_isd_weather_source():
+    ws = WeatherSource('722880', False, False)
+    return ws
 
 
 @pytest.fixture
@@ -99,10 +106,11 @@ def trace4():
     return EnergyTrace("ELECTRICITY_CONSUMPTION_SUPPLIED", df, unit="KWH")
 
 
-def test_basic_monthly(trace1, monkeypatch_temperature_data):
+def test_basic_monthly(trace1, monkeypatch_temperature_data,
+    mock_isd_weather_source):
     mdbf = ModelDataBillingFormatter()
     input_data = mdbf.create_input(
-        trace1)
+        trace1, mock_isd_weather_source)
 
     trace_data, temperature_data = input_data
     assert trace_data.shape == (4,)
@@ -124,10 +132,11 @@ def test_basic_monthly(trace1, monkeypatch_temperature_data):
     assert_allclose(daily.sum(), trace1.data.value.sum())
 
 
-def test_empty(trace2, monkeypatch_temperature_data):
+def test_empty(trace2, monkeypatch_temperature_data,
+    mock_isd_weather_source):
     mdbf = ModelDataBillingFormatter()
     input_data = mdbf.create_input(
-        trace2)
+        trace2, mock_isd_weather_source)
     trace_data, temperature_data = input_data
     assert trace_data.shape == (0,)
     assert temperature_data.shape == (0,)
@@ -145,16 +154,18 @@ def test_empty(trace2, monkeypatch_temperature_data):
     assert_allclose(daily.sum(), trace2.data.value.sum())
 
 
-def test_small(trace3, monkeypatch_temperature_data):
+def test_small(trace3, monkeypatch_temperature_data,
+    mock_isd_weather_source):
     mdbf = ModelDataBillingFormatter()
     with pytest.raises(ValueError):
-        mdbf.create_input(trace3)
+        mdbf.create_input(trace3, mock_isd_weather_source)
 
 
-def test_daily(trace4, monkeypatch_temperature_data):
+def test_daily(trace4, monkeypatch_temperature_data,
+    mock_isd_weather_source):
     mdbf = ModelDataBillingFormatter()
     input_data = mdbf.create_input(
-        trace4)
+        trace4, mock_isd_weather_source)
     trace_data, temperature_data = input_data
     assert trace_data.shape == (100,)
     assert temperature_data.shape == (100,)

@@ -530,8 +530,7 @@ class EnergyEfficiencyMeter(object):
         modeled_trace = SplitModeledEnergyTrace(
             trace, formatter_instance, model_mapping, modeling_period_set)
 
-        modeled_trace.fit(weather_source, normalized=False,
-            use_cz2010=use_cz2010)
+        modeled_trace.fit(weather_source)
         output["modeled_energy_trace"] = \
             serialize_split_modeled_energy_trace(modeled_trace)
 

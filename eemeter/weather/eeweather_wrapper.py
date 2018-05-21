@@ -48,8 +48,7 @@ class WeatherSource(object):
     def __repr__(self):
         return '{}WeatherSource("{}")'.format(self.station_type, self.usaf_id)
 
-    def indexed_temperatures(self, index, unit,
-        normalized, use_cz2010, allow_mixed_frequency=False):
+    def indexed_temperatures(self, index, unit, allow_mixed_frequency=False):
         ''' Return average temperatures over the given index.
 
         Parameters
@@ -75,7 +74,7 @@ class WeatherSource(object):
         #using fully qualified name for monkeypatching
         self.tempC = eemeter.weather.eeweather_wrapper. \
             _get_temperature_data_eeweather(self.usaf_id, start, end,
-            normalized, use_cz2010)
+            self.normalized, self.use_cz2010)
 
         if index.freq is not None:
             freq = index.freq

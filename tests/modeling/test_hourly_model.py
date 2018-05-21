@@ -41,8 +41,9 @@ def hourly_trace_with_dummy_energy():
 
 @pytest.fixture
 def input_df(monkeypatch_temperature_data, hourly_trace_with_dummy_energy):
-    weather_source = WeatherSource("722880")
-    weather_source.indexed_temperatures(hourly_trace_with_dummy_energy.index, "degF")
+    weather_source = WeatherSource("722880", normalized=False, use_cz2010=False)
+    tempF = weather_source.indexed_temperatures(
+        hourly_trace_with_dummy_energy.index, "degF")
     return hourly_trace_with_dummy_energy.assign(tempF=tempF)
 
 

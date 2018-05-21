@@ -19,7 +19,7 @@ def test_basic_usage(site):
 
     ws = get_weather_normal_source(site)
 
-    assert ws.station == '722880'
+    assert ws.usaf_id == '722880'
 
 
 def test_bad_zip(site_bad_zip):

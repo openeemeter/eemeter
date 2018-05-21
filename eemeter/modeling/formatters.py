@@ -91,7 +91,7 @@ class ModelDataFormatter(FormatterBase):
     def __repr__(self):
         return 'ModelDataFormatter("{}")'.format(self.freq_str)
 
-    def create_input(self, trace, weather_source, normalized, use_cz2010):
+    def create_input(self, trace, weather_source):
         '''Creates a :code:`DatetimeIndex` ed dataframe containing formatted
         model input data formatted as follows.
 
@@ -117,13 +117,11 @@ class ModelDataFormatter(FormatterBase):
 
         energy = trace.data.value.resample(self.freq_str).sum()
         tempF = weather_source.indexed_temperatures(
-            energy.index, "degF",
-            normalized=normalized, use_cz2010=use_cz2010)
+            energy.index, "degF")
         return pd.DataFrame({"energy": energy, "tempF": tempF},
                             columns=["energy", "tempF"])
 
-    def create_demand_fixture(self, index, weather_source, normalized,
-        use_cz2010):
+    def create_demand_fixture(self, index, weather_source):
         '''Creates a :code:`DatetimeIndex` ed dataframe containing formatted
         demand fixture data.
 
@@ -140,8 +138,7 @@ class ModelDataFormatter(FormatterBase):
             Predictably formatted input data. This data should be directly
             usable as input to applicable model.predict() methods.
         '''
-        tempF = weather_source.indexed_temperatures(index, "degF",
-        normalized=normalized, use_cz2010=use_cz2010)
+        tempF = weather_source.indexed_temperatures(index, "degF")
         return pd.DataFrame({"tempF": tempF})
 
     def _get_start_date(self, input_data):
@@ -289,7 +286,7 @@ formatter.create_input(energy_trace, weather_source)
         index, values = zip(*yielded)
         return pd.Series(values, index=index)
 
-    def create_input(self, trace, weather_source, normalized, use_cz2010):
+    def create_input(self, trace, weather_source):
         '''Creates two :code:`DatetimeIndex` ed dataframes containing formatted
         model input data formatted as follows.
 
@@ -323,12 +320,10 @@ formatter.create_input(energy_trace, weather_source)
         '''
         unestimated_trace_data = self._unestimated(trace.data.copy())
         temp_data = weather_source.indexed_temperatures(
-            unestimated_trace_data.index, "degF", allow_mixed_frequency=True,
-            normalized=normalized, use_cz2010=use_cz2010)
+            unestimated_trace_data.index, "degF", allow_mixed_frequency=True)
         return unestimated_trace_data, temp_data
 
-    def create_demand_fixture(self, index, weather_source, normalized,
-        use_cz2010):
+    def create_demand_fixture(self, index, weather_source):
         '''Creates a :code:`DatetimeIndex` ed dataframe containing formatted
         demand fixture data.
 
@@ -345,8 +340,7 @@ formatter.create_input(energy_trace, weather_source)
             Predictably formatted input data. This data should be directly
             usable as input to applicable model.predict() methods.
         '''
-        tempF = weather_source.indexed_temperatures(index, "degF",
-            normalized=normalized, use_cz2010=use_cz2010)
+        tempF = weather_source.indexed_temperatures(index, "degF")
         return pd.DataFrame({"tempF": tempF})
 
     def _get_start_date(self, input_data):

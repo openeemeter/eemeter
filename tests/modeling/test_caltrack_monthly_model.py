@@ -1,4 +1,5 @@
 import tempfile
+
 from datetime import datetime, timedelta
 
 import pytest
@@ -16,6 +17,7 @@ from eemeter.modeling.exceptions import (
 )
 from eemeter.structures import EnergyTrace
 from eemeter.modeling.models import CaltrackMonthlyModel
+from eemeter.weather import WeatherSource
 
 
 def _fake_temps(usaf_id, start, end, normalized, use_cz2010):
@@ -38,6 +40,12 @@ def monkeypatch_temperature_data(monkeypatch):
         'eemeter.weather.eeweather_wrapper._get_temperature_data_eeweather',
         _fake_temps
     )
+
+
+@pytest.fixture
+def mock_isd_weather_source():
+    ws = WeatherSource('722880', False, False)
+    return ws
 
 
 @pytest.fixture
@@ -74,15 +82,17 @@ def billing_trace():
 
 
 @pytest.fixture
-def input_df(monkeypatch_temperature_data, daily_trace):
+def input_df(monkeypatch_temperature_data, daily_trace,
+    mock_isd_weather_source):
     mdf = ModelDataFormatter("D")
-    return mdf.create_input(daily_trace)
+    return mdf.create_input(daily_trace, mock_isd_weather_source)
 
 
 @pytest.fixture
-def input_billing_df(monkeypatch_temperature_data, billing_trace):
+def input_billing_df(monkeypatch_temperature_data, billing_trace,
+    mock_isd_weather_source):
     mdbf = ModelDataBillingFormatter()
-    return mdbf.create_input(billing_trace)
+    return mdbf.create_input(billing_trace, mock_isd_weather_source)
 
 def test_sufficiency_criteria():
     m_baseline = CaltrackMonthlyModel(
@@ -267,7 +277,8 @@ def test_fit_cdd_false(input_df):
     assert variance > 0
 
 
-def test_basic_billing(input_billing_df, monkeypatch_temperature_data):
+def test_basic_billing(input_billing_df, monkeypatch_temperature_data,
+    mock_isd_weather_source):
     m = CaltrackMonthlyModel(fit_cdd=True)
     assert str(m).startswith("Caltrack")
     assert m.n is None
@@ -290,7 +301,8 @@ def test_basic_billing(input_billing_df, monkeypatch_temperature_data):
 
     index = pd.date_range('2011-01-01', freq='D', periods=365, tz=pytz.UTC)
     formatter = ModelDataBillingFormatter()
-    formatted_predict_data = formatter.create_demand_fixture(index)
+    formatted_predict_data = formatter.create_demand_fixture(index,
+        mock_isd_weather_source)
 
     outputs, variance = m.predict(formatted_predict_data, summed=False)
     assert outputs.shape == (365,)

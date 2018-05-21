@@ -1020,11 +1020,97 @@ def test_meter_settings_cz2010(meter_input_daily):
         'weather_normal_station_mapping': 'CZ2010'
     }
 
-
 def test_basic_usage_hourly(
         meter_input_hourly, monkeypatch_temperature_data):
 
     meter = EnergyEfficiencyMeter()
 
-    with pytest.raises(ValueError):
-        results = meter.evaluate(meter_input_hourly)
+    results = meter.evaluate(meter_input_hourly)
+
+    assert results['status'] == 'SUCCESS'
+    assert results['failure_message'] is None
+    assert len(results['logs']) == 2
+
+    assert results['eemeter_version'] is not None
+
+    assert results['project_id'] == 'PROJECT_1'
+    assert results['trace_id'] == 'TRACE_1'
+    assert results['interval'] == 'hourly'
+
+    assert results['meter_kwargs'] == {}
+    assert results['model_class'] == 'CaltrackDailyModel'
+    assert results['model_kwargs'] is not None
+    assert results['formatter_class'] == 'ModelDataFormatter'
+    assert results['formatter_kwargs'] is not None
+
+    assert results['modeled_energy_trace'] is not None
+
+    derivatives = results['derivatives']
+
+    baseline_observed = {d['series']:d for d in derivatives}['Observed, baseline period']
+    reporting_observed = {d['series']:d for d in derivatives}['Observed, reporting period']
+
+    assert (baseline_observed['orderable'][0], baseline_observed['orderable'][-1]) == ('2012-01-01T00:00:00+00:00', '2014-01-01T00:00:00+00:00')
+    assert (reporting_observed['orderable'][0], reporting_observed['orderable'][-1]) == ('2014-02-01T00:00:00+00:00', '2015-12-30T00:00:00+00:00')
+
+    assert len(derivatives) == 35
+    assert derivatives[0]['modeling_period_group'] == \
+        ('baseline', 'reporting')
+    assert derivatives[0]['orderable'] == [None]
+
+    source_series = set([d['series'] for d in derivatives])
+    assert source_series == set([
+        'Cumulative baseline model minus reporting model, normal year',
+        'Cumulative baseline model, normal year',
+        'Baseline model, normal year',
+        'Cumulative reporting model, normal year',
+        'Baseline model minus reporting model, normal year',
+        'Baseline model, normal year',
+        'Reporting model, normal year',
+        'Baseline model, baseline period',
+
+        'Cumulative baseline model minus observed, reporting period',
+        'Cumulative baseline model, reporting period',
+        'Cumulative observed, reporting period',
+        'Baseline model minus observed, reporting period',
+        'Baseline model, reporting period',
+        'Observed, reporting period',
+        'Masked baseline model minus observed, reporting period',
+        'Masked baseline model, reporting period',
+        'Masked observed, reporting period',
+
+        'Baseline model, baseline period',
+        'Reporting model, reporting period',
+
+        'Cumulative observed, baseline period',
+        'Observed, baseline period',
+
+        'Observed, project period',
+
+        'Inclusion mask, baseline period',
+        'Inclusion mask, reporting period',
+
+        'Temperature, baseline period',
+        'Temperature, reporting period',
+        'Temperature, normal year',
+        'Masked temperature, reporting period',
+
+        'Heating degree day balance point, baseline period',
+        'Cooling degree day balance point, baseline period',
+        'Heating degree day balance point, reporting period',
+        'Cooling degree day balance point, reporting period',
+        'Best-fit intercept, baseline period',
+        'Best-fit intercept, reporting period',
+
+        'Resource curve, normal year',
+        'Resource curve, reporting period',
+        'CO2 avoided emissions, normal year',
+    ])
+
+    for d in derivatives:
+        assert isinstance(d['orderable'], list)
+        assert isinstance(d['value'], list)
+        assert isinstance(d['variance'], list)
+        assert len(d['orderable']) == len(d['value']) == len(d['variance'])
+
+    json.dumps(results)

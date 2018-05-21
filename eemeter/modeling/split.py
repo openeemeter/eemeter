@@ -40,7 +40,7 @@ class SplitModeledEnergyTrace(object):
                     self.modeling_period_set)
         )
 
-    def fit(self, weather_source, normalized, use_cz2010):
+    def fit(self, weather_source):
         ''' Fit all models associated with this trace.
 
         Parameters
@@ -90,8 +90,7 @@ class SplitModeledEnergyTrace(object):
             # attempt to create input data
             try:
                 input_data = self.formatter.create_input(
-                    filtered_trace, weather_source, normalized,
-                    use_cz2010)
+                    filtered_trace, weather_source)
             except:
                 logger.warn(
                     'Input data formatting failed for trace {} in {} period.'

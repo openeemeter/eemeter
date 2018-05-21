@@ -22,6 +22,7 @@ from eemeter.modeling.models import (
     BillingElasticNetCVModel,
 )
 from eemeter.modeling.split import SplitModeledEnergyTrace
+from eemeter.weather import WeatherSource
 
 
 def _fake_temps(usaf_id, start, end, normalized, use_cz2010):
@@ -44,6 +45,12 @@ def monkeypatch_temperature_data(monkeypatch):
         'eemeter.weather.eeweather_wrapper._get_temperature_data_eeweather',
         _fake_temps
     )
+
+
+@pytest.fixture
+def mock_isd_weather_source():
+    ws = WeatherSource('722880', False, False)
+    return ws
 
 
 @pytest.fixture
@@ -94,7 +101,7 @@ def modeling_period_set():
 
 @pytest.fixture
 def split_modeled_energy_trace_daily(daily_trace, modeling_period_set,
-                                     monkeypatch_temperature_data):
+    monkeypatch_temperature_data, mock_isd_weather_source):
 
     # create SplitModeledEnergyTrace
     formatter = ModelDataFormatter('D')
@@ -105,13 +112,13 @@ def split_modeled_energy_trace_daily(daily_trace, modeling_period_set,
     smet = SplitModeledEnergyTrace(
         daily_trace, formatter, model_mapping, modeling_period_set)
 
-    smet.fit()
+    smet.fit(mock_isd_weather_source)
     return smet
 
 
 @pytest.fixture
 def split_modeled_energy_trace_monthly(monthly_trace, modeling_period_set,
-                                       monkeypatch_temperature_data):
+    monkeypatch_temperature_data, mock_isd_weather_source):
 
     # create SplitModeledEnergyTrace
     formatter = ModelDataBillingFormatter()
@@ -122,7 +129,7 @@ def split_modeled_energy_trace_monthly(monthly_trace, modeling_period_set,
     smet = SplitModeledEnergyTrace(
         monthly_trace, formatter, model_mapping, modeling_period_set)
 
-    smet.fit()
+    smet.fit(mock_isd_weather_source)
     return smet
 
 
