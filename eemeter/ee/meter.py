@@ -414,8 +414,8 @@ class EnergyEfficiencyMeter(object):
         )
 
         # Step 2: Match weather
+        use_cz2010 = (self.weather_station_mapping == 'CZ2010')
         if weather_source is None:
-            use_cz2010 = (self.weather_station_mapping == 'CZ2010')
             weather_source = get_weather_source(site, use_cz2010=use_cz2010)
 
             if weather_source is None:
@@ -423,14 +423,14 @@ class EnergyEfficiencyMeter(object):
                     "Could not find weather normal source matching site {}"
                     .format(site)
                 )
-                weather_source_station = None
+                weather_source_usaf_id = None
             else:
                 message = "Using weather_source {}".format(weather_source)
-                weather_source_station = weather_source.station
+                weather_source_usaf_id = weather_source.usaf_id
         else:
             message = "Using supplied weather_source"
-            weather_source_station = weather_source.station
-        output['weather_source_station'] = weather_source_station
+            weather_source_usaf_id = weather_source.usaf_id
+        output['weather_source_station'] = weather_source_usaf_id
         output['logs'].append(message)
         logger.debug(message)
 
@@ -443,17 +443,17 @@ class EnergyEfficiencyMeter(object):
                     "Could not find weather normal source matching site {}"
                     .format(site)
                 )
-                weather_normal_source_station = None
+                weather_normal_source_usaf_id = None
             else:
                 message = (
                     "Using weather_normal_source {}"
                     .format(weather_normal_source)
                 )
-                weather_normal_source_station = weather_normal_source.station
+                weather_normal_source_usaf_id = weather_normal_source.usaf_id
         else:
             message = "Using supplied weather_normal_source"
-            weather_normal_source_station = weather_normal_source.station
-        output['weather_normal_source_station'] = weather_normal_source_station
+            weather_normal_source_usaf_id = weather_normal_source.usaf_id
+        output['weather_normal_source_station'] = weather_normal_source_usaf_id
         output['logs'].append(message)
         logger.debug(message)
 

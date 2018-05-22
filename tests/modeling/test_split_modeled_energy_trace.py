@@ -15,8 +15,6 @@ from eemeter.structures import (
     ModelingPeriod,
     ModelingPeriodSet,
 )
-from eemeter.testing.mocks import MockWeatherClient
-from eemeter.weather import ISDWeatherSource
 
 
 @pytest.fixture
@@ -29,14 +27,6 @@ def trace():
     index = pd.date_range('2000-01-01', periods=365, freq='D', tz=pytz.UTC)
     df = pd.DataFrame(data, index=index, columns=columns)
     return EnergyTrace("ELECTRICITY_CONSUMPTION_SUPPLIED", df, unit="KWH")
-
-
-@pytest.fixture
-def mock_isd_weather_source():
-    tmp_url = "sqlite:///{}/weather_cache.db".format(tempfile.mkdtemp())
-    ws = ISDWeatherSource("722880", tmp_url)
-    ws.client = MockWeatherClient()
-    return ws
 
 
 @pytest.fixture
@@ -61,7 +51,8 @@ def modeling_period_set():
     return ModelingPeriodSet(modeling_periods, grouping)
 
 
-def test_basic_usage(trace, modeling_period_set, mock_isd_weather_source):
+def test_basic_usage(trace, modeling_period_set, monkeypatch_temperature_data,
+    mock_isd_weather_source):
 
     # create SplitModeledEnergyTrace
     formatter = ModelDataFormatter('D')

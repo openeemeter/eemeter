@@ -116,7 +116,8 @@ class ModelDataFormatter(FormatterBase):
             )
 
         energy = trace.data.value.resample(self.freq_str).sum()
-        tempF = weather_source.indexed_temperatures(energy.index, "degF")
+        tempF = weather_source.indexed_temperatures(
+            energy.index, "degF")
         return pd.DataFrame({"energy": energy, "tempF": tempF},
                             columns=["energy", "tempF"])
 

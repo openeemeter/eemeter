@@ -6,9 +6,7 @@ from eemeter.weather.location import (
     zipcode_to_cz2010_station,
 )
 from eemeter.co2.location import zipcode_to_avert_region
-from eemeter.weather.noaa import ISDWeatherSource
-from eemeter.weather.tmy3 import TMY3WeatherSource
-from eemeter.weather.cz2010 import CZ2010WeatherSource
+from eemeter.weather.eeweather_wrapper import WeatherSource
 from eemeter.co2.avert import AVERTSource
 
 logger = logging.getLogger(__name__)
@@ -52,10 +50,10 @@ def get_weather_source(site, use_cz2010=False):
     )
 
     try:
-        weather_source = ISDWeatherSource(station)
+        weather_source = WeatherSource(station, normalized=False, use_cz2010=False)
     except ValueError:
         logger.error(
-            "Could not create ISDWeatherSource for station {}."
+            "Could not create WeatherSource for station {}."
             .format(station)
         )
         return None
@@ -106,25 +104,14 @@ def get_weather_normal_source(site, use_cz2010=False):
         .format(zipcode, station_type, station)
     )
 
-    if use_cz2010:
-        try:
-            weather_normal_source = CZ2010WeatherSource(station)
-        except ValueError:
-            logger.error(
-                "Could not create CZ2010WeatherSource for station {}."
-                .format(station)
-            )
-            return None
-    else:
-
-        try:
-            weather_normal_source = TMY3WeatherSource(station)
-        except ValueError:
-            logger.error(
-                'Could not create TMY3WeatherSource for station {}.'
-                .format(station)
-            )
-            return None
+    try:
+        weather_normal_source = WeatherSource(station, normalized=True, use_cz2010=use_cz2010)
+    except ValueError:
+        logger.error(
+            "Could not create normalized WeatherSource for station {}."
+            .format(station)
+        )
+        return None
 
     logger.debug(
         'Created {}WeatherSource using station {}'

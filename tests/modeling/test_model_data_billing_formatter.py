@@ -7,18 +7,8 @@ import pandas as pd
 import pytest
 import pytz
 
-from eemeter.testing.mocks import MockWeatherClient
-from eemeter.weather import ISDWeatherSource
 from eemeter.modeling.formatters import ModelDataBillingFormatter
 from eemeter.structures import EnergyTrace
-
-
-@pytest.fixture
-def mock_isd_weather_source():
-    tmp_url = "sqlite:///{}/weather_cache.db".format(tempfile.mkdtemp())
-    ws = ISDWeatherSource("722880", tmp_url)
-    ws.client = MockWeatherClient()
-    return ws
 
 
 @pytest.fixture
@@ -87,7 +77,8 @@ def trace4():
     return EnergyTrace("ELECTRICITY_CONSUMPTION_SUPPLIED", df, unit="KWH")
 
 
-def test_basic_monthly(trace1, mock_isd_weather_source):
+def test_basic_monthly(trace1, monkeypatch_temperature_data,
+    mock_isd_weather_source):
     mdbf = ModelDataBillingFormatter()
     input_data = mdbf.create_input(
         trace1, mock_isd_weather_source)
@@ -112,7 +103,8 @@ def test_basic_monthly(trace1, mock_isd_weather_source):
     assert_allclose(daily.sum(), trace1.data.value.sum())
 
 
-def test_empty(trace2, mock_isd_weather_source):
+def test_empty(trace2, monkeypatch_temperature_data,
+    mock_isd_weather_source):
     mdbf = ModelDataBillingFormatter()
     input_data = mdbf.create_input(
         trace2, mock_isd_weather_source)
@@ -133,13 +125,15 @@ def test_empty(trace2, mock_isd_weather_source):
     assert_allclose(daily.sum(), trace2.data.value.sum())
 
 
-def test_small(trace3, mock_isd_weather_source):
+def test_small(trace3, monkeypatch_temperature_data,
+    mock_isd_weather_source):
     mdbf = ModelDataBillingFormatter()
     with pytest.raises(ValueError):
         mdbf.create_input(trace3, mock_isd_weather_source)
 
 
-def test_daily(trace4, mock_isd_weather_source):
+def test_daily(trace4, monkeypatch_temperature_data,
+    mock_isd_weather_source):
     mdbf = ModelDataBillingFormatter()
     input_data = mdbf.create_input(
         trace4, mock_isd_weather_source)

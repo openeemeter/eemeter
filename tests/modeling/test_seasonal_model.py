@@ -7,19 +7,9 @@ import numpy as np
 from numpy.testing import assert_allclose
 import pytz
 
-from eemeter.weather import ISDWeatherSource
-from eemeter.testing.mocks import MockWeatherClient
 from eemeter.modeling.formatters import ModelDataFormatter
 from eemeter.structures import EnergyTrace
 from eemeter.modeling.models import SeasonalElasticNetCVModel
-
-
-@pytest.fixture
-def mock_isd_weather_source():
-    tmp_url = "sqlite:///{}/weather_cache.db".format(tempfile.mkdtemp())
-    ws = ISDWeatherSource("722880", tmp_url)
-    ws.client = MockWeatherClient()
-    return ws
 
 
 @pytest.fixture
@@ -35,7 +25,8 @@ def daily_trace():
 
 
 @pytest.fixture
-def input_df(mock_isd_weather_source, daily_trace):
+def input_df(monkeypatch_temperature_data, daily_trace,
+    mock_isd_weather_source):
     mdf = ModelDataFormatter("D")
     return mdf.create_input(daily_trace, mock_isd_weather_source)
 

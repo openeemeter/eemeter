@@ -22,8 +22,6 @@ from eemeter.modeling.models import (
     BillingElasticNetCVModel,
 )
 from eemeter.modeling.split import SplitModeledEnergyTrace
-from eemeter.testing import MockWeatherClient
-from eemeter.weather import ISDWeatherSource
 
 
 @pytest.fixture
@@ -51,14 +49,6 @@ def monthly_trace():
 
 
 @pytest.fixture
-def mock_isd_weather_source():
-    tmp_url = "sqlite:///{}/weather_cache.db".format(tempfile.mkdtemp())
-    ws = ISDWeatherSource("722880", tmp_url)
-    ws.client = MockWeatherClient()
-    return ws
-
-
-@pytest.fixture
 def modeling_period_set():
     modeling_period_1 = ModelingPeriod(
         "BASELINE",
@@ -82,7 +72,7 @@ def modeling_period_set():
 
 @pytest.fixture
 def split_modeled_energy_trace_daily(daily_trace, modeling_period_set,
-                                     mock_isd_weather_source):
+    monkeypatch_temperature_data, mock_isd_weather_source):
 
     # create SplitModeledEnergyTrace
     formatter = ModelDataFormatter('D')
@@ -99,7 +89,7 @@ def split_modeled_energy_trace_daily(daily_trace, modeling_period_set,
 
 @pytest.fixture
 def split_modeled_energy_trace_monthly(monthly_trace, modeling_period_set,
-                                       mock_isd_weather_source):
+    monkeypatch_temperature_data, mock_isd_weather_source):
 
     # create SplitModeledEnergyTrace
     formatter = ModelDataBillingFormatter()

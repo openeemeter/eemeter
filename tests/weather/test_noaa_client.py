@@ -1,19 +1,35 @@
-from eemeter.weather.clients import NOAAClient
+from io import BytesIO
+import numpy as np
+import re
+import pkg_resources
+import tempfile
+
 import pandas as pd
-from numpy.testing import assert_allclose
+import pytest
+import pytz
+import json
+from eeweather.testing import (
+    MockKeyValueStoreProxy,
+    MockTMY3RequestProxy,
+    MockCZ2010RequestProxy,
+)
+
+from eemeter.weather import WeatherSource
 
 
-def test_isod_data():
-    client = NOAAClient()
-    data = client.get_isd_data('724464', '2011')
-    assert data.shape == (17544,)
-    ts = pd.Timestamp('2011-01-01 00:00:00+0000', tz='UTC')
-    assert_allclose(data[ts], -2.0)
+def test_noaa_client():
+    '''
+    This is a station that previously provided data only up to
+    May 31, 2017.
+    '''
+    station = '720406'
+    weather_source = WeatherSource(station,
+        normalized=False, use_cz2010=False)
 
+    index = pd.date_range(
+        '2017-01-01', periods=365*24, freq='H', tz=pytz.UTC)
 
-def test_gsod_data():
-    client = NOAAClient()
-    data = client.get_gsod_data('724464', '2011')
-    assert data.shape == (365,)
-    ts = pd.Timestamp('2011-01-01 00:00:00+0000', tz='UTC')
-    assert_allclose(data[ts], -6.9444444444444446)
+    tempF = weather_source.indexed_temperatures(index, "degF")
+    assert np.shape(tempF)==(8760,)
+    assert np.shape(tempF.dropna())==(8752,)
+
