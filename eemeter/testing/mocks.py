@@ -1,7 +1,6 @@
 import pandas as pd
 import pytz
 import numpy as np
-import pytest
 
 
 class MockAVERTClient(object):

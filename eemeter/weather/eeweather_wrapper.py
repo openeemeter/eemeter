@@ -1,22 +1,17 @@
-from datetime import datetime, date
-from pkg_resources import resource_stream
+from datetime import datetime
 import eeweather
 import eemeter
 
-import json
 import pandas as pd
-import pytz
 
 
-def _get_temperature_data_eeweather(usaf_id, start, end,
-    normalized, use_cz2010):
+def _get_temperature_data_eeweather(usaf_id, start,
+                                    end, normalized, use_cz2010):
     if normalized:
         if use_cz2010:
-            tempC = eeweather.load_cz2010_hourly_temp_data(
-                usaf_id, start, end)
+            tempC = eeweather.load_cz2010_hourly_temp_data(usaf_id, start, end)
         else:
-            tempC = eeweather.load_tmy3_hourly_temp_data(
-                usaf_id, start, end)
+            tempC = eeweather.load_tmy3_hourly_temp_data(usaf_id, start, end)
     else:
         tempC = eeweather.load_isd_hourly_temp_data(usaf_id, start, end)
     return tempC
@@ -42,7 +37,7 @@ class WeatherSource(object):
                 self.resource_loc = 'supported_tmy3_stations.json'
                 self.station_type = 'TMY3'
         else:
-            self.resource_loc ='GSOD-ISD_station_index.json'
+            self.resource_loc = 'GSOD-ISD_station_index.json'
             self.station_type = 'ISD'
 
     def __repr__(self):
@@ -69,12 +64,12 @@ class WeatherSource(object):
         if index.shape == (0,):
             return pd.Series([], index=index, dtype=float)
         years = sorted(index.groupby(index.year).keys())
-        start = pd.to_datetime(datetime(years[0],1,1), utc=True)
-        end = pd.to_datetime(datetime(years[-1],12,31,23,59), utc=True)
-        #using fully qualified name for monkeypatching
+        start = pd.to_datetime(datetime(years[0], 1, 1), utc=True)
+        end = pd.to_datetime(datetime(years[-1], 12, 31, 23, 59), utc=True)
+        # using fully qualified name for monkeypatching
         self.tempC = eemeter.weather.eeweather_wrapper. \
             _get_temperature_data_eeweather(self.usaf_id, start, end,
-            self.normalized, self.use_cz2010)
+                                            self.normalized, self.use_cz2010)
 
         if index.freq is not None:
             freq = index.freq

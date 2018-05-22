@@ -50,8 +50,7 @@ def get_weather_source(site, use_cz2010=False):
     )
 
     try:
-        weather_source = WeatherSource(station,
-            normalized=False, use_cz2010=False)
+        weather_source = WeatherSource(station, normalized=False, use_cz2010=False)
     except ValueError:
         logger.error(
             "Could not create WeatherSource for station {}."
@@ -106,8 +105,7 @@ def get_weather_normal_source(site, use_cz2010=False):
     )
 
     try:
-        weather_normal_source = WeatherSource(station,
-            normalized=True, use_cz2010=use_cz2010)
+        weather_normal_source = WeatherSource(station, normalized=True, use_cz2010=use_cz2010)
     except ValueError:
         logger.error(
             "Could not create normalized WeatherSource for station {}."
