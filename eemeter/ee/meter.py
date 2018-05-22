@@ -548,8 +548,7 @@ class EnergyEfficiencyMeter(object):
             deriv_input = unpack(modeled_trace, baseline_label, reporting_label,
                                  baseline_period, reporting_period,
                                  weather_source, weather_normal_source,
-                                 site, use_cz2010,
-                                 derivative_freq=derivative_freq)
+                                 site, derivative_freq=derivative_freq)
             if deriv_input is None:
                 continue
             raw_derivatives.extend([
