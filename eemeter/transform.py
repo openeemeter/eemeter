@@ -45,6 +45,7 @@ def _degree_day_columns(
     # TODO(philngo): can this be refactored to be a more general without losing
     # on performance?
 
+    # Not used in CalTRACK 2.0
     if degree_day_method == 'hourly':
         def _compute_columns(temps):
             n_temps = temps.shape[0]
@@ -71,6 +72,7 @@ def _degree_day_columns(
             columns.update(hdd_cols)
             return columns
 
+    # CalTRACK 2.2.2.3
     n_limit = 24 * percent_hourly_coverage_per_day
 
     if degree_day_method == 'daily':
@@ -81,6 +83,7 @@ def _degree_day_columns(
                 day_groups = np.floor(np.arange(count) / 24)
                 daily_temps = temps.groupby(day_groups).agg(['mean', 'count'])
                 n_days_total = daily_temps.shape[0]
+                # CalTRACK 2.2.2.3
                 daily_temps = daily_temps['mean'][daily_temps['count'] > n_limit]
                 n_days_kept = daily_temps.shape[0]
                 count_cols = {
@@ -108,6 +111,7 @@ def _degree_day_columns(
                         'n_days_kept': 1,
                         'n_days_dropped': 0,
                     }
+                    # CalTRACK 2.2.2.3
                     mean_temp = temps.mean()
                 else:
                     count_cols = {
@@ -116,10 +120,13 @@ def _degree_day_columns(
                     }
                     mean_temp = np.nan
 
+                # CalTrack 3.3.4.1.1
                 cdd_cols = {
                     'cdd_%s' % bp: np.maximum(mean_temp - bp, 0)
                     for bp in cooling_balance_points
                 }
+
+                # CalTrack 3.3.5.1.1
                 hdd_cols = {
                     'hdd_%s' % bp: np.maximum(bp - mean_temp, 0)
                     for bp in heating_balance_points
@@ -145,6 +152,25 @@ def merge_temperature_data(
     a dataset to feed to models.
 
     Creates a :any:`pandas.DataFrame` with the same index as the meter data.
+
+    .. note::
+
+        For CalTRACK compliance (2.2.2.3), must set
+        ``percent_hourly_coverage_per_day=0.5``,
+        ``cooling_balacne_points=range(30,90,X)``, and
+        ``heating_balance_points=range(30,90,X)``, where
+        X is either 1, 2, or 3. For natural gas meter use data, must
+        set ``fit_cdd=False``.
+
+    .. note::
+
+        For CalTRACK compliance (3.3.1.1), for billing methods, must set
+        ``use_mean_daily_values=True``.
+
+    .. note::
+
+        For CalTRACK compliance (3.3.1.2), for daily or billing methods,
+        must set ``degree_day_method=daily``.
 
     Parameters
     ----------
@@ -189,6 +215,16 @@ def merge_temperature_data(
             "temperature_data.index must have hourly frequency (freq='H')."
             " Found: {}"
             .format(temperature_data.index.freq)
+        )
+
+    if (
+        meter_data.index.freq is None and
+        meter_data.index.inferred_freq == 'H'):
+        raise ValueError(
+            "If you have hourly data explicitly set the frequency"
+            " of the dataframe by setting"
+            "``meter_data.index.freq ="
+            " pd.tseries.frequencies.to_offset('H')."
         )
 
     temp_agg_funcs = []
@@ -251,8 +287,13 @@ def merge_temperature_data(
         columns=temp_agg_column_renames
     )
 
+    freq_greater_than_daily = (
+        meter_data.index.freq is None or
+        pd.Timedelta(meter_data.index.freq) > pd.Timedelta('1D'))
+
+    # CalTrack 3.3.1.1
     # convert to average daily values.
-    if use_mean_daily_values and meter_data.index.freq is None:
+    if use_mean_daily_values and freq_greater_than_daily:
         df['meter_value'] = df.meter_value / day_counts(df.meter_value)
 
     # expand degree_day_columns
@@ -278,6 +319,7 @@ def remove_duplicates(df_or_series):
     deduplicated : :any:`pandas.DataFrame` or :any:`pandas.Series`
         The deduplicated pandas object.
     '''
+    # CalTrack 2.3.2.2
     return df_or_series[~df_or_series.index.duplicated(keep='first')]
 
 
@@ -321,6 +363,7 @@ def as_freq(meter_data_series, freq, atomic_freq='1 Min'):
     resampled_meter_data : :any:`pandas.Series`
         Meter data resampled to the given frequency.
     '''
+    # TODO(philngo): make sure this complies with CalTRACK 2.2.2.1
     if not isinstance(meter_data_series, pd.Series):
         raise ValueError(
             'expected series, got object with class {}'
@@ -362,6 +405,10 @@ def day_counts(series):
 
 def get_baseline_data(data, start=None, end=None, max_days=365):
     ''' Filter down to baseline period data.
+
+    .. note::
+
+        For compliance with CalTRACK, set ``max_days=365`` (section 2.2.1.1).
 
     Parameters
     ----------

@@ -88,4 +88,5 @@ Usage Guides
 
    basics
    advanced
+   caltrack_compliance
    api

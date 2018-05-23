@@ -113,6 +113,25 @@ def test_merge_temperature_data_hourly_daily_degree_days_fail(
         )
 
 
+def test_merge_temperature_data_hourly_daily_missing_explicit_freq(
+    il_electricity_cdd_hdd_hourly
+):
+    # pick a slice with both hdd and cdd
+    meter_data = il_electricity_cdd_hdd_hourly['meter_data']\
+        ['2016-03-01':'2016-07-01']
+    temperature_data = il_electricity_cdd_hdd_hourly['temperature_data']\
+        ['2016-03-01':'2016-07-01']
+
+    meter_data.index.freq = None
+    with pytest.raises(ValueError):
+        merge_temperature_data(
+            meter_data, temperature_data,
+            heating_balance_points=[60, 61],
+            cooling_balance_points=[65, 66],
+            degree_day_method='daily',
+        )
+
+
 def test_merge_temperature_data_hourly_bad_degree_days(
     il_electricity_cdd_hdd_hourly
 ):

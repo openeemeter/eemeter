@@ -33,6 +33,10 @@ __all__ = (
     'get_total_degree_day_too_low_warning',
     'get_parameter_negative_warning',
     'get_parameter_p_value_too_high_warning',
+    'get_single_intercept_only_candidate_model',
+    'get_single_cdd_only_candidate_model',
+    'get_single_hdd_only_candidate_model',
+    'get_single_cdd_hdd_candidate_model',
     'get_intercept_only_candidate_models',
     'get_cdd_only_candidate_models',
     'get_hdd_only_candidate_models',
@@ -398,6 +402,8 @@ def get_intercept_only_candidate_models(data, weights_col):
         return [get_fit_failed_candidate_model(model_type, formula)]
 
     result = model.fit()
+
+    # CalTrack 3.3.1.3
     model_params = {'intercept': result.params['Intercept']}
     return [_candidate_model_factory(
         model_type, formula, 'QUALIFIED',
@@ -471,6 +477,8 @@ def get_single_cdd_only_candidate_model(
     result = model.fit()
     r_squared = result.rsquared_adj
     beta_cdd_p_value = result.pvalues[cdd_column]
+
+    # CalTrack 3.3.1.3
     model_params = {
         'intercept': result.params['Intercept'],
         'beta_cdd': result.params[cdd_column],
@@ -478,6 +486,8 @@ def get_single_cdd_only_candidate_model(
     }
 
     model_warnings = []
+
+    # CalTrack 3.4.3.2
     for parameter in ['intercept', 'beta_cdd']:
         model_warnings.extend(get_parameter_negative_warning(
             model_type, model_params, parameter
@@ -605,6 +615,8 @@ def get_single_hdd_only_candidate_model(
     result = model.fit()
     r_squared = result.rsquared_adj
     beta_hdd_p_value = result.pvalues[hdd_column]
+
+    # CalTrack 3.3.1.3
     model_params = {
         'intercept': result.params['Intercept'],
         'beta_hdd': result.params[hdd_column],
@@ -612,6 +624,8 @@ def get_single_hdd_only_candidate_model(
     }
 
     model_warnings = []
+
+    # CalTrack 3.4.3.2
     for parameter in ['intercept', 'beta_hdd']:
         model_warnings.extend(get_parameter_negative_warning(
             model_type, model_params, parameter
@@ -757,6 +771,8 @@ def get_single_cdd_hdd_candidate_model(
     r_squared = result.rsquared_adj
     beta_cdd_p_value = result.pvalues[cdd_column]
     beta_hdd_p_value = result.pvalues[hdd_column]
+
+    # CalTrack 3.3.1.3
     model_params = {
         'intercept': result.params['Intercept'],
         'beta_cdd': result.params[cdd_column],
@@ -766,6 +782,8 @@ def get_single_cdd_hdd_candidate_model(
     }
 
     model_warnings = []
+
+    # CalTrack 3.4.3.2
     for parameter in ['intercept', 'beta_cdd', 'beta_hdd']:
         model_warnings.extend(get_parameter_negative_warning(
             model_type, model_params, parameter
@@ -833,6 +851,8 @@ def get_cdd_hdd_candidate_models(
     heating_balance_points = [
         int(col[4:]) for col in data.columns if col.startswith('hdd')
     ]
+
+    # CalTrack 3.2.2.1
     candidate_models = [
         get_single_cdd_hdd_candidate_model(
             data, minimum_non_zero_cdd, minimum_non_zero_hdd,
@@ -866,6 +886,7 @@ def select_best_candidate(candidate_models):
     best_r_squared = -np.inf
     best_candidate = None
 
+    # CalTrack 3.4.3.3
     for candidate in candidate_models:
         if candidate.status == 'QUALIFIED' and candidate.r_squared > best_r_squared:
             best_candidate = candidate
@@ -963,6 +984,7 @@ def caltrack_method(
             )],
         )
     # collect all candidate results, then validate all at once
+    # CalTrack 3.4.3.1
     candidates = []
 
     if fit_intercept_only:
@@ -1037,10 +1059,18 @@ def caltrack_method(
 
 def caltrack_sufficiency_criteria(
     data_quality, requested_start, requested_end, min_days=365,
-    min_fraction_daily_coverage=0.9,
+    min_fraction_daily_coverage=0.9,  # TODO: needs to be per year
     min_fraction_hourly_temperature_coverage_per_period=0.9,
 ):
     '''CalTRACK daily data sufficiency criteria.
+
+    .. note::
+
+        For CalTRACK compliance, ``min_fraction_daily_coverage`` must be set
+        at ``0.9`` (section 2.2.1.2), and requested_start and requested_end must
+        not be None (section 2.2.4).
+
+    TODO: add warning for outliers (CalTrack 2.3.6)
 
     Parameters
     ----------
@@ -1110,6 +1140,7 @@ def caltrack_sufficiency_criteria(
 
     non_critical_warnings = []
     if n_days_end_gap < 0:
+        # CalTRACK 2.2.4
         non_critical_warnings.append(EEMeterWarning(
             qualified_name=(
                 'eemeter.caltrack_sufficiency_criteria'
@@ -1126,6 +1157,7 @@ def caltrack_sufficiency_criteria(
         n_days_end_gap = 0
 
     if n_days_start_gap < 0:
+        # CalTRACK 2.2.4
         non_critical_warnings.append(EEMeterWarning(
             qualified_name=(
                 'eemeter.caltrack_sufficiency_criteria'
@@ -1149,6 +1181,7 @@ def caltrack_sufficiency_criteria(
         data_quality.meter_value[data_quality.meter_value < 0].shape[0]
 
     if n_negative_meter_values > 0:
+        #CalTrack 2.3.5
         critical_warnings.append(EEMeterWarning(
             qualified_name=(
                 'eemeter.caltrack_sufficiency_criteria'
@@ -1276,9 +1309,9 @@ def caltrack_metered_savings(
     baseline_model, reporting_meter_data, temperature_data,
     degree_day_method='daily', with_disaggregated=False,
 ):
-    ''' Compute modeled savings, i.e., savings in which baseline and reporting
-    usage values are based on models. This is appropriate for annualizing or
-    weather normalizing models.
+    ''' Compute metered savings, i.e., savings in which the baseline model
+    is used to calculate the modeled usage in the reporting period. This
+    modeled usage is then compared to the actual usage from the reporting period.
 
     Parameters
     ----------
@@ -1343,6 +1376,7 @@ def caltrack_metered_savings(
         reporting_data['n_days'] = (
             reporting_data.n_hours_kept + reporting_data.n_hours_dropped) / 24
 
+    # CalTrack 3.5.1
     counterfactual_usage = baseline_model.predict(reporting_data) \
         .rename('counterfactual_usage')
 
