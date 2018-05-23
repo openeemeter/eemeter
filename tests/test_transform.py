@@ -542,6 +542,40 @@ def test_merge_temperature_data_billing_bimonthly_data_quality(
     assert round(df.temperature_null.mean(), 2) == 0.0
 
 
+def test_merge_temperature_data_shorter_temperature_data(
+        il_electricity_cdd_hdd_daily):
+    meter_data = il_electricity_cdd_hdd_daily['meter_data']
+    temperature_data = il_electricity_cdd_hdd_daily['temperature_data']
+
+    # drop some data
+    temperature_data = temperature_data[:-200]
+
+    df = merge_temperature_data(meter_data, temperature_data)
+    assert df.shape == (810, 4)
+    assert list(df.columns) == [
+        'meter_value', 'temperature_mean', 'n_days_dropped', 'n_days_kept'
+    ]
+    assert round(df.meter_value.sum()) == 21564.0
+    assert round(df.temperature_mean.sum()) == 43958.0
+
+
+def test_merge_temperature_data_shorter_meter_data(
+        il_electricity_cdd_hdd_daily):
+    meter_data = il_electricity_cdd_hdd_daily['meter_data']
+    temperature_data = il_electricity_cdd_hdd_daily['temperature_data']
+
+    # drop some data
+    meter_data = meter_data[:-10]
+
+    df = merge_temperature_data(meter_data, temperature_data)
+    assert df.shape == (800, 4)
+    assert list(df.columns) == [
+        'meter_value', 'temperature_mean', 'n_days_dropped', 'n_days_kept'
+    ]
+    assert round(df.meter_value.sum()) == 21525.0
+    assert round(df.temperature_mean.sum()) == 43934.0
+
+
 def test_as_freq_not_series(il_electricity_cdd_hdd_billing_monthly):
     meter_data = il_electricity_cdd_hdd_billing_monthly['meter_data']
     assert meter_data.shape == (27, 1)

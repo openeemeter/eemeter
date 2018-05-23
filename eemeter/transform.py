@@ -259,7 +259,7 @@ def merge_temperature_data(
     if 'degree_day_columns' in df:
         df = pd.concat([
             df.drop(['degree_day_columns'], axis=1),
-            df['degree_day_columns'].apply(pd.Series)
+            df['degree_day_columns'].dropna().apply(pd.Series)
         ], axis=1)
 
     return df.dropna().reindex(df.index)
