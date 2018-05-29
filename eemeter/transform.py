@@ -19,6 +19,7 @@ __all__ = (
     'get_reporting_data',
     'merge_temperature_data',
     'remove_duplicates',
+    'overwrite_partial_rows_with_nan',
 )
 
 
@@ -40,7 +41,8 @@ def _matching_groups(index, df, tolerance):
 
 def _degree_day_columns(
     heating_balance_points, cooling_balance_points, degree_day_method,
-    percent_hourly_coverage_per_day, use_mean_daily_values,
+    percent_hourly_coverage_per_day, percent_hourly_coverage_per_billing_period,
+    use_mean_daily_values,
 ):
     # TODO(philngo): can this be refactored to be a more general without losing
     # on performance?
@@ -73,7 +75,7 @@ def _degree_day_columns(
             return columns
 
     # CalTRACK 2.2.2.3
-    n_limit = 24 * percent_hourly_coverage_per_day
+    n_limit_daily = 24 * percent_hourly_coverage_per_day
 
     if degree_day_method == 'daily':
         def _compute_columns(temps):
@@ -82,9 +84,16 @@ def _degree_day_columns(
 
                 day_groups = np.floor(np.arange(count) / 24)
                 daily_temps = temps.groupby(day_groups).agg(['mean', 'count'])
+                n_limit_period = (percent_hourly_coverage_per_billing_period *
+                    count)
                 n_days_total = daily_temps.shape[0]
-                # CalTRACK 2.2.2.3
-                daily_temps = daily_temps['mean'][daily_temps['count'] > n_limit]
+
+                # CalTrack 2.2.3.2
+                if temps.notnull().sum() < n_limit_period:
+                    daily_temps = daily_temps['mean'].iloc[0:0]
+                else:
+                    # CalTRACK 2.2.2.3
+                    daily_temps = daily_temps['mean'][daily_temps['count'] > n_limit_daily]
                 n_days_kept = daily_temps.shape[0]
                 count_cols = {
                     'n_days_kept': n_days_kept,
@@ -106,7 +115,7 @@ def _degree_day_columns(
                 }
             else:  # faster route for daily case, should have same effect.
 
-                if count > n_limit:
+                if count > n_limit_daily:
                     count_cols = {
                         'n_days_kept': 1,
                         'n_days_dropped': 0,
@@ -146,7 +155,8 @@ def merge_temperature_data(
     meter_data, temperature_data, heating_balance_points=None,
     cooling_balance_points=None, data_quality=False, temperature_mean=True,
     degree_day_method='daily', percent_hourly_coverage_per_day=0.5,
-    use_mean_daily_values=True, tolerance=None
+    percent_hourly_coverage_per_billing_period=0.9,
+    use_mean_daily_values=True, tolerance=None, keep_partial_nan_rows=False
 ):
     ''' Merge meter data of any frequency with hourly temperature data to make
     a dataset to feed to models.
@@ -161,6 +171,11 @@ def merge_temperature_data(
         ``heating_balance_points=range(30,90,X)``, where
         X is either 1, 2, or 3. For natural gas meter use data, must
         set ``fit_cdd=False``.
+
+    .. note::
+
+        For CalTRACK compliance (2.2.3.2), for billing methods, must set
+        ``percent_hourly_coverage_per_billing_period=0.9``.
 
     .. note::
 
@@ -200,6 +215,10 @@ def merge_temperature_data(
         totals. If False, totals will be used instead.
     tolerance : :any:`pandas.Timedelta`, optional
         Do not merge more than this amount of temperature data beyond this limit.
+    keep_partial_nan_rows: :any:`bool`, optional
+        If True, keeps data in resultant :any:`pandas.DataFrame` that has
+        missing temperature or meter data. Otherwise, these rows are overwritten
+        entirely with ``numpy.nan`` values.
 
     Returns
     -------
@@ -209,6 +228,7 @@ def merge_temperature_data(
     # TODO(philngo): write fast route for hourly meter data + hourly temp data,
     #   possibly using pd.align or pd.reindex
     # TODO(philngo): think about providing some presets
+    # TODO(ssuffian): fix the following: for billing period data when keep_partial_nan_rows=True, n_days_total is always one more than n_days_kept, due to the last row of the meter data being an np.nan value.
 
     if temperature_data.index.freq != 'H':
         raise ValueError(
@@ -256,6 +276,7 @@ def merge_temperature_data(
         cooling_balance_points=cooling_balance_points,
         degree_day_method=degree_day_method,
         percent_hourly_coverage_per_day=percent_hourly_coverage_per_day,
+        percent_hourly_coverage_per_billing_period=percent_hourly_coverage_per_billing_period,
         use_mean_daily_values=use_mean_daily_values,
     ))
     temp_agg_column_renames.update({
@@ -303,8 +324,12 @@ def merge_temperature_data(
             df['degree_day_columns'].dropna().apply(pd.Series)
         ], axis=1)
 
-    return df.dropna().reindex(df.index)
+    if not keep_partial_nan_rows:
+        df = overwrite_partial_rows_with_nan(df)
+    return df
 
+def overwrite_partial_rows_with_nan(df):
+    return df.dropna().reindex(df.index)
 
 def remove_duplicates(df_or_series):
     ''' Remove duplicate rows or values by keeping the first of each duplicate.
