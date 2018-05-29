@@ -23,7 +23,7 @@ Section 2.2.2: Daily Data Sufficiency
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - **2.2.2.1**: (Data Preparation) Input meter data has been appropriately downsampled to daily values.
-- **2.2.2.2**: (Data Preparation) Estimated reads in input data have been combined with subsequent reads.
+- **2.2.2.2**: (Data Preparation) The estimated reads in input data have been combined with subsequent reads.
 - **2.2.2.3**: :any:`eemeter.merge_temperature_data` sets ``percent_hourly_coverage_per_day=0.5``.
 - **2.2.2.4**: (Data Preparation) Meter usage and temperature data that is downsampled to daily has used matching time zone information to ensure that the upsampled values represent the same periods of time.
 
