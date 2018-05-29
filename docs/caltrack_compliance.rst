@@ -53,7 +53,7 @@ Section 2.3: Data Quality
 Section 2.3.1: Impossible Dates
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- **2.3.1.1**: (Data Preparation) Input meter data containing invalid dates for a valid month have been converted to the first date of that month.
+- **2.3.1.1**: (Data Preparation) For billing analysis, input meter data containing invalid dates for a valid month have been converted to the first date of that month.
 - **2.3.1.2**: (Data Preparation) Input meter data containing invalid months/years for have been removed and a warning has been generated.
 
 

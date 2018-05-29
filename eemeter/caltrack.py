@@ -403,17 +403,26 @@ def get_intercept_only_candidate_models(data, weights_col):
 
     result = model.fit()
 
-    # CalTrack 3.4.3.2
-    if result.params['Intercept']<0:
-        model_status = 'DISQUALIFIED'
-    else:
-        model_status = 'QUALIFIED'
-
     # CalTrack 3.3.1.3
     model_params = {'intercept': result.params['Intercept']}
 
+    model_warnings = []
+
+    # CalTrack 3.4.3.2
+    for parameter in ['intercept']:
+        model_warnings.extend(get_parameter_negative_warning(
+            model_type, model_params, parameter
+        ))
+
+    if len(model_warnings) > 0:
+        status = 'DISQUALIFIED'
+    else:
+        status = 'QUALIFIED'
+
+
     return [_candidate_model_factory(
-        model_type, formula, 'QUALIFIED',
+        model_type, formula, status,
+        warnings=model_warnings,
         model_params=model_params,
         model=model,
         result=result,

@@ -125,14 +125,6 @@ def baseline_temperature_data():
                     index=index)
     return series
 
-
-@pytest.fixture
-def baseline_temperature_data():
-    index = pd.date_range('2011-01-01', freq='H', periods=1095*24, tz='UTC')
-    series = pd.Series(np.random.normal(60, 5, len(index)),
-                    index=index)
-    return series
-
 def test_caltrack_predict_intercept_only(
     candidate_model_intercept_only, design_matrix
 ):
@@ -389,6 +381,30 @@ def test_get_parameter_p_value_too_high_warning_fail():
         'intercept_maximum_p_value': 0.1,
         'intercept_p_value': 0.2
     }
+
+
+def test_get_intercept_only_candidate_models_fail(design_matrix):
+    # should be covered by ETL, but this ensures no negative values.
+    data = pd.DataFrame({
+        'meter_value': np.arange(10)*-1,
+    })
+    candidate_models = get_intercept_only_candidate_models(
+        data, weights_col=None)
+    assert len(candidate_models) == 1
+    model = candidate_models[0]
+    assert model.model_type == 'intercept_only'
+    assert model.formula == 'meter_value ~ 1'
+    assert model.status == 'DISQUALIFIED'
+    assert model.model is not None
+    assert model.result is not None
+    assert list(sorted(model.model_params.keys())) == ['intercept']
+    assert round(model.model_params['intercept'], 2) == -4.5
+    assert model.r_squared == 0
+    assert len(model.warnings) == 1
+    warning = model.warnings[0]
+    assert warning.qualified_name == (
+        'eemeter.caltrack_daily.intercept_only.intercept_negative'
+    )
 
 
 def test_get_intercept_only_candidate_models_qualified(design_matrix):
