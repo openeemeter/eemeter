@@ -1477,7 +1477,8 @@ def caltrack_modeled_savings(
     # There is probably a cleaner way to do this and it likely involves making
     # merge_temperature_data more flexible.
     meter_data_hack = pd.DataFrame({'value': 0}, index=result_index)
-    meter_data_hack.iloc[-1] = np.nan
+    if meter_data_hack.shape[0] > 0:
+        meter_data_hack.iloc[-1] = np.nan
 
     design_matrix = merge_temperature_data(
         meter_data_hack, temperature_data,
@@ -1487,6 +1488,13 @@ def caltrack_modeled_savings(
         use_mean_daily_values=False,
     )
 
+    if design_matrix.empty:
+        return pd.DataFrame({
+            'modeled_baseline_usage': [],
+            'modeled_reporting_usage': [],
+            'modeled_savings': []
+        }, index=result_index)
+
     if degree_day_method == 'daily':
         design_matrix['n_days'] = (
             design_matrix.n_days_kept + design_matrix.n_days_dropped)
@@ -1494,10 +1502,10 @@ def caltrack_modeled_savings(
         design_matrix['n_days'] = (
             design_matrix.n_hours_kept + design_matrix.n_hours_dropped) / 24
 
-    modeled_baseline_usage = baseline_model.predict(design_matrix)\
+    modeled_baseline_usage = baseline_model.predict(design_matrix) \
         .to_frame('modeled_baseline_usage')
 
-    modeled_reporting_usage = reporting_model.predict(design_matrix)\
+    modeled_reporting_usage = reporting_model.predict(design_matrix) \
         .rename('modeled_reporting_usage')
 
     def modeled_savings_func(row):

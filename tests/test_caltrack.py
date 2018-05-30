@@ -1416,3 +1416,23 @@ def test_caltrack_modeled_savings_cdd_hdd_with_disaggregated(
         'modeled_reporting_usage',
         'modeled_savings',
     ]
+
+
+def test_caltrack_modeled_savings_empty_temperature_data(
+    baseline_model, reporting_model,
+):
+
+    index = pd.DatetimeIndex([], freq='H')
+    temperature_data = pd.Series([], index=index)
+
+    meter_data_index = temperature_data.resample('D').sum().index
+
+    # using reporting data for convenience, but intention is to use normal data
+    results = caltrack_modeled_savings(
+        baseline_model, reporting_model, meter_data_index,
+        temperature_data, degree_day_method='daily'
+    )
+    assert results.shape == (0, 3)
+    assert list(results.columns) == [
+        'modeled_baseline_usage', 'modeled_reporting_usage', 'modeled_savings'
+    ]
