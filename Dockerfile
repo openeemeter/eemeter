@@ -7,7 +7,7 @@ RUN apt-get update \
     # for access to metadata.db
     sqlite3 libsqlite3-dev
 
-ENV PYTHONPATH=/usr/local/bin
+ENV PYTHONPATH=/usr/local/bin:/app
 ENV PYTHON_VERSION=3.6.4
 
 RUN set -ex && pip install pip --upgrade
@@ -17,5 +17,6 @@ COPY dev_requirements.txt dev_requirements.txt
 COPY eemeter/ /app/eemeter/
 RUN set -ex && pip install -r dev_requirements.txt
 RUN set -ex && pip install -e /app
+RUN set -ex && cd /usr/local/lib/ && python /app/setup.py develop
 
 WORKDIR /app
