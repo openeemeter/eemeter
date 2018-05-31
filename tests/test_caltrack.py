@@ -110,6 +110,21 @@ def design_matrix():
     )
 
 
+@pytest.fixture
+def baseline_meter_data_billing():
+    index = pd.date_range('2011-01-01', freq='30D', periods=12, tz='UTC')
+    df = pd.DataFrame({'value': 1}, index=index)
+    df.iloc[-1] = np.nan
+    return df
+
+
+@pytest.fixture
+def baseline_temperature_data():
+    index = pd.date_range('2011-01-01', freq='H', periods=1095*24, tz='UTC')
+    series = pd.Series(np.random.normal(60, 5, len(index)),
+                    index=index)
+    return series
+
 def test_caltrack_predict_intercept_only(
     candidate_model_intercept_only, design_matrix
 ):
@@ -366,6 +381,30 @@ def test_get_parameter_p_value_too_high_warning_fail():
         'intercept_maximum_p_value': 0.1,
         'intercept_p_value': 0.2
     }
+
+
+def test_get_intercept_only_candidate_models_fail(design_matrix):
+    # should be covered by ETL, but this ensures no negative values.
+    data = pd.DataFrame({
+        'meter_value': np.arange(10)*-1,
+    })
+    candidate_models = get_intercept_only_candidate_models(
+        data, weights_col=None)
+    assert len(candidate_models) == 1
+    model = candidate_models[0]
+    assert model.model_type == 'intercept_only'
+    assert model.formula == 'meter_value ~ 1'
+    assert model.status == 'DISQUALIFIED'
+    assert model.model is not None
+    assert model.result is not None
+    assert list(sorted(model.model_params.keys())) == ['intercept']
+    assert round(model.model_params['intercept'], 2) == -4.5
+    assert model.r_squared == 0
+    assert len(model.warnings) == 1
+    warning = model.warnings[0]
+    assert warning.qualified_name == (
+        'eemeter.caltrack_daily.intercept_only.intercept_negative'
+    )
 
 
 def test_get_intercept_only_candidate_models_qualified(design_matrix):
@@ -976,6 +1015,32 @@ def test_caltrack_method_no_model():
     assert warning.data == {}
 
 
+# CalTrack 2.2.3.2
+def test_caltrack_merge_temperatures_insufficient_temperature_per_period(
+    baseline_meter_data_billing, baseline_temperature_data):
+    baseline_temperature_data_missing = baseline_temperature_data.copy(deep=True)
+    baseline_temperature_data_missing.iloc[:(4*24)] = np.nan
+
+    # test without percent_hourly_coverage_per_billing_period constraint
+    data_quality = merge_temperature_data(
+        baseline_meter_data_billing, baseline_temperature_data_missing,
+        heating_balance_points=range(40, 81),
+        cooling_balance_points=range(50, 91),
+        data_quality=True,keep_partial_nan_rows=False,
+        percent_hourly_coverage_per_billing_period=0,
+    )
+    assert data_quality['n_days_kept'].isnull().sum()==1
+
+    # test with default percent_hourly_coverage_per_billing_period=0.9 constraint
+    data_quality = merge_temperature_data(
+        baseline_meter_data_billing, baseline_temperature_data_missing,
+        heating_balance_points=range(40, 81),
+        cooling_balance_points=range(50, 91),
+        data_quality=True,keep_partial_nan_rows=False,
+    )
+    assert data_quality['n_days_kept'].isnull().sum()==2
+
+
 def test_caltrack_sufficiency_criteria_no_data():
     data_quality = pd.DataFrame({
         'meter_value': [],
@@ -1165,6 +1230,7 @@ def test_caltrack_sufficiency_criteria_fail_with_requested_start_end():
     }
 
 
+# CalTrack 2.2.4
 def test_caltrack_sufficiency_criteria_too_much_data():
     data_quality = pd.DataFrame({
         'meter_value': [1, 1, 1],
@@ -1180,7 +1246,7 @@ def test_caltrack_sufficiency_criteria_too_much_data():
         min_fraction_daily_coverage=0.9,
         min_fraction_hourly_temperature_coverage_per_period=0.9,
     )
-    assert data_sufficiency.status == 'PASS'
+    assert data_sufficiency.status == 'FAIL'
     assert len(data_sufficiency.warnings) == 2
 
     warning0 = data_sufficiency.warnings[0]
