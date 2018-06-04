@@ -179,6 +179,11 @@ def merge_temperature_data(
 
     .. note::
 
+        For CalTRACK compliance (2.3.3), ``meter_data`` and ``temperature_data``
+        must both be timezone-aware and have matching timezones.
+
+    .. note::
+
         For CalTRACK compliance (3.3.1.1), for billing methods, must set
         ``use_mean_daily_values=True``.
 
@@ -247,6 +252,17 @@ def merge_temperature_data(
             " pd.tseries.frequencies.to_offset('H')."
         )
 
+    if not meter_data.index.tz:
+        raise ValueError(
+            "meter_data.index must be timezone-aware. You can set it with"
+            " meter_data.tz_localize(...)."
+        )
+
+    if not temperature_data.index.tz:
+        raise ValueError(
+            "temperature_data.index must be timezone-aware. You can set it with"
+            " temperature_data.tz_localize(...)."
+        )
     temp_agg_funcs = []
     temp_agg_column_renames = {}
 
