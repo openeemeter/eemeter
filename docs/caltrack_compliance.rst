@@ -25,7 +25,6 @@ Section 2.2.2: Daily Data Sufficiency
 - **2.2.2.1**: (Data Preparation) Input meter data has been appropriately downsampled to daily values.
 - **2.2.2.2**: (Data Preparation) Estimated reads in input data have been combined with subsequent reads.
 - **2.2.2.3**: :any:`eemeter.merge_temperature_data` sets ``percent_hourly_coverage_per_day=0.5``.
-- **2.2.2.4**: (Data Preparation) Meter usage and temperature data that is downsampled to daily has used matching time zone information to ensure that the upsampled values represent the same periods of time.
 
 
 Section 2.2.3: Billing Data Sufficiency
@@ -62,14 +61,15 @@ Section 2.3.2: Duplicate Records
 
 
 - **2.3.2.1**: (Data Preparation) Meter usage and temperature data has used matching time zone information to ensure that the upsampled values represent the same periods of time.
-- **2.3.2.2**: *Not yet compliant (If duplicate rows are found for meter data, then the project must be flagged as it may have sub-metering/multiple meters. Warnings could possibly be generated in :any:`eemeter.remove_duplicates`.
+- **2.3.2.2**: *Not yet compliant (If duplicate rows are found for meter data, then the project must be flagged as it may have sub-metering/multiple meters. Warnings could possibly be generated in :any:`eemeter.remove_duplicates`.*
 
 
 Section 2.3.X: Other Data Quality Requirements
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- **2.3.3**: If NOAA weather data was used (which is roughly hourly), it has been normalized to hourly using :any:`eeweather.ISDStation.fetch_isd_hourly_temp_data`.
-- **2.3.4**: If multiple project installation dates were given, the earliest date is assigned to be the Project start date (2.1.3.1.1) and :any:`eemeter.get_baseline_data` must set ``end=project_start_date``. The latest date is assigned to be the Intervention active date (2.1.3.1.2) and :any:`eemeter.get_reporting_data` must set ``start=intervention_active_date``.
+
+- **2.3.3**: :any: `eemeter.merge_temperature_data` ``meter_data`` and ``temperature_data`` must be timezone-aware and have matching timezones. 
+- **2.3.4**: If NOAA weather data was used (which is roughly hourly), it has been normalized to hourly using :any:`eeweather.ISDStation.fetch_isd_hourly_temp_data`.
 - **2.3.5**: Warnings are generated in :any:`eemeter.caltrack_sufficiency_criteria` if negative meter values are discovered as they indicate the possible presence of unreported net metering.
 - **2.3.6**: *Not yet compliant (Must generate warning for values that are more than three interquartile ranges larger than the median usage).*
 - **2.3.7**: (Audit) Resulting dataset of meter runs has been compared with expected counts of sites, meters, and projects.
@@ -79,7 +79,7 @@ Section 2.3.X: Other Data Quality Requirements
 Section 2.4: Matching Sites to Weather Stations
 -----------------------------------------------
 
-- **2.4.1**: When matching weather stations to sites, :any:`eeweather.match_lat_long` and :any:`eeweather.match_zcta` should use the default ``mapping`` parameter.
+- **2.4.1**: When matching weather stations to sites, :any:`eeweather.match_lat_long` should use the default ``mapping`` parameter.
 - **2.4.2**: When matching a particular site to a weather station, a weather station mapping :any:`eeweather.ISDStationMapping` generates a warning if the weather station is greater than 200 km from the site.
 
 
