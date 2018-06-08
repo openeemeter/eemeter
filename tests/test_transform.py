@@ -562,7 +562,8 @@ def test_merge_temperature_data_billing_bimonthly_data_quality(
 
 
 def test_merge_temperature_data_shorter_temperature_data(
-        il_electricity_cdd_hdd_daily):
+    il_electricity_cdd_hdd_daily
+):
     meter_data = il_electricity_cdd_hdd_daily['meter_data']
     temperature_data = il_electricity_cdd_hdd_daily['temperature_data']
 
@@ -579,7 +580,8 @@ def test_merge_temperature_data_shorter_temperature_data(
 
 
 def test_merge_temperature_data_shorter_meter_data(
-        il_electricity_cdd_hdd_daily):
+    il_electricity_cdd_hdd_daily
+):
     meter_data = il_electricity_cdd_hdd_daily['meter_data']
     temperature_data = il_electricity_cdd_hdd_daily['temperature_data']
 
@@ -593,6 +595,27 @@ def test_merge_temperature_data_shorter_meter_data(
     ]
     assert round(df.meter_value.sum()) == 21525.0
     assert round(df.temperature_mean.sum()) == 43934.0
+
+
+def test_merge_temperature_data_empty_data():
+    index = pd.DatetimeIndex([], tz='UTC', name='dt', freq='H')
+    temperature_data = pd.Series({'value': []}, index=index)
+    result_index = temperature_data.resample('D').sum().index
+    meter_data_hack = pd.DataFrame({'value': 0}, index=result_index)
+
+    df = merge_temperature_data(
+        meter_data_hack, temperature_data,
+        heating_balance_points=[65],
+        cooling_balance_points=[65],
+        degree_day_method='daily',
+        use_mean_daily_values=False,
+    )
+    assert df.shape == (0, 4)
+    assert list(df.columns) == [
+        'meter_value', 'temperature_mean', 'n_days_dropped', 'n_days_kept'
+    ]
+    assert round(df.meter_value.sum()) == 0
+    assert round(df.temperature_mean.sum()) == 0
 
 
 def test_as_freq_not_series(il_electricity_cdd_hdd_billing_monthly):

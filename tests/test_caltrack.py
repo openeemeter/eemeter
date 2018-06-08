@@ -1421,8 +1421,7 @@ def test_caltrack_modeled_savings_cdd_hdd_with_disaggregated(
 def test_caltrack_modeled_savings_empty_temperature_data(
     baseline_model, reporting_model,
 ):
-
-    index = pd.DatetimeIndex([], freq='H')
+    index = pd.DatetimeIndex([], tz='UTC', name='dt', freq='H')
     temperature_data = pd.Series([], index=index)
 
     meter_data_index = temperature_data.resample('D').sum().index

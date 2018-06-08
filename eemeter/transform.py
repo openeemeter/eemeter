@@ -296,12 +296,21 @@ def merge_temperature_data(
     if use_mean_daily_values and freq_greater_than_daily:
         df['meter_value'] = df.meter_value / day_counts(df.meter_value)
 
-    # expand degree_day_columns
-    if 'degree_day_columns' in df:
-        df = pd.concat([
-            df.drop(['degree_day_columns'], axis=1),
-            df['degree_day_columns'].dropna().apply(pd.Series)
-        ], axis=1)
+    if df.empty:
+        if 'degree_day_columns' in df:
+            column_defaults = {
+                column: []
+                for column in ['n_days_dropped', 'n_days_kept']
+            }
+            df = df.drop(['degree_day_columns'], axis=1) \
+                .assign(**column_defaults)
+    else:
+        # expand degree_day_columns
+        if 'degree_day_columns' in df:
+            df = pd.concat([
+                df.drop(['degree_day_columns'], axis=1),
+                df['degree_day_columns'].dropna().apply(pd.Series)
+            ], axis=1)
 
     return df.dropna().reindex(df.index)
 
