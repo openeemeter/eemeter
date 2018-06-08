@@ -19,6 +19,7 @@ from .exceptions import (
 from .transform import (
     day_counts,
     merge_temperature_data,
+    overwrite_partial_rows_with_nan,
 )
 
 
@@ -33,7 +34,6 @@ __all__ = (
     'get_total_degree_day_too_low_warning',
     'get_parameter_negative_warning',
     'get_parameter_p_value_too_high_warning',
-    'get_single_intercept_only_candidate_model',
     'get_single_cdd_only_candidate_model',
     'get_single_hdd_only_candidate_model',
     'get_single_cdd_hdd_candidate_model',
@@ -405,8 +405,24 @@ def get_intercept_only_candidate_models(data, weights_col):
 
     # CalTrack 3.3.1.3
     model_params = {'intercept': result.params['Intercept']}
+
+    model_warnings = []
+
+    # CalTrack 3.4.3.2
+    for parameter in ['intercept']:
+        model_warnings.extend(get_parameter_negative_warning(
+            model_type, model_params, parameter
+        ))
+
+    if len(model_warnings) > 0:
+        status = 'DISQUALIFIED'
+    else:
+        status = 'QUALIFIED'
+
+
     return [_candidate_model_factory(
-        model_type, formula, 'QUALIFIED',
+        model_type, formula, status,
+        warnings=model_warnings,
         model_params=model_params,
         model=model,
         result=result,
@@ -971,6 +987,9 @@ def caltrack_method(
         minimum_total_cdd = 0
         minimum_total_hdd = 0
 
+    #cleans data to fully NaN rows that have missing temp or meter data
+    data = overwrite_partial_rows_with_nan(data)
+
     if data.empty:
         return ModelFit(
             status='NO DATA',
@@ -983,6 +1002,7 @@ def caltrack_method(
                 data={},
             )],
         )
+
     # collect all candidate results, then validate all at once
     # CalTrack 3.4.3.1
     candidates = []
@@ -1084,11 +1104,12 @@ def caltrack_sufficiency_criteria(
         The desired start of the period, if any, especially if this is
         different from the start of the data. If given, warnings
         are reported on the basis of this start date instead of data start
-        date.
+        date. Must be explicitly set to ``None`` in order to use data start date.
     requested_end : :any:`datetime.datetime`, timezone aware (or :any:`None`)
         The desired end of the period, if any, especially if this is
         different from the end of the data. If given, warnings
         are reported on the basis of this end date instead of data end date.
+        Must be explicitly set to ``None`` in order to use data end date.
     min_days : :any:`int`, optional
         Minimum number of days allowed in data, including extent given by
         ``requested_start`` or ``requested_end``, if given.
@@ -1138,10 +1159,11 @@ def caltrack_sufficiency_criteria(
     else:
         n_days_end_gap = 0
 
-    non_critical_warnings = []
+    critical_warnings = []
+
     if n_days_end_gap < 0:
         # CalTRACK 2.2.4
-        non_critical_warnings.append(EEMeterWarning(
+        critical_warnings.append(EEMeterWarning(
             qualified_name=(
                 'eemeter.caltrack_sufficiency_criteria'
                 '.extra_data_after_requested_end_date'
@@ -1158,7 +1180,7 @@ def caltrack_sufficiency_criteria(
 
     if n_days_start_gap < 0:
         # CalTRACK 2.2.4
-        non_critical_warnings.append(EEMeterWarning(
+        critical_warnings.append(EEMeterWarning(
             qualified_name=(
                 'eemeter.caltrack_sufficiency_criteria'
                 '.extra_data_before_requested_start_date'
@@ -1174,8 +1196,6 @@ def caltrack_sufficiency_criteria(
         n_days_start_gap = 0
 
     n_days_total = n_days_data + n_days_start_gap + n_days_end_gap
-
-    critical_warnings = []
 
     n_negative_meter_values = \
         data_quality.meter_value[data_quality.meter_value < 0].shape[0]
@@ -1290,7 +1310,7 @@ def caltrack_sufficiency_criteria(
     else:
         status = 'PASS'
 
-    warnings = critical_warnings + non_critical_warnings
+    warnings = critical_warnings
 
     return DataSufficiency(
         status=status,

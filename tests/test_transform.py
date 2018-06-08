@@ -25,6 +25,23 @@ def test_merge_temperature_data_no_freq_index(il_electricity_cdd_hdd_billing_mon
         merge_temperature_data(meter_data, temperature_data)
 
 
+def test_merge_temperature_data_no_meter_data_tz(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly['meter_data']
+    temperature_data = il_electricity_cdd_hdd_billing_monthly['temperature_data']
+    meter_data = meter_data.tz_localize(None)
+    with pytest.raises(ValueError):
+        merge_temperature_data(meter_data, temperature_data)
+
+
+def test_merge_temperature_data_no_temp_data_tz(il_electricity_cdd_hdd_billing_monthly):
+    # pick a slice with both hdd and cdd
+    meter_data = il_electricity_cdd_hdd_billing_monthly['meter_data']
+    temperature_data = il_electricity_cdd_hdd_billing_monthly['temperature_data']
+    temperature_data = temperature_data.tz_localize(None)
+    with pytest.raises(ValueError):
+        merge_temperature_data(meter_data, temperature_data)
+
+
 def test_merge_temperature_data_hourly_temp_mean(il_electricity_cdd_hdd_hourly):
     # pick a slice with both hdd and cdd
     meter_data = il_electricity_cdd_hdd_hourly['meter_data']['2016-03-01':'2016-07-01']
