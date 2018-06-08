@@ -10,17 +10,6 @@ services:
       - .:/app
       - /app/tests/__pycache__/
 
-  docs:
-    image: eemeter_shell
-    ports:
-      - "${HOST_PORT_DOCS:-8000}:8000"
-    entrypoint: make -C docs livehtml
-    volumes:
-      - .:/app
-      - /app/tests/__pycache__/
-    depends_on:
-      - shell
-
   test:
     image: eemeter_shell
     entrypoint: py.test -n0

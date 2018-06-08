@@ -1068,7 +1068,7 @@ def test_caltrack_sufficiency_criteria_pass():
         'temperature_not_null': [1, 1],
         'temperature_null': [0, 0],
         'start': pd.date_range(
-            start='2016-01-02', periods=2, freq='D').tz_localize('UTC'),
+            start='2016-01-02', periods=2, freq='D', tz='UTC'),
     }).set_index('start')
     requested_start = pd.Timestamp('2016-01-02') \
         .tz_localize('UTC').to_pydatetime()
@@ -1096,7 +1096,7 @@ def test_caltrack_sufficiency_criteria_fail_no_gap():
         'temperature_not_null': [1, 5],
         'temperature_null': [0, 5],
         'start': pd.date_range(
-            start='2016-01-02', periods=2, freq='D').tz_localize('UTC'),
+            start='2016-01-02', periods=2, freq='D', tz='UTC'),
     }).set_index('start')
     requested_start = pd.Timestamp('2016-01-02').tz_localize('UTC')
     requested_end = pd.Timestamp('2016-01-04').tz_localize('UTC')
@@ -1161,7 +1161,7 @@ def test_caltrack_sufficiency_criteria_pass_no_requested_start_end():
         'temperature_not_null': [1, 1],
         'temperature_null': [0, 0],
         'start': pd.date_range(
-            start='2016-01-02', periods=2, freq='D').tz_localize('UTC'),
+            start='2016-01-02', periods=2, freq='D', tz='UTC'),
     }).set_index('start')
     data_sufficiency = caltrack_sufficiency_criteria(
         data_quality, None, None, min_days=1,
@@ -1181,7 +1181,7 @@ def test_caltrack_sufficiency_criteria_fail_with_requested_start_end():
         'temperature_not_null': [1, 1],
         'temperature_null': [0, 0],
         'start': pd.date_range(
-            start='2016-01-02', periods=2, freq='D').tz_localize('UTC'),
+            start='2016-01-02', periods=2, freq='D', tz='UTC'),
     }).set_index('start')
     requested_start = pd.Timestamp('2016-01-01').tz_localize('UTC')
     requested_end = pd.Timestamp('2016-01-04').tz_localize('UTC')
@@ -1237,7 +1237,7 @@ def test_caltrack_sufficiency_criteria_too_much_data():
         'temperature_not_null': [1, 1, 1],
         'temperature_null': [0, 0, 0],
         'start': pd.date_range(
-            start='2016-01-02', periods=3, freq='D').tz_localize('UTC'),
+            start='2016-01-02', periods=3, freq='D', tz='UTC'),
     }).set_index('start')
     requested_start = pd.Timestamp('2016-01-03').tz_localize('UTC')
     requested_end = pd.Timestamp('2016-01-03').tz_localize('UTC')
@@ -1282,7 +1282,7 @@ def test_caltrack_sufficiency_criteria_negative_values():
         'temperature_not_null': [1, 1, 1],
         'temperature_null': [0, 0, 1],
         'start': pd.date_range(
-            start='2016-01-02', periods=3, freq='D').tz_localize('UTC'),
+            start='2016-01-02', periods=3, freq='D', tz='UTC'),
     }).set_index('start')
     data_sufficiency = caltrack_sufficiency_criteria(
         data_quality, None, None, min_days=1,
@@ -1310,7 +1310,7 @@ def test_caltrack_sufficiency_criteria_handle_single_input():
         'temperature_not_null': [1],
         'temperature_null': [0],
         'start': pd.date_range(
-            start='2016-01-02', periods=1, freq='D').tz_localize('UTC'),
+            start='2016-01-02', periods=1, freq='D', tz='UTC'),
     }).set_index('start')
     data_sufficiency = caltrack_sufficiency_criteria(
         data_quality, None, None, min_days=0,
@@ -1487,9 +1487,8 @@ def test_caltrack_modeled_savings_cdd_hdd_with_disaggregated(
 def test_caltrack_modeled_savings_empty_temperature_data(
     baseline_model, reporting_model,
 ):
-
-    index = pd.DatetimeIndex([], freq='H')
-    temperature_data = pd.Series([], index=index).tz_localize('UTC')
+    index = pd.DatetimeIndex([], tz='UTC', name='dt', freq='H')
+    temperature_data = pd.Series([], index=index)
 
     meter_data_index = temperature_data.resample('D').sum().index
 
