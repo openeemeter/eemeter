@@ -19,14 +19,16 @@
 
 # -- Project information -----------------------------------------------------
 
+from eemeter import get_version
+
 project = 'eemeter'
 copyright = '2016-2018, Open Energy Efficiency, Inc.'
 author = 'Phil Ngo'
 
 # The short X.Y version
-version = '2.0.0'
+version = get_version()
 # The full version, including alpha/beta/rc tags
-release = '2.0.0-alpha'
+release = version
 
 
 # -- General configuration ---------------------------------------------------
