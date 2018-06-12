@@ -13,6 +13,7 @@ eeweather = "*"
 matplotlib = "*"
 statsmodels = "*"
 sqlalchemy = "*"
+scipy = "*"
 
 
 [dev-packages]
