@@ -447,6 +447,9 @@ def day_counts(series):
     # dont affect the original data
     series = series.copy()
 
+    if len(series) == 0:
+        return pd.Series([], index=series.index)
+
     timedeltas = (series.index[1:] - series.index[:-1]).append(pd.TimedeltaIndex([pd.NaT]))
     timedelta_days = timedeltas.total_seconds() / (60 * 60 * 24)
 

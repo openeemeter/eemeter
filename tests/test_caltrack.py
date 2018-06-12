@@ -1393,13 +1393,13 @@ def test_caltrack_metered_savings_cdd_hdd_with_disaggregated(
         baseline_model, reporting_meter_data, reporting_temperature_data,
         degree_day_method='daily', with_disaggregated=True
     )
-    assert list(results.columns) == [
-        'reporting_observed',
-        'counterfactual_usage',
-        'metered_savings',
+    assert list(sorted(results.columns)) == [
         'counterfactual_base_load',
         'counterfactual_cooling_load',
-        'counterfactual_heating_load'
+        'counterfactual_heating_load',
+        'counterfactual_usage',
+        'metered_savings',
+        'reporting_observed',
     ]
 
 
