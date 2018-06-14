@@ -56,4 +56,4 @@ are using the virtualenv py.test:
 Licence
 -------
 
-MIT
+[Apache-2.0](LICENSE)
