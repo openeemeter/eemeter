@@ -20,6 +20,8 @@ def test_candidate_model_minimal():
     assert candidate_model.status == 'status'
     with pytest.raises(ValueError):
         candidate_model.predict('a') == 'a'
+    with pytest.raises(ValueError):
+        candidate_model.predict_index('a') == 'a'
     assert candidate_model.model_params == {}
     assert candidate_model.warnings == []
     assert str(candidate_model).startswith('CandidateModel')

@@ -29,6 +29,7 @@ __all__ = (
     'caltrack_metered_savings',
     'caltrack_modeled_savings',
     'caltrack_predict',
+    'caltrack_predict_index',
     'plot_caltrack_candidate',
     'get_too_few_non_zero_degree_day_warning',
     'get_total_degree_day_too_low_warning',
@@ -47,12 +48,18 @@ __all__ = (
 
 def _candidate_model_factory(
     model_type, formula, status, warnings=None, model_params=None,
-    model=None, result=None, r_squared=None, use_predict_func=True
+    model=None, result=None, r_squared=None, use_predict_func=True,
+    use_predict_index_func=True
 ):
     if use_predict_func:
         predict_func = caltrack_predict
     else:
         predict_func = None
+
+    if use_predict_index_func:
+        predict_index_func = caltrack_predict_index
+    else:
+        predict_index_func = None
 
     return CandidateModel(
         model_type=model_type,
@@ -60,6 +67,7 @@ def _candidate_model_factory(
         status=status,
         warnings=warnings,
         predict_func=predict_func,
+        predict_index_func=predict_index_func,
         plot_func=plot_caltrack_candidate,
         model_params=model_params, model=model, result=result,
         r_squared=r_squared,
@@ -159,6 +167,68 @@ def caltrack_predict(
         })
     else:
         return base_load + heating_load + cooling_load
+
+
+def caltrack_predict_index(
+    model_type, model_params, predict_func,
+    temperature_data, prediction_index, degree_day_method,
+    with_disaggregated=False
+):
+    if model_params is None:
+        raise MissingModelParameterError(
+            'model_params is None.'
+        )
+
+    cooling_balance_points = []
+    heating_balance_points = []
+
+    if 'cooling_balance_point' in model_params:
+        cooling_balance_points.append(model_params['cooling_balance_point'])
+    if 'heating_balance_point' in model_params:
+        heating_balance_points.append(model_params['heating_balance_point'])
+
+    # There is probably a cleaner way to do this and it likely involves making
+    # merge_temperature_data more flexible.
+    meter_data_hack = pd.DataFrame({'value': 0}, index=prediction_index)
+    if meter_data_hack.shape[0] > 0:
+        meter_data_hack.iloc[-1] = np.nan
+
+    design_matrix = merge_temperature_data(
+        meter_data_hack, temperature_data,
+        heating_balance_points=heating_balance_points,
+        cooling_balance_points=cooling_balance_points,
+        degree_day_method=degree_day_method,
+        use_mean_daily_values=False,
+    )
+
+    if design_matrix.empty:
+        if with_disaggregated:
+            empty_columns = {
+                'predicted_usage': [],
+                'base_load': [],
+                'heating_load': [],
+                'cooling_load': []
+            }
+        else:
+            empty_columns = {'predicted_usage': []}
+        return pd.DataFrame(empty_columns, index=prediction_index)
+
+    if degree_day_method == 'daily':
+        design_matrix['n_days'] = (
+            design_matrix.n_days_kept + design_matrix.n_days_dropped)
+    else:
+        design_matrix['n_days'] = (
+            design_matrix.n_hours_kept + design_matrix.n_hours_dropped) / 24
+
+    results = predict_func(model_type, model_params, design_matrix) \
+        .to_frame('predicted_usage')
+
+    if with_disaggregated:
+        disaggregated = predict_func(
+            model_type, model_params, design_matrix, disaggregated=True)
+        results = results.join(disaggregated)
+
+    return results
 
 
 def get_too_few_non_zero_degree_day_warning(
@@ -477,7 +547,8 @@ def get_single_cdd_only_candidate_model(
     if len(degree_day_warnings) > 0:
         return _candidate_model_factory(
             model_type, formula, 'NOT ATTEMPTED',
-            warnings=degree_day_warnings, use_predict_func=False
+            warnings=degree_day_warnings, use_predict_func=False,
+            use_predict_index_func=False
         )
 
     if weights_col is None:
@@ -615,7 +686,8 @@ def get_single_hdd_only_candidate_model(
     if len(degree_day_warnings) > 0:
         return _candidate_model_factory(
             model_type, formula, 'NOT ATTEMPTED',
-            warnings=degree_day_warnings, use_predict_func=False
+            warnings=degree_day_warnings, use_predict_func=False,
+            use_predict_index_func=False
         )
 
     if weights_col is None:
@@ -770,7 +842,8 @@ def get_single_cdd_hdd_candidate_model(
     if len(degree_day_warnings) > 0:
         return _candidate_model_factory(
             model_type, formula, 'NOT ATTEMPTED',
-            warnings=degree_day_warnings, use_predict_func=False
+            warnings=degree_day_warnings, use_predict_func=False,
+            use_predict_index_func=False
         )
 
     if weights_col is None:
@@ -1369,49 +1442,28 @@ def caltrack_metered_savings(
         - ``counterfactual_cooling_load``
 
     '''
-    model_params = baseline_model.model_params
-    if model_params is None:
-        raise MissingModelParameterError(
-            'baseline model has no model_params attribute.'
-        )
-
-    cooling_balance_points = []
-    heating_balance_points = []
-    if 'cooling_balance_point' in model_params:
-        cooling_balance_points.append(model_params['cooling_balance_point'])
-    if 'heating_balance_point' in model_params:
-        heating_balance_points.append(model_params['heating_balance_point'])
-
-    reporting_data = merge_temperature_data(
-        reporting_meter_data, temperature_data,
-        heating_balance_points=heating_balance_points,
-        cooling_balance_points=cooling_balance_points,
-        degree_day_method=degree_day_method,
-        use_mean_daily_values=False,
+    prediction_index = reporting_meter_data.index
+    predicted_baseline_usage = baseline_model.predict_index(
+        temperature_data, prediction_index, degree_day_method,
+        with_disaggregated=True
     )
-    if degree_day_method == 'daily':
-        reporting_data['n_days'] = (
-            reporting_data.n_days_kept + reporting_data.n_days_dropped)
-    else:
-        reporting_data['n_days'] = (
-            reporting_data.n_hours_kept + reporting_data.n_hours_dropped) / 24
-
     # CalTrack 3.5.1
-    counterfactual_usage = baseline_model.predict(reporting_data) \
-        .rename('counterfactual_usage')
+    counterfactual_usage = predicted_baseline_usage['predicted_usage']\
+        .to_frame('counterfactual_usage')
+
+    reporting_observed = reporting_meter_data['value'].to_frame('reporting_observed')
 
     def metered_savings_func(row):
         return row.counterfactual_usage - row.reporting_observed
 
-    results = reporting_meter_data \
-        .rename(columns={'value': 'reporting_observed'}) \
+    results = reporting_observed \
         .join(counterfactual_usage) \
         .assign(metered_savings=metered_savings_func)
 
     if with_disaggregated:
-        counterfactual_usage_disaggregated = baseline_model.predict(
-            reporting_data, disaggregated=True,
-        ).rename(columns={
+        counterfactual_usage_disaggregated = predicted_baseline_usage[
+            ['base_load', 'heating_load', 'cooling_load']
+        ].rename(columns={
             'base_load': 'counterfactual_base_load',
             'heating_load': 'counterfactual_heating_load',
             'cooling_load': 'counterfactual_cooling_load',
@@ -1469,64 +1521,21 @@ def caltrack_modeled_savings(
         - ``modeled_cooling_load_savings``
         - ``modeled_heating_load_savings``
     '''
-    baseline_model_params = baseline_model.model_params
-    if baseline_model_params is None:
-        raise MissingModelParameterError(
-            'baseline_model.model_params is None.'
-        )
+    prediction_index = result_index
 
-    reporting_model_params = reporting_model.model_params
-    if reporting_model_params is None:
-        raise MissingModelParameterError(
-            'reporting_model.model_params is None.'
-        )
-
-    cooling_balance_points = []
-    heating_balance_points = []
-
-    if 'cooling_balance_point' in baseline_model_params:
-        cooling_balance_points.append(baseline_model_params['cooling_balance_point'])
-    if 'heating_balance_point' in baseline_model_params:
-        heating_balance_points.append(baseline_model_params['heating_balance_point'])
-
-    if 'cooling_balance_point' in reporting_model_params:
-        cooling_balance_points.append(reporting_model_params['cooling_balance_point'])
-    if 'heating_balance_point' in reporting_model_params:
-        heating_balance_points.append(reporting_model_params['heating_balance_point'])
-
-    # There is probably a cleaner way to do this and it likely involves making
-    # merge_temperature_data more flexible.
-    meter_data_hack = pd.DataFrame({'value': 0}, index=result_index)
-    if meter_data_hack.shape[0] > 0:
-        meter_data_hack.iloc[-1] = np.nan
-
-    design_matrix = merge_temperature_data(
-        meter_data_hack, temperature_data,
-        heating_balance_points=heating_balance_points,
-        cooling_balance_points=cooling_balance_points,
-        degree_day_method=degree_day_method,
-        use_mean_daily_values=False,
+    predicted_baseline_usage = baseline_model.predict_index(
+        temperature_data, prediction_index, degree_day_method,
+        with_disaggregated=True
     )
-
-    if design_matrix.empty:
-        return pd.DataFrame({
-            'modeled_baseline_usage': [],
-            'modeled_reporting_usage': [],
-            'modeled_savings': []
-        }, index=result_index)
-
-    if degree_day_method == 'daily':
-        design_matrix['n_days'] = (
-            design_matrix.n_days_kept + design_matrix.n_days_dropped)
-    else:
-        design_matrix['n_days'] = (
-            design_matrix.n_hours_kept + design_matrix.n_hours_dropped) / 24
-
-    modeled_baseline_usage = baseline_model.predict(design_matrix) \
+    modeled_baseline_usage = predicted_baseline_usage['predicted_usage']\
         .to_frame('modeled_baseline_usage')
 
-    modeled_reporting_usage = reporting_model.predict(design_matrix) \
-        .rename('modeled_reporting_usage')
+    predicted_reporting_usage = reporting_model.predict_index(
+        temperature_data, prediction_index, degree_day_method,
+        with_disaggregated=True
+    )
+    modeled_reporting_usage = predicted_reporting_usage['predicted_usage']\
+        .to_frame('modeled_reporting_usage')
 
     def modeled_savings_func(row):
         return row.modeled_baseline_usage - row.modeled_reporting_usage
@@ -1536,18 +1545,17 @@ def caltrack_modeled_savings(
         .assign(modeled_savings=modeled_savings_func)
 
     if with_disaggregated:
-
-        modeled_baseline_usage_disaggregated = baseline_model.predict(
-            design_matrix, disaggregated=True
-        ).rename(columns={
+        modeled_baseline_usage_disaggregated = predicted_baseline_usage[
+            ['base_load', 'heating_load', 'cooling_load']
+        ].rename(columns={
             'base_load': 'modeled_baseline_base_load',
             'heating_load': 'modeled_baseline_heating_load',
             'cooling_load': 'modeled_baseline_cooling_load',
         })
 
-        modeled_reporting_usage_disaggregated = reporting_model.predict(
-            design_matrix, disaggregated=True
-        ).rename(columns={
+        modeled_reporting_usage_disaggregated = predicted_reporting_usage[
+            ['base_load', 'heating_load', 'cooling_load']
+        ].rename(columns={
             'base_load': 'modeled_reporting_base_load',
             'heating_load': 'modeled_reporting_heating_load',
             'cooling_load': 'modeled_reporting_cooling_load',

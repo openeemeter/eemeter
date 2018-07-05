@@ -23,6 +23,7 @@ from eemeter.caltrack import (
     get_hdd_only_candidate_models,
     get_cdd_hdd_candidate_models,
     caltrack_predict,
+    caltrack_predict_index,
     select_best_candidate,
 )
 from eemeter.exceptions import (
@@ -46,6 +47,7 @@ def candidate_model_no_model_none():
         formula='formula',
         status='QUALIFIED',
         predict_func=caltrack_predict,
+        predict_index_func=caltrack_predict_index,
         model_params={
             'intercept': 1,
         }
@@ -59,6 +61,18 @@ def test_caltrack_predict_no_model_status(candidate_model_no_model_status):
     })
     with pytest.raises(ValueError):
         candidate_model_no_model_status.predict(df)
+
+
+# TODO repeat for all!
+def test_caltrack_predict_index_no_model_status(candidate_model_no_model_status):
+    index = pd.date_range('2015-01-01', '2015-01-02', freq='H', tz='UTC')
+    temperature_data = pd.Series(1, index=index)
+    prediction_index = temperature_data.resample('D').mean().index
+    degree_day_method = 'daily'
+    with pytest.raises(ValueError):
+        candidate_model_no_model_status.predict_index(
+            temperature_data, prediction_index, degree_day_method,
+        )
 
 
 def test_caltrack_predict_no_model_none(candidate_model_no_model_none):
@@ -76,6 +90,7 @@ def candidate_model_intercept_only():
         formula='formula',
         status='QUALIFIED',
         predict_func=caltrack_predict,
+        predict_index_func=caltrack_predict_index,
         model_params={
             'intercept': 1,
         }
@@ -150,6 +165,7 @@ def candidate_model_missing_params():
         formula='formula',
         status='QUALIFIED',
         predict_func=caltrack_predict,
+        predict_index_func=caltrack_predict_index,
         model_params={}
     )
 
@@ -167,6 +183,7 @@ def candidate_model_cdd_only():
         formula='formula',
         status='QUALIFIED',
         predict_func=caltrack_predict,
+        predict_index_func=caltrack_predict_index,
         model_params={
             'intercept': 1,
             'beta_cdd': 1,
@@ -200,6 +217,7 @@ def candidate_model_hdd_only():
         formula='formula',
         status='QUALIFIED',
         predict_func=caltrack_predict,
+        predict_index_func=caltrack_predict_index,
         model_params={
             'intercept': 1,
             'beta_hdd': 1,
@@ -233,6 +251,7 @@ def candidate_model_cdd_hdd():
         formula='formula',
         status='QUALIFIED',
         predict_func=caltrack_predict,
+        predict_index_func=caltrack_predict_index,
         model_params={
             'intercept': 1,
             'beta_hdd': 1,
@@ -268,6 +287,7 @@ def candidate_model_bad_model_type():
         formula='formula',
         status='QUALIFIED',
         predict_func=caltrack_predict,
+        predict_index_func=caltrack_predict_index,
         model_params={}
     )
 

@@ -47,9 +47,9 @@ class CandidateModel(object):
     '''
 
     def __init__(
-        self, model_type, formula, status, predict_func=None, plot_func=None,
-        model_params=None, model=None, result=None, r_squared=None,
-        warnings=None
+        self, model_type, formula, status, predict_func=None,
+        predict_index_func=None,  plot_func=None, model_params=None,
+        model=None, result=None, r_squared=None, warnings=None
     ):
         self.model_type = model_type
         self.formula = formula
@@ -58,6 +58,7 @@ class CandidateModel(object):
         self.result = result
         self.r_squared = r_squared
         self.predict_func = predict_func
+        self.predict_index_func = predict_index_func
         self.plot_func = plot_func
 
         if model_params is None:
@@ -103,6 +104,18 @@ class CandidateModel(object):
         else:
             return self.predict_func(
                 self.model_type, self.model_params, *args, **kwargs)
+
+    def predict_index(self, *args, **kwargs):
+        ''' Predict for index for this model. Arguments may vary by model type.
+        '''
+        if self.predict_index_func is None:
+            raise ValueError(
+                'This candidate model cannot be used for index-based'
+                ' prediction because the predict_index_func attr is not set.'
+            )
+        else:
+            return self.predict_index_func(
+                self.model_type, self.model_params, self.predict_func, *args, **kwargs)
 
     def plot(self, *args, **kwargs):
         ''' Predict for this model. Arguments may vary by model type.
