@@ -353,8 +353,10 @@ def merge_temperature_data(
         df = overwrite_partial_rows_with_nan(df)
     return df
 
+
 def overwrite_partial_rows_with_nan(df):
     return df.dropna().reindex(df.index)
+
 
 def remove_duplicates(df_or_series):
     ''' Remove duplicate rows or values by keeping the first of each duplicate.
