@@ -72,8 +72,8 @@ def utc_index():
 @pytest.fixture
 def temperature_data(utc_index):
     series = pd.Series([
-        30 * ((i % (365 * 24)) / (365 * 24))  # 30 * frac of way through year
-        + 50  # range from 50 to 80
+        30.0 * ((i % (365 * 24.0)) / (365 * 24.0))  # 30 * frac of way through year
+        + 50.0  # range from 50 to 80
         for i in range(len(utc_index))
     ], index=utc_index)
     return series
