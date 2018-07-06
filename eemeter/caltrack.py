@@ -1078,7 +1078,7 @@ def caltrack_method(
 
 
 def caltrack_sufficiency_criteria(
-    data_quality, requested_start, requested_end, min_days=365,
+    data_quality, requested_start, requested_end, num_days=365,
     min_fraction_daily_coverage=0.9,  # TODO: needs to be per year
     min_fraction_hourly_temperature_coverage_per_period=0.9,
 ):
@@ -1110,8 +1110,8 @@ def caltrack_sufficiency_criteria(
         different from the end of the data. If given, warnings
         are reported on the basis of this end date instead of data end date.
         Must be explicitly set to ``None`` in order to use data end date.
-    min_days : :any:`int`, optional
-        Minimum number of days allowed in data, including extent given by
+    num_days : :any:`int`, optional
+        Exact number of days allowed in data, including extent given by
         ``requested_start`` or ``requested_end``, if given.
     min_fraction_daily_coverage : :any:, optional
         Minimum fraction of days of data in total data extent for which data
@@ -1244,17 +1244,17 @@ def caltrack_sufficiency_criteria(
         fraction_valid_temperature_days = 0
         fraction_valid_days = 0
 
-    if n_days_total < min_days:
+    if n_days_total != num_days:
         critical_warnings.append(EEMeterWarning(
             qualified_name=(
                 'eemeter.caltrack_sufficiency_criteria'
-                '.too_few_total_days'
+                '.incorrect_number_of_total_days'
             ),
             description=(
-                'Smaller total data span than the allowable minimum.'
+                'Total data span does not match the required value.'
             ),
             data={
-                'min_days': min_days,
+                'num_days': num_days,
                 'n_days_total': n_days_total,
             }
         ))
@@ -1317,7 +1317,7 @@ def caltrack_sufficiency_criteria(
         criteria_name=criteria_name,
         warnings=warnings,
         settings={
-            'min_days': min_days,
+            'num_days': num_days,
             'min_fraction_daily_coverage': min_fraction_daily_coverage,
             'min_fraction_hourly_temperature_coverage_per_period':
                 min_fraction_hourly_temperature_coverage_per_period,

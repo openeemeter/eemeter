@@ -1064,7 +1064,7 @@ def test_caltrack_sufficiency_criteria_no_data():
 
 def test_caltrack_sufficiency_criteria_pass():
     data_quality = pd.DataFrame({
-        'meter_value': [1, 1],
+        'meter_value': [1, np.nan],
         'temperature_not_null': [1, 1],
         'temperature_null': [0, 0],
         'start': pd.date_range(
@@ -1074,7 +1074,7 @@ def test_caltrack_sufficiency_criteria_pass():
         .tz_localize('UTC').to_pydatetime()
     requested_end = pd.Timestamp('2016-01-03').tz_localize('UTC')
     data_sufficiency = caltrack_sufficiency_criteria(
-        data_quality, requested_start, requested_end, min_days=1,
+        data_quality, requested_start, requested_end, num_days=1,
         min_fraction_daily_coverage=0.9,
         min_fraction_hourly_temperature_coverage_per_period=0.9,
     )
@@ -1084,7 +1084,7 @@ def test_caltrack_sufficiency_criteria_pass():
     )
     assert data_sufficiency.warnings == []
     assert data_sufficiency.settings == {
-        'min_days': 1,
+        'num_days': 1,
         'min_fraction_daily_coverage': 0.9,
         'min_fraction_hourly_temperature_coverage_per_period': 0.9
     }
@@ -1092,7 +1092,7 @@ def test_caltrack_sufficiency_criteria_pass():
 
 def test_caltrack_sufficiency_criteria_fail_no_gap():
     data_quality = pd.DataFrame({
-        'meter_value': [np.nan, 1],
+        'meter_value': [np.nan, np.nan],
         'temperature_not_null': [1, 5],
         'temperature_null': [0, 5],
         'start': pd.date_range(
@@ -1101,7 +1101,7 @@ def test_caltrack_sufficiency_criteria_fail_no_gap():
     requested_start = pd.Timestamp('2016-01-02').tz_localize('UTC')
     requested_end = pd.Timestamp('2016-01-04').tz_localize('UTC')
     data_sufficiency = caltrack_sufficiency_criteria(
-        data_quality, requested_start, requested_end, min_days=3,
+        data_quality, requested_start, requested_end, num_days=3,
         min_fraction_daily_coverage=0.9,
         min_fraction_hourly_temperature_coverage_per_period=0.9,
     )
@@ -1113,12 +1113,12 @@ def test_caltrack_sufficiency_criteria_fail_no_gap():
 
     warning0 = data_sufficiency.warnings[0]
     assert warning0.qualified_name == (
-        'eemeter.caltrack_sufficiency_criteria.too_few_total_days'
+        'eemeter.caltrack_sufficiency_criteria.incorrect_number_of_total_days'
     )
     assert warning0.description == (
-        'Smaller total data span than the allowable minimum.'
+        'Total data span does not match the required value.'
     )
-    assert warning0.data == {'min_days': 3, 'n_days_total': 2}
+    assert warning0.data == {'num_days': 3, 'n_days_total': 2}
 
     warning1 = data_sufficiency.warnings[1]
     assert warning1.qualified_name == (
@@ -1157,14 +1157,14 @@ def test_caltrack_sufficiency_criteria_fail_no_gap():
 
 def test_caltrack_sufficiency_criteria_pass_no_requested_start_end():
     data_quality = pd.DataFrame({
-        'meter_value': [1, 1],
+        'meter_value': [1, np.nan],
         'temperature_not_null': [1, 1],
         'temperature_null': [0, 0],
         'start': pd.date_range(
             start='2016-01-02', periods=2, freq='D', tz='UTC'),
     }).set_index('start')
     data_sufficiency = caltrack_sufficiency_criteria(
-        data_quality, None, None, min_days=1,
+        data_quality, None, None, num_days=1,
         min_fraction_daily_coverage=0.9,
         min_fraction_hourly_temperature_coverage_per_period=0.9,
     )
@@ -1177,7 +1177,7 @@ def test_caltrack_sufficiency_criteria_pass_no_requested_start_end():
 
 def test_caltrack_sufficiency_criteria_fail_with_requested_start_end():
     data_quality = pd.DataFrame({
-        'meter_value': [1, 1],
+        'meter_value': [1, np.nan],
         'temperature_not_null': [1, 1],
         'temperature_null': [0, 0],
         'start': pd.date_range(
@@ -1186,7 +1186,7 @@ def test_caltrack_sufficiency_criteria_fail_with_requested_start_end():
     requested_start = pd.Timestamp('2016-01-01').tz_localize('UTC')
     requested_end = pd.Timestamp('2016-01-04').tz_localize('UTC')
     data_sufficiency = caltrack_sufficiency_criteria(
-        data_quality, requested_start, requested_end, min_days=2,
+        data_quality, requested_start, requested_end, num_days=3,
         min_fraction_daily_coverage=0.9,
         min_fraction_hourly_temperature_coverage_per_period=0.9,
     )
@@ -1233,7 +1233,7 @@ def test_caltrack_sufficiency_criteria_fail_with_requested_start_end():
 # CalTrack 2.2.4
 def test_caltrack_sufficiency_criteria_too_much_data():
     data_quality = pd.DataFrame({
-        'meter_value': [1, 1, 1],
+        'meter_value': [1, 1, np.nan],
         'temperature_not_null': [1, 1, 1],
         'temperature_null': [0, 0, 0],
         'start': pd.date_range(
@@ -1242,7 +1242,7 @@ def test_caltrack_sufficiency_criteria_too_much_data():
     requested_start = pd.Timestamp('2016-01-03').tz_localize('UTC')
     requested_end = pd.Timestamp('2016-01-03').tz_localize('UTC')
     data_sufficiency = caltrack_sufficiency_criteria(
-        data_quality, requested_start, requested_end, min_days=2,
+        data_quality, requested_start, requested_end, num_days=2,
         min_fraction_daily_coverage=0.9,
         min_fraction_hourly_temperature_coverage_per_period=0.9,
     )
@@ -1278,14 +1278,14 @@ def test_caltrack_sufficiency_criteria_too_much_data():
 
 def test_caltrack_sufficiency_criteria_negative_values():
     data_quality = pd.DataFrame({
-        'meter_value': [-1, 1, 1],
+        'meter_value': [-1, 1, np.nan],
         'temperature_not_null': [1, 1, 1],
         'temperature_null': [0, 0, 1],
         'start': pd.date_range(
             start='2016-01-02', periods=3, freq='D', tz='UTC'),
     }).set_index('start')
     data_sufficiency = caltrack_sufficiency_criteria(
-        data_quality, None, None, min_days=1,
+        data_quality, None, None, num_days=2,
         min_fraction_daily_coverage=0.9,
         min_fraction_hourly_temperature_coverage_per_period=0.9,
     )
@@ -1306,14 +1306,14 @@ def test_caltrack_sufficiency_criteria_negative_values():
 def test_caltrack_sufficiency_criteria_handle_single_input():
     # just make sure this case is handled.
     data_quality = pd.DataFrame({
-        'meter_value': [1],
+        'meter_value': [np.nan],
         'temperature_not_null': [1],
         'temperature_null': [0],
         'start': pd.date_range(
             start='2016-01-02', periods=1, freq='D', tz='UTC'),
     }).set_index('start')
     data_sufficiency = caltrack_sufficiency_criteria(
-        data_quality, None, None, min_days=0,
+        data_quality, None, None, num_days=0,
         min_fraction_daily_coverage=0.9,
         min_fraction_hourly_temperature_coverage_per_period=0.9,
     )
