@@ -29,7 +29,6 @@ __all__ = (
     'caltrack_metered_savings',
     'caltrack_modeled_savings',
     'caltrack_predict',
-    'caltrack_predict_index',
     'plot_caltrack_candidate',
     'get_too_few_non_zero_degree_day_warning',
     'get_total_degree_day_too_low_warning',
@@ -49,17 +48,11 @@ __all__ = (
 def _candidate_model_factory(
     model_type, formula, status, warnings=None, model_params=None,
     model=None, result=None, r_squared=None, use_predict_func=True,
-    use_predict_index_func=True
 ):
     if use_predict_func:
         predict_func = caltrack_predict
     else:
         predict_func = None
-
-    if use_predict_index_func:
-        predict_index_func = caltrack_predict_index
-    else:
-        predict_index_func = None
 
     return CandidateModel(
         model_type=model_type,
@@ -67,7 +60,6 @@ def _candidate_model_factory(
         status=status,
         warnings=warnings,
         predict_func=predict_func,
-        predict_index_func=predict_index_func,
         plot_func=plot_caltrack_candidate,
         model_params=model_params, model=model, result=result,
         r_squared=r_squared,
@@ -84,7 +76,7 @@ def _get_parameter_or_raise(model_type, model_params, param):
         )
 
 
-def caltrack_predict(
+def _caltrack_predict_design_matrix(
     model_type, model_params, data, disaggregated=False
 ):
     ''' CalTRACK predict method.
@@ -118,12 +110,6 @@ def caltrack_predict(
 
     if isinstance(data.index, pd.DatetimeIndex):
         days = day_counts(zeros)
-    elif 'n_days' in data:
-        days = data.n_days
-    else:
-        raise ValueError(
-            '`data` must have either a pandas.DatetimeIndex or the column `n_days`'
-        )
 
     # TODO(philngo): handle different degree day methods and hourly temperatures
     if model_type in ['intercept_only', 'hdd_only', 'cdd_only', 'cdd_hdd']:
@@ -169,10 +155,9 @@ def caltrack_predict(
         return base_load + heating_load + cooling_load
 
 
-def caltrack_predict_index(
-    model_type, model_params, predict_func,
-    temperature_data, prediction_index, degree_day_method,
-    with_disaggregated=False
+def caltrack_predict(
+    model_type, model_params, temperature_data, prediction_index,
+    degree_day_method, with_disaggregated=False, with_design_matrix=False
 ):
     if model_params is None:
         raise MissingModelParameterError(
@@ -200,6 +185,7 @@ def caltrack_predict_index(
         degree_day_method=degree_day_method,
         use_mean_daily_values=False,
     )
+    del design_matrix['meter_value']  # clean up meter data hack
 
     if design_matrix.empty:
         if with_disaggregated:
@@ -220,13 +206,16 @@ def caltrack_predict_index(
         design_matrix['n_days'] = (
             design_matrix.n_hours_kept + design_matrix.n_hours_dropped) / 24
 
-    results = predict_func(model_type, model_params, design_matrix) \
+    results = _caltrack_predict_design_matrix(model_type, model_params, design_matrix) \
         .to_frame('predicted_usage')
 
     if with_disaggregated:
-        disaggregated = predict_func(
+        disaggregated = _caltrack_predict_design_matrix(
             model_type, model_params, design_matrix, disaggregated=True)
         results = results.join(disaggregated)
+
+    if with_design_matrix:
+        results = results.join(design_matrix)
 
     return results
 
@@ -547,8 +536,7 @@ def get_single_cdd_only_candidate_model(
     if len(degree_day_warnings) > 0:
         return _candidate_model_factory(
             model_type, formula, 'NOT ATTEMPTED',
-            warnings=degree_day_warnings, use_predict_func=False,
-            use_predict_index_func=False
+            warnings=degree_day_warnings, use_predict_func=False
         )
 
     if weights_col is None:
@@ -686,8 +674,7 @@ def get_single_hdd_only_candidate_model(
     if len(degree_day_warnings) > 0:
         return _candidate_model_factory(
             model_type, formula, 'NOT ATTEMPTED',
-            warnings=degree_day_warnings, use_predict_func=False,
-            use_predict_index_func=False
+            warnings=degree_day_warnings, use_predict_func=False
         )
 
     if weights_col is None:
@@ -842,8 +829,7 @@ def get_single_cdd_hdd_candidate_model(
     if len(degree_day_warnings) > 0:
         return _candidate_model_factory(
             model_type, formula, 'NOT ATTEMPTED',
-            warnings=degree_day_warnings, use_predict_func=False,
-            use_predict_index_func=False
+            warnings=degree_day_warnings, use_predict_func=False
         )
 
     if weights_col is None:
@@ -1443,7 +1429,7 @@ def caltrack_metered_savings(
 
     '''
     prediction_index = reporting_meter_data.index
-    predicted_baseline_usage = baseline_model.predict_index(
+    predicted_baseline_usage = baseline_model.predict(
         temperature_data, prediction_index, degree_day_method,
         with_disaggregated=True
     )
@@ -1523,14 +1509,14 @@ def caltrack_modeled_savings(
     '''
     prediction_index = result_index
 
-    predicted_baseline_usage = baseline_model.predict_index(
+    predicted_baseline_usage = baseline_model.predict(
         temperature_data, prediction_index, degree_day_method,
         with_disaggregated=True
     )
     modeled_baseline_usage = predicted_baseline_usage['predicted_usage']\
         .to_frame('modeled_baseline_usage')
 
-    predicted_reporting_usage = reporting_model.predict_index(
+    predicted_reporting_usage = reporting_model.predict(
         temperature_data, prediction_index, degree_day_method,
         with_disaggregated=True
     )
