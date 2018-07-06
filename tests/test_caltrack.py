@@ -31,6 +31,7 @@ from eemeter.exceptions import (
     UnrecognizedModelTypeError,
 )
 
+
 @pytest.fixture
 def candidate_model_no_model_status():
     return CandidateModel(
@@ -63,12 +64,35 @@ def test_caltrack_predict_no_model_status(candidate_model_no_model_status):
         candidate_model_no_model_status.predict(df)
 
 
-# TODO repeat for all!
-def test_caltrack_predict_index_no_model_status(candidate_model_no_model_status):
-    index = pd.date_range('2015-01-01', '2015-01-02', freq='H', tz='UTC')
-    temperature_data = pd.Series(1, index=index)
-    prediction_index = temperature_data.resample('D').mean().index
-    degree_day_method = 'daily'
+@pytest.fixture
+def utc_index():
+    return pd.date_range('2011-01-01', freq='H', periods=365*24 + 1, tz='UTC')
+
+
+@pytest.fixture
+def temperature_data(utc_index):
+    series = pd.Series([
+        30 * ((i % (365 * 24)) / (365 * 24))  # 30 * frac of way through year
+        + 50  # range from 50 to 80
+        for i in range(len(utc_index))
+    ], index=utc_index)
+    return series
+
+
+@pytest.fixture
+def prediction_index(temperature_data):
+    return temperature_data.resample('D').mean().index
+
+
+@pytest.fixture
+def degree_day_method():
+    return 'daily'
+
+
+def test_caltrack_predict_index_no_model_status(
+    candidate_model_no_model_status, temperature_data, prediction_index,
+    degree_day_method,
+):
     with pytest.raises(ValueError):
         candidate_model_no_model_status.predict_index(
             temperature_data, prediction_index, degree_day_method,
@@ -82,6 +106,17 @@ def test_caltrack_predict_no_model_none(candidate_model_no_model_none):
     })
     with pytest.raises(ValueError):
         candidate_model_no_model_none.predict(df)
+
+
+def test_caltrack_predict_index_no_model_none(
+    candidate_model_no_model_none, temperature_data, prediction_index,
+    degree_day_method,
+):
+    with pytest.raises(ValueError):
+        candidate_model_no_model_none.predict_index(
+            temperature_data, prediction_index, degree_day_method,
+        )
+
 
 @pytest.fixture
 def candidate_model_intercept_only():
@@ -97,12 +132,14 @@ def candidate_model_intercept_only():
     )
 
 
+# not applicable for predict_index
 def test_caltrack_predict_no_index_or_n_days(candidate_model_intercept_only):
     df = pd.DataFrame([np.arange(30, 90)]).astype(float)
     with pytest.raises(ValueError):
         candidate_model_intercept_only.predict(df)
 
 
+# not applicable for predict_index
 def test_caltrack_predict_n_days(candidate_model_intercept_only):
     df = pd.DataFrame({
         'value': np.arange(30.0, 90.0),
@@ -125,26 +162,22 @@ def design_matrix():
     )
 
 
-@pytest.fixture
-def baseline_meter_data_billing():
-    index = pd.date_range('2011-01-01', freq='30D', periods=12, tz='UTC')
-    df = pd.DataFrame({'value': 1}, index=index)
-    df.iloc[-1] = np.nan
-    return df
-
-
-@pytest.fixture
-def baseline_temperature_data():
-    index = pd.date_range('2011-01-01', freq='H', periods=1095*24, tz='UTC')
-    series = pd.Series(np.random.normal(60, 5, len(index)),
-                    index=index)
-    return series
-
 def test_caltrack_predict_intercept_only(
     candidate_model_intercept_only, design_matrix
 ):
     prediction = candidate_model_intercept_only.predict(design_matrix)
     assert prediction.sum() == 59
+
+
+def test_caltrack_predict_index_intercept_only(
+    candidate_model_intercept_only, temperature_data, prediction_index,
+    degree_day_method,
+):
+    prediction = candidate_model_intercept_only.predict_index(
+        temperature_data, prediction_index, degree_day_method,
+    )
+    assert prediction['predicted_usage'].sum() == 365
+    assert sorted(prediction.columns) == ['predicted_usage']
 
 
 def test_caltrack_predict_intercept_only_disaggregated(
@@ -156,6 +189,26 @@ def test_caltrack_predict_intercept_only_disaggregated(
     assert prediction.base_load.sum() == 59
     assert prediction.heating_load.sum() == 0
     assert prediction.cooling_load.sum() == 0
+
+
+def test_caltrack_predict_index_intercept_only_with_disaggregated(
+    candidate_model_intercept_only, temperature_data, prediction_index,
+    degree_day_method,
+):
+    prediction = candidate_model_intercept_only.predict_index(
+        temperature_data, prediction_index, degree_day_method,
+        with_disaggregated=True
+    )
+    assert prediction['base_load'].sum() == 365.0
+    assert prediction['cooling_load'].sum() == 0.0
+    assert prediction['heating_load'].sum() == 0.0
+    assert prediction['predicted_usage'].sum() == 365.0
+    assert sorted(prediction.columns) == [
+        'base_load',
+        'cooling_load',
+        'heating_load',
+        'predicted_usage'
+    ]
 
 
 @pytest.fixture
@@ -174,6 +227,16 @@ def test_caltrack_predict_missing_params(
         candidate_model_missing_params, design_matrix):
     with pytest.raises(MissingModelParameterError):
         candidate_model_missing_params.predict(design_matrix)
+
+
+def test_caltrack_predict_index_missing_params(
+    candidate_model_missing_params, temperature_data, prediction_index,
+    degree_day_method,
+):
+    with pytest.raises(MissingModelParameterError):
+        candidate_model_missing_params.predict_index(
+            temperature_data, prediction_index, degree_day_method,
+        )
 
 
 @pytest.fixture
@@ -199,6 +262,16 @@ def test_caltrack_predict_cdd_only(
     assert prediction.sum() == 335
 
 
+def test_caltrack_predict_index_cdd_only(
+    candidate_model_cdd_only, temperature_data, prediction_index,
+    degree_day_method,
+):
+    prediction = candidate_model_cdd_only.predict_index(
+        temperature_data, prediction_index, degree_day_method,
+    )
+    assert round(prediction.predicted_usage.sum()) == 1733
+
+
 def test_caltrack_predict_cdd_only_disaggregated(
     candidate_model_cdd_only, design_matrix
 ):
@@ -208,6 +281,20 @@ def test_caltrack_predict_cdd_only_disaggregated(
     assert prediction.base_load.sum() == 59
     assert prediction.heating_load.sum() == 0
     assert prediction.cooling_load.sum() == 276
+
+
+def test_caltrack_predict_index_cdd_only_disaggregated(
+    candidate_model_cdd_only, temperature_data, prediction_index,
+    degree_day_method,
+):
+    prediction = candidate_model_cdd_only.predict_index(
+        temperature_data, prediction_index, degree_day_method,
+        with_disaggregated=True
+    )
+    assert round(prediction.predicted_usage.sum()) == 1733
+    assert round(prediction.base_load.sum()) == 365.0
+    assert round(prediction.heating_load.sum()) == 0.0
+    assert round(prediction.cooling_load.sum()) == 1368.0
 
 
 @pytest.fixture
@@ -233,6 +320,16 @@ def test_caltrack_predict_hdd_only(
     assert prediction.sum() == 689.0
 
 
+def test_caltrack_predict_index_hdd_only(
+    candidate_model_hdd_only, temperature_data, prediction_index,
+    degree_day_method,
+):
+    prediction = candidate_model_hdd_only.predict_index(
+        temperature_data, prediction_index, degree_day_method,
+    )
+    assert round(prediction.predicted_usage.sum()) == 1734
+
+
 def test_caltrack_predict_hdd_only_disaggregated(
     candidate_model_hdd_only, design_matrix
 ):
@@ -242,6 +339,20 @@ def test_caltrack_predict_hdd_only_disaggregated(
     assert prediction.base_load.sum() == 59.0
     assert prediction.heating_load.sum() == 630.0
     assert prediction.cooling_load.sum() == 0
+
+
+def test_caltrack_predict_index_hdd_only_disaggregated(
+    candidate_model_hdd_only, temperature_data, prediction_index,
+    degree_day_method,
+):
+    prediction = candidate_model_hdd_only.predict_index(
+        temperature_data, prediction_index, degree_day_method,
+        with_disaggregated=True
+    )
+    assert round(prediction.predicted_usage.sum()) == 1734
+    assert round(prediction.base_load.sum()) == 365.0
+    assert round(prediction.heating_load.sum()) == 1369.0
+    assert round(prediction.cooling_load.sum()) == 0.0
 
 
 @pytest.fixture
@@ -269,6 +380,16 @@ def test_caltrack_predict_cdd_hdd(
     assert prediction.sum() == 695.0
 
 
+def test_caltrack_predict_index_cdd_hdd(
+    candidate_model_cdd_hdd, temperature_data, prediction_index,
+    degree_day_method,
+):
+    prediction = candidate_model_cdd_hdd.predict_index(
+        temperature_data, prediction_index, degree_day_method,
+    )
+    assert round(prediction.predicted_usage.sum()) == 1582.0
+
+
 def test_caltrack_predict_cdd_hdd_disaggregated(
     candidate_model_cdd_hdd, design_matrix
 ):
@@ -278,6 +399,20 @@ def test_caltrack_predict_cdd_hdd_disaggregated(
     assert prediction.base_load.sum() == 59
     assert prediction.heating_load.sum() == 465.0
     assert prediction.cooling_load.sum() == 171.0
+
+
+def test_caltrack_predict_index_cdd_hdd_disaggregated(
+    candidate_model_cdd_hdd, temperature_data, prediction_index,
+    degree_day_method,
+):
+    prediction = candidate_model_cdd_hdd.predict_index(
+        temperature_data, prediction_index, degree_day_method,
+        with_disaggregated=True
+    )
+    assert round(prediction.predicted_usage.sum()) == 1582.0
+    assert round(prediction.base_load.sum()) == 365.0
+    assert round(prediction.heating_load.sum()) == 609.0
+    assert round(prediction.cooling_load.sum()) == 608.0
 
 
 @pytest.fixture
@@ -296,6 +431,26 @@ def test_caltrack_predict_bad_model_type(
         candidate_model_bad_model_type, design_matrix):
     with pytest.raises(UnrecognizedModelTypeError):
         candidate_model_bad_model_type.predict(design_matrix)
+
+
+def test_caltrack_predict_index_bad_model_type(
+    candidate_model_bad_model_type, temperature_data, prediction_index,
+    degree_day_method,
+):
+    with pytest.raises(UnrecognizedModelTypeError):
+        candidate_model_bad_model_type.predict_index(
+            temperature_data, prediction_index, degree_day_method,
+        )
+
+
+def test_caltrack_predict_index_empty(
+    candidate_model_bad_model_type, temperature_data, prediction_index,
+    degree_day_method,
+):
+    prediction = candidate_model_bad_model_type.predict_index(
+        temperature_data[:0], prediction_index[:0], degree_day_method,
+    )
+    assert prediction.empty is True
 
 
 def test_get_too_few_non_zero_degree_day_warning_ok():
@@ -1033,6 +1188,22 @@ def test_caltrack_method_no_model():
         'No qualified model candidates available.'
     )
     assert warning.data == {}
+
+
+@pytest.fixture
+def baseline_meter_data_billing():
+    index = pd.date_range('2011-01-01', freq='30D', periods=12, tz='UTC')
+    df = pd.DataFrame({'value': 1}, index=index)
+    df.iloc[-1] = np.nan
+    return df
+
+
+@pytest.fixture
+def baseline_temperature_data():
+    index = pd.date_range('2011-01-01', freq='H', periods=1095*24, tz='UTC')
+    series = pd.Series(
+        np.random.normal(60, 5, len(index)), index=index)
+    return series
 
 
 # CalTrack 2.2.3.2
