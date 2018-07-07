@@ -157,9 +157,9 @@ def test_caltrack_predict_intercept_only_with_design_matrix(
         'predicted_usage',
         'temperature_mean',
     ]
-    assert prediction.n_days.sum() == 365.0
-    assert prediction.n_days_dropped.sum() == 0
-    assert prediction.n_days_kept.sum() == 365.0
+    assert prediction.n_days.sum() == 366.0
+    assert prediction.n_days_dropped.sum() == 1
+    assert prediction.n_days_kept.sum() == 365
     assert prediction.predicted_usage.sum() == 365.0
     assert round(prediction.temperature_mean.mean()) == 65.0
 

@@ -14,6 +14,7 @@ from .api import EEMeterWarning
 
 __all__ = (
     'as_freq',
+    'compute_temperature_features',
     'day_counts',
     'get_baseline_data',
     'get_reporting_data',
@@ -235,6 +236,48 @@ def merge_temperature_data(
     # TODO(philngo): think about providing some presets
     # TODO(ssuffian): fix the following: for billing period data when keep_partial_nan_rows=True, n_days_total is always one more than n_days_kept, due to the last row of the meter data being an np.nan value.
 
+    freq_greater_than_daily = (
+        meter_data.index.freq is None or
+        pd.Timedelta(meter_data.index.freq) > pd.Timedelta('1D'))
+
+    meter_value_df = meter_data.value.to_frame('meter_value')
+
+    # CalTrack 3.3.1.1
+    # convert to average daily meter values.
+    if use_mean_daily_values and freq_greater_than_daily:
+        meter_value_df['meter_value'] = meter_value_df.meter_value / \
+            day_counts(meter_value_df.meter_value)
+
+    temperature_feature_df = compute_temperature_features(
+        temperature_data, meter_data.index,
+        heating_balance_points=heating_balance_points,
+        cooling_balance_points=cooling_balance_points,
+        data_quality=data_quality, temperature_mean=temperature_mean,
+        degree_day_method=degree_day_method,
+        percent_hourly_coverage_per_day=percent_hourly_coverage_per_day,
+        percent_hourly_coverage_per_billing_period=\
+            percent_hourly_coverage_per_billing_period,
+        use_mean_daily_values=use_mean_daily_values,
+        tolerance=tolerance, keep_partial_nan_rows=keep_partial_nan_rows
+    )
+
+    df = pd.concat([
+        meter_value_df,
+        temperature_feature_df
+    ], axis=1)
+
+    if not keep_partial_nan_rows:
+        df = overwrite_partial_rows_with_nan(df)
+    return df
+
+
+def compute_temperature_features(
+    temperature_data, meter_data_index, heating_balance_points=None,
+    cooling_balance_points=None, data_quality=False, temperature_mean=True,
+    degree_day_method='daily', percent_hourly_coverage_per_day=0.5,
+    percent_hourly_coverage_per_billing_period=0.9,
+    use_mean_daily_values=True, tolerance=None, keep_partial_nan_rows=False
+):
     if temperature_data.index.freq != 'H':
         raise ValueError(
             "temperature_data.index must have hourly frequency (freq='H')."
@@ -242,27 +285,29 @@ def merge_temperature_data(
             .format(temperature_data.index.freq)
         )
 
-    if (
-        meter_data.index.freq is None and
-        meter_data.index.inferred_freq == 'H'):
-        raise ValueError(
-            "If you have hourly data explicitly set the frequency"
-            " of the dataframe by setting"
-            "``meter_data.index.freq ="
-            " pd.tseries.frequencies.to_offset('H')."
-        )
-
-    if not meter_data.index.tz:
-        raise ValueError(
-            "meter_data.index must be timezone-aware. You can set it with"
-            " meter_data.tz_localize(...)."
-        )
-
     if not temperature_data.index.tz:
         raise ValueError(
             "temperature_data.index must be timezone-aware. You can set it with"
             " temperature_data.tz_localize(...)."
         )
+
+    if (
+        meter_data_index.freq is None and
+        meter_data_index.inferred_freq == 'H'
+    ):
+        raise ValueError(
+            "If you have hourly data explicitly set the frequency"
+            " of the dataframe by setting"
+            "``meter_data_index.freq ="
+            " pd.tseries.frequencies.to_offset('H')."
+        )
+
+    if not meter_data_index.tz:
+        raise ValueError(
+            "meter_data_index must be timezone-aware. You can set it with"
+            " meter_data.tz_localize(...)."
+        )
+
     temp_agg_funcs = []
     temp_agg_column_renames = {}
 
@@ -271,14 +316,14 @@ def merge_temperature_data(
     if cooling_balance_points is None:
         cooling_balance_points = []
 
-    if tolerance is None and meter_data.index.freq is not None:
-        tolerance = pd.Timedelta(meter_data.index.freq)
+    if tolerance is None and meter_data_index.freq is not None:
+        tolerance = pd.Timedelta(meter_data_index.freq)
 
     if not (heating_balance_points == [] and cooling_balance_points == []):
         if degree_day_method == 'hourly':
             pass
         elif degree_day_method == 'daily':
-            if meter_data.index.freq == 'H':
+            if meter_data_index.freq == 'H':
                 raise ValueError(
                     "degree_day_method='hourly' must be used with"
                     " hourly meter data. Found: 'daily'".format(degree_day_method)
@@ -313,25 +358,20 @@ def merge_temperature_data(
         temp_agg_funcs.extend([('mean', 'mean')])
         temp_agg_column_renames.update({('temp', 'mean'): 'temperature_mean'})
 
-    dfs_to_merge = [meter_data.value.to_frame('meter_value')]
-
     # aggregate temperatures
     temp_df = temperature_data.to_frame('temp')
-    temp_groups = _matching_groups(meter_data.index, temp_df, tolerance)
-    dfs_to_merge.append(temp_groups.agg({'temp': temp_agg_funcs}))
+    temp_groups = _matching_groups(meter_data_index, temp_df, tolerance)
+    temp_aggregations = temp_groups.agg({'temp': temp_agg_funcs})
 
-    df = pd.concat(dfs_to_merge, axis=1).rename(
-        columns=temp_agg_column_renames
-    )
-
-    freq_greater_than_daily = (
-        meter_data.index.freq is None or
-        pd.Timedelta(meter_data.index.freq) > pd.Timedelta('1D'))
-
-    # CalTrack 3.3.1.1
-    # convert to average daily values.
-    if use_mean_daily_values and freq_greater_than_daily:
-        df['meter_value'] = df.meter_value / day_counts(df.meter_value)
+    # expand temp aggregations by faking and delete the `meter_value` column.
+    # I haven't yet figured out a way to avoid this and get the desired
+    # structure and behavior. (philngo)
+    meter_value = pd.DataFrame({'meter_value': 0}, index=meter_data_index)
+    df = pd.concat([
+        meter_value,
+        temp_aggregations,
+    ], axis=1).rename(columns=temp_agg_column_renames)
+    del df['meter_value']
 
     if df.empty:
         if 'degree_day_columns' in df:
@@ -351,6 +391,7 @@ def merge_temperature_data(
 
     if not keep_partial_nan_rows:
         df = overwrite_partial_rows_with_nan(df)
+
     return df
 
 

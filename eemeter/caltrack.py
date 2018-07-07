@@ -18,7 +18,7 @@ from .exceptions import (
 )
 from .transform import (
     day_counts,
-    merge_temperature_data,
+    compute_temperature_features,
     overwrite_partial_rows_with_nan,
 )
 
@@ -172,20 +172,13 @@ def caltrack_predict(
     if 'heating_balance_point' in model_params:
         heating_balance_points.append(model_params['heating_balance_point'])
 
-    # There is probably a cleaner way to do this and it likely involves making
-    # merge_temperature_data more flexible.
-    meter_data_hack = pd.DataFrame({'value': 0}, index=prediction_index)
-    if meter_data_hack.shape[0] > 0:
-        meter_data_hack.iloc[-1] = np.nan
-
-    design_matrix = merge_temperature_data(
-        meter_data_hack, temperature_data,
+    design_matrix = compute_temperature_features(
+        temperature_data, prediction_index,
         heating_balance_points=heating_balance_points,
         cooling_balance_points=cooling_balance_points,
         degree_day_method=degree_day_method,
         use_mean_daily_values=False,
     )
-    del design_matrix['meter_value']  # clean up meter data hack
 
     if design_matrix.empty:
         if with_disaggregated:
