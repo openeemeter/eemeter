@@ -168,7 +168,7 @@ def merge_temperature_data(
 
         For CalTRACK compliance (2.2.2.3), must set
         ``percent_hourly_coverage_per_day=0.5``,
-        ``cooling_balacne_points=range(30,90,X)``, and
+        ``cooling_balance_points=range(30,90,X)``, and
         ``heating_balance_points=range(30,90,X)``, where
         X is either 1, 2, or 3. For natural gas meter use data, must
         set ``fit_cdd=False``.
@@ -192,6 +192,8 @@ def merge_temperature_data(
 
         For CalTRACK compliance (3.3.1.2), for daily or billing methods,
         must set ``degree_day_method=daily``.
+
+    See also :any:`eemeter.compute_temperature_features`.
 
     Parameters
     ----------
@@ -278,6 +280,80 @@ def compute_temperature_features(
     percent_hourly_coverage_per_billing_period=0.9,
     use_mean_daily_values=True, tolerance=None, keep_partial_nan_rows=False
 ):
+    ''' Compute temperature features from hourly temperature data using the
+    :any:`pandas.DatetimeIndex` meter data..
+
+    Creates a :any:`pandas.DataFrame` with the same index as the meter data.
+
+    .. note::
+
+        For CalTRACK compliance (2.2.2.3), must set
+        ``percent_hourly_coverage_per_day=0.5``,
+        ``cooling_balance_points=range(30,90,X)``, and
+        ``heating_balance_points=range(30,90,X)``, where
+        X is either 1, 2, or 3. For natural gas meter use data, must
+        set ``fit_cdd=False``.
+
+    .. note::
+
+        For CalTRACK compliance (2.2.3.2), for billing methods, must set
+        ``percent_hourly_coverage_per_billing_period=0.9``.
+
+    .. note::
+
+        For CalTRACK compliance (2.3.3), ``meter_data`` and ``temperature_data``
+        must both be timezone-aware and have matching timezones.
+
+    .. note::
+
+        For CalTRACK compliance (3.3.1.1), for billing methods, must set
+        ``use_mean_daily_values=True``.
+
+    .. note::
+
+        For CalTRACK compliance (3.3.1.2), for daily or billing methods,
+        must set ``degree_day_method=daily``.
+
+    See also :any:`eemeter.merge_temperature_data`.
+
+    Parameters
+    ----------
+    temperature_data : :any:`pandas.Series`
+        Series with :any:`pandas.DatetimeIndex` with hourly (``'H'``) frequency
+        and a set of temperature values.
+    meter_data_index : :any:`pandas.DataFrame`
+        A :any:`pandas.DatetimeIndex` corresponding to the index over which
+        to compute temperature features.
+    cooling_balance_points : :any:`list` of :any:`int` or :any:`float`, optional
+        List of cooling balance points for which to create cooling degree days.
+    heating_balance_points : :any:`list` of :any:`int` or :any:`float`, optional
+        List of heating balance points for which to create heating degree days.
+    data_quality : :any:`bool`, optional
+        If True, compute data quality columns for temperature, i.e.,
+        ``temperature_not_null`` and ``temperature_null``, containing for
+        each meter value
+    temperature_mean : :any:`bool`, optional
+        If True, compute temperature means for each meter period.
+    degree_day_method : :any:`str`, ``'daily'`` or ``'hourly'``
+        The method to use in calculating degree days.
+    percent_hourly_coverage_per_day : :any:`str`, optional
+        Percent hourly temperature coverage per day for heating and cooling
+        degree days to not be dropped.
+    use_mean_daily_values : :any:`bool`, optional
+        If True, meter and degree day values should be mean daily values, not
+        totals. If False, totals will be used instead.
+    tolerance : :any:`pandas.Timedelta`, optional
+        Do not merge more than this amount of temperature data beyond this limit.
+    keep_partial_nan_rows: :any:`bool`, optional
+        If True, keeps data in resultant :any:`pandas.DataFrame` that has
+        missing temperature or meter data. Otherwise, these rows are overwritten
+        entirely with ``numpy.nan`` values.
+
+    Returns
+    -------
+    data : :any:`pandas.DataFrame`
+        A dataset with the specified parameters.
+    '''
     if temperature_data.index.freq != 'H':
         raise ValueError(
             "temperature_data.index must have hourly frequency (freq='H')."

@@ -57,6 +57,8 @@ Data transformation utilities
 
 .. autofunction:: eemeter.as_freq
 
+.. autofunction:: eemeter.compute_temperature_features
+
 .. autofunction:: eemeter.day_counts
 
 .. autofunction:: eemeter.get_baseline_data

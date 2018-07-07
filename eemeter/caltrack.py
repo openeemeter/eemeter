@@ -79,7 +79,8 @@ def _get_parameter_or_raise(model_type, model_params, param):
 def _caltrack_predict_design_matrix(
     model_type, model_params, data, disaggregated=False
 ):
-    ''' CalTRACK predict method.
+    ''' An internal CalTRACK predict method for use with a design matrix of the form
+    used in model fitting.
 
     Given a set model type, parameters, and daily temperatures, return model
     predictions.
@@ -159,6 +160,50 @@ def caltrack_predict(
     model_type, model_params, temperature_data, prediction_index,
     degree_day_method, with_disaggregated=False, with_design_matrix=False
 ):
+    ''' CalTRACK predict method.
+
+    Given a model type, parameters, hourly temperatures, a
+    :any:`pandas.DatetimeIndex` index over which to predict meter usage,
+    return model predictions. Optionally include the computed design matrix
+    or disaggregated usage in the output dataframe.
+
+    Parameters
+    ----------
+    model_type : :any:`str`
+        Model type (e.g., ``'cdd_hdd'``).
+    model_params : :any:`dict`
+        Parameters as stored in :any:`eemeter.CandidateModel.model_params`.
+    temperature_data : :any:`pandas.DataFrame`
+        Hourly temperature data to use for prediction. Time period should match
+        the ``prediction_index`` argument.
+    prediction_index : :any:`pandas.DatetimeIndex`
+        Time period over which to predict.
+    with_disaggregated : :any:`bool`, optional
+        If True, return results as a :any:`pandas.DataFrame` with columns
+        ``'base_load'``, ``'heating_load'``, and ``'cooling_load'``.
+    with_design_matrix : :any:`bool`, optional
+        If True, return results as a :any:`pandas.DataFrame` with columns
+        ``'n_days'``, ``'n_days_dropped'``, ``n_days_kept``, and
+        ``temperature_mean``.
+
+    Returns
+    -------
+    prediction : :any:`pandas.DataFrame`
+        Columns are as follows:
+
+        - ``predicted_usage``: Predicted usage values computed to match
+          ``prediction_index``.
+        - ``heating_load``: modeled base load (only for ``with_disaggregated=True``).
+        - ``cooling_load``: modeled cooling load (only for ``with_disaggregated=True``).
+        - ``heating_load``: modeled heating load (only for ``with_disaggregated=True``).
+        - ``n_days``: number of days in period (only for ``with_design_matrix=True``).
+        - ``n_days_dropped``: number of days dropped because of insufficient
+          data (only for ``with_design_matrix=True``).
+        - ``n_days_kept``: number of days kept because of sufficient data
+          (only for ``with_design_matrix=True``).
+        - ``temperature_mean``: mean temperature during given period.
+          (only for ``with_design_matrix=True``).
+    '''
     if model_params is None:
         raise MissingModelParameterError(
             'model_params is None.'
