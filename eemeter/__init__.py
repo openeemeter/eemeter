@@ -50,6 +50,7 @@ from .exceptions import (
 )
 from .transform import (
     as_freq,
+    compute_temperature_features,
     day_counts,
     get_baseline_data,
     get_reporting_data,
