@@ -71,7 +71,7 @@ Section 2.3.X: Other Data Quality Requirements
 - **2.3.3**: :any: `eemeter.merge_temperature_data` ``meter_data`` and ``temperature_data`` must be timezone-aware and have matching timezones. 
 - **2.3.4**: If NOAA weather data was used (which is roughly hourly), it has been normalized to hourly using :any:`eeweather.ISDStation.fetch_isd_hourly_temp_data`.
 - **2.3.5**: Warnings are generated in :any:`eemeter.caltrack_sufficiency_criteria` if negative meter values are discovered as they indicate the possible presence of unreported net metering.
-- **2.3.6**: *Not yet compliant (Must generate warning for values that are more than three interquartile ranges larger than the median usage).*
+- **2.3.6**: (Data Preparation) Must generate warning for values that are more than three interquartile ranges larger than the median usage.
 - **2.3.7**: (Audit) Resulting dataset of meter runs has been compared with expected counts of sites, meters, and projects.
 - **2.3.8**: (Data Preparation) Meter data has been downsampled according to the desired frequency for analysis using :any:`eemeter.as_freq` before merging of temperature data or modeling.
 
