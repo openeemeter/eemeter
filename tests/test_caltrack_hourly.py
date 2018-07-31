@@ -199,7 +199,7 @@ def test_assign_baseline_periods_single(baseline_data):
                            in x.model_months, axis=1)] == 1)
 
 
-def test_assign_baseline_periods_three_months_wtd_truncated(baseline_data):    
+def test_assign_baseline_periods_three_months_wtd_truncated(baseline_data):
     baseline_data, warnings = get_baseline_data(
             data=baseline_data, end=baseline_data.index[-1], max_days=180)
     baseline_data_segmented, warnings = assign_baseline_periods(
@@ -207,9 +207,7 @@ def test_assign_baseline_periods_three_months_wtd_truncated(baseline_data):
     unique_models = [
             list(x) for x in
             set(tuple(x) for x in baseline_data_segmented.model_months)]
-    captured_months = [element for sublist in unique_models
-                       for element in sublist]
-    assert len(warnings) == 1
+    assert len(warnings) == 7
     assert len(unique_models) == 7
     assert all(column in baseline_data_segmented.columns
                for column in ['meter_value', 'temperature_mean',
@@ -227,15 +225,15 @@ def test_assign_baseline_periods_three_months_wtd_truncated(baseline_data):
                .loc[baseline_data_segmented
                     .apply(lambda x: x.name.month
                            not in x.model_months, axis=1)] != 1)
-    assert warnings[0].qualified_name == (
+    assert warnings[-1].qualified_name == (
         'eemeter.caltrack_hourly'
         '.incomplete_calendar_year_coverage'
     )
-    assert warnings[0].description == (
+    assert warnings[-1].description == (
         'Data does not cover full calendar year. '
         '5 Missing months: [3, 4, 5, 6, 7]'
     )
-    assert warnings[0].data == {'num_missing_months': 5,
+    assert warnings[-1].data == {'num_missing_months': 5,
                    'missing_months': [3, 4, 5, 6, 7]}
 
     
