@@ -41,6 +41,9 @@ from .caltrack import (
     plot_caltrack_candidate,
     select_best_candidate,
 )
+from .caltrack_hourly import (
+    assign_baseline_periods,
+)
 from .exceptions import (
     EEMeterError,
     NoBaselineDataError,
