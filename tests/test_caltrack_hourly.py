@@ -31,8 +31,13 @@ def meter_data():
 
 
 @pytest.fixture
-def baseline_data(meter_data, temperature_data):
+def merged_data(meter_data, temperature_data):
     merged_data = merge_temperature_data(meter_data, temperature_data)
+    return merged_data
+
+
+@pytest.fixture
+def baseline_data(merged_data):
     baseline_data, warnings = get_baseline_data(
             data=merged_data, end=merged_data.index[-1], max_days=365)
     return baseline_data
@@ -89,7 +94,7 @@ def test_assign_baseline_periods_one_month(baseline_data):
 
     unique_models = [
             list(x) for x in
-            set(tuple(x) for x in baseline_data_segmented.model_months)]
+            set(baseline_data_segmented.model_months)]
     captured_months = [element for sublist in unique_models
                        for element in sublist]
     assert len(warnings) == 0
@@ -116,7 +121,7 @@ def test_assign_baseline_periods_three_month(baseline_data):
 
     unique_models = [
             list(x) for x in
-            set(tuple(x) for x in baseline_data_segmented.model_months)]
+            set(baseline_data_segmented.model_months)]
     captured_months = [element for sublist in unique_models
                        for element in sublist]
     assert len(warnings) == 0
@@ -147,7 +152,7 @@ def test_assign_baseline_periods_three_month_weighted(baseline_data):
 
     unique_models = [
             list(x) for x in
-            set(tuple(x) for x in baseline_data_segmented.model_months)]
+            set(baseline_data_segmented.model_months)]
     captured_months = [element for sublist in unique_models
                        for element in sublist]
     assert len(warnings) == 0
@@ -178,7 +183,7 @@ def test_assign_baseline_periods_single(baseline_data):
 
     unique_models = [
             list(x) for x in
-            set(tuple(x) for x in baseline_data_segmented.model_months)]
+            set(baseline_data_segmented.model_months)]
     captured_months = [element for sublist in unique_models
                        for element in sublist]
     assert len(warnings) == 0
@@ -199,14 +204,14 @@ def test_assign_baseline_periods_single(baseline_data):
                            in x.model_months, axis=1)] == 1)
 
 
-def test_assign_baseline_periods_three_months_wtd_truncated(baseline_data):
+def test_assign_baseline_periods_three_months_wtd_truncated(merged_data):
     baseline_data, warnings = get_baseline_data(
-            data=baseline_data, end=baseline_data.index[-1], max_days=180)
+            data=merged_data, end=merged_data.index[-1], max_days=180)
     baseline_data_segmented, warnings = assign_baseline_periods(
             baseline_data, baseline_type='three_month_weighted')
     unique_models = [
             list(x) for x in
-            set(tuple(x) for x in baseline_data_segmented.model_months)]
+            set(baseline_data_segmented.model_months)]
     assert len(warnings) == 7
     assert len(unique_models) == 7
     assert all(column in baseline_data_segmented.columns
@@ -231,9 +236,44 @@ def test_assign_baseline_periods_three_months_wtd_truncated(baseline_data):
     )
     assert warnings[-1].description == (
         'Data does not cover full calendar year. '
-        '5 Missing months: [3, 4, 5, 6, 7]'
+        '5 Missing monthly models: [3, 4, 5, 6, 7]'
     )
     assert warnings[-1].data == {'num_missing_months': 5,
-                   'missing_months': [3, 4, 5, 6, 7]}
+                                 'missing_months': [3, 4, 5, 6, 7]}
 
-    
+
+def test_assign_baseline_periods_three_months_wtd_insufficient(merged_data):
+    baseline_data, warnings = get_baseline_data(
+            data=merged_data, end=merged_data.index[-1], max_days=360)
+    baseline_data_segmented, warnings = assign_baseline_periods(
+            baseline_data, baseline_type='three_month_weighted')
+    unique_models = [
+            list(x) for x in
+            set(baseline_data_segmented.model_months)]
+    ndays = baseline_data.index[0].days_in_month
+    assert len(warnings) == 3
+    assert len(unique_models) == 12
+    assert all(column in baseline_data_segmented.columns
+               for column in ['meter_value', 'temperature_mean',
+                              'weight', 'model_months'])
+    assert np.sum(baseline_data.meter_value) == \
+        np.sum(baseline_data_segmented.meter_value
+               .loc[baseline_data_segmented
+                    .apply(lambda x: x.name.month
+                           in x.model_months, axis=1)])
+    assert all(baseline_data_segmented.weight
+               .loc[baseline_data_segmented
+                    .apply(lambda x: x.name.month
+                           in x.model_months, axis=1)] == 1)
+    assert all(baseline_data_segmented.weight
+               .loc[baseline_data_segmented
+                    .apply(lambda x: x.name.month
+                           not in x.model_months, axis=1)] != 1)
+    assert warnings[0].qualified_name == (
+        'eemeter.caltrack_hourly'
+        '.insufficient_hourly_coverage'
+    )
+    assert ('Data for this model does not meet the minimum hourly '
+            'sufficiency criteria. Month 2') in warnings[0].description
+    assert warnings[0].data['hourly_coverage'] == \
+        ((ndays - 5) * 24 + 1)/(ndays * 24)

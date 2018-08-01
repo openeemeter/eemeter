@@ -11,7 +11,7 @@ def get_calendar_year_coverage_warning(baseline_data_segmented):
     warnings = []
     unique_models = [
             list(x) for x in
-            set(tuple(x) for x in baseline_data_segmented.model_months)]
+            set(baseline_data_segmented.model_months)]
     captured_months = [element for sublist in unique_models
                        for element in sublist]
     if len(captured_months) < 12:
@@ -20,7 +20,7 @@ def get_calendar_year_coverage_warning(baseline_data_segmented):
                                 'incomplete_calendar_year_coverage'),
                 description=(
                         'Data does not cover full calendar year. '
-                        '{} Missing months: {}'
+                        '{} Missing monthly models: {}'
                         .format(12 - len(captured_months),
                                 [month for month in range(1, 13)
                                 if month not in captured_months])
@@ -73,7 +73,7 @@ def get_hourly_coverage_warning(
                             ),
                     data={'model_months': model_months,
                           'month': month,
-                          'total_days': row.total_days,
+                          'total_days': row.total_days.values[0],
                           'hourly_coverage': row.hourly_coverage.values[0]}
                           )])
 
@@ -92,10 +92,10 @@ def assign_baseline_periods(data, baseline_type):
     if baseline_type not in valid_baseline_types:
         raise ValueError('Invalid baseline type: %s' % (baseline_type))
 
-    if any(column not in data.columns
-           for column in ['meter_value', 'temperature_mean']):
-        raise ValueError('''Data does not include columns:
-            meter_value or temperature_mean''')
+    for column in ['meter_value', 'temperature_mean']:
+        if column not in data.columns:
+            raise ValueError('Data does not include columns: {}'
+                             .format(column))
 
     if baseline_type == 'one_month':
         baseline_data_segmented = baseline_data.copy()
