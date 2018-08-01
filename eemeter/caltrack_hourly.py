@@ -9,9 +9,7 @@ pd.options.mode.chained_assignment = None
 def get_calendar_year_coverage_warning(baseline_data_segmented):
 
     warnings = []
-    unique_models = [
-            list(x) for x in
-            set(baseline_data_segmented.model_months)]
+    unique_models = baseline_data_segmented.model_months.unique()
     captured_months = [element for sublist in unique_models
                        for element in sublist]
     if len(captured_months) < 12:
