@@ -292,4 +292,17 @@ def test_lookup_hour_of_week(baseline_data):
 
 
 def test_lookup_hour_of_week_incomplete_week(merged_data):
-    pass
+    five_day_index = pd.date_range('2017-01-04', freq='H',
+                                   periods=5*24, tz='UTC')
+    baseline_data = pd.DataFrame({'meter_value': [1 for i in range(0, 120)]}) \
+        .set_index(five_day_index)
+    lookup_hour_of_week, warnings = get_lookup_hour_of_week(
+            baseline_data)
+    assert len(warnings) == 1
+    assert warnings[0].qualified_name == (
+        'eemeter.caltrack_hourly'
+        '.missing_hours_of_week'
+    )
+    assert ('Data does not include all hours of week.') \
+        in warnings[0].description
+    assert warnings[0].data['num_missing_hours'] == 24 * 2
