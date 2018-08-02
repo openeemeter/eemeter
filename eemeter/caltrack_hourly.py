@@ -99,7 +99,7 @@ def assign_baseline_periods(data, baseline_type):
         baseline_data_segmented = baseline_data.copy()
         baseline_data_segmented['weight'] = 1
         baseline_data_segmented['model_months'] = \
-            baseline_data_segmented.index.map(lambda x: (x.month,))
+            [tuple([x]) for x in baseline_data_segmented.index.month]
     elif baseline_type in ['three_month', 'three_month_weighted']:
         unique_months = pd.Series(
                 baseline_data.index
