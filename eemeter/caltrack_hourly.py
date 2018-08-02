@@ -148,17 +148,17 @@ def assign_baseline_periods(data, baseline_type):
     return baseline_data_segmented, warnings
 
 
-def get_lookup_hour_of_week(data):
+def get_feature_hour_of_week(data):
     warnings = []
-    lookup_hour_of_week = \
+    feature_hour_of_week = \
         data.apply(lambda x: (x.name.dayofweek) * 24 +
                    (x.name.hour+1), axis=1) \
             .reset_index() \
             .rename(columns={0: 'hour_of_week'})
-    captured_hours = lookup_hour_of_week.hour_of_week.unique()
+    captured_hours = feature_hour_of_week.hour_of_week.unique()
     missing_hours = [hour for hour in range(1, 169)
                      if hour not in captured_hours]
-    if sorted(lookup_hour_of_week.hour_of_week.unique()) != \
+    if sorted(feature_hour_of_week.hour_of_week.unique()) != \
             [x for x in range(1, 169)]:
                 warnings = [EEMeterWarning(
                         qualified_name=('eemeter.caltrack_hourly.'
@@ -171,4 +171,4 @@ def get_lookup_hour_of_week(data):
                         data={'num_missing_hours': 168 - len(captured_hours),
                               'missing_hours': missing_hours}
                         )]
-    return lookup_hour_of_week, warnings
+    return feature_hour_of_week, warnings

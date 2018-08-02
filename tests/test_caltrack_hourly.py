@@ -7,7 +7,7 @@ from eemeter import (
     merge_temperature_data,
     get_baseline_data,
     assign_baseline_periods,
-    get_lookup_hour_of_week,
+    get_feature_hour_of_week,
 )
 
 
@@ -69,11 +69,11 @@ def test_e2e(
                               'temperature_mean', 'weight', 'model_months'])
 
     # Get hour of week lookup
-    lookup_hour_of_week, warnings = get_lookup_hour_of_week(baseline_data)
+    feature_hour_of_week, warnings = get_feature_hour_of_week(baseline_data)
     e2e_warnings.extend(warnings)
-    assert all(column in lookup_hour_of_week.columns
+    assert all(column in feature_hour_of_week.columns
                for column in ['start', 'hour_of_week'])
-    assert lookup_hour_of_week.shape == (len(baseline_data.index), 2)
+    assert feature_hour_of_week.shape == (len(baseline_data.index), 2)
     # Validate temperature bin endpoints and determine temperature bins
 
     # Generate design matrix for weighted 3-month baseline
@@ -280,23 +280,23 @@ def test_assign_baseline_periods_three_months_wtd_insufficient(merged_data):
         round(((ndays - 5) * 24 + 1)/(ndays * 24), 4)
 
 
-def test_lookup_hour_of_week(baseline_data):
-    lookup_hour_of_week, warnings = get_lookup_hour_of_week(
+def test_feature_hour_of_week(baseline_data):
+    feature_hour_of_week, warnings = get_feature_hour_of_week(
             baseline_data)
     assert len(warnings) == 0
-    assert all(column in lookup_hour_of_week.columns
+    assert all(column in feature_hour_of_week.columns
                for column in ['start', 'hour_of_week'])
-    assert lookup_hour_of_week.shape == (len(baseline_data.index), 2)
-    assert all(x in lookup_hour_of_week.hour_of_week.unique()
+    assert feature_hour_of_week.shape == (len(baseline_data.index), 2)
+    assert all(x in feature_hour_of_week.hour_of_week.unique()
                for x in range(1, 169))
 
 
-def test_lookup_hour_of_week_incomplete_week(merged_data):
+def test_feature_hour_of_week_incomplete_week(merged_data):
     five_day_index = pd.date_range('2017-01-04', freq='H',
                                    periods=5*24, tz='UTC')
     baseline_data = pd.DataFrame({'meter_value': [1 for i in range(0, 120)]}) \
         .set_index(five_day_index)
-    lookup_hour_of_week, warnings = get_lookup_hour_of_week(
+    feature_hour_of_week, warnings = get_feature_hour_of_week(
             baseline_data)
     assert len(warnings) == 1
     assert warnings[0].qualified_name == (
