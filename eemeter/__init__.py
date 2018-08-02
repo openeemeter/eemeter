@@ -43,6 +43,7 @@ from .caltrack import (
 )
 from .caltrack_hourly import (
     assign_baseline_periods,
+    get_lookup_hour_of_week,
 )
 from .exceptions import (
     EEMeterError,
