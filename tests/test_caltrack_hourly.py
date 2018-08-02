@@ -13,27 +13,17 @@ from eemeter import (
 
 # E2E Test
 @pytest.fixture
-def utc_index():
-    return pd.date_range('2011-01-01', freq='H', periods=365*24 + 1, tz='UTC')
-
-
-@pytest.fixture
-def temperature_data(utc_index):
+def merged_data():
     meter_data, temperature_data, metadata = \
         load_sample('il-electricity-cdd-hdd-hourly')
-    return temperature_data
-
-
-@pytest.fixture
-def meter_data():
-    meter_data, temperature_data, metadata = \
-        load_sample('il-electricity-cdd-hdd-hourly')
-    return meter_data
-
-
-@pytest.fixture
-def merged_data(meter_data, temperature_data):
-    merged_data = merge_temperature_data(meter_data, temperature_data)
+#    merged_data = merge_temperature_data(meter_data, temperature_data)
+    merged_data = pd.DataFrame(meter_data) \
+        .merge(pd.DataFrame(temperature_data),
+               left_index=True, right_index=True) \
+        .rename(columns={'value': 'meter_value',
+                         'tempF': 'temperature_mean'})
+    merged_data['n_days_dropped'] = 0
+    merged_data['n_days_kept'] = 0
     return merged_data
 
 
@@ -45,14 +35,10 @@ def baseline_data(merged_data):
 
 
 def test_e2e(
-        meter_data, temperature_data):
+        merged_data):
 #    meter_data = meter_data()
 #    temperature_data = temperature_data(utc_index())
     e2e_warnings = []
-    # Merge meter and temperature data
-    merged_data = merge_temperature_data(meter_data, temperature_data)
-    assert len(merged_data.index) == len(meter_data.index)
-    assert np.mean(merged_data.temperature_mean) == np.mean(temperature_data)
 
     # Filter to 365 day baseline
     baseline_data, warnings = get_baseline_data(
@@ -117,13 +103,15 @@ def test_assign_baseline_periods_one_month(baseline_data):
     assert baseline_data_segmented.shape == (8761, 7)
     assert np.sum(baseline_data.meter_value) == \
         np.sum(baseline_data_segmented.meter_value
-               .loc[baseline_data_segmented
-                    .apply(lambda x: x.start.month
-                           in x.model_months, axis=1)])
+               .loc[[x[0] in x[1] for x in
+                     zip(baseline_data_segmented
+                         .set_index('start').index.month,
+                         baseline_data_segmented.model_months)]])
     assert all(baseline_data_segmented.weight
-               .loc[baseline_data_segmented
-                    .apply(lambda x: x.start.month
-                           in x.model_months, axis=1)] == 1)
+               .loc[[x[0] in x[1] for x in
+                     zip(baseline_data_segmented
+                         .set_index('start').index.month,
+                         baseline_data_segmented.model_months)]] == 1)
 
 
 def test_assign_baseline_periods_three_month(baseline_data):
@@ -142,17 +130,20 @@ def test_assign_baseline_periods_three_month(baseline_data):
     assert baseline_data_segmented.shape == (8761*3, 7)
     assert np.sum(baseline_data.meter_value) == \
         np.sum(baseline_data_segmented.meter_value
-               .loc[baseline_data_segmented
-                    .apply(lambda x: x.start.month
-                           in x.model_months, axis=1)])
+               .loc[[x[0] in x[1] for x in
+                     zip(baseline_data_segmented
+                         .set_index('start').index.month,
+                         baseline_data_segmented.model_months)]])
     assert all(baseline_data_segmented.weight
-               .loc[baseline_data_segmented
-                    .apply(lambda x: x.start.month
-                           in x.model_months, axis=1)] == 1)
+               .loc[[x[0] in x[1] for x in
+                     zip(baseline_data_segmented
+                         .set_index('start').index.month,
+                         baseline_data_segmented.model_months)]] == 1)
     assert all(baseline_data_segmented.weight
-               .loc[baseline_data_segmented
-                    .apply(lambda x: x.start.month
-                           not in x.model_months, axis=1)] == 1)
+               .loc[[x[0] in x[1] for x in
+                     zip(baseline_data_segmented
+                         .set_index('start').index.month,
+                         baseline_data_segmented.model_months)]] == 1)
 
 
 def test_assign_baseline_periods_three_month_weighted(baseline_data):
@@ -171,17 +162,20 @@ def test_assign_baseline_periods_three_month_weighted(baseline_data):
     assert baseline_data_segmented.shape == (8761*3, 7)
     assert np.sum(baseline_data.meter_value) == \
         np.sum(baseline_data_segmented.meter_value
-               .loc[baseline_data_segmented
-                    .apply(lambda x: x.start.month
-                           in x.model_months, axis=1)])
+               .loc[[x[0] in x[1] for x in
+                     zip(baseline_data_segmented
+                         .set_index('start').index.month,
+                         baseline_data_segmented.model_months)]])
     assert all(baseline_data_segmented.weight
-               .loc[baseline_data_segmented
-                    .apply(lambda x: x.start.month
-                           in x.model_months, axis=1)] == 1)
+               .loc[[x[0] in x[1] for x in
+                     zip(baseline_data_segmented
+                         .set_index('start').index.month,
+                         baseline_data_segmented.model_months)]] == 1)
     assert all(baseline_data_segmented.weight
-               .loc[baseline_data_segmented
-                    .apply(lambda x: x.start.month
-                           not in x.model_months, axis=1)] != 1)
+               .loc[[x[0] not in x[1] for x in
+                     zip(baseline_data_segmented
+                         .set_index('start').index.month,
+                         baseline_data_segmented.model_months)]] != 1)
 
 
 def test_assign_baseline_periods_single(baseline_data):
@@ -200,13 +194,15 @@ def test_assign_baseline_periods_single(baseline_data):
     assert baseline_data_segmented.shape == (8761, 7)
     assert np.sum(baseline_data.meter_value) == \
         np.sum(baseline_data_segmented.meter_value
-               .loc[baseline_data_segmented
-                    .apply(lambda x: x.start.month
-                           in x.model_months, axis=1)])
+               .loc[[x[0] in x[1] for x in
+                     zip(baseline_data_segmented
+                         .set_index('start').index.month,
+                         baseline_data_segmented.model_months)]])
     assert all(baseline_data_segmented.weight
-               .loc[baseline_data_segmented
-                    .apply(lambda x: x.start.month
-                           in x.model_months, axis=1)] == 1)
+               .loc[[x[0] in x[1] for x in
+                     zip(baseline_data_segmented
+                         .set_index('start').index.month,
+                         baseline_data_segmented.model_months)]] == 1)
 
 
 def test_assign_baseline_periods_three_months_wtd_truncated(merged_data):
@@ -222,17 +218,15 @@ def test_assign_baseline_periods_three_months_wtd_truncated(merged_data):
                               'weight', 'model_months'])
     assert np.sum(baseline_data.meter_value) == \
         np.sum(baseline_data_segmented.meter_value
-               .loc[baseline_data_segmented
-                    .apply(lambda x: x.start.month
-                           in x.model_months, axis=1)])
+               .loc[[x[0] in x[1] for x in
+                     zip(baseline_data_segmented
+                         .set_index('start').index.month,
+                         baseline_data_segmented.model_months)]])
     assert all(baseline_data_segmented.weight
-               .loc[baseline_data_segmented
-                    .apply(lambda x: x.start.month
-                           in x.model_months, axis=1)] == 1)
-    assert all(baseline_data_segmented.weight
-               .loc[baseline_data_segmented
-                    .apply(lambda x: x.start.month
-                           not in x.model_months, axis=1)] != 1)
+               .loc[[x[0] not in x[1] for x in
+                     zip(baseline_data_segmented
+                         .set_index('start').index.month,
+                         baseline_data_segmented.model_months)]] != 1)
     assert warnings[-1].qualified_name == (
         'eemeter.caltrack_hourly'
         '.incomplete_calendar_year_coverage'
@@ -259,17 +253,20 @@ def test_assign_baseline_periods_three_months_wtd_insufficient(merged_data):
                               'weight', 'model_months'])
     assert round(np.sum(baseline_data.meter_value), 4) == \
         round(np.sum(baseline_data_segmented.meter_value
-                     .loc[baseline_data_segmented
-                          .apply(lambda x: x.start.month
-                                 in x.model_months, axis=1)]), 4)
+                     .loc[[x[0] in x[1] for x in
+                           zip(baseline_data_segmented
+                               .set_index('start').index.month,
+                               baseline_data_segmented.model_months)]]), 4)
     assert all(baseline_data_segmented.weight
-               .loc[baseline_data_segmented
-                    .apply(lambda x: x.start.month
-                           in x.model_months, axis=1)] == 1)
+               .loc[[x[0] in x[1] for x in
+                     zip(baseline_data_segmented
+                         .set_index('start').index.month,
+                         baseline_data_segmented.model_months)]] == 1)
     assert all(baseline_data_segmented.weight
-               .loc[baseline_data_segmented
-                    .apply(lambda x: x.start.month
-                           not in x.model_months, axis=1)] != 1)
+               .loc[[x[0] not in x[1] for x in
+                     zip(baseline_data_segmented
+                         .set_index('start').index.month,
+                         baseline_data_segmented.model_months)]] != 1)
     assert warnings[0].qualified_name == (
         'eemeter.caltrack_hourly'
         '.insufficient_hourly_coverage'

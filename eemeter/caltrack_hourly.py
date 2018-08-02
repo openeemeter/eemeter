@@ -122,17 +122,15 @@ def assign_baseline_periods(data, baseline_type):
             this_df = baseline_data \
                     .loc[baseline_data.index.month.isin(month.baseline)]
             this_df.loc[:, 'model_months'] = \
-                [month.model_months for j in range(len(this_df.index))]
+                [month.model_months] * len(this_df.index)
             warnings.extend(get_hourly_coverage_warning(
                     this_df, month.baseline, month.model_months))
-            if baseline_type == 'three_month':
-                this_df['weight'] = 1
-            else:
-                this_df.loc[this_df.apply(
-                        lambda x: x.name.month in x.model_months, axis=1),
-                        'weight'] = 1
-                this_df.loc[this_df.apply(
-                        lambda x: x.name.month not in x.model_months, axis=1),
+
+            this_df['weight'] = 1
+            if baseline_type == 'three_month_weighted':
+                this_df.loc[
+                        [x[0] not in x[1] for x in
+                         zip(this_df.index.month, this_df.model_months)],
                         'weight'] = 0.5
             baseline_data_segmented = baseline_data_segmented.append(
                     this_df, sort=False)
