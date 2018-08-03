@@ -9,7 +9,7 @@ pd.options.mode.chained_assignment = None
 def get_calendar_year_coverage_warning(baseline_data_segmented):
 
     warnings = []
-    unique_models = baseline_data_segmented.model_months.unique()
+    unique_models = baseline_data_segmented.model_id.unique()
     captured_months = [element for sublist in unique_models
                        for element in sublist]
     if len(captured_months) < 12:
@@ -31,12 +31,12 @@ def get_calendar_year_coverage_warning(baseline_data_segmented):
 
 
 def get_hourly_coverage_warning(
-        data, baseline_months, model_months, min_fraction_daily_coverage=0.9,):
+        data, baseline_months, model_id, min_fraction_daily_coverage=0.9,):
 
     warnings = []
     summary = data.reset_index()
     summary = summary.groupby(summary.start.map(lambda x: x.month)) \
-        .agg({'meter_value': len, 'start': max, 'model_months': max})
+        .agg({'meter_value': len, 'start': max, 'model_id': max})
     summary['total_days'] = summary.apply(lambda x: x.start.days_in_month,
                                           axis=1)
     summary['hourly_coverage'] = summary.meter_value / \
@@ -53,7 +53,7 @@ def get_hourly_coverage_warning(
                             'Month {}'
                             .format(month)
                             ),
-                    data={'model_months': model_months,
+                    data={'model_id': model_id,
                           'month': month,
                           'hourly_coverage': 0}
                           )])
@@ -69,7 +69,7 @@ def get_hourly_coverage_warning(
                             'Month {}: Coverage: {}'
                             .format(month, row.hourly_coverage.values[0])
                             ),
-                    data={'model_months': model_months,
+                    data={'model_id': model_id,
                           'month': month,
                           'total_days': row.total_days.values[0],
                           'hourly_coverage': row.hourly_coverage.values[0]}
@@ -98,7 +98,7 @@ def assign_baseline_periods(data, baseline_type):
     if baseline_type == 'one_month':
         baseline_data_segmented = baseline_data.copy()
         baseline_data_segmented['weight'] = 1
-        baseline_data_segmented['model_months'] = \
+        baseline_data_segmented['model_id'] = \
             [tuple([x]) for x in baseline_data_segmented.index.month]
     elif baseline_type in ['three_month', 'three_month_weighted']:
         unique_months = pd.Series(
@@ -106,7 +106,7 @@ def assign_baseline_periods(data, baseline_type):
                 .map(lambda x: x.month)
                 .unique().values) \
                 .map(lambda x: (x,))
-        months = pd.DataFrame(unique_months, columns=['model_months'])
+        months = pd.DataFrame(unique_months, columns=['model_id'])
 
         def shoulder_months(month):
             if month == 1:
@@ -116,28 +116,28 @@ def assign_baseline_periods(data, baseline_type):
             else:
                 return (month - 1, month, month + 1)
 
-        months.loc[:, 'baseline'] = months.model_months \
+        months.loc[:, 'baseline'] = months.model_id \
             .map(lambda x: shoulder_months(x[0]))
         for i, month in months.iterrows():
             this_df = baseline_data \
                     .loc[baseline_data.index.month.isin(month.baseline)]
-            this_df.loc[:, 'model_months'] = \
-                [month.model_months] * len(this_df.index)
+            this_df.loc[:, 'model_id'] = \
+                [month.model_id] * len(this_df.index)
             warnings.extend(get_hourly_coverage_warning(
-                    this_df, month.baseline, month.model_months))
+                    this_df, month.baseline, month.model_id))
 
             this_df['weight'] = 1
             if baseline_type == 'three_month_weighted':
                 this_df.loc[
                         [x[0] not in x[1] for x in
-                         zip(this_df.index.month, this_df.model_months)],
+                         zip(this_df.index.month, this_df.model_id)],
                         'weight'] = 0.5
             baseline_data_segmented = baseline_data_segmented.append(
                     this_df, sort=False)
     elif baseline_type == 'single':
         baseline_data_segmented = baseline_data.copy()
         baseline_data_segmented['weight'] = 1
-        baseline_data_segmented['model_months'] = \
+        baseline_data_segmented['model_id'] = \
             [range(1, 13) for j in range(len(baseline_data_segmented.index))]
 
     baseline_data_segmented = baseline_data_segmented.reset_index()
@@ -153,6 +153,8 @@ def get_feature_hour_of_week(data):
                    (x.name.hour+1), axis=1) \
             .reset_index() \
             .rename(columns={0: 'hour_of_week'})
+    feature_hour_of_week["hour_of_week"] = \
+        feature_hour_of_week["hour_of_week"].astype('category')
     captured_hours = feature_hour_of_week.hour_of_week.unique()
     missing_hours = [hour for hour in range(1, 169)
                      if hour not in captured_hours]
@@ -170,3 +172,7 @@ def get_feature_hour_of_week(data):
                               'missing_hours': missing_hours}
                         )]
     return feature_hour_of_week, warnings
+
+
+def get_feature_occupancy(data):
+    pass

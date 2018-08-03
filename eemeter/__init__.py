@@ -44,6 +44,7 @@ from .caltrack import (
 from .caltrack_hourly import (
     assign_baseline_periods,
     get_feature_hour_of_week,
+    get_feature_occupancy,
 )
 from .exceptions import (
     EEMeterError,
