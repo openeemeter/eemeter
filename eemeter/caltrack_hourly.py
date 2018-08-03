@@ -3,6 +3,7 @@ import pandas as pd
 from .api import (
     EEMeterWarning,
 )
+import statsmodels.formula.api as smf
 pd.options.mode.chained_assignment = None
 
 
@@ -34,11 +35,9 @@ def get_hourly_coverage_warning(
         data, baseline_months, model_id, min_fraction_daily_coverage=0.9,):
 
     warnings = []
-    summary = data.reset_index()
-    summary = summary.groupby(summary.start.map(lambda x: x.month)) \
-        .agg({'meter_value': len, 'start': max, 'model_id': max})
-    summary['total_days'] = summary.apply(lambda x: x.start.days_in_month,
-                                          axis=1)
+    summary = data.assign(total_days=data.index.days_in_month)
+    summary = summary.groupby(summary.index.month) \
+        .agg({'meter_value': len, 'model_id': max, 'total_days': max})
     summary['hourly_coverage'] = summary.meter_value / \
         (summary.total_days * 24)
 
@@ -140,7 +139,7 @@ def assign_baseline_periods(data, baseline_type):
         baseline_data_segmented['model_id'] = \
             [range(1, 13) for j in range(len(baseline_data_segmented.index))]
 
-    baseline_data_segmented = baseline_data_segmented.reset_index()
+#    baseline_data_segmented = baseline_data_segmented.reset_index()
     warnings.extend(get_calendar_year_coverage_warning(
             baseline_data_segmented))
     return baseline_data_segmented, warnings
@@ -176,3 +175,28 @@ def get_feature_hour_of_week(data):
 
 def get_feature_occupancy(data):
     pass
+#    warnings = []
+#    
+#    model_data = baseline_data_segmented.assign(
+#            cdd_65 = baseline_data_segmented.temperature_mean.map(lambda x: max(0, x-65)),
+#            hdd_50 = baseline_data_segmented.temperature_mean.map(lambda x: max(0, 50-x))) \
+#            .set_index('start')
+#
+#    model_occupancy = smf.wls(formula='meter_value ~ cdd_65 + hdd_50',
+#                              data=model_data,
+#                              weights=model_data.weight)
+#    model_data = model_data.merge(
+#            pd.DataFrame({'residuals':model_occupancy.fit().resid}),
+#            left_index='start', right_index=True)
+#    
+#    occupancy_lookup = pd.DataFrame({'occupied': baseline_data.groupby(['hour_of_week']).apply(ishighusage)})
+#    
+#    data_w_occupancy = data.reset_index() \
+#        .merge(occupancy_lookup, left_on=['hour_of_week'], right_on=['hour_of_week']) \
+#        .set_index('date').sort_index()
+#    baseline_data = data_w_occupancy.loc[(data_w_occupancy.index > end_date - pd.to_timedelta('365 days')) & 
+#                         (data_w_occupancy.index < end_date) & 
+#                         (data_w_occupancy.month.isin(baseline_months)) &
+#                         (data_w_occupancy.index.day.isin(baseline_days))]
+#
+#    return feature_occupancy, lookup_occupancy, warnings
