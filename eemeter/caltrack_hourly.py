@@ -4,6 +4,7 @@ from .api import (
     EEMeterWarning,
 )
 import statsmodels.formula.api as smf
+import traceback
 pd.options.mode.chained_assignment = None
 
 
@@ -137,7 +138,8 @@ def assign_baseline_periods(data, baseline_type):
         baseline_data_segmented = baseline_data.copy()
         baseline_data_segmented['weight'] = 1
         baseline_data_segmented['model_id'] = \
-            [range(1, 13) for j in range(len(baseline_data_segmented.index))]
+            [tuple(range(1, 13))
+             for j in range(len(baseline_data_segmented.index))]
 
 #    baseline_data_segmented = baseline_data_segmented.reset_index()
     warnings.extend(get_calendar_year_coverage_warning(
@@ -148,10 +150,9 @@ def assign_baseline_periods(data, baseline_type):
 def get_feature_hour_of_week(data):
     warnings = []
     feature_hour_of_week = \
-        data.apply(lambda x: (x.name.dayofweek) * 24 +
-                   (x.name.hour+1), axis=1) \
-            .reset_index() \
-            .rename(columns={0: 'hour_of_week'})
+        pd.DataFrame(data.index.dayofweek * 24 + (data.index.hour+1),
+                     index=data.index) \
+        .rename(columns={'start': 'hour_of_week'})
     feature_hour_of_week["hour_of_week"] = \
         feature_hour_of_week["hour_of_week"].astype('category')
     captured_hours = feature_hour_of_week.hour_of_week.unique()
@@ -173,30 +174,115 @@ def get_feature_hour_of_week(data):
     return feature_hour_of_week, warnings
 
 
-def get_feature_occupancy(data):
-    pass
-#    warnings = []
-#    
-#    model_data = baseline_data_segmented.assign(
-#            cdd_65 = baseline_data_segmented.temperature_mean.map(lambda x: max(0, x-65)),
-#            hdd_50 = baseline_data_segmented.temperature_mean.map(lambda x: max(0, 50-x))) \
-#            .set_index('start')
-#
-#    model_occupancy = smf.wls(formula='meter_value ~ cdd_65 + hdd_50',
-#                              data=model_data,
-#                              weights=model_data.weight)
-#    model_data = model_data.merge(
-#            pd.DataFrame({'residuals':model_occupancy.fit().resid}),
-#            left_index='start', right_index=True)
-#    
-#    occupancy_lookup = pd.DataFrame({'occupied': baseline_data.groupby(['hour_of_week']).apply(ishighusage)})
-#    
-#    data_w_occupancy = data.reset_index() \
-#        .merge(occupancy_lookup, left_on=['hour_of_week'], right_on=['hour_of_week']) \
-#        .set_index('date').sort_index()
-#    baseline_data = data_w_occupancy.loc[(data_w_occupancy.index > end_date - pd.to_timedelta('365 days')) & 
-#                         (data_w_occupancy.index < end_date) & 
-#                         (data_w_occupancy.month.isin(baseline_months)) &
-#                         (data_w_occupancy.index.day.isin(baseline_days))]
-#
-#    return feature_occupancy, lookup_occupancy, warnings
+def get_fit_failed_occupancy_model_warning(model_id):
+    warning = [EEMeterWarning(
+        qualified_name='eemeter.caltrack_hourly.failed_occupancy_model',
+        description=(
+            'Error encountered in statsmodels.formula.api.wls method '
+            'for occupancy model id: {}'.format(model_id)
+        ),
+        data={'model_id': model_id,
+              'traceback': traceback.format_exc()}
+    )]
+    return warning
+
+
+def ishighusage(df, threshold, residual_col='residuals'):
+    df = df.rename(columns={residual_col: 'residuals'})
+
+    return int(sum(df.residuals > 0) / len(df.residuals) > threshold)
+
+
+def get_single_feature_occupancy(data, threshold):
+    warnings = []
+
+    # TODO: replace with design matrix function
+    model_data = data.assign(
+            cdd_65=data.temperature_mean.map(lambda x: max(0, x-65)),
+            hdd_50=data.temperature_mean.map(lambda x: max(0, 50-x)))
+
+    try:
+        model_occupancy = smf.wls(formula='meter_value ~ cdd_65 + hdd_50',
+                                  data=model_data,
+                                  weights=model_data.weight)
+    except Exception as e:
+        warnings.extend(
+                get_fit_failed_occupancy_model_warning(data.model_id[0]))
+        return pd.DataFrame(), pd.DataFrame(), warnings
+
+    model_data = model_data.merge(
+            pd.DataFrame({'residuals': model_occupancy.fit().resid}),
+            left_index=True, right_index=True)
+
+    # TODO: replace with design matrix function
+    feature_hour_of_week, warnings = get_feature_hour_of_week(data)
+    model_data = model_data.merge(feature_hour_of_week,
+                                  left_index=True, right_index=True)
+
+    lookup_occupancy = pd.DataFrame({
+            'occupancy': model_data.groupby(['hour_of_week'])
+            .apply(lambda x: ishighusage(x, threshold))}) \
+        .reset_index()
+
+    feature_occupancy = model_data.reset_index() \
+        .merge(lookup_occupancy,
+               left_on=['hour_of_week'],
+               right_on=['hour_of_week']) \
+        .set_index('start').sort_index() \
+        .loc[:, ['occupancy']]
+
+    return feature_occupancy, lookup_occupancy, warnings
+
+
+def get_missing_model_id_warning(columns):
+    warning = [EEMeterWarning(
+        qualified_name='eemeter.caltrack_hourly.missing_model_id',
+        description=(
+            'Warning: Model ID is missing - this function will be run '
+            'with all of the data in a single model'
+        ),
+        data={'dataframe_columns': columns}
+    )]
+    return warning
+
+
+def get_missing_weight_column_warning(columns):
+    warning = [EEMeterWarning(
+        qualified_name='eemeter.caltrack_hourly.missing_weight_column',
+        description=(
+            'Warning: Weight column is missing - this function will be run '
+            'without any data weights'
+        ),
+        data={'dataframe_columns': columns}
+    )]
+    return warning
+
+
+def get_feature_occupancy(data, threshold=0.65):
+    warnings = []
+    feature_occupancy = pd.DataFrame()
+    lookup_occupancy = pd.DataFrame()
+
+    if 'model_id' not in data.columns:
+        warnings.extend(get_missing_model_id_warning(data.columns))
+        data['model_id'] = [(1,)] * len(data.index)
+    if 'weight' not in data.columns:
+        warnings.extend(get_missing_weight_column_warning(data.columns))
+        data['weight'] = 1
+
+    unique_models = data.model_id.unique()
+    for model_id in unique_models:
+        this_data = data.loc[data.model_id == model_id]
+        this_feature_occupancy, this_lookup_occupancy, this_warnings = \
+            get_single_feature_occupancy(this_data, threshold)
+
+        this_feature_occupancy['model_id'] = [model_id] * \
+            len(this_feature_occupancy.index)
+        this_lookup_occupancy['model_id'] = [model_id] * \
+            len(this_lookup_occupancy.index)
+
+        feature_occupancy = feature_occupancy.append(this_feature_occupancy)
+        lookup_occupancy = lookup_occupancy.append(this_lookup_occupancy)
+        warnings.extend(this_warnings)
+
+    return feature_occupancy, lookup_occupancy, warnings

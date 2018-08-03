@@ -58,18 +58,17 @@ def test_e2e(
     # Get hour of week feature
     feature_hour_of_week, warnings = get_feature_hour_of_week(baseline_data)
     e2e_warnings.extend(warnings)
-    assert all(column in feature_hour_of_week.columns
-               for column in ['start', 'hour_of_week'])
-    assert feature_hour_of_week.shape == (len(baseline_data.index), 2)
-    
+    assert 'hour_of_week' in feature_hour_of_week.columns
+    assert feature_hour_of_week.shape == (len(baseline_data.index), 1)
+
     # Get occupancy feature
-#    feature_occupancy, lookup_occupancy, warnings = \
-#        get_feature_occupancy(baseline_data_segmented)
-#    e2e_warnings.extend(warnings)
-#    assert all(column in feature_occupancy.columns
-#               for column in ['start', 'occupancy'])
-#    assert feature_occupancy.shape == (len(baseline_data_segmented.index), 2)
-#    assert lookup_occupancy.shape == (168 * 12, 3)
+    feature_occupancy, lookup_occupancy, warnings = \
+        get_feature_occupancy(baseline_data_segmented)
+    e2e_warnings.extend(warnings)
+    assert all(column in feature_occupancy.columns
+               for column in ['model_id', 'occupancy'])
+    assert feature_occupancy.shape == (len(baseline_data_segmented.index)-3, 2)
+    assert lookup_occupancy.shape == (168 * 12, 3)
     # Validate temperature bin endpoints and determine temperature bins
 
     # Generate design matrix for weighted 3-month baseline
@@ -291,9 +290,8 @@ def test_feature_hour_of_week(baseline_data):
     feature_hour_of_week, warnings = get_feature_hour_of_week(
             baseline_data)
     assert len(warnings) == 0
-    assert all(column in feature_hour_of_week.columns
-               for column in ['start', 'hour_of_week'])
-    assert feature_hour_of_week.shape == (len(baseline_data.index), 2)
+    assert 'hour_of_week' in feature_hour_of_week.columns
+    assert feature_hour_of_week.shape == (len(baseline_data.index), 1)
     assert all(x in feature_hour_of_week.hour_of_week.unique()
                for x in range(1, 169))
     assert feature_hour_of_week.hour_of_week.dtypes == 'category'
@@ -301,7 +299,8 @@ def test_feature_hour_of_week(baseline_data):
 
 def test_feature_hour_of_week_incomplete_week(merged_data):
     five_day_index = pd.date_range('2017-01-04', freq='H',
-                                   periods=5*24, tz='UTC')
+                                   periods=5*24, tz='UTC',
+                                   name='start')
     baseline_data = pd.DataFrame({'meter_value': [1 for i in range(0, 120)]}) \
         .set_index(five_day_index)
     feature_hour_of_week, warnings = get_feature_hour_of_week(
@@ -315,27 +314,40 @@ def test_feature_hour_of_week_incomplete_week(merged_data):
         in warnings[0].description
     assert warnings[0].data['num_missing_hours'] == 24 * 2
 
-#
-#def test_feature_occupancy_unsegmented(baseline_data):
-#    feature_occupancy, lookup_occupancy, warnings = \
-#        get_feature_occupancy(baseline_data)
-#
-#    assert feature_occupancy.shape == (len(baseline_data.index), 2)
-#    assert lookup_occupancy.shape == (168, 3)
-#    assert sum(lookup_occupancy.occupancy
-#               [lookup_occupancy.model_id == (1,)]) == 5
-#
-#
-#def test_feature_occupancy_failed_model(baseline_data):
-#    baseline_data['meter_value'] = 0
-#    feature_occupancy, lookup_occupancy, warnings = \
-#        get_feature_occupancy(baseline_data)
-#    assert len(warnings) == 1
-#    assert warnings[0].qualified_name == (
-#        'eemeter.caltrack_hourly'
-#        '.failed_occupancy_model'
-#    )
-#    assert warnings[0].description == 'Failed to fit occupancy model.'
-#    assert warnings[0].data['traceback'] is not None
+
+def test_feature_occupancy_unsegmented(baseline_data):
+    feature_occupancy, lookup_occupancy, warnings = \
+        get_feature_occupancy(baseline_data, threshold=0.5)
+
+    assert feature_occupancy.shape == (len(baseline_data.index)-1, 2)
+    assert lookup_occupancy.shape == (168, 3)
+    assert sum(lookup_occupancy.occupancy) == 4
+    assert len(warnings) == 2
+    assert warnings[0].qualified_name == (
+        'eemeter.caltrack_hourly'
+        '.missing_model_id'
+    )
+    assert warnings[1].qualified_name == (
+        'eemeter.caltrack_hourly'
+        '.missing_weight_column'
+    )
+    assert all(column not in warnings[0].data['dataframe_columns']
+               for column in ['model_id', 'weight'])
+
+
+def test_feature_occupancy_failed_model(baseline_data):
+    baseline_data = baseline_data.drop('meter_value', axis=1)
+    baseline_data['model_id'] = [(1,)] * len(baseline_data.index)
+    baseline_data['weight'] = 1
+    feature_occupancy, lookup_occupancy, warnings = \
+        get_feature_occupancy(baseline_data)
+    assert len(warnings) == 1
+    assert warnings[0].qualified_name == (
+        'eemeter.caltrack_hourly'
+        '.failed_occupancy_model'
+    )
+    assert 'Error encountered in statsmodels.formula.api.wls' \
+        in warnings[0].description
+    assert warnings[0].data['traceback'] is not None
 
 
