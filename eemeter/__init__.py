@@ -42,7 +42,7 @@ from .caltrack import (
     select_best_candidate,
 )
 from .caltrack_hourly import (
-    assign_baseline_periods,
+    segment_timeseries,
     get_feature_hour_of_week,
     get_feature_occupancy,
     get_design_matrix,

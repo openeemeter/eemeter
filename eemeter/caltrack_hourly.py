@@ -78,31 +78,30 @@ def get_hourly_coverage_warning(
     return warnings
 
 
-def assign_baseline_periods(data, baseline_type):
+def segment_timeseries(data, segment_type):
 
-    baseline_data = data.copy()
-    baseline_data_segmented = pd.DataFrame()
+    data_segmented = pd.DataFrame()
     warnings = []
-    valid_baseline_types = ['one_month',
-                            'three_month',
-                            'three_month_weighted',
-                            'single', ]
-    if baseline_type not in valid_baseline_types:
-        raise ValueError('Invalid baseline type: %s' % (baseline_type))
+    valid_segment_types = ['one_month',
+                           'three_month',
+                           'three_month_weighted',
+                           'single', ]
+    if segment_type not in valid_segment_types:
+        raise ValueError('Invalid segment type: %s' % (segment_type))
 
     for column in ['meter_value', 'temperature_mean']:
         if column not in data.columns:
             raise ValueError('Data does not include columns: {}'
                              .format(column))
 
-    if baseline_type == 'one_month':
-        baseline_data_segmented = baseline_data.copy()
-        baseline_data_segmented['weight'] = 1
-        baseline_data_segmented['model_id'] = \
-            [tuple([x]) for x in baseline_data_segmented.index.month]
-    elif baseline_type in ['three_month', 'three_month_weighted']:
+    if segment_type == 'one_month':
+        data_segmented = data.copy()
+        data_segmented['weight'] = 1
+        data_segmented['model_id'] = \
+            [tuple([x]) for x in data_segmented.index.month]
+    elif segment_type in ['three_month', 'three_month_weighted']:
         unique_months = pd.Series(
-                baseline_data.index
+                data.index
                 .map(lambda x: x.month)
                 .unique().values) \
                 .map(lambda x: (x,))
@@ -119,32 +118,31 @@ def assign_baseline_periods(data, baseline_type):
         months.loc[:, 'baseline'] = months.model_id \
             .map(lambda x: shoulder_months(x[0]))
         for i, month in months.iterrows():
-            this_df = baseline_data \
-                    .loc[baseline_data.index.month.isin(month.baseline)]
+            this_df = data \
+                    .loc[data.index.month.isin(month.baseline)]
             this_df.loc[:, 'model_id'] = \
                 [month.model_id] * len(this_df.index)
             warnings.extend(get_hourly_coverage_warning(
                     this_df, month.baseline, month.model_id))
 
             this_df['weight'] = 1
-            if baseline_type == 'three_month_weighted':
+            if segment_type == 'three_month_weighted':
                 this_df.loc[
                         [x[0] not in x[1] for x in
                          zip(this_df.index.month, this_df.model_id)],
                         'weight'] = 0.5
-            baseline_data_segmented = baseline_data_segmented.append(
+            data_segmented = data_segmented.append(
                     this_df, sort=False)
-    elif baseline_type == 'single':
-        baseline_data_segmented = baseline_data.copy()
-        baseline_data_segmented['weight'] = 1
-        baseline_data_segmented['model_id'] = \
+    elif segment_type == 'single':
+        data_segmented = data.copy()
+        data_segmented['weight'] = 1
+        data_segmented['model_id'] = \
             [tuple(range(1, 13))
-             for j in range(len(baseline_data_segmented.index))]
+             for j in range(len(data_segmented.index))]
 
-#    baseline_data_segmented = baseline_data_segmented.reset_index()
     warnings.extend(get_calendar_year_coverage_warning(
-            baseline_data_segmented))
-    return baseline_data_segmented, warnings
+            data_segmented))
+    return data_segmented, warnings
 
 
 def get_feature_hour_of_week(data):
@@ -226,13 +224,6 @@ def get_single_feature_occupancy(data, threshold):
             'occupancy': model_data.groupby(['hour_of_week'])
             .apply(lambda x: ishighusage(x, threshold))}) \
         .reset_index()
-#
-#    feature_occupancy = model_data.reset_index() \
-#        .merge(lookup_occupancy,
-#               left_on=['hour_of_week'],
-#               right_on=['hour_of_week']) \
-#        .set_index('start').sort_index() \
-#        .loc[:, ['occupancy']]
 
     return lookup_occupancy, warnings
 

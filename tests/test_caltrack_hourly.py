@@ -6,7 +6,7 @@ from eemeter import (
     load_sample,
     merge_temperature_data,
     get_baseline_data,
-    assign_baseline_periods,
+    segment_timeseries,
     get_feature_hour_of_week,
     get_feature_occupancy,
     get_design_matrix,
@@ -47,8 +47,8 @@ def test_e2e(
     assert baseline_data.shape == (8761, 4)
 
     # Calculate baseline period segmentation
-    baseline_data_segmented, warnings = assign_baseline_periods(
-            baseline_data, baseline_type='three_month_weighted')
+    baseline_data_segmented, warnings = segment_timeseries(
+            baseline_data, segment_type='three_month_weighted')
     e2e_warnings.extend(warnings)
     assert all(column in baseline_data_segmented.columns
                for column in ['meter_value',
@@ -103,22 +103,22 @@ def test_e2e(
 # Unit tests
 def test_assign_baseline_periods_wrong_baseline_type(baseline_data):
     with pytest.raises(ValueError) as error:
-        baseline_data_segmented, warnings = assign_baseline_periods(
-            baseline_data, baseline_type='unknown')
-    assert 'Invalid baseline type' in str(error)
+        baseline_data_segmented, warnings = segment_timeseries(
+            baseline_data, segment_type='unknown')
+    assert 'Invalid segment type' in str(error)
 
 
 def test_assign_baseline_periods_missing_temperature_data(baseline_data):
     baseline_data = baseline_data.drop('temperature_mean', axis=1)
     with pytest.raises(ValueError) as error:
-        baseline_data_segmented, warnings = assign_baseline_periods(
-                baseline_data, baseline_type='three_month_weighted')
+        baseline_data_segmented, warnings = segment_timeseries(
+                baseline_data, segment_type='three_month_weighted')
     assert 'Data does not include columns' in str(error)
 
 
 def test_assign_baseline_periods_one_month(baseline_data):
-    baseline_data_segmented, warnings = assign_baseline_periods(
-            baseline_data, baseline_type='one_month')
+    baseline_data_segmented, warnings = segment_timeseries(
+            baseline_data, segment_type='one_month')
 
     unique_models = baseline_data_segmented.model_id.unique()
     captured_months = [element for sublist in unique_models
@@ -144,8 +144,8 @@ def test_assign_baseline_periods_one_month(baseline_data):
 
 
 def test_assign_baseline_periods_three_month(baseline_data):
-    baseline_data_segmented, warnings = assign_baseline_periods(
-            baseline_data, baseline_type='three_month')
+    baseline_data_segmented, warnings = segment_timeseries(
+            baseline_data, segment_type='three_month')
 
     unique_models = baseline_data_segmented.model_id.unique()
     captured_months = [element for sublist in unique_models
@@ -176,8 +176,8 @@ def test_assign_baseline_periods_three_month(baseline_data):
 
 
 def test_assign_baseline_periods_three_month_weighted(baseline_data):
-    baseline_data_segmented, warnings = assign_baseline_periods(
-            baseline_data, baseline_type='three_month_weighted')
+    baseline_data_segmented, warnings = segment_timeseries(
+            baseline_data, segment_type='three_month_weighted')
 
     unique_models = baseline_data_segmented.model_id.unique()
     captured_months = [element for sublist in unique_models
@@ -208,8 +208,8 @@ def test_assign_baseline_periods_three_month_weighted(baseline_data):
 
 
 def test_assign_baseline_periods_single(baseline_data):
-    baseline_data_segmented, warnings = assign_baseline_periods(
-            baseline_data, baseline_type='single')
+    baseline_data_segmented, warnings = segment_timeseries(
+            baseline_data, segment_type='single')
 
     unique_models = baseline_data_segmented.model_id.unique()
     captured_months = [element for sublist in unique_models
@@ -237,8 +237,8 @@ def test_assign_baseline_periods_single(baseline_data):
 def test_assign_baseline_periods_three_months_wtd_truncated(merged_data):
     baseline_data, warnings = get_baseline_data(
             data=merged_data, end=merged_data.index[-1], max_days=180)
-    baseline_data_segmented, warnings = assign_baseline_periods(
-            baseline_data, baseline_type='three_month_weighted')
+    baseline_data_segmented, warnings = segment_timeseries(
+            baseline_data, segment_type='three_month_weighted')
     unique_models = baseline_data_segmented.model_id.unique()
     assert len(warnings) == 7
     assert len(unique_models) == 7
@@ -271,8 +271,8 @@ def test_assign_baseline_periods_three_months_wtd_truncated(merged_data):
 def test_assign_baseline_periods_three_months_wtd_insufficient(merged_data):
     baseline_data, warnings = get_baseline_data(
             data=merged_data, end=merged_data.index[-1], max_days=360)
-    baseline_data_segmented, warnings = assign_baseline_periods(
-            baseline_data, baseline_type='three_month_weighted')
+    baseline_data_segmented, warnings = segment_timeseries(
+            baseline_data, segment_type='three_month_weighted')
     unique_models = baseline_data_segmented.model_id.unique()
     ndays = baseline_data.index[0].days_in_month
     assert len(warnings) == 3
