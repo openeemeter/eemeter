@@ -137,16 +137,39 @@ def segment_timeseries(data, segment_type):
         data_segmented = data.copy()
         data_segmented['weight'] = 1
         data_segmented['model_id'] = \
-            [tuple(range(1, 13))
-             for j in range(len(data_segmented.index))]
+            [tuple(range(1, 13))] * len(data_segmented.index)
 
     warnings.extend(get_calendar_year_coverage_warning(
             data_segmented))
     return data_segmented, warnings
 
 
+def get_missing_hours_of_week_warning(unique_hours):
+    warning = []
+    missing_hours = [hour for hour in range(1, 169)
+                     if hour not in unique_hours]
+    if sorted(unique_hours) != \
+            [x for x in range(1, 169)]:
+                warning = [EEMeterWarning(
+                        qualified_name=('eemeter.caltrack_hourly.'
+                                        'missing_hours_of_week'),
+                        description=(
+                                'Data does not include all hours of week. '
+                                'Missing hours of week: {}'
+                                .format(missing_hours)
+                                ),
+                        data={'num_missing_hours': 168 - len(unique_hours),
+                              'missing_hours': missing_hours}
+                        )]
+    return warning
+
+
 def get_feature_hour_of_week(data):
-    warnings = []
+    hour_warnings = []
+
+    data_verified, warnings = handle_unsegmented_timeseries(data)
+    hour_warnings.extend(warnings)
+
     feature_hour_of_week = \
         pd.DataFrame({
                 'hour_of_week': data.index.dayofweek * 24
@@ -155,24 +178,12 @@ def get_feature_hour_of_week(data):
             index=data.index)
     feature_hour_of_week["hour_of_week"] = \
         feature_hour_of_week["hour_of_week"].astype('category')
-    captured_hours = feature_hour_of_week.hour_of_week.unique()
-    missing_hours = [hour for hour in range(1, 169)
-                     if hour not in captured_hours]
-    if sorted(feature_hour_of_week.hour_of_week.unique()) != \
-            [x for x in range(1, 169)]:
-                warnings = [EEMeterWarning(
-                        qualified_name=('eemeter.caltrack_hourly.'
-                                        'missing_hours_of_week'),
-                        description=(
-                                'Data does not include all hours of week. '
-                                'Missing hours of week: {}'
-                                .format(missing_hours)
-                                ),
-                        data={'num_missing_hours': 168 - len(captured_hours),
-                              'missing_hours': missing_hours}
-                        )]
+
+    hour_warnings.extend(get_missing_hours_of_week_warning(
+            feature_hour_of_week.hour_of_week.unique()))
+
     parameters = {}
-    return feature_hour_of_week, parameters, warnings
+    return feature_hour_of_week, parameters, hour_warnings
 
 
 def get_fit_failed_occupancy_model_warning(model_id):
@@ -253,16 +264,10 @@ def get_missing_weight_column_warning(columns):
 
 
 def get_feature_occupancy(data, threshold=0.65, lookup_occupancy=None):
-    warnings = []
+    occupancy_warnings = []
 
-    data_verified = data.copy()
-    if 'model_id' not in data_verified.columns:
-        warnings.extend(get_missing_model_id_warning(data_verified.columns))
-        data_verified['model_id'] = [(1,)] * len(data_verified.index)
-    if 'weight' not in data_verified.columns:
-        warnings.extend(
-            get_missing_weight_column_warning(data_verified.columns))
-        data_verified['weight'] = 1
+    data_verified, warnings = handle_unsegmented_timeseries(data)
+    occupancy_warnings.extend(warnings)
 
     if lookup_occupancy is None:
         lookup_occupancy = pd.DataFrame()
@@ -276,12 +281,12 @@ def get_feature_occupancy(data, threshold=0.65, lookup_occupancy=None):
 
             lookup_occupancy = lookup_occupancy.append(this_lookup_occupancy,
                                                        sort=False)
-            warnings.extend(this_warnings)
+            occupancy_warnings.extend(this_warnings)
 
     if len(lookup_occupancy.index) == 0:
-        return pd.DataFrame(), {}, warnings
+        return pd.DataFrame(), {}, occupancy_warnings
 
-    feature_hour_of_week, parameters, hour_warnings = \
+    feature_hour_of_week, parameters, warnings = \
         get_feature_hour_of_week(data_verified)
 
     feature_occupancy = data_verified.reset_index() \
@@ -296,7 +301,7 @@ def get_feature_occupancy(data, threshold=0.65, lookup_occupancy=None):
     occupancy_parameters = {
             'threshold': threshold,
             'lookup_occupancy': lookup_occupancy}
-    return feature_occupancy, occupancy_parameters, warnings
+    return feature_occupancy, occupancy_parameters, occupancy_warnings
 
 
 def get_design_matrix_unmatched_index_warning(function):
@@ -324,19 +329,27 @@ def get_design_matrix_wrong_kwargs_warning(function):
     return warning
 
 
+def handle_unsegmented_timeseries(data):
+    data_verified = data.copy()
+    warnings = []
+    if 'model_id' not in data_verified.columns:
+        warnings.extend(
+                get_missing_model_id_warning(data_verified.columns))
+        data_verified['model_id'] = \
+            [tuple(range(1, 13))] * len(data_verified.index)
+    if 'weight' not in data_verified.columns:
+        warnings.extend(
+                get_missing_weight_column_warning(data_verified.columns))
+        data_verified['weight'] = 1
+    return data_verified, warnings
+
+
 def get_design_matrix(data, functions):
     feature_parameters = {}
     design_matrix_warnings = []
 
-    data_verified = data.copy()
-    if 'model_id' not in data_verified.columns:
-        design_matrix_warnings.extend(
-                get_missing_model_id_warning(data_verified.columns))
-        data_verified['model_id'] = [(1,)] * len(data_verified.index)
-    if 'weight' not in data_verified.columns:
-        design_matrix_warnings.extend(
-                get_missing_weight_column_warning(data_verified.columns))
-        data_verified['weight'] = 1
+    data_verified, warnings = handle_unsegmented_timeseries(data)
+    design_matrix_warnings.extend(warnings)
 
     design_matrix = data_verified.copy()
     for function in functions:

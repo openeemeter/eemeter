@@ -308,6 +308,7 @@ def test_assign_baseline_periods_three_months_wtd_insufficient(merged_data):
 
 def test_feature_hour_of_week(baseline_data):
     baseline_data['model_id'] = [(1,)] * len(baseline_data.index)
+    baseline_data['weight'] = 1
     feature_hour_of_week, parameters, warnings = get_feature_hour_of_week(
             baseline_data)
     assert len(warnings) == 0
@@ -326,6 +327,7 @@ def test_feature_hour_of_week_incomplete_week(merged_data):
     baseline_data = pd.DataFrame({'meter_value': [1 for i in range(0, 120)]}) \
         .set_index(five_day_index)
     baseline_data['model_id'] = [(1,)] * len(baseline_data.index)
+    baseline_data['weight'] = 1
     feature_hour_of_week, parameters, warnings = get_feature_hour_of_week(
             baseline_data)
     assert len(warnings) == 1
