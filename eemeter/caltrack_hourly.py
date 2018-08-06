@@ -286,3 +286,10 @@ def get_feature_occupancy(data, threshold=0.65):
         warnings.extend(this_warnings)
 
     return feature_occupancy, lookup_occupancy, warnings
+
+
+def get_design_matrix(data, functions):
+    design_matrix = pd.DataFrame()
+    feature_parameters = {}
+    warnings = []
+    return design_matrix, feature_parameters, warnings

@@ -45,6 +45,7 @@ from .caltrack_hourly import (
     assign_baseline_periods,
     get_feature_hour_of_week,
     get_feature_occupancy,
+    get_design_matrix,
 )
 from .exceptions import (
     EEMeterError,
