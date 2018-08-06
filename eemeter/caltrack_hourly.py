@@ -150,9 +150,11 @@ def assign_baseline_periods(data, baseline_type):
 def get_feature_hour_of_week(data):
     warnings = []
     feature_hour_of_week = \
-        pd.DataFrame(data.index.dayofweek * 24 + (data.index.hour+1),
-                     index=data.index) \
-        .rename(columns={'start': 'hour_of_week'})
+        pd.DataFrame({
+                'hour_of_week': data.index.dayofweek * 24
+                + (data.index.hour + 1),
+                'model_id': data.model_id},
+            index=data.index)
     feature_hour_of_week["hour_of_week"] = \
         feature_hour_of_week["hour_of_week"].astype('category')
     captured_hours = feature_hour_of_week.hour_of_week.unique()
@@ -171,7 +173,8 @@ def get_feature_hour_of_week(data):
                         data={'num_missing_hours': 168 - len(captured_hours),
                               'missing_hours': missing_hours}
                         )]
-    return feature_hour_of_week, warnings
+    parameters = {}
+    return feature_hour_of_week, parameters, warnings
 
 
 def get_fit_failed_occupancy_model_warning(model_id):
@@ -208,14 +211,14 @@ def get_single_feature_occupancy(data, threshold):
     except Exception as e:
         warnings.extend(
                 get_fit_failed_occupancy_model_warning(data.model_id[0]))
-        return pd.DataFrame(), pd.DataFrame(), warnings
+        return pd.DataFrame(), warnings
 
     model_data = model_data.merge(
             pd.DataFrame({'residuals': model_occupancy.fit().resid}),
             left_index=True, right_index=True)
 
     # TODO: replace with design matrix function
-    feature_hour_of_week, warnings = get_feature_hour_of_week(data)
+    feature_hour_of_week, parameters, warnings = get_feature_hour_of_week(data)
     model_data = model_data.merge(feature_hour_of_week,
                                   left_index=True, right_index=True)
 
@@ -223,15 +226,15 @@ def get_single_feature_occupancy(data, threshold):
             'occupancy': model_data.groupby(['hour_of_week'])
             .apply(lambda x: ishighusage(x, threshold))}) \
         .reset_index()
+#
+#    feature_occupancy = model_data.reset_index() \
+#        .merge(lookup_occupancy,
+#               left_on=['hour_of_week'],
+#               right_on=['hour_of_week']) \
+#        .set_index('start').sort_index() \
+#        .loc[:, ['occupancy']]
 
-    feature_occupancy = model_data.reset_index() \
-        .merge(lookup_occupancy,
-               left_on=['hour_of_week'],
-               right_on=['hour_of_week']) \
-        .set_index('start').sort_index() \
-        .loc[:, ['occupancy']]
-
-    return feature_occupancy, lookup_occupancy, warnings
+    return lookup_occupancy, warnings
 
 
 def get_missing_model_id_warning(columns):
@@ -258,38 +261,117 @@ def get_missing_weight_column_warning(columns):
     return warning
 
 
-def get_feature_occupancy(data, threshold=0.65):
+def get_feature_occupancy(data, threshold=0.65, lookup_occupancy=None):
     warnings = []
-    feature_occupancy = pd.DataFrame()
-    lookup_occupancy = pd.DataFrame()
 
-    if 'model_id' not in data.columns:
-        warnings.extend(get_missing_model_id_warning(data.columns))
-        data['model_id'] = [(1,)] * len(data.index)
-    if 'weight' not in data.columns:
-        warnings.extend(get_missing_weight_column_warning(data.columns))
-        data['weight'] = 1
+    data_verified = data.copy()
+    if 'model_id' not in data_verified.columns:
+        warnings.extend(get_missing_model_id_warning(data_verified.columns))
+        data_verified['model_id'] = [(1,)] * len(data_verified.index)
+    if 'weight' not in data_verified.columns:
+        warnings.extend(
+            get_missing_weight_column_warning(data_verified.columns))
+        data_verified['weight'] = 1
 
-    unique_models = data.model_id.unique()
-    for model_id in unique_models:
-        this_data = data.loc[data.model_id == model_id]
-        this_feature_occupancy, this_lookup_occupancy, this_warnings = \
-            get_single_feature_occupancy(this_data, threshold)
+    if lookup_occupancy is None:
+        lookup_occupancy = pd.DataFrame()
+        unique_models = data_verified.model_id.unique()
+        for model_id in unique_models:
+            this_data = data_verified.loc[data_verified.model_id == model_id]
+            this_lookup_occupancy, this_warnings = \
+                get_single_feature_occupancy(this_data, threshold)
+            this_lookup_occupancy['model_id'] = [model_id] * \
+                len(this_lookup_occupancy.index)
 
-        this_feature_occupancy['model_id'] = [model_id] * \
-            len(this_feature_occupancy.index)
-        this_lookup_occupancy['model_id'] = [model_id] * \
-            len(this_lookup_occupancy.index)
+            lookup_occupancy = lookup_occupancy.append(this_lookup_occupancy,
+                                                       sort=False)
+            warnings.extend(this_warnings)
 
-        feature_occupancy = feature_occupancy.append(this_feature_occupancy)
-        lookup_occupancy = lookup_occupancy.append(this_lookup_occupancy)
-        warnings.extend(this_warnings)
+    if len(lookup_occupancy.index) == 0:
+        return pd.DataFrame(), {}, warnings
 
-    return feature_occupancy, lookup_occupancy, warnings
+    feature_hour_of_week, parameters, hour_warnings = \
+        get_feature_hour_of_week(data_verified)
+
+    feature_occupancy = data_verified.reset_index() \
+        .merge(feature_hour_of_week,
+               left_on=['start', 'model_id'],
+               right_on=['start', 'model_id']) \
+        .merge(lookup_occupancy,
+               left_on=['model_id', 'hour_of_week'],
+               right_on=['model_id', 'hour_of_week']) \
+        .loc[:, ['start', 'model_id', 'occupancy']] \
+        .set_index('start')
+    occupancy_parameters = {
+            'threshold': threshold,
+            'lookup_occupancy': lookup_occupancy}
+    return feature_occupancy, occupancy_parameters, warnings
+
+
+def get_design_matrix_unmatched_index_warning(function):
+    warning = [EEMeterWarning(
+        qualified_name='eemeter.caltrack_hourly.design_matrix_unmatched_index',
+        description=(
+            'Error: Function returned a feature whose index does not match '
+            'the data. Function name: {}'.format(function['function'].__name__)
+        ),
+        data={'function': function['function'].__name__}
+    )]
+    return warning
+
+
+def get_design_matrix_wrong_kwargs_warning(function):
+    warning = [EEMeterWarning(
+        qualified_name='eemeter.caltrack_hourly.design_matrix_wrong_kwargs',
+        description=(
+            'Error: Function returned a feature whose index does not match '
+            'the data. Function name: {}'.format(function['function'].__name__)
+        ),
+        data={'function': function['function'].__name__,
+              'kwargs': function['kwargs']}
+    )]
+    return warning
 
 
 def get_design_matrix(data, functions):
-    design_matrix = pd.DataFrame()
     feature_parameters = {}
-    warnings = []
-    return design_matrix, feature_parameters, warnings
+    design_matrix_warnings = []
+
+    data_verified = data.copy()
+    if 'model_id' not in data_verified.columns:
+        design_matrix_warnings.extend(
+                get_missing_model_id_warning(data_verified.columns))
+        data_verified['model_id'] = [(1,)] * len(data_verified.index)
+    if 'weight' not in data_verified.columns:
+        design_matrix_warnings.extend(
+                get_missing_weight_column_warning(data_verified.columns))
+        data_verified['weight'] = 1
+
+    design_matrix = data_verified.copy()
+    for function in functions:
+        try:
+            this_feature, this_parameters, this_warnings = \
+                function['function'](data_verified, **function['kwargs'])
+        except TypeError:
+            design_matrix_warnings.extend(
+                    get_design_matrix_wrong_kwargs_warning(function))
+            return pd.DataFrame(), dict(), design_matrix_warnings
+
+        if (len(this_feature.index) != len(data_verified.index)):
+            design_matrix_warnings.extend(
+                get_design_matrix_unmatched_index_warning(function))
+            return pd.DataFrame(), dict(), design_matrix_warnings
+        if (any(this_feature.sort_index().index !=
+                data_verified.sort_index().index)):
+            design_matrix_warnings.extend(
+                get_design_matrix_unmatched_index_warning(function))
+            return pd.DataFrame(), dict(), design_matrix_warnings
+
+        design_matrix = design_matrix.merge(
+                this_feature,
+                left_on=['start', 'model_id'],
+                right_on=['start', 'model_id'])
+        feature_parameters.update({
+                function['function'].__name__: this_parameters})
+
+    return design_matrix, feature_parameters, design_matrix_warnings

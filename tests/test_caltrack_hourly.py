@@ -38,8 +38,6 @@ def baseline_data(merged_data):
 
 def test_e2e(
         merged_data):
-#    meter_data = meter_data()
-#    temperature_data = temperature_data(utc_index())
     e2e_warnings = []
 
     # Filter to 365 day baseline
@@ -57,19 +55,21 @@ def test_e2e(
                               'temperature_mean', 'weight', 'model_id'])
 
     # Get hour of week feature
-    feature_hour_of_week, warnings = get_feature_hour_of_week(baseline_data)
+    feature_hour_of_week, hour_parameters, warnings = \
+        get_feature_hour_of_week(baseline_data_segmented)
     e2e_warnings.extend(warnings)
     assert 'hour_of_week' in feature_hour_of_week.columns
-    assert feature_hour_of_week.shape == (len(baseline_data.index), 1)
+    assert feature_hour_of_week.shape == \
+        (len(baseline_data_segmented.index), 2)
 
     # Get occupancy feature
-    feature_occupancy, lookup_occupancy, warnings = \
+    feature_occupancy, occupancy_parameters, warnings = \
         get_feature_occupancy(baseline_data_segmented)
     e2e_warnings.extend(warnings)
     assert all(column in feature_occupancy.columns
                for column in ['model_id', 'occupancy'])
-    assert feature_occupancy.shape == (len(baseline_data_segmented.index)-3, 2)
-    assert lookup_occupancy.shape == (168 * 12, 3)
+    assert feature_occupancy.shape == (len(baseline_data_segmented.index), 2)
+    assert occupancy_parameters['lookup_occupancy'].shape == (168 * 12, 3)
     # Validate temperature bin endpoints and determine temperature bins
 
     # Generate design matrix for weighted 3-month baseline
@@ -81,16 +81,18 @@ def test_e2e(
                          'kwargs': {}
                          },
                         {'function': get_feature_occupancy,
-                         'kwargs': {'lookup_occupancy': lookup_occupancy}
+                         'kwargs': {'lookup_occupancy':
+                                    occupancy_parameters['lookup_occupancy']}
                          }
                         ])
     e2e_warnings.extend(warnings)
 
-    assert design_matrix.shape == (len(baseline_data_segmented.index)-3, 3)
+    assert design_matrix.shape == (len(baseline_data_segmented.index), 8)
     assert all(column in design_matrix.columns
                for column in ['model_id', 'occupancy', 'hour_of_week'])
-    assert all(key in feature_parameters.keys
-               for key in ['lookup_occupancy'])
+    assert all(key in feature_parameters.keys()
+               for key in ['get_feature_occupancy',
+                           'get_feature_hour_of_week'])
     # Fit consumption model
 
     # Use fitted model to predict counterfactual in reporting period
@@ -305,11 +307,13 @@ def test_assign_baseline_periods_three_months_wtd_insufficient(merged_data):
 
 
 def test_feature_hour_of_week(baseline_data):
-    feature_hour_of_week, warnings = get_feature_hour_of_week(
+    baseline_data['model_id'] = [(1,)] * len(baseline_data.index)
+    feature_hour_of_week, parameters, warnings = get_feature_hour_of_week(
             baseline_data)
     assert len(warnings) == 0
-    assert 'hour_of_week' in feature_hour_of_week.columns
-    assert feature_hour_of_week.shape == (len(baseline_data.index), 1)
+    assert all(column in feature_hour_of_week.columns
+               for column in ['hour_of_week', 'model_id'])
+    assert feature_hour_of_week.shape == (len(baseline_data.index), 2)
     assert all(x in feature_hour_of_week.hour_of_week.unique()
                for x in range(1, 169))
     assert feature_hour_of_week.hour_of_week.dtypes == 'category'
@@ -321,7 +325,8 @@ def test_feature_hour_of_week_incomplete_week(merged_data):
                                    name='start')
     baseline_data = pd.DataFrame({'meter_value': [1 for i in range(0, 120)]}) \
         .set_index(five_day_index)
-    feature_hour_of_week, warnings = get_feature_hour_of_week(
+    baseline_data['model_id'] = [(1,)] * len(baseline_data.index)
+    feature_hour_of_week, parameters, warnings = get_feature_hour_of_week(
             baseline_data)
     assert len(warnings) == 1
     assert warnings[0].qualified_name == (
@@ -334,16 +339,16 @@ def test_feature_hour_of_week_incomplete_week(merged_data):
 
 
 def test_feature_occupancy_unsegmented(baseline_data):
-    feature_occupancy, lookup_occupancy, warnings = \
+    feature_occupancy, parameters, warnings = \
         get_feature_occupancy(baseline_data, threshold=0.5)
 
-    assert feature_occupancy.shape == (len(baseline_data.index)-1, 2)
-    assert lookup_occupancy.shape == (168, 3)
-    assert sum(lookup_occupancy.occupancy) == 4
+    assert feature_occupancy.shape == (len(baseline_data.index), 2)
+    assert parameters['lookup_occupancy'].shape == (168, 3)
+    assert sum(parameters['lookup_occupancy'].occupancy) == 4
     assert len(warnings) == 2
     assert warnings[0].qualified_name == (
         'eemeter.caltrack_hourly'
-        '.v'
+        '.missing_model_id'
     )
     assert warnings[1].qualified_name == (
         'eemeter.caltrack_hourly'
@@ -357,7 +362,7 @@ def test_feature_occupancy_failed_model(baseline_data):
     baseline_data = baseline_data.drop('meter_value', axis=1)
     baseline_data['model_id'] = [(1,)] * len(baseline_data.index)
     baseline_data['weight'] = 1
-    feature_occupancy, lookup_occupancy, warnings = \
+    feature_occupancy, parameters, warnings = \
         get_feature_occupancy(baseline_data)
     assert len(warnings) == 1
     assert warnings[0].qualified_name == (
@@ -369,18 +374,18 @@ def test_feature_occupancy_failed_model(baseline_data):
     assert warnings[0].data['traceback'] is not None
 
 
-def test_get_design_matrix_unmatched_index(baseline_data):
+def test_get_design_matrix_different_length_index(baseline_data):
     baseline_data['model_id'] = [(1,)] * len(baseline_data.index)
     baseline_data['weight'] = 1
 
-    def get_ones(n):
+    def get_ones(data, n):
         n_day_index = pd.date_range('2017-01-04', freq='H',
                                     periods=n*24, tz='UTC',
                                     name='start')
         weird_feature = pd.DataFrame(
                 {'meter_value': [1] * (n * 24)}) \
             .set_index(n_day_index)
-        return weird_feature
+        return weird_feature, {}, []
     design_matrix, feature_parameters, warnings = \
         get_design_matrix(
                 baseline_data,
@@ -396,9 +401,41 @@ def test_get_design_matrix_unmatched_index(baseline_data):
         'eemeter.caltrack_hourly'
         '.design_matrix_unmatched_index'
     )
-    assert 'A function returns a feature whose index does not match the data' \
+    assert 'Function returned a feature whose index does not match the data' \
         in warnings[0].description
-    assert warnings[0].data['function'] == get_ones
+    assert warnings[0].data['function'] == 'get_ones'
+
+
+def test_get_design_matrix_unmatched_index(baseline_data):
+    baseline_data['model_id'] = [(1,)] * len(baseline_data.index)
+    baseline_data['weight'] = 1
+
+    def get_ones(data):
+        n_day_index = pd.date_range('2017-01-04', freq='H',
+                                    periods=len(data.index), tz='UTC',
+                                    name='start')
+        weird_feature = pd.DataFrame(
+                {'meter_value': [1] * len(data.index)}) \
+            .set_index(n_day_index)
+        return weird_feature, {}, []
+    design_matrix, feature_parameters, warnings = \
+        get_design_matrix(
+                baseline_data,
+                functions=[
+                        {'function': get_ones,
+                         'kwargs': {}
+                         },
+                        ])
+    assert len(design_matrix.index) == 0
+    assert len(feature_parameters) == 0
+    assert len(warnings) == 1
+    assert warnings[0].qualified_name == (
+        'eemeter.caltrack_hourly'
+        '.design_matrix_unmatched_index'
+    )
+    assert 'Function returned a feature whose index does not match the data' \
+        in warnings[0].description
+    assert warnings[0].data['function'] == 'get_ones'
 
 
 def test_get_design_matrix_unsegmented(baseline_data):
@@ -411,8 +448,8 @@ def test_get_design_matrix_unsegmented(baseline_data):
                          },
                         ])
 
-    assert len(design_matrix.index) == 0
-    assert len(feature_parameters) == 0
+    assert len(design_matrix.index) == 8761
+    assert len(feature_parameters['get_feature_hour_of_week']) == 0
     assert len(warnings) == 2
     assert warnings[0].qualified_name == (
         'eemeter.caltrack_hourly'
@@ -427,6 +464,8 @@ def test_get_design_matrix_unsegmented(baseline_data):
 
 
 def test_get_design_matrix_wrong_kwargs(baseline_data):
+    baseline_data['model_id'] = [(1,)] * len(baseline_data.index)
+    baseline_data['weight'] = 1
     design_matrix, feature_parameters, warnings = \
         get_design_matrix(
                 baseline_data,
@@ -441,12 +480,8 @@ def test_get_design_matrix_wrong_kwargs(baseline_data):
     assert len(warnings) == 1
     assert warnings[0].qualified_name == (
         'eemeter.caltrack_hourly'
-        '.missing_model_id'
-    )
-    assert warnings[1].qualified_name == (
-        'eemeter.caltrack_hourly'
         '.design_matrix_wrong_kwargs'
     )
     assert warnings[0].data == {
-            'function': get_feature_hour_of_week,
+            'function': 'get_feature_hour_of_week',
             'kwargs': {'wrong': 55}}
