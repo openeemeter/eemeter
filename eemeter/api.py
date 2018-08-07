@@ -389,12 +389,13 @@ class HourlyModel(object):
 
     def __init__(
         self, formula, status, predict_func=None, plot_func=None,
-        model_params=None, model=None, result=None, r_squared=None,
+        model_params=None, feature_params=None, 
+        model_object=None, result=None, r_squared=None,
         warnings=None
     ):
         self.formula = formula
-        self.status = status  # NOT ATTEMPTED | ERROR | QUALIFIED | DISQUALIFIED
-        self.model = model
+        self.status = status  # SUCCESS | ERROR
+        self.model_object = model_object
         self.result = result
         self.r_squared = r_squared
         self.predict_func = predict_func
@@ -403,6 +404,10 @@ class HourlyModel(object):
         if model_params is None:
             model_params = {}
         self.model_params = model_params
+        
+        if feature_params is None:
+            feature_params = {}
+        self.feature_params = feature_params
 
         if warnings is None:
             warnings = []

@@ -8,6 +8,7 @@ from .api import (
 import statsmodels.formula.api as smf
 from patsy import ModelDesc
 import traceback
+import warnings as ws
 pd.options.mode.chained_assignment = None
 
 
@@ -189,14 +190,16 @@ def get_feature_hour_of_week(data):
     return feature_hour_of_week, parameters, hour_warnings
 
 
-def get_fit_failed_occupancy_model_warning(model_id):
+def get_fit_failed_model_warning(model_id, model_type):
+
     warning = [EEMeterWarning(
-        qualified_name='eemeter.caltrack_hourly.failed_occupancy_model',
+        qualified_name='eemeter.caltrack_hourly.failed_' + model_type,
         description=(
             'Error encountered in statsmodels.formula.api.wls method '
-            'for occupancy model id: {}'.format(model_id)
+            'for model id: {}'.format(model_id)
         ),
         data={'model_id': model_id,
+              'model_type': model_type,
               'traceback': traceback.format_exc()}
     )]
     return warning
@@ -222,7 +225,8 @@ def get_single_feature_occupancy(data, threshold):
                                   weights=model_data.weight)
     except Exception as e:
         warnings.extend(
-                get_fit_failed_occupancy_model_warning(data.model_id[0]))
+                get_fit_failed_model_warning(data.model_id[0],
+                                             'occupancy_model'))
         return None, pd.DataFrame(), warnings
 
     model_data = model_data.merge(
@@ -387,6 +391,33 @@ def get_design_matrix(data, functions):
     return design_matrix, feature_parameters, design_matrix_warnings
 
 
+def get_single_model(data, formula):
+    warnings = []
+
+    try:
+        with ws.catch_warnings(record=True) as sm_warnings:
+            model_consumption = smf.wls(
+                    formula=formula,
+                    data=data,
+                    weights=data.weight)
+            if len(sm_warnings) > 0:
+                raise RuntimeError([w.message for w in sm_warnings])
+    except Exception as e:
+        warnings.extend(
+                get_fit_failed_model_warning(data.model_id[0],
+                                             'consumption_model'))
+        return None, pd.DataFrame(), warnings
+
+    model_parameters = pd.DataFrame(model_consumption.fit().params).transpose()
+
+    return model_consumption, model_parameters, warnings
+
+    model_consumption = smf.wls(
+                formula=formula,
+                data=data,
+                weights=data.weight)
+
+
 def get_terms_in_formula(formula):
     model_desc = ModelDesc.from_formula(formula)
     term_list = []
@@ -394,18 +425,18 @@ def get_terms_in_formula(formula):
         for term in side:
             for factor in term.factors:
                 term_list.extend([factor.name()])
-    return pd.Series(term_list).str.replace('^C\(|\)', '')
+    return pd.Series(term_list).str.replace('^C\(|\)', '').tolist()
 
 
-def caltrack_hourly_method(data, formula, preprocessors=None):
-    
+def caltrack_hourly_method(data, formula=None, preprocessors=None):
+
     method_warnings = []
     if data.empty:
         return ModelFit(
             status='NO DATA',
             method_name='caltrack_hourly_method',
             warnings=[EEMeterWarning(
-                qualified_name='eemeter.caltrack_hourly_method.no_data',
+                qualified_name='eemeter.caltrack_hourly.no_data',
                 description=(
                     'No data available. Cannot fit model.'
                 ),
@@ -413,12 +444,21 @@ def caltrack_hourly_method(data, formula, preprocessors=None):
             )],
         )
 
-    if preprocessors is not None:
+    if preprocessors is None:
+        design_matrix, warnings = handle_unsegmented_timeseries(data)
+        method_warnings.extend(warnings)
+    else:
         design_matrix, feature_parameters, warnings = \
             get_design_matrix(data, preprocessors)
         method_warnings.extend(warnings)
-    else:
-        design_matrix = data.copy()
+
+    if formula is None:
+        formula = '''meter_value ~ C(hour_of_week) - 1 '''  #+
+#                bin_lt30:occupancy +
+#                bin_30_45:occupancy + bin_45_55:occupancy +
+#                bin_55_65:occupancy + bin_65_75:occupancy +
+#                bin_75_90:occupancy + bin_30_45:occupancy +
+#                bin_gt90:occupancy''' # default Caltrack formula
 
     term_list = get_terms_in_formula(formula)
     if any(term not in design_matrix.columns for term in term_list):
@@ -427,7 +467,7 @@ def caltrack_hourly_method(data, formula, preprocessors=None):
             method_name='caltrack_hourly_method',
             warnings=[EEMeterWarning(
                 qualified_name=(
-                    'eemeter.caltrack_hourly_method.missing_features'
+                    'eemeter.caltrack_hourly.missing_features'
                 ),
                 description=(
                     'Data is missing features specified in formula.'
@@ -437,16 +477,45 @@ def caltrack_hourly_method(data, formula, preprocessors=None):
             )],
         )
 
+    model_params = pd.DataFrame()
+    model_object = {}
+    model_warnings = []
+    unique_models = design_matrix.model_id.unique()
+    for model_id in unique_models:
+        this_data = design_matrix.loc[design_matrix.model_id == model_id]
+        this_model, this_parameters, this_warnings = \
+            get_single_model(this_data, formula)
+        this_parameters['model_id'] = [model_id] * \
+            len(this_parameters.index)
+
+        model_params = model_params.append(this_parameters, sort=False)
+        model_warnings.extend(this_warnings)
+        model_object[model_id] = this_model
+
+    if len(model_warnings) > 0:
+        return ModelFit(
+            status='FAILED MODELS',
+            method_name='caltrack_hourly_method',
+            warnings=model_warnings,
+        )
     model = HourlyModel(
         formula=formula,
         status='SUCCESS',
+        warnings=method_warnings,
+        predict_func=None,  # TODO:
+        plot_func=None,  # TODO:
+        model_params=model_params,
+        feature_params=feature_parameters,
+        model_object=model_object,
     )
+
     return ModelFit(
-        status=None,
+        status='SUCCESS',
         method_name='caltrack_hourly_method',
         model=model,
         candidates=None,
-        r_squared=None,
-        warnings=None,
-        settings=None,
+        warnings=method_warnings,
+        settings={
+                'preprocessors': preprocessors,
+                'formula': formula},
     )

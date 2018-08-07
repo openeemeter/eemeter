@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import statsmodels.formula.api as smf
+import statsmodels
 import pytest
 
 from eemeter import (
@@ -119,9 +119,11 @@ def test_e2e(
             baseline_data_segmented, formula, preprocessors)
     assert isinstance(model_fit, ModelFit)
     assert isinstance(model_fit.model, HourlyModel)
-#    assert model_fit.model.model is not None
-#    assert isinstance(model_fit.model.model_params, pd.DataFrame)
-#    assert isinstance(model_fit.model.model[0], smf.WLSRegression)
+    assert len(model_fit.model.model_object) == 12
+    assert isinstance(list(model_fit.model.model_object.values())[0],
+                      statsmodels.regression.linear_model.WLS)
+    assert isinstance(model_fit.model.model_params, pd.DataFrame)
+
     # Use fitted model to predict counterfactual in reporting period
 
     assert len(e2e_warnings) == 0
@@ -528,7 +530,7 @@ def test_caltrack_hourly_method_no_data():
     assert len(model_fit.warnings) == 1
     warning = model_fit.warnings[0]
     assert warning.qualified_name == (
-        'eemeter.caltrack_hourly_method.no_data'
+        'eemeter.caltrack_hourly.no_data'
     )
     assert warning.description == (
         'No data available. Cannot fit model.'
@@ -548,14 +550,37 @@ def test_caltrack_hourly_method_formula_does_not_match_data():
     assert len(model_fit.warnings) == 1
     warning = model_fit.warnings[0]
     assert warning.qualified_name == (
-        'eemeter.caltrack_hourly_method.missing_features'
+        'eemeter.caltrack_hourly.missing_features'
     )
     assert warning.description == (
         'Data is missing features specified in formula.'
     )
     assert warning.data == {
             'formula': 'meter_value ~ hour_of_week + missing_feature',
-            'dataframe_columns': ['meter_value', 'hour_of_week']}
+            'dataframe_columns': ['meter_value', 'hour_of_week',
+                                  'model_id', 'weight']}
+
+
+def test_caltrack_hourly_method_failed_model():
+    data = pd.DataFrame({
+        'meter_value': [1, 2, 1],
+        'hour_of_week': [2, 3, 4],
+        'weight': [np.inf, np.inf, np.inf]
+    })
+    model_fit = caltrack_hourly_method(
+            data, formula='meter_value ~ hour_of_week')
+    assert model_fit.method_name == 'caltrack_hourly_method'
+    assert model_fit.status == 'FAILED MODELS'
+    assert len(model_fit.warnings) == 1
+    warning = model_fit.warnings[-1]
+    assert warning.qualified_name == (
+        'eemeter.caltrack_hourly.failed_consumption_model'
+    )
+    assert warning.description == (
+        'Error encountered in statsmodels.formula.api.wls method '
+        'for model id: (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)'
+    )
+    assert warning.data is not None
 
 
 def test_caltrack_hourly_error_propagation():
