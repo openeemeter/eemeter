@@ -2,8 +2,11 @@ import numpy as np
 import pandas as pd
 from .api import (
     EEMeterWarning,
+    ModelFit,
+    HourlyModel,
 )
 import statsmodels.formula.api as smf
+from patsy import ModelDesc
 import traceback
 pd.options.mode.chained_assignment = None
 
@@ -379,3 +382,68 @@ def get_design_matrix(data, functions):
                 function['function'].__name__: this_parameters})
 
     return design_matrix, feature_parameters, design_matrix_warnings
+
+
+def get_terms_in_formula(formula):
+    model_desc = ModelDesc.from_formula(formula)
+    term_list = []
+    for side in [model_desc.lhs_termlist, model_desc.rhs_termlist]:
+        for term in side:
+            for factor in term.factors:
+                term_list.extend([factor.name()])
+    return pd.Series(term_list).str.replace('^C\(|\)', '')
+
+
+def caltrack_hourly_method(data, formula, preprocessors=None):
+    
+    method_warnings = []
+    if data.empty:
+        return ModelFit(
+            status='NO DATA',
+            method_name='caltrack_hourly_method',
+            warnings=[EEMeterWarning(
+                qualified_name='eemeter.caltrack_hourly_method.no_data',
+                description=(
+                    'No data available. Cannot fit model.'
+                ),
+                data={},
+            )],
+        )
+
+    if preprocessors is not None:
+        design_matrix, feature_parameters, warnings = \
+            get_design_matrix(data, preprocessors)
+        method_warnings.extend(warnings)
+    else:
+        design_matrix = data.copy()
+
+    term_list = get_terms_in_formula(formula)
+    if any(term not in design_matrix.columns for term in term_list):
+        return ModelFit(
+            status='MISSING FEATURES',
+            method_name='caltrack_hourly_method',
+            warnings=[EEMeterWarning(
+                qualified_name=(
+                    'eemeter.caltrack_hourly_method.missing_features'
+                ),
+                description=(
+                    'Data is missing features specified in formula.'
+                ),
+                data={'formula': formula,
+                      'dataframe_columns': design_matrix.columns.tolist()},
+            )],
+        )
+
+    model = HourlyModel(
+        formula=formula,
+        status='SUCCESS',
+    )
+    return ModelFit(
+        status=None,
+        method_name='caltrack_hourly_method',
+        model=model,
+        candidates=None,
+        r_squared=None,
+        warnings=None,
+        settings=None,
+    )

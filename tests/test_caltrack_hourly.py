@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import statsmodels.formula.api as smf
 import pytest
 
 from eemeter import (
@@ -114,10 +115,13 @@ def test_e2e(
 #                bin_55_65:occupancy + bin_65_75:occupancy + 
 #                bin_75_90:occupancy + bin_30_45:occupancy +
 #                bin_gt90:occupancy'''
-    model = caltrack_hourly_method(
+    model_fit = caltrack_hourly_method(
             baseline_data_segmented, formula, preprocessors)
-    assert isinstance(model, ModelFit)
-    assert isinstance(model.model, HourlyModel)
+    assert isinstance(model_fit, ModelFit)
+    assert isinstance(model_fit.model, HourlyModel)
+#    assert model_fit.model.model is not None
+#    assert isinstance(model_fit.model.model_params, pd.DataFrame)
+#    assert isinstance(model_fit.model.model[0], smf.WLSRegression)
     # Use fitted model to predict counterfactual in reporting period
 
     assert len(e2e_warnings) == 0
@@ -532,8 +536,26 @@ def test_caltrack_hourly_method_no_data():
     assert warning.data == {}
 
 
-def test_caltrack_hourly_method_formula_doesnot_match_data():
-    pass
+def test_caltrack_hourly_method_formula_does_not_match_data():
+    data = pd.DataFrame({
+        'meter_value': [1, 2, 1],
+        'hour_of_week': [2, 3, 4],
+    })
+    model_fit = caltrack_hourly_method(
+            data, formula='meter_value ~ hour_of_week + missing_feature')
+    assert model_fit.method_name == 'caltrack_hourly_method'
+    assert model_fit.status == 'MISSING FEATURES'
+    assert len(model_fit.warnings) == 1
+    warning = model_fit.warnings[0]
+    assert warning.qualified_name == (
+        'eemeter.caltrack_hourly_method.missing_features'
+    )
+    assert warning.description == (
+        'Data is missing features specified in formula.'
+    )
+    assert warning.data == {
+            'formula': 'meter_value ~ hour_of_week + missing_feature',
+            'dataframe_columns': ['meter_value', 'hour_of_week']}
 
 
 def test_caltrack_hourly_error_propagation():

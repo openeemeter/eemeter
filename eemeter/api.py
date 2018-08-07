@@ -345,3 +345,101 @@ class ModelFit(object):
             ax.set_title(title)
 
         return ax
+
+
+class HourlyModel(object):
+    ''' Contains information about a candidate model.
+
+    Attributes
+    ----------
+    model_type : :any:`str`
+        The type of model, e..g., :code:`'hdd_only'`.
+    formula : :any:`str`
+        The R-style formula for the design matrix of this model, e.g., :code:`'meter_value ~ hdd_65'`.
+    status : :any:`str`
+        A string indicating the status of this model. Possible statuses:
+
+        - ``'NOT ATTEMPTED'``: Candidate model not fitted due to an issue
+          encountered in data before attempt.
+        - ``'ERROR'``: A fatal error occurred during model fit process.
+        - ``'DISQUALIFIED'``: The candidate model fit was disqualified
+          from the model selection process because of a decision made after
+          candidate model fit completed, e.g., a bad fit, or a parameter out
+          of acceptable range.
+        - ``'QUALIFIED'``: The candidate model fit is acceptable can be
+          considered during model selection.
+    predict_func : :any:`callable`
+        A function of the following form:
+        ``predict_func(candidate_model, inputs) -> outputs``
+    plot_func : :any:`callable`
+        A function of the following form:
+        ``plot_func(candidate_model, inputs) -> outputs``
+    model_params : :any:`dict`, default :any:`None`
+        A flat dictionary of model parameters which must be serializable
+        using the :any:`json.dumps` method.
+    model : :any:`object`
+        The raw model (if any) used in fitting. Not serialized.
+    result : :any:`object`
+        The raw modeling result (if any) returned by the `model`. Not serialized.
+    r_squared : :any:`float`
+        The adjusted r-squared of the candidate model.
+    warnings : :any:`list` of :any:`eemeter.EEMeterWarning`
+        A list of any warnings reported during creation of the candidate model.
+    '''
+
+    def __init__(
+        self, formula, status, predict_func=None, plot_func=None,
+        model_params=None, model=None, result=None, r_squared=None,
+        warnings=None
+    ):
+        self.formula = formula
+        self.status = status  # NOT ATTEMPTED | ERROR | QUALIFIED | DISQUALIFIED
+        self.model = model
+        self.result = result
+        self.r_squared = r_squared
+        self.predict_func = predict_func
+        self.plot_func = plot_func
+
+        if model_params is None:
+            model_params = {}
+        self.model_params = model_params
+
+        if warnings is None:
+            warnings = []
+        self.warnings = warnings
+
+    def __repr__(self):
+        return (
+            "CandidateModel(model_type='{}', formula='{}', status='{}', r_squared={})"
+            .format(
+                self.model_type, self.formula, self.status,
+                round(self.r_squared, 3) if self.r_squared is not None else None
+            )
+        )
+
+    def json(self):
+        ''' Return a JSON-serializable representation of this result.
+
+        The output of this function can be converted to a serialized string
+        with :any:`json.dumps`.
+        '''
+        return {
+            'model_type': self.model_type,
+            'formula': self.formula,
+            'status': self.status,
+            'model_params': self.model_params,
+            'r_squared': self.r_squared,
+            'warnings': [w.json() for w in self.warnings],
+        }
+
+    def predict(self, *args, **kwargs):
+        ''' Predict for this model. Arguments may vary by model type.
+        '''
+        if self.predict_func is None:
+            raise ValueError(
+                'This candidate model cannot be used for prediction because'
+                ' the predict_func attr is not set.'
+            )
+        else:
+            return self.predict_func(
+                self.model_type, self.model_params, *args, **kwargs)

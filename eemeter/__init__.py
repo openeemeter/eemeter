@@ -20,6 +20,7 @@ from .api import (
     DataSufficiency,
     EEMeterWarning,
     ModelFit,
+    HourlyModel,
 )
 from .caltrack import (
     caltrack_method,
@@ -46,6 +47,7 @@ from .caltrack_hourly import (
     get_feature_hour_of_week,
     get_feature_occupancy,
     get_design_matrix,
+    caltrack_hourly_method,
 )
 from .exceptions import (
     EEMeterError,
