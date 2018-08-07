@@ -223,7 +223,7 @@ def get_single_feature_occupancy(data, threshold):
     except Exception as e:
         warnings.extend(
                 get_fit_failed_occupancy_model_warning(data.model_id[0]))
-        return pd.DataFrame(), warnings
+        return None, pd.DataFrame(), warnings
 
     model_data = model_data.merge(
             pd.DataFrame({'residuals': model_occupancy.fit().resid}),
@@ -234,12 +234,12 @@ def get_single_feature_occupancy(data, threshold):
     model_data = model_data.merge(feature_hour_of_week,
                                   left_index=True, right_index=True)
 
-    lookup_occupancy = pd.DataFrame({
+    occupancy_lookup = pd.DataFrame({
             'occupancy': model_data.groupby(['hour_of_week'])
             .apply(lambda x: ishighusage(x, threshold))}) \
         .reset_index()
 
-    return lookup_occupancy, warnings
+    return model_occupancy, occupancy_lookup, warnings
 
 
 def get_missing_model_id_warning(columns):
@@ -266,27 +266,29 @@ def get_missing_weight_column_warning(columns):
     return warning
 
 
-def get_feature_occupancy(data, threshold=0.65, lookup_occupancy=None):
+def get_feature_occupancy(data, threshold=0.65, occupancy_lookup=None):
     occupancy_warnings = []
+    occupancy_models = {}
 
     data_verified, warnings = handle_unsegmented_timeseries(data)
     occupancy_warnings.extend(warnings)
 
-    if lookup_occupancy is None:
-        lookup_occupancy = pd.DataFrame()
+    if occupancy_lookup is None:
+        occupancy_lookup = pd.DataFrame()
         unique_models = data_verified.model_id.unique()
         for model_id in unique_models:
             this_data = data_verified.loc[data_verified.model_id == model_id]
-            this_lookup_occupancy, this_warnings = \
+            this_model, this_occupancy_lookup, this_warnings = \
                 get_single_feature_occupancy(this_data, threshold)
-            this_lookup_occupancy['model_id'] = [model_id] * \
-                len(this_lookup_occupancy.index)
+            this_occupancy_lookup['model_id'] = [model_id] * \
+                len(this_occupancy_lookup.index)
 
-            lookup_occupancy = lookup_occupancy.append(this_lookup_occupancy,
+            occupancy_lookup = occupancy_lookup.append(this_occupancy_lookup,
                                                        sort=False)
             occupancy_warnings.extend(this_warnings)
+            occupancy_models[model_id] = this_model
 
-    if len(lookup_occupancy.index) == 0:
+    if len(occupancy_lookup.index) == 0:
         return pd.DataFrame(), {}, occupancy_warnings
 
     feature_hour_of_week, parameters, warnings = \
@@ -296,14 +298,15 @@ def get_feature_occupancy(data, threshold=0.65, lookup_occupancy=None):
         .merge(feature_hour_of_week,
                left_on=['start', 'model_id'],
                right_on=['start', 'model_id']) \
-        .merge(lookup_occupancy,
+        .merge(occupancy_lookup,
                left_on=['model_id', 'hour_of_week'],
                right_on=['model_id', 'hour_of_week']) \
         .loc[:, ['start', 'model_id', 'occupancy']] \
         .set_index('start')
     occupancy_parameters = {
+            'occupancy_models': occupancy_models,
             'threshold': threshold,
-            'lookup_occupancy': lookup_occupancy}
+            'occupancy_lookup': occupancy_lookup}
     return feature_occupancy, occupancy_parameters, occupancy_warnings
 
 

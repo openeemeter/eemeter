@@ -75,7 +75,7 @@ def test_e2e(
     assert all(column in feature_occupancy.columns
                for column in ['model_id', 'occupancy'])
     assert feature_occupancy.shape == (len(baseline_data_segmented.index), 2)
-    assert occupancy_parameters['lookup_occupancy'].shape == (168 * 12, 3)
+    assert occupancy_parameters['occupancy_lookup'].shape == (168 * 12, 3)
     # Validate temperature bin endpoints and determine temperature bins
 
     # Generate design matrix for weighted 3-month baseline
@@ -87,8 +87,8 @@ def test_e2e(
                          'kwargs': {}
                          },
                         {'function': get_feature_occupancy,
-                         'kwargs': {'lookup_occupancy':
-                                    occupancy_parameters['lookup_occupancy']}
+                         'kwargs': {'occupancy_lookup':
+                                    occupancy_parameters['occupancy_lookup']}
                          }
                         ])
     e2e_warnings.extend(warnings)
@@ -106,8 +106,8 @@ def test_e2e(
              'kwargs': {}
              },
             {'function': get_feature_occupancy,
-             'kwargs': {'lookup_occupancy':
-                        occupancy_parameters['lookup_occupancy']}
+             'kwargs': {'occupancy_lookup':
+                        occupancy_parameters['occupancy_lookup']}
              }]
     formula = '''meter_value ~ C(hour_of_week) - 1 '''#+ 
 #                bin_lt30:occupancy +
@@ -372,8 +372,8 @@ def test_feature_occupancy_unsegmented(baseline_data):
         get_feature_occupancy(baseline_data, threshold=0.5)
 
     assert feature_occupancy.shape == (len(baseline_data.index), 2)
-    assert parameters['lookup_occupancy'].shape == (168, 3)
-    assert sum(parameters['lookup_occupancy'].occupancy) == 4
+    assert parameters['occupancy_lookup'].shape == (168, 3)
+    assert sum(parameters['occupancy_lookup'].occupancy) == 4
     assert len(warnings) == 2
     assert warnings[0].qualified_name == (
         'eemeter.caltrack_hourly'
