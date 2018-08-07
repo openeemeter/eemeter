@@ -10,8 +10,13 @@ from eemeter import (
     get_feature_hour_of_week,
     get_feature_occupancy,
     get_design_matrix,
+    caltrack_hourly_method,
 )
 
+from eemeter.api import (
+    HourlyModel,
+    ModelFit,
+)
 
 # E2E Test
 @pytest.fixture
@@ -95,6 +100,24 @@ def test_e2e(
                            'get_feature_hour_of_week'])
     # Fit consumption model
 
+    preprocessors = [
+            {'function': get_feature_hour_of_week,
+             'kwargs': {}
+             },
+            {'function': get_feature_occupancy,
+             'kwargs': {'lookup_occupancy':
+                        occupancy_parameters['lookup_occupancy']}
+             }]
+    formula = '''meter_value ~ C(hour_of_week) - 1 '''#+ 
+#                bin_lt30:occupancy +
+#                bin_30_45:occupancy + bin_45_55:occupancy + 
+#                bin_55_65:occupancy + bin_65_75:occupancy + 
+#                bin_75_90:occupancy + bin_30_45:occupancy +
+#                bin_gt90:occupancy'''
+    model = caltrack_hourly_method(
+            baseline_data_segmented, formula, preprocessors)
+    assert isinstance(model, ModelFit)
+    assert isinstance(model.model, HourlyModel)
     # Use fitted model to predict counterfactual in reporting period
 
     assert len(e2e_warnings) == 0
@@ -487,3 +510,31 @@ def test_get_design_matrix_wrong_kwargs(baseline_data):
     assert warnings[0].data == {
             'function': 'get_feature_hour_of_week',
             'kwargs': {'wrong': 55}}
+
+
+def test_caltrack_hourly_method_no_data():
+    data = pd.DataFrame({
+        'meter_value': [],
+        'hour_of_week': [],
+    })
+    model_fit = caltrack_hourly_method(
+            data, formula='meter_value ~ hour_of_week')
+    assert model_fit.method_name == 'caltrack_hourly_method'
+    assert model_fit.status == 'NO DATA'
+    assert len(model_fit.warnings) == 1
+    warning = model_fit.warnings[0]
+    assert warning.qualified_name == (
+        'eemeter.caltrack_hourly_method.no_data'
+    )
+    assert warning.description == (
+        'No data available. Cannot fit model.'
+    )
+    assert warning.data == {}
+
+
+def test_caltrack_hourly_method_formula_doesnot_match_data():
+    pass
+
+
+def test_caltrack_hourly_error_propagation():
+    pass
