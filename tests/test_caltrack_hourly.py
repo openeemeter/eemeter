@@ -123,6 +123,7 @@ def test_e2e(
     assert isinstance(list(model_fit.model.model_object.values())[0],
                       statsmodels.regression.linear_model.WLS)
     assert isinstance(model_fit.model.model_params, pd.DataFrame)
+    assert model_fit.model.model_params.shape == (12, 1 + 168)
 
     # Use fitted model to predict counterfactual in reporting period
 

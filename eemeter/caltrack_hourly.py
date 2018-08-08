@@ -357,12 +357,22 @@ def handle_unsegmented_timeseries(data):
 def get_design_matrix(data, functions):
     feature_parameters = {}
     design_matrix_warnings = []
+    feature_functions = functions.copy()
 
-    data_verified, warnings = handle_unsegmented_timeseries(data)
+    segmented = False
+    for function in feature_functions:
+        if function['function'] == segment_timeseries:
+            data_verified, warnings = \
+                segment_timeseries(data, **function['kwargs'])
+            segmented = True
+            feature_functions.remove(function)
+    if not segmented:
+        data_verified, warnings = handle_unsegmented_timeseries(data)
+
     design_matrix_warnings.extend(warnings)
 
     design_matrix = data_verified.copy()
-    for function in functions:
+    for function in feature_functions:
         try:
             this_feature, this_parameters, this_warnings = \
                 function['function'](data_verified, **function['kwargs'])
