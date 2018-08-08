@@ -19,7 +19,7 @@ from eemeter.api import (
     ModelFit,
 )
 
-# E2E Test
+
 @pytest.fixture
 def merged_data():
     meter_data, temperature_data, metadata = \
@@ -42,6 +42,7 @@ def baseline_data(merged_data):
     return baseline_data
 
 
+# E2E Test
 def test_e2e(
         merged_data):
     e2e_warnings = []
@@ -117,6 +118,7 @@ def test_e2e(
 #                bin_gt90:occupancy'''
     model_fit = caltrack_hourly_method(
             baseline_data_segmented, formula, preprocessors)
+    e2e_warnings.extend(model_fit.warnings)
     assert isinstance(model_fit, ModelFit)
     assert isinstance(model_fit.model, HourlyModel)
     assert len(model_fit.model.model_object) == 12
@@ -126,7 +128,8 @@ def test_e2e(
     assert model_fit.model.model_params.shape == (12, 1 + 168)
 
     # Use fitted model to predict counterfactual in reporting period
-
+    results = model_fit.model.predict(baseline_data)
+    assert len(results.index) > 0
     assert len(e2e_warnings) == 0
 
 

@@ -452,6 +452,7 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
             )],
         )
 
+    segment_type = 'unknown'
     if preprocessors is None:
         design_matrix, warnings = handle_unsegmented_timeseries(data)
         method_warnings.extend(warnings)
@@ -460,6 +461,9 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
         design_matrix, feature_parameters, warnings = \
             get_design_matrix(data, preprocessors)
         method_warnings.extend(warnings)
+        for function in preprocessors:
+            if function['function'] == segment_timeseries:
+                segment_type = function['kwargs']['segment_type']
 
     if formula is None:
         formula = '''meter_value ~ C(hour_of_week) - 1 '''  #+
@@ -509,13 +513,15 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
         )
     model = HourlyModel(
         formula=formula,
+        segment_type=segment_type,
         status='SUCCESS',
         warnings=method_warnings,
-        predict_func=None,  # TODO:
+        predict_func=caltrack_hourly_predict,
         plot_func=None,  # TODO:
         model_params=model_params,
         feature_params=feature_parameters,
         model_object=model_object,
+        preprocessors=preprocessors
     )
 
     return ModelFit(
@@ -528,3 +534,8 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
                 'preprocessors': preprocessors,
                 'formula': formula},
     )
+
+
+def caltrack_hourly_predict():
+    pass
+

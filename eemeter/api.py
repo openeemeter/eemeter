@@ -388,23 +388,26 @@ class HourlyModel(object):
     '''
 
     def __init__(
-        self, formula, status, predict_func=None, plot_func=None,
-        model_params=None, feature_params=None, 
-        model_object=None, result=None, r_squared=None,
-        warnings=None
+        self, formula, status, segment_type=None,
+        predict_func=None, plot_func=None,
+        model_params=None, preprocessors=None, feature_params=None,
+        model_object=None, warnings=None
     ):
         self.formula = formula
         self.status = status  # SUCCESS | ERROR
+        self.segment_type = segment_type
         self.model_object = model_object
-        self.result = result
-        self.r_squared = r_squared
         self.predict_func = predict_func
         self.plot_func = plot_func
 
         if model_params is None:
             model_params = {}
         self.model_params = model_params
-        
+
+        if preprocessors is None:
+            preprocessors = {}
+        self.preprocessors = preprocessors
+
         if feature_params is None:
             feature_params = {}
         self.feature_params = feature_params
@@ -415,10 +418,9 @@ class HourlyModel(object):
 
     def __repr__(self):
         return (
-            "CandidateModel(model_type='{}', formula='{}', status='{}', r_squared={})"
+            "HourlyModel(segment_type='{}', formula='{}', status='{}')"
             .format(
-                self.model_type, self.formula, self.status,
-                round(self.r_squared, 3) if self.r_squared is not None else None
+                self.segment_type, self.formula, self.status
             )
         )
 
@@ -429,11 +431,11 @@ class HourlyModel(object):
         with :any:`json.dumps`.
         '''
         return {
-            'model_type': self.model_type,
+            'segment_type': self.segment_type,
             'formula': self.formula,
             'status': self.status,
             'model_params': self.model_params,
-            'r_squared': self.r_squared,
+            'feature_params': self.feature_params,
             'warnings': [w.json() for w in self.warnings],
         }
 
@@ -447,4 +449,4 @@ class HourlyModel(object):
             )
         else:
             return self.predict_func(
-                self.model_type, self.model_params, *args, **kwargs)
+                self.model_params, self.preprocessors, *args, **kwargs)
