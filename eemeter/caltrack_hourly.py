@@ -364,8 +364,11 @@ def get_design_matrix(data, functions):
         if function['function'] == segment_timeseries:
             data_verified, warnings = \
                 segment_timeseries(data, **function['kwargs'])
+            feature_parameters.update({
+                    function['function'].__name__: function['kwargs']})
             segmented = True
             feature_functions.remove(function)
+
     if not segmented:
         data_verified, warnings = handle_unsegmented_timeseries(data)
 
@@ -422,11 +425,6 @@ def get_single_model(data, formula):
 
     return model_consumption, model_parameters, warnings
 
-    model_consumption = smf.wls(
-                formula=formula,
-                data=data,
-                weights=data.weight)
-
 
 def get_terms_in_formula(formula):
     model_desc = ModelDesc.from_formula(formula)
@@ -457,6 +455,7 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
     if preprocessors is None:
         design_matrix, warnings = handle_unsegmented_timeseries(data)
         method_warnings.extend(warnings)
+        feature_parameters = {}
     else:
         design_matrix, feature_parameters, warnings = \
             get_design_matrix(data, preprocessors)

@@ -495,6 +495,27 @@ def test_get_design_matrix_unsegmented(baseline_data):
                for column in ['model_id', 'weight'])
 
 
+def test_get_design_matrix_with_segmentation_function(baseline_data):
+    design_matrix, feature_parameters, warnings = \
+        get_design_matrix(
+                baseline_data,
+                functions=[
+                        {'function': segment_timeseries,
+                         'kwargs': {'segment_type': 'one_month'}
+                         },
+                        {'function': get_feature_hour_of_week,
+                         'kwargs': {}
+                         },
+                        ])
+
+    assert len(design_matrix.index) == 8761
+    assert len(feature_parameters['get_feature_hour_of_week']) == 0
+    assert len(feature_parameters['segment_timeseries']) == 1
+    assert feature_parameters['segment_timeseries']['segment_type'] == \
+        'one_month'
+    assert len(warnings) == 0
+
+
 def test_get_design_matrix_wrong_kwargs(baseline_data):
     baseline_data['model_id'] = [(1,)] * len(baseline_data.index)
     baseline_data['weight'] = 1
@@ -580,6 +601,27 @@ def test_caltrack_hourly_method_failed_model():
     assert warning.description == (
         'Error encountered in statsmodels.formula.api.wls method '
         'for model id: (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)'
+    )
+    assert warning.data is not None
+
+
+def test_caltrack_hourly_method_no_formula():
+    data = pd.DataFrame({
+        'meter_value': [1, 2, 1],
+        'hour_of_week': [2, 3, 4],
+        'weight': [1, 1, 1]
+    })
+    model_fit = caltrack_hourly_method(data)
+    assert model_fit.method_name == 'caltrack_hourly_method'
+    assert model_fit.status == 'SUCCESS'
+    assert len(model_fit.warnings) == 1
+    warning = model_fit.warnings[-1]
+    assert warning.qualified_name == (
+        'eemeter.caltrack_hourly.missing_model_id'
+    )
+    assert warning.description == (
+        'Warning: Model ID is missing - this function will be run '
+        'with all of the data in a single model'
     )
     assert warning.data is not None
 
