@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from .api import (
+from eemeter.api import (
     EEMeterWarning,
     ModelFit,
     HourlyModel,
@@ -97,6 +97,10 @@ def segment_timeseries(data, segment_type):
     for column in ['meter_value', 'temperature_mean']:
         if column not in data.columns:
             raise ValueError('Data does not include columns: {}'
+                             .format(column))
+    for column in ['model_id', 'weight']:
+        if column in data.columns:
+            raise ValueError('Data already contains column: {}'
                              .format(column))
 
     if segment_type == 'one_month':
@@ -206,6 +210,30 @@ def get_fit_failed_model_warning(model_id, model_type):
     return warning
 
 
+def get_missing_model_id_warning(columns):
+    warning = [EEMeterWarning(
+        qualified_name='eemeter.caltrack_hourly.missing_model_id',
+        description=(
+            'Warning: Model ID is missing - this function will be run '
+            'with all of the data in a single model'
+        ),
+        data={'dataframe_columns': columns}
+    )]
+    return warning
+
+
+def get_missing_weight_column_warning(columns):
+    warning = [EEMeterWarning(
+        qualified_name='eemeter.caltrack_hourly.missing_weight_column',
+        description=(
+            'Warning: Weight column is missing - this function will be run '
+            'without any data weights'
+        ),
+        data={'dataframe_columns': columns}
+    )]
+    return warning
+
+
 def ishighusage(df, threshold, residual_col='residuals'):
     df = df.rename(columns={residual_col: 'residuals'})
 
@@ -245,30 +273,6 @@ def get_single_feature_occupancy(data, threshold):
         .reset_index()
 
     return model_occupancy, occupancy_lookup, warnings
-
-
-def get_missing_model_id_warning(columns):
-    warning = [EEMeterWarning(
-        qualified_name='eemeter.caltrack_hourly.missing_model_id',
-        description=(
-            'Warning: Model ID is missing - this function will be run '
-            'with all of the data in a single model'
-        ),
-        data={'dataframe_columns': columns}
-    )]
-    return warning
-
-
-def get_missing_weight_column_warning(columns):
-    warning = [EEMeterWarning(
-        qualified_name='eemeter.caltrack_hourly.missing_weight_column',
-        description=(
-            'Warning: Weight column is missing - this function will be run '
-            'without any data weights'
-        ),
-        data={'dataframe_columns': columns}
-    )]
-    return warning
 
 
 def get_feature_occupancy(data, mode='fit',
@@ -318,6 +322,157 @@ def get_feature_occupancy(data, mode='fit',
     return feature_occupancy, occupancy_parameters, occupancy_warnings
 
 
+def assign_temperature_bins(data, bin_endpoints):
+    bin_endpoints = [-1000000] + bin_endpoints + [1000000]
+
+    tdata = data.loc[:, ['temperature_mean']]
+    ibin_final = len(bin_endpoints)-1
+    for ibin in range(ibin_final):
+        bin_name = 'bin_' + str(ibin)
+
+        in_bin = (tdata.temperature_mean > bin_endpoints[ibin]) \
+            & (tdata.temperature_mean <= bin_endpoints[ibin + 1])
+        gt_bin = tdata.temperature_mean > bin_endpoints[ibin + 1]
+        lt_bin = tdata.temperature_mean < bin_endpoints[ibin]
+
+        if (ibin == 0):
+            tdata.loc[in_bin, bin_name] = tdata.temperature_mean[in_bin]
+            tdata.loc[~in_bin, bin_name] = bin_endpoints[ibin + 1]
+            tdata.loc[tdata.temperature_mean.isna()] = np.nan
+        else:
+            tdata.loc[in_bin, bin_name] = \
+                tdata.temperature_mean[in_bin] - bin_endpoints[ibin]
+            tdata.loc[gt_bin, bin_name] = \
+                bin_endpoints[ibin + 1] - bin_endpoints[ibin]
+            tdata.loc[lt_bin, bin_name] = 0
+    return tdata.drop('temperature_mean', axis=1)
+
+
+def validate_temperature_bins(data,
+                              default_bins,
+                              min_temperature_count=20):
+    bin_endpoints_valid = [-1000000] + default_bins + [1000000]
+    temperature_data = data.loc[:, ['temperature_mean']]
+
+    for i in range(1, len(bin_endpoints_valid)-1):
+        temperature_data['bin'] = pd.cut(
+                temperature_data.temperature_mean, bins=bin_endpoints_valid)
+        bins_default = [
+            pd.Interval(bin_endpoints_valid[i],
+                        bin_endpoints_valid[i+1],
+                        closed='right')
+            for i in range(len(bin_endpoints_valid)-1)]
+
+        temperature_data.bin = temperature_data.bin \
+            .cat.set_categories(bins_default)
+
+        temperature_summary = temperature_data \
+            .groupby('bin') \
+            .count().sort_index().reset_index()
+
+        if i == 1:
+            temperature_summary_original = temperature_summary.copy()
+        if ((temperature_summary.temperature_mean.iloc[0] <
+             min_temperature_count) or
+                np.isnan(temperature_summary.temperature_mean.iloc[0])):
+                    bin_endpoints_valid.remove(
+                            temperature_summary.iloc[0].bin.right)
+
+        if ((temperature_summary.temperature_mean.iloc[-1] <
+             min_temperature_count) or
+                np.isnan(temperature_summary.temperature_mean.iloc[-1])):
+                    bin_endpoints_valid.remove(
+                            temperature_summary.iloc[-1].bin.left)
+
+    bin_endpoints_valid = [x for x in bin_endpoints_valid
+                           if x not in [-1000000, 1000000]]
+
+    return temperature_summary_original, bin_endpoints_valid
+
+
+def get_feature_binned_temperatures(data, mode='fit',
+                                    default_bins=[30, 45, 55, 65, 75, 90],
+                                    **kwargs):
+    temperature_warnings = []
+    temperature_bins = pd.DataFrame()
+    temperature_summary = pd.DataFrame()
+
+    data_verified, warnings = handle_unsegmented_timeseries(data)
+    temperature_warnings.extend(warnings)
+    unique_models = data_verified.model_id.unique()
+
+    if mode == 'fit':
+        temperature_bins = pd.DataFrame()
+
+        for model_id in unique_models:
+            this_data = data_verified.loc[data_verified.model_id == model_id]
+            this_summary, this_valid_bins = \
+                validate_temperature_bins(
+                        this_data, default_bins, **kwargs)
+            this_summary['model_id'] = [model_id] * \
+                len(this_summary.index)
+            temperature_bins = temperature_bins.append(
+                    pd.DataFrame({'model_id': [model_id],
+                                  'bins': [this_valid_bins]}),
+                    sort=False)
+            temperature_summary = temperature_summary.append(
+                    this_summary, sort=False)
+        if len(temperature_bins.index) == 0:
+            warning = [EEMeterWarning(
+                qualified_name=(
+                        'eemeter.caltrack_hourly.'
+                        'temperature_bins_failed_create'
+                        ),
+                description=(
+                    'Error in temperature bin validation.'
+                    ),
+                data={}
+            )]
+            return pd.DataFrame(), {}, warning
+    else:
+        temperature_bins = kwargs['temperature_bins']
+
+        try:
+            missing_columns = any(
+                    column not in temperature_bins.columns
+                    for column in ['bins', 'model_id'])
+            if missing_columns:
+                raise ValueError()
+        except Exception:
+            warning = [EEMeterWarning(
+                qualified_name=(
+                        'eemeter.caltrack_hourly.temperature_bins_failed_read'
+                        ),
+                description=(
+                    'Provided temperature bins do not match required format.'
+                    ),
+                data={'dataframe_columns': temperature_bins.columns}
+            )]
+            return pd.DataFrame(), {}, warning
+
+    feature_binned_temperatures = pd.DataFrame()
+    for model_id in unique_models:
+        this_data = data_verified.loc[data_verified.model_id == model_id]
+        this_valid_bins = temperature_bins \
+            .loc[temperature_bins.model_id == model_id] \
+            .bins[0]
+        this_feature = assign_temperature_bins(this_data, this_valid_bins)
+        this_feature['model_id'] = [model_id] * \
+            len(this_feature.index)
+        feature_binned_temperatures = feature_binned_temperatures \
+            .append(this_feature, sort=False)
+    feature_binned_temperatures.fillna(0, inplace=True)
+    for i in range(len(default_bins) + 1):
+        if 'bin_' + str(i) not in feature_binned_temperatures:
+            feature_binned_temperatures['bin_' + str(i)] = 0
+    temperature_parameters = {
+            'mode': 'predict',
+            'temperature_bins': temperature_bins,
+            'temperature_summary': temperature_summary}
+    return feature_binned_temperatures, temperature_parameters, \
+        temperature_warnings
+
+
 def get_design_matrix_unmatched_index_warning(function):
     warning = [EEMeterWarning(
         qualified_name='eemeter.caltrack_hourly.design_matrix_unmatched_index',
@@ -338,24 +493,10 @@ def get_design_matrix_wrong_kwargs_warning(function):
             'dict. Function name: {}'.format(function['function'].__name__)
         ),
         data={'function': function['function'].__name__,
-              'kwargs': function['kwargs']}
+              'kwargs': function['kwargs'],
+              'traceback': traceback.format_exc()}
     )]
     return warning
-
-
-def handle_unsegmented_timeseries(data):
-    data_verified = data.copy()
-    warnings = []
-    if 'model_id' not in data_verified.columns:
-        warnings.extend(
-                get_missing_model_id_warning(data_verified.columns))
-        data_verified['model_id'] = \
-            [tuple(range(1, 13))] * len(data_verified.index)
-    if 'weight' not in data_verified.columns:
-        warnings.extend(
-                get_missing_weight_column_warning(data_verified.columns))
-        data_verified['weight'] = 1
-    return data_verified, warnings
 
 
 def has_call_attribute(fn):
@@ -382,6 +523,21 @@ def get_invalid_function_dict_warning(function_dict):
     return []
 
 
+def handle_unsegmented_timeseries(data):
+    data_verified = data.copy()
+    warnings = []
+    if 'model_id' not in data_verified.columns:
+        warnings.extend(
+                get_missing_model_id_warning(data_verified.columns))
+        data_verified['model_id'] = \
+            [tuple(range(1, 13))] * len(data_verified.index)
+    if 'weight' not in data_verified.columns:
+        warnings.extend(
+                get_missing_weight_column_warning(data_verified.columns))
+        data_verified['weight'] = 1
+    return data_verified, warnings
+
+
 def get_design_matrix(data, functions):
     preprocessors_fit = {}
     design_matrix_warnings = []
@@ -398,7 +554,7 @@ def get_design_matrix(data, functions):
             try:
                 data_verified, warnings = \
                     segment_timeseries(data, **function['kwargs'])
-            except TypeError:
+            except (TypeError, ValueError):
                 design_matrix_warnings.extend(
                         get_design_matrix_wrong_kwargs_warning(function))
                 return pd.DataFrame(), dict(), design_matrix_warnings
@@ -444,6 +600,30 @@ def get_design_matrix(data, functions):
     return design_matrix, preprocessors_fit, design_matrix_warnings
 
 
+def get_missing_features_warning(formula, columns):
+    warning = [EEMeterWarning(
+                qualified_name=(
+                    'eemeter.caltrack_hourly.missing_features'
+                ),
+                description=(
+                    'Data is missing features specified in formula.'
+                ),
+                data={'formula': formula,
+                      'dataframe_columns': columns},
+            )]
+    return warning
+
+
+def get_terms_in_formula(formula):
+    model_desc = ModelDesc.from_formula(formula)
+    term_list = []
+    for side in [model_desc.lhs_termlist, model_desc.rhs_termlist]:
+        for term in side:
+            for factor in term.factors:
+                term_list.extend([factor.name()])
+    return pd.Series(term_list).str.replace('^C\(|\)', '').tolist()
+
+
 def get_single_model(data, formula):
     warnings = []
 
@@ -464,16 +644,6 @@ def get_single_model(data, formula):
     model_parameters = pd.DataFrame(model_consumption.fit().params).transpose()
 
     return model_consumption, model_parameters, warnings
-
-
-def get_terms_in_formula(formula):
-    model_desc = ModelDesc.from_formula(formula)
-    term_list = []
-    for side in [model_desc.lhs_termlist, model_desc.rhs_termlist]:
-        for term in side:
-            for factor in term.factors:
-                term_list.extend([factor.name()])
-    return pd.Series(term_list).str.replace('^C\(|\)', '').tolist()
 
 
 def caltrack_hourly_method(data, formula=None, preprocessors=None):
@@ -572,20 +742,6 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
                 'preprocessors': preprocessors,
                 'formula': formula},
     )
-
-
-def get_missing_features_warning(formula, columns):
-    warning = [EEMeterWarning(
-                qualified_name=(
-                    'eemeter.caltrack_hourly.missing_features'
-                ),
-                description=(
-                    'Data is missing features specified in formula.'
-                ),
-                data={'formula': formula,
-                      'dataframe_columns': columns},
-            )]
-    return warning
 
 
 def caltrack_hourly_predict(formula, preprocessors_fit,

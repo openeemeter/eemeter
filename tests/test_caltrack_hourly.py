@@ -10,6 +10,7 @@ from eemeter import (
     segment_timeseries,
     get_feature_hour_of_week,
     get_feature_occupancy,
+    get_feature_binned_temperatures,
     get_design_matrix,
     caltrack_hourly_method,
     caltrack_hourly_predict,
@@ -116,14 +117,16 @@ def test_e2e(
             'get_feature_occupancy': {
                     'function': get_feature_occupancy,
                     'kwargs': {'threshold': 0.6}
+                        },
+            'get_feature_binned_temperatures': {
+                    'function': get_feature_binned_temperatures,
+                    'kwargs': {}}
                         }
-                        }
-    formula = '''meter_value ~ C(hour_of_week) - 1 '''#+ 
-#                bin_lt30:occupancy +
-#                bin_30_45:occupancy + bin_45_55:occupancy + 
-#                bin_55_65:occupancy + bin_65_75:occupancy + 
-#                bin_75_90:occupancy + bin_30_45:occupancy +
-#                bin_gt90:occupancy'''
+    formula = ('meter_value ~ C(hour_of_week) - 1 + '
+               'bin_0:occupancy + '
+               'bin_1:occupancy + bin_2:occupancy + '
+               'bin_3:occupancy + bin_4:occupancy + '
+               'bin_5:occupancy + bin_6:occupancy')
     model_fit = caltrack_hourly_method(
             baseline_data, formula, preprocessors)
     e2e_warnings.extend(model_fit.warnings)
@@ -137,7 +140,7 @@ def test_e2e(
     assert isinstance(list(model_fit.model.model_object.values())[0],
                       statsmodels.regression.linear_model.WLS)
     assert isinstance(model_fit.model.model_params, pd.DataFrame)
-    assert model_fit.model.model_params.shape == (12, 1 + 168)
+    assert model_fit.model.model_params.shape == (12, 1 + 168 + 7)
     assert model_fit.model.__repr__() == \
         ("HourlyModel(segment_type='three_month_weighted', "
          "formula='{}', "
@@ -148,7 +151,7 @@ def test_e2e(
     assert len(design_matrix.index) == len(baseline_data.index)
     assert results.shape == (len(baseline_data.index), 1)
     assert len(e2e_warnings) == 0
-    
+
 
 # Unit tests
 def test_assign_baseline_periods_wrong_baseline_type(baseline_data):
@@ -562,9 +565,9 @@ def test_get_design_matrix_with_segmentation_missing_arg(baseline_data):
     )
     assert 'Error: Missing or wrong keyword arguments' in \
         warnings[0].description
-    assert warnings[0].data == {
-            'function': 'segment_timeseries',
-            'kwargs': {}}
+    assert warnings[0].data['function'] == 'segment_timeseries'
+    assert warnings[0].data['kwargs'] == {}
+    assert warnings[0].data['traceback'] is not None
 
 
 def test_get_design_matrix_wrong_kwargs(baseline_data):
@@ -589,9 +592,9 @@ def test_get_design_matrix_wrong_kwargs(baseline_data):
     )
     assert 'Error: Missing or wrong keyword arguments' in \
         warnings[0].description
-    assert warnings[0].data == {
-            'function': 'get_feature_hour_of_week',
-            'kwargs': {'wrong': 55}}
+    assert warnings[0].data['function'] == 'get_feature_hour_of_week'
+    assert warnings[0].data['kwargs'] == {'wrong': 55}
+    assert warnings[0].data['traceback'] is not None
 
 
 def test_get_design_matrix_wrong_function_schema(baseline_data):

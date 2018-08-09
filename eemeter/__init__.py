@@ -46,6 +46,7 @@ from .caltrack_hourly import (
     segment_timeseries,
     get_feature_hour_of_week,
     get_feature_occupancy,
+    get_feature_binned_temperatures,
     get_design_matrix,
     caltrack_hourly_method,
     caltrack_hourly_predict,
