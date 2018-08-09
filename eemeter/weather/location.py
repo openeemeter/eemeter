@@ -187,6 +187,7 @@ def lat_lng_to_station_using_eeweather(
 
     return primary_match_station.usaf_id if primary_match_station else None
 
+
 def lat_lng_to_usaf_station(lat, lng):
     """Return the closest USAF station ID using latitude and
     longitude coordinates.
