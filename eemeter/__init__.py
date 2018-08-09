@@ -48,6 +48,7 @@ from .caltrack_hourly import (
     get_feature_occupancy,
     get_design_matrix,
     caltrack_hourly_method,
+    caltrack_hourly_predict,
 )
 from .exceptions import (
     EEMeterError,

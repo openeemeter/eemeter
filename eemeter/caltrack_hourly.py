@@ -6,7 +6,7 @@ from .api import (
     HourlyModel,
 )
 import statsmodels.formula.api as smf
-from patsy import ModelDesc
+from patsy import ModelDesc, dmatrix
 import traceback
 import warnings as ws
 pd.options.mode.chained_assignment = None
@@ -270,14 +270,16 @@ def get_missing_weight_column_warning(columns):
     return warning
 
 
-def get_feature_occupancy(data, threshold=0.65, occupancy_lookup=None):
+def get_feature_occupancy(data, mode='fit',
+                          threshold=0.65, occupancy_lookup=None,
+                          **kwargs):
     occupancy_warnings = []
     occupancy_models = {}
 
     data_verified, warnings = handle_unsegmented_timeseries(data)
     occupancy_warnings.extend(warnings)
 
-    if occupancy_lookup is None:
+    if mode == 'fit':
         occupancy_lookup = pd.DataFrame()
         unique_models = data_verified.model_id.unique()
         for model_id in unique_models:
@@ -308,6 +310,7 @@ def get_feature_occupancy(data, threshold=0.65, occupancy_lookup=None):
         .loc[:, ['start', 'model_id', 'occupancy']] \
         .set_index('start')
     occupancy_parameters = {
+            'mode': 'predict',
             'occupancy_models': occupancy_models,
             'threshold': threshold,
             'occupancy_lookup': occupancy_lookup}
@@ -330,8 +333,8 @@ def get_design_matrix_wrong_kwargs_warning(function):
     warning = [EEMeterWarning(
         qualified_name='eemeter.caltrack_hourly.design_matrix_wrong_kwargs',
         description=(
-            'Error: Function returned a feature whose index does not match '
-            'the data. Function name: {}'.format(function['function'].__name__)
+            'Error: Missing or wrong keyword arguments passed in function '
+            'dict. Function name: {}'.format(function['function'].__name__)
         ),
         data={'function': function['function'].__name__,
               'kwargs': function['kwargs']}
@@ -355,19 +358,23 @@ def handle_unsegmented_timeseries(data):
 
 
 def get_design_matrix(data, functions):
-    feature_parameters = {}
+    preprocessors_fit = {}
     design_matrix_warnings = []
     feature_functions = functions.copy()
 
     segmented = False
-    for function in feature_functions:
-        if function['function'] == segment_timeseries:
-            data_verified, warnings = \
-                segment_timeseries(data, **function['kwargs'])
-            feature_parameters.update({
-                    function['function'].__name__: function['kwargs']})
+    for name, function in feature_functions.items():
+        if function['function'].__name__ == 'segment_timeseries':
+            try:
+                data_verified, warnings = \
+                    segment_timeseries(data, **function['kwargs'])
+            except TypeError:
+                design_matrix_warnings.extend(
+                        get_design_matrix_wrong_kwargs_warning(function))
+                return pd.DataFrame(), dict(), design_matrix_warnings
             segmented = True
-            feature_functions.remove(function)
+            del(feature_functions[name])
+            break
 
     if not segmented:
         data_verified, warnings = handle_unsegmented_timeseries(data)
@@ -375,7 +382,7 @@ def get_design_matrix(data, functions):
     design_matrix_warnings.extend(warnings)
 
     design_matrix = data_verified.copy()
-    for function in feature_functions:
+    for name, function in feature_functions.items():
         try:
             this_feature, this_parameters, this_warnings = \
                 function['function'](data_verified, **function['kwargs'])
@@ -398,10 +405,13 @@ def get_design_matrix(data, functions):
                 this_feature,
                 left_on=['start', 'model_id'],
                 right_on=['start', 'model_id'])
-        feature_parameters.update({
-                function['function'].__name__: this_parameters})
+        preprocessors_fit.update(
+                {name: {
+                    'function': function['function'],
+                    'kwargs': this_parameters
+                    }})
 
-    return design_matrix, feature_parameters, design_matrix_warnings
+    return design_matrix, preprocessors_fit, design_matrix_warnings
 
 
 def get_single_model(data, formula):
@@ -456,14 +466,14 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
     if preprocessors is None:
         design_matrix, warnings = handle_unsegmented_timeseries(data)
         method_warnings.extend(warnings)
-        feature_parameters = {}
+        preprocessors_fit = {}
     else:
-        design_matrix, feature_parameters, warnings = \
+        design_matrix, preprocessors_fit, warnings = \
             get_design_matrix(data, preprocessors)
         method_warnings.extend(warnings)
-        for function in preprocessors:
-            if function['function'] == segment_timeseries:
-                segment_type = function['kwargs']['segment_type']
+        for name, preprocessor in preprocessors.items():
+            if preprocessor['function'] == segment_timeseries:
+                segment_type = preprocessor['kwargs']['segment_type']
 
     if formula is None:
         formula = '''meter_value ~ C(hour_of_week) - 1 '''  #+
@@ -478,17 +488,9 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
         return ModelFit(
             status='MISSING FEATURES',
             method_name='caltrack_hourly_method',
-            warnings=[EEMeterWarning(
-                qualified_name=(
-                    'eemeter.caltrack_hourly.missing_features'
-                ),
-                description=(
-                    'Data is missing features specified in formula.'
-                ),
-                data={'formula': formula,
-                      'dataframe_columns': design_matrix.columns.tolist()},
-            )],
-        )
+            warnings=get_missing_features_warning(
+                    formula, design_matrix.columns.tolist())
+            )
 
     model_params = pd.DataFrame()
     model_object = {}
@@ -519,9 +521,10 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
         predict_func=caltrack_hourly_predict,
         plot_func=None,  # TODO:
         model_params=model_params,
-        feature_params=feature_parameters,
         model_object=model_object,
-        preprocessors=preprocessors
+        preprocessors_raw=preprocessors,
+        preprocessors_fit=preprocessors_fit,
+        unique_models=unique_models
     )
 
     return ModelFit(
@@ -536,6 +539,71 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
     )
 
 
-def caltrack_hourly_predict():
-    pass
+def get_missing_features_warning(formula, columns):
+    warning = [EEMeterWarning(
+                qualified_name=(
+                    'eemeter.caltrack_hourly.missing_features'
+                ),
+                description=(
+                    'Data is missing features specified in formula.'
+                ),
+                data={'formula': formula,
+                      'dataframe_columns': columns},
+            )]
+    return warning
 
+
+def caltrack_hourly_predict(formula, preprocessors_fit,
+                            unique_models, model_params,
+                            data):
+    predict_warnings = []
+    if 'temperature_mean' not in data.columns:
+        raise ValueError('Data does not include a temperature_mean column')
+    if not isinstance(data.index, pd.DatetimeIndex):
+        raise TypeError('Dataframe index is not a pandas DatetimeIndex')
+    if not isinstance(formula, str):
+        raise TypeError('Formula hasn\'t been provided')
+    if not isinstance(model_params, pd.DataFrame):
+        raise TypeError('Model parameters haven\'t been provided')
+    data_verified = data.copy()
+    data_verified['model_id'] = [model
+                                 for month in data_verified.index.month
+                                 for model in unique_models
+                                 if month in model]
+    data_verified['weight'] = 1
+
+    if preprocessors_fit is None:
+        design_matrix = data_verified
+    else:
+        design_matrix, _fit, warnings = \
+            get_design_matrix(data_verified, preprocessors_fit)
+
+    term_list = get_terms_in_formula(formula.split('~')[1])
+    if any(term not in design_matrix.columns for term in term_list):
+        predict_warnings.extend(
+                get_missing_features_warning(
+                        formula, design_matrix.columns.tolist()))
+        return pd.DataFrame(), design_matrix, predict_warnings
+
+    design_matrix_granular = dmatrix(
+            formula.split('~')[1],
+            design_matrix, return_type='dataframe')
+    design_matrix_granular['model_id'] = [
+            model
+            for month in design_matrix_granular.index.month
+            for model in unique_models
+            if month in model]
+
+    results = pd.DataFrame()
+    for model_id in unique_models:
+        this_parameters = model_params \
+            .loc[model_params.model_id == model_id] \
+            .drop('model_id', axis=1)
+        this_data = design_matrix_granular \
+            .loc[design_matrix_granular.model_id == model_id] \
+            .drop('model_id', axis=1)
+        this_result = this_data.dot(this_parameters.transpose())
+        results = results.append(this_result, sort=False)
+    results = results.rename(columns={0: 'counterfactual'})
+
+    return results, design_matrix, predict_warnings

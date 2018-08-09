@@ -390,8 +390,8 @@ class HourlyModel(object):
     def __init__(
         self, formula, status, segment_type=None,
         predict_func=None, plot_func=None,
-        model_params=None, preprocessors=None, feature_params=None,
-        model_object=None, warnings=None
+        model_params=None, preprocessors_raw=None, preprocessors_fit=None,
+        unique_models=None, model_object=None, warnings=None
     ):
         self.formula = formula
         self.status = status  # SUCCESS | ERROR
@@ -404,13 +404,17 @@ class HourlyModel(object):
             model_params = {}
         self.model_params = model_params
 
-        if preprocessors is None:
-            preprocessors = {}
-        self.preprocessors = preprocessors
+        if preprocessors_raw is None:
+            preprocessors_raw = {}
+        self.preprocessors_raw = preprocessors_raw
 
-        if feature_params is None:
-            feature_params = {}
-        self.feature_params = feature_params
+        if preprocessors_fit is None:
+            preprocessors_fit = {}
+        self.preprocessors_fit = preprocessors_fit
+
+        if unique_models is None:
+            unique_models = {}
+        self.unique_models = unique_models
 
         if warnings is None:
             warnings = []
@@ -449,4 +453,6 @@ class HourlyModel(object):
             )
         else:
             return self.predict_func(
-                self.model_params, self.preprocessors, *args, **kwargs)
+                    self.formula, self.preprocessors_fit,
+                    self.unique_models, self.model_params,
+                    *args, **kwargs)

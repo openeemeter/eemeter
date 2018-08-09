@@ -12,6 +12,7 @@ from eemeter import (
     get_feature_occupancy,
     get_design_matrix,
     caltrack_hourly_method,
+    caltrack_hourly_predict,
 )
 
 from eemeter.api import (
@@ -80,36 +81,43 @@ def test_e2e(
     # Validate temperature bin endpoints and determine temperature bins
 
     # Generate design matrix for weighted 3-month baseline
-    design_matrix, feature_parameters, warnings = \
+    design_matrix, preprocessors_fit, warnings = \
         get_design_matrix(
                 baseline_data_segmented,
-                functions=[
-                        {'function': get_feature_hour_of_week,
-                         'kwargs': {}
-                         },
-                        {'function': get_feature_occupancy,
-                         'kwargs': {'occupancy_lookup':
-                                    occupancy_parameters['occupancy_lookup']}
-                         }
-                        ])
+                functions={
+                        'get_feature_hour_of_week': {
+                                'function': get_feature_hour_of_week,
+                                'kwargs': {}
+                             },
+                        'get_feature_occupancy': {
+                                'function': get_feature_occupancy,
+                                'kwargs': {'occupancy_lookup':
+                                           occupancy_parameters[
+                                                    'occupancy_lookup']}
+                                    }
+                                 })
     e2e_warnings.extend(warnings)
 
     assert design_matrix.shape == (len(baseline_data_segmented.index), 8)
     assert all(column in design_matrix.columns
                for column in ['model_id', 'occupancy', 'hour_of_week'])
-    assert all(key in feature_parameters.keys()
+    assert all(key in preprocessors_fit.keys()
                for key in ['get_feature_occupancy',
                            'get_feature_hour_of_week'])
     # Fit consumption model
-
-    preprocessors = [
-            {'function': get_feature_hour_of_week,
-             'kwargs': {}
-             },
-            {'function': get_feature_occupancy,
-             'kwargs': {'occupancy_lookup':
-                        occupancy_parameters['occupancy_lookup']}
-             }]
+    preprocessors = {
+            'segment_timeseries': {
+                    'function': segment_timeseries,
+                    'kwargs': {'segment_type': 'three_month_weighted'}},
+            'get_feature_hour_of_week': {
+                    'function': get_feature_hour_of_week,
+                    'kwargs': {}
+                    },
+            'get_feature_occupancy': {
+                    'function': get_feature_occupancy,
+                    'kwargs': {'threshold': 0.6}
+                        }
+                        }
     formula = '''meter_value ~ C(hour_of_week) - 1 '''#+ 
 #                bin_lt30:occupancy +
 #                bin_30_45:occupancy + bin_45_55:occupancy + 
@@ -117,7 +125,7 @@ def test_e2e(
 #                bin_75_90:occupancy + bin_30_45:occupancy +
 #                bin_gt90:occupancy'''
     model_fit = caltrack_hourly_method(
-            baseline_data_segmented, formula, preprocessors)
+            baseline_data, formula, preprocessors)
     e2e_warnings.extend(model_fit.warnings)
     assert isinstance(model_fit, ModelFit)
     assert isinstance(model_fit.model, HourlyModel)
@@ -128,8 +136,10 @@ def test_e2e(
     assert model_fit.model.model_params.shape == (12, 1 + 168)
 
     # Use fitted model to predict counterfactual in reporting period
-    results = model_fit.model.predict(baseline_data)
-    assert len(results.index) > 0
+    results, design_matrix, warnings = model_fit.model.predict(baseline_data)
+    e2e_warnings.extend(warnings)
+    assert len(design_matrix.index) == len(baseline_data.index)
+    assert results.shape == (len(baseline_data.index), 1)
     assert len(e2e_warnings) == 0
 
 
@@ -424,11 +434,12 @@ def test_get_design_matrix_different_length_index(baseline_data):
     design_matrix, feature_parameters, warnings = \
         get_design_matrix(
                 baseline_data,
-                functions=[
-                        {'function': get_ones,
-                         'kwargs': {'n': 5}
+                functions={
+                        'get_ones': {
+                                'function': get_ones,
+                                'kwargs': {'n': 5}
                          },
-                        ])
+                        })
     assert len(design_matrix.index) == 0
     assert len(feature_parameters) == 0
     assert len(warnings) == 1
@@ -456,11 +467,12 @@ def test_get_design_matrix_unmatched_index(baseline_data):
     design_matrix, feature_parameters, warnings = \
         get_design_matrix(
                 baseline_data,
-                functions=[
-                        {'function': get_ones,
-                         'kwargs': {}
+                functions={
+                        'get_ones': {
+                                'function': get_ones,
+                                'kwargs': {}
                          },
-                        ])
+                        })
     assert len(design_matrix.index) == 0
     assert len(feature_parameters) == 0
     assert len(warnings) == 1
@@ -474,17 +486,18 @@ def test_get_design_matrix_unmatched_index(baseline_data):
 
 
 def test_get_design_matrix_unsegmented(baseline_data):
-    design_matrix, feature_parameters, warnings = \
+    design_matrix, preprocessors_fit, warnings = \
         get_design_matrix(
                 baseline_data,
-                functions=[
-                        {'function': get_feature_hour_of_week,
-                         'kwargs': {}
+                functions={
+                        'get_feature_hour_of_week': {
+                                'function': get_feature_hour_of_week,
+                                'kwargs': {}
                          },
-                        ])
+                        })
 
     assert len(design_matrix.index) == 8761
-    assert len(feature_parameters['get_feature_hour_of_week']) == 0
+    assert len(preprocessors_fit['get_feature_hour_of_week']['kwargs']) == 0
     assert len(warnings) == 2
     assert warnings[0].qualified_name == (
         'eemeter.caltrack_hourly'
@@ -499,24 +512,52 @@ def test_get_design_matrix_unsegmented(baseline_data):
 
 
 def test_get_design_matrix_with_segmentation_function(baseline_data):
-    design_matrix, feature_parameters, warnings = \
+    design_matrix, preprocessors_fit, warnings = \
         get_design_matrix(
                 baseline_data,
-                functions=[
-                        {'function': segment_timeseries,
-                         'kwargs': {'segment_type': 'one_month'}
+                functions={
+                        'segment_timeseries': {
+                                'function': segment_timeseries,
+                                'kwargs': {'segment_type': 'one_month'}
                          },
-                        {'function': get_feature_hour_of_week,
-                         'kwargs': {}
+                        'get_feature_hour_of_week': {
+                                'function': get_feature_hour_of_week,
+                                'kwargs': {}
                          },
-                        ])
+                        })
 
     assert len(design_matrix.index) == 8761
-    assert len(feature_parameters['get_feature_hour_of_week']) == 0
-    assert len(feature_parameters['segment_timeseries']) == 1
-    assert feature_parameters['segment_timeseries']['segment_type'] == \
-        'one_month'
+    assert len(preprocessors_fit['get_feature_hour_of_week']['kwargs']) == 0
     assert len(warnings) == 0
+
+
+def test_get_design_matrix_with_segmentation_missing_arg(baseline_data):
+    design_matrix, preprocessors_fit, warnings = \
+        get_design_matrix(
+                baseline_data,
+                functions={
+                        'segment_timeseries': {
+                                'function': segment_timeseries,
+                                'kwargs': {}
+                         },
+                        'get_feature_hour_of_week': {
+                                'function': get_feature_hour_of_week,
+                                'kwargs': {}
+                         },
+                        })
+
+    assert len(design_matrix.index) == 0
+    assert len(preprocessors_fit) == 0
+    assert len(warnings) == 1
+    assert warnings[0].qualified_name == (
+        'eemeter.caltrack_hourly'
+        '.design_matrix_wrong_kwargs'
+    )
+    assert 'Error: Missing or wrong keyword arguments' in \
+        warnings[0].description
+    assert warnings[0].data == {
+            'function': 'segment_timeseries',
+            'kwargs': {}}
 
 
 def test_get_design_matrix_wrong_kwargs(baseline_data):
@@ -525,11 +566,12 @@ def test_get_design_matrix_wrong_kwargs(baseline_data):
     design_matrix, feature_parameters, warnings = \
         get_design_matrix(
                 baseline_data,
-                functions=[
-                        {'function': get_feature_hour_of_week,
-                         'kwargs': {'wrong': 55}
+                functions={
+                        'get_feature_hour_of_week': {
+                                'function': get_feature_hour_of_week,
+                                'kwargs': {'wrong': 55}
                          },
-                        ])
+                        })
 
     assert len(design_matrix.index) == 0
     assert len(feature_parameters) == 0
@@ -538,6 +580,8 @@ def test_get_design_matrix_wrong_kwargs(baseline_data):
         'eemeter.caltrack_hourly'
         '.design_matrix_wrong_kwargs'
     )
+    assert 'Error: Missing or wrong keyword arguments' in \
+        warnings[0].description
     assert warnings[0].data == {
             'function': 'get_feature_hour_of_week',
             'kwargs': {'wrong': 55}}
@@ -627,6 +671,83 @@ def test_caltrack_hourly_method_no_formula():
         'with all of the data in a single model'
     )
     assert warning.data is not None
+
+
+def test_caltrack_hourly_predict_no_temperature():
+    data = pd.DataFrame({
+        'meter_value': [1, 2, 1, 6, 2]
+    })
+    time_index = pd.date_range('2017-01-04', freq='H',
+                               periods=5, tz='UTC', name='start')
+    data = data.set_index(time_index)
+    with pytest.raises(ValueError) as error:
+        results, design_matrix, warnings = caltrack_hourly_predict(
+            None, None, None, None, data)
+    assert 'Data does not include a temperature_mean column' in str(error)
+
+
+def test_caltrack_hourly_predict_no_datetime_index():
+    data = pd.DataFrame({
+        'temperature_mean': [1, 2, 1, 6, 2]
+    })
+    with pytest.raises(TypeError) as error:
+        results, design_matrix, warnings = caltrack_hourly_predict(
+            None, None, None, None, data)
+    assert 'Dataframe index is not a pandas DatetimeIndex' in str(error)
+
+
+def test_caltrack_hourly_predict_design_matrix_missing_model_parameters():
+    data = pd.DataFrame({
+        'temperature_mean': [1, 2, 1, 6, 2],
+        'hour_of_week': [1, 2, 3, 4, 5]
+    })
+    time_index = pd.date_range('2017-01-04', freq='H',
+                               periods=5, tz='UTC', name='start')
+    data = data.set_index(time_index)
+    unique_models = [(1,)]
+    formula = 'meter_value ~ C(hour_of_week) - 1'
+    with pytest.raises(TypeError) as error:
+        results, design_matrix, warnings = caltrack_hourly_predict(
+                formula, None, unique_models, None, data)
+    assert 'Model parameters haven\'t been provided' in str(error)
+
+
+def test_caltrack_hourly_predict_design_matrix_missing_formula():
+    data = pd.DataFrame({
+        'temperature_mean': [1, 2, 1, 6, 2],
+        'hour_of_week': [1, 2, 3, 4, 5]
+    })
+    time_index = pd.date_range('2017-01-04', freq='H',
+                               periods=5, tz='UTC', name='start')
+    data = data.set_index(time_index)
+    unique_models = [(1,)]
+    with pytest.raises(TypeError) as error:
+        results, design_matrix, warnings = caltrack_hourly_predict(
+                None, None, unique_models, None, data)
+    assert 'Formula hasn\'t been provided' in str(error)
+
+
+def test_caltrack_hourly_predict_design_matrix_missing_columns():
+    data = pd.DataFrame({
+        'temperature_mean': [1, 2, 1, 6, 2]
+    })
+    model_params = pd.DataFrame()
+    time_index = pd.date_range('2017-01-04', freq='H',
+                               periods=5, tz='UTC', name='start')
+    data = data.set_index(time_index)
+    unique_models = [(1,)]
+    formula = 'meter_value ~ C(hour_of_week) - 1'
+    results, design_matrix, warnings = caltrack_hourly_predict(
+            formula, None, unique_models, model_params, data)
+    assert warnings[0].qualified_name == \
+        'eemeter.caltrack_hourly.missing_features'
+    assert warnings[0].description == \
+        'Data is missing features specified in formula.'
+    assert warnings[0].data == {
+            'dataframe_columns': ['temperature_mean', 'model_id', 'weight'],
+            'formula': 'meter_value ~ C(hour_of_week) - 1'}
+    assert all(column in design_matrix.columns
+               for column in ['temperature_mean', 'model_id'])
 
 
 def test_caltrack_hourly_error_propagation():
