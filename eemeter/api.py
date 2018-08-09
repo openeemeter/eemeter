@@ -439,7 +439,8 @@ class HourlyModel(object):
             'formula': self.formula,
             'status': self.status,
             'model_params': self.model_params,
-            'feature_params': self.feature_params,
+            'preprocessors_fit': self.preprocessors_fit,
+            'unique_models': self.unique_models.tolist(),
             'warnings': [w.json() for w in self.warnings],
         }
 

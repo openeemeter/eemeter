@@ -9,6 +9,7 @@ import statsmodels.formula.api as smf
 from patsy import ModelDesc, dmatrix
 import traceback
 import warnings as ws
+from schema import Schema, SchemaError
 pd.options.mode.chained_assignment = None
 
 
@@ -357,10 +358,39 @@ def handle_unsegmented_timeseries(data):
     return data_verified, warnings
 
 
+def has_call_attribute(fn):
+    return hasattr(fn, '__call__')
+
+
+def get_invalid_function_dict_warning(function_dict):
+    schema = Schema({str:
+                    {'function': has_call_attribute,
+                     'kwargs': dict}})
+    try:
+        schema.validate(function_dict)
+    except SchemaError as e:
+        return [EEMeterWarning(
+            qualified_name=(
+                'eemeter.caltrack_hourly.design_matrix_wrong_schema'
+                ),
+            description=(
+                'Wrong schema for function list. Expecting dict of dicts.'
+                ),
+            data={'preprocessors': function_dict,
+                  'traceback': traceback.format_exc()}
+        )]
+    return []
+
+
 def get_design_matrix(data, functions):
     preprocessors_fit = {}
     design_matrix_warnings = []
     feature_functions = functions.copy()
+
+    design_matrix_warnings.extend(
+            get_invalid_function_dict_warning(feature_functions))
+    if len(design_matrix_warnings) > 0:
+        return pd.DataFrame(), dict(), design_matrix_warnings
 
     segmented = False
     for name, function in feature_functions.items():
@@ -468,9 +498,14 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
         method_warnings.extend(warnings)
         preprocessors_fit = {}
     else:
-        design_matrix, preprocessors_fit, warnings = \
+        design_matrix, preprocessors_fit, design_matrix_warnings = \
             get_design_matrix(data, preprocessors)
-        method_warnings.extend(warnings)
+        if len(design_matrix_warnings) > 0:
+            return ModelFit(
+                status='NOT ATTEMPTED',
+                method_name='caltrack_hourly_method',
+                warnings=design_matrix_warnings,
+            )
         for name, preprocessor in preprocessors.items():
             if preprocessor['function'] == segment_timeseries:
                 segment_type = preprocessor['kwargs']['segment_type']
@@ -486,7 +521,7 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
     term_list = get_terms_in_formula(formula)
     if any(term not in design_matrix.columns for term in term_list):
         return ModelFit(
-            status='MISSING FEATURES',
+            status='NOT ATTEMPTED',
             method_name='caltrack_hourly_method',
             warnings=get_missing_features_warning(
                     formula, design_matrix.columns.tolist())
@@ -509,7 +544,7 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
 
     if len(model_warnings) > 0:
         return ModelFit(
-            status='FAILED MODELS',
+            status='FAILED',
             method_name='caltrack_hourly_method',
             warnings=model_warnings,
         )
@@ -575,8 +610,14 @@ def caltrack_hourly_predict(formula, preprocessors_fit,
     if preprocessors_fit is None:
         design_matrix = data_verified
     else:
-        design_matrix, _fit, warnings = \
+        design_matrix, _fit, design_matrix_warnings = \
             get_design_matrix(data_verified, preprocessors_fit)
+        if len(design_matrix_warnings) > 0:
+            return ModelFit(
+                status='NOT ATTEMPTED',
+                method_name='caltrack_hourly_method',
+                warnings=design_matrix_warnings,
+            )
 
     term_list = get_terms_in_formula(formula.split('~')[1])
     if any(term not in design_matrix.columns for term in term_list):

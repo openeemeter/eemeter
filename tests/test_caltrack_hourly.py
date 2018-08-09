@@ -128,20 +128,27 @@ def test_e2e(
             baseline_data, formula, preprocessors)
     e2e_warnings.extend(model_fit.warnings)
     assert isinstance(model_fit, ModelFit)
+    assert model_fit.status == 'SUCCESS'
+    assert model_fit.method_name == 'caltrack_hourly_method'
+    assert model_fit.settings == {'preprocessors': preprocessors,
+                                  'formula': formula}
     assert isinstance(model_fit.model, HourlyModel)
     assert len(model_fit.model.model_object) == 12
     assert isinstance(list(model_fit.model.model_object.values())[0],
                       statsmodels.regression.linear_model.WLS)
     assert isinstance(model_fit.model.model_params, pd.DataFrame)
     assert model_fit.model.model_params.shape == (12, 1 + 168)
-
+    assert model_fit.model.__repr__() == \
+        ("HourlyModel(segment_type='three_month_weighted', "
+         "formula='{}', "
+         "status='SUCCESS')").format(formula)
     # Use fitted model to predict counterfactual in reporting period
     results, design_matrix, warnings = model_fit.model.predict(baseline_data)
     e2e_warnings.extend(warnings)
     assert len(design_matrix.index) == len(baseline_data.index)
     assert results.shape == (len(baseline_data.index), 1)
     assert len(e2e_warnings) == 0
-
+    
 
 # Unit tests
 def test_assign_baseline_periods_wrong_baseline_type(baseline_data):
@@ -587,6 +594,30 @@ def test_get_design_matrix_wrong_kwargs(baseline_data):
             'kwargs': {'wrong': 55}}
 
 
+def test_get_design_matrix_wrong_function_schema(baseline_data):
+    baseline_data['model_id'] = [(1,)] * len(baseline_data.index)
+    baseline_data['weight'] = 1
+    design_matrix, feature_parameters, warnings = \
+        get_design_matrix(
+                baseline_data,
+                functions={
+                        'get_feature_hour_of_week': {
+                                'function': 'get_feature_hour_of_week',
+                                'kwargs': {}
+                         },
+                        })
+
+    assert len(design_matrix.index) == 0
+    assert len(warnings) == 1
+    assert warnings[0].qualified_name == (
+        'eemeter.caltrack_hourly'
+        '.design_matrix_wrong_schema'
+    )
+    assert 'Wrong schema for function list. Expecting dict of dicts.' in \
+        warnings[0].description
+    assert warnings[0].data['traceback'] is not None
+
+
 def test_caltrack_hourly_method_no_data():
     data = pd.DataFrame({
         'meter_value': [],
@@ -615,7 +646,7 @@ def test_caltrack_hourly_method_formula_does_not_match_data():
     model_fit = caltrack_hourly_method(
             data, formula='meter_value ~ hour_of_week + missing_feature')
     assert model_fit.method_name == 'caltrack_hourly_method'
-    assert model_fit.status == 'MISSING FEATURES'
+    assert model_fit.status == 'NOT ATTEMPTED'
     assert len(model_fit.warnings) == 1
     warning = model_fit.warnings[0]
     assert warning.qualified_name == (
@@ -639,7 +670,7 @@ def test_caltrack_hourly_method_failed_model():
     model_fit = caltrack_hourly_method(
             data, formula='meter_value ~ hour_of_week')
     assert model_fit.method_name == 'caltrack_hourly_method'
-    assert model_fit.status == 'FAILED MODELS'
+    assert model_fit.status == 'FAILED'
     assert len(model_fit.warnings) == 1
     warning = model_fit.warnings[-1]
     assert warning.qualified_name == (
