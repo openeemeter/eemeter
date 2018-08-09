@@ -1,6 +1,9 @@
 import json
 import numpy as np
 from pkg_resources import resource_stream
+from datetime import datetime, timedelta
+import pytz
+import eeweather
 
 
 resources = {}
@@ -146,6 +149,44 @@ def haversine(lat1, lng1, lat2, lng2):
     return c * r
 
 
+def lat_lng_to_station_using_eeweather(
+    lat, lng, is_cz2010=False
+):
+
+    ranked_stations = eeweather.rank_stations(
+           lat, lng,
+           match_iecc_climate_zone=True,
+           match_iecc_moisture_regime=True,
+           match_ba_climate_zone=True,
+           match_ca_climate_zone=True,
+           minimum_quality='high',
+           is_tmy3=True,
+           is_cz2010=is_cz2010
+       )
+
+    naive_ranked_stations = eeweather.rank_stations(
+        lat, lng,
+        minimum_quality='high',
+        is_tmy3=True,
+        is_cz2010=is_cz2010,
+
+    )
+
+    ranked_stations = eeweather.combine_ranked_stations([ranked_stations, naive_ranked_stations])
+
+    curr = datetime.now()
+    curr = datetime(curr.year, curr.month, curr.day, tzinfo=pytz.utc)
+    start = curr - timedelta(days=(365 * 5))
+
+    primary_match_station, warning_descs = eeweather.select_station(
+        ranked_stations,
+        coverage_range=(start, curr),
+        min_fraction_coverage=0.9,
+        rank=1,
+    )
+
+    return primary_match_station.usaf_id if primary_match_station else None
+
 def lat_lng_to_usaf_station(lat, lng):
     """Return the closest USAF station ID using latitude and
     longitude coordinates.
@@ -163,13 +204,10 @@ def lat_lng_to_usaf_station(lat, lng):
         String representing a USAF weather station ID or None, if none was
         found.
     """
+
     if lat is None or lng is None:
         return None
-    usaf_station_to_lat_lng_index = _load_usaf_station_to_lat_lng_index()
-    index_list = list(usaf_station_to_lat_lng_index.items())
-    dists = [haversine(lat, lng, stat_lat, stat_lng)
-             for _, (stat_lat, stat_lng) in index_list]
-    return index_list[np.argmin(dists)][0]
+    return lat_lng_to_station_using_eeweather(lat, lng)
 
 
 def lat_lng_to_tmy3_station(lat, lng):
@@ -191,11 +229,7 @@ def lat_lng_to_tmy3_station(lat, lng):
     """
     if lat is None or lng is None:
         return None
-    tmy3_station_to_lat_lng_index = _load_tmy3_station_to_lat_lng_index()
-    index_list = list(tmy3_station_to_lat_lng_index.items())
-    dists = [haversine(lat, lng, stat_lat, stat_lng)
-             for _, (stat_lat, stat_lng) in index_list]
-    return index_list[np.argmin(dists)][0]
+    return lat_lng_to_station_using_eeweather(lat, lng)
 
 
 def lat_lng_to_zipcode(lat, lng):
@@ -218,6 +252,7 @@ def lat_lng_to_zipcode(lat, lng):
 
     if lat is None or lng is None:
         return None
+
     zipcode_to_lat_lng_index = _load_zipcode_to_lat_lng_index()
     index_list = list(zipcode_to_lat_lng_index.items())
     dists = [haversine(lat, lng, zip_lat, zip_lng)
@@ -389,7 +424,11 @@ def zipcode_to_usaf_station(zipcode):
     station : str
         String representing a USAF weather station ID
     """
-    return _load_zipcode_to_usaf_station_index().get(zipcode, None)
+    try:
+        lat, lng = eeweather.zcta_to_lat_long(zipcode)
+    except eeweather.exceptions.UnrecognizedZCTAError:
+        return None
+    return lat_lng_to_station_using_eeweather(lat, lng)
 
 
 def zipcode_to_tmy3_station(zipcode):
@@ -406,7 +445,11 @@ def zipcode_to_tmy3_station(zipcode):
     station : str
         String representing a TMY3 Weather station (USAF ID).
     """
-    return _load_zipcode_to_tmy3_station_index().get(zipcode, None)
+    try:
+        lat, lng = eeweather.zcta_to_lat_long(zipcode)
+    except eeweather.exceptions.UnrecognizedZCTAError:
+        return None
+    return lat_lng_to_station_using_eeweather(lat, lng)
 
 
 def zipcode_to_cz2010_station(zipcode):
@@ -425,7 +468,11 @@ def zipcode_to_cz2010_station(zipcode):
     station : str
         String representing a CZ2010 weather station ID
     """
-    return _load_zipcode_to_cz2010_station_index().get(zipcode, None)
+    try:
+        lat, lng = eeweather.zcta_to_lat_long(zipcode)
+    except eeweather.exceptions.UnrecognizedZCTAError:
+        return None
+    return lat_lng_to_station_using_eeweather(lat, lng, is_cz2010=True)
 
 
 def zipcode_to_climate_zone(zipcode):

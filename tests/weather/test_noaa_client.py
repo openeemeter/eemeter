@@ -31,5 +31,5 @@ def test_noaa_client():
 
     tempF = weather_source.indexed_temperatures(index, "degF")
     assert np.shape(tempF)==(8760,)
-    assert np.shape(tempF.dropna())==(8752,)
+    assert np.shape(tempF.dropna())==(8756,)
 

@@ -1079,8 +1079,8 @@ def test_meter_settings_cz2010(meter_input_daily):
     assert meter.weather_normal_station_mapping == 'CZ2010'
 
     results = meter.evaluate(meter_input_daily)
-    assert results['logs'][0] == 'Using weather_source ISDWeatherSource("722874")'
-    assert results['logs'][1] == 'Using weather_normal_source CZ2010WeatherSource("722874")'
+    assert results['logs'][0] == 'Using weather_source ISDWeatherSource("722880")'
+    assert results['logs'][1] == 'Using weather_normal_source CZ2010WeatherSource("722880")'
     assert results['status'] == 'SUCCESS'
     assert results['meter_kwargs'] == {
         'weather_station_mapping': 'CZ2010',

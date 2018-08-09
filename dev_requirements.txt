@@ -16,6 +16,6 @@ numpy==1.13.3
 statsmodels==0.8.0
 notebook==5.2.1
 pytest-xdist==1.22.2
-eeweather==0.1.10
+eeweather==0.3.3
 tornado==4.5.3
 jupyterlab==0.32.1

@@ -1,5 +1,4 @@
 import pytest
-
 from eemeter.structures import ZIPCodeSite
 
 from eemeter.processors.location import get_weather_source
@@ -19,11 +18,9 @@ def test_basic_usage(site):
 
     ws = get_weather_source(site)
 
-    assert ws.usaf_id == '722880'
+    assert ws.usaf_id == '722904'
 
 
 def test_bad_zip(site_bad_zip):
 
-    ws = get_weather_source(site_bad_zip)
-
-    assert ws is None
+    assert get_weather_source(site_bad_zip) is None
