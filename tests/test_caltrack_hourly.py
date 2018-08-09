@@ -3,6 +3,8 @@ import pandas as pd
 import statsmodels
 import pytest
 
+import eemeter
+
 from eemeter import (
     load_sample,
     merge_temperature_data,
@@ -154,14 +156,14 @@ def test_e2e(
 
 
 # Unit tests
-def test_assign_baseline_periods_wrong_baseline_type(baseline_data):
+def test_segment_timeseries_wrong_baseline_type(baseline_data):
     with pytest.raises(ValueError) as error:
         baseline_data_segmented, warnings = segment_timeseries(
             baseline_data, segment_type='unknown')
     assert 'Invalid segment type' in str(error)
 
 
-def test_assign_baseline_periods_missing_temperature_data(baseline_data):
+def test_segment_timeseries_missing_temperature_data(baseline_data):
     baseline_data = baseline_data.drop('temperature_mean', axis=1)
     with pytest.raises(ValueError) as error:
         baseline_data_segmented, warnings = segment_timeseries(
@@ -169,7 +171,15 @@ def test_assign_baseline_periods_missing_temperature_data(baseline_data):
     assert 'Data does not include columns' in str(error)
 
 
-def test_assign_baseline_periods_one_month(baseline_data):
+def test_segment_timeseries_already_segmented(baseline_data):
+    baseline_data['model_id'] = [(1,)] * len(baseline_data.index)
+    with pytest.raises(ValueError) as error:
+        baseline_data_segmented, warnings = segment_timeseries(
+                baseline_data, segment_type='three_month_weighted')
+    assert 'Data already contains column' in str(error)
+
+
+def test_segment_timeseries_one_month(baseline_data):
     baseline_data_segmented, warnings = segment_timeseries(
             baseline_data, segment_type='one_month')
 
@@ -196,7 +206,7 @@ def test_assign_baseline_periods_one_month(baseline_data):
                          baseline_data_segmented.model_id)]] == 1)
 
 
-def test_assign_baseline_periods_three_month(baseline_data):
+def test_segment_timeseries_three_month(baseline_data):
     baseline_data_segmented, warnings = segment_timeseries(
             baseline_data, segment_type='three_month')
 
@@ -228,7 +238,7 @@ def test_assign_baseline_periods_three_month(baseline_data):
                          baseline_data_segmented.model_id)]] == 1)
 
 
-def test_assign_baseline_periods_three_month_weighted(baseline_data):
+def test_segment_timeseries_three_month_weighted(baseline_data):
     baseline_data_segmented, warnings = segment_timeseries(
             baseline_data, segment_type='three_month_weighted')
 
@@ -260,7 +270,7 @@ def test_assign_baseline_periods_three_month_weighted(baseline_data):
                          baseline_data_segmented.model_id)]] != 1)
 
 
-def test_assign_baseline_periods_single(baseline_data):
+def test_segment_timeseries_single(baseline_data):
     baseline_data_segmented, warnings = segment_timeseries(
             baseline_data, segment_type='single')
 
@@ -287,7 +297,7 @@ def test_assign_baseline_periods_single(baseline_data):
                          baseline_data_segmented.model_id)]] == 1)
 
 
-def test_assign_baseline_periods_three_months_wtd_truncated(merged_data):
+def test_segment_timeseries_three_months_wtd_truncated(merged_data):
     baseline_data, warnings = get_baseline_data(
             data=merged_data, end=merged_data.index[-1], max_days=180)
     baseline_data_segmented, warnings = segment_timeseries(
@@ -321,7 +331,7 @@ def test_assign_baseline_periods_three_months_wtd_truncated(merged_data):
                                  'missing_months': [3, 4, 5, 6, 7]}
 
 
-def test_assign_baseline_periods_three_months_wtd_insufficient(merged_data):
+def test_segment_timeseries_three_months_wtd_insufficient(merged_data):
     baseline_data, warnings = get_baseline_data(
             data=merged_data, end=merged_data.index[-1], max_days=360)
     baseline_data_segmented, warnings = segment_timeseries(
@@ -427,6 +437,97 @@ def test_feature_occupancy_failed_model(baseline_data):
     assert 'Error encountered in statsmodels.formula.api.wls' \
         in warnings[0].description
     assert warnings[0].data['traceback'] is not None
+
+
+def test_feature_binned_temperatures_unsegmented(baseline_data):
+    feature_temperature, parameters, warnings = \
+        get_feature_binned_temperatures(baseline_data)
+
+    assert feature_temperature.shape == (len(baseline_data.index), 8)
+    assert parameters['temperature_bins'].shape == (1, 2)
+    assert len(warnings) == 2
+    assert warnings[0].qualified_name == (
+        'eemeter.caltrack_hourly'
+        '.missing_model_id'
+    )
+    assert warnings[1].qualified_name == (
+        'eemeter.caltrack_hourly'
+        '.missing_weight_column'
+    )
+    assert all(column not in warnings[0].data['dataframe_columns']
+               for column in ['model_id', 'weight'])
+
+
+def test_feature_binned_temperatures_wrong_bin_arg(baseline_data):
+    bins = pd.DataFrame({
+            'model_id': [(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12)],
+            'valid_bins': [[222, 333]]})
+    baseline_data['model_id'] = [(1,)] * len(baseline_data.index)
+    baseline_data['weight'] = 1
+    feature_temperature, parameters, warnings = \
+        get_feature_binned_temperatures(
+                baseline_data, mode='predict',
+                temperature_bins=bins)
+    assert len(warnings) == 1
+    assert warnings[0].qualified_name == (
+        'eemeter.caltrack_hourly'
+        '.temperature_bins_failed_read'
+    )
+    assert 'Provided temperature bins do not match required format.' \
+        in warnings[0].description
+
+
+def test_feature_binned_temperatures_incomplete_range(baseline_data):
+    data = pd.DataFrame({
+            'temperature_mean': [i for i in range(70)]},
+        index=pd.date_range('2017-01-04', freq='H', periods=70, tz='UTC',
+                            name='start'))
+    feature_temperature, parameters, warnings = \
+        get_feature_binned_temperatures(
+                data,
+                default_bins=[30, 45, 55, 65, 75, 90],
+                min_temperature_count=5)
+    assert all(column in feature_temperature.columns
+               for column in ['bin_0', 'bin_1', 'bin_2', 'bin_3', 'bin_4',
+                              'bin_5', 'bin_6'])
+    assert any(feature_temperature.bin_0 != 0.0)
+    assert any(feature_temperature.bin_1 != 0.0)
+    assert any(feature_temperature.bin_2 != 0.0)
+    assert any(feature_temperature.bin_3 != 0.0)
+    assert all(feature_temperature.bin_4 == 0.0)
+    assert all(feature_temperature.bin_5 == 0.0)
+    assert all(feature_temperature.bin_6 == 0.0)
+
+
+def test_feature_assign_temperatures_bins_no_valid_bins(baseline_data):
+    feature_temperature = eemeter.caltrack_hourly.assign_temperature_bins(
+            baseline_data, [])
+    assert all(feature_temperature.bin_0.iloc[0:-1] ==
+               baseline_data.temperature_mean.iloc[0:-1])
+
+
+def test_feature_assign_temperatures_bins_off_limit():
+    data = pd.DataFrame({
+            'temperature_mean': [i for i in range(24)]},
+        index=pd.date_range('2017-01-04', freq='H', periods=24, tz='UTC',
+                            name='start'))
+    feature_temperature = eemeter.caltrack_hourly.assign_temperature_bins(
+            data, [60, 80]).dropna()
+    assert feature_temperature.shape == (len(data.index), 3)
+    assert any(feature_temperature.bin_0 != 0.0)
+    assert all(feature_temperature.bin_1 == 0.0)
+    assert all(feature_temperature.bin_2 == 0.0)
+
+
+def test_validate_temperature_bins_single_temperature(baseline_data):
+    data = pd.DataFrame({
+            'temperature_mean': [55] * 24},
+        index=pd.date_range('2017-01-04', freq='H', periods=24, tz='UTC',
+                            name='start'))
+    temperature_summary, bin_endpoints_valid = \
+        eemeter.caltrack_hourly.validate_temperature_bins(data, [30, 60, 90])
+    assert temperature_summary.shape == (4, 2)
+    assert bin_endpoints_valid == []
 
 
 def test_get_design_matrix_different_length_index(baseline_data):
@@ -690,7 +791,15 @@ def test_caltrack_hourly_method_no_formula():
     data = pd.DataFrame({
         'meter_value': [1, 2, 1],
         'hour_of_week': [2, 3, 4],
-        'weight': [1, 1, 1]
+        'weight': [1, 1, 1],
+        'occupancy': [0, 1, 0],
+        'bin_0': [22, 44, 66],
+        'bin_1': [22, 44, 66],
+        'bin_2': [22, 44, 66],
+        'bin_3': [22, 44, 66],
+        'bin_4': [22, 44, 66],
+        'bin_5': [22, 44, 66],
+        'bin_6': [22, 44, 66],
     })
     model_fit = caltrack_hourly_method(data)
     assert model_fit.method_name == 'caltrack_hourly_method'
@@ -782,6 +891,38 @@ def test_caltrack_hourly_predict_design_matrix_missing_columns():
             'formula': 'meter_value ~ C(hour_of_week) - 1'}
     assert all(column in design_matrix.columns
                for column in ['temperature_mean', 'model_id'])
+
+
+def test_caltrack_hourly_predict_design_matrix_failure(baseline_data):
+    data = pd.DataFrame({
+        'temperature_mean': [1, 2, 1, 6, 2],
+        'hour_of_week': [1, 2, 3, 4, 5]
+    })
+    time_index = pd.date_range('2017-01-04', freq='H',
+                               periods=5, tz='UTC', name='start')
+    data = data.set_index(time_index)
+    unique_models = [(1,)]
+    model_params = pd.DataFrame()
+    formula = 'meter_value ~ C(hour_of_week) - 1'
+    preprocessors = {
+                    'get_feature_hour_of_week': {
+                            'function': 'wrong',
+                            'kwargs': {}
+                     },
+                    }
+    results, design_matrix, warnings = caltrack_hourly_predict(
+            formula, preprocessors, unique_models, model_params, data)
+
+    assert len(design_matrix.index) == 0
+    assert len(results.index) == 0
+    assert len(warnings) == 1
+    assert warnings[0].qualified_name == (
+        'eemeter.caltrack_hourly'
+        '.design_matrix_wrong_schema'
+    )
+    assert 'Wrong schema for function list. Expecting dict of dicts.' in \
+        warnings[0].description
+    assert warnings[0].data['traceback'] is not None
 
 
 def test_caltrack_hourly_error_propagation():

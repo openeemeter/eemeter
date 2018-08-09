@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from eemeter.api import (
+from .api import (
     EEMeterWarning,
     ModelFit,
     HourlyModel,
@@ -417,18 +417,6 @@ def get_feature_binned_temperatures(data, mode='fit',
                     sort=False)
             temperature_summary = temperature_summary.append(
                     this_summary, sort=False)
-        if len(temperature_bins.index) == 0:
-            warning = [EEMeterWarning(
-                qualified_name=(
-                        'eemeter.caltrack_hourly.'
-                        'temperature_bins_failed_create'
-                        ),
-                description=(
-                    'Error in temperature bin validation.'
-                    ),
-                data={}
-            )]
-            return pd.DataFrame(), {}, warning
     else:
         temperature_bins = kwargs['temperature_bins']
 
@@ -445,6 +433,7 @@ def get_feature_binned_temperatures(data, mode='fit',
                         ),
                 description=(
                     'Provided temperature bins do not match required format.'
+                    'Required columns: model_id, bins'
                     ),
                 data={'dataframe_columns': temperature_bins.columns}
             )]
@@ -680,13 +669,13 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
             if preprocessor['function'] == segment_timeseries:
                 segment_type = preprocessor['kwargs']['segment_type']
 
+    # default Caltrack formula
     if formula is None:
-        formula = '''meter_value ~ C(hour_of_week) - 1 '''  #+
-#                bin_lt30:occupancy +
-#                bin_30_45:occupancy + bin_45_55:occupancy +
-#                bin_55_65:occupancy + bin_65_75:occupancy +
-#                bin_75_90:occupancy + bin_30_45:occupancy +
-#                bin_gt90:occupancy''' # default Caltrack formula
+        formula = ('meter_value ~ C(hour_of_week) - 1 + '
+                   'bin_0:occupancy + '
+                   'bin_1:occupancy + bin_2:occupancy + '
+                   'bin_3:occupancy + bin_4:occupancy + '
+                   'bin_5:occupancy + bin_6:occupancy')
 
     term_list = get_terms_in_formula(formula)
     if any(term not in design_matrix.columns for term in term_list):
@@ -769,11 +758,7 @@ def caltrack_hourly_predict(formula, preprocessors_fit,
         design_matrix, _fit, design_matrix_warnings = \
             get_design_matrix(data_verified, preprocessors_fit)
         if len(design_matrix_warnings) > 0:
-            return ModelFit(
-                status='NOT ATTEMPTED',
-                method_name='caltrack_hourly_method',
-                warnings=design_matrix_warnings,
-            )
+            return pd.DataFrame(), pd.DataFrame(), design_matrix_warnings
 
     term_list = get_terms_in_formula(formula.split('~')[1])
     if any(term not in design_matrix.columns for term in term_list):
