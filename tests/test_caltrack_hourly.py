@@ -28,6 +28,7 @@ from eemeter.api import (
 def merged_data():
     meter_data, temperature_data, metadata = \
         load_sample('il-electricity-cdd-hdd-hourly')
+# TODO: Look into merge_temperature for hourly data
 #    merged_data = merge_temperature_data(meter_data, temperature_data)
     merged_data = pd.DataFrame(meter_data) \
         .merge(pd.DataFrame(temperature_data),

@@ -8,7 +8,7 @@ name = "pypi"
 [packages]
 
 click = "*"
-pandas = "*"
+pandas = ">=0.23.0"
 eeweather = "*"
 matplotlib = "*"
 statsmodels = "*"

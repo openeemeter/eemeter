@@ -528,6 +528,31 @@ def handle_unsegmented_timeseries(data):
 
 
 def get_design_matrix(data, functions):
+    ''' Design matrix creation method.
+
+    Parameters
+    ----------
+    data : :any:`pandas.DataFrame`
+        A DataFrame containing at least the column ``temperature_mean``.
+        and a `DatetimeIndex`. DataFrames of this form can be
+        made using the :any:`eemeter.merge_temperature_data` method.
+    preprocessors : :any:`dict`, optional
+        Preprocessing functions to apply to ``data``. Each function is passed
+        as a :any:`dict` with two keys: `function` points to the function to be
+        applied, `kwargs` is a :any:`dict` defining the keyword arguments for
+        that function.
+
+    Returns
+    -------
+    design_matrix: :any:`pandas.DataFrame`
+        Design matrix used to calculate predictions
+    preprocessors_fit : :any:`dict`
+        Preprocessing functions with saved parameters and
+        `mode='predict'`. Can be applied to ``data`` or similar dataframes
+        to reproduce the design matrix creation.
+    design_matrix_warnings: :any:`list`
+        :any:`list` of :any:`eemeter.EEMeterWarning`. Can be empty list.
+    '''
     preprocessors_fit = {}
     design_matrix_warnings = []
     feature_functions = functions.copy()
@@ -636,7 +661,28 @@ def get_single_model(data, formula):
 
 
 def caltrack_hourly_method(data, formula=None, preprocessors=None):
+    ''' CalTRACK hourly fit method.
 
+    Parameters
+    ----------
+    data : :any:`pandas.DataFrame`
+        A DataFrame containing at least the columns ``meter_value`` and
+        ``meter_value``. DataFrames of this form can be
+        made using the :any:`eemeter.merge_temperature_data` method.
+    formula : :any:`str`
+        Patsy style model formula. If `None`, uses the default CalTRACK
+        formula.
+    preprocessors : :any:`dict`, optional
+        Preprocessing functions to apply to ``data``. Passed to
+        :any:`eemeter.caltrack_hourly.get_design_matrix`. If `None`,
+        assumes that ``data`` is the design matrix.
+
+    Returns
+    -------
+    model_fit : :any:`eemeter.ModelFit`
+        Results of running CalTRACK hourly method. See :any:`eemeter.ModelFit`
+        for more details.
+    '''
     method_warnings = []
     if data.empty:
         return ModelFit(
@@ -736,6 +782,39 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
 def caltrack_hourly_predict(formula, preprocessors_fit,
                             unique_models, model_params,
                             data):
+    ''' CalTRACK hourly predict method.
+
+    Parameters
+    ----------
+    data : :any:`pandas.DataFrame`
+        A DataFrame containing at least the column ``temperature_mean``.
+        and a `DatetimeIndex`. DataFrames of this form can be
+        made using the :any:`eemeter.merge_temperature_data` method.
+    formula : :any:`str`
+        Patsy style model formula. Typically stored in
+        :any:`eemeter.HourlyModel.formula`.
+    preprocessors_fit : :any:`dict`
+        Preprocessing functions to apply to ``data``. Passed to
+        :any:`eemeter.caltrack_hourly.get_design_matrix`. If `None`,
+        assumes that ``data`` is the design matrix. Typically stored
+        in :any:`eemeter.HourlyModel.preprocessors_fit`.
+    unique_models : :any:`list`
+        List of model ids stored in :any:`eemeter.HourlyModel.unique_models`.
+    model_params : :any:`list`
+        List of model parameters stored in
+        :any:`eemeter.HourlyModel.model_params`.
+    Returns
+    -------
+    result : :any:`pandas.DataFrame`
+        Results of running CalTRACK hourly method. Columns are as follows:
+
+        - ``predicted_usage``: Predicted usage values
+        - ``start``: DatetimeIndex
+    design_matrix: :any:`pandas.DataFrame`
+        Design matrix used to calculate predictions
+    predict_warnings: :any:`list`
+        :any:`list` of :any:`eemeter.EEMeterWarning`. Can be empty list.
+    '''
     predict_warnings = []
     if 'temperature_mean' not in data.columns:
         raise ValueError('Data does not include a temperature_mean column')
@@ -786,6 +865,6 @@ def caltrack_hourly_predict(formula, preprocessors_fit,
             .drop('model_id', axis=1)
         this_result = this_data.dot(this_parameters.transpose())
         results = results.append(this_result, sort=False)
-    results = results.rename(columns={0: 'counterfactual'})
+    results = results.rename(columns={0: 'predicted_usage'})
 
     return results, design_matrix, predict_warnings
