@@ -763,8 +763,8 @@ def test_caltrack_hourly_method_formula_does_not_match_data():
     assert warning.data['formula'] == (
         'meter_value ~ hour_of_week + missing_feature'
     )
-    assert warning.data['dataframe_columns'] == [
-        'meter_value', 'hour_of_week', 'model_id', 'weight'
+    assert sorted(warning.data['dataframe_columns']) == [
+        'hour_of_week', 'meter_value', 'model_id', 'weight'
     ]
 
 
