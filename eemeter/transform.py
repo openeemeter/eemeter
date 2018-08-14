@@ -538,6 +538,8 @@ def as_freq(meter_data_series, freq, atomic_freq='1 Min'):
             'expected series, got object with class {}'
             .format(meter_data_series.__class__)
         )
+    if meter_data_series.empty:
+        return meter_data_series
     series = remove_duplicates(meter_data_series)
     target_freq = pd.Timedelta(atomic_freq)
     timedeltas = (series.index[1:] - series.index[:-1]).append(pd.TimedeltaIndex([pd.NaT]))

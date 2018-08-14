@@ -1333,6 +1333,12 @@ def test_as_freq_month_start(il_electricity_cdd_hdd_billing_monthly):
     assert round(meter_data.value.sum(), 1) == round(as_month_start.sum(), 1) == 21290.2
 
 
+def test_as_freq_empty():
+    meter_data = pd.DataFrame({'value': []})
+    empty_meter_data = as_freq(meter_data.value, freq='H')
+    assert empty_meter_data.empty
+
+
 def test_day_counts(il_electricity_cdd_hdd_billing_monthly):
     data = il_electricity_cdd_hdd_billing_monthly['meter_data'].value
     counts = day_counts(data)

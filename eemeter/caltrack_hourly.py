@@ -38,7 +38,8 @@ def get_calendar_year_coverage_warning(baseline_data_segmented):
 
 
 def get_hourly_coverage_warning(
-        data, baseline_months, model_id, min_fraction_daily_coverage=0.9,):
+    data, baseline_months, model_id, min_fraction_daily_coverage=0.9,
+):
 
     warnings = []
     summary = data.assign(total_days=data.index.days_in_month)
@@ -275,9 +276,9 @@ def get_single_feature_occupancy(data, threshold):
     return model_occupancy, occupancy_lookup, warnings
 
 
-def get_feature_occupancy(data, mode='fit',
-                          threshold=0.65, occupancy_lookup=None,
-                          **kwargs):
+def get_feature_occupancy(
+    data, mode='fit', threshold=0.65, occupancy_lookup=None, **kwargs
+):
     occupancy_warnings = []
     occupancy_models = {}
 
@@ -348,20 +349,22 @@ def assign_temperature_bins(data, bin_endpoints):
     return tdata.drop('temperature_mean', axis=1)
 
 
-def validate_temperature_bins(data,
-                              default_bins,
-                              min_temperature_count=20):
+def validate_temperature_bins(
+    data, default_bins, min_temperature_count=20
+):
     bin_endpoints_valid = [-1000000] + default_bins + [1000000]
     temperature_data = data.loc[:, ['temperature_mean']]
 
     for i in range(1, len(bin_endpoints_valid)-1):
         temperature_data['bin'] = pd.cut(
-                temperature_data.temperature_mean, bins=bin_endpoints_valid)
+            temperature_data.temperature_mean, bins=bin_endpoints_valid
+        )
         bins_default = [
             pd.Interval(bin_endpoints_valid[i],
                         bin_endpoints_valid[i+1],
                         closed='right')
-            for i in range(len(bin_endpoints_valid)-1)]
+            for i in range(len(bin_endpoints_valid)-1)
+        ]
 
         temperature_data.bin = temperature_data.bin \
             .cat.set_categories(bins_default)
@@ -390,9 +393,9 @@ def validate_temperature_bins(data,
     return temperature_summary_original, bin_endpoints_valid
 
 
-def get_feature_binned_temperatures(data, mode='fit',
-                                    default_bins=[30, 45, 55, 65, 75, 90],
-                                    **kwargs):
+def get_feature_binned_temperatures(
+    data, mode='fit', default_bins=[30, 45, 55, 65, 75, 90], **kwargs
+):
     temperature_warnings = []
     temperature_bins = pd.DataFrame()
     temperature_summary = pd.DataFrame()
@@ -417,16 +420,13 @@ def get_feature_binned_temperatures(data, mode='fit',
                     sort=False)
             temperature_summary = temperature_summary.append(
                     this_summary, sort=False)
-    else:
+    else: #mode == 'predict'
         temperature_bins = kwargs['temperature_bins']
 
-        try:
-            missing_columns = any(
-                    column not in temperature_bins.columns
-                    for column in ['bins', 'model_id'])
-            if missing_columns:
-                raise ValueError()
-        except Exception:
+        missing_columns = any(
+                column not in temperature_bins.columns
+                for column in ['bins', 'model_id'])
+        if missing_columns:
             warning = [EEMeterWarning(
                 qualified_name=(
                         'eemeter.caltrack_hourly.temperature_bins_failed_read'
@@ -513,6 +513,22 @@ def get_invalid_function_dict_warning(function_dict):
 
 
 def handle_unsegmented_timeseries(data):
+    '''Checks for model_id and weight columns.
+
+    Parameters
+    ----------
+    data : :any:`pandas.DataFrame`
+        A DataFrame containing a `DatetimeIndex`.
+
+    Returns
+    -------
+    data : :any:`pandas.DataFrame`
+        A DataFrame that includes a default model_id (1-12) and
+        weight (1) if it was not already included in the data.
+    warnings: list of :any:`EEMeterWarning`
+        Warnings that are created if the input data does not already
+        contain a model_id column and weight column.
+    '''
     data_verified = data.copy()
     warnings = []
     if 'model_id' not in data_verified.columns:
@@ -779,9 +795,9 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
     )
 
 
-def caltrack_hourly_predict(formula, preprocessors_fit,
-                            unique_models, model_params,
-                            data):
+def caltrack_hourly_predict(
+    formula, preprocessors_fit, unique_models, model_params, data
+):
     ''' CalTRACK hourly predict method.
 
     Parameters

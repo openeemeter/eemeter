@@ -8,23 +8,24 @@ name = "pypi"
 [packages]
 
 click = "*"
-pandas = ">=0.23.0"
 eeweather = "*"
 matplotlib = "*"
+pandas = "*"
+schema = "*"
+scipy = "*"
 statsmodels = "*"
 sqlalchemy = "*"
-scipy = "*"
 
 
 [dev-packages]
 
-pytest = "*"
 coverage = "*"
+pytest = "*"
 pytest-cov = "*"
-tox = "*"
-twine = "*"
 pytest-xdist = "*"
 sphinx = "*"
 sphinx-autobuild = "*"
-typing = "*"
 sphinxcontrib-spelling = "*"
+tox = "*"
+twine = "*"
+typing = "*"
