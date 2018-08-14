@@ -760,10 +760,12 @@ def test_caltrack_hourly_method_formula_does_not_match_data():
     assert warning.description == (
         'Data is missing features specified in formula.'
     )
-    assert warning.data == {
-            'formula': 'meter_value ~ hour_of_week + missing_feature',
-            'dataframe_columns': ['meter_value', 'hour_of_week',
-                                  'model_id', 'weight']}
+    assert warning.data['formula'] == (
+        'formula': 'meter_value ~ hour_of_week + missing_feature'
+    )
+    assert warning.data['dataframe_columns'] == [
+        'meter_value', 'hour_of_week', 'model_id', 'weight'
+    ]
 
 
 def test_caltrack_hourly_method_failed_model():
