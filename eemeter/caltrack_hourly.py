@@ -357,12 +357,14 @@ def validate_temperature_bins(
 
     for i in range(1, len(bin_endpoints_valid)-1):
         temperature_data['bin'] = pd.cut(
-                temperature_data.temperature_mean, bins=bin_endpoints_valid)
+            temperature_data.temperature_mean, bins=bin_endpoints_valid
+        )
         bins_default = [
             pd.Interval(bin_endpoints_valid[i],
                         bin_endpoints_valid[i+1],
                         closed='right')
-            for i in range(len(bin_endpoints_valid)-1)]
+            for i in range(len(bin_endpoints_valid)-1)
+        ]
 
         temperature_data.bin = temperature_data.bin \
             .cat.set_categories(bins_default)
@@ -421,13 +423,10 @@ def get_feature_binned_temperatures(
     else: #mode == 'predict'
         temperature_bins = kwargs['temperature_bins']
 
-        try:
-            missing_columns = any(
-                    column not in temperature_bins.columns
-                    for column in ['bins', 'model_id'])
-            if missing_columns:
-                raise ValueError()
-        except Exception:
+        missing_columns = any(
+                column not in temperature_bins.columns
+                for column in ['bins', 'model_id'])
+        if missing_columns:
             warning = [EEMeterWarning(
                 qualified_name=(
                         'eemeter.caltrack_hourly.temperature_bins_failed_read'
