@@ -360,10 +360,10 @@ def validate_temperature_bins(
             temperature_data.temperature_mean, bins=bin_endpoints_valid
         )
         bins_default = [
-            pd.Interval(bin_endpoints_valid[i],
-                        bin_endpoints_valid[i+1],
+            pd.Interval(bin_endpoints_valid[bin_id],
+                        bin_endpoints_valid[bin_id+1],
                         closed='right')
-            for i in range(len(bin_endpoints_valid)-1)
+            for bin_id in range(len(bin_endpoints_valid)-1)
         ]
 
         temperature_data.bin = temperature_data.bin \
