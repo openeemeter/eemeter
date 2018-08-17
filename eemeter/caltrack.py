@@ -807,7 +807,7 @@ def get_single_cdd_hdd_candidate_model(
     minimum_total_hdd, beta_cdd_maximum_p_value, beta_hdd_maximum_p_value,
     weights_col, cooling_balance_point, heating_balance_point,
 ):
-    ''' Return a single candidate cdd_hdd model for a particular selection
+    ''' Return and fit a single candidate cdd_hdd model for a particular selection
     of cooling balance point and heating balance point
 
     Parameters
@@ -1671,6 +1671,7 @@ def plot_caltrack_candidate(
         cdd_column_name = 'cdd_%s' % cooling_balance_point
         data.update({cdd_column_name: np.maximum(temps - cooling_balance_point, 0)})
 
+    #CandidateModel.plot seems to be broken, might need to dix it
     prediction = candidate.predict(pd.DataFrame(data))
 
     plot_kwargs = {

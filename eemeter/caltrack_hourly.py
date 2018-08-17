@@ -1,3 +1,4 @@
+
 import numpy as np
 import pandas as pd
 from .api import (
@@ -655,6 +656,12 @@ def get_terms_in_formula(formula):
 
 
 def get_single_model(data, formula):
+    """
+    Model fitting
+    :param data:
+    :param formula:
+    :return:
+    """
     warnings = []
 
     try:
