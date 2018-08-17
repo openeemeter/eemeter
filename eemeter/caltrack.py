@@ -1467,10 +1467,13 @@ def caltrack_metered_savings(
 
     '''
     prediction_index = reporting_meter_data.index
+    # with_disaggregated not set in caltrack_hourly_predict
     predicted_baseline_usage = baseline_model.predict(
         temperature_data, prediction_index, degree_day_method,
         with_disaggregated=True
     )
+
+    predicted_baseline_usage = predicted_baseline_usage
     # CalTrack 3.5.1
     counterfactual_usage = predicted_baseline_usage['predicted_usage']\
         .to_frame('counterfactual_usage')

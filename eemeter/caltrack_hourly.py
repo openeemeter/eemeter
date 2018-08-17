@@ -803,8 +803,7 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
 
 
 def caltrack_hourly_predict(
-    formula, preprocessors_fit, unique_models, model_params, data
-):
+    formula, preprocessors_fit, unique_models, model_params, data, *args, **kwargs):
     ''' CalTRACK hourly predict method.
 
     Parameters
@@ -889,5 +888,6 @@ def caltrack_hourly_predict(
         this_result = this_data.dot(this_parameters.transpose())
         results = results.append(this_result, sort=False)
     results = results.rename(columns={0: 'predicted_usage'})
-
-    return results, design_matrix, predict_warnings
+    result = results.join(design_matrix_granular)
+    return results
+    #return results, design_matrix, predict_warnings
