@@ -238,7 +238,7 @@ def get_missing_weight_column_warning(columns):
 def ishighusage(df, threshold, residual_col='residuals'):
     df = df.rename(columns={residual_col: 'residuals'})
 
-    return int(sum(df.residuals > 0) / len(df.residuals) > threshold)
+    return int(sum(df.residuals > 0) / float(len(df.residuals)) > threshold)
 
 
 def get_single_feature_occupancy(data, threshold):
@@ -266,7 +266,8 @@ def get_single_feature_occupancy(data, threshold):
     # TODO: replace with design matrix function
     feature_hour_of_week, parameters, warnings = get_feature_hour_of_week(data)
     model_data = model_data.merge(feature_hour_of_week,
-                                  left_index=True, right_index=True)
+                                  left_on=['start', 'model_id'],
+                                  right_on=['start', 'model_id'])
 
     occupancy_lookup = pd.DataFrame({
             'occupancy': model_data.groupby(['hour_of_week'])
