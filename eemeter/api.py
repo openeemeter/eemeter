@@ -3,8 +3,12 @@ __all__ = (
     'DataSufficiency',
     'EEMeterWarning',
     'ModelFit',
+    'ModelPrediction',
 )
 
+from collections import namedtuple
+
+ModelPrediction =   namedtuple("ModelPrediction" , ['result', 'design_matrix', 'warnings'])
 
 class CandidateModel(object):
     ''' Contains information about a candidate model.
