@@ -1,3 +1,6 @@
+import numpy as np
+import pandas as pd
+
 __all__ = (
     'CandidateModel',
     'DataSufficiency',
@@ -401,7 +404,7 @@ class HourlyModel(object):
         self.plot_func = plot_func
 
         if model_params is None:
-            model_params = {}
+            model_params = pd.DataFrame()
         self.model_params = model_params
 
         if preprocessors_raw is None:
@@ -413,7 +416,7 @@ class HourlyModel(object):
         self.preprocessors_fit = preprocessors_fit
 
         if unique_models is None:
-            unique_models = {}
+            unique_models = np.array([])
         self.unique_models = unique_models
 
         if warnings is None:
