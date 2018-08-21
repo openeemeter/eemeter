@@ -13,9 +13,6 @@ Results
 .. autoclass:: eemeter.ModelFit
    :members:
 
-.. autoclass:: eemeter.ModelMetrics
-   :members:
-
 
 CalTRACK methods
 ----------------

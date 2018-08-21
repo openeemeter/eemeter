@@ -48,9 +48,6 @@ from .exceptions import (
     MissingModelParameterError,
     UnrecognizedModelTypeError,
 )
-from .metrics import (
-    ModelMetrics,
-)
 from .transform import (
     as_freq,
     compute_temperature_features,

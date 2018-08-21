@@ -147,26 +147,24 @@ class ModelMetrics(object):
         self, observed_input, predicted_input, num_parameters=1, autocorr_lags=1
     ):
         if (num_parameters < 0): \
-            raise ValueError('num_parameters must be greater than or equal to zero')
+            raise Exception('num_parameters must be greater than or equal to zero')
         if (autocorr_lags <= 0):
-            raise ValueError('autocorr_lags must be greater than zero')  
+            raise Exception('autocorr_lags must be greater than zero')  
        
         observed = observed_input.to_frame().dropna()
         predicted = predicted_input.to_frame().dropna()
-        observed.columns = ['observed']
-        predicted.columns = ['predicted']
         
         self.observed_length = observed.shape[0]
         self.predicted_length = predicted.shape[0]
         
         if (self.observed_length != self.predicted_length) : \
-            raise ValueError('Input series are of different lengths')
+            raise Exception('Input series are of different lengths')
     
         # Do an inner join on the two input series to make sure that we only
         # use observations with the same time stamps.
         combined = observed.merge(predicted, left_index=True, \
             right_index=True)
-                
+        
         self.merged_length = combined.shape[0]
         
         # Calculate residuals because these are an input for most of the metrics.
@@ -197,7 +195,7 @@ class ModelMetrics(object):
         self.cvrmse_adj = _compute_cvrmse_adj(combined, self.merged_length, \
             self.num_parameters)
         
-        # Create a new DataFrame with all rows removed where observed is 
+                # Create a new DataFrame with all rows removed where observed is 
         # zero, so we can calculate a version of MAPE with the zeros excluded.
         # (Without the zeros excluded, MAPE becomes infinite when one observed
         # value is zero.)
@@ -234,7 +232,6 @@ class ModelMetrics(object):
         return {
             'observed_length': self.observed_length,
             'predicted_length': self.predicted_length,
-            'merged_length': self.merged_length,
             'observed_mean': self.observed_mean,
             'predicted_mean': self.predicted_mean,
             'observed_skew': self.observed_skew,
@@ -244,6 +241,7 @@ class ModelMetrics(object):
             'observed_cvstd': self.observed_cvstd,
             'predicted_cvstd': self.predicted_cvstd,
             'r_squared': self.r_squared,
+            'merged_length': self.merged_length,
             'r_squared_adj': self.r_squared_adj,
             'cvrmse': self.cvrmse,
             'cvrmse_adj': self.cvrmse_adj,
