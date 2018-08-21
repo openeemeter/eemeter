@@ -1,18 +1,25 @@
 import pandas as pd
 
 
+__all__ = (
+    'ModelMetrics',
+)
+
+
 def _compute_r_squared(combined):
     
     r_squared = (combined[['predicted','observed']].corr().iloc[0,1]**2)
     
     return r_squared
 
-def _compute_r_squared_adj(r_squared, length, regressors):
+
+def _compute_r_squared_adj(r_squared, length, num_parameters):
 
     r_squared_adj = (1 - (1 - r_squared)*(length - 1)/ \
-            (length - regressors - 1)) 
+            (length - num_parameters - 1)) 
 
     return r_squared_adj
+
 
 def _compute_cvrmse(combined):
     
@@ -21,11 +28,21 @@ def _compute_cvrmse(combined):
     
     return cvrmse
 
+    
+def _compute_cvrmse_adj(combined, length, num_parameters):
+    
+    cvrmse_adj = (((combined['residuals']**2).sum()/(length - num_parameters))**0.5)/ \
+        (combined['observed'].mean())
+    
+    return cvrmse_adj
+
+
 def _compute_mape(combined):
     
     mape = (combined['residuals'] / combined['observed']).abs().mean()
     
     return mape
+
 
 def _compute_nmae(combined):
     
@@ -33,11 +50,13 @@ def _compute_nmae(combined):
 
     return nmae
 
+
 def _compute_nmbe(combined):
     
     nmbe = (combined['residuals'].sum()/combined['observed'].sum())
     
     return nmbe
+
 
 def _compute_autocorr_resid(combined, autocorr_lags):
     
@@ -45,19 +64,11 @@ def _compute_autocorr_resid(combined, autocorr_lags):
     
     return autocorr_resid
 
-def _compute_model_uncertainty():
-    
-    return model_uncertainty
 
 class ModelMetrics(object):
-    ''' Contains information on a variety of measures of model fit. Different 
-    from ModelFit object in that only one of ModelFit's outputs is a
-    measure of fit (r-squared), and ModelFit contains results relating to 
-    failed models (and not just the one ultimately selected model). 
-    ModelMetrics contains many measures of fit, and does so only for a single
-    model. 
+    ''' Contains measures of model fit and summary statistics on the input series.
 
-   Parameters
+    Parameters
     ----------
     observed_input : :any:`pandas.Series`
         Series with :any:`pandas.DatetimeIndex` with a set of electricity or 
@@ -65,147 +76,179 @@ class ModelMetrics(object):
     predicted_input : :any:`pandas.Series`
         Series with :any:`pandas.DatetimeIndex` with a set of electricity or 
         gas meter values.
-    frequency : :any:`str`
-        The frequency of the two input data series. Options are 
-        `'hourly'`, `'daily'`, `'billing_monthly'`, `'billing_bimonthly'`, or
-        `'other'`. Determines whether model uncertainty is calculated 
-        (presently only available for daily- and billing-period data).
+    num_parameters : :any:`int`, optional
+        The number of parameters (excluding the intercept) used in the
+        regression from which the predictions were derived.
+    autocorr_lags : :any:`int`, optional
+        The number of lags to use when calculating the autocorrelation of the 
+        residuals
+        
+    Attributes
+    ----------
+    observed_length : :any:`int`
+        The length of the observed_input series.
+    predicted_length : :any:`int`
+        The length of the predicted_input series.
+    merged_length : :any:`int`
+        The length of the dataframe resulting from the inner join of the 
+        observed_input series and the predicted_input series.
+    observed_mean : :any:`float`
+        The mean of the observed_input series.
+    predicted_mean : :any:`float`
+        The mean of the predicted_input series.
+    observed_skew : :any:`float`
+        The skew of the observed_input series.
+    predicted_skew : :any:`float`
+        The skew of the predicted_input series.
+    observed_kurtosis : :any:`float`
+        The excess kurtosis of the observed_input series.
+    predicted_kurtosis : :any:`float`
+        The excess kurtosis of the predicted_input series.
+    observed_cvstd : :any:`float`
+        The coefficient of standard deviation of the observed_input series.
+    predicted_cvstd : :any:`float`
+        The coefficient of standard deviation of the predicted_input series.
+    r_squared : :any:`float`
+        The r-squared of the model from which the predicted_input series was
+        produced.
+    r_squared_adj : :any:`float`
+        The r-squared of the predicted_input series relative to the 
+        observed_input series, adjusted by the number of parameters in the model.
+    cvrmse : :any:`float`
+        The coefficient of variation (root-mean-squared error) of the 
+        predicted_input series relative to the observed_input series.
+    cvrmse_adj : :any:`float`
+        The coefficient of variation (root-mean-squared error) of the
+        predicted_input series relative to the observed_input series, adjusted 
+        by the number of parameters in the model.
+    mape : :any:`float`
+        The mean absolute percent error of the predicted_input series relative 
+        to the observed_input series.
+    mape_no_zeros : :any:`float`
+        The mean absolute percent error of the predicted_input series relative 
+        to the observed_input series, with all time periods dropped where the 
+        observed_input series was not greater than zero.
+    num_meter_zeros : :any:`int`
+        The number of time periods for which the observed_input series was not
+        greater than zero.
+    nmae : :any:`float`
+        The normalized mean absolute error of the predicted_input series
+        relative to the observed_input series.
+    nmbe : :any:`float`
+        The normalized mean bias error of the predicted_input series relative 
+        to the observed_input series.
+    autocorr_resid : :any:`float`
+        The autocorrelation of the residuals (where the residuals equal the
+        predicted_input series minus the observed_input series), measured
+        using a number of lags equal to autocorr_lags.
     '''
 
     def __init__(
-        self, observed_input, predicted_input, frequency='other', regressors=1, autocorr_lags=1
+        self, observed_input, predicted_input, num_parameters=1, autocorr_lags=1
     ):
-        observed_input.name = "observed"
-        predicted_input.name = "predicted"
-        
-        observed = observed_input.to_frame()
-        predicted = predicted_input.to_frame()
+        if (num_parameters < 0): \
+            raise Exception('num_parameters must be greater than or equal to zero')
+        if (autocorr_lags <= 0):
+            raise Exception('autocorr_lags must be greater than zero')  
+       
+        observed = observed_input.to_frame().dropna()
+        predicted = predicted_input.to_frame().dropna()
         
         self.observed_length = observed.shape[0]
         self.predicted_length = predicted.shape[0]
         
-        warnings = []
-        # warn if the input series have different lengths
-        if self.observed_length != self.predicted_length:
-            warnings.append(EEMeterWarning(
-                qualified_name='eemeter.ModelMetrics.observed_and_predicted_lengths_differ',
-                description=(
-                    'Input data series -- observed and predicted -- are different lengths.'
-                ),
-                data={
-                    0
-                        # ASK PHIL -- maybe just self.observed_length self.predicted_length
-                },
-            ))
-
+        if (self.observed_length != self.predicted_length) : \
+            raise Exception('Input series are of different lengths')
+    
+        # Do an inner join on the two input series to make sure that we only
+        # use observations with the same time stamps.
         combined = observed.merge(predicted, left_index=True, \
-                        right_index=True)
+            right_index=True)
         
-        # Calculate residuals because these are an input for most of the metrics  
+        self.merged_length = combined.shape[0]
+        
+        # Calculate residuals because these are an input for most of the metrics.
         combined['residuals'] = (combined.predicted - combined.observed)
         
-        self.freq = frequency
-        self.numregressors = regressors
+        self.num_parameters = num_parameters
         self.autocorr_lags = autocorr_lags
         
-        # Calculate and record mean
         self.observed_mean = combined['observed'].mean()
         self.predicted_mean = combined['predicted'].mean()
         
-        # Calculate and record skew
         self.observed_skew = combined['observed'].skew()
         self.predicted_skew = combined['predicted'].skew()
         
-        # Calculate and record excess kurtosis
         self.observed_kurtosis = combined['observed'].kurtosis()
         self.predicted_kurtosis = combined['predicted'].kurtosis()
         
-        # Calculate and record coefficient of variation standard deviation 
-        # (CVSTD)
         self.observed_cvstd = combined['observed'].std()/ \
             self.observed_mean
-        
         self.predicted_cvstd = combined['predicted'].std()/ \
             self.predicted_mean
         
-        # Calculate and record r-squared
-        self.r_squared = _compute_rsquared(combined)
-        
-        # Calculate and record number of observations
-        self.merged_length = combined.shape[0]
-        
-        # Calculate and record adjusted r-squared. NOTE: I can't get this to 
-        # exactly match the ModelFit adjusted r-squared, though I could match 
-        # it to five decimal places if I reduced the number of regressors by 
-        # two in the denominator instead of one
+        self.r_squared = _compute_r_squared(combined)
         self.r_squared_adj = _compute_r_squared_adj(self.r_squared, \
-            self.merged_length, self.numregressors)
+            self.merged_length, self.num_parameters)
         
         self.cvrmse = _compute_cvrmse(combined)
+        self.cvrmse_adj = _compute_cvrmse_adj(combined, self.merged_length, \
+            self.num_parameters)
+        
+                # Create a new DataFrame with all rows removed where observed is 
+        # zero, so we can calculate a version of MAPE with the zeros excluded.
+        # (Without the zeros excluded, MAPE becomes infinite when one observed
+        # value is zero.)
+        no_observed_zeros = combined[combined['observed'] > 0]
         
         self.mape = _compute_mape(combined)
+        self.mape_no_zeros = _compute_mape(no_observed_zeros)
         
-        # Because MAPE will often be infinite (since meter values, the
-        # denominator, can hit zero), create a new DataFrame with all rows
-        # removed where meter_value is zero
-        nometerzeros = combined[combined['observed'] > 0]
+        self.num_meter_zeros = ((self.merged_length) - no_observed_zeros.shape[0])
         
-        # Calculate and record MAPE with all rows excluded where meter_value is
-        # zero
-        self.mape_nozeros = _compute_mape(nometerzeros)
-        
-        # Calculate and record the number of times meter_value is zero. We 
-        # subtract one from length because length ends in a nan value that
-        # nometerzeros didn't include
-        self.nummeterzeros = ((self.merged_length - 1) - nometerzeros.shape[0])
-        
-        # Calculate and record normalized mean absolute error (NMAE)
         self.nmae = _compute_nmae(combined)
         
-        # Calculate and record normalized mean bias error (NMBE)
         self.nmbe = _compute_nmbe(combined)
                 
-        # Calculate and record autocorrelation coefficient of residuals
         self.autocorr_resid = _compute_autocorr_resid(combined, autocorr_lags)
-        
-        if frequency == 'daily':
-            self.model_uncertainty = _compute_model_uncertainty()
-            
-        elif frequency == 'billing_monthly':
-            self.model_uncertainty = _compute_model_uncertainty()
 
+    def __repr__(self):
+        return (
+            "ModelMetrics(merged_length={}, r_squared_adj={}, cvrmse_adj={}, \
+            mape_no_zeros={}, nmae={}, nmbe={}, autocorr_resid={})"
+            .format(
+                self.merged_length, round(self.r_squared_adj, 3), round(self.cvrmse_adj, 3),
+                round(self.mape_no_zeros, 3), round(self.nmae, 3), round(self.nmbe, 3),
+                round(self.autocorr_resid, 3)
+            )
+        )
 
-    # CREATE JSON DUMP code
+    def json(self):
+        ''' Return a JSON-serializable representation of this result.
 
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        The output of this function can be converted to a serialized string
+        with :any:`json.dumps`.
+        '''
+        return {
+            'observed_length': self.observed_length,
+            'predicted_length': self.predicted_length,
+            'observed_mean': self.observed_mean,
+            'predicted_mean': self.predicted_mean,
+            'observed_skew': self.observed_skew,
+            'predicted_skew': self.predicted_skew,
+            'observed_kurtosis': self.observed_kurtosis,
+            'predicted_kurtosis': self.predicted_kurtosis,
+            'observed_cvstd': self.observed_cvstd,
+            'predicted_cvstd': self.predicted_cvstd,
+            'r_squared': self.r_squared,
+            'merged_length': self.merged_length,
+            'r_squared_adj': self.r_squared_adj,
+            'cvrmse': self.cvrmse,
+            'cvrmse_adj': self.cvrmse_adj,
+            'mape': self.mape,
+            'mape_no_zeros': self.mape_no_zeros,
+            'num_meter_zeros': self.num_meter_zeros,
+            'nmae': self.nmae,
+            'nmbe': self.nmbe,
+            'autocorr_resid': self.autocorr_resid,
+        }
