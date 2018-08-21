@@ -41,11 +41,3 @@ services:
       - /app/tests/__pycache__/
     depends_on:
       - shell
-
-  pipenv:
-    image: eemeter_shell
-    entrypoint: pipenv
-    volumes:
-      - .:/app
-    depends_on:
-      - shell
