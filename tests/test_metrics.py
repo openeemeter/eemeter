@@ -1,7 +1,7 @@
+import json
 import pytest
 import pandas as pd
 import numpy as np
-import json
 
 from eemeter import (
     ModelMetrics,
@@ -17,11 +17,12 @@ from eemeter.metrics import (
     _compute_autocorr_resid,
 )
 
+
 @pytest.fixture
 def sample_data():
     # Could have included DatetimeIndex, but made it more general
-    series_one = pd.Series([1,3,4,1,6])
-    series_two =  pd.Series([2,3,3,2,4])
+    series_one = pd.Series([1, 3, 4, 1, 6])
+    series_two =  pd.Series([2, 3, 3, 2, 4])
     series_one.name = "NameOne" 
     series_two.name = "NameTwo"
     return series_one, series_two
@@ -57,42 +58,49 @@ def test_ModelMetrics(sample_data):
 
 @pytest.fixture
 def sample_data_zeros():
-    series_one = pd.Series([1,0,0,1,6])
-    series_two =  pd.Series([2,3,3,2,4])
+    series_one = pd.Series([1, 0, 0, 1, 6])
+    series_two =  pd.Series([2, 3, 3, 2, 4])
     return series_one, series_two
+
 
 def test_ModelMetrics_zeros(sample_data_zeros):
     series_one, series_two = sample_data_zeros
-    model_metrics = ModelMetrics(series_one,series_two,num_parameters=2)
+    model_metrics = ModelMetrics(series_one, series_two, num_parameters = 2)
     assert np.isinf(model_metrics.mape)
     assert model_metrics.num_meter_zeros == 2
+
     
 def test_ModelMetrics_num_parameter_error(sample_data):
     series_one, series_two = sample_data
     with pytest.raises(ValueError):
-        model_metrics = ModelMetrics(series_one,series_two,num_parameters=-1)
+        model_metrics = ModelMetrics(series_one, series_two, num_parameters = -1)
+
     
 def test_ModelMetrics_autocorr_lags_error(sample_data):
     series_one, series_two = sample_data
     with pytest.raises(ValueError):
-        model_metrics = ModelMetrics(series_one,series_two,autocorr_lags=0)
+        model_metrics = ModelMetrics(series_one, series_two, autocorr_lags = 0)
+
         
 @pytest.fixture
 def sample_data_diff_length():
-    series_one = pd.Series([1,0,0,1,6,4,5])
-    series_two =  pd.Series([2,3,3,2,4])
+    series_one = pd.Series([1, 0, 0, 1, 6, 4, 5])
+    series_two =  pd.Series([2, 3, 3, 2, 4])
     return series_one, series_two
         
+
 def test_ModelMetrics_diff_length_error(sample_data_diff_length):
     series_one, series_two = sample_data_diff_length
     with pytest.raises(ValueError):
-        model_metrics = ModelMetrics(series_one,series_two)
+        model_metrics = ModelMetrics(series_one, series_two)
+    
     
 def test_ModelMetrics_inputs_unchanged(sample_data):
     series_one, series_two = sample_data
-    model_metrics = ModelMetrics(series_one,series_two)
+    model_metrics = ModelMetrics(series_one, series_two)
     assert sample_data[0].name == "NameOne"
     assert sample_data[1].name == "NameTwo"
+    
     
 @pytest.fixture
 def sample_data_merged(sample_data):
@@ -101,58 +109,47 @@ def sample_data_merged(sample_data):
     predicted = series_two.to_frame().dropna()
     observed.columns = ['observed']
     predicted.columns = ['predicted']
-    combined = observed.merge(predicted, left_index=True, \
+    combined = observed.merge(predicted, left_index=True, 
         right_index=True)
     combined['residuals'] = (combined.predicted - combined.observed)    
     return combined
+ 
     
 def test_compute_r_squared(sample_data_merged):
     combined = sample_data_merged
     assert round(_compute_r_squared(combined), 3) == 0.972
     
+    
 def test_compute_r_squared_adj(sample_data_merged):
     combined = sample_data_merged
-    assert round(_compute_r_squared_adj(_compute_r_squared(combined),5,2), 3) == 0.944
+    assert round(_compute_r_squared_adj(_compute_r_squared(combined), 5, 2), 3) == 0.944
+    
     
 def test_compute_cvrmse(sample_data_merged):
     combined = sample_data_merged
     assert round(_compute_cvrmse(combined), 3) == 0.394
     
+    
 def test_compute_cvrmse_adj(sample_data_merged):
     combined = sample_data_merged
-    assert round(_compute_cvrmse_adj(combined,5,2), 3) == 0.509
+    assert round(_compute_cvrmse_adj(combined, 5, 2), 3) == 0.509
+    
     
 def test_compute_mape(sample_data_merged):
     combined = sample_data_merged
     assert round(_compute_mape(combined), 3) == 0.517
         
+    
 def test_compute_nmae(sample_data_merged):
     combined = sample_data_merged
     assert round(_compute_nmae(combined), 3) == 0.333
+    
     
 def test_compute_nmbe(sample_data_merged):
     combined = sample_data_merged
     assert round(_compute_nmbe(combined), 3) == -0.067
     
+    
 def test_compute_autocorr_resid(sample_data_merged):
     combined = sample_data_merged
     assert round(_compute_autocorr_resid(combined, 1), 3) == -0.674
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    

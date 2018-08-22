@@ -8,31 +8,31 @@ __all__ = (
 
 def _compute_r_squared(combined):
     
-    r_squared = (combined[['predicted','observed']].corr().iloc[0,1]**2)
+    r_squared = (combined[['predicted','observed']].corr().iloc[0, 1] ** 2)
     
     return r_squared
 
 
 def _compute_r_squared_adj(r_squared, length, num_parameters):
 
-    r_squared_adj = (1 - (1 - r_squared)*(length - 1)/ \
-            (length - num_parameters - 1)) 
+    r_squared_adj = (1 - (1 - r_squared) * (length - 1) / 
+        (length - num_parameters - 1)) 
 
     return r_squared_adj
 
 
 def _compute_cvrmse(combined):
     
-    cvrmse = ((combined['residuals']**2).mean()**0.5)/ \
-        (combined['observed'].mean())
+    cvrmse = (((combined['residuals'] ** 2).mean() ** 0.5) / 
+        (combined['observed'].mean()))
     
     return cvrmse
 
     
 def _compute_cvrmse_adj(combined, length, num_parameters):
     
-    cvrmse_adj = (((combined['residuals']**2).sum()/(length - num_parameters))**0.5)/ \
-        (combined['observed'].mean())
+    cvrmse_adj = (((combined['residuals'].astype(float) ** 2).sum() /
+        (length - num_parameters)) ** 0.5) / (combined['observed'].mean())
     
     return cvrmse_adj
 
@@ -46,14 +46,16 @@ def _compute_mape(combined):
 
 def _compute_nmae(combined):
     
-    nmae = (combined['residuals'].abs().sum())/(combined['observed'].sum())
+    nmae = ((combined['residuals'].astype(float).abs().sum()) / 
+        (combined['observed'].sum()))
 
     return nmae
 
 
 def _compute_nmbe(combined):
     
-    nmbe = (combined['residuals'].sum()/combined['observed'].sum())
+    nmbe = (combined['residuals'].astype(float).sum() / 
+        combined['observed'].sum())
     
     return nmbe
 
@@ -144,9 +146,9 @@ class ModelMetrics(object):
     '''
 
     def __init__(
-        self, observed_input, predicted_input, num_parameters=1, autocorr_lags=1
+        self, observed_input, predicted_input, num_parameters = 1, autocorr_lags = 1
     ):
-        if (num_parameters < 0): \
+        if (num_parameters < 0): 
             raise ValueError('num_parameters must be greater than or equal to zero')
         if (autocorr_lags <= 0):
             raise ValueError('autocorr_lags must be greater than zero')  
@@ -159,12 +161,12 @@ class ModelMetrics(object):
         self.observed_length = observed.shape[0]
         self.predicted_length = predicted.shape[0]
         
-        if (self.observed_length != self.predicted_length) : \
+        if (self.observed_length != self.predicted_length) : 
             raise ValueError('Input series are of different lengths')
     
         # Do an inner join on the two input series to make sure that we only
         # use observations with the same time stamps.
-        combined = observed.merge(predicted, left_index=True, \
+        combined = observed.merge(predicted, left_index=True, 
             right_index=True)
                 
         self.merged_length = combined.shape[0]
@@ -184,17 +186,15 @@ class ModelMetrics(object):
         self.observed_kurtosis = combined['observed'].kurtosis()
         self.predicted_kurtosis = combined['predicted'].kurtosis()
         
-        self.observed_cvstd = combined['observed'].std()/ \
-            self.observed_mean
-        self.predicted_cvstd = combined['predicted'].std()/ \
-            self.predicted_mean
+        self.observed_cvstd = combined['observed'].std() / self.observed_mean
+        self.predicted_cvstd = combined['predicted'].std() / self.predicted_mean
         
         self.r_squared = _compute_r_squared(combined)
-        self.r_squared_adj = _compute_r_squared_adj(self.r_squared, \
+        self.r_squared_adj = _compute_r_squared_adj(self.r_squared,
             self.merged_length, self.num_parameters)
         
         self.cvrmse = _compute_cvrmse(combined)
-        self.cvrmse_adj = _compute_cvrmse_adj(combined, self.merged_length, \
+        self.cvrmse_adj = _compute_cvrmse_adj(combined, self.merged_length,
             self.num_parameters)
         
         # Create a new DataFrame with all rows removed where observed is 
@@ -216,8 +216,8 @@ class ModelMetrics(object):
 
     def __repr__(self):
         return (
-            "ModelMetrics(merged_length={}, r_squared_adj={}, cvrmse_adj={}, \
-            mape_no_zeros={}, nmae={}, nmbe={}, autocorr_resid={})"
+            "ModelMetrics(merged_length={}, r_squared_adj={}, cvrmse_adj={}, "
+            "mape_no_zeros={}, nmae={}, nmbe={}, autocorr_resid={})"
             .format(
                 self.merged_length, round(self.r_squared_adj, 3), round(self.cvrmse_adj, 3),
                 round(self.mape_no_zeros, 3), round(self.nmae, 3), round(self.nmbe, 3),
