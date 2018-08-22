@@ -20,6 +20,7 @@ sqlalchemy = "*"
 [dev-packages]
 
 coverage = "*"
+jupyterlab = "*"
 pytest = "*"
 pytest-cov = "*"
 pytest-xdist = "*"

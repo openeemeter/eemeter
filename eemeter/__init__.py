@@ -43,13 +43,21 @@ from .caltrack import (
     select_best_candidate,
 )
 from .caltrack_hourly import (
-    segment_timeseries,
     get_feature_hour_of_week,
     get_feature_occupancy,
     get_feature_binned_temperatures,
     get_design_matrix,
     caltrack_hourly_method,
     caltrack_hourly_predict,
+)
+from .features import (
+    iterate_segmented_dataset,
+    compute_temperature_features,
+    compute_time_features,
+    estimate_hour_of_week_occupancy,
+)
+from .segmentation import (
+    segment_time_series,
 )
 from .exceptions import (
     EEMeterError,
@@ -60,12 +68,12 @@ from .exceptions import (
 )
 from .transform import (
     as_freq,
-    compute_temperature_features,
     day_counts,
     get_baseline_data,
     get_reporting_data,
     merge_temperature_data,
     remove_duplicates,
+    overwrite_partial_rows_with_nan,
 )
 from .io import (
     meter_data_from_csv,

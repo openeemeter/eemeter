@@ -28,39 +28,30 @@ from eemeter.api import (
 def merged_data():
     meter_data, temperature_data, metadata = \
         load_sample('il-electricity-cdd-hdd-hourly')
-# TODO: Look into merge_temperature for hourly data
-#    merged_data = merge_temperature_data(meter_data, temperature_data)
-    merged_data = pd.DataFrame(meter_data) \
-        .merge(pd.DataFrame(temperature_data),
-               left_index=True, right_index=True) \
-        .rename(columns={'value': 'meter_value',
-                         'tempF': 'temperature_mean'})
-    merged_data['n_days_dropped'] = 0
-    merged_data['n_days_kept'] = 0
+    merged_data = merge_temperature_data(meter_data, temperature_data)
     return merged_data
 
 
 @pytest.fixture
 def baseline_data(merged_data):
     baseline_data, warnings = get_baseline_data(
-            data=merged_data, end=merged_data.index[-1], max_days=365)
+        data=merged_data, end=merged_data.index[-1], max_days=365)
     return baseline_data
 
 
 # E2E Test
-def test_e2e(
-        merged_data):
+def test_e2e(merged_data):
     e2e_warnings = []
 
     # Filter to 365 day baseline
     baseline_data, warnings = get_baseline_data(
-            data=merged_data, end=merged_data.index[-1], max_days=365)
+        data=merged_data, end=merged_data.index[-1], max_days=365)
     e2e_warnings.extend(warnings)
     assert baseline_data.shape == (8761, 4)
 
     # Calculate baseline period segmentation
     baseline_data_segmented, warnings = segment_timeseries(
-            baseline_data, segment_type='three_month_weighted')
+        baseline_data, segment_type='three_month_weighted')
     e2e_warnings.extend(warnings)
     assert all(column in baseline_data_segmented.columns
                for column in ['meter_value',

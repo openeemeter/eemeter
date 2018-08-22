@@ -18,8 +18,11 @@ from .exceptions import (
 )
 from .transform import (
     day_counts,
-    compute_temperature_features,
     overwrite_partial_rows_with_nan,
+)
+
+from .features import (
+    compute_temperature_features,
 )
 
 
@@ -218,7 +221,7 @@ def caltrack_predict(
         heating_balance_points.append(model_params['heating_balance_point'])
 
     design_matrix = compute_temperature_features(
-        temperature_data, prediction_index,
+        prediction_index, temperature_data,
         heating_balance_points=heating_balance_points,
         cooling_balance_points=cooling_balance_points,
         degree_day_method=degree_day_method,

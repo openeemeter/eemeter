@@ -14,33 +14,44 @@ pd.options.mode.chained_assignment = None
 
 
 def get_calendar_year_coverage_warning(baseline_data_segmented):
-
+    # this will fail if the model ids aren't calendar months
     warnings = []
     unique_models = baseline_data_segmented.model_id.unique()
-    captured_months = [element for sublist in unique_models
-                       for element in sublist]
+    captured_months = [
+        element
+        for sublist in unique_models
+        for element in sublist
+    ]
     if len(captured_months) < 12:
-        warnings = [EEMeterWarning(
-                qualified_name=('eemeter.caltrack_hourly.'
-                                'incomplete_calendar_year_coverage'),
-                description=(
-                        'Data does not cover full calendar year. '
-                        '{} Missing monthly models: {}'
-                        .format(12 - len(captured_months),
-                                [month for month in range(1, 13)
-                                if month not in captured_months])
-                    ),
-                data={'num_missing_months': 12 - len(captured_months),
-                      'missing_months': [month for month in range(1, 13)
-                                         if month not in captured_months]}
-                      )]
+        warnings.append(EEMeterWarning(
+            qualified_name=(
+                'eemeter.caltrack_hourly.incomplete_calendar_year_coverage'
+            ),
+            description=(
+                'Data does not cover full calendar year. '
+                '{} Missing monthly models: {}'
+                .format(
+                    12 - len(captured_months),
+                    [
+                        month for month in range(1, 13)
+                        if month not in captured_months
+                    ]
+                )
+            ),
+            data={
+                'num_missing_months': 12 - len(captured_months),
+                'missing_months': [
+                    month for month in range(1, 13)
+                    if month not in captured_months
+                ]
+            }
+        ))
     return warnings
 
 
 def get_hourly_coverage_warning(
     data, baseline_months, model_id, min_fraction_daily_coverage=0.9,
 ):
-
     warnings = []
     summary = data.assign(total_days=data.index.days_in_month)
     summary = summary.groupby(summary.index.month) \
@@ -51,70 +62,78 @@ def get_hourly_coverage_warning(
     for month in baseline_months:
         row = summary.loc[summary.index == month]
         if (len(row.index) == 0):
-            warnings.extend([EEMeterWarning(
-                    qualified_name=('eemeter.caltrack_hourly.'
-                                    'no_baseline_data_for_month'),
-                    description=(
-                            'No data for one of the baseline months. '
-                            'Month {}'
-                            .format(month)
-                            ),
-                    data={'model_id': model_id,
-                          'month': month,
-                          'hourly_coverage': 0}
-                          )])
+            warnings.append(EEMeterWarning(
+                qualified_name=(
+                    'eemeter.caltrack_hourly.no_baseline_data_for_month'
+                ),
+                description=(
+                    'No data for one of the baseline months. Month {}'
+                    .format(month)
+                ),
+                data={
+                    'model_id': model_id,
+                    'month': month,
+                    'hourly_coverage': 0
+                }
+            ))
             continue
 
         if (row.hourly_coverage.values[0] < min_fraction_daily_coverage):
-            warnings.extend([EEMeterWarning(
-                    qualified_name=('eemeter.caltrack_hourly.'
-                                    'insufficient_hourly_coverage'),
-                    description=(
-                            'Data for this model does not meet the minimum '
-                            'hourly sufficiency criteria. '
-                            'Month {}: Coverage: {}'
-                            .format(month, row.hourly_coverage.values[0])
-                            ),
-                    data={'model_id': model_id,
-                          'month': month,
-                          'total_days': row.total_days.values[0],
-                          'hourly_coverage': row.hourly_coverage.values[0]}
-                          )])
+            warnings.append(EEMeterWarning(
+                qualified_name=(
+                    'eemeter.caltrack_hourly.insufficient_hourly_coverage'
+                ),
+                description=(
+                    'Data for this model does not meet the minimum '
+                    'hourly sufficiency criteria. '
+                    'Month {}: Coverage: {}'
+                    .format(month, row.hourly_coverage.values[0])
+                ),
+                data={
+                    'model_id': model_id,
+                    'month': month,
+                    'total_days': row.total_days.values[0],
+                    'hourly_coverage': row.hourly_coverage.values[0]
+                }
+            ))
 
     return warnings
 
 
 def segment_timeseries(data, segment_type):
-
     data_segmented = pd.DataFrame()
     warnings = []
-    valid_segment_types = ['one_month',
-                           'three_month',
-                           'three_month_weighted',
-                           'single', ]
+
+    valid_segment_types = [
+        'one_month',
+        'three_month',
+        'three_month_weighted',
+        'single',
+    ]
+
     if segment_type not in valid_segment_types:
         raise ValueError('Invalid segment type: %s' % (segment_type))
 
     for column in ['meter_value', 'temperature_mean']:
         if column not in data.columns:
-            raise ValueError('Data does not include columns: {}'
-                             .format(column))
+            raise ValueError(
+                'Data does not include columns: {}'.format(column))
+
     for column in ['model_id', 'weight']:
         if column in data.columns:
-            raise ValueError('Data already contains column: {}'
-                             .format(column))
+            raise ValueError(
+                'Data already contains column: {}'.format(column))
 
     if segment_type == 'one_month':
         data_segmented = data.copy()
         data_segmented['weight'] = 1
         data_segmented['model_id'] = \
             [tuple([x]) for x in data_segmented.index.month]
+
     elif segment_type in ['three_month', 'three_month_weighted']:
         unique_months = pd.Series(
-                data.index
-                .map(lambda x: x.month)
-                .unique().values) \
-                .map(lambda x: (x,))
+            data.index.map(lambda x: x.month).unique().values
+        ).map(lambda x: (x,))
         months = pd.DataFrame(unique_months, columns=['model_id'])
 
         def shoulder_months(month):
@@ -127,50 +146,53 @@ def segment_timeseries(data, segment_type):
 
         months.loc[:, 'baseline'] = months.model_id \
             .map(lambda x: shoulder_months(x[0]))
+
         for i, month in months.iterrows():
-            this_df = data \
-                    .loc[data.index.month.isin(month.baseline)]
-            this_df.loc[:, 'model_id'] = \
-                [month.model_id] * len(this_df.index)
-            warnings.extend(get_hourly_coverage_warning(
+            this_df = data.loc[data.index.month.isin(month.baseline)]
+            this_df.loc[:, 'model_id'] = [month.model_id] * len(this_df.index)
+            warnings.extend(
+                get_hourly_coverage_warning(
                     this_df, month.baseline, month.model_id))
 
             this_df['weight'] = 1
             if segment_type == 'three_month_weighted':
-                this_df.loc[
-                        [x[0] not in x[1] for x in
-                         zip(this_df.index.month, this_df.model_id)],
-                        'weight'] = 0.5
-            data_segmented = data_segmented.append(
-                    this_df, sort=False)
+                this_df.loc[[
+                    x[0] not in x[1]
+                    for x in zip(this_df.index.month, this_df.model_id)
+                ], 'weight'] = 0.5
+            data_segmented = data_segmented.append(this_df, sort=False)
+
     elif segment_type == 'single':
         data_segmented = data.copy()
         data_segmented['weight'] = 1
         data_segmented['model_id'] = \
             [tuple(range(1, 13))] * len(data_segmented.index)
 
-    warnings.extend(get_calendar_year_coverage_warning(
-            data_segmented))
+    warnings.extend(get_calendar_year_coverage_warning(data_segmented))
     return data_segmented, warnings
 
 
 def get_missing_hours_of_week_warning(unique_hours):
     warning = []
-    missing_hours = [hour for hour in range(1, 169)
-                     if hour not in unique_hours]
-    if sorted(unique_hours) != \
-            [x for x in range(1, 169)]:
-                warning = [EEMeterWarning(
-                        qualified_name=('eemeter.caltrack_hourly.'
-                                        'missing_hours_of_week'),
-                        description=(
-                                'Data does not include all hours of week. '
-                                'Missing hours of week: {}'
-                                .format(missing_hours)
-                                ),
-                        data={'num_missing_hours': 168 - len(unique_hours),
-                              'missing_hours': missing_hours}
-                        )]
+    missing_hours = [
+        hour for hour in range(1, 169)
+        if hour not in unique_hours
+    ]
+    if sorted(unique_hours) != [x for x in range(1, 169)]:
+        warning.append(EEMeterWarning(
+            qualified_name=(
+                'eemeter.caltrack_hourly.missing_hours_of_week'
+            ),
+            description=(
+                'Data does not include all hours of week. '
+                'Missing hours of week: {}'
+                .format(missing_hours)
+            ),
+            data={
+                'num_missing_hours': 168 - len(unique_hours),
+                'missing_hours': missing_hours
+            }
+        ))
     return warning
 
 
@@ -180,16 +202,16 @@ def get_feature_hour_of_week(data):
     data_verified, warnings = handle_unsegmented_timeseries(data)
     hour_warnings.extend(warnings)
 
-    feature_hour_of_week = \
-        pd.DataFrame({
-                'hour_of_week': data.index.dayofweek * 24
-                + (data.index.hour + 1),
-                'model_id': data.model_id},
-            index=data.index)
-    feature_hour_of_week["hour_of_week"] = \
-        feature_hour_of_week["hour_of_week"].astype('category')
+    feature_hour_of_week = pd.DataFrame({
+        'hour_of_week': data.index.dayofweek * 24 + (data.index.hour + 1),
+        'model_id': data.model_id
+    }, index=data.index)
 
-    hour_warnings.extend(get_missing_hours_of_week_warning(
+    feature_hour_of_week['hour_of_week'] = \
+        feature_hour_of_week['hour_of_week'].astype('category')
+
+    hour_warnings.extend(
+        get_missing_hours_of_week_warning(
             feature_hour_of_week.hour_of_week.unique()))
 
     parameters = {}
@@ -197,16 +219,18 @@ def get_feature_hour_of_week(data):
 
 
 def get_fit_failed_model_warning(model_id, model_type):
-
     warning = [EEMeterWarning(
         qualified_name='eemeter.caltrack_hourly.failed_' + model_type,
         description=(
             'Error encountered in statsmodels.formula.api.wls method '
-            'for model id: {}'.format(model_id)
+            'for model id: {}'
+            .format(model_id)
         ),
-        data={'model_id': model_id,
-              'model_type': model_type,
-              'traceback': traceback.format_exc()}
+        data={
+            'model_id': model_id,
+            'model_type': model_type,
+            'traceback': traceback.format_exc()
+        }
     )]
     return warning
 
@@ -235,9 +259,8 @@ def get_missing_weight_column_warning(columns):
     return warning
 
 
-def ishighusage(df, threshold, residual_col='residuals'):
+def is_high_usage(df, threshold, residual_col='residuals'):
     df = df.rename(columns={residual_col: 'residuals'})
-
     return int(sum(df.residuals > 0) / len(df.residuals) > threshold)
 
 
@@ -246,32 +269,35 @@ def get_single_feature_occupancy(data, threshold):
 
     # TODO: replace with design matrix function
     model_data = data.assign(
-            cdd_65=data.temperature_mean.map(lambda x: max(0, x-65)),
-            hdd_50=data.temperature_mean.map(lambda x: max(0, 50-x)))
+        cdd_65=np.maximum(data.temperature_mean - 65, 0),
+        hdd_50=np.maximum(50 - data.temperature_mean, 0),
+    )
 
     try:
-        model_occupancy = smf.wls(formula='meter_value ~ cdd_65 + hdd_50',
-                                  data=model_data,
-                                  weights=model_data.weight)
+        model_occupancy = smf.wls(
+            formula='meter_value ~ cdd_65 + hdd_50',
+            data=model_data,
+            weights=model_data.weight
+        )
     except Exception as e:
         warnings.extend(
-                get_fit_failed_model_warning(data.model_id[0],
-                                             'occupancy_model'))
+            get_fit_failed_model_warning(
+                data.model_id[0], 'occupancy_model'))
         return None, pd.DataFrame(), warnings
 
     model_data = model_data.merge(
-            pd.DataFrame({'residuals': model_occupancy.fit().resid}),
-            left_index=True, right_index=True)
+        pd.DataFrame({'residuals': model_occupancy.fit().resid}),
+        left_index=True, right_index=True)
 
     # TODO: replace with design matrix function
     feature_hour_of_week, parameters, warnings = get_feature_hour_of_week(data)
-    model_data = model_data.merge(feature_hour_of_week,
-                                  left_index=True, right_index=True)
+    model_data = model_data.merge(
+        feature_hour_of_week, left_index=True, right_index=True)
 
     occupancy_lookup = pd.DataFrame({
-            'occupancy': model_data.groupby(['hour_of_week'])
-            .apply(lambda x: ishighusage(x, threshold))}) \
-        .reset_index()
+        'occupancy': model_data.groupby(['hour_of_week'])
+            .apply(lambda x: is_high_usage(x, threshold))
+    }).reset_index()
 
     return model_occupancy, occupancy_lookup, warnings
 
@@ -295,8 +321,8 @@ def get_feature_occupancy(
             this_occupancy_lookup['model_id'] = [model_id] * \
                 len(this_occupancy_lookup.index)
 
-            occupancy_lookup = occupancy_lookup.append(this_occupancy_lookup,
-                                                       sort=False)
+            occupancy_lookup = occupancy_lookup.append(
+                this_occupancy_lookup, sort=False)
             occupancy_warnings.extend(this_warnings)
             occupancy_models[model_id] = this_model
 
@@ -306,20 +332,22 @@ def get_feature_occupancy(
     feature_hour_of_week, parameters, warnings = \
         get_feature_hour_of_week(data_verified)
 
-    feature_occupancy = data_verified.reset_index() \
-        .merge(feature_hour_of_week,
-               left_on=['start', 'model_id'],
-               right_on=['start', 'model_id']) \
-        .merge(occupancy_lookup,
-               left_on=['model_id', 'hour_of_week'],
-               right_on=['model_id', 'hour_of_week']) \
-        .loc[:, ['start', 'model_id', 'occupancy']] \
-        .set_index('start')
+    feature_occupancy = data_verified.reset_index().merge(
+        feature_hour_of_week,
+        left_on=['start', 'model_id'],
+        right_on=['start', 'model_id']
+    ).merge(
+        occupancy_lookup,
+        left_on=['model_id', 'hour_of_week'],
+        right_on=['model_id', 'hour_of_week']
+    ).loc[:, ['start', 'model_id', 'occupancy']].set_index('start')
+
     occupancy_parameters = {
-            'mode': 'predict',
-            'occupancy_models': occupancy_models,
-            'threshold': threshold,
-            'occupancy_lookup': occupancy_lookup}
+        'mode': 'predict',
+        'occupancy_models': occupancy_models,
+        'threshold': threshold,
+        'occupancy_lookup': occupancy_lookup
+    }
     return feature_occupancy, occupancy_parameters, occupancy_warnings
 
 
@@ -352,43 +380,51 @@ def assign_temperature_bins(data, bin_endpoints):
 def validate_temperature_bins(
     data, default_bins, min_temperature_count=20
 ):
-    bin_endpoints_valid = [-1000000] + default_bins + [1000000]
+    bin_endpoints_valid = [-1000000] + default_bins + [1000000]  # use np.inf?
     temperature_data = data.loc[:, ['temperature_mean']]
 
-    for i in range(1, len(bin_endpoints_valid)-1):
+    for i in range(1, len(bin_endpoints_valid)-1):  # not pythonic
         temperature_data['bin'] = pd.cut(
             temperature_data.temperature_mean, bins=bin_endpoints_valid
         )
         bins_default = [
-            pd.Interval(bin_endpoints_valid[i],
-                        bin_endpoints_valid[i+1],
-                        closed='right')
-            for i in range(len(bin_endpoints_valid)-1)
+            pd.Interval(
+                bin_endpoints_valid[i],
+                bin_endpoints_valid[i+1],
+                closed='right'
+            )
+            for i in range(len(bin_endpoints_valid)-1)  # using i again?
         ]
 
         temperature_data.bin = temperature_data.bin \
             .cat.set_categories(bins_default)
 
-        temperature_summary = temperature_data \
-            .groupby('bin') \
+        temperature_summary = temperature_data.groupby('bin') \
             .count().sort_index().reset_index()
 
         if i == 1:
             temperature_summary_original = temperature_summary.copy()
-        if ((temperature_summary.temperature_mean.iloc[0] <
-             min_temperature_count) or
-                np.isnan(temperature_summary.temperature_mean.iloc[0])):
-                    bin_endpoints_valid.remove(
-                            temperature_summary.iloc[0].bin.right)
 
-        if ((temperature_summary.temperature_mean.iloc[-1] <
-             min_temperature_count) or
-                np.isnan(temperature_summary.temperature_mean.iloc[-1])):
-                    bin_endpoints_valid.remove(
-                            temperature_summary.iloc[-1].bin.left)
+        first_bin_below_threshold = \
+            temperature_summary.temperature_mean.iloc[0] < \
+            min_temperature_count
+        first_bin_null = np.isnan(temperature_summary.temperature_mean.iloc[0])
 
-    bin_endpoints_valid = [x for x in bin_endpoints_valid
-                           if x not in [-1000000, 1000000]]
+        if first_bin_below_threshold or first_bin_null:
+            bin_endpoints_valid.remove(temperature_summary.iloc[0].bin.right)
+
+        last_bin_below_threshold = \
+            temperature_summary.temperature_mean.iloc[-1] < \
+            min_temperature_count
+        last_bin_null = np.isnan(temperature_summary.temperature_mean.iloc[-1])
+
+        if last_bin_below_threshold or last_bin_null:
+            bin_endpoints_valid.remove(temperature_summary.iloc[-1].bin.left)
+
+    bin_endpoints_valid = [
+        x for x in bin_endpoints_valid
+        if x not in [-1000000, 1000000]
+    ]
 
     return temperature_summary_original, bin_endpoints_valid
 
@@ -410,22 +446,26 @@ def get_feature_binned_temperatures(
         for model_id in unique_models:
             this_data = data_verified.loc[data_verified.model_id == model_id]
             this_summary, this_valid_bins = \
-                validate_temperature_bins(
-                        this_data, default_bins, **kwargs)
+                validate_temperature_bins(this_data, default_bins, **kwargs)
             this_summary['model_id'] = [model_id] * \
                 len(this_summary.index)
             temperature_bins = temperature_bins.append(
-                    pd.DataFrame({'model_id': [model_id],
-                                  'bins': [this_valid_bins]}),
-                    sort=False)
+                pd.DataFrame({
+                    'model_id': [model_id],
+                    'bins': [this_valid_bins]
+                }),
+                sort=False)
             temperature_summary = temperature_summary.append(
                     this_summary, sort=False)
-    else: #mode == 'predict'
+
+    else:  # mode == 'predict'
         temperature_bins = kwargs['temperature_bins']
 
         missing_columns = any(
-                column not in temperature_bins.columns
-                for column in ['bins', 'model_id'])
+            column not in temperature_bins.columns
+            for column in ['bins', 'model_id']
+        )
+
         if missing_columns:
             warning = [EEMeterWarning(
                 qualified_name=(
@@ -446,20 +486,26 @@ def get_feature_binned_temperatures(
             .loc[temperature_bins.model_id == model_id] \
             .bins[0]
         this_feature = assign_temperature_bins(this_data, this_valid_bins)
-        this_feature['model_id'] = [model_id] * \
-            len(this_feature.index)
+        this_feature['model_id'] = [model_id] * len(this_feature.index)
         feature_binned_temperatures = feature_binned_temperatures \
             .append(this_feature, sort=False)
+
     feature_binned_temperatures.fillna(0, inplace=True)
+
     for i in range(len(default_bins) + 1):
         if 'bin_' + str(i) not in feature_binned_temperatures:
             feature_binned_temperatures['bin_' + str(i)] = 0
+
     temperature_parameters = {
-            'mode': 'predict',
-            'temperature_bins': temperature_bins,
-            'temperature_summary': temperature_summary}
-    return feature_binned_temperatures, temperature_parameters, \
-        temperature_warnings
+        'mode': 'predict',
+        'temperature_bins': temperature_bins,
+        'temperature_summary': temperature_summary
+    }
+    return (
+        feature_binned_temperatures,
+        temperature_parameters,
+        temperature_warnings,
+    )
 
 
 def get_design_matrix_unmatched_index_warning(function):
@@ -481,9 +527,11 @@ def get_design_matrix_wrong_kwargs_warning(function):
             'Error: Missing or wrong keyword arguments passed in function '
             'dict. Function name: {}'.format(function['function'].__name__)
         ),
-        data={'function': function['function'].__name__,
-              'kwargs': function['kwargs'],
-              'traceback': traceback.format_exc()}
+        data={
+            'function': function['function'].__name__,
+            'kwargs': function['kwargs'],
+            'traceback': traceback.format_exc()
+        }
     )]
     return warning
 
@@ -493,21 +541,26 @@ def has_call_attribute(fn):
 
 
 def get_invalid_function_dict_warning(function_dict):
-    schema = Schema({str:
-                    {'function': has_call_attribute,
-                     'kwargs': dict}})
+    schema = Schema({
+        str: {
+            'function': has_call_attribute,
+            'kwargs': dict
+        }
+    })
     try:
         schema.validate(function_dict)
     except SchemaError as e:
         return [EEMeterWarning(
             qualified_name=(
                 'eemeter.caltrack_hourly.design_matrix_wrong_schema'
-                ),
+            ),
             description=(
                 'Wrong schema for function list. Expecting dict of dicts.'
-                ),
-            data={'preprocessors': function_dict,
-                  'traceback': traceback.format_exc()}
+            ),
+            data={
+                'preprocessors': function_dict,
+                'traceback': traceback.format_exc()
+            }
         )]
     return []
 
@@ -531,15 +584,18 @@ def handle_unsegmented_timeseries(data):
     '''
     data_verified = data.copy()
     warnings = []
+
     if 'model_id' not in data_verified.columns:
         warnings.extend(
                 get_missing_model_id_warning(data_verified.columns))
         data_verified['model_id'] = \
-            [tuple(range(1, 13))] * len(data_verified.index)
+            [tuple(range(1, 13))] * len(data_verified.index)  # odd model id
+
     if 'weight' not in data_verified.columns:
         warnings.extend(
                 get_missing_weight_column_warning(data_verified.columns))
         data_verified['weight'] = 1
+
     return data_verified, warnings
 
 
@@ -586,10 +642,10 @@ def get_design_matrix(data, functions):
                     segment_timeseries(data, **function['kwargs'])
             except (TypeError, ValueError):
                 design_matrix_warnings.extend(
-                        get_design_matrix_wrong_kwargs_warning(function))
+                    get_design_matrix_wrong_kwargs_warning(function))
                 return pd.DataFrame(), dict(), design_matrix_warnings
             segmented = True
-            del(feature_functions[name])
+            del feature_functions[name]
             break
 
     if not segmented:
@@ -604,13 +660,14 @@ def get_design_matrix(data, functions):
                 function['function'](data_verified, **function['kwargs'])
         except TypeError:
             design_matrix_warnings.extend(
-                    get_design_matrix_wrong_kwargs_warning(function))
+                get_design_matrix_wrong_kwargs_warning(function))
             return pd.DataFrame(), dict(), design_matrix_warnings
 
         if (len(this_feature.index) != len(data_verified.index)):
             design_matrix_warnings.extend(
                 get_design_matrix_unmatched_index_warning(function))
             return pd.DataFrame(), dict(), design_matrix_warnings
+
         if (any(this_feature.sort_index().index !=
                 data_verified.sort_index().index)):
             design_matrix_warnings.extend(
@@ -618,29 +675,33 @@ def get_design_matrix(data, functions):
             return pd.DataFrame(), dict(), design_matrix_warnings
 
         design_matrix = design_matrix.merge(
-                this_feature,
-                left_on=['start', 'model_id'],
-                right_on=['start', 'model_id'])
-        preprocessors_fit.update(
-                {name: {
-                    'function': function['function'],
-                    'kwargs': this_parameters
-                    }})
+            this_feature,
+            left_on=['start', 'model_id'],
+            right_on=['start', 'model_id']
+        )
+        preprocessors_fit.update({
+            name: {
+                'function': function['function'],
+                'kwargs': this_parameters
+            }
+        })
 
     return design_matrix, preprocessors_fit, design_matrix_warnings
 
 
 def get_missing_features_warning(formula, columns):
     warning = [EEMeterWarning(
-                qualified_name=(
-                    'eemeter.caltrack_hourly.missing_features'
-                ),
-                description=(
-                    'Data is missing features specified in formula.'
-                ),
-                data={'formula': formula,
-                      'dataframe_columns': columns},
-            )]
+        qualified_name=(
+            'eemeter.caltrack_hourly.missing_features'
+        ),
+        description=(
+            'Data is missing features specified in formula.'
+        ),
+        data={
+            'formula': formula,
+            'dataframe_columns': columns
+        },
+    )]
     return warning
 
 
@@ -660,15 +721,15 @@ def get_single_model(data, formula):
     try:
         with ws.catch_warnings(record=True) as sm_warnings:
             model_consumption = smf.wls(
-                    formula=formula,
-                    data=data,
-                    weights=data.weight)
+                formula=formula,
+                data=data,
+                weights=data.weight)
             if len(sm_warnings) > 0:
                 raise RuntimeError([w.message for w in sm_warnings])
     except Exception as e:
         warnings.extend(
-                get_fit_failed_model_warning(data.model_id[0],
-                                             'consumption_model'))
+            get_fit_failed_model_warning(
+                data.model_id[0], 'consumption_model'))
         return None, pd.DataFrame(), warnings
 
     model_parameters = pd.DataFrame(model_consumption.fit().params).transpose()
@@ -714,10 +775,12 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
         )
 
     segment_type = 'unknown'
+
     if preprocessors is None:
         design_matrix, warnings = handle_unsegmented_timeseries(data)
         method_warnings.extend(warnings)
         preprocessors_fit = {}
+
     else:
         design_matrix, preprocessors_fit, design_matrix_warnings = \
             get_design_matrix(data, preprocessors)
@@ -733,11 +796,13 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
 
     # default Caltrack formula
     if formula is None:
-        formula = ('meter_value ~ C(hour_of_week) - 1 + '
-                   'bin_0:occupancy + '
-                   'bin_1:occupancy + bin_2:occupancy + '
-                   'bin_3:occupancy + bin_4:occupancy + '
-                   'bin_5:occupancy + bin_6:occupancy')
+        formula = (
+            'meter_value ~ C(hour_of_week) - 1 + '
+            'bin_0:occupancy + '
+            'bin_1:occupancy + bin_2:occupancy + '
+            'bin_3:occupancy + bin_4:occupancy + '
+            'bin_5:occupancy + bin_6:occupancy'
+        )
 
     term_list = get_terms_in_formula(formula)
     if any(term not in design_matrix.columns for term in term_list):
@@ -745,13 +810,14 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
             status='NOT ATTEMPTED',
             method_name='caltrack_hourly_method',
             warnings=get_missing_features_warning(
-                    formula, design_matrix.columns.tolist())
+                formula, design_matrix.columns.tolist())
             )
 
     model_params = pd.DataFrame()
     model_object = {}
     model_warnings = []
     unique_models = design_matrix.model_id.unique()
+
     for model_id in unique_models:
         this_data = design_matrix.loc[design_matrix.model_id == model_id]
         this_model, this_parameters, this_warnings = \
@@ -769,6 +835,7 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
             method_name='caltrack_hourly_method',
             warnings=model_warnings,
         )
+
     model = HourlyModel(
         formula=formula,
         segment_type=segment_type,
@@ -819,6 +886,7 @@ def caltrack_hourly_predict(
     model_params : :any:`list`
         List of model parameters stored in
         :any:`eemeter.HourlyModel.model_params`.
+
     Returns
     -------
     result : :any:`pandas.DataFrame`
@@ -858,18 +926,20 @@ def caltrack_hourly_predict(
     term_list = get_terms_in_formula(formula.split('~')[1])
     if any(term not in design_matrix.columns for term in term_list):
         predict_warnings.extend(
-                get_missing_features_warning(
-                        formula, design_matrix.columns.tolist()))
+            get_missing_features_warning(
+                formula, design_matrix.columns.tolist()))
         return pd.DataFrame(), design_matrix, predict_warnings
 
     design_matrix_granular = dmatrix(
-            formula.split('~')[1],
-            design_matrix, return_type='dataframe')
+        formula.split('~')[1],
+        design_matrix, return_type='dataframe')
+
     design_matrix_granular['model_id'] = [
-            model
-            for month in design_matrix_granular.index.month
-            for model in unique_models
-            if month in model]
+        model
+        for month in design_matrix_granular.index.month
+        for model in unique_models
+        if month in model
+    ]
 
     results = pd.DataFrame()
     for model_id in unique_models:

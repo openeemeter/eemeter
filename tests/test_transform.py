@@ -32,7 +32,7 @@ def test_compute_temperature_features_no_freq_index(il_electricity_cdd_hdd_billi
     temperature_data = il_electricity_cdd_hdd_billing_monthly['temperature_data']
     temperature_data.index.freq = None
     with pytest.raises(ValueError):
-        compute_temperature_features(temperature_data, meter_data.index)
+        compute_temperature_features(meter_data.index, temperature_data)
 
 
 def test_merge_temperature_data_no_meter_data_tz(il_electricity_cdd_hdd_billing_monthly):
@@ -48,7 +48,7 @@ def test_compute_temperature_features_no_meter_data_tz(il_electricity_cdd_hdd_bi
     temperature_data = il_electricity_cdd_hdd_billing_monthly['temperature_data']
     meter_data.index = meter_data.index.tz_localize(None)
     with pytest.raises(ValueError):
-        compute_temperature_features(temperature_data, meter_data.index)
+        compute_temperature_features(meter_data.index, temperature_data)
 
 
 def test_merge_temperature_data_no_temp_data_tz(il_electricity_cdd_hdd_billing_monthly):
@@ -66,7 +66,7 @@ def test_compute_temperature_features_no_temp_data_tz(il_electricity_cdd_hdd_bil
     temperature_data = il_electricity_cdd_hdd_billing_monthly['temperature_data']
     temperature_data = temperature_data.tz_localize(None)
     with pytest.raises(ValueError):
-        compute_temperature_features(temperature_data, meter_data.index)
+        compute_temperature_features(meter_data.index, temperature_data)
 
 
 def test_merge_temperature_data_hourly_temp_mean(il_electricity_cdd_hdd_hourly):
@@ -93,7 +93,7 @@ def test_compute_temperature_features_hourly_temp_mean(il_electricity_cdd_hdd_ho
     temperature_data = il_electricity_cdd_hdd_hourly\
         ['temperature_data']['2016-03-01':'2016-07-01']
     df = compute_temperature_features(
-        temperature_data, meter_data.index)
+        meter_data.index, temperature_data)
     assert list(sorted(df.columns)) == [
         'n_days_dropped', 'n_days_kept', 'temperature_mean',
     ]
@@ -136,7 +136,7 @@ def test_compute_temperature_features_hourly_hourly_degree_days(il_electricity_c
     temperature_data = il_electricity_cdd_hdd_hourly\
         ['temperature_data']['2016-03-01':'2016-07-01']
     df = compute_temperature_features(
-        temperature_data, meter_data.index,
+        meter_data.index, temperature_data,
         heating_balance_points=[60, 61],
         cooling_balance_points=[65, 66],
         temperature_mean=False,
@@ -194,7 +194,7 @@ def test_compute_temperature_features_hourly_hourly_degree_days_use_mean_false(
     temperature_data = il_electricity_cdd_hdd_hourly['temperature_data']\
         ['2016-03-01':'2016-07-01']
     df = compute_temperature_features(
-        temperature_data, meter_data.index,
+        meter_data.index, temperature_data,
         heating_balance_points=[60, 61],
         cooling_balance_points=[65, 66],
         temperature_mean=False,
@@ -243,7 +243,7 @@ def test_compute_temperature_features_hourly_daily_degree_days_fail(
 
     with pytest.raises(ValueError):
         compute_temperature_features(
-            temperature_data, meter_data.index,
+            meter_data.index, temperature_data,
             heating_balance_points=[60, 61],
             cooling_balance_points=[65, 66],
             degree_day_method='daily',
@@ -281,7 +281,7 @@ def test_compute_temperature_features_hourly_daily_missing_explicit_freq(
     meter_data.index.freq = None
     with pytest.raises(ValueError):
         compute_temperature_features(
-            temperature_data, meter_data.index,
+            meter_data.index, temperature_data,
             heating_balance_points=[60, 61],
             cooling_balance_points=[65, 66],
             degree_day_method='daily',
@@ -317,7 +317,7 @@ def test_compute_temperature_features_hourly_bad_degree_days(
 
     with pytest.raises(ValueError):
         compute_temperature_features(
-            temperature_data, meter_data.index,
+            meter_data.index, temperature_data,
             heating_balance_points=[60, 61],
             cooling_balance_points=[65, 66],
             degree_day_method='UNKNOWN',
@@ -354,7 +354,7 @@ def test_compute_temperature_features_hourly_data_quality(il_electricity_cdd_hdd
         ['2016-03-01':'2016-07-01']
 
     df = compute_temperature_features(
-        temperature_data, meter_data.index, temperature_mean=False,
+        meter_data.index, temperature_data, temperature_mean=False,
         data_quality=True,
     )
     assert df.shape == (2952, 4)
@@ -382,7 +382,7 @@ def test_merge_temperature_data_daily_temp_mean(il_electricity_cdd_hdd_daily):
 def test_compute_temperature_features_daily_temp_mean(il_electricity_cdd_hdd_daily):
     meter_data = il_electricity_cdd_hdd_daily['meter_data']
     temperature_data = il_electricity_cdd_hdd_daily['temperature_data']
-    df = compute_temperature_features(temperature_data, meter_data.index)
+    df = compute_temperature_features(meter_data.index, temperature_data)
     assert df.shape == (810, 3)
     assert list(sorted(df.columns)) == [
         'n_days_dropped', 'n_days_kept', 'temperature_mean',
@@ -419,7 +419,7 @@ def test_compute_temperature_features_daily_daily_degree_days(il_electricity_cdd
     meter_data = il_electricity_cdd_hdd_daily['meter_data']
     temperature_data = il_electricity_cdd_hdd_daily['temperature_data']
     df = compute_temperature_features(
-        temperature_data, meter_data.index,
+        meter_data.index, temperature_data,
         heating_balance_points=[60, 61],
         cooling_balance_points=[65, 66],
         temperature_mean=False,
@@ -471,7 +471,7 @@ def test_compute_temperature_features_daily_daily_degree_days_use_mean_false(
     meter_data = il_electricity_cdd_hdd_daily['meter_data']
     temperature_data = il_electricity_cdd_hdd_daily['temperature_data']
     df = compute_temperature_features(
-        temperature_data, meter_data.index,
+        meter_data.index, temperature_data,
         heating_balance_points=[60, 61],
         cooling_balance_points=[65, 66],
         temperature_mean=False,
@@ -519,7 +519,7 @@ def test_compute_temperature_features_daily_hourly_degree_days(il_electricity_cd
     meter_data = il_electricity_cdd_hdd_daily['meter_data']
     temperature_data = il_electricity_cdd_hdd_daily['temperature_data']
     df = compute_temperature_features(
-        temperature_data, meter_data.index,
+        meter_data.index, temperature_data,
         heating_balance_points=[60, 61],
         cooling_balance_points=[65, 66],
         temperature_mean=False,
@@ -571,7 +571,7 @@ def test_compute_temperature_features_daily_hourly_degree_days_use_mean_false(
     meter_data = il_electricity_cdd_hdd_daily['meter_data']
     temperature_data = il_electricity_cdd_hdd_daily['temperature_data']
     df = compute_temperature_features(
-        temperature_data, meter_data.index,
+        meter_data.index, temperature_data,
         heating_balance_points=[60, 61],
         cooling_balance_points=[65, 66],
         temperature_mean=False,
@@ -608,7 +608,7 @@ def test_compute_temperature_features_daily_bad_degree_days(il_electricity_cdd_h
     temperature_data = il_electricity_cdd_hdd_daily['temperature_data']
     with pytest.raises(ValueError):
         compute_temperature_features(
-            temperature_data, meter_data.index,
+            meter_data.index, temperature_data,
             heating_balance_points=[60, 61],
             cooling_balance_points=[65, 66],
             degree_day_method='UNKNOWN',
@@ -637,7 +637,7 @@ def test_compute_temperature_features_daily_data_quality(il_electricity_cdd_hdd_
     meter_data = il_electricity_cdd_hdd_daily['meter_data']
     temperature_data = il_electricity_cdd_hdd_daily['temperature_data']
     df = compute_temperature_features(
-        temperature_data, meter_data.index,
+        meter_data.index, temperature_data,
         temperature_mean=False,
         data_quality=True,
     )
@@ -669,7 +669,7 @@ def test_compute_temperature_features_billing_monthly_temp_mean(
 ):
     meter_data = il_electricity_cdd_hdd_billing_monthly['meter_data']
     temperature_data = il_electricity_cdd_hdd_billing_monthly['temperature_data']
-    df = compute_temperature_features(temperature_data, meter_data.index)
+    df = compute_temperature_features(meter_data.index, temperature_data)
     assert df.shape == (27, 3)
     assert list(sorted(df.columns)) == [
         'n_days_dropped', 'n_days_kept', 'temperature_mean',
@@ -709,7 +709,7 @@ def test_compute_temperature_features_billing_monthly_daily_degree_days(
     meter_data = il_electricity_cdd_hdd_billing_monthly['meter_data']
     temperature_data = il_electricity_cdd_hdd_billing_monthly['temperature_data']
     df = compute_temperature_features(
-        temperature_data, meter_data.index,
+        meter_data.index, temperature_data,
         heating_balance_points=[60, 61],
         cooling_balance_points=[65, 66],
         temperature_mean=False,
@@ -761,7 +761,7 @@ def test_compute_temperature_features_billing_monthly_daily_degree_days_use_mean
     meter_data = il_electricity_cdd_hdd_billing_monthly['meter_data']
     temperature_data = il_electricity_cdd_hdd_billing_monthly['temperature_data']
     df = compute_temperature_features(
-        temperature_data, meter_data.index,
+        meter_data.index, temperature_data,
         heating_balance_points=[60, 61],
         cooling_balance_points=[65, 66],
         temperature_mean=False,
@@ -813,7 +813,7 @@ def test_compute_temperature_features_billing_monthly_hourly_degree_days(
     meter_data = il_electricity_cdd_hdd_billing_monthly['meter_data']
     temperature_data = il_electricity_cdd_hdd_billing_monthly['temperature_data']
     df = compute_temperature_features(
-        temperature_data, meter_data.index,
+        meter_data.index, temperature_data,
         heating_balance_points=[60, 61],
         cooling_balance_points=[65, 66],
         temperature_mean=False,
@@ -865,7 +865,7 @@ def test_compute_temperature_features_billing_monthly_hourly_degree_days_use_mea
     meter_data = il_electricity_cdd_hdd_billing_monthly['meter_data']
     temperature_data = il_electricity_cdd_hdd_billing_monthly['temperature_data']
     df = compute_temperature_features(
-        temperature_data, meter_data.index,
+        meter_data.index, temperature_data,
         heating_balance_points=[60, 61],
         cooling_balance_points=[65, 66],
         temperature_mean=False,
@@ -906,7 +906,7 @@ def test_compute_temperature_features_billing_monthly_bad_degree_day_method(
     temperature_data = il_electricity_cdd_hdd_billing_monthly['temperature_data']
     with pytest.raises(ValueError):
         compute_temperature_features(
-            temperature_data, meter_data.index,
+            meter_data.index, temperature_data,
             heating_balance_points=[60, 61],
             cooling_balance_points=[65, 66],
             degree_day_method='UNKNOWN',
@@ -939,7 +939,7 @@ def test_compute_temperature_features_billing_monthly_data_quality(
     meter_data = il_electricity_cdd_hdd_billing_monthly['meter_data']
     temperature_data = il_electricity_cdd_hdd_billing_monthly['temperature_data']
     df = compute_temperature_features(
-        temperature_data, meter_data.index,
+        meter_data.index, temperature_data,
         temperature_mean=False,
         data_quality=True,
     )
@@ -971,7 +971,7 @@ def test_compute_temperature_features_billing_bimonthly_temp_mean(
 ):
     meter_data = il_electricity_cdd_hdd_billing_bimonthly['meter_data']
     temperature_data = il_electricity_cdd_hdd_billing_bimonthly['temperature_data']
-    df = compute_temperature_features(temperature_data, meter_data.index)
+    df = compute_temperature_features(meter_data.index, temperature_data)
     assert df.shape == (14, 3)
     assert list(sorted(df.columns)) == [
         'n_days_dropped', 'n_days_kept', 'temperature_mean',
@@ -1011,7 +1011,7 @@ def test_compute_temperature_features_billing_bimonthly_daily_degree_days(
     meter_data = il_electricity_cdd_hdd_billing_bimonthly['meter_data']
     temperature_data = il_electricity_cdd_hdd_billing_bimonthly['temperature_data']
     df = compute_temperature_features(
-        temperature_data, meter_data.index,
+        meter_data.index, temperature_data,
         heating_balance_points=[60, 61],
         cooling_balance_points=[65, 66],
         temperature_mean=False,
@@ -1062,7 +1062,7 @@ def test_compute_temperature_features_billing_bimonthly_hourly_degree_days(
     meter_data = il_electricity_cdd_hdd_billing_bimonthly['meter_data']
     temperature_data = il_electricity_cdd_hdd_billing_bimonthly['temperature_data']
     df = compute_temperature_features(
-        temperature_data, meter_data.index,
+        meter_data.index, temperature_data,
         heating_balance_points=[60, 61],
         cooling_balance_points=[65, 66],
         temperature_mean=False,
@@ -1102,7 +1102,7 @@ def test_compute_temperature_features_billing_bimonthly_bad_degree_days(
     temperature_data = il_electricity_cdd_hdd_billing_bimonthly['temperature_data']
     with pytest.raises(ValueError):
         compute_temperature_features(
-            temperature_data, meter_data.index,
+            meter_data.index, temperature_data,
             heating_balance_points=[60, 61],
             cooling_balance_points=[65, 66],
             degree_day_method='UNKNOWN',
@@ -1135,7 +1135,7 @@ def test_compute_temperature_features_billing_bimonthly_data_quality(
     meter_data = il_electricity_cdd_hdd_billing_bimonthly['meter_data']
     temperature_data = il_electricity_cdd_hdd_billing_bimonthly['temperature_data']
     df = compute_temperature_features(
-        temperature_data, meter_data.index,
+        meter_data.index, temperature_data,
         temperature_mean=False,
         data_quality=True,
     )
@@ -1175,7 +1175,7 @@ def test_compute_temperature_features_shorter_temperature_data(
     # drop some data
     temperature_data = temperature_data[:-200]
 
-    df = compute_temperature_features(temperature_data, meter_data.index)
+    df = compute_temperature_features(meter_data.index, temperature_data)
     assert df.shape == (810, 3)
     assert list(sorted(df.columns)) == [
         'n_days_dropped', 'n_days_kept', 'temperature_mean'
@@ -1210,7 +1210,7 @@ def test_compute_temperature_features_shorter_meter_data(
     # drop some data
     meter_data = meter_data[:-10]
 
-    df = compute_temperature_features(temperature_data, meter_data.index)
+    df = compute_temperature_features(meter_data.index, temperature_data)
     assert df.shape == (800, 3)
     assert list(sorted(df.columns)) == [
         'n_days_dropped', 'n_days_kept', 'temperature_mean'
