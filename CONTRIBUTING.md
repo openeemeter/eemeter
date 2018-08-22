@@ -9,4 +9,4 @@ How to release code updates
 6. bump version - edit __version__.py and rename `Development` section with the new version in CHANGELOG.md
 7. commit changes and then create a tag called vX.X.X on release/vX.X.X branch and push both
 8. merge release branch to master
-9. submit to pypi
+9. submit to pypi with `pipenv run python setup.py upload` (must have proper credentials)
