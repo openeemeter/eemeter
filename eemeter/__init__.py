@@ -25,8 +25,6 @@ from .api import (
 from .caltrack import (
     caltrack_method,
     caltrack_sufficiency_criteria,
-    caltrack_metered_savings,
-    caltrack_modeled_savings,
     caltrack_predict,
     get_single_cdd_only_candidate_model,
     get_single_hdd_only_candidate_model,
@@ -41,6 +39,10 @@ from .caltrack import (
     get_total_degree_day_too_low_warning,
     plot_caltrack_candidate,
     select_best_candidate,
+)
+from eemeter.derivative import (
+    caltrack_metered_savings,
+    caltrack_modeled_savings
 )
 from .caltrack_hourly import (
     get_feature_hour_of_week,
@@ -68,6 +70,9 @@ from .exceptions import (
     NoReportingDataError,
     MissingModelParameterError,
     UnrecognizedModelTypeError,
+)
+from .metrics import (
+    ModelMetrics,
 )
 from .transform import (
     as_freq,

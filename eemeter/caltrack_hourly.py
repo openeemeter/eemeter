@@ -1,9 +1,11 @@
+
 import numpy as np
 import pandas as pd
 from .api import (
     EEMeterWarning,
     ModelFit,
     HourlyModel,
+    ModelPrediction
 )
 import statsmodels.formula.api as smf
 from patsy import ModelDesc, dmatrix
@@ -716,6 +718,12 @@ def get_terms_in_formula(formula):
 
 
 def get_single_model(data, formula):
+    """
+    Model fitting
+    :param data:
+    :param formula:
+    :return:
+    """
     warnings = []
 
     try:
@@ -862,9 +870,9 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
     )
 
 
+
 def caltrack_hourly_predict(
-    formula, preprocessors_fit, unique_models, model_params, data
-):
+    formula, preprocessors_fit, unique_models, model_params, data, *args, **kwargs):
     ''' CalTRACK hourly predict method.
 
     Parameters
@@ -921,14 +929,20 @@ def caltrack_hourly_predict(
         design_matrix, _fit, design_matrix_warnings = \
             get_design_matrix(data_verified, preprocessors_fit)
         if len(design_matrix_warnings) > 0:
-            return pd.DataFrame(), pd.DataFrame(), design_matrix_warnings
+            return ModelPrediction(result=pd.DataFrame(),
+                                   design_matrix=pd.DataFrame(),
+                                   warnings=design_matrix_warnings)
 
     term_list = get_terms_in_formula(formula.split('~')[1])
     if any(term not in design_matrix.columns for term in term_list):
         predict_warnings.extend(
             get_missing_features_warning(
                 formula, design_matrix.columns.tolist()))
-        return pd.DataFrame(), design_matrix, predict_warnings
+        return ModelPrediction(
+            result=pd.DataFrame(),
+            design_matrix=design_matrix,
+            warnings=predict_warnings
+        )
 
     design_matrix_granular = dmatrix(
         formula.split('~')[1],
@@ -952,5 +966,7 @@ def caltrack_hourly_predict(
         this_result = this_data.dot(this_parameters.transpose())
         results = results.append(this_result, sort=False)
     results = results.rename(columns={0: 'predicted_usage'})
-
-    return results, design_matrix, predict_warnings
+    results = results.join(design_matrix_granular)
+    return ModelPrediction(result=results,
+                           design_matrix=design_matrix_granular,
+                           warnings=predict_warnings)

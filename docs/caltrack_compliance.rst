@@ -61,7 +61,7 @@ Section 2.3.2: Duplicate Records
 
 
 - **2.3.2.1**: (Data Preparation) Meter usage and temperature data has used matching time zone information to ensure that the upsampled values represent the same periods of time.
-- **2.3.2.2**: *Not yet compliant (If duplicate rows are found for meter data, then the project must be flagged as it may have sub-metering/multiple meters. Warnings could possibly be generated in :any:`eemeter.remove_duplicates`.*
+- **2.3.2.2**: (Data Preparation) If duplicate rows are found for meter data, then the project must be flagged as it may have sub-metering/multiple meters.
 
 
 Section 2.3.X: Other Data Quality Requirements
