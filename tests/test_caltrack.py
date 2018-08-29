@@ -115,9 +115,10 @@ def test_caltrack_predict_intercept_only(
     candidate_model_intercept_only, temperature_data, prediction_index,
     degree_day_method,
 ):
-    prediction = candidate_model_intercept_only.predict(
+    model_prediction = candidate_model_intercept_only.predict(
         temperature_data, prediction_index, degree_day_method,
     )
+    prediction = model_prediction.result
     assert prediction['predicted_usage'].sum() == 365
     assert sorted(prediction.columns) == ['predicted_usage']
 
@@ -126,10 +127,11 @@ def test_caltrack_predict_intercept_only_with_disaggregated(
     candidate_model_intercept_only, temperature_data, prediction_index,
     degree_day_method,
 ):
-    prediction = candidate_model_intercept_only.predict(
+    model_prediction = candidate_model_intercept_only.predict(
         temperature_data, prediction_index, degree_day_method,
         with_disaggregated=True
     )
+    prediction = model_prediction.result
     assert prediction['base_load'].sum() == 365.0
     assert prediction['cooling_load'].sum() == 0.0
     assert prediction['heating_load'].sum() == 0.0
@@ -146,10 +148,11 @@ def test_caltrack_predict_intercept_only_with_design_matrix(
     candidate_model_intercept_only, temperature_data, prediction_index,
     degree_day_method,
 ):
-    prediction = candidate_model_intercept_only.predict(
+    model_prediction = candidate_model_intercept_only.predict(
         temperature_data, prediction_index, degree_day_method,
         with_design_matrix=True
     )
+    prediction = model_prediction.result
     assert sorted(prediction.columns) == [
         'n_days',
         'n_days_dropped',
@@ -204,20 +207,22 @@ def test_caltrack_predict_cdd_only(
     candidate_model_cdd_only, temperature_data, prediction_index,
     degree_day_method,
 ):
-    prediction = candidate_model_cdd_only.predict(
+    model_prediction = candidate_model_cdd_only.predict(
         temperature_data, prediction_index, degree_day_method,
     )
-    assert round(prediction.predicted_usage.sum()) == 1733
+    prediction_df = model_prediction.result
+    assert round(prediction_df.predicted_usage.sum()) == 1733
 
 
 def test_caltrack_predict_cdd_only_with_disaggregated(
     candidate_model_cdd_only, temperature_data, prediction_index,
     degree_day_method,
 ):
-    prediction = candidate_model_cdd_only.predict(
+    model_prediction = candidate_model_cdd_only.predict(
         temperature_data, prediction_index, degree_day_method,
         with_disaggregated=True
     )
+    prediction = model_prediction.result
     assert round(prediction.predicted_usage.sum()) == 1733
     assert round(prediction.base_load.sum()) == 365.0
     assert round(prediction.heating_load.sum()) == 0.0
@@ -228,10 +233,11 @@ def test_caltrack_predict_cdd_only_with_design_matrix(
     candidate_model_cdd_only, temperature_data, prediction_index,
     degree_day_method,
 ):
-    prediction = candidate_model_cdd_only.predict(
+    model_prediction = candidate_model_cdd_only.predict(
         temperature_data, prediction_index, degree_day_method,
         with_design_matrix=True
     )
+    prediction = model_prediction.result
     assert sorted(prediction.columns) == [
         'cdd_65',
         'n_days',
@@ -267,9 +273,10 @@ def test_caltrack_predict_hdd_only(
     candidate_model_hdd_only, temperature_data, prediction_index,
     degree_day_method,
 ):
-    prediction = candidate_model_hdd_only.predict(
+    model_prediction = candidate_model_hdd_only.predict(
         temperature_data, prediction_index, degree_day_method,
     )
+    prediction = model_prediction.result
     assert round(prediction.predicted_usage.sum()) == 1734
 
 
@@ -277,10 +284,11 @@ def test_caltrack_predict_hdd_only_with_disaggregated(
     candidate_model_hdd_only, temperature_data, prediction_index,
     degree_day_method,
 ):
-    prediction = candidate_model_hdd_only.predict(
+    model_prediction = candidate_model_hdd_only.predict(
         temperature_data, prediction_index, degree_day_method,
         with_disaggregated=True
     )
+    prediction = model_prediction.result
     assert round(prediction.predicted_usage.sum()) == 1734
     assert round(prediction.base_load.sum()) == 365.0
     assert round(prediction.heating_load.sum()) == 1369.0
@@ -291,10 +299,11 @@ def test_caltrack_predict_hdd_only_with_design_matrix(
     candidate_model_hdd_only, temperature_data, prediction_index,
     degree_day_method,
 ):
-    prediction = candidate_model_hdd_only.predict(
+    model_prediction = candidate_model_hdd_only.predict(
         temperature_data, prediction_index, degree_day_method,
         with_design_matrix=True
     )
+    prediction = model_prediction.result
     assert sorted(prediction.columns) == [
         'hdd_65',
         'n_days',
@@ -332,9 +341,10 @@ def test_caltrack_predict_cdd_hdd(
     candidate_model_cdd_hdd, temperature_data, prediction_index,
     degree_day_method,
 ):
-    prediction = candidate_model_cdd_hdd.predict(
+    model_prediction = candidate_model_cdd_hdd.predict(
         temperature_data, prediction_index, degree_day_method,
     )
+    prediction = model_prediction.result
     assert round(prediction.predicted_usage.sum()) == 1582.0
 
 
@@ -342,10 +352,11 @@ def test_caltrack_predict_cdd_hdd_disaggregated(
     candidate_model_cdd_hdd, temperature_data, prediction_index,
     degree_day_method,
 ):
-    prediction = candidate_model_cdd_hdd.predict(
+    model_prediction = candidate_model_cdd_hdd.predict(
         temperature_data, prediction_index, degree_day_method,
         with_disaggregated=True
     )
+    prediction = model_prediction.result
     assert round(prediction.predicted_usage.sum()) == 1582.0
     assert round(prediction.base_load.sum()) == 365.0
     assert round(prediction.heating_load.sum()) == 609.0
@@ -356,10 +367,11 @@ def test_caltrack_predict_cdd_hdd_with_design_matrix(
     candidate_model_cdd_hdd, temperature_data, prediction_index,
     degree_day_method,
 ):
-    prediction = candidate_model_cdd_hdd.predict(
+    model_prediction = candidate_model_cdd_hdd.predict(
         temperature_data, prediction_index, degree_day_method,
         with_design_matrix=True
     )
+    prediction = model_prediction.result
     assert sorted(prediction.columns) == [
         'cdd_70',
         'hdd_60',
@@ -403,10 +415,10 @@ def test_caltrack_predict_empty(
     candidate_model_bad_model_type, temperature_data, prediction_index,
     degree_day_method,
 ):
-    prediction = candidate_model_bad_model_type.predict(
+    model_prediction_obj = candidate_model_bad_model_type.predict(
         temperature_data[:0], prediction_index[:0], degree_day_method,
     )
-    assert prediction.empty is True
+    assert model_prediction_obj.result.empty is True
 
 
 def test_get_too_few_non_zero_degree_day_warning_ok():
@@ -555,7 +567,8 @@ def test_get_intercept_only_candidate_models_qualified(
     assert model.result is not None
     assert list(sorted(model.model_params.keys())) == ['intercept']
     assert round(model.model_params['intercept'], 2) == 4.5
-    prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    model_prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    prediction = model_prediction.result
     assert round(prediction.predicted_usage.sum(), 2) == 1642.5
     assert model.r_squared == 0
     assert model.warnings == []
@@ -580,7 +593,8 @@ def test_get_intercept_only_candidate_models_qualified_with_weights(
     assert model.result is not None
     assert list(sorted(model.model_params.keys())) == ['intercept']
     assert round(model.model_params['intercept'], 2) == 6.33
-    prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    model_prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    prediction = model_prediction.result
     assert round(prediction.predicted_usage.sum(), 2) == 2311.67
     assert model.r_squared == 0
     assert model.warnings == []
@@ -630,7 +644,8 @@ def test_get_cdd_only_candidate_models_qualified(
     assert round(model.model_params['beta_cdd'], 2) == 1.01
     assert round(model.model_params['cooling_balance_point'], 2) == 65
     assert round(model.model_params['intercept'], 2) == 0.97
-    prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    model_prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    prediction = model_prediction.result
     assert round(prediction.predicted_usage.sum(), 2) == 1730.04
     assert round(model.r_squared, 2) == 1.00
     assert model.warnings == []
@@ -660,7 +675,8 @@ def test_get_cdd_only_candidate_models_qualified_with_weights(
     assert round(model.model_params['beta_cdd'], 2) == 1.02
     assert round(model.model_params['cooling_balance_point'], 2) == 65
     assert round(model.model_params['intercept'], 2) == 0.9
-    prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    model_prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    prediction = model_prediction.result
     assert round(prediction.predicted_usage.sum(), 2) == 1723.19
     assert round(model.r_squared, 2) == 1.00
     assert model.warnings == []
@@ -713,7 +729,8 @@ def test_get_cdd_only_candidate_models_disqualified(
     assert round(model.model_params['beta_cdd'], 2) == -1.01
     assert round(model.model_params['cooling_balance_point'], 2) == 65
     assert round(model.model_params['intercept'], 2) == 1.03
-    prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    model_prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    prediction = model_prediction.result
     assert round(prediction.predicted_usage.sum(), 2) == -1000.04
     assert round(model.r_squared, 2) == 1.00
     assert len(model.warnings) == 2
@@ -764,7 +781,8 @@ def test_get_hdd_only_candidate_models_qualified(
     assert round(model.model_params['beta_hdd'], 2) == 1.01
     assert round(model.model_params['heating_balance_point'], 2) == 65
     assert round(model.model_params['intercept'], 2) == 0.97
-    prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    model_prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    prediction = model_prediction.result
     assert round(prediction.predicted_usage.sum(), 2) == 1730.67
     assert round(model.r_squared, 2) == 1.00
     assert model.warnings == []
@@ -795,7 +813,8 @@ def test_get_hdd_only_candidate_models_qualified_with_weights(
     assert round(model.model_params['beta_hdd'], 2) == 1.02
     assert round(model.model_params['heating_balance_point'], 2) == 65
     assert round(model.model_params['intercept'], 2) == 0.9
-    prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    model_prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    prediction = model_prediction.result
     assert round(prediction.predicted_usage.sum(), 2) == 1723.83
     assert round(model.r_squared, 2) == 1.00
     assert model.warnings == []
@@ -848,7 +867,8 @@ def test_get_hdd_only_candidate_models_disqualified(
     assert round(model.model_params['beta_hdd'], 2) == -1.01
     assert round(model.model_params['heating_balance_point'], 2) == 65
     assert round(model.model_params['intercept'], 2) == 1.03
-    prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    model_prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    prediction = model_prediction.result
     assert round(prediction.predicted_usage.sum(), 2) == -1000.67
     assert round(model.r_squared, 2) == 1.00
     assert len(model.warnings) == 2
@@ -904,7 +924,8 @@ def test_get_cdd_hdd_candidate_models_qualified(
     assert round(model.model_params['cooling_balance_point'], 2) == 65
     assert round(model.model_params['heating_balance_point'], 2) == 65
     assert round(model.model_params['intercept'], 2) == 0.85
-    prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    model_prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    prediction = model_prediction.result
     assert round(prediction.predicted_usage.sum(), 2) == 3130.31
     assert round(model.r_squared, 2) == 1.00
     assert model.warnings == []
@@ -939,7 +960,8 @@ def test_get_cdd_hdd_candidate_models_qualified_with_weights(
     assert round(model.model_params['cooling_balance_point'], 2) == 65
     assert round(model.model_params['heating_balance_point'], 2) == 65
     assert round(model.model_params['intercept'], 2) == 0.79
-    prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    model_prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    prediction = model_prediction.result
     assert round(prediction.predicted_usage.sum(), 2) == 3139.71
     assert round(model.r_squared, 2) == 1.00
     assert model.warnings == []
@@ -997,7 +1019,8 @@ def test_get_cdd_hdd_candidate_models_disqualified(
     assert round(model.model_params['cooling_balance_point'], 2) == 65
     assert round(model.model_params['heating_balance_point'], 2) == 65
     assert round(model.model_params['intercept'], 2) == 1.1
-    prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    model_prediction = model.predict(temperature_data, prediction_index, degree_day_method)
+    prediction = model_prediction.result
     assert round(prediction.predicted_usage.sum(), 2) == -2391.1
     assert round(model.r_squared, 2) == 1.00
     assert len(model.warnings) == 4
@@ -1137,9 +1160,10 @@ def test_caltrack_method_cdd_hdd(
     assert model_fit.candidates[3].model_type == 'cdd_hdd'
     assert model_fit.model.status == 'QUALIFIED'
     assert model_fit.model.model_type == 'cdd_hdd'
-    prediction = model_fit.model.predict(
+    model_prediction = model_fit.model.predict(
         temperature_data, prediction_index, degree_day_method)
-    assert round(prediction.predicted_usage.sum(), 2) == 7059.48
+    prediction_df = model_prediction.result
+    assert round(prediction_df.predicted_usage.sum(), 2) == 7059.48
 
 
 def test_caltrack_method_cdd_hdd_use_billing_presets(
@@ -1153,8 +1177,9 @@ def test_caltrack_method_cdd_hdd_use_billing_presets(
     assert model_fit.candidates[3].model_type == 'cdd_hdd'
     assert model_fit.model.status == 'QUALIFIED'
     assert model_fit.model.model_type == 'cdd_hdd'
-    prediction = model_fit.model.predict(
+    model_prediction = model_fit.model.predict(
         temperature_data, prediction_index, degree_day_method)
+    prediction = model_prediction.result
     assert round(prediction.predicted_usage.sum(), 2) == 7059.48
 
 
