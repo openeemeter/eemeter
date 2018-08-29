@@ -113,7 +113,7 @@ def _caltrack_predict_design_matrix(
     zeros = pd.Series(0, index=data.index)
 
     if isinstance(data.index, pd.DatetimeIndex):
-        days = day_counts(zeros)
+        days = day_counts(data.index)
 
     # TODO(philngo): handle different degree day methods and hourly temperatures
     if model_type in ['intercept_only', 'hdd_only', 'cdd_only', 'cdd_hdd']:
@@ -1327,7 +1327,7 @@ def caltrack_sufficiency_criteria(
     valid_rows = valid_meter_value_rows & valid_temperature_rows
 
     # get number of days per period - for daily this should be a series of ones
-    row_day_counts = day_counts(data_quality.meter_value)
+    row_day_counts = day_counts(data_quality.index)
 
     # apply masks, giving total
     n_valid_meter_value_days = int((valid_meter_value_rows * row_day_counts).sum())
@@ -1664,17 +1664,11 @@ def plot_caltrack_candidate(
 
     data = {'n_days': np.ones(temps.shape)}
 
-    heating_balance_point = candidate.model_params.get('heating_balance_point')
-    if heating_balance_point is not None:
-        hdd_column_name = 'hdd_%s' % heating_balance_point
-        data.update({hdd_column_name: np.maximum(heating_balance_point - temps, 0)})
+    prediction_index = pd.date_range('2017-01-01T00:00:00Z', periods=len(temps), freq='D')
 
-    cooling_balance_point = candidate.model_params.get('cooling_balance_point')
-    if cooling_balance_point is not None:
-        cdd_column_name = 'cdd_%s' % cooling_balance_point
-        data.update({cdd_column_name: np.maximum(temps - cooling_balance_point, 0)})
+    temps_hourly = pd.Series(temps, index=prediction_index).resample('H').ffill()
 
-    prediction = candidate.predict(pd.DataFrame(data))
+    prediction = candidate.predict(temps_hourly, prediction_index, 'daily')
 
     plot_kwargs = {
         'color': color,

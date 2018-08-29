@@ -17,129 +17,9 @@ __all__ = (
     'day_counts',
     'get_baseline_data',
     'get_reporting_data',
-    'merge_temperature_data',
     'remove_duplicates',
     'overwrite_partial_rows_with_nan',
 )
-
-
-def merge_temperature_data(
-    meter_data, temperature_data, heating_balance_points=None,
-    cooling_balance_points=None, data_quality=False, temperature_mean=True,
-    degree_day_method='daily', percent_hourly_coverage_per_day=0.5,
-    percent_hourly_coverage_per_billing_period=0.9,
-    use_mean_daily_values=True, tolerance=None, keep_partial_nan_rows=False
-):
-    ''' Merge meter data of any frequency with hourly temperature data to make
-    a dataset to feed to models.
-
-    Creates a :any:`pandas.DataFrame` with the same index as the meter data.
-
-    .. note::
-
-        For CalTRACK compliance (2.2.2.3), must set
-        ``percent_hourly_coverage_per_day=0.5``,
-        ``cooling_balance_points=range(30,90,X)``, and
-        ``heating_balance_points=range(30,90,X)``, where
-        X is either 1, 2, or 3. For natural gas meter use data, must
-        set ``fit_cdd=False``.
-
-    .. note::
-
-        For CalTRACK compliance (2.2.3.2), for billing methods, must set
-        ``percent_hourly_coverage_per_billing_period=0.9``.
-
-    .. note::
-
-        For CalTRACK compliance (2.3.3), ``meter_data`` and ``temperature_data``
-        must both be timezone-aware and have matching timezones.
-
-    .. note::
-
-        For CalTRACK compliance (3.3.1.1), for billing methods, must set
-        ``use_mean_daily_values=True``.
-
-    .. note::
-
-        For CalTRACK compliance (3.3.1.2), for daily or billing methods,
-        must set ``degree_day_method=daily``.
-
-    See also :any:`eemeter.compute_temperature_features`.
-
-    Parameters
-    ----------
-    meter_data : :any:`pandas.DataFrame`
-        DataFrame with :any:`pandas.DatetimeIndex` and a column with the name
-        ``value``.
-    temperature_data : :any:`pandas.Series`
-        Series with :any:`pandas.DatetimeIndex` with hourly (``'H'``) frequency
-        and a set of temperature values.
-    cooling_balance_points : :any:`list` of :any:`int` or :any:`float`, optional
-        List of cooling balance points for which to create cooling degree days.
-    heating_balance_points : :any:`list` of :any:`int` or :any:`float`, optional
-        List of heating balance points for which to create heating degree days.
-    data_quality : :any:`bool`, optional
-        If True, compute data quality columns for temperature, i.e.,
-        ``temperature_not_null`` and ``temperature_null``, containing for
-        each meter value
-    temperature_mean : :any:`bool`, optional
-        If True, compute temperature means for each meter period.
-    degree_day_method : :any:`str`, ``'daily'`` or ``'hourly'``
-        The method to use in calculating degree days.
-    percent_hourly_coverage_per_day : :any:`str`, optional
-        Percent hourly temperature coverage per day for heating and cooling
-        degree days to not be dropped.
-    use_mean_daily_values : :any:`bool`, optional
-        If True, meter and degree day values should be mean daily values, not
-        totals. If False, totals will be used instead.
-    tolerance : :any:`pandas.Timedelta`, optional
-        Do not merge more than this amount of temperature data beyond this limit.
-    keep_partial_nan_rows: :any:`bool`, optional
-        If True, keeps data in resultant :any:`pandas.DataFrame` that has
-        missing temperature or meter data. Otherwise, these rows are overwritten
-        entirely with ``numpy.nan`` values.
-
-    Returns
-    -------
-    data : :any:`pandas.DataFrame`
-        A dataset with the specified parameters.
-    '''
-    # TODO(philngo): think about providing some presets
-    # TODO(ssuffian): fix the following: for billing period data when keep_partial_nan_rows=True, n_days_total is always one more than n_days_kept, due to the last row of the meter data being an np.nan value.
-
-    freq_greater_than_daily = (
-        meter_data.index.freq is None or
-        pd.Timedelta(meter_data.index.freq) > pd.Timedelta('1D'))
-
-    meter_value_df = meter_data.value.to_frame('meter_value')
-
-    # CalTrack 3.3.1.1
-    # convert to average daily meter values.
-    if use_mean_daily_values and freq_greater_than_daily:
-        meter_value_df['meter_value'] = meter_value_df.meter_value / \
-            day_counts(meter_value_df.meter_value)
-
-    temperature_feature_df = compute_temperature_features(
-        temperature_data, meter_data.index,
-        heating_balance_points=heating_balance_points,
-        cooling_balance_points=cooling_balance_points,
-        data_quality=data_quality, temperature_mean=temperature_mean,
-        degree_day_method=degree_day_method,
-        percent_hourly_coverage_per_day=percent_hourly_coverage_per_day,
-        percent_hourly_coverage_per_billing_period=\
-            percent_hourly_coverage_per_billing_period,
-        use_mean_daily_values=use_mean_daily_values,
-        tolerance=tolerance, keep_partial_nan_rows=keep_partial_nan_rows
-    )
-
-    df = pd.concat([
-        meter_value_df,
-        temperature_feature_df
-    ], axis=1)
-
-    if not keep_partial_nan_rows:
-        df = overwrite_partial_rows_with_nan(df)
-    return df
 
 
 def overwrite_partial_rows_with_nan(df):
@@ -221,31 +101,30 @@ def as_freq(meter_data_series, freq, atomic_freq='1 Min'):
     return resampled
 
 
-def day_counts(series):
-    '''Days between index datetime values as a :any:`pandas.Series`.
+def day_counts(index):
+    '''Days between DatetimeIndex values as a :any:`pandas.Series`.
 
     Parameters
     ----------
-    series : :any:`pandas.Series` with :any:`pandas.DatetimeIndex`
-        A series for which to get day counts.
+    index : :any:`pandas.DatetimeIndex`
+        The index for which to get day counts.
+
     Returns
     -------
     day_counts : :any:`pandas.Series`
         A :any:`pandas.Series` with counts of days between periods. Counts are
         given on start dates of periods.
     '''
-    # TODO(philngo): incorporate this directly into merge_temperature_data
-
     # dont affect the original data
-    series = series.copy()
+    index = index.copy()
 
-    if len(series) == 0:
-        return pd.Series([], index=series.index)
+    if len(index) == 0:
+        return pd.Series([], index=index)
 
-    timedeltas = (series.index[1:] - series.index[:-1]).append(pd.TimedeltaIndex([pd.NaT]))
+    timedeltas = (index[1:] - index[:-1]).append(pd.TimedeltaIndex([pd.NaT]))
     timedelta_days = timedeltas.total_seconds() / (60 * 60 * 24)
 
-    return pd.Series(timedelta_days, index=series.index)
+    return pd.Series(timedelta_days, index=index)
 
 
 def get_baseline_data(data, start=None, end=None, max_days=365):

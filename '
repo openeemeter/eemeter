@@ -3,17 +3,13 @@ from .transform import (
     overwrite_partial_rows_with_nan,
 )
 
-from .segmentation import (
-    iterate_segmented_dataset,
-)
-
 import numpy as np
 import pandas as pd
 import statsmodels.formula.api as smf
 
 
 __all__ = (
-    'compute_usage_per_day_feature',
+    'compute_usage_per_day_features',
     'compute_temperature_features',
     'compute_time_features',
     'estimate_hour_of_week_occupancy',
@@ -38,10 +34,15 @@ def merge_features(features, keep_partial_nan_rows=False):
 
 
 def compute_usage_per_day_feature(meter_data, series_name='usage_per_day'):
+    freq_greater_than_daily = (
+        meter_data.index.freq is None
+        or pd.Timedelta(meter_data.index.freq) > pd.Timedelta('1D')
+    )
 
     # CalTrack 3.3.1.1
     # convert to average daily meter values.
-    usage_per_day = meter_data.value / day_counts(meter_data.index)
+    if freq_greater_than_daily:
+        usage_per_day = meter_data.value / day_counts(meter_data.value)
     return pd.Series(usage_per_day, name=series_name)
 
 
@@ -434,7 +435,7 @@ def _estimate_hour_of_week_occupancy(model_data, threshold):
         .groupby(['hour_of_week']) \
         .apply(_is_high_usage) \
         .rename('occupancy') \
-        .reindex(pd.CategoricalIndex(range(1, 169)))  # guarantee an index value for all hours
+        .reindex(range(1, 169))  # guarantee an index value for all hours
 
 
 def estimate_hour_of_week_occupancy(data, segmentation=None, threshold=0.65):

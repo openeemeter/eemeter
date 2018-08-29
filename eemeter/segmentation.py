@@ -1,6 +1,27 @@
 import pandas as pd
 
 
+__all__ = (
+    'iterate_segmented_dataset',
+    'segment_time_series',
+)
+
+
+def iterate_segmented_dataset(data, segmentation=None):
+    if segmentation is None:
+        yield None, pd.merge(
+            data, pd.DataFrame({'weight': 1}, index=data.index),
+            left_index=True, right_index=True
+        )  # add weight column
+    else:
+        for segment_name, segment_weights in segmentation.iteritems():
+            segment_data = pd.merge(
+                data, segment_weights.to_frame('weight'),
+                left_index=True, right_index=True
+            )[segment_weights > 0]  # take only non zero weights
+            yield segment_name, segment_data
+
+
 def _get_calendar_year_coverage_warning(index):
     pass
 

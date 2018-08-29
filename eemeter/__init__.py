@@ -51,12 +51,15 @@ from .caltrack_hourly import (
     caltrack_hourly_predict,
 )
 from .features import (
-    iterate_segmented_dataset,
+    compute_usage_per_day_feature,
     compute_temperature_features,
     compute_time_features,
     estimate_hour_of_week_occupancy,
+    fit_temperature_bins,
+    merge_features,
 )
 from .segmentation import (
+    iterate_segmented_dataset,
     segment_time_series,
 )
 from .exceptions import (
@@ -71,7 +74,6 @@ from .transform import (
     day_counts,
     get_baseline_data,
     get_reporting_data,
-    merge_temperature_data,
     remove_duplicates,
     overwrite_partial_rows_with_nan,
 )

@@ -358,7 +358,7 @@ def test_segment_timeseries_three_months_wtd_insufficient(merged_data):
     assert ('Data for this model does not meet the minimum hourly '
             'sufficiency criteria. Month 2') in warnings[0].description
     assert round(warnings[0].data['hourly_coverage'], 4) == \
-        round(((ndays - 5) * 24 + 1)/(ndays * 24), 4)
+        round(((ndays - 5) * 24.0 + 1)/(ndays * 24), 4)
 
 
 def test_feature_hour_of_week(baseline_data):
@@ -921,3 +921,27 @@ def test_caltrack_hourly_predict_design_matrix_failure(baseline_data):
 
 def test_caltrack_hourly_error_propagation():
     pass
+
+def test_caltrack_hourly_empty_model():
+    model = HourlyModel(formula=None,  status='ERROR')
+    model_json = model.json()
+    assert model_json['segment_type'] == None
+    assert model_json['formula'] == None
+    assert model_json['unique_models'] == []
+    with pytest.raises(ValueError) as error:
+        model.predict()
+    assert (
+        'This candidate model cannot be used for prediction because'
+        ' the predict_func attr is not set.' in str(error)
+    )
+
+def test_model_not_attempted_design_matrix_warnings(baseline_data):
+    formula = ('meter_value ~ C(hour_of_week) - 1 + '
+               'bin_0:occupancy + '
+               'bin_1:occupancy + bin_2:occupancy + '
+               'bin_3:occupancy + bin_4:occupancy + '
+               'bin_5:occupancy + bin_6:occupancy')
+    preprocessors = {}
+    model_fit = caltrack_hourly_method(
+            baseline_data, formula, preprocessors)
+    assert model_fit.status == 'NOT ATTEMPTED'
