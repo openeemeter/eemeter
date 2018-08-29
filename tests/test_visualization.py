@@ -6,7 +6,7 @@ matplotlib.use('Agg')
 
 from eemeter import (
     CandidateModel,
-    ModelFit,
+    ModelResults,
     plot_energy_signature,
     plot_time_series,
     plot_caltrack_candidate,
@@ -120,7 +120,7 @@ def test_plot_caltrack_candidate_hdd_cdd_model(predict_func):
     assert data.shape == (60, 2)
 
 
-def test_plot_model_fit(il_electricity_cdd_hdd_daily, predict_func):
+def test_plot_model_results(il_electricity_cdd_hdd_daily, predict_func):
     candidate_model = CandidateModel(
         model_type='model_type',
         formula='formula',
@@ -128,13 +128,13 @@ def test_plot_model_fit(il_electricity_cdd_hdd_daily, predict_func):
         predict_func=predict_func,
         plot_func=plot_caltrack_candidate,
     )
-    model_fit = ModelFit(
+    model_results = ModelResults(
         status='status',
         method_name='method_name',
         model=candidate_model,
         candidates=[candidate_model],
     )
-    ax = model_fit.plot(
+    ax = model_results.plot(
         title='title', with_candidates=True)
     data = ax.lines[0].get_xydata()
     assert data.shape == (70, 2)

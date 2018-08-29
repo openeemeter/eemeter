@@ -217,25 +217,25 @@ CalTRACK Daily Methods
 ----------------------
 
 Running caltrack daily methods is easy once you have the data in the right
-format. This method returns a :any:`eemeter.ModelFit` object::
+format. This method returns a :any:`eemeter.ModelResults` object::
 
-    >>> model_fit = eemeter.caltrack_method(data)
+    >>> model_results = eemeter.caltrack_method(data)
 
 This object can be dumped into a JSON string::
 
     >>> import json
-    >>> model_fit = eemeter.caltrack_method(data)
-    >>> print(json.dumps(model_fit.json(), indent=2))
+    >>> model_results = eemeter.caltrack_method(data)
+    >>> print(json.dumps(model_results.json(), indent=2))
 
 It can be inspected for more detailed information::
 
-    >>> model_fit.r_squared
+    >>> model_results.r_squared_adj
     0.7294645737524558
 
 Or plotted (use with :any:`eemeter.plot_energy_signature` for an overlay on the
 fitted data)::
 
-    >>> model_fit.plot()
+    >>> model_results.plot()
 
 
 CalTRACK Billing Methods
@@ -243,7 +243,7 @@ CalTRACK Billing Methods
 
 Running caltrack billing methods::
 
-    >>> model_fit = eemeter.caltrack_method(data, use_billing_preset=True)
+    >>> model_results = eemeter.caltrack_method(data, use_billing_preset=True)
 
 It is essential that the data used in the CalTRACK billing methods is
 *average daily* period usage (UPDm) and degree day values.
@@ -278,10 +278,10 @@ Use CalTRACK methods on sample data::
           "cooling_balance_point": 65,
           "heating_balance_point": 55
         },
-        "r_squared": 0.7810065909435654,
+        "r_squared_adj": 0.7810065909435654,
         "warnings": []
       },
-      "r_squared": 0.7810065909435654,
+      "r_squared_adj": 0.7810065909435654,
       "warnings": [],
       "metadata": {},
       "settings": {
@@ -352,17 +352,17 @@ Plot a time series of meter data and temperature data
 
 .. image:: _static/plot_time_series.png
 
-Plot a model fit and all candidate models (:any:`eemeter.ModelFit.plot`)
+Plot the selected model and all candidate models (:any:`eemeter.ModelResults.plot`)
 on top of an energy signature::
 
     >>> ax = eemeter.plot_energy_signature(meter_data, temperature_data)
-    >>> model_fit.plot(ax=ax, with_candidates=True)
+    >>> model_results.plot(ax=ax, with_candidates=True)
 
-.. image:: _static/plot_model_fit.png
+.. image:: _static/plot_model_results.png
 
 Plot a single candidate model (:any:`eemeter.CandidateModel.plot`)::
 
-    >>> model_fit.model.plot()
+    >>> model_results.model.plot()
 
 .. image:: _static/plot_candidate.png
 
