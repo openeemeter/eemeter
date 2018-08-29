@@ -2,7 +2,7 @@ __all__ = (
     'CandidateModel',
     'DataSufficiency',
     'EEMeterWarning',
-    'ModelFit',
+    'ModelResults',
 )
 
 
@@ -25,7 +25,7 @@ class CandidateModel(object):
           from the model selection process because of a decision made after
           candidate model fit completed, e.g., a bad fit, or a parameter out
           of acceptable range.
-        - ``'QUALIFIED'``: The candidate model fit is acceptable can be
+        - ``'QUALIFIED'``: The candidate model fit is acceptable and can be
           considered during model selection.
     predict_func : :any:`callable`
         A function of the following form:
@@ -40,7 +40,7 @@ class CandidateModel(object):
         The raw model (if any) used in fitting. Not serialized.
     result : :any:`object`
         The raw modeling result (if any) returned by the `model`. Not serialized.
-    r_squared : :any:`float`
+    r_squared_adj : :any:`float`
         The adjusted r-squared of the candidate model.
     warnings : :any:`list` of :any:`eemeter.EEMeterWarning`
         A list of any warnings reported during creation of the candidate model.
@@ -48,7 +48,7 @@ class CandidateModel(object):
 
     def __init__(
         self, model_type, formula, status, predict_func=None, plot_func=None,
-        model_params=None, model=None, result=None, r_squared=None,
+        model_params=None, model=None, result=None, r_squared_adj=None,
         warnings=None
     ):
         self.model_type = model_type
@@ -56,7 +56,7 @@ class CandidateModel(object):
         self.status = status  # NOT ATTEMPTED | ERROR | QUALIFIED | DISQUALIFIED
         self.model = model
         self.result = result
-        self.r_squared = r_squared
+        self.r_squared_adj = r_squared_adj
         self.predict_func = predict_func
         self.plot_func = plot_func
 
@@ -70,10 +70,10 @@ class CandidateModel(object):
 
     def __repr__(self):
         return (
-            "CandidateModel(model_type='{}', formula='{}', status='{}', r_squared={})"
+            "CandidateModel(model_type='{}', formula='{}', status='{}', r_squared_adj={})"
             .format(
                 self.model_type, self.formula, self.status,
-                round(self.r_squared, 3) if self.r_squared is not None else None
+                round(self.r_squared_adj, 3) if self.r_squared_adj is not None else None
             )
         )
 
@@ -88,7 +88,7 @@ class CandidateModel(object):
             'formula': self.formula,
             'status': self.status,
             'model_params': self.model_params,
-            'r_squared': self.r_squared,
+            'r_squared_adj': self.r_squared_adj,
             'warnings': [w.json() for w in self.warnings],
         }
 
@@ -207,8 +207,8 @@ class EEMeterWarning(object):
         }
 
 
-class ModelFit(object):
-    ''' Contains information about a model fit.
+class ModelResults(object):
+    ''' Contains information about the chosen model.
 
     Attributes
     ----------
@@ -223,7 +223,7 @@ class ModelFit(object):
         The name of the method used to fit the baseline model.
     model : :any:`eemeter.CandidateModel` or :any:`None`
         The selected candidate model, if any.
-    r_squared : :any:`float`
+    r_squared_adj : :any:`float`
         The adjusted r-squared of the selected model.
     candidates : :any:`list` of :any:`eemeter.CandidateModel`
         A list of any model candidates encountered during the model
@@ -242,16 +242,20 @@ class ModelFit(object):
 
     settings : :any:`dict`
         A dictionary of settings used by the method.
+    metrics : :any:`ModelMetrics`
+        A ModelMetrics object, if one is calculated and associated with this
+        model. (This initializes to None.) The ModelMetrics object contains
+        model fit information and descriptive statistics about the underlying data.
     '''
 
     def __init__(
-        self, status, method_name, model=None, r_squared=None,
+        self, status, method_name, model=None, r_squared_adj=None,
         candidates=None, warnings=None, metadata=None, settings=None,
     ):
         self.status = status  # NO DATA | NO MODEL | SUCCESS
         self.method_name = method_name
         self.model = model
-        self.r_squared = r_squared
+        self.r_squared_adj = r_squared_adj
 
         if candidates is None:
             candidates = []
@@ -269,10 +273,12 @@ class ModelFit(object):
             settings = {}
         self.settings = settings
 
+        self.metrics = None
+
     def __repr__(self):
         return (
-            "ModelFit(status='{}', method_name='{}', r_squared={})"
-            .format(self.status, self.method_name, self.r_squared)
+            "ModelResults(status='{}', method_name='{}', r_squared_adj={})"
+            .format(self.status, self.method_name, self.r_squared_adj)
         )
 
     def json(self, with_candidates=False):
@@ -285,11 +291,16 @@ class ModelFit(object):
             'status': self.status,
             'method_name': self.method_name,
             'model': self.model.json() if self.model is not None else None,
-            'r_squared': self.r_squared,
+            'r_squared_adj': self.r_squared_adj,
             'warnings': [w.json() for w in self.warnings],
             'metadata': self.metadata,
             'settings': self.settings,
+            'metrics': None
         }
+        if self.metrics:
+            data['metrics'] = [
+                self.metrics.json()
+            ]
         if with_candidates:
             data['candidates'] = [
                 candidate.json()

@@ -6,18 +6,12 @@ matplotlib.use('Agg')
 
 from eemeter import (
     CandidateModel,
-    ModelFit,
+    ModelResults,
     plot_energy_signature,
     plot_time_series,
     plot_caltrack_candidate,
+    caltrack_predict,
 )
-
-
-@pytest.fixture
-def predict_func():
-    def _predict_func(model_type, model_params, input_):
-        return input_
-    return _predict_func
 
 
 def test_plot_time_series(il_electricity_cdd_hdd_daily):
@@ -39,13 +33,14 @@ def test_plot_energy_signature(il_electricity_cdd_hdd_daily):
     assert ax.get_title() == 'title'
 
 
-def test_plot_caltrack_candidate_qualified(predict_func):
+def test_plot_caltrack_candidate_qualified():
     candidate_model = CandidateModel(
-        model_type='model_type',
+        model_type='intercept_only',
         formula='formula',
         status='QUALIFIED',
-        predict_func=predict_func,
+        predict_func=caltrack_predict,
         plot_func=plot_caltrack_candidate,
+        model_params={'intercept': 1},
     )
     ax = candidate_model.plot(candidate_model, title='title')
     data = ax.lines[0].get_xydata()
@@ -53,39 +48,42 @@ def test_plot_caltrack_candidate_qualified(predict_func):
     assert ax.get_title() == 'title'
 
 
-def test_plot_caltrack_candidate_disqualified(predict_func):
+def test_plot_caltrack_candidate_disqualified():
     candidate_model = CandidateModel(
-        model_type='model_type',
+        model_type='intercept_only',
         formula='formula',
         status='DISQUALIFIED',
-        predict_func=predict_func,
+        predict_func=caltrack_predict,
         plot_func=plot_caltrack_candidate,
+        model_params={'intercept': 1},
     )
     ax = candidate_model.plot()
     data = ax.lines[0].get_xydata()
     assert data.shape == (60, 2)
 
 
-def test_plot_caltrack_candidate_with_range(predict_func):
+def test_plot_caltrack_candidate_with_range():
     candidate_model = CandidateModel(
-        model_type='model_type',
+        model_type='intercept_only',
         formula='formula',
         status='QUALIFIED',
-        predict_func=predict_func,
+        predict_func=caltrack_predict,
         plot_func=plot_caltrack_candidate,
+        model_params={'intercept': 1},
     )
     ax = candidate_model.plot(temp_range=(10, 20))
     data = ax.lines[0].get_xydata()
     assert data.shape == (10, 2)
 
 
-def test_plot_caltrack_candidate_best(predict_func):
+def test_plot_caltrack_candidate_best():
     candidate_model = CandidateModel(
-        model_type='model_type',
+        model_type='intercept_only',
         formula='formula',
         status='QUALIFIED',
-        predict_func=predict_func,
+        predict_func=caltrack_predict,
         plot_func=plot_caltrack_candidate,
+        model_params={'intercept': 1},
     )
     ax = candidate_model.plot(best=True)
     data = ax.lines[0].get_xydata()
@@ -94,25 +92,29 @@ def test_plot_caltrack_candidate_best(predict_func):
 
 def test_plot_caltrack_candidate_error():
     candidate_model = CandidateModel(
-        model_type='model_type',
+        model_type='intercept_only',
         formula='formula',
         status='ERROR',
-        plot_func=plot_caltrack_candidate,
+        plot_func=plot_caltrack_candidate,  # no predict func
+        model_params={'intercept': 1},
     )
     ax = candidate_model.plot()
     assert ax is None
 
 
-def test_plot_caltrack_candidate_hdd_cdd_model(predict_func):
+def test_plot_caltrack_candidate_cdd_hdd_model():
     candidate_model = CandidateModel(
-        model_type='model_type',
+        model_type='cdd_hdd',
         formula='formula',
         status='QUALIFIED',
-        predict_func=predict_func,
+        predict_func=caltrack_predict,
         plot_func=plot_caltrack_candidate,
         model_params={
-            'heating_balance_point': 65,
+            'beta_hdd': 1,
+            'beta_cdd': 1,
             'cooling_balance_point': 65,
+            'heating_balance_point': 65,
+            'intercept': 1,
         },
     )
     ax = candidate_model.plot()
@@ -120,21 +122,22 @@ def test_plot_caltrack_candidate_hdd_cdd_model(predict_func):
     assert data.shape == (60, 2)
 
 
-def test_plot_model_fit(il_electricity_cdd_hdd_daily, predict_func):
+def test_plot_model_results(il_electricity_cdd_hdd_daily):
     candidate_model = CandidateModel(
-        model_type='model_type',
+        model_type='intercept_only',
         formula='formula',
         status='QUALIFIED',
-        predict_func=predict_func,
+        predict_func=caltrack_predict,
         plot_func=plot_caltrack_candidate,
+        model_params={'intercept': 1},
     )
-    model_fit = ModelFit(
+    model_results = ModelResults(
         status='status',
         method_name='method_name',
         model=candidate_model,
         candidates=[candidate_model],
     )
-    ax = model_fit.plot(
+    ax = model_results.plot(
         title='title', with_candidates=True)
     data = ax.lines[0].get_xydata()
     assert data.shape == (70, 2)

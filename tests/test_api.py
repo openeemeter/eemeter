@@ -5,7 +5,7 @@ from eemeter import (
     CandidateModel,
     DataSufficiency,
     EEMeterWarning,
-    ModelFit,
+    ModelResults,
 )
 
 
@@ -27,7 +27,7 @@ def test_candidate_model_minimal():
         'formula': 'formula',
         'model_params': {},
         'model_type': 'model_type',
-        'r_squared': None,
+        'r_squared_adj': None,
         'status': 'status',
         'warnings': []
     }
@@ -74,7 +74,7 @@ def test_candidate_model_json_with_warning():
         'formula': 'formula',
         'model_params': {},
         'model_type': 'model_type',
-        'r_squared': None,
+        'r_squared_adj': None,
         'status': 'status',
         'warnings': [
             {
@@ -146,32 +146,33 @@ def test_eemeter_warning():
     }
 
 
-def test_model_fit_minimal():
-    model_fit = ModelFit(
+def test_model_results_minimal():
+    model_results = ModelResults(
         status='status',
         method_name='method_name',
     )
-    assert model_fit.status == 'status'
-    assert model_fit.method_name == 'method_name'
-    assert model_fit.model is None
-    assert model_fit.r_squared is None
-    assert model_fit.candidates == []
-    assert model_fit.warnings == []
-    assert model_fit.metadata == {}
-    assert model_fit.settings == {}
-    assert str(model_fit).startswith('ModelFit')
-    assert model_fit.json() == {
+    assert model_results.status == 'status'
+    assert model_results.method_name == 'method_name'
+    assert model_results.model is None
+    assert model_results.r_squared_adj is None
+    assert model_results.candidates == []
+    assert model_results.warnings == []
+    assert model_results.metadata == {}
+    assert model_results.settings == {}
+    assert str(model_results).startswith('ModelResults')
+    assert model_results.json() == {
         'metadata': {},
         'method_name': 'method_name',
+        'metrics': None,
         'model': None,
         'settings': {},
         'status': 'status',
-        'r_squared': None,
+        'r_squared_adj': None,
         'warnings': [],
     }
 
 
-def test_model_fit_json_with_objects():
+def test_model_results_json_with_objects():
     candidate_model = CandidateModel(
         model_type='model_type',
         formula='formula',
@@ -182,35 +183,36 @@ def test_model_fit_json_with_objects():
         description='description',
         data={}
     )
-    model_fit = ModelFit(
+    model_results = ModelResults(
         status='status',
         method_name='method_name',
         model=candidate_model,
         candidates=[candidate_model],
         warnings=[eemeter_warning],
     )
-    assert model_fit.json(with_candidates=True) == {
+    assert model_results.json(with_candidates=True) == {
         'candidates': [{
             'formula': 'formula',
             'model_params': {},
             'model_type': 'model_type',
-            'r_squared': None,
+            'r_squared_adj': None,
             'status': 'status',
             'warnings': []
         }],
         'metadata': {},
         'method_name': 'method_name',
+        'metrics': None,
         'model': {
             'formula': 'formula',
             'model_params': {},
             'model_type': 'model_type',
-            'r_squared': None,
+            'r_squared_adj': None,
             'status': 'status',
             'warnings': []
         },
         'settings': {},
         'status': 'status',
-        'r_squared': None,
+        'r_squared_adj': None,
         'warnings': [{
             'data': {},
             'description': 'description',

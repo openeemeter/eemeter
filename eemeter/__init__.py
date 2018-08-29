@@ -19,7 +19,7 @@ from .api import (
     CandidateModel,
     DataSufficiency,
     EEMeterWarning,
-    ModelFit,
+    ModelResults,
 )
 from .caltrack import (
     caltrack_method,
