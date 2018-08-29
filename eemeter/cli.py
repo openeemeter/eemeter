@@ -5,9 +5,11 @@ import click
 
 from eemeter import (
     caltrack_method,
+    compute_usage_per_day_feature,
+    compute_temperature_features,
     meter_data_from_csv,
     temperature_data_from_csv,
-    merge_temperature_data,
+    merge_features,
 )
 
 
@@ -79,11 +81,16 @@ def _get_data(
     else:
         raise click.ClickException('Temperature data not specified.')
 
-    return merge_temperature_data(
-        meter_data, temperature_data,
+    usage_per_day = compute_usage_per_day_feature(meter_data)
+    temperature_features = compute_temperature_features(
+        meter_data.index, temperature_data,
         heating_balance_points=heating_balance_points,
         cooling_balance_points=cooling_balance_points,
     )
+    return merge_features([
+        usage_per_day,
+        temperature_features,
+    ])
 
 
 @cli.command()

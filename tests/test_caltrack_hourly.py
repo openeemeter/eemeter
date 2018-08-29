@@ -7,15 +7,17 @@ import eemeter
 
 from eemeter import (
     load_sample,
-    merge_temperature_data,
     get_baseline_data,
-    segment_timeseries,
     get_feature_hour_of_week,
     get_feature_occupancy,
     get_feature_binned_temperatures,
     get_design_matrix,
     caltrack_hourly_method,
     caltrack_hourly_predict,
+    compute_usage_per_day_feature,
+    compute_temperature_features,
+    merge_features,
+    segment_time_series,
 )
 
 from eemeter.api import (
@@ -28,8 +30,14 @@ from eemeter.api import (
 def merged_data():
     meter_data, temperature_data, metadata = \
         load_sample('il-electricity-cdd-hdd-hourly')
-    merged_data = merge_temperature_data(meter_data, temperature_data)
-    return merged_data
+    usage_per_day = compute_usage_per_day_feature(meter_data)
+    temperature_features = compute_temperature_features(
+        meter_data.index, temperature_data,
+    )
+    return merge_features([
+        usage_per_day,
+        temperature_features,
+    ])
 
 
 @pytest.fixture
