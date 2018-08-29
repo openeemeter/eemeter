@@ -40,9 +40,9 @@ from .caltrack import (
     plot_caltrack_candidate,
     select_best_candidate,
 )
-from eemeter.derivative import (
-    caltrack_metered_savings,
-    caltrack_modeled_savings
+from eemeter.derivatives import (
+    metered_savings,
+    modeled_savings
 )
 from .caltrack_hourly import (
     get_feature_hour_of_week,

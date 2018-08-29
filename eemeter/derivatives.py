@@ -1,10 +1,9 @@
-
 __all__ = (
-    'caltrack_metered_savings',
-    'caltrack_modeled_savings',
+    'metered_savings',
+    'modeled_savings',
 )
 
-def caltrack_metered_savings(
+def metered_savings(
     baseline_model, reporting_meter_data, temperature_data,
     degree_day_method='daily', with_disaggregated=False,
 ):
@@ -82,7 +81,7 @@ def caltrack_metered_savings(
     return results.dropna().reindex(results.index)
 
 
-def caltrack_modeled_savings(
+def modeled_savings(
     baseline_model, reporting_model, result_index, temperature_data,
     degree_day_method='daily', with_disaggregated=False,
 ):
