@@ -1,25 +1,127 @@
 import pandas as pd
-
+from patsy import dmatrix
 
 __all__ = (
     'iterate_segmented_dataset',
     'segment_time_series',
+    'SegmentModel',
+    'SegmentedModel'
 )
 
 
-def iterate_segmented_dataset(data, segmentation=None):
-    if segmentation is None:
-        yield None, pd.merge(
-            data, pd.DataFrame({'weight': 1}, index=data.index),
+class SegmentModel(object):
+
+    def __init__(self, segment_name, model, formula, model_params, warnings=None):
+        self.segment_name = segment_name
+        self.model = model
+        self.formula = formula
+        self.model_params = model_params
+
+        if warnings is None:
+            warnings = []
+        self.warnings = warnings
+
+    def predict(self, data):
+        design_matrix_granular = dmatrix(
+            self.formula.split('~', 1)[1],
+            data, return_type='dataframe')
+
+        parameters = pd.Series(self.model_params)
+        prediction = design_matrix_granular.dot(parameters)\
+            .rename(columns={0: 'predicted_usage'})
+        return prediction
+
+
+class SegmentedModel(object):
+
+    def __init__(
+        self, segment_models, prediction_segment_type,
+        prediction_segment_name_mapping=None,
+        prediction_feature_processor=None,
+        prediction_feature_processor_kwargs=None,
+    ):
+        self.segment_models = segment_models
+
+        fitted_model_lookup = {
+            segment_model.segment_name: segment_model
+            for segment_model in segment_models
+        }
+        if prediction_segment_name_mapping is None:
+            self.model_lookup = fitted_model_lookup
+        else:
+            self.model_lookup = {
+                prediction_segment_name: fitted_model_lookup.get(fitted_segment_name)
+                for prediction_segment_name, fitted_segment_name
+                in prediction_segment_name_mapping.items()
+            }
+        self.prediction_segment_type = prediction_segment_type
+        self.prediction_segment_name_mapping = prediction_segment_name_mapping
+        self.prediction_feature_processor = prediction_feature_processor
+        self.prediction_feature_processor_kwargs = prediction_feature_processor_kwargs
+
+    def predict(self, prediction_index, temperature):
+        prediction_segmentation = segment_time_series(
+            temperature.index, self.prediction_segment_type
+        )
+        iterator = iterate_segmented_dataset(
+            temperature.to_frame('temperature_mean'),
+            segmentation=prediction_segmentation,
+            feature_processor=self.prediction_feature_processor,
+            feature_processor_kwargs=self.prediction_feature_processor_kwargs,
+            feature_processor_segment_name_mapping=self.prediction_segment_name_mapping
+
+        )
+        predictions = {}
+        for segment_name, segmented_data in iterator:
+            segment_model = self.model_lookup.get(segment_name)
+            if segment_model is None:
+                continue
+            prediction = segment_model.predict(segmented_data).reindex(prediction_index)
+            predictions[segment_name] = prediction
+        predictions = pd.DataFrame(predictions)
+        return predictions.sum(axis=1)
+
+
+def iterate_segmented_dataset(
+    data, segmentation=None, feature_processor=None,
+    feature_processor_kwargs=None,
+    feature_processor_segment_name_mapping=None,
+):
+
+    if feature_processor_kwargs is None:
+        feature_processor_kwargs = {}
+
+    if feature_processor_segment_name_mapping is None:
+        feature_processor_segment_name_mapping = {}
+
+    def _apply_feature_processor(segment_name, segment_data):
+        feature_processor_segment_name = \
+            feature_processor_segment_name_mapping.get(
+                segment_name, segment_name)
+
+        if feature_processor is not None:
+            segment_data = feature_processor(
+                feature_processor_segment_name, segment_data,
+                **feature_processor_kwargs)
+        return segment_data
+
+    def _add_weights(data, weights):
+        return pd.merge(
+            data, weights,
             left_index=True, right_index=True
-        )  # add weight column
+        )[weights.weight > 0]  # take only non zero weights
+
+    if segmentation is None:
+        # spoof segment name and weights column
+        segment_name = None
+        weights = pd.DataFrame({'weight': 1}, index=data.index)
+        segment_data = _add_weights(data, weights)
+        yield segment_name, _apply_feature_processor(segment_name, segment_data)
     else:
         for segment_name, segment_weights in segmentation.iteritems():
-            segment_data = pd.merge(
-                data, segment_weights.to_frame('weight'),
-                left_index=True, right_index=True
-            )[segment_weights > 0]  # take only non zero weights
-            yield segment_name, segment_data
+            weights = segment_weights.to_frame('weight')
+            segment_data = _add_weights(data, weights)
+            yield segment_name, _apply_feature_processor(segment_name, segment_data)
 
 
 def _get_calendar_year_coverage_warning(index):
@@ -141,3 +243,22 @@ def segment_time_series(index, segment_type='single'):
     _get_calendar_year_coverage_warning(index)  # whole index
 
     return segment_weights
+
+
+def fit_segmented_model(
+    segmented_dataset_dict, fit_segment, prediction_segment_type,
+    prediction_segment_name_mapping, prediction_feature_processor,
+    prediction_feature_processor_kwargs,
+):
+    segment_models = []
+    for segment_name, segment_data in segmented_dataset_dict.items():
+        segment_model = fit_segment(segment_name, segment_data)
+        segment_models.append(segment_model)
+    segmented_model = SegmentedModel(
+        segment_models,
+        prediction_segment_type=prediction_segment_type,
+        prediction_segment_name_mapping=prediction_segment_name_mapping,
+        prediction_feature_processor=prediction_feature_processor,
+        prediction_feature_processor_kwargs=prediction_feature_processor_kwargs,
+    )
+    return segmented_model

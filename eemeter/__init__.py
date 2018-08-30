@@ -40,7 +40,7 @@ from .caltrack import (
     plot_caltrack_candidate,
     select_best_candidate,
 )
-from eemeter.derivatives import (
+from .derivatives import (
     metered_savings,
     modeled_savings
 )
@@ -51,10 +51,15 @@ from .caltrack_hourly import (
     get_design_matrix,
     caltrack_hourly_method,
     caltrack_hourly_predict,
+    caltrack_hourly_fit_feature_processor,
+    caltrack_hourly_prediction_feature_processor,
+    fit_hourly_model_segment,
 )
 from .features import (
     compute_usage_per_day_feature,
+    compute_occupancy_feature,
     compute_temperature_features,
+    compute_temperature_bin_features,
     compute_time_features,
     estimate_hour_of_week_occupancy,
     fit_temperature_bins,
@@ -63,6 +68,9 @@ from .features import (
 from .segmentation import (
     iterate_segmented_dataset,
     segment_time_series,
+    fit_segmented_model,
+    SegmentModel,
+    SegmentedModel,
 )
 from .exceptions import (
     EEMeterError,

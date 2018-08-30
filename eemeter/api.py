@@ -9,6 +9,7 @@ __all__ = (
     'ModelPrediction',
 )
 
+
 from collections import namedtuple
 
 ModelPrediction =   namedtuple("ModelPrediction" , ['result', 'design_matrix', 'warnings'])

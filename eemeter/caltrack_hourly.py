@@ -1,18 +1,34 @@
+import traceback
+import warnings as ws
 
 import numpy as np
 import pandas as pd
+from patsy import ModelDesc, dmatrix
+from schema import Schema, SchemaError
+import statsmodels.formula.api as smf
+
 from .api import (
     EEMeterWarning,
     ModelFit,
     HourlyModel,
-    ModelPrediction
+    ModelPrediction,
 )
-import statsmodels.formula.api as smf
-from patsy import ModelDesc, dmatrix
-import traceback
-import warnings as ws
-from schema import Schema, SchemaError
-pd.options.mode.chained_assignment = None
+from .features import (
+    compute_time_features,
+    compute_temperature_bin_features,
+    compute_occupancy_feature,
+    merge_features,
+)
+from .segmentation import (
+    SegmentModel,
+)
+
+
+__all__ = (
+    'caltrack_hourly_fit_feature_processor',
+    'caltrack_hourly_prediction_feature_processor',
+    'fit_hourly_model_segment',
+)
 
 
 def get_calendar_year_coverage_warning(baseline_data_segmented):
@@ -709,12 +725,12 @@ def get_missing_features_warning(formula, columns):
 
 def get_terms_in_formula(formula):
     model_desc = ModelDesc.from_formula(formula)
-    term_list = []
-    for side in [model_desc.lhs_termlist, model_desc.rhs_termlist]:
-        for term in side:
-            for factor in term.factors:
-                term_list.extend([factor.name()])
-    return pd.Series(term_list).str.replace('^C\(|\)', '').tolist()
+    return sorted(set(
+        factor.name().replace('C(', '').replace(')', '')
+        for side in [model_desc.lhs_termlist, model_desc.rhs_termlist]
+        for term in side
+        for factor in term.factors
+    ))
 
 
 def get_single_model(data, formula):
@@ -970,3 +986,91 @@ def caltrack_hourly_predict(
     return ModelPrediction(result=results,
                            design_matrix=design_matrix_granular,
                            warnings=predict_warnings)
+
+
+def caltrack_hourly_fit_feature_processor(
+    segment_name, segmented_data, occupancy_lookup, temperature_bins
+):
+    # get occupied feature
+    hour_of_week = segmented_data.hour_of_week
+    occupancy = occupancy_lookup[segment_name]
+    occupancy_feature = compute_occupancy_feature(hour_of_week, occupancy)
+
+    # get temperature bin features
+    temperatures = segmented_data.temperature_mean
+    bin_endpoints_list = temperature_bins[segment_name]\
+        .index[temperature_bins[segment_name]].tolist()
+    # TODO(philngo): combine with compute_temperature_features
+    temperature_bin_features = compute_temperature_bin_features(
+        segmented_data.temperature_mean,
+        bin_endpoints_list,
+    )
+
+    # combine features
+    return merge_features([
+        segmented_data[['meter_value', 'hour_of_week']],
+        occupancy_feature,
+        temperature_bin_features,
+        segmented_data.weight
+    ])
+
+
+def caltrack_hourly_prediction_feature_processor(
+    segment_name, segmented_data, occupancy_lookup, temperature_bins
+):
+    # hour of week feature
+    hour_of_week_feature = compute_time_features(segmented_data.index)
+
+    # occupancy feature
+    occupancy = occupancy_lookup[segment_name]
+    occupancy_feature = compute_occupancy_feature(
+        hour_of_week_feature.hour_of_week, occupancy
+    )
+
+    # get temperature bin features
+    temperatures = segmented_data
+    bin_endpoints_list = temperature_bins[segment_name]\
+        .index[temperature_bins[segment_name]].tolist()
+    # TODO(philngo): combine with compute_temperature_features
+    temperature_bin_features = compute_temperature_bin_features(
+        segmented_data.temperature_mean,
+        bin_endpoints_list,
+    )
+
+    # combine features
+    return merge_features([
+        hour_of_week_feature,
+        occupancy_feature,
+        temperature_bin_features,
+        segmented_data.weight
+    ])
+
+
+def get_hourly_model_formula(data):
+    bin_occupancy_interactions = ''.join([
+        ' + {}:occupancy'.format(c)
+        for c in data.columns if 'bin' in c
+    ])
+    return (
+        'meter_value ~ C(hour_of_week) - 1{}'
+        .format(bin_occupancy_interactions)
+    )
+
+
+def fit_hourly_model_segment(segment_name, segment_data):
+    formula = get_hourly_model_formula(segment_data)
+    model = smf.wls(
+        formula=formula,
+        data=segment_data,
+        weights=segment_data.weight
+    )
+    model_params = {
+        coeff: value
+        for coeff, value in model.fit().params.items()
+    }
+    warnings = []
+    return SegmentModel(
+        segment_name=segment_name, model=model,
+        formula=formula, model_params=model_params,
+        warnings=warnings
+    )

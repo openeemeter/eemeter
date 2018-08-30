@@ -14,7 +14,9 @@ import statsmodels.formula.api as smf
 
 __all__ = (
     'compute_usage_per_day_feature',
+    'compute_occupancy_feature',
     'compute_temperature_features',
+    'compute_temperature_bin_features',
     'compute_time_features',
     'estimate_hour_of_week_occupancy',
     'fit_temperature_bins'
@@ -57,7 +59,7 @@ def compute_time_features(index, hour_of_week=True):
             ).astype('category'),
         }, index=index)
     else:
-        time_features = pd.DataFrame({}, index=True)
+        time_features = pd.DataFrame({}, index=index)
 
     # TODO: do something with this
     _get_missing_hours_of_week_warning()
@@ -526,5 +528,45 @@ def fit_temperature_bins(
     )
 
 
-# assign temperature bins
-# fit and predict methods
+def compute_temperature_bin_features(temperatures, bin_endpoints):
+    bin_endpoints = [-np.inf] + bin_endpoints + [np.inf]
+
+    bins = {}
+
+    for i, (left_bin, right_bin) in enumerate(
+            zip(bin_endpoints, bin_endpoints[1:])):
+
+        bin_name = 'bin_{}'.format(i)
+
+        in_bin = (temperatures > left_bin) & (temperatures <= right_bin)
+        gt_bin = temperatures > right_bin
+
+        not_in_bin_index = temperatures.index[~in_bin]
+        gt_bin_index = temperatures.index[gt_bin]
+
+        def _expand_and_fill(partial_temp_series):
+            return partial_temp_series.reindex(temperatures.index, fill_value=0)
+
+        def _mask_nans(temp_series):
+            return temp_series[temperatures.notnull()].reindex(temperatures.index)
+
+        if i == 0:
+            temps_in_bin = _expand_and_fill(temperatures[in_bin])
+            temps_out_of_bin = _expand_and_fill(pd.Series(right_bin, index=not_in_bin_index))
+            bin_values = temps_in_bin + temps_out_of_bin
+        else:
+            temps_in_bin = _expand_and_fill(temperatures[in_bin] - left_bin)
+            temps_gt_bin = _expand_and_fill(pd.Series(right_bin - left_bin, index=gt_bin_index))
+            bin_values = temps_in_bin + temps_gt_bin
+        bins[bin_name] = _mask_nans(bin_values)
+    return pd.DataFrame(bins)
+
+
+def compute_occupancy_feature(hour_of_week, occupancy):
+    return pd.merge(
+        hour_of_week.to_frame(),
+        occupancy.to_frame('occupancy'),
+        how='left',
+        left_on='hour_of_week',
+        right_index=True,
+    ).occupancy
