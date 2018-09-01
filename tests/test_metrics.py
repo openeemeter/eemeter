@@ -9,6 +9,8 @@ from eemeter import (
 from eemeter.metrics import (
     _compute_r_squared,
     _compute_r_squared_adj,
+    _compute_rmse,
+    _compute_rmse_adj,
     _compute_cvrmse,
     _compute_cvrmse_adj,
     _compute_mape,
@@ -127,12 +129,17 @@ def test_compute_r_squared_adj(sample_data_merged):
     
 def test_compute_cvrmse(sample_data_merged):
     combined = sample_data_merged
-    assert round(_compute_cvrmse(combined), 3) == 0.394
+    observed_mean = combined['observed'].mean()
+    assert round(_compute_cvrmse(_compute_rmse(combined),observed_mean), 3) == 0.394
     
     
 def test_compute_cvrmse_adj(sample_data_merged):
     combined = sample_data_merged
-    assert round(_compute_cvrmse_adj(combined, 5, 2), 3) == 0.509
+    observed_mean = combined['observed'].mean()
+    observed_length = len(combined['observed'])
+    num_parameters = 2
+    assert round(_compute_cvrmse_adj(_compute_rmse_adj(combined, observed_length,
+        num_parameters), observed_mean), 3) == 0.509
     
     
 def test_compute_mape(sample_data_merged):

@@ -122,6 +122,11 @@ def _caltrack_predict_design_matrix(
 
     if isinstance(data.index, pd.DatetimeIndex):
         days_per_period = day_counts(zeros)
+    else:
+        try:
+            days_per_period = data['n_days']
+        except KeyError:
+            raise KeyError('Data needs DatetimeIndex or an n_days column.')
 
     # TODO(philngo): handle different degree day methods and hourly temperatures
     if model_type in ['intercept_only', 'hdd_only', 'cdd_only', 'cdd_hdd']:
@@ -131,8 +136,6 @@ def _caltrack_predict_design_matrix(
             base_load = intercept * days_per_period
         else:
             base_load = intercept * ones
-        # The last row of data was nan -- Restore the NaN
-        base_load[-1] = np.nan
     elif model_type is None:
         raise ValueError('Model not valid for prediction: model_type=None')
     else:
@@ -175,6 +178,17 @@ def _caltrack_predict_design_matrix(
             cooling_load = cdd * beta_cdd / days_per_period
     else:
         cooling_load = zeros
+
+    # If any of the rows of input data contained NaNs, restore the NaNs
+    # Note: If data contains ANY NaNs at all, this declares the entire row a NaN.
+    # TODO(philngo): Consider making this more nuanced.
+    def _restore_nans(load):
+        load = load[data.sum(axis=1, skipna=False).notnull()].reindex(data.index)
+        return load
+
+    base_load = _restore_nans(base_load)
+    heating_load = _restore_nans(heating_load)
+    cooling_load = _restore_nans(cooling_load)
 
     if disaggregated:
         return pd.DataFrame({
@@ -1071,7 +1085,8 @@ def caltrack_method(
         A DataFrame containing at least the column ``meter_value`` and 1 to n
         columns each of the form ``hdd_<heating_balance_point>``
         and ``cdd_<cooling_balance_point>``. DataFrames of this form can be
-        made using the :any:`eemeter.merge_temperature_data` method.
+        made using the :any:`eemeter.merge_temperature_data` method. Should
+        have a :any:`pandas.DatetimeIndex`.
     fit_cdd : :any:`bool`, optional
         If True, fit CDD models unless overridden by ``fit_cdd_only`` or
         ``fit_cdd_hdd`` flags. Should be set to ``False`` for gas meter data.
@@ -1214,14 +1229,26 @@ def caltrack_method(
         else:
             num_parameters = 0
 
-        predicted = _caltrack_predict_design_matrix(
+        predicted_avgs = _caltrack_predict_design_matrix(
             best_candidate.model_type,
             best_candidate.model_params,
             data,
             input_averages = True,
             output_averages = True,
         )
-        model_result.metrics = ModelMetrics(data.meter_value, predicted, num_parameters)
+        model_result.avgs_metrics = ModelMetrics(data.meter_value, predicted_avgs, num_parameters)
+
+        predicted_totals = _caltrack_predict_design_matrix(
+            best_candidate.model_type,
+            best_candidate.model_params,
+            data,
+            input_averages = True,
+            output_averages = False,
+        )
+
+        days_per_period = day_counts(data)
+        data_totals = data.meter_value*days_per_period
+        model_result.totals_metrics = ModelMetrics(data_totals, predicted_totals, num_parameters)
 
     return model_result
 
@@ -1473,21 +1500,59 @@ def caltrack_sufficiency_criteria(
         }
     )
 
+def _compute_ols_error(
+    t_stat, rmse_base_residuals, post_obs, base_obs, base_avg, post_avg, base_var, nprime
+):
+    ols_model_agg_error = ((t_stat * rmse_base_residuals * post_obs)
+        / (base_obs ** 0.5) * (1 + ((base_avg - post_avg) ** 2 / base_var)) ** 0.5)
+
+    ols_noise_agg_error = (t_stat * rmse_base_residuals
+        * (post_obs * base_obs / nprime) ** 0.5)
+
+    ols_total_agg_error = (ols_model_agg_error ** 2 + ols_noise_agg_error ** 2) ** 0.5
+
+    return ols_total_agg_error, ols_model_agg_error, ols_noise_agg_error
+
+def _compute_fsu_error(
+    t_stat, frequency, post_obs, total_base_energy, rmse_base_residuals, base_avg, base_obs,
+    nprime
+):
+    if frequency == "billing":
+        a_coeff = -0.00022
+        b_coeff = 0.03306
+        c_coeff = 0.94054
+        months_reporting = post_obs
+    else:
+        a_coeff = -0.00024
+        b_coeff = 0.03535
+        c_coeff = 1.00286
+        months_reporting = post_obs / 30
+
+    fsu_error_band = (total_base_energy
+        * (t_stat * (a_coeff * months_reporting ** 2 + b_coeff * months_reporting + c_coeff) 
+        * (rmse_base_residuals / base_avg)
+        * ((base_obs / nprime) * (1 + (2 / nprime)) * (1 / post_obs)) ** 0.5))
+
+    return fsu_error_band
 
 def caltrack_metered_savings(
-    baseline_model, reporting_meter_data, temperature_data,
-    degree_day_method='daily', with_disaggregated=False,
+    model_results, reporting_meter_data, temperature_data,
+    degree_day_method='daily', with_disaggregated=False, frequency='unknown',
+    t_stat=1.649
 ):
     ''' Compute metered savings, i.e., savings in which the baseline model
     is used to calculate the modeled usage in the reporting period. This
     modeled usage is then compared to the actual usage from the reporting period.
+    Also compute two measures of the uncertainty of the aggregate savings estimate,
+    a fractional savings uncertainty (FSU) error band and an OLS error band. (To convert
+    the FSU error band into FSU, divide by total estimated savings.)
 
     Parameters
     ----------
-    baseline_model : :any:`eemeter.CandidateModel`
-        Model to use for predicting pre-intervention usage.
+    model_results : :any:`eemeter.ModelResults`
+        ModelResult object to use for predicting pre-intervention usage.
     reporting_meter_data : :any:`pandas.DataFrame`
-        The observed reporting period data. Savings will be computed for the
+        The observed reporting period data (totals). Savings will be computed for the
         periods supplied in the reporting period data.
     temperature_data : :any:`pandas.Series`
         Hourly-frequency timeseries of temperature data during the reporting
@@ -1499,6 +1564,15 @@ def caltrack_metered_savings(
         If True, calculate baseline counterfactual disaggregated usage
         estimates. Savings cannot be disaggregated for metered savings. For
         that, use :any:`eemeter.caltrack_modeled_savings`.
+    frequency : :any`str`, optional
+        The frequency used for calculating the FSU error band. Frequency can be
+        ``'billing'`` or ``'daily'``. If frequency is anything else, the FSU and OLS
+        error bands will not be calculated.
+    t_stat : :any`float`
+        The t-statistic associated with the desired confidence level and degrees of
+        freedom (number of baseline observations minus the number of parameters).
+        Defaults to 1.649, the t-statistic associated with 363 degrees of freedom (365
+        observations minus two parameters) and a two-tailed 90% confidence level.
 
     Returns
     -------
@@ -1517,12 +1591,15 @@ def caltrack_metered_savings(
         - ``counterfactual_heating_load``
         - ``counterfactual_cooling_load``
 
+    error_bands : :any:`dict`, optional
+        If frequency is 'daily' or 'billing', will also return a dictionary of FSU and
+        OLS error bands for the aggregated energy savings over the post period.
     '''
     prediction_index = reporting_meter_data.index
-    predicted_baseline_usage = baseline_model.predict(
+    predicted_baseline_usage = model_results.model.predict(
         temperature_data, prediction_index, degree_day_method,
-        with_disaggregated=True
-    )
+        with_disaggregated=True)
+
     # CalTrack 3.5.1
     counterfactual_usage = predicted_baseline_usage['predicted_usage']\
         .to_frame('counterfactual_usage')
@@ -1546,7 +1623,45 @@ def caltrack_metered_savings(
         })
         results = results.join(counterfactual_usage_disaggregated)
 
-    return results.dropna().reindex(results.index)
+    error_bands = None
+
+    if frequency == 'daily' or frequency == 'billing':
+        num_parameters = model_results.totals_metrics.num_parameters
+
+        base_obs = model_results.totals_metrics.observed_length
+        post_obs = results['reporting_observed'].dropna().shape[0]
+
+        rmse_base_residuals = model_results.totals_metrics.rmse_adj
+        autocorr_resid = model_results.totals_metrics.autocorr_resid
+
+        base_avg = model_results.totals_metrics.observed_mean
+        post_avg = results['reporting_observed'].mean()
+        post_prediction_avg = results['counterfactual_usage'].mean()
+
+        base_var = model_results.totals_metrics.observed_variance
+
+        nprime = base_obs * (1 - autocorr_resid) / (1 + autocorr_resid)
+
+        total_base_energy = base_avg * base_obs
+
+        ols_total_agg_error, ols_model_agg_error, ols_noise_agg_error =_compute_ols_error(
+            t_stat, rmse_base_residuals, post_obs, base_obs, base_avg, post_avg, base_var,
+            nprime
+        )
+
+        fsu_error_band = _compute_fsu_error(
+            t_stat, frequency, post_obs, total_base_energy, rmse_base_residuals, base_avg,
+            base_obs, nprime
+        )
+
+        error_bands = {
+            "FSU Error Band": fsu_error_band,
+            "OLS Error Band": ols_total_agg_error,
+            "OLS Error Band: Model Error": ols_model_agg_error,
+            "OLS Error Band: Noise": ols_noise_agg_error
+        }
+
+    return results.dropna().reindex(results.index), error_bands
 
 
 def caltrack_modeled_savings(

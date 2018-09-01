@@ -242,10 +242,16 @@ class ModelResults(object):
 
     settings : :any:`dict`
         A dictionary of settings used by the method.
-    metrics : :any:`ModelMetrics`
+    totals_metrics : :any:`ModelMetrics`
         A ModelMetrics object, if one is calculated and associated with this
         model. (This initializes to None.) The ModelMetrics object contains
-        model fit information and descriptive statistics about the underlying data.
+        model fit information and descriptive statistics about the underlying data,
+        with that data expressed as period totals.
+    avgs_metrics : :any:`ModelMetrics`
+        A ModelMetrics object, if one is calculated and associated with this
+        model. (This initializes to None.) The ModelMetrics object contains
+        model fit information and descriptive statistics about the underlying data,
+        with that data expressed as daily averages.
     '''
 
     def __init__(
@@ -273,7 +279,8 @@ class ModelResults(object):
             settings = {}
         self.settings = settings
 
-        self.metrics = None
+        self.totals_metrics = None
+        self.avgs_metrics = None
 
     def __repr__(self):
         return (
@@ -295,11 +302,16 @@ class ModelResults(object):
             'warnings': [w.json() for w in self.warnings],
             'metadata': self.metadata,
             'settings': self.settings,
-            'metrics': None
+            'totals_metrics': None,
+            'avgs_metrics': None
         }
-        if self.metrics:
-            data['metrics'] = [
-                self.metrics.json()
+        if self.totals_metrics:
+            data['totals_metrics'] = [
+                self.totals_metrics.json()
+            ]
+        if self.avgs_metrics:
+            data['avgs_metrics'] = [
+                self.avgs_metrics.json()
             ]
         if with_candidates:
             data['candidates'] = [
