@@ -42,11 +42,16 @@ def plot_time_series(meter_data, temperature_data, **kwargs):
     default_kwargs.update(kwargs)
     fig, ax1 = plt.subplots(**default_kwargs)
 
-    ax1.plot(meter_data.index, meter_data.value, color='C0', label='Energy Use')
+    ax1.plot(
+        meter_data.index, meter_data.value,
+        color='C0', label='Energy Use', drawstyle='steps-post'
+    )
     ax1.set_ylabel('Energy Use')
 
     ax2 = ax1.twinx()
-    ax2.plot(temperature_data.index, temperature_data, color='C1', label='Temperature', alpha=0.8)
+    ax2.plot(
+        temperature_data.index, temperature_data,
+        color='C1', label='Temperature', alpha=0.8)
     ax2.set_ylabel('Temperature')
 
     fig.legend()
