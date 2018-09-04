@@ -449,7 +449,6 @@ def test_caltrack_predict_design_matrix_input_avg_false_output_avg_true(
          input_averages = False,
          output_averages = True
     )
-    print(prediction)
     assert round(prediction.mean(), 3) == 28.253
 
 
@@ -468,7 +467,6 @@ def test_caltrack_predict_design_matrix_input_avg_false_output_avg_false(
          input_averages = False,
          output_averages = False
     )
-    print(prediction)
     assert round(prediction.mean(), 3) == 855.832
 
 
@@ -500,7 +498,6 @@ def test_caltrack_predict_design_matrix_input_avg_true_output_avg_false(
          input_averages = True,
          output_averages = False
     )
-    print(prediction)
     assert round(prediction.mean(), 3) == 855.832
 
 
@@ -519,9 +516,30 @@ def test_caltrack_predict_design_matrix_input_avg_true_output_avg_true(
          input_averages = True,
          output_averages = True
     )
-    print(prediction)
     assert round(prediction.mean(), 3) == 28.253
 
+
+
+def test_caltrack_predict_design_matrix_n_days(
+    cdd_hdd_h53_c68_billing_monthly_totals
+):
+    # This makes sure that the method works with n_days when
+    # DatetimeIndexes are not available.
+    data = cdd_hdd_h53_c68_billing_monthly_totals
+    data.reset_index()
+    data['n_days'] = 1
+    prediction = _caltrack_predict_design_matrix(
+         'cdd_hdd',
+         {'intercept': 13.420093629452852,
+         'beta_cdd': 2.257868665412409,
+         'beta_hdd': 1.0479347638717025,
+         'cooling_balance_point': 67,
+         'heating_balance_point': 54},
+         data,
+         input_averages = True,
+         output_averages = True
+    )
+    assert prediction.mean() is not None
 
 def test_get_too_few_non_zero_degree_day_warning_ok():
     warnings = get_too_few_non_zero_degree_day_warning(
@@ -1291,11 +1309,17 @@ def test_caltrack_method_num_parameters_equals_zero():
         'meter_value': [6, 1, 1, 6],
         'cdd_65': [5, 0, 0.1, 0],
         'hdd_65': [0, 0.1, 0.1, 5],
-    })
+        'start': pd.date_range(
+            start='2016-01-02', periods=4, freq='D', tz='UTC'),
+    }).set_index('start')
+
     model_results = caltrack_method(
         data, fit_intercept_only=True
     )
-    assert model_results.metrics.cvrmse == model_results.metrics.cvrmse_adj
+    assert model_results.totals_metrics.num_parameters == model_results.totals_metrics.num_parameters
+    assert model_results.avgs_metrics.num_parameters == model_results.avgs_metrics.num_parameters
+    assert model_results.totals_metrics.cvrmse == model_results.totals_metrics.cvrmse_adj
+    assert model_results.avgs_metrics.cvrmse == model_results.avgs_metrics.cvrmse_adj
 
 
 def test_caltrack_method_no_model():
@@ -1652,6 +1676,12 @@ def baseline_model(cdd_hdd_h60_c65):
 
 
 @pytest.fixture
+def baseline_model_results(cdd_hdd_h60_c65):
+    model_results = caltrack_method(cdd_hdd_h60_c65)
+    return model_results
+
+
+@pytest.fixture
 def reporting_model(cdd_hdd_h60_c65):
     model_results = caltrack_method(cdd_hdd_h60_c65)
     return model_results.model
@@ -1670,12 +1700,12 @@ def reporting_temperature_data():
 
 
 def test_caltrack_metered_savings_cdd_hdd(
-    baseline_model, reporting_meter_data, reporting_temperature_data
+    baseline_model_results, reporting_meter_data, reporting_temperature_data
 ):
 
-    results = caltrack_metered_savings(
-        baseline_model, reporting_meter_data, reporting_temperature_data,
-        degree_day_method='daily'
+    results, error_bands = caltrack_metered_savings(
+        baseline_model_results, reporting_meter_data, reporting_temperature_data,
+        degree_day_method='daily', frequency='daily', t_stat=1.649
     )
     assert list(results.columns) == [
         'reporting_observed', 'counterfactual_usage', 'metered_savings'
@@ -1684,12 +1714,12 @@ def test_caltrack_metered_savings_cdd_hdd(
 
 
 def test_caltrack_metered_savings_cdd_hdd_hourly_degree_days(
-    baseline_model, reporting_meter_data, reporting_temperature_data
+    baseline_model_results, reporting_meter_data, reporting_temperature_data
 ):
 
-    results = caltrack_metered_savings(
-        baseline_model, reporting_meter_data, reporting_temperature_data,
-        degree_day_method='hourly'
+    results , error_bands = caltrack_metered_savings(
+        baseline_model_results, reporting_meter_data, reporting_temperature_data,
+        degree_day_method='hourly', frequency='daily', t_stat=1.649
     )
     assert list(results.columns) == [
         'reporting_observed', 'counterfactual_usage', 'metered_savings'
@@ -1698,23 +1728,23 @@ def test_caltrack_metered_savings_cdd_hdd_hourly_degree_days(
 
 
 def test_caltrack_metered_savings_cdd_hdd_no_params(
-    baseline_model, reporting_meter_data, reporting_temperature_data
+    baseline_model_results, reporting_meter_data, reporting_temperature_data
 ):
-    baseline_model.model_params = None
+    baseline_model_results.model.model_params = None
     with pytest.raises(MissingModelParameterError):
         caltrack_metered_savings(
-            baseline_model, reporting_meter_data, reporting_temperature_data,
-            degree_day_method='daily'
+            baseline_model_results, reporting_meter_data, reporting_temperature_data,
+            degree_day_method='daily', frequency='daily', t_stat=1.649
         )
 
 
 def test_caltrack_metered_savings_cdd_hdd_with_disaggregated(
-    baseline_model, reporting_meter_data, reporting_temperature_data
+    baseline_model_results, reporting_meter_data, reporting_temperature_data
 ):
 
-    results = caltrack_metered_savings(
-        baseline_model, reporting_meter_data, reporting_temperature_data,
-        degree_day_method='daily', with_disaggregated=True
+    results, error_bands = caltrack_metered_savings(
+        baseline_model_results, reporting_meter_data, reporting_temperature_data,
+        degree_day_method='daily', with_disaggregated=True, frequency='daily', t_stat=1.649
     )
     assert list(sorted(results.columns)) == [
         'counterfactual_base_load',

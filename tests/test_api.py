@@ -163,7 +163,8 @@ def test_model_results_minimal():
     assert model_results.json() == {
         'metadata': {},
         'method_name': 'method_name',
-        'metrics': None,
+        'totals_metrics': None,
+        'avgs_metrics': None,
         'model': None,
         'settings': {},
         'status': 'status',
@@ -201,7 +202,8 @@ def test_model_results_json_with_objects():
         }],
         'metadata': {},
         'method_name': 'method_name',
-        'metrics': None,
+        'totals_metrics': None,
+        'avgs_metrics': None,
         'model': {
             'formula': 'formula',
             'model_params': {},

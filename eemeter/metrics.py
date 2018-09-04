@@ -21,18 +21,31 @@ def _compute_r_squared_adj(r_squared, length, num_parameters):
     return r_squared_adj
 
 
-def _compute_cvrmse(combined):
+def _compute_rmse(combined):
 
-    cvrmse = (((combined['residuals'] ** 2).mean() ** 0.5) /
-        (combined['observed'].mean()))
+    rmse = ((combined['residuals'].astype(float) ** 2).mean() ** 0.5)
+
+    return rmse
+
+
+def _compute_rmse_adj(combined, length, num_parameters):
+
+    rmse_adj = (((combined['residuals'].astype(float) ** 2).sum() /
+        (length - num_parameters)) ** 0.5)
+
+    return rmse_adj
+
+
+def _compute_cvrmse(rmse, observed_mean):
+
+    cvrmse = rmse / observed_mean
 
     return cvrmse
 
 
-def _compute_cvrmse_adj(combined, length, num_parameters):
+def _compute_cvrmse_adj(rmse_adj, observed_mean):
 
-    cvrmse_adj = (((combined['residuals'].astype(float) ** 2).sum() /
-        (length - num_parameters)) ** 0.5) / (combined['observed'].mean())
+    cvrmse_adj = rmse_adj / observed_mean
 
     return cvrmse_adj
 
@@ -180,6 +193,9 @@ class ModelMetrics(object):
         self.observed_mean = combined['observed'].mean()
         self.predicted_mean = combined['predicted'].mean()
 
+        self.observed_variance = combined['observed'].var(ddof=0)
+        self.predicted_variance = combined['predicted'].var(ddof=0)
+
         self.observed_skew = combined['observed'].skew()
         self.predicted_skew = combined['predicted'].skew()
 
@@ -193,9 +209,12 @@ class ModelMetrics(object):
         self.r_squared_adj = _compute_r_squared_adj(self.r_squared,
             self.merged_length, self.num_parameters)
 
-        self.cvrmse = _compute_cvrmse(combined)
-        self.cvrmse_adj = _compute_cvrmse_adj(combined, self.merged_length,
+        self.rmse = _compute_rmse(combined)
+        self.rmse_adj = _compute_rmse_adj(combined, self.merged_length,
             self.num_parameters)
+
+        self.cvrmse = _compute_cvrmse(self.rmse, self.observed_mean)
+        self.cvrmse_adj = _compute_cvrmse_adj(self.rmse_adj, self.observed_mean)
 
         # Create a new DataFrame with all rows removed where observed is
         # zero, so we can calculate a version of MAPE with the zeros excluded.
@@ -235,8 +254,11 @@ class ModelMetrics(object):
             'observed_length': self.observed_length,
             'predicted_length': self.predicted_length,
             'merged_length': self.merged_length,
+            'num_parameters': self.num_parameters,
             'observed_mean': self.observed_mean,
             'predicted_mean': self.predicted_mean,
+            'observed_variance': self.observed_variance,
+            'predicted_variance': self.predicted_variance,
             'observed_skew': self.observed_skew,
             'predicted_skew': self.predicted_skew,
             'observed_kurtosis': self.observed_kurtosis,
@@ -245,6 +267,8 @@ class ModelMetrics(object):
             'predicted_cvstd': self.predicted_cvstd,
             'r_squared': self.r_squared,
             'r_squared_adj': self.r_squared_adj,
+            'rmse': self.rmse,
+            'rmse_adj': self.rmse_adj,
             'cvrmse': self.cvrmse,
             'cvrmse_adj': self.cvrmse_adj,
             'mape': self.mape,
