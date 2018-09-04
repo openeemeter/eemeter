@@ -123,7 +123,7 @@ def _caltrack_predict_design_matrix(
     ones = zeros + 1
 
     if isinstance(data.index, pd.DatetimeIndex):
-        days_per_period = day_counts(zeros)
+        days_per_period = day_counts(data.index)
 
     # TODO(philngo): handle different degree day methods and hourly temperatures
     if model_type in ['intercept_only', 'hdd_only', 'cdd_only', 'cdd_hdd']:

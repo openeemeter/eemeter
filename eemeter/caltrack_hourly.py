@@ -9,7 +9,7 @@ import statsmodels.formula.api as smf
 
 from .api import (
     EEMeterWarning,
-    ModelFit,
+    ModelResults,
     HourlyModel,
     ModelPrediction,
 )
@@ -780,13 +780,13 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
 
     Returns
     -------
-    model_fit : :any:`eemeter.ModelFit`
-        Results of running CalTRACK hourly method. See :any:`eemeter.ModelFit`
+    model_results : :any:`eemeter.ModelResults`
+        Results of running CalTRACK hourly method. See :any:`eemeter.ModelResults`
         for more details.
     '''
     method_warnings = []
     if data.empty:
-        return ModelFit(
+        return ModelResults(
             status='NO DATA',
             method_name='caltrack_hourly_method',
             warnings=[EEMeterWarning(
@@ -809,7 +809,7 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
         design_matrix, preprocessors_fit, design_matrix_warnings = \
             get_design_matrix(data, preprocessors)
         if len(design_matrix_warnings) > 0:
-            return ModelFit(
+            return ModelResults(
                 status='NOT ATTEMPTED',
                 method_name='caltrack_hourly_method',
                 warnings=design_matrix_warnings,
@@ -830,7 +830,7 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
 
     term_list = get_terms_in_formula(formula)
     if any(term not in design_matrix.columns for term in term_list):
-        return ModelFit(
+        return ModelResults(
             status='NOT ATTEMPTED',
             method_name='caltrack_hourly_method',
             warnings=get_missing_features_warning(
@@ -854,7 +854,7 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
         model_object[model_id] = this_model
 
     if len(model_warnings) > 0:
-        return ModelFit(
+        return ModelResults(
             status='FAILED',
             method_name='caltrack_hourly_method',
             warnings=model_warnings,
@@ -874,7 +874,7 @@ def caltrack_hourly_method(data, formula=None, preprocessors=None):
         unique_models=unique_models
     )
 
-    return ModelFit(
+    return ModelResults(
         status='SUCCESS',
         method_name='caltrack_hourly_method',
         model=model,
