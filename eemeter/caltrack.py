@@ -10,8 +10,8 @@ from .api import (
     CandidateModel,
     DataSufficiency,
     EEMeterWarning,
-    ModelFit,
-    ModelPrediction
+    ModelResults,
+    ModelPrediction,
 )
 from .exceptions import (
     MissingModelParameterError,
@@ -20,6 +20,9 @@ from .exceptions import (
 from .transform import (
     day_counts,
     overwrite_partial_rows_with_nan,
+)
+from .metrics import (
+    ModelMetrics,
 )
 
 from .features import (
@@ -49,7 +52,7 @@ __all__ = (
 
 def _candidate_model_factory(
     model_type, formula, status, warnings=None, model_params=None,
-    model=None, result=None, r_squared=None, use_predict_func=True,
+    model=None, result=None, r_squared_adj=None, use_predict_func=True,
 ):
     if use_predict_func:
         predict_func = caltrack_predict
@@ -64,7 +67,7 @@ def _candidate_model_factory(
         predict_func=predict_func,
         plot_func=plot_caltrack_candidate,
         model_params=model_params, model=model, result=result,
-        r_squared=r_squared,
+        r_squared_adj=r_squared_adj,
     )
 
 
@@ -79,7 +82,7 @@ def _get_parameter_or_raise(model_type, model_params, param):
 
 
 def _caltrack_predict_design_matrix(
-    model_type, model_params, data, disaggregated=False
+    model_type, model_params, data, disaggregated=False, input_averages=False, output_averages=False,
 ):
     ''' An internal CalTRACK predict method for use with a design matrix of the form
     used in model fitting.
@@ -102,6 +105,13 @@ def _caltrack_predict_design_matrix(
     disaggregated : :any:`bool`, optional
         If True, return results as a :any:`pandas.DataFrame` with columns
         ``'base_load'``, ``'heating_load'``, and ``'cooling_load'``
+    input_averages : :any:`bool`, optional
+        If HDD and CDD columns expressed as period totals, select False. If HDD
+        and CDD columns expressed as period averages, select True. If prediction
+        period is daily, results should be the same either way. Matters for billing.
+    output_averages : :any:`bool`, optional
+        If True, prediction returned as averages (not totals). If False, returned
+        as totals.
 
     Returns
     -------
@@ -110,15 +120,21 @@ def _caltrack_predict_design_matrix(
     '''
 
     zeros = pd.Series(0, index=data.index)
+    ones = zeros + 1
 
     if isinstance(data.index, pd.DatetimeIndex):
-        days = day_counts(data.index)
+        days_per_period = day_counts(zeros)
 
     # TODO(philngo): handle different degree day methods and hourly temperatures
     if model_type in ['intercept_only', 'hdd_only', 'cdd_only', 'cdd_hdd']:
         intercept = _get_parameter_or_raise(
             model_type, model_params, 'intercept')
-        base_load = intercept * days
+        if output_averages == False:
+            base_load = intercept * days_per_period
+        else:
+            base_load = intercept * ones
+        # The last row of data was nan -- Restore the NaN
+        base_load[-1] = np.nan
     elif model_type is None:
         raise ValueError('Model not valid for prediction: model_type=None')
     else:
@@ -133,7 +149,14 @@ def _caltrack_predict_design_matrix(
             model_type, model_params, 'heating_balance_point')
         hdd_column_name = 'hdd_%s' % heating_balance_point
         hdd = data[hdd_column_name]
-        heating_load = hdd * beta_hdd
+        if input_averages == True and output_averages == False:
+            heating_load = hdd * beta_hdd * days_per_period
+        elif input_averages == True and output_averages == True:
+            heating_load = (hdd * beta_hdd)
+        elif input_averages == False and output_averages == False:
+            heating_load = hdd * beta_hdd
+        else:
+            heating_load = hdd * beta_hdd / days_per_period
     else:
         heating_load = zeros
 
@@ -144,7 +167,14 @@ def _caltrack_predict_design_matrix(
             model_type, model_params, 'cooling_balance_point')
         cdd_column_name = 'cdd_%s' % cooling_balance_point
         cdd = data[cdd_column_name]
-        cooling_load = cdd * beta_cdd
+        if input_averages == True and output_averages == False:
+            cooling_load = cdd * beta_cdd * days_per_period
+        elif input_averages == True and output_averages == True:
+            cooling_load = (cdd * beta_cdd)
+        elif input_averages == False and output_averages == False:
+            cooling_load = cdd * beta_cdd
+        else:
+            cooling_load = cdd * beta_cdd / days_per_period
     else:
         cooling_load = zeros
 
@@ -166,8 +196,9 @@ def caltrack_predict(
 
     Given a model type, parameters, hourly temperatures, a
     :any:`pandas.DatetimeIndex` index over which to predict meter usage,
-    return model predictions. Optionally include the computed design matrix
-    or disaggregated usage in the output dataframe.
+    return model predictions as totals for the period (so billing period totals,
+    daily totals, etc.). Optionally include the computed design matrix or
+    disaggregated usage in the output dataframe.
 
     Parameters
     ----------
@@ -195,7 +226,7 @@ def caltrack_predict(
 
         - ``predicted_usage``: Predicted usage values computed to match
           ``prediction_index``.
-        - ``heating_load``: modeled base load (only for ``with_disaggregated=True``).
+        - ``base_load``: modeled base load (only for ``with_disaggregated=True``).
         - ``cooling_load``: modeled cooling load (only for ``with_disaggregated=True``).
         - ``heating_load``: modeled heating load (only for ``with_disaggregated=True``).
         - ``n_days``: number of days in period (only for ``with_design_matrix=True``).
@@ -259,12 +290,16 @@ def caltrack_predict(
         design_matrix['n_days'] = (
             design_matrix.n_hours_kept + design_matrix.n_hours_dropped) / 24
 
-    results = _caltrack_predict_design_matrix(model_type, model_params, design_matrix) \
-        .to_frame('predicted_usage')
+    results = _caltrack_predict_design_matrix(
+         model_type, model_params, design_matrix, input_averages=False,
+         output_averages=False
+         ).to_frame('predicted_usage')
 
     if with_disaggregated:
         disaggregated = _caltrack_predict_design_matrix(
-            model_type, model_params, design_matrix, disaggregated=True)
+            model_type, model_params, design_matrix, disaggregated=True,
+            input_averages=False, output_averages=False
+            )
         results = results.join(disaggregated)
 
     if with_design_matrix:
@@ -476,7 +511,7 @@ def get_fit_failed_candidate_model(model_type, formula):
         traceback.
     '''
     warnings = [EEMeterWarning(
-        qualified_name='eemeter.caltrack_daily.{}.model_fit'.format(model_type),
+        qualified_name='eemeter.caltrack_daily.{}.model_results'.format(model_type),
         description=(
             'Error encountered in statsmodels.formula.api.ols method. (Empty data?)'
         ),
@@ -540,7 +575,7 @@ def get_intercept_only_candidate_models(data, weights_col):
         model_params=model_params,
         model=model,
         result=result,
-        r_squared=0,
+        r_squared_adj=0,
     )]
 
 
@@ -605,7 +640,7 @@ def get_single_cdd_only_candidate_model(
         return get_fit_failed_candidate_model(model_type, formula)
 
     result = model.fit()
-    r_squared = result.rsquared_adj
+    r_squared_adj = result.rsquared_adj
     beta_cdd_p_value = result.pvalues[cdd_column]
 
     # CalTrack 3.3.1.3
@@ -637,7 +672,7 @@ def get_single_cdd_only_candidate_model(
         model_params=model_params,
         model=model,
         result=result,
-        r_squared=r_squared,
+        r_squared_adj=r_squared_adj,
     )
 
 
@@ -743,7 +778,7 @@ def get_single_hdd_only_candidate_model(
         return get_fit_failed_candidate_model(model_type, formula)
 
     result = model.fit()
-    r_squared = result.rsquared_adj
+    r_squared_adj = result.rsquared_adj
     beta_hdd_p_value = result.pvalues[hdd_column]
 
     # CalTrack 3.3.1.3
@@ -773,7 +808,7 @@ def get_single_hdd_only_candidate_model(
     return _candidate_model_factory(
         model_type, formula, status, warnings=model_warnings,
         model_params=model_params, model=model, result=result,
-        r_squared=r_squared,
+        r_squared_adj=r_squared_adj,
     )
 
 
@@ -898,7 +933,7 @@ def get_single_cdd_hdd_candidate_model(
         return get_fit_failed_candidate_model(model_type, formula)
 
     result = model.fit()
-    r_squared = result.rsquared_adj
+    r_squared_adj = result.rsquared_adj
     beta_cdd_p_value = result.pvalues[cdd_column]
     beta_hdd_p_value = result.pvalues[hdd_column]
 
@@ -935,7 +970,7 @@ def get_single_cdd_hdd_candidate_model(
     return _candidate_model_factory(
         model_type, formula, status, warnings=model_warnings,
         model_params=model_params, model=model, result=result,
-        r_squared=r_squared,
+        r_squared_adj=r_squared_adj,
     )
 
 
@@ -1013,14 +1048,14 @@ def select_best_candidate(candidate_models):
         the requirements, and a list of warnings about this selection (or lack
         of selection).
     '''
-    best_r_squared = -np.inf
+    best_r_squared_adj = -np.inf
     best_candidate = None
 
     # CalTrack 3.4.3.3
     for candidate in candidate_models:
-        if candidate.status == 'QUALIFIED' and candidate.r_squared > best_r_squared:
+        if candidate.status == 'QUALIFIED' and candidate.r_squared_adj > best_r_squared_adj:
             best_candidate = candidate
-            best_r_squared = candidate.r_squared
+            best_r_squared_adj = candidate.r_squared_adj
 
     if best_candidate is None:
         warnings = [EEMeterWarning(
@@ -1045,7 +1080,7 @@ def caltrack_method(
     fit_intercept_only=True, fit_cdd_only=True, fit_hdd_only=True,
     fit_cdd_hdd=True
 ):
-    ''' CalTRACK daily method.
+    ''' CalTRACK method.
 
     Parameters
     ----------
@@ -1091,8 +1126,8 @@ def caltrack_method(
 
     Returns
     -------
-    model_fit : :any:`eemeter.ModelFit`
-        Results of running CalTRACK daily method. See :any:`eemeter.ModelFit`
+    model_results : :any:`eemeter.ModelResults`
+        Results of running CalTRACK daily method. See :any:`eemeter.ModelResults`
         for more details.
     '''
     if use_billing_presets:
@@ -1105,7 +1140,7 @@ def caltrack_method(
     data = overwrite_partial_rows_with_nan(data)
 
     if data.empty:
-        return ModelFit(
+        return ModelResults(
             status='NO DATA',
             method_name='caltrack_method',
             warnings=[EEMeterWarning(
@@ -1165,17 +1200,17 @@ def caltrack_method(
 
     if best_candidate is None:
         status = 'NO MODEL'
-        r_squared = None
+        r_squared_adj = None
     else:
         status = 'SUCCESS'
-        r_squared = best_candidate.r_squared
+        r_squared_adj = best_candidate.r_squared_adj
 
-    model_result = ModelFit(
+    model_result = ModelResults(
         status=status,
         method_name='caltrack_method',
         model=best_candidate,
         candidates=candidates,
-        r_squared=r_squared,
+        r_squared_adj=r_squared_adj,
         warnings=warnings,
         settings={
             'fit_cdd': fit_cdd,
@@ -1187,6 +1222,23 @@ def caltrack_method(
             'beta_hdd_maximum_p_value': beta_hdd_maximum_p_value,
         },
     )
+
+    if best_candidate is not None:
+        if best_candidate.model_type in ['cdd_hdd']:
+            num_parameters = 2
+        elif best_candidate.model_type in ['hdd_only', 'cdd_only']:
+            num_parameters = 1
+        else:
+            num_parameters = 0
+
+        predicted = _caltrack_predict_design_matrix(
+            best_candidate.model_type,
+            best_candidate.model_params,
+            data,
+            input_averages = True,
+            output_averages = True,
+        )
+        model_result.metrics = ModelMetrics(data.meter_value, predicted, num_parameters)
 
     return model_result
 

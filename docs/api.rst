@@ -10,7 +10,7 @@ Results
 .. autoclass:: eemeter.DataSufficiency
    :members:
 
-.. autoclass:: eemeter.ModelFit
+.. autoclass:: eemeter.ModelResults
    :members:
 
 .. autoclass:: eemeter.ModelMetrics

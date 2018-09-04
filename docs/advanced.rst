@@ -29,7 +29,7 @@ How the models work
 We're planning a deeper dive on the methods here, but for now, see
 `openee.io <https://www.openee.io/open-source/how-it-works>`_, dig into
 the :any:`code <eemeter.caltrack_method>` (try viewing the source link),
-or try :any:`visualizing <eemeter.ModelFit.plot>` some the models built with
+or try :any:`visualizing <eemeter.ModelResults.plot>` some the models built with
 the sample data.
 
 

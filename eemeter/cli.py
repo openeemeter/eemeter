@@ -113,8 +113,8 @@ def caltrack(
         sample, meter_file, temperature_file, heating_balance_points,
         cooling_balance_points
     )
-    model_fit = caltrack_method(data, fit_cdd=fit_cdd)
-    json_str = json.dumps(model_fit.json(with_candidates=show_candidates), indent=2)
+    model_results = caltrack_method(data, fit_cdd=fit_cdd)
+    json_str = json.dumps(model_results.json(with_candidates=show_candidates), indent=2)
 
     if output_file is None:
         click.echo(json_str)
