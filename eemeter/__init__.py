@@ -80,7 +80,6 @@ from .samples.load import (
 def get_version():
     return __version__
 
-
 # Set default logging handler to avoid "No handler found" warnings.
 from logging import NullHandler
 
