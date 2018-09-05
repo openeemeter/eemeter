@@ -13,5 +13,5 @@ tox==2.9.1
 twine==1.9.1
 xlrd==1.1.0
 numpy==1.13.3
-statsmodels==0.8.0
+statsmodels==0.9.0
 notebook==5.2.1
