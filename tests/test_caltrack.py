@@ -12,6 +12,11 @@ from eemeter import (
     modeled_savings,
     get_baseline_data,
 )
+from eemeter.features import (
+    compute_temperature_features,
+    compute_usage_per_day_feature,
+    merge_features
+)
 from eemeter.caltrack import (
     get_intercept_only_candidate_models,
     get_too_few_non_zero_degree_day_warning,
@@ -422,22 +427,23 @@ def test_caltrack_predict_empty(
 
 
 @pytest.fixture
-def cdd_hdd_h53_c68_billing_monthly_totals(il_electricity_cdd_hdd_billing_monthly):
+def cdd_hdd_h54_c67_billing_monthly_totals(il_electricity_cdd_hdd_billing_monthly):
     meter_data = il_electricity_cdd_hdd_billing_monthly['meter_data']
     temperature_data = il_electricity_cdd_hdd_billing_monthly['temperature_data']
-    data = merge_temperature_data(
-        meter_data, temperature_data,
+    temperature_features = compute_temperature_features(
+        meter_data.index, temperature_data,
         heating_balance_points=[54],
         cooling_balance_points=[67],
         use_mean_daily_values=False,
     )
+    data = merge_features([meter_data, temperature_features])
     return data
 
 
 def test_caltrack_predict_design_matrix_input_avg_false_output_avg_true(
-    cdd_hdd_h53_c68_billing_monthly_totals
+    cdd_hdd_h54_c67_billing_monthly_totals
 ):
-    data = cdd_hdd_h53_c68_billing_monthly_totals
+    data = cdd_hdd_h54_c67_billing_monthly_totals
     prediction = _caltrack_predict_design_matrix(
          'cdd_hdd',
          {'intercept': 13.420093629452852,
@@ -453,9 +459,9 @@ def test_caltrack_predict_design_matrix_input_avg_false_output_avg_true(
 
 
 def test_caltrack_predict_design_matrix_input_avg_false_output_avg_false(
-    cdd_hdd_h53_c68_billing_monthly_totals
+    cdd_hdd_h54_c67_billing_monthly_totals
 ):
-    data = cdd_hdd_h53_c68_billing_monthly_totals
+    data = cdd_hdd_h54_c67_billing_monthly_totals
     prediction = _caltrack_predict_design_matrix(
          'cdd_hdd',
          {'intercept': 13.420093629452852,
@@ -471,22 +477,24 @@ def test_caltrack_predict_design_matrix_input_avg_false_output_avg_false(
 
 
 @pytest.fixture
-def cdd_hdd_h53_c68_billing_monthly_avgs(il_electricity_cdd_hdd_billing_monthly):
+def cdd_hdd_h54_c67_billing_monthly_avgs(il_electricity_cdd_hdd_billing_monthly):
     meter_data = il_electricity_cdd_hdd_billing_monthly['meter_data']
     temperature_data = il_electricity_cdd_hdd_billing_monthly['temperature_data']
-    data = merge_temperature_data(
-        meter_data, temperature_data,
+    temperature_features = compute_temperature_features(
+        meter_data.index, temperature_data,
         heating_balance_points=[54],
         cooling_balance_points=[67],
         use_mean_daily_values=True,
     )
+    meter_data_feature = compute_usage_per_day_feature(meter_data)
+    data = merge_features([meter_data_feature, temperature_features])
     return data
 
 
 def test_caltrack_predict_design_matrix_input_avg_true_output_avg_false(
-    cdd_hdd_h53_c68_billing_monthly_avgs
+    cdd_hdd_h54_c67_billing_monthly_avgs
 ):
-    data = cdd_hdd_h53_c68_billing_monthly_avgs
+    data = cdd_hdd_h54_c67_billing_monthly_avgs
     prediction = _caltrack_predict_design_matrix(
          'cdd_hdd',
          {'intercept': 13.420093629452852,
@@ -502,9 +510,9 @@ def test_caltrack_predict_design_matrix_input_avg_true_output_avg_false(
 
 
 def test_caltrack_predict_design_matrix_input_avg_true_output_avg_true(
-    cdd_hdd_h53_c68_billing_monthly_avgs
+    cdd_hdd_h54_c67_billing_monthly_avgs
 ):
-    data = cdd_hdd_h53_c68_billing_monthly_avgs
+    data = cdd_hdd_h54_c67_billing_monthly_avgs
     prediction = _caltrack_predict_design_matrix(
          'cdd_hdd',
          {'intercept': 13.420093629452852,
@@ -521,11 +529,11 @@ def test_caltrack_predict_design_matrix_input_avg_true_output_avg_true(
 
 
 def test_caltrack_predict_design_matrix_n_days(
-    cdd_hdd_h53_c68_billing_monthly_totals
+    cdd_hdd_h54_c67_billing_monthly_totals
 ):
     # This makes sure that the method works with n_days when
     # DatetimeIndexes are not available.
-    data = cdd_hdd_h53_c68_billing_monthly_totals
+    data = cdd_hdd_h54_c67_billing_monthly_totals
     data.reset_index()
     data['n_days'] = 1
     prediction = _caltrack_predict_design_matrix(
@@ -1259,11 +1267,14 @@ def cdd_hdd_h60_c65(il_electricity_cdd_hdd_daily):
     meter_data = il_electricity_cdd_hdd_daily['meter_data']
     temperature_data = il_electricity_cdd_hdd_daily['temperature_data']
     blackout_start_date = il_electricity_cdd_hdd_daily['blackout_start_date']
-    data = merge_temperature_data(
-        meter_data, temperature_data,
+    temperature_features = compute_temperature_features(
+        meter_data.index, temperature_data,
         heating_balance_points=[60],
         cooling_balance_points=[65],
+        use_mean_daily_values=True,
     )
+    meter_data_feature = compute_usage_per_day_feature(meter_data)
+    data = merge_features([meter_data_feature, temperature_features])
     baseline_data, warnings = get_baseline_data(
         data, end=blackout_start_date)
     return baseline_data

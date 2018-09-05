@@ -82,7 +82,8 @@ def _get_parameter_or_raise(model_type, model_params, param):
 
 
 def _caltrack_predict_design_matrix(
-    model_type, model_params, data, disaggregated=False, input_averages=False, output_averages=False,
+    model_type, model_params, data, disaggregated=False, input_averages=False,
+    output_averages=False,
 ):
     ''' An internal CalTRACK predict method for use with a design matrix of the form
     used in model fitting.
@@ -123,7 +124,7 @@ def _caltrack_predict_design_matrix(
     ones = zeros + 1
 
     if isinstance(data.index, pd.DatetimeIndex):
-        days_per_period = day_counts(zeros)
+        days_per_period = day_counts(data.index)
     else:
         try:
             days_per_period = data['n_days']
