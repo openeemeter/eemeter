@@ -1,5 +1,5 @@
 import pandas as pd
-
+import math
 
 __all__ = (
     'ModelMetrics',
@@ -65,6 +65,21 @@ def _compute_autocorr_resid(combined, autocorr_lags):
     autocorr_resid = (combined['residuals'].autocorr(lag=autocorr_lags))
     
     return autocorr_resid
+
+def _json_safe_float(number):
+    """
+    json serialization for infinity can be problematic.
+    Refer https://docs.python.org/2/library/json.html#basic-usage
+    This function return None if number is infinity or negative infinity
+    if the data type of number is not float then this function tries to
+    convert float, it will raise exception if it cannot be converted.
+    :param number:
+    :return:
+    """
+    if type(number) == float:
+        return None if math.isinf(number) else number
+    # Number might be string or some other type, try converting to float, will raise exception if not a valid data type.
+    return float(number)
 
 
 class ModelMetrics(object):
@@ -235,22 +250,22 @@ class ModelMetrics(object):
             'observed_length': self.observed_length,
             'predicted_length': self.predicted_length,
             'merged_length': self.merged_length,
-            'observed_mean': self.observed_mean,
-            'predicted_mean': self.predicted_mean,
-            'observed_skew': self.observed_skew,
-            'predicted_skew': self.predicted_skew,
-            'observed_kurtosis': self.observed_kurtosis,
-            'predicted_kurtosis': self.predicted_kurtosis,
-            'observed_cvstd': self.observed_cvstd,
-            'predicted_cvstd': self.predicted_cvstd,
-            'r_squared': self.r_squared,
-            'r_squared_adj': self.r_squared_adj,
-            'cvrmse': self.cvrmse,
-            'cvrmse_adj': self.cvrmse_adj,
-            'mape': self.mape,
+            'observed_mean': _json_safe_float(self.observed_mean),
+            'predicted_mean': _json_safe_float(self.predicted_mean),
+            'observed_skew': _json_safe_float(self.observed_skew),
+            'predicted_skew': _json_safe_float(self.predicted_skew),
+            'observed_kurtosis': _json_safe_float(self.observed_kurtosis),
+            'predicted_kurtosis': _json_safe_float(self.predicted_kurtosis),
+            'observed_cvstd': _json_safe_float(self.observed_cvstd),
+            'predicted_cvstd': _json_safe_float(self.predicted_cvstd),
+            'r_squared': _json_safe_float(self.r_squared),
+            'r_squared_adj': _json_safe_float(self.r_squared_adj),
+            'cvrmse': _json_safe_float(self.cvrmse),
+            'cvrmse_adj': _json_safe_float(self.cvrmse_adj),
+            'mape': _json_safe_float(self.mape),
             'mape_no_zeros': self.mape_no_zeros,
             'num_meter_zeros': self.num_meter_zeros,
-            'nmae': self.nmae,
-            'nmbe': self.nmbe,
-            'autocorr_resid': self.autocorr_resid,
+            'nmae': _json_safe_float(self.nmae),
+            'nmbe': _json_safe_float(self.nmbe),
+            'autocorr_resid': _json_safe_float(self.autocorr_resid),
         }

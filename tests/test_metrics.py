@@ -15,6 +15,7 @@ from eemeter.metrics import (
     _compute_nmae,
     _compute_nmbe,
     _compute_autocorr_resid,
+    _json_safe_float
 )
 
 
@@ -153,3 +154,15 @@ def test_compute_nmbe(sample_data_merged):
 def test_compute_autocorr_resid(sample_data_merged):
     combined = sample_data_merged
     assert round(_compute_autocorr_resid(combined, 1), 3) == -0.674
+
+def test_json_safe_float():
+    assert _json_safe_float(float("inf")) == None
+    assert _json_safe_float(float("-inf")) == None
+    assert _json_safe_float(np.inf) == None
+    assert _json_safe_float(-np.inf) == None
+    assert _json_safe_float(3.3) == 3.3
+    assert _json_safe_float('3.3') == 3.3
+    assert _json_safe_float(1) == 1.0
+
+    with pytest.raises(Exception):
+        _json_safe_float('not a number')
