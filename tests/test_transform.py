@@ -56,8 +56,8 @@ def test_compute_temperature_features_hourly_temp_mean(il_electricity_cdd_hdd_ho
     ]
     df = compute_temperature_features(meter_data.index, temperature_data)
     assert list(sorted(df.columns)) == [
-        "n_days_dropped",
-        "n_days_kept",
+        "n_hours_dropped",
+        "n_hours_kept",
         "temperature_mean",
     ]
     assert df.shape == (2952, 3)
@@ -204,8 +204,8 @@ def test_compute_temperature_features_hourly_data_quality(
     )
     assert df.shape == (2952, 4)
     assert list(sorted(df.columns)) == [
-        "n_days_dropped",
-        "n_days_kept",
+        "n_hours_dropped",
+        "n_hours_kept",
         "temperature_not_null",
         "temperature_null",
     ]
@@ -704,8 +704,8 @@ def test_compute_temperature_features_empty_temperature_data():
     meter_data_hack = pd.DataFrame({"value": 0}, index=result_index)
 
     df = compute_temperature_features(
-        temperature_data,
         meter_data_hack.index,
+        temperature_data,
         heating_balance_points=[65],
         cooling_balance_points=[65],
         degree_day_method="daily",
@@ -728,8 +728,8 @@ def test_compute_temperature_features_empty_meter_data():
     meter_data_hack.index.freq = None
 
     df = compute_temperature_features(
-        temperature_data,
         meter_data_hack.index,
+        temperature_data,
         heating_balance_points=[65],
         cooling_balance_points=[65],
         degree_day_method="daily",
@@ -783,7 +783,7 @@ def test_as_freq_empty():
 
 def test_day_counts(il_electricity_cdd_hdd_billing_monthly):
     data = il_electricity_cdd_hdd_billing_monthly["meter_data"].value
-    counts = day_counts(data)
+    counts = day_counts(data.index)
     assert counts.shape == (27,)
     assert counts.iloc[0] == 29.0
     assert pd.isnull(counts.iloc[-1])
@@ -794,7 +794,7 @@ def test_day_counts_empty_series():
     index = pd.DatetimeIndex([])
     index.freq = None
     data = pd.Series([], index=index)
-    counts = day_counts(data)
+    counts = day_counts(data.index)
     assert counts.shape == (0,)
 
 

@@ -1244,7 +1244,7 @@ def cdd_hdd_h60_c65(il_electricity_cdd_hdd_daily):
         cooling_balance_points=[65],
         use_mean_daily_values=True,
     )
-    meter_data_feature = compute_usage_per_day_feature(meter_data)
+    meter_data_feature = compute_usage_per_day_feature(meter_data, "meter_value")
     data = merge_features([meter_data_feature, temperature_features])
     baseline_data, warnings = get_baseline_data(data, end=blackout_start_date)
     return baseline_data
@@ -1261,7 +1261,7 @@ def test_caltrack_method_cdd_hdd(
     assert model_results.candidates[3].model_type == "cdd_hdd"
     assert model_results.model.status == "QUALIFIED"
     assert model_results.model.model_type == "cdd_hdd"
-    prediction = model_results.model.predict(
+    model_prediction = model_results.model.predict(
         temperature_data, prediction_index, degree_day_method
     )
     prediction_df = model_prediction.result
@@ -1279,7 +1279,7 @@ def test_caltrack_method_cdd_hdd_use_billing_presets(
     assert model_results.candidates[3].model_type == "cdd_hdd"
     assert model_results.model.status == "QUALIFIED"
     assert model_results.model.model_type == "cdd_hdd"
-    prediction = model_results.model.predict(
+    model_prediction = model_results.model.predict(
         temperature_data, prediction_index, degree_day_method
     )
     prediction = model_prediction.result
@@ -1361,8 +1361,8 @@ def test_caltrack_merge_temperatures_insufficient_temperature_per_period(
     baseline_temperature_data_missing.iloc[: (4 * 24)] = np.nan
 
     # test without percent_hourly_coverage_per_billing_period constraint
-    data_quality = merge_temperature_data(
-        baseline_meter_data_billing,
+    temperature_features_no_constraint = compute_temperature_features(
+        baseline_meter_data_billing.index,
         baseline_temperature_data_missing,
         heating_balance_points=range(40, 81),
         cooling_balance_points=range(50, 91),
@@ -1370,18 +1370,19 @@ def test_caltrack_merge_temperatures_insufficient_temperature_per_period(
         keep_partial_nan_rows=False,
         percent_hourly_coverage_per_billing_period=0,
     )
-    assert data_quality["n_days_kept"].isnull().sum() == 1
+
+    assert temperature_features_no_constraint["n_days_kept"].isnull().sum() == 0
 
     # test with default percent_hourly_coverage_per_billing_period=0.9 constraint
-    data_quality = merge_temperature_data(
-        baseline_meter_data_billing,
+    temperature_features_with_constraint = compute_temperature_features(
+        baseline_meter_data_billing.index,
         baseline_temperature_data_missing,
         heating_balance_points=range(40, 81),
         cooling_balance_points=range(50, 91),
         data_quality=True,
         keep_partial_nan_rows=False,
     )
-    assert data_quality["n_days_kept"].isnull().sum() == 2
+    assert temperature_features_with_constraint["n_days_kept"].isnull().sum() == 1
 
 
 def test_caltrack_sufficiency_criteria_no_data():
@@ -1688,11 +1689,11 @@ def reporting_temperature_data():
     return pd.Series(np.arange(30.0, 90.0), index=index).asfreq("H").ffill()
 
 
-def test_caltrack_metered_savings_cdd_hdd(
+def test_metered_savings_cdd_hdd(
     baseline_model_results, reporting_meter_data, reporting_temperature_data
 ):
 
-    results, error_bands = caltrack_metered_savings(
+    results, error_bands = metered_savings(
         baseline_model_results,
         reporting_meter_data,
         reporting_temperature_data,
@@ -1708,11 +1709,11 @@ def test_caltrack_metered_savings_cdd_hdd(
     assert round(results.metered_savings.sum(), 2) == 1569.57
 
 
-def test_caltrack_metered_savings_cdd_hdd_hourly_degree_days(
+def test_metered_savings_cdd_hdd_hourly_degree_days(
     baseline_model_results, reporting_meter_data, reporting_temperature_data
 ):
 
-    results, error_bands = caltrack_metered_savings(
+    results, error_bands = metered_savings(
         baseline_model_results,
         reporting_meter_data,
         reporting_temperature_data,
@@ -1728,12 +1729,12 @@ def test_caltrack_metered_savings_cdd_hdd_hourly_degree_days(
     assert round(results.metered_savings.sum(), 2) == 1569.57
 
 
-def test_caltrack_metered_savings_cdd_hdd_no_params(
+def test_metered_savings_cdd_hdd_no_params(
     baseline_model_results, reporting_meter_data, reporting_temperature_data
 ):
     baseline_model_results.model.model_params = None
     with pytest.raises(MissingModelParameterError):
-        caltrack_metered_savings(
+        metered_savings(
             baseline_model_results,
             reporting_meter_data,
             reporting_temperature_data,
@@ -1743,11 +1744,11 @@ def test_caltrack_metered_savings_cdd_hdd_no_params(
         )
 
 
-def test_caltrack_metered_savings_cdd_hdd_with_disaggregated(
+def test_metered_savings_cdd_hdd_with_disaggregated(
     baseline_model_results, reporting_meter_data, reporting_temperature_data
 ):
 
-    results, error_bands = caltrack_metered_savings(
+    results, error_bands = metered_savings(
         baseline_model_results,
         reporting_meter_data,
         reporting_temperature_data,
@@ -1766,11 +1767,11 @@ def test_caltrack_metered_savings_cdd_hdd_with_disaggregated(
     ]
 
 
-def test_caltrack_modeled_savings_cdd_hdd(
+def test_modeled_savings_cdd_hdd(
     baseline_model, reporting_model, reporting_meter_data, reporting_temperature_data
 ):
     # using reporting data for convenience, but intention is to use normal data
-    results = caltrack_modeled_savings(
+    results = modeled_savings(
         baseline_model,
         reporting_model,
         reporting_meter_data.index,
@@ -1785,11 +1786,11 @@ def test_caltrack_modeled_savings_cdd_hdd(
     assert round(results.modeled_savings.sum(), 2) == 0.0
 
 
-def test_caltrack_modeled_savings_cdd_hdd_hourly_degree_days(
+def test_modeled_savings_cdd_hdd_hourly_degree_days(
     baseline_model, reporting_model, reporting_meter_data, reporting_temperature_data
 ):
     # using reporting data for convenience, but intention is to use normal data
-    results = caltrack_modeled_savings(
+    results = modeled_savings(
         baseline_model,
         reporting_model,
         reporting_meter_data.index,
@@ -1804,12 +1805,12 @@ def test_caltrack_modeled_savings_cdd_hdd_hourly_degree_days(
     assert round(results.modeled_savings.sum(), 2) == 0.0
 
 
-def test_caltrack_modeled_savings_cdd_hdd_baseline_model_no_params(
+def test_modeled_savings_cdd_hdd_baseline_model_no_params(
     baseline_model, reporting_model, reporting_meter_data, reporting_temperature_data
 ):
     baseline_model.model_params = None
     with pytest.raises(MissingModelParameterError):
-        caltrack_modeled_savings(
+        modeled_savings(
             baseline_model,
             reporting_model,
             reporting_meter_data.index,
@@ -1818,12 +1819,12 @@ def test_caltrack_modeled_savings_cdd_hdd_baseline_model_no_params(
         )
 
 
-def test_caltrack_modeled_savings_cdd_hdd_reporting_model_no_params(
+def test_modeled_savings_cdd_hdd_reporting_model_no_params(
     baseline_model, reporting_model, reporting_meter_data, reporting_temperature_data
 ):
     reporting_model.model_params = None
     with pytest.raises(MissingModelParameterError):
-        caltrack_modeled_savings(
+        modeled_savings(
             baseline_model,
             reporting_model,
             reporting_meter_data.index,
@@ -1832,12 +1833,12 @@ def test_caltrack_modeled_savings_cdd_hdd_reporting_model_no_params(
         )
 
 
-def test_caltrack_modeled_savings_cdd_hdd_with_disaggregated(
+def test_modeled_savings_cdd_hdd_with_disaggregated(
     baseline_model, reporting_model, reporting_meter_data, reporting_temperature_data
 ):
 
     # using reporting data for convenience, but intention is to use normal data
-    results = caltrack_modeled_savings(
+    results = modeled_savings(
         baseline_model,
         reporting_model,
         reporting_meter_data.index,
@@ -1861,16 +1862,14 @@ def test_caltrack_modeled_savings_cdd_hdd_with_disaggregated(
     ]
 
 
-def test_caltrack_modeled_savings_empty_temperature_data(
-    baseline_model, reporting_model
-):
+def test_modeled_savings_empty_temperature_data(baseline_model, reporting_model):
     index = pd.DatetimeIndex([], tz="UTC", name="dt", freq="H")
     temperature_data = pd.Series([], index=index)
 
     meter_data_index = temperature_data.resample("D").sum().index
 
     # using reporting data for convenience, but intention is to use normal data
-    results = caltrack_modeled_savings(
+    results = modeled_savings(
         baseline_model,
         reporting_model,
         meter_data_index,

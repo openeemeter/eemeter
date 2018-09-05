@@ -225,7 +225,7 @@ def compute_temperature_features(
 
     .. note::
 
-        For CalTRACK compliance (2.3.3), ``meter_data`` and ``temperature_data``
+        For CalTRACK compliance (2.3.3), ``meter_data_index`` and ``temperature_data``
         must both be timezone-aware and have matching timezones.
 
     .. note::
@@ -238,16 +238,14 @@ def compute_temperature_features(
         For CalTRACK compliance (3.3.1.2), for daily or billing methods,
         must set ``degree_day_method=daily``.
 
-    See also :any:`eemeter.merge_temperature_data`.
-
     Parameters
     ----------
-    temperature_data : :any:`pandas.Series`
-        Series with :any:`pandas.DatetimeIndex` with hourly (``'H'``) frequency
-        and a set of temperature values.
     meter_data_index : :any:`pandas.DataFrame`
         A :any:`pandas.DatetimeIndex` corresponding to the index over which
         to compute temperature features.
+    temperature_data : :any:`pandas.Series`
+        Series with :any:`pandas.DatetimeIndex` with hourly (``'H'``) frequency
+        and a set of temperature values.
     cooling_balance_points : :any:`list` of :any:`int` or :any:`float`, optional
         List of cooling balance points for which to create cooling degree days.
     heating_balance_points : :any:`list` of :any:`int` or :any:`float`, optional
@@ -330,22 +328,33 @@ def compute_temperature_features(
     if pd.Timedelta(meter_data_index.freq) == pd.Timedelta("1H"):
         # special fast route for hourly data.
         df = temperature_data.to_frame("temperature_mean").reindex(meter_data_index)
+
+        if use_mean_daily_values:
+            n_days = 1
+        else:
+            n_days = 1.0 / 24.0
+
         df = df.assign(
             **{
-                "cdd_{}".format(bp): np.maximum(df.temperature_mean - bp, 0)
+                "cdd_{}".format(bp): np.maximum(df.temperature_mean - bp, 0) * n_days
                 for bp in cooling_balance_points
             }
         )
         df = df.assign(
             **{
-                "hdd_{}".format(bp): np.maximum(bp - df.temperature_mean, 0)
+                "hdd_{}".format(bp): np.maximum(bp - df.temperature_mean, 0) * n_days
                 for bp in heating_balance_points
             }
         )
+        df = df.assign(
+            n_hours_dropped=df.temperature_mean.isnull().astype(int),
+            n_hours_kept=df.temperature_mean.notnull().astype(int),
+        )
+        # TODO(philngo): bad interface or maybe this is just wrong for some reason?
         if data_quality:
             df = df.assign(
-                temperature_null=df.temperature_mean.isnull().astype(int),
-                temperature_not_null=df.temperature_mean.notnull().astype(int),
+                temperature_null=df.n_hours_dropped,
+                temperature_not_null=df.n_hours_kept,
             )
         if not temperature_mean:
             del df["temperature_mean"]
@@ -386,7 +395,7 @@ def compute_temperature_features(
         temp_groups = _matching_groups(meter_data_index, temp_df, tolerance)
         temp_aggregations = temp_groups.agg({"temp": temp_agg_funcs})
 
-        # expand temp aggregations by faking and delete the `meter_value` column.
+        # expand temp aggregations by faking and deleting the `meter_value` column.
         # I haven't yet figured out a way to avoid this and get the desired
         # structure and behavior. (philngo)
         meter_value = pd.DataFrame({"meter_value": 0}, index=meter_data_index)
