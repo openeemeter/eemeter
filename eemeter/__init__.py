@@ -40,10 +40,7 @@ from .caltrack import (
     plot_caltrack_candidate,
     select_best_candidate,
 )
-from .derivatives import (
-    metered_savings,
-    modeled_savings
-)
+from .derivatives import metered_savings, modeled_savings
 from .caltrack_hourly import (
     get_feature_hour_of_week,
     get_feature_occupancy,
@@ -79,9 +76,7 @@ from .exceptions import (
     MissingModelParameterError,
     UnrecognizedModelTypeError,
 )
-from .metrics import (
-    ModelMetrics,
-)
+from .metrics import ModelMetrics
 from .transform import (
     as_freq,
     day_counts,
@@ -98,14 +93,9 @@ from .io import (
     temperature_data_from_json,
     temperature_data_to_csv,
 )
-from .visualization import (
-    plot_energy_signature,
-    plot_time_series,
-)
-from .samples.load import (
-    samples,
-    load_sample,
-)
+from .visualization import plot_energy_signature, plot_time_series
+from .samples.load import samples, load_sample
+
 
 def get_version():
     return __version__

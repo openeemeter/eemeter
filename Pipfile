@@ -1,12 +1,9 @@
 [[source]]
-
 url = "https://pypi.python.org/simple"
 verify_ssl = true
 name = "pypi"
 
-
 [packages]
-
 click = "*"
 eeweather = "*"
 matplotlib = "*"
@@ -16,9 +13,8 @@ scipy = "*"
 statsmodels = "*"
 sqlalchemy = "*"
 
-
 [dev-packages]
-
+black = "==18.6b4"
 coverage = "*"
 jupyterlab = "*"
 pytest = "*"

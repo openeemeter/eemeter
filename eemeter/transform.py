@@ -5,20 +5,17 @@ import numpy as np
 import pandas as pd
 import pytz
 
-from .exceptions import (
-    NoBaselineDataError,
-    NoReportingDataError,
-)
+from .exceptions import NoBaselineDataError, NoReportingDataError
 from .api import EEMeterWarning
 
 
 __all__ = (
-    'as_freq',
-    'day_counts',
-    'get_baseline_data',
-    'get_reporting_data',
-    'remove_duplicates',
-    'overwrite_partial_rows_with_nan',
+    "as_freq",
+    "day_counts",
+    "get_baseline_data",
+    "get_reporting_data",
+    "remove_duplicates",
+    "overwrite_partial_rows_with_nan",
 )
 
 
@@ -27,7 +24,7 @@ def overwrite_partial_rows_with_nan(df):
 
 
 def remove_duplicates(df_or_series):
-    ''' Remove duplicate rows or values by keeping the first of each duplicate.
+    """ Remove duplicate rows or values by keeping the first of each duplicate.
 
     Parameters
     ----------
@@ -38,13 +35,13 @@ def remove_duplicates(df_or_series):
     -------
     deduplicated : :any:`pandas.DataFrame` or :any:`pandas.Series`
         The deduplicated pandas object.
-    '''
+    """
     # CalTrack 2.3.2.2
-    return df_or_series[~df_or_series.index.duplicated(keep='first')]
+    return df_or_series[~df_or_series.index.duplicated(keep="first")]
 
 
-def as_freq(meter_data_series, freq, atomic_freq='1 Min'):
-    '''Resample meter data to a different frequency.
+def as_freq(meter_data_series, freq, atomic_freq="1 Min"):
+    """Resample meter data to a different frequency.
 
     This method can be used to upsample or downsample meter data. The
     assumption it makes to do so is that meter data is constant and averaged
@@ -82,27 +79,30 @@ def as_freq(meter_data_series, freq, atomic_freq='1 Min'):
     -------
     resampled_meter_data : :any:`pandas.Series`
         Meter data resampled to the given frequency.
-    '''
+    """
     # TODO(philngo): make sure this complies with CalTRACK 2.2.2.1
     if not isinstance(meter_data_series, pd.Series):
         raise ValueError(
-            'expected series, got object with class {}'
-            .format(meter_data_series.__class__)
+            "expected series, got object with class {}".format(
+                meter_data_series.__class__
+            )
         )
     if meter_data_series.empty:
         return meter_data_series
     series = remove_duplicates(meter_data_series)
     target_freq = pd.Timedelta(atomic_freq)
-    timedeltas = (series.index[1:] - series.index[:-1]).append(pd.TimedeltaIndex([pd.NaT]))
+    timedeltas = (series.index[1:] - series.index[:-1]).append(
+        pd.TimedeltaIndex([pd.NaT])
+    )
     spread_factor = target_freq.total_seconds() / timedeltas.total_seconds()
     series_spread = series * spread_factor
-    atomic_series = series_spread.asfreq(atomic_freq, method='ffill')
+    atomic_series = series_spread.asfreq(atomic_freq, method="ffill")
     resampled = atomic_series.resample(freq).sum()
     return resampled
 
 
 def day_counts(index):
-    '''Days between DatetimeIndex values as a :any:`pandas.Series`.
+    """Days between DatetimeIndex values as a :any:`pandas.Series`.
 
     Parameters
     ----------
@@ -114,7 +114,7 @@ def day_counts(index):
     day_counts : :any:`pandas.Series`
         A :any:`pandas.Series` with counts of days between periods. Counts are
         given on start dates of periods.
-    '''
+    """
     # dont affect the original data
     index = index.copy()
 
@@ -128,7 +128,7 @@ def day_counts(index):
 
 
 def get_baseline_data(data, start=None, end=None, max_days=365):
-    ''' Filter down to baseline period data.
+    """ Filter down to baseline period data.
 
     .. note::
 
@@ -157,7 +157,7 @@ def get_baseline_data(data, start=None, end=None, max_days=365):
     -------
     baseline_data, warnings : :any:`tuple` of (:any:`pandas.DataFrame` or :any:`pandas.Series`, :any:`list` of :any:`eemeter.EEMeterWarning`)
         Data for only the specified baseline period and any associated warnings.
-    '''
+    """
 
     start_inf = False
     if start is None:
@@ -179,30 +179,34 @@ def get_baseline_data(data, start=None, end=None, max_days=365):
     # warn if there is a gap at end
     data_end = data.index.max()
     if not end_inf and data_end < end:
-        warnings.append(EEMeterWarning(
-            qualified_name='eemeter.get_baseline_data.gap_at_baseline_end',
-            description=(
-                'Data does not have coverage at requested baseline end date.'
-            ),
-            data={
-                'requested_end': end.isoformat(),
-                'data_end': data_end.isoformat(),
-            },
-        ))
+        warnings.append(
+            EEMeterWarning(
+                qualified_name="eemeter.get_baseline_data.gap_at_baseline_end",
+                description=(
+                    "Data does not have coverage at requested baseline end date."
+                ),
+                data={
+                    "requested_end": end.isoformat(),
+                    "data_end": data_end.isoformat(),
+                },
+            )
+        )
 
     # warn if there is a gap at start
     data_start = data.index.min()
     if not start_inf and start < data_start:
-        warnings.append(EEMeterWarning(
-            qualified_name='eemeter.get_baseline_data.gap_at_baseline_start',
-            description=(
-                'Data does not have coverage at requested baseline start date.'
-            ),
-            data={
-                'requested_start': start.isoformat(),
-                'data_start': data_start.isoformat(),
-            },
-        ))
+        warnings.append(
+            EEMeterWarning(
+                qualified_name="eemeter.get_baseline_data.gap_at_baseline_start",
+                description=(
+                    "Data does not have coverage at requested baseline start date."
+                ),
+                data={
+                    "requested_start": start.isoformat(),
+                    "data_start": data_start.isoformat(),
+                },
+            )
+        )
 
     # copying prevents setting on slice warnings
     baseline_data = data[start:end].copy()
@@ -216,7 +220,7 @@ def get_baseline_data(data, start=None, end=None, max_days=365):
 
 
 def get_reporting_data(data, start=None, end=None, max_days=365):
-    ''' Filter down to reporting period data.
+    """ Filter down to reporting period data.
 
     Parameters
     ----------
@@ -241,7 +245,7 @@ def get_reporting_data(data, start=None, end=None, max_days=365):
     -------
     reporting_data, warnings : :any:`tuple` of (:any:`pandas.DataFrame` or :any:`pandas.Series`, :any:`list` of :any:`eemeter.EEMeterWarning`)
         Data for only the specified reporting period and any associated warnings.
-    '''
+    """
     # TODO(philngo): use default max_days None? Maybe too symmetrical with
     # get_baseline_data?
 
@@ -265,30 +269,34 @@ def get_reporting_data(data, start=None, end=None, max_days=365):
     # warn if there is a gap at end
     data_end = data.index.max()
     if not end_inf and data_end < end:
-        warnings.append(EEMeterWarning(
-            qualified_name='eemeter.get_reporting_data.gap_at_reporting_end',
-            description=(
-                'Data does not have coverage at requested reporting end date.'
-            ),
-            data={
-                'requested_end': end.isoformat(),
-                'data_end': data_end.isoformat(),
-            },
-        ))
+        warnings.append(
+            EEMeterWarning(
+                qualified_name="eemeter.get_reporting_data.gap_at_reporting_end",
+                description=(
+                    "Data does not have coverage at requested reporting end date."
+                ),
+                data={
+                    "requested_end": end.isoformat(),
+                    "data_end": data_end.isoformat(),
+                },
+            )
+        )
 
     # warn if there is a gap at start
     data_start = data.index.min()
     if not start_inf and start < data_start:
-        warnings.append(EEMeterWarning(
-            qualified_name='eemeter.get_reporting_data.gap_at_reporting_start',
-            description=(
-                'Data does not have coverage at requested reporting start date.'
-            ),
-            data={
-                'requested_start': start.isoformat(),
-                'data_start': data_start.isoformat(),
-            },
-        ))
+        warnings.append(
+            EEMeterWarning(
+                qualified_name="eemeter.get_reporting_data.gap_at_reporting_start",
+                description=(
+                    "Data does not have coverage at requested reporting start date."
+                ),
+                data={
+                    "requested_start": start.isoformat(),
+                    "data_start": data_start.isoformat(),
+                },
+            )
+        )
 
     # copying prevents setting on slice warnings
     reporting_data = data[start:end].copy()

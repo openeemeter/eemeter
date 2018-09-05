@@ -8,14 +8,11 @@ from .features import (
 )
 
 
-__all__ = (
-    'plot_energy_signature',
-    'plot_time_series',
-)
+__all__ = ("plot_energy_signature", "plot_time_series")
 
 
 def plot_time_series(meter_data, temperature_data, **kwargs):
-    ''' Plot meter and temperature data in dual-axes time series.
+    """ Plot meter and temperature data in dual-axes time series.
 
     Parameters
     ----------
@@ -31,28 +28,35 @@ def plot_time_series(meter_data, temperature_data, **kwargs):
     -------
     axes : :any:`tuple` of :any:`matplotlib.axes.Axes`
         Tuple of ``(ax_meter_data, ax_temperature_data)``.
-    '''
+    """
     # TODO(philngo): include image in docs.
     try:
         import matplotlib.pyplot as plt
     except ImportError:  # pragma: no cover
-        raise ImportError('matplotlib is required for plotting.')
+        raise ImportError("matplotlib is required for plotting.")
 
-    default_kwargs = {'figsize': (16, 4) }
+    default_kwargs = {"figsize": (16, 4)}
     default_kwargs.update(kwargs)
     fig, ax1 = plt.subplots(**default_kwargs)
 
     ax1.plot(
-        meter_data.index, meter_data.value,
-        color='C0', label='Energy Use', drawstyle='steps-post'
+        meter_data.index,
+        meter_data.value,
+        color="C0",
+        label="Energy Use",
+        drawstyle="steps-post",
     )
-    ax1.set_ylabel('Energy Use')
+    ax1.set_ylabel("Energy Use")
 
     ax2 = ax1.twinx()
     ax2.plot(
-        temperature_data.index, temperature_data,
-        color='C1', label='Temperature', alpha=0.8)
-    ax2.set_ylabel('Temperature')
+        temperature_data.index,
+        temperature_data,
+        color="C1",
+        label="Temperature",
+        alpha=0.8,
+    )
+    ax2.set_ylabel("Temperature")
 
     fig.legend()
 
@@ -60,10 +64,15 @@ def plot_time_series(meter_data, temperature_data, **kwargs):
 
 
 def plot_energy_signature(
-    meter_data, temperature_data, temp_col=None, ax=None, title=None,
-    figsize=None, **kwargs
+    meter_data,
+    temperature_data,
+    temp_col=None,
+    ax=None,
+    title=None,
+    figsize=None,
+    **kwargs
 ):
-    ''' Plot meter and temperature data in energy signature.
+    """ Plot meter and temperature data in energy signature.
 
     Parameters
     ----------
@@ -87,16 +96,15 @@ def plot_energy_signature(
     -------
     ax : :any:`matplotlib.axes.Axes`
         Matplotlib axes.
-    '''
+    """
     try:
         import matplotlib.pyplot as plt
     except ImportError:  # pragma: no cover
-        raise ImportError('matplotlib is required for plotting.')
+        raise ImportError("matplotlib is required for plotting.")
 
     # format data
-    temperature_mean = compute_temperature_features(
-        meter_data.index, temperature_data)
-    usage_per_day = compute_usage_per_day_feature(meter_data, series_name='meter_value')
+    temperature_mean = compute_temperature_features(meter_data.index, temperature_data)
+    usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
     df = merge_features([usage_per_day, temperature_mean.temperature_mean])
 
     if figsize is None:
@@ -106,11 +114,11 @@ def plot_energy_signature(
         fig, ax = plt.subplots(figsize=figsize)
 
     if temp_col is None:
-        temp_col = 'temperature_mean'
+        temp_col = "temperature_mean"
 
     ax.scatter(df[temp_col], df.meter_value, **kwargs)
-    ax.set_xlabel('Temperature')
-    ax.set_ylabel('Energy Use per Day')
+    ax.set_xlabel("Temperature")
+    ax.set_ylabel("Energy Use per Day")
 
     if title is not None:
         ax.set_title(title)
