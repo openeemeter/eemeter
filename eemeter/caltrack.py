@@ -1787,7 +1787,6 @@ def caltrack_modeled_savings(
     return results.dropna().reindex(results.index)
 
 
->>>>>>> feature/model-metrics
 def plot_caltrack_candidate(
     candidate, best=False, ax=None, title=None, figsize=None, temp_range=None,
     alpha=None, **kwargs
