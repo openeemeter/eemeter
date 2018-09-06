@@ -1,5 +1,15 @@
-How to release code updates 
-===========================
+Contributing
+============
+
+Guidelines
+----------
+
+* Make sure you follow PEP 008 style guide conventions.
+* Commit messages should start with a capital letter ("Updated models", not "updated models").
+* Write new tests and run old tests! Make sure that % test coverage does not decrease.
+
+Releasing
+---------
 
 1. create branch named feature/examplefeature and make desired changes
 2. edit CHANGELOG.md with changes under a new section called `Development`

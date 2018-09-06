@@ -1,3 +1,5 @@
+import numpy as np
+
 __all__ = (
     'CandidateModel',
     'DataSufficiency',
@@ -5,6 +7,10 @@ __all__ = (
     'ModelResults',
 )
 
+def _noneify(value):
+    if value is None:
+        return None
+    return None if np.isnan(value) else value
 
 class CandidateModel(object):
     ''' Contains information about a candidate model.
@@ -88,7 +94,7 @@ class CandidateModel(object):
             'formula': self.formula,
             'status': self.status,
             'model_params': self.model_params,
-            'r_squared_adj': self.r_squared_adj,
+            'r_squared_adj': _noneify(self.r_squared_adj),
             'warnings': [w.json() for w in self.warnings],
         }
 
@@ -287,20 +293,20 @@ class ModelResults(object):
         The output of this function can be converted to a serialized string
         with :any:`json.dumps`.
         '''
+        def _json_or_none(obj):
+            return None if obj is None else obj.json()
+
         data = {
             'status': self.status,
             'method_name': self.method_name,
-            'model': self.model.json() if self.model is not None else None,
-            'r_squared_adj': self.r_squared_adj,
+            'model': _json_or_none(self.model),
+            'r_squared_adj': _noneify(self.r_squared_adj),
             'warnings': [w.json() for w in self.warnings],
             'metadata': self.metadata,
             'settings': self.settings,
-            'metrics': None
+            'metrics': _json_or_none(self.metrics),
+            'candidates': None,
         }
-        if self.metrics:
-            data['metrics'] = [
-                self.metrics.json()
-            ]
         if with_candidates:
             data['candidates'] = [
                 candidate.json()
