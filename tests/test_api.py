@@ -228,7 +228,8 @@ def test_model_results_json_with_nan_r_squared_adj():
         'candidates': None,
         'metadata': {},
         'method_name': 'method_name',
-        'metrics': None,
+        'totals_metrics': None,
+        'avgs_metrics': None,
         'model': {
             'formula': 'formula',
             'model_params': {},
@@ -263,12 +264,18 @@ def test_model_results_json_with_model_metrics():
     )
     json_result = model_results.json()
     json.dumps(json_result)  # just make sure it's valid json
-    json_result['metrics'] = {}  # overwrite because of floats
+
+    assert 'totals_metrics' in json_result
+    assert 'avgs_metrics' in json_result
+    json_result['totals_metrics'] = {}  # overwrite because of floats
+    json_result['avgs_metrics'] = {}  # overwrite because of floats
+
     assert json_result == {
         'candidates': None,
         'metadata': {},
         'method_name': 'method_name',
-        'metrics': {},
+        'totals_metrics': {},
+        'avgs_metrics': {},
         'model': {
             'formula': 'formula',
             'model_params': {},

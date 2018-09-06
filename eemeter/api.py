@@ -331,6 +331,7 @@ class ModelResults(object):
             "settings": self.settings,
             "totals_metrics": _json_or_none(self.totals_metrics),
             "avgs_metrics": _json_or_none(self.avgs_metrics),
+            "candidates": None,
         }
         if with_candidates:
             data["candidates"] = [candidate.json() for candidate in self.candidates]

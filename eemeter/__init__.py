@@ -20,7 +20,7 @@ from .api import (
     DataSufficiency,
     EEMeterWarning,
     ModelResults,
-    HourlyModel,
+    ModelPrediction,
 )
 from .caltrack import (
     caltrack_method,
@@ -39,18 +39,17 @@ from .caltrack import (
     get_total_degree_day_too_low_warning,
     plot_caltrack_candidate,
     select_best_candidate,
-)
-from .derivatives import metered_savings, modeled_savings
-from .caltrack_hourly import (
-    get_feature_hour_of_week,
-    get_feature_occupancy,
-    get_feature_binned_temperatures,
-    get_design_matrix,
-    caltrack_hourly_method,
-    caltrack_hourly_predict,
     caltrack_hourly_fit_feature_processor,
     caltrack_hourly_prediction_feature_processor,
-    fit_hourly_model_segment,
+    fit_caltrack_hourly_model_segment,
+)
+from .derivatives import metered_savings, modeled_savings
+from .exceptions import (
+    EEMeterError,
+    NoBaselineDataError,
+    NoReportingDataError,
+    MissingModelParameterError,
+    UnrecognizedModelTypeError,
 )
 from .features import (
     compute_usage_per_day_feature,
@@ -61,20 +60,6 @@ from .features import (
     estimate_hour_of_week_occupancy,
     fit_temperature_bins,
     merge_features,
-)
-from .segmentation import (
-    iterate_segmented_dataset,
-    segment_time_series,
-    fit_segmented_model,
-    SegmentModel,
-    SegmentedModel,
-)
-from .exceptions import (
-    EEMeterError,
-    NoBaselineDataError,
-    NoReportingDataError,
-    MissingModelParameterError,
-    UnrecognizedModelTypeError,
 )
 from .metrics import ModelMetrics
 from .transform import (
@@ -95,6 +80,13 @@ from .io import (
 )
 from .visualization import plot_energy_signature, plot_time_series
 from .samples.load import samples, load_sample
+from .segmentation import (
+    iterate_segmented_dataset,
+    segment_time_series,
+    fit_segmented_model,
+    SegmentModel,
+    SegmentedModel,
+)
 
 
 def get_version():
