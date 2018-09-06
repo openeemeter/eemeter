@@ -49,3 +49,9 @@ services:
       - .:/app
     depends_on:
       - shell
+
+  blacken:
+    image: eemeter_shell
+    entrypoint: black .
+    volumes:
+      - .:/app

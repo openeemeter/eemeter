@@ -1,19 +1,16 @@
 import numpy as np
 
-__all__ = (
-    'CandidateModel',
-    'DataSufficiency',
-    'EEMeterWarning',
-    'ModelResults',
-)
+__all__ = ("CandidateModel", "DataSufficiency", "EEMeterWarning", "ModelResults")
+
 
 def _noneify(value):
     if value is None:
         return None
     return None if np.isnan(value) else value
 
+
 class CandidateModel(object):
-    ''' Contains information about a candidate model.
+    """ Contains information about a candidate model.
 
     Attributes
     ----------
@@ -50,12 +47,20 @@ class CandidateModel(object):
         The adjusted r-squared of the candidate model.
     warnings : :any:`list` of :any:`eemeter.EEMeterWarning`
         A list of any warnings reported during creation of the candidate model.
-    '''
+    """
 
     def __init__(
-        self, model_type, formula, status, predict_func=None, plot_func=None,
-        model_params=None, model=None, result=None, r_squared_adj=None,
-        warnings=None
+        self,
+        model_type,
+        formula,
+        status,
+        predict_func=None,
+        plot_func=None,
+        model_params=None,
+        model=None,
+        result=None,
+        r_squared_adj=None,
+        warnings=None,
     ):
         self.model_type = model_type
         self.formula = formula
@@ -75,55 +80,55 @@ class CandidateModel(object):
         self.warnings = warnings
 
     def __repr__(self):
-        return (
-            "CandidateModel(model_type='{}', formula='{}', status='{}', r_squared_adj={})"
-            .format(
-                self.model_type, self.formula, self.status,
-                round(self.r_squared_adj, 3) if self.r_squared_adj is not None else None
-            )
+        return "CandidateModel(model_type='{}', formula='{}', status='{}', r_squared_adj={})".format(
+            self.model_type,
+            self.formula,
+            self.status,
+            round(self.r_squared_adj, 3) if self.r_squared_adj is not None else None,
         )
 
     def json(self):
-        ''' Return a JSON-serializable representation of this result.
+        """ Return a JSON-serializable representation of this result.
 
         The output of this function can be converted to a serialized string
         with :any:`json.dumps`.
-        '''
+        """
         return {
-            'model_type': self.model_type,
-            'formula': self.formula,
-            'status': self.status,
-            'model_params': self.model_params,
-            'r_squared_adj': _noneify(self.r_squared_adj),
-            'warnings': [w.json() for w in self.warnings],
+            "model_type": self.model_type,
+            "formula": self.formula,
+            "status": self.status,
+            "model_params": self.model_params,
+            "r_squared_adj": _noneify(self.r_squared_adj),
+            "warnings": [w.json() for w in self.warnings],
         }
 
     def predict(self, *args, **kwargs):
-        ''' Predict for this model. Arguments may vary by model type.
-        '''
+        """ Predict for this model. Arguments may vary by model type.
+        """
         if self.predict_func is None:
             raise ValueError(
-                'This candidate model cannot be used for prediction because'
-                ' the predict_func attr is not set.'
+                "This candidate model cannot be used for prediction because"
+                " the predict_func attr is not set."
             )
         else:
             return self.predict_func(
-                self.model_type, self.model_params, *args, **kwargs)
+                self.model_type, self.model_params, *args, **kwargs
+            )
 
     def plot(self, *args, **kwargs):
-        ''' Predict for this model. Arguments may vary by model type.
-        '''
+        """ Predict for this model. Arguments may vary by model type.
+        """
         if self.plot_func is None:
             raise ValueError(
-                'This candidate model cannot be used for plotting because'
-                ' the plot_func attr is not set.'
+                "This candidate model cannot be used for plotting because"
+                " the plot_func attr is not set."
             )
         else:
             return self.plot_func(self, *args, **kwargs)
 
 
 class DataSufficiency(object):
-    ''' Contains the result of a data sufficiency check.
+    """ Contains the result of a data sufficiency check.
 
     Attributes
     ----------
@@ -139,11 +144,9 @@ class DataSufficiency(object):
         A list of any warnings reported during the check for baseline data sufficiency.
     settings : :any:`dict`
         A dictionary of settings (keyword arguments) used.
-    '''
+    """
 
-    def __init__(
-        self, status, criteria_name, warnings=None, settings=None,
-    ):
+    def __init__(self, status, criteria_name, warnings=None, settings=None):
         self.status = status  # NO DATA | FAIL | PASS
         self.criteria_name = criteria_name
 
@@ -157,30 +160,28 @@ class DataSufficiency(object):
 
     def __repr__(self):
         return (
-            'DataSufficiency('
-            "status='{status}', criteria_name='{criteria_name}')"
-            .format(
-                status=self.status,
-                criteria_name=self.criteria_name,
+            "DataSufficiency("
+            "status='{status}', criteria_name='{criteria_name}')".format(
+                status=self.status, criteria_name=self.criteria_name
             )
         )
 
     def json(self):
-        ''' Return a JSON-serializable representation of this result.
+        """ Return a JSON-serializable representation of this result.
 
         The output of this function can be converted to a serialized string
         with :any:`json.dumps`.
-        '''
+        """
         return {
-            'status': self.status,
-            'criteria_name': self.criteria_name,
-            'warnings': [w.json() for w in self.warnings],
-            'settings': self.settings,
+            "status": self.status,
+            "criteria_name": self.criteria_name,
+            "warnings": [w.json() for w in self.warnings],
+            "settings": self.settings,
         }
 
 
 class EEMeterWarning(object):
-    ''' An object representing a warning and data associated with it.
+    """ An object representing a warning and data associated with it.
 
     Attributes
     ----------
@@ -190,7 +191,7 @@ class EEMeterWarning(object):
         Prose describing the nature of the warning.
     data : :any:`dict`
         Data that reproducibly shows why the warning was issued.
-    '''
+    """
 
     def __init__(self, qualified_name, description, data):
         self.qualified_name = qualified_name
@@ -198,23 +199,23 @@ class EEMeterWarning(object):
         self.data = data
 
     def __repr__(self):
-        return 'EEMeterWarning(qualified_name={})'.format(self.qualified_name)
+        return "EEMeterWarning(qualified_name={})".format(self.qualified_name)
 
     def json(self):
-        ''' Return a JSON-serializable representation of this result.
+        """ Return a JSON-serializable representation of this result.
 
         The output of this function can be converted to a serialized string
         with :any:`json.dumps`.
-        '''
+        """
         return {
-            'qualified_name': self.qualified_name,
-            'description': self.description,
-            'data': self.data,
+            "qualified_name": self.qualified_name,
+            "description": self.description,
+            "data": self.data,
         }
 
 
 class ModelResults(object):
-    ''' Contains information about the chosen model.
+    """ Contains information about the chosen model.
 
     Attributes
     ----------
@@ -252,11 +253,18 @@ class ModelResults(object):
         A ModelMetrics object, if one is calculated and associated with this
         model. (This initializes to None.) The ModelMetrics object contains
         model fit information and descriptive statistics about the underlying data.
-    '''
+    """
 
     def __init__(
-        self, status, method_name, model=None, r_squared_adj=None,
-        candidates=None, warnings=None, metadata=None, settings=None,
+        self,
+        status,
+        method_name,
+        model=None,
+        r_squared_adj=None,
+        candidates=None,
+        warnings=None,
+        metadata=None,
+        settings=None,
     ):
         self.status = status  # NO DATA | NO MODEL | SUCCESS
         self.method_name = method_name
@@ -282,43 +290,45 @@ class ModelResults(object):
         self.metrics = None
 
     def __repr__(self):
-        return (
-            "ModelResults(status='{}', method_name='{}', r_squared_adj={})"
-            .format(self.status, self.method_name, self.r_squared_adj)
+        return "ModelResults(status='{}', method_name='{}', r_squared_adj={})".format(
+            self.status, self.method_name, self.r_squared_adj
         )
 
     def json(self, with_candidates=False):
-        ''' Return a JSON-serializable representation of this result.
+        """ Return a JSON-serializable representation of this result.
 
         The output of this function can be converted to a serialized string
         with :any:`json.dumps`.
-        '''
+        """
+
         def _json_or_none(obj):
             return None if obj is None else obj.json()
 
         data = {
-            'status': self.status,
-            'method_name': self.method_name,
-            'model': _json_or_none(self.model),
-            'r_squared_adj': _noneify(self.r_squared_adj),
-            'warnings': [w.json() for w in self.warnings],
-            'metadata': self.metadata,
-            'settings': self.settings,
-            'metrics': _json_or_none(self.metrics),
-            'candidates': None,
+            "status": self.status,
+            "method_name": self.method_name,
+            "model": _json_or_none(self.model),
+            "r_squared_adj": _noneify(self.r_squared_adj),
+            "warnings": [w.json() for w in self.warnings],
+            "metadata": self.metadata,
+            "settings": self.settings,
+            "metrics": _json_or_none(self.metrics),
+            "candidates": None,
         }
         if with_candidates:
-            data['candidates'] = [
-                candidate.json()
-                for candidate in self.candidates
-            ]
+            data["candidates"] = [candidate.json() for candidate in self.candidates]
         return data
 
     def plot(
-        self, ax=None, title=None, figsize=None, with_candidates=False,
-        candidate_alpha=None, temp_range=None
+        self,
+        ax=None,
+        title=None,
+        figsize=None,
+        with_candidates=False,
+        candidate_alpha=None,
+        temp_range=None,
     ):
-        ''' Plot a model fit.
+        """ Plot a model fit.
 
         Parameters
         ----------
@@ -338,11 +348,11 @@ class ModelResults(object):
         -------
         ax : :any:`matplotlib.axes.Axes`
             Matplotlib axes.
-        '''
+        """
         try:
             import matplotlib.pyplot as plt
         except ImportError:  # pragma: no cover
-            raise ImportError('matplotlib is required for plotting.')
+            raise ImportError("matplotlib is required for plotting.")
 
         if figsize is None:
             figsize = (10, 4)

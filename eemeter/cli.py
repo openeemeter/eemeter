@@ -13,7 +13,7 @@ from eemeter import (
 
 @click.group()
 def cli():
-    '''Example usage
+    """Example usage
 
 
 Save output::
@@ -38,63 +38,64 @@ Save output::
 
     \b
         $ eemeter caltrack --sample=il-gas-hdd-only-billing_monthly --no-fit-cdd
-    '''
+    """
     pass  # pragma: no cover
 
 
 def _get_data(
-    sample, meter_file, temperature_file, heating_balance_points,
-    cooling_balance_points
+    sample, meter_file, temperature_file, heating_balance_points, cooling_balance_points
 ):
 
     if sample is not None:
-        with resource_stream('eemeter.samples', 'metadata.json') as f:
-            metadata = json.loads(f.read().decode('utf-8'))
+        with resource_stream("eemeter.samples", "metadata.json") as f:
+            metadata = json.loads(f.read().decode("utf-8"))
         if sample in metadata:
-            click.echo('Loading sample: {}'.format(sample))
+            click.echo("Loading sample: {}".format(sample))
 
             meter_file = resource_stream(
-                'eemeter.samples', metadata[sample]['meter_data_filename'])
+                "eemeter.samples", metadata[sample]["meter_data_filename"]
+            )
             temperature_file = resource_stream(
-                'eemeter.samples', metadata[sample]['temperature_filename'])
+                "eemeter.samples", metadata[sample]["temperature_filename"]
+            )
         else:
             raise click.ClickException(
-                'Sample not found. Try one of these?\n{}'.format(
-                    '\n'.join([
-                        ' - {}'.format(key) for key in sorted(metadata.keys())
-                    ])
+                "Sample not found. Try one of these?\n{}".format(
+                    "\n".join([" - {}".format(key) for key in sorted(metadata.keys())])
                 )
             )
 
     if meter_file is not None:
-        gzipped = meter_file.name.endswith('.gz')
+        gzipped = meter_file.name.endswith(".gz")
         meter_data = meter_data_from_csv(meter_file, gzipped=gzipped)
     else:
-        raise click.ClickException('Meter data not specified.')
+        raise click.ClickException("Meter data not specified.")
 
     if temperature_file is not None:
-        gzipped = temperature_file.name.endswith('.gz')
+        gzipped = temperature_file.name.endswith(".gz")
         temperature_data = temperature_data_from_csv(
-            temperature_file, gzipped=gzipped, freq='hourly')
+            temperature_file, gzipped=gzipped, freq="hourly"
+        )
     else:
-        raise click.ClickException('Temperature data not specified.')
+        raise click.ClickException("Temperature data not specified.")
 
     return merge_temperature_data(
-        meter_data, temperature_data,
+        meter_data,
+        temperature_data,
         heating_balance_points=heating_balance_points,
         cooling_balance_points=cooling_balance_points,
     )
 
 
 @cli.command()
-@click.option('--sample', default=None, type=str)
-@click.option('--meter-file', default=None, type=click.File('rb'))
-@click.option('--temperature-file', default=None, type=click.File('rb'))
-@click.option('--output-file', default=None, type=click.File('wb'))
-@click.option('--show-candidates/--no-show-candidates', default=False, is_flag=True)
-@click.option('--fit-cdd/--no-fit-cdd', default=True, is_flag=True)
+@click.option("--sample", default=None, type=str)
+@click.option("--meter-file", default=None, type=click.File("rb"))
+@click.option("--temperature-file", default=None, type=click.File("rb"))
+@click.option("--output-file", default=None, type=click.File("wb"))
+@click.option("--show-candidates/--no-show-candidates", default=False, is_flag=True)
+@click.option("--fit-cdd/--no-fit-cdd", default=True, is_flag=True)
 def caltrack(
-    sample, meter_file, temperature_file, output_file, show_candidates, fit_cdd,
+    sample, meter_file, temperature_file, output_file, show_candidates, fit_cdd
 ):
     # TODO(philngo): add project dates and baseline period/reporting period.
     # TODO(philngo): complain about temperature data that isn't daily
@@ -103,8 +104,11 @@ def caltrack(
     cooling_balance_points = range(65, 76)
 
     data = _get_data(
-        sample, meter_file, temperature_file, heating_balance_points,
-        cooling_balance_points
+        sample,
+        meter_file,
+        temperature_file,
+        heating_balance_points,
+        cooling_balance_points,
     )
     model_results = caltrack_method(data, fit_cdd=fit_cdd)
     json_str = json.dumps(model_results.json(with_candidates=show_candidates), indent=2)
@@ -112,5 +116,5 @@ def caltrack(
     if output_file is None:
         click.echo(json_str)
     else:
-        output_file.write(json_str.encode('utf-8'))
-        click.echo('Output written: {}'.format(output_file.name))
+        output_file.write(json_str.encode("utf-8"))
+        click.echo("Output written: {}".format(output_file.name))
