@@ -11,6 +11,10 @@ __all__ = (
     "ModelPrediction",
 )
 
+def _noneify(value):
+    if value is None:
+        return None
+    return None if np.isnan(value) else value
 
 ModelPrediction = namedtuple("ModelPrediction", ["result", "design_matrix", "warnings"])
 
@@ -104,7 +108,7 @@ class CandidateModel(object):
             "formula": self.formula,
             "status": self.status,
             "model_params": self.model_params,
-            "r_squared_adj": self.r_squared_adj,
+            "r_squared_adj": _noneify(self.r_squared_adj),
             "warnings": [w.json() for w in self.warnings],
         }
 
@@ -313,21 +317,21 @@ class ModelResults(object):
         The output of this function can be converted to a serialized string
         with :any:`json.dumps`.
         """
+
+        def _json_or_none(obj):
+            return None if obj is None else obj.json()
+
         data = {
             "status": self.status,
             "method_name": self.method_name,
-            "model": self.model.json() if self.model is not None else None,
-            "r_squared_adj": self.r_squared_adj,
+            "model": _json_or_none(self.model),
+            "r_squared_adj": _noneify(self.r_squared_adj),
             "warnings": [w.json() for w in self.warnings],
             "metadata": self.metadata,
             "settings": self.settings,
-            "totals_metrics": None,
-            "avgs_metrics": None,
+            "totals_metrics": _json_or_none(self.totals_metrics),
+            "avgs_metrics": _json_or_none(self.avgs_metrics),
         }
-        if self.totals_metrics:
-            data["totals_metrics"] = [self.totals_metrics.json()]
-        if self.avgs_metrics:
-            data["avgs_metrics"] = [self.avgs_metrics.json()]
         if with_candidates:
             data["candidates"] = [candidate.json() for candidate in self.candidates]
         return data
@@ -385,124 +389,3 @@ class ModelResults(object):
             ax.set_title(title)
 
         return ax
-
-
-class HourlyModel(object):
-    """ Contains information about a candidate model.
-
-    Attributes
-    ----------
-    model_type : :any:`str`
-        The type of model, e..g., :code:`'hdd_only'`.
-    formula : :any:`str`
-        The R-style formula for the design matrix of this model, e.g., :code:`'meter_value ~ hdd_65'`.
-    status : :any:`str`
-        A string indicating the status of this model. Possible statuses:
-
-        - ``'NOT ATTEMPTED'``: Candidate model not fitted due to an issue
-          encountered in data before attempt.
-        - ``'ERROR'``: A fatal error occurred during model fit process.
-        - ``'DISQUALIFIED'``: The candidate model fit was disqualified
-          from the model selection process because of a decision made after
-          candidate model fit completed, e.g., a bad fit, or a parameter out
-          of acceptable range.
-        - ``'QUALIFIED'``: The candidate model fit is acceptable can be
-          considered during model selection.
-    predict_func : :any:`callable`
-        A function of the following form:
-        ``predict_func(candidate_model, inputs) -> outputs``
-    plot_func : :any:`callable`
-        A function of the following form:
-        ``plot_func(candidate_model, inputs) -> outputs``
-    model_params : :any:`dict`, default :any:`None`
-        A flat dictionary of model parameters which must be serializable
-        using the :any:`json.dumps` method.
-    model : :any:`object`
-        The raw model (if any) used in fitting. Not serialized.
-    result : :any:`object`
-        The raw modeling result (if any) returned by the `model`. Not serialized.
-    r_squared : :any:`float`
-        The adjusted r-squared of the candidate model.
-    warnings : :any:`list` of :any:`eemeter.EEMeterWarning`
-        A list of any warnings reported during creation of the candidate model.
-    """
-
-    def __init__(
-        self,
-        formula,
-        status,
-        segment_type=None,
-        predict_func=None,
-        plot_func=None,
-        model_params=None,
-        preprocessors_raw=None,
-        preprocessors_fit=None,
-        unique_models=None,
-        model_object=None,
-        warnings=None,
-    ):
-        self.formula = formula
-        self.status = status  # SUCCESS | ERROR
-        self.segment_type = segment_type
-        self.model_object = model_object
-        self.predict_func = predict_func
-        self.plot_func = plot_func
-
-        if model_params is None:
-            model_params = pd.DataFrame()
-        self.model_params = model_params
-
-        if preprocessors_raw is None:
-            preprocessors_raw = {}
-        self.preprocessors_raw = preprocessors_raw
-
-        if preprocessors_fit is None:
-            preprocessors_fit = {}
-        self.preprocessors_fit = preprocessors_fit
-
-        if unique_models is None:
-            unique_models = np.array([])
-        self.unique_models = unique_models
-
-        if warnings is None:
-            warnings = []
-        self.warnings = warnings
-
-    def __repr__(self):
-        return "HourlyModel(segment_type='{}', formula='{}', status='{}')".format(
-            self.segment_type, self.formula, self.status
-        )
-
-    def json(self):
-        """ Return a JSON-serializable representation of this result.
-
-        The output of this function can be converted to a serialized string
-        with :any:`json.dumps`.
-        """
-        return {
-            "segment_type": self.segment_type,
-            "formula": self.formula,
-            "status": self.status,
-            "model_params": self.model_params,
-            "preprocessors_fit": self.preprocessors_fit,
-            "unique_models": self.unique_models.tolist(),
-            "warnings": [w.json() for w in self.warnings],
-        }
-
-    def predict(self, *args, **kwargs):
-        """ Predict for this model. Arguments may vary by model type.
-        """
-        if self.predict_func is None:
-            raise ValueError(
-                "This candidate model cannot be used for prediction because"
-                " the predict_func attr is not set."
-            )
-        else:
-            return self.predict_func(
-                self.formula,
-                self.preprocessors_fit,
-                self.unique_models,
-                self.model_params,
-                *args,
-                **kwargs
-            )

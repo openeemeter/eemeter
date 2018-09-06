@@ -5,92 +5,63 @@ __all__ = ("ModelMetrics",)
 
 
 def _compute_r_squared(combined):
-
-    r_squared = combined[["predicted", "observed"]].corr().iloc[0, 1] ** 2
-
-    return r_squared
+    return combined[["predicted", "observed"]].corr().iloc[0, 1] ** 2
 
 
 def _compute_r_squared_adj(r_squared, length, num_parameters):
-
-    r_squared_adj = 1 - (1 - r_squared) * (length - 1) / (length - num_parameters - 1)
-
-    return r_squared_adj
-
+    return 1 - (1 - r_squared) * (length - 1) / (length - num_parameters - 1)
 
 def _compute_rmse(combined):
-
-    rmse = (combined["residuals"].astype(float) ** 2).mean() ** 0.5
-
-    return rmse
+    return (combined["residuals"].astype(float) ** 2).mean() ** 0.5
 
 
 def _compute_rmse_adj(combined, length, num_parameters):
-
-    rmse_adj = (
+    return (
         (combined["residuals"].astype(float) ** 2).sum() / (length - num_parameters)
     ) ** 0.5
 
-    return rmse_adj
-
 
 def _compute_cvrmse(rmse, observed_mean):
-
-    cvrmse = rmse / observed_mean
-
-    return cvrmse
+    return rmse / observed_mean
 
 
 def _compute_cvrmse_adj(rmse_adj, observed_mean):
-
-    cvrmse_adj = rmse_adj / observed_mean
-
-    return cvrmse_adj
+    return rmse_adj / observed_mean
 
 
 def _compute_mape(combined):
-
-    mape = (combined["residuals"] / combined["observed"]).abs().mean()
-
-    return mape
+    return (combined["residuals"] / combined["observed"]).abs().mean()
 
 
 def _compute_nmae(combined):
-
-    nmae = (combined["residuals"].astype(float).abs().sum()) / (
+    return (combined["residuals"].astype(float).abs().sum()) / (
         combined["observed"].sum()
     )
 
-    return nmae
-
 
 def _compute_nmbe(combined):
-
-    nmbe = combined["residuals"].astype(float).sum() / combined["observed"].sum()
-
-    return nmbe
+    return combined["residuals"].astype(float).sum() / combined["observed"].sum()
 
 
 def _compute_autocorr_resid(combined, autocorr_lags):
-
-    autocorr_resid = combined["residuals"].autocorr(lag=autocorr_lags)
-
-    return autocorr_resid
+    return combined["residuals"].autocorr(lag=autocorr_lags)
 
 
 def _json_safe_float(number):
     """
-    json serialization for infinity can be problematic.
-    Refer https://docs.python.org/2/library/json.html#basic-usage
-    This function return None if number is infinity or negative infinity
-    if the data type of number is not float then this function tries to
-    convert float, it will raise exception if it cannot be converted.
-    :param number:
-    :return:
+    JSON serialization for infinity can be problematic.
+    See https://docs.python.org/2/library/json.html#basic-usage
+    This function returns None if `number` is infinity or negative infinity.
+
+    If the `number` cannot be converted to float, this will raise an exception.
     """
-    if type(number) == float:
+    if number is None:
+        return None
+
+    if isinstance(number, float):
         return None if math.isinf(number) else number
-    # Number might be string or some other type, try converting to float, will raise exception if not a valid data type.
+
+    # errors if number is not float compatible
     return float(number)
 
 
