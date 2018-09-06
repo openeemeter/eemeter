@@ -140,7 +140,7 @@ def _caltrack_predict_design_matrix(
         try:
             days_per_period = data["n_days"]
         except KeyError:
-            raise KeyError("Data needs DatetimeIndex or an n_days column.")
+            raise ValueError("Data needs DatetimeIndex or an n_days column.")
 
     # TODO(philngo): handle different degree day methods and hourly temperatures
     if model_type in ["intercept_only", "hdd_only", "cdd_only", "cdd_hdd"]:
