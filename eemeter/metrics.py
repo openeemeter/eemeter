@@ -1,5 +1,5 @@
+import numpy as np
 import pandas as pd
-import math
 
 __all__ = (
     'ModelMetrics',
@@ -76,9 +76,14 @@ def _json_safe_float(number):
     :param number:
     :return:
     """
-    if type(number) == float:
-        return None if math.isinf(number) else number
-    # Number might be string or some other type, try converting to float, will raise exception if not a valid data type.
+    if number is None:
+        return None
+
+    if isinstance(number, float):
+        return None if np.isinf(number) or np.isnan(number) else number
+
+    # Number might be string or some other type, try converting to float,
+    # will raise exception if not a valid data type.
     return float(number)
 
 
