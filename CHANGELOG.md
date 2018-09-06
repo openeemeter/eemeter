@@ -1,6 +1,11 @@
 Changelog
 =========
 
+Development
+-----------
+
+* Fixed JSON representation of model classes
+
 2.0.0
 -----
 
