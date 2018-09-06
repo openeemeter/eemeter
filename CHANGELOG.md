@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* [placeholder]
+* Cont. fixing JSON representation of NaN values
 
 2.0.1
 -----
