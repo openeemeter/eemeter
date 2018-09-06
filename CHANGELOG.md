@@ -6,6 +6,11 @@ Development
 
 * [placeholder]
 
+2.0.2
+-----
+
+* Cont. fixing JSON representation of NaN values
+
 2.0.1
 -----
 

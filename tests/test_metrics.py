@@ -22,10 +22,8 @@ from eemeter.metrics import (
 @pytest.fixture
 def sample_data():
     # Could have included DatetimeIndex, but made it more general
-    series_one = pd.Series([1, 3, 4, 1, 6])
-    series_two = pd.Series([2, 3, 3, 2, 4])
-    series_one.name = "NameOne"
-    series_two.name = "NameTwo"
+    series_one = pd.Series([1, 3, 4, 1, 6], name="NameOne")
+    series_two = pd.Series([2, 3, 3, 2, 4], name="NameTwo")
     return series_one, series_two
 
 
@@ -104,6 +102,46 @@ def test_ModelMetrics_inputs_unchanged(sample_data):
 
 
 @pytest.fixture
+def model_metrics(sample_data):
+    series_one, series_two = sample_data
+    return ModelMetrics(series_one, series_two, num_parameters=2)
+
+
+def test_model_metrics_json_valid(model_metrics):
+    model_metrics.r_squared = np.nan
+    model_metrics.r_squared_adj = float('nan')
+    model_metrics.cvrmse = np.inf
+    model_metrics.cvrmse_adj = float('inf')
+    model_metrics.nmae = None
+    model_metrics.mape = float('-inf')
+    json_rep = model_metrics.json()
+    json.dumps(json_rep)
+    assert sorted(json_rep.keys()) == [
+        'autocorr_resid',
+        'cvrmse',
+        'cvrmse_adj',
+        'mape',
+        'mape_no_zeros',
+        'merged_length',
+        'nmae',
+        'nmbe',
+        'num_meter_zeros',
+        'observed_cvstd',
+        'observed_kurtosis',
+        'observed_length',
+        'observed_mean',
+        'observed_skew',
+        'predicted_cvstd',
+        'predicted_kurtosis',
+        'predicted_length',
+        'predicted_mean',
+        'predicted_skew',
+        'r_squared',
+        'r_squared_adj'
+    ]
+
+
+@pytest.fixture
 def sample_data_merged(sample_data):
     series_one, series_two = sample_data
     observed = series_one.to_frame().dropna()
@@ -136,16 +174,8 @@ def test_compute_cvrmse_adj(sample_data_merged):
     observed_mean = combined["observed"].mean()
     observed_length = len(combined["observed"])
     num_parameters = 2
-    assert (
-        round(
-            _compute_cvrmse_adj(
-                _compute_rmse_adj(combined, observed_length, num_parameters),
-                observed_mean,
-            ),
-            3,
-        )
-        == 0.509
-    )
+    rmse_adj = _compute_rmse_adj(combined, observed_length, num_parameters)
+    assert round(_compute_cvrmse_adj(rmse_adj, observed_mean, 3) == 0.509
 
 
 def test_compute_mape(sample_data_merged):
@@ -169,13 +199,16 @@ def test_compute_autocorr_resid(sample_data_merged):
 
 
 def test_json_safe_float():
-    assert _json_safe_float(float("inf")) == None
-    assert _json_safe_float(float("-inf")) == None
-    assert _json_safe_float(np.inf) == None
-    assert _json_safe_float(-np.inf) == None
+    assert _json_safe_float(float("inf")) is None
+    assert _json_safe_float(float("-inf")) is None
+    assert _json_safe_float(float("nan")) == None
+    assert _json_safe_float(np.inf) is None
+    assert _json_safe_float(-np.inf) is None
+    assert _json_safe_float(np.nan) is None
     assert _json_safe_float(3.3) == 3.3
     assert _json_safe_float("3.3") == 3.3
     assert _json_safe_float(1) == 1.0
+    assert _json_safe_float(None) == None
 
     with pytest.raises(Exception):
         _json_safe_float("not a number")
