@@ -175,7 +175,7 @@ def test_compute_cvrmse_adj(sample_data_merged):
     observed_length = len(combined["observed"])
     num_parameters = 2
     rmse_adj = _compute_rmse_adj(combined, observed_length, num_parameters)
-    assert round(_compute_cvrmse_adj(rmse_adj, observed_mean, 3) == 0.509
+    assert round(_compute_cvrmse_adj(rmse_adj, observed_mean), 3) == 0.509
 
 
 def test_compute_mape(sample_data_merged):
