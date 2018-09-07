@@ -126,18 +126,23 @@ def test_model_metrics_json_valid(model_metrics):
         'nmae',
         'nmbe',
         'num_meter_zeros',
+        'num_parameters',
         'observed_cvstd',
         'observed_kurtosis',
         'observed_length',
         'observed_mean',
         'observed_skew',
+        'observed_variance',
         'predicted_cvstd',
         'predicted_kurtosis',
         'predicted_length',
         'predicted_mean',
         'predicted_skew',
+        'predicted_variance',
         'r_squared',
-        'r_squared_adj'
+        'r_squared_adj',
+        'rmse',
+        'rmse_adj',
     ]
 
 
