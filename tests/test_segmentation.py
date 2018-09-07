@@ -7,7 +7,7 @@ from eemeter.segmentation import segment_time_series
 
 @pytest.fixture
 def index_8760():
-    return pd.date_range("2017-01-01", periods=365*24, freq="H", tz="UTC")
+    return pd.date_range("2017-01-01", periods=365 * 24, freq="H", tz="UTC")
 
 
 def test_segment_time_series_invalid_type(index_8760):

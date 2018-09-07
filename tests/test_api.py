@@ -213,79 +213,75 @@ def test_model_results_json_with_objects():
 
 def test_model_results_json_with_nan_r_squared_adj():
     candidate_model = CandidateModel(
-        model_type='model_type',
-        formula='formula',
-        status='status',
+        model_type="model_type",
+        formula="formula",
+        status="status",
         r_squared_adj=np.nan,
     )
     model_results = ModelResults(
-        status='status',
-        method_name='method_name',
+        status="status",
+        method_name="method_name",
         model=candidate_model,
-        r_squared_adj=np.nan
+        r_squared_adj=np.nan,
     )
     assert model_results.json() == {
-        'candidates': None,
-        'metadata': {},
-        'method_name': 'method_name',
-        'totals_metrics': None,
-        'avgs_metrics': None,
-        'model': {
-            'formula': 'formula',
-            'model_params': {},
-            'model_type': 'model_type',
-            'r_squared_adj': None,
-            'status': 'status',
-            'warnings': []
+        "candidates": None,
+        "metadata": {},
+        "method_name": "method_name",
+        "totals_metrics": None,
+        "avgs_metrics": None,
+        "model": {
+            "formula": "formula",
+            "model_params": {},
+            "model_type": "model_type",
+            "r_squared_adj": None,
+            "status": "status",
+            "warnings": [],
         },
-        'settings': {},
-        'status': 'status',
-        'r_squared_adj': None,
-        'warnings': [],
+        "settings": {},
+        "status": "status",
+        "r_squared_adj": None,
+        "warnings": [],
     }
 
 
 def test_model_results_json_with_model_metrics():
     candidate_model = CandidateModel(
-        model_type='model_type',
-        formula='formula',
-        status='status',
-        r_squared_adj=0.5,
+        model_type="model_type", formula="formula", status="status", r_squared_adj=0.5
     )
     model_results = ModelResults(
-        status='status',
-        method_name='method_name',
+        status="status",
+        method_name="method_name",
         model=candidate_model,
-        r_squared_adj=np.nan
+        r_squared_adj=np.nan,
     )
     model_metrics = ModelMetrics(
-        observed_input=pd.Series([0, 1, 2]),
-        predicted_input=pd.Series([1, 0, 2]),
+        observed_input=pd.Series([0, 1, 2]), predicted_input=pd.Series([1, 0, 2])
     )
     json_result = model_results.json()
     json.dumps(json_result)  # just make sure it's valid json
 
-    assert 'totals_metrics' in json_result
-    assert 'avgs_metrics' in json_result
-    json_result['totals_metrics'] = {}  # overwrite because of floats
-    json_result['avgs_metrics'] = {}  # overwrite because of floats
+    assert "totals_metrics" in json_result
+    assert "avgs_metrics" in json_result
+    json_result["totals_metrics"] = {}  # overwrite because of floats
+    json_result["avgs_metrics"] = {}  # overwrite because of floats
 
     assert json_result == {
-        'candidates': None,
-        'metadata': {},
-        'method_name': 'method_name',
-        'totals_metrics': {},
-        'avgs_metrics': {},
-        'model': {
-            'formula': 'formula',
-            'model_params': {},
-            'model_type': 'model_type',
-            'r_squared_adj': 0.5,
-            'status': 'status',
-            'warnings': []
+        "candidates": None,
+        "metadata": {},
+        "method_name": "method_name",
+        "totals_metrics": {},
+        "avgs_metrics": {},
+        "model": {
+            "formula": "formula",
+            "model_params": {},
+            "model_type": "model_type",
+            "r_squared_adj": 0.5,
+            "status": "status",
+            "warnings": [],
         },
-        'settings': {},
-        'status': 'status',
-        'r_squared_adj': None,
-        'warnings': [],
+        "settings": {},
+        "status": "status",
+        "r_squared_adj": None,
+        "warnings": [],
     }

@@ -11,6 +11,7 @@ def _compute_r_squared(combined):
 def _compute_r_squared_adj(r_squared, length, num_parameters):
     return 1 - (1 - r_squared) * (length - 1) / (length - num_parameters - 1)
 
+
 def _compute_rmse(combined):
     return (combined["residuals"].astype(float) ** 2).mean() ** 0.5
 

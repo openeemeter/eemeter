@@ -11,10 +11,12 @@ __all__ = (
     "ModelPrediction",
 )
 
+
 def _noneify(value):
     if value is None:
         return None
     return None if np.isnan(value) else value
+
 
 ModelPrediction = namedtuple("ModelPrediction", ["result", "design_matrix", "warnings"])
 

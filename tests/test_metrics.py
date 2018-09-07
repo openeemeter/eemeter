@@ -109,40 +109,40 @@ def model_metrics(sample_data):
 
 def test_model_metrics_json_valid(model_metrics):
     model_metrics.r_squared = np.nan
-    model_metrics.r_squared_adj = float('nan')
+    model_metrics.r_squared_adj = float("nan")
     model_metrics.cvrmse = np.inf
-    model_metrics.cvrmse_adj = float('inf')
+    model_metrics.cvrmse_adj = float("inf")
     model_metrics.nmae = None
-    model_metrics.mape = float('-inf')
+    model_metrics.mape = float("-inf")
     json_rep = model_metrics.json()
     json.dumps(json_rep)
     assert sorted(json_rep.keys()) == [
-        'autocorr_resid',
-        'cvrmse',
-        'cvrmse_adj',
-        'mape',
-        'mape_no_zeros',
-        'merged_length',
-        'nmae',
-        'nmbe',
-        'num_meter_zeros',
-        'num_parameters',
-        'observed_cvstd',
-        'observed_kurtosis',
-        'observed_length',
-        'observed_mean',
-        'observed_skew',
-        'observed_variance',
-        'predicted_cvstd',
-        'predicted_kurtosis',
-        'predicted_length',
-        'predicted_mean',
-        'predicted_skew',
-        'predicted_variance',
-        'r_squared',
-        'r_squared_adj',
-        'rmse',
-        'rmse_adj',
+        "autocorr_resid",
+        "cvrmse",
+        "cvrmse_adj",
+        "mape",
+        "mape_no_zeros",
+        "merged_length",
+        "nmae",
+        "nmbe",
+        "num_meter_zeros",
+        "num_parameters",
+        "observed_cvstd",
+        "observed_kurtosis",
+        "observed_length",
+        "observed_mean",
+        "observed_skew",
+        "observed_variance",
+        "predicted_cvstd",
+        "predicted_kurtosis",
+        "predicted_length",
+        "predicted_mean",
+        "predicted_skew",
+        "predicted_variance",
+        "r_squared",
+        "r_squared_adj",
+        "rmse",
+        "rmse_adj",
     ]
 
 

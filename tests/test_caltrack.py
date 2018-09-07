@@ -12,9 +12,7 @@ from eemeter import (
     modeled_savings,
     get_baseline_data,
 )
-from eemeter.transform import (
-    day_counts,
-)
+from eemeter.transform import day_counts
 from eemeter.features import (
     compute_temperature_features,
     compute_usage_per_day_feature,
@@ -542,7 +540,9 @@ def test_caltrack_predict_design_matrix_n_days(cdd_hdd_h54_c67_billing_monthly_t
     assert prediction.mean() is not None
 
 
-def test_caltrack_predict_design_matrix_no_days_fails(cdd_hdd_h54_c67_billing_monthly_totals):
+def test_caltrack_predict_design_matrix_no_days_fails(
+    cdd_hdd_h54_c67_billing_monthly_totals
+):
     # This makes sure that the method fails if neither n_days nor
     # a DatetimeIndex is available.
     data = cdd_hdd_h54_c67_billing_monthly_totals

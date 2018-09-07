@@ -162,9 +162,7 @@ def _segment_weights_one_month(index):
 def _segment_weights_three_month(index):
     return pd.DataFrame(
         {
-            month_names: (index.month.map(lambda i: i in month_numbers)).astype(
-                float
-            )
+            month_names: (index.month.map(lambda i: i in month_numbers)).astype(float)
             for month_names, month_numbers in [
                 ("dec-jan-feb", (12, 1, 2)),
                 ("jan-feb-mar", (1, 2, 3)),
