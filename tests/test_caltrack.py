@@ -4,21 +4,12 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from eemeter import (
-    CandidateModel,
-    caltrack_method,
-    caltrack_sufficiency_criteria,
-    metered_savings,
-    modeled_savings,
-    get_baseline_data,
-)
-from eemeter.transform import day_counts
-from eemeter.features import (
-    compute_temperature_features,
-    compute_usage_per_day_feature,
-    merge_features,
-)
+from eemeter.api import CandidateModel
 from eemeter.caltrack import (
+    _caltrack_predict_design_matrix,
+    caltrack_method,
+    caltrack_predict,
+    caltrack_sufficiency_criteria,
     get_intercept_only_candidate_models,
     get_too_few_non_zero_degree_day_warning,
     get_total_degree_day_too_low_warning,
@@ -27,11 +18,15 @@ from eemeter.caltrack import (
     get_cdd_only_candidate_models,
     get_hdd_only_candidate_models,
     get_cdd_hdd_candidate_models,
-    caltrack_predict,
     select_best_candidate,
-    _caltrack_predict_design_matrix,
 )
 from eemeter.exceptions import MissingModelParameterError, UnrecognizedModelTypeError
+from eemeter.features import (
+    compute_temperature_features,
+    compute_usage_per_day_feature,
+    merge_features,
+)
+from eemeter.transform import day_counts, get_baseline_data
 
 
 @pytest.fixture
@@ -1681,228 +1676,3 @@ def test_caltrack_sufficiency_criteria_handle_single_input():
 
     assert data_sufficiency.status == "FAIL"
     assert len(data_sufficiency.warnings) == 3
-
-
-@pytest.fixture
-def baseline_model(cdd_hdd_h60_c65):
-    model_results = caltrack_method(cdd_hdd_h60_c65)
-    return model_results.model
-
-
-@pytest.fixture
-def baseline_model_results(cdd_hdd_h60_c65):
-    model_results = caltrack_method(cdd_hdd_h60_c65)
-    return model_results
-
-
-@pytest.fixture
-def reporting_model(cdd_hdd_h60_c65):
-    model_results = caltrack_method(cdd_hdd_h60_c65)
-    return model_results.model
-
-
-@pytest.fixture
-def reporting_meter_data():
-    index = pd.date_range("2011-01-01", freq="D", periods=60, tz="UTC")
-    return pd.DataFrame({"value": 1}, index=index)
-
-
-@pytest.fixture
-def reporting_temperature_data():
-    index = pd.date_range("2011-01-01", freq="D", periods=60, tz="UTC")
-    return pd.Series(np.arange(30.0, 90.0), index=index).asfreq("H").ffill()
-
-
-def test_metered_savings_cdd_hdd(
-    baseline_model_results, reporting_meter_data, reporting_temperature_data
-):
-
-    results, error_bands = metered_savings(
-        baseline_model_results,
-        reporting_meter_data,
-        reporting_temperature_data,
-        degree_day_method="daily",
-        frequency="daily",
-        t_stat=1.649,
-    )
-    assert list(results.columns) == [
-        "reporting_observed",
-        "counterfactual_usage",
-        "metered_savings",
-    ]
-    assert round(results.metered_savings.sum(), 2) == 1569.57
-
-
-def test_metered_savings_cdd_hdd_hourly_degree_days(
-    baseline_model_results, reporting_meter_data, reporting_temperature_data
-):
-
-    results, error_bands = metered_savings(
-        baseline_model_results,
-        reporting_meter_data,
-        reporting_temperature_data,
-        degree_day_method="hourly",
-        frequency="daily",
-        t_stat=1.649,
-    )
-    assert list(results.columns) == [
-        "reporting_observed",
-        "counterfactual_usage",
-        "metered_savings",
-    ]
-    assert round(results.metered_savings.sum(), 2) == 1569.57
-
-
-def test_metered_savings_cdd_hdd_no_params(
-    baseline_model_results, reporting_meter_data, reporting_temperature_data
-):
-    baseline_model_results.model.model_params = None
-    with pytest.raises(MissingModelParameterError):
-        metered_savings(
-            baseline_model_results,
-            reporting_meter_data,
-            reporting_temperature_data,
-            degree_day_method="daily",
-            frequency="daily",
-            t_stat=1.649,
-        )
-
-
-def test_metered_savings_cdd_hdd_with_disaggregated(
-    baseline_model_results, reporting_meter_data, reporting_temperature_data
-):
-
-    results, error_bands = metered_savings(
-        baseline_model_results,
-        reporting_meter_data,
-        reporting_temperature_data,
-        degree_day_method="daily",
-        with_disaggregated=True,
-        frequency="daily",
-        t_stat=1.649,
-    )
-    assert list(sorted(results.columns)) == [
-        "counterfactual_base_load",
-        "counterfactual_cooling_load",
-        "counterfactual_heating_load",
-        "counterfactual_usage",
-        "metered_savings",
-        "reporting_observed",
-    ]
-
-
-def test_modeled_savings_cdd_hdd(
-    baseline_model, reporting_model, reporting_meter_data, reporting_temperature_data
-):
-    # using reporting data for convenience, but intention is to use normal data
-    results = modeled_savings(
-        baseline_model,
-        reporting_model,
-        reporting_meter_data.index,
-        reporting_temperature_data,
-        degree_day_method="daily",
-    )
-    assert list(results.columns) == [
-        "modeled_baseline_usage",
-        "modeled_reporting_usage",
-        "modeled_savings",
-    ]
-    assert round(results.modeled_savings.sum(), 2) == 0.0
-
-
-def test_modeled_savings_cdd_hdd_hourly_degree_days(
-    baseline_model, reporting_model, reporting_meter_data, reporting_temperature_data
-):
-    # using reporting data for convenience, but intention is to use normal data
-    results = modeled_savings(
-        baseline_model,
-        reporting_model,
-        reporting_meter_data.index,
-        reporting_temperature_data,
-        degree_day_method="hourly",
-    )
-    assert list(results.columns) == [
-        "modeled_baseline_usage",
-        "modeled_reporting_usage",
-        "modeled_savings",
-    ]
-    assert round(results.modeled_savings.sum(), 2) == 0.0
-
-
-def test_modeled_savings_cdd_hdd_baseline_model_no_params(
-    baseline_model, reporting_model, reporting_meter_data, reporting_temperature_data
-):
-    baseline_model.model_params = None
-    with pytest.raises(MissingModelParameterError):
-        modeled_savings(
-            baseline_model,
-            reporting_model,
-            reporting_meter_data.index,
-            reporting_temperature_data,
-            degree_day_method="daily",
-        )
-
-
-def test_modeled_savings_cdd_hdd_reporting_model_no_params(
-    baseline_model, reporting_model, reporting_meter_data, reporting_temperature_data
-):
-    reporting_model.model_params = None
-    with pytest.raises(MissingModelParameterError):
-        modeled_savings(
-            baseline_model,
-            reporting_model,
-            reporting_meter_data.index,
-            reporting_temperature_data,
-            degree_day_method="daily",
-        )
-
-
-def test_modeled_savings_cdd_hdd_with_disaggregated(
-    baseline_model, reporting_model, reporting_meter_data, reporting_temperature_data
-):
-
-    # using reporting data for convenience, but intention is to use normal data
-    results = modeled_savings(
-        baseline_model,
-        reporting_model,
-        reporting_meter_data.index,
-        reporting_temperature_data,
-        degree_day_method="daily",
-        with_disaggregated=True,
-    )
-    assert list(sorted(results.columns)) == [
-        "modeled_base_load_savings",
-        "modeled_baseline_base_load",
-        "modeled_baseline_cooling_load",
-        "modeled_baseline_heating_load",
-        "modeled_baseline_usage",
-        "modeled_cooling_load_savings",
-        "modeled_heating_load_savings",
-        "modeled_reporting_base_load",
-        "modeled_reporting_cooling_load",
-        "modeled_reporting_heating_load",
-        "modeled_reporting_usage",
-        "modeled_savings",
-    ]
-
-
-def test_modeled_savings_empty_temperature_data(baseline_model, reporting_model):
-    index = pd.DatetimeIndex([], tz="UTC", name="dt", freq="H")
-    temperature_data = pd.Series([], index=index)
-
-    meter_data_index = temperature_data.resample("D").sum().index
-
-    # using reporting data for convenience, but intention is to use normal data
-    results = modeled_savings(
-        baseline_model,
-        reporting_model,
-        meter_data_index,
-        temperature_data,
-        degree_day_method="daily",
-    )
-    assert results.shape == (0, 3)
-    assert list(results.columns) == [
-        "modeled_baseline_usage",
-        "modeled_reporting_usage",
-        "modeled_savings",
-    ]
