@@ -156,6 +156,20 @@ def _segment_weights_one_month(index):
             ]
         },
         index=index,
+        columns=[
+            "jan",
+            "feb",
+            "mar",
+            "apr",
+            "may",
+            "jun",
+            "jul",
+            "aug",
+            "sep",
+            "oct",
+            "nov",
+            "dec",
+        ]  # guarantee order
     )
 
 
@@ -179,6 +193,20 @@ def _segment_weights_three_month(index):
             ]
         },
         index=index,
+        columns=[
+            "dec-jan-feb",
+            "jan-feb-mar",
+            "feb-mar-apr",
+            "mar-apr-may",
+            "apr-may-jun",
+            "may-jun-jul",
+            "jun-jul-aug",
+            "jul-aug-sep",
+            "aug-sep-oct",
+            "sep-oct-nov",
+            "oct-nov-dec",
+            "nov-dec-jan",
+        ],  # guarantee order
     )
 
 
@@ -204,6 +232,20 @@ def _segment_weights_three_month_weighted(index):
             ]
         },
         index=index,
+        columns=[
+            "dec-jan-feb-weighted",
+            "jan-feb-mar-weighted",
+            "feb-mar-apr-weighted",
+            "mar-apr-may-weighted",
+            "apr-may-jun-weighted",
+            "may-jun-jul-weighted",
+            "jun-jul-aug-weighted",
+            "jul-aug-sep-weighted",
+            "aug-sep-oct-weighted",
+            "sep-oct-nov-weighted",
+            "oct-nov-dec-weighted",
+            "nov-dec-jan-weighted",
+        ],  # guarantee order
     )
 
 
