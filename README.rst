@@ -2,22 +2,28 @@ EEmeter: tools for calculating metered energy savings
 =====================================================
 
 .. image:: https://travis-ci.org/openeemeter/eemeter.svg?branch=master
-    :target: https://travis-ci.org/openeemeter/eemeter
+  :target: https://travis-ci.org/openeemeter/eemeter
+  :alt: Build Status
 
 .. image:: https://img.shields.io/github/license/openeemeter/eemeter.svg
-    :target: https://github.com/openeemeter/eemeter
+  :target: https://github.com/openeemeter/eemeter
+  :alt: License
 
-.. image:: https://readthedocs.org/projects/eemeter/badge/?version=latest
-    :target: http://eemeter.readthedocs.io/en/latest/?badge=latest
+.. image:: https://readthedocs.org/projects/eemeter/badge/?version=master
+  :target: https://eemeter.readthedocs.io/?badge=master
+  :alt: Documentation Status
 
 .. image:: https://img.shields.io/pypi/v/eemeter.svg
-    :target: https://pypi.python.org/pypi/eemeter
+  :target: https://pypi.python.org/pypi/eemeter
+  :alt: PyPI Version
 
 .. image:: https://codecov.io/gh/openeemeter/eemeter/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/openeemeter/eemeter
+  :alt: Code Coverage Status
 
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
-  :target: https:////github.com/ambv/black
+  :target: https://github.com/ambv/black
+  :alt: Code Style
 
 ---------------
 
