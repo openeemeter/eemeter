@@ -12,6 +12,9 @@ from eemeter import (
     modeled_savings,
     get_baseline_data,
 )
+from eemeter.transform import (
+    day_counts,
+)
 from eemeter.features import (
     compute_temperature_features,
     compute_usage_per_day_feature,
@@ -521,7 +524,7 @@ def test_caltrack_predict_design_matrix_n_days(cdd_hdd_h54_c67_billing_monthly_t
     # This makes sure that the method works with n_days when
     # DatetimeIndexes are not available.
     data = cdd_hdd_h54_c67_billing_monthly_totals
-    data.reset_index()
+    data = data.reset_index(drop=True)
     data["n_days"] = 1
     prediction = _caltrack_predict_design_matrix(
         "cdd_hdd",
@@ -537,6 +540,27 @@ def test_caltrack_predict_design_matrix_n_days(cdd_hdd_h54_c67_billing_monthly_t
         output_averages=True,
     )
     assert prediction.mean() is not None
+
+
+def test_caltrack_predict_design_matrix_no_days_fails(cdd_hdd_h54_c67_billing_monthly_totals):
+    # This makes sure that the method fails if neither n_days nor
+    # a DatetimeIndex is available.
+    data = cdd_hdd_h54_c67_billing_monthly_totals
+    data = data.reset_index(drop=True)
+    with pytest.raises(ValueError):
+        _caltrack_predict_design_matrix(
+            "cdd_hdd",
+            {
+                "intercept": 13.420093629452852,
+                "beta_cdd": 2.257868665412409,
+                "beta_hdd": 1.0479347638717025,
+                "cooling_balance_point": 67,
+                "heating_balance_point": 54,
+            },
+            data,
+            input_averages=True,
+            output_averages=True,
+        )
 
 
 def test_get_too_few_non_zero_degree_day_warning_ok():

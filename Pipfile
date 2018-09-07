@@ -1,28 +1,31 @@
 [[source]]
+
 url = "https://pypi.python.org/simple"
 verify_ssl = true
 name = "pypi"
 
+
 [packages]
+
 click = "*"
+pandas = "*"
 eeweather = "*"
 matplotlib = "*"
-pandas = "*"
-schema = "*"
-scipy = "*"
 statsmodels = "*"
 sqlalchemy = "*"
+scipy = "*"
+
 
 [dev-packages]
-black = "==18.6b4"
-coverage = "*"
-jupyterlab = "*"
+
+black = {version = "==18.6b4", markers="python_version >= '3.6'"}
 pytest = "*"
+coverage = "*"
 pytest-cov = "*"
+tox = "*"
+twine = "*"
 pytest-xdist = "*"
 sphinx = "*"
 sphinx-autobuild = "*"
-sphinxcontrib-spelling = "*"
-tox = "*"
-twine = "*"
 typing = "*"
+sphinxcontrib-spelling = "*"
