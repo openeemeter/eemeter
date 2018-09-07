@@ -3,9 +3,7 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from eemeter import (
-    ModelMetrics,
-)
+from eemeter import ModelMetrics
 from eemeter.metrics import (
     _compute_r_squared,
     _compute_r_squared_adj,
@@ -15,7 +13,7 @@ from eemeter.metrics import (
     _compute_nmae,
     _compute_nmbe,
     _compute_autocorr_resid,
-    _json_safe_float
+    _json_safe_float,
 )
 
 
@@ -23,7 +21,7 @@ from eemeter.metrics import (
 def sample_data():
     # Could have included DatetimeIndex, but made it more general
     series_one = pd.Series([1, 3, 4, 1, 6])
-    series_two =  pd.Series([2, 3, 3, 2, 4])
+    series_two = pd.Series([2, 3, 3, 2, 4])
     series_one.name = "NameOne"
     series_two.name = "NameTwo"
     return series_one, series_two
@@ -31,7 +29,7 @@ def sample_data():
 
 def test_ModelMetrics(sample_data):
     series_one, series_two = sample_data
-    model_metrics = ModelMetrics(series_one,series_two,num_parameters=2)
+    model_metrics = ModelMetrics(series_one, series_two, num_parameters=2)
     assert model_metrics.observed_length == 5
     assert model_metrics.predicted_length == 5
     assert model_metrics.merged_length == 5
@@ -60,13 +58,13 @@ def test_ModelMetrics(sample_data):
 @pytest.fixture
 def sample_data_zeros():
     series_one = pd.Series([1, 0, 0, 1, 6])
-    series_two =  pd.Series([2, 3, 3, 2, 4])
+    series_two = pd.Series([2, 3, 3, 2, 4])
     return series_one, series_two
 
 
 def test_ModelMetrics_zeros(sample_data_zeros):
     series_one, series_two = sample_data_zeros
-    model_metrics = ModelMetrics(series_one, series_two, num_parameters = 2)
+    model_metrics = ModelMetrics(series_one, series_two, num_parameters=2)
     assert np.isinf(model_metrics.mape)
     assert model_metrics.num_meter_zeros == 2
 
@@ -74,19 +72,19 @@ def test_ModelMetrics_zeros(sample_data_zeros):
 def test_ModelMetrics_num_parameter_error(sample_data):
     series_one, series_two = sample_data
     with pytest.raises(ValueError):
-        model_metrics = ModelMetrics(series_one, series_two, num_parameters = -1)
+        model_metrics = ModelMetrics(series_one, series_two, num_parameters=-1)
 
 
 def test_ModelMetrics_autocorr_lags_error(sample_data):
     series_one, series_two = sample_data
     with pytest.raises(ValueError):
-        model_metrics = ModelMetrics(series_one, series_two, autocorr_lags = 0)
+        model_metrics = ModelMetrics(series_one, series_two, autocorr_lags=0)
 
 
 @pytest.fixture
 def sample_data_diff_length():
     series_one = pd.Series([1, 0, 0, 1, 6, 4, 5])
-    series_two =  pd.Series([2, 3, 3, 2, 4])
+    series_two = pd.Series([2, 3, 3, 2, 4])
     return series_one, series_two
 
 
@@ -111,35 +109,35 @@ def model_metrics(sample_data):
 
 def test_model_metrics_json_valid(model_metrics):
     model_metrics.r_squared = np.nan
-    model_metrics.r_squared_adj = float('nan')
+    model_metrics.r_squared_adj = float("nan")
     model_metrics.cvrmse = np.inf
-    model_metrics.cvrmse_adj = float('inf')
+    model_metrics.cvrmse_adj = float("inf")
     model_metrics.nmae = None
-    model_metrics.mape = float('-inf')
+    model_metrics.mape = float("-inf")
     json_rep = model_metrics.json()
     json.dumps(json_rep)
     assert sorted(json_rep.keys()) == [
-        'autocorr_resid',
-        'cvrmse',
-        'cvrmse_adj',
-        'mape',
-        'mape_no_zeros',
-        'merged_length',
-        'nmae',
-        'nmbe',
-        'num_meter_zeros',
-        'observed_cvstd',
-        'observed_kurtosis',
-        'observed_length',
-        'observed_mean',
-        'observed_skew',
-        'predicted_cvstd',
-        'predicted_kurtosis',
-        'predicted_length',
-        'predicted_mean',
-        'predicted_skew',
-        'r_squared',
-        'r_squared_adj'
+        "autocorr_resid",
+        "cvrmse",
+        "cvrmse_adj",
+        "mape",
+        "mape_no_zeros",
+        "merged_length",
+        "nmae",
+        "nmbe",
+        "num_meter_zeros",
+        "observed_cvstd",
+        "observed_kurtosis",
+        "observed_length",
+        "observed_mean",
+        "observed_skew",
+        "predicted_cvstd",
+        "predicted_kurtosis",
+        "predicted_length",
+        "predicted_mean",
+        "predicted_skew",
+        "r_squared",
+        "r_squared_adj",
     ]
 
 
@@ -148,11 +146,10 @@ def sample_data_merged(sample_data):
     series_one, series_two = sample_data
     observed = series_one.to_frame().dropna()
     predicted = series_two.to_frame().dropna()
-    observed.columns = ['observed']
-    predicted.columns = ['predicted']
-    combined = observed.merge(predicted, left_index=True,
-        right_index=True)
-    combined['residuals'] = (combined.predicted - combined.observed)
+    observed.columns = ["observed"]
+    predicted.columns = ["predicted"]
+    combined = observed.merge(predicted, left_index=True, right_index=True)
+    combined["residuals"] = combined.predicted - combined.observed
     return combined
 
 
@@ -204,9 +201,9 @@ def test_json_safe_float():
     assert _json_safe_float(-np.inf) is None
     assert _json_safe_float(np.nan) is None
     assert _json_safe_float(3.3) == 3.3
-    assert _json_safe_float('3.3') == 3.3
+    assert _json_safe_float("3.3") == 3.3
     assert _json_safe_float(1) == 1.0
     assert _json_safe_float(None) == None
 
     with pytest.raises(Exception):
-        _json_safe_float('not a number')
+        _json_safe_float("not a number")

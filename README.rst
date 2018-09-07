@@ -16,6 +16,9 @@ EEmeter: tools for calculating metered energy savings
 .. image:: https://codecov.io/gh/openeemeter/eemeter/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/openeemeter/eemeter
 
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+  :target: https:////github.com/ambv/black
+
 ---------------
 
 **EEmeter** — open source implementations of standard methods for calculating

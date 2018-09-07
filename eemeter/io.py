@@ -2,20 +2,25 @@ import numpy as np
 import pandas as pd
 
 __all__ = (
-    'meter_data_from_csv',
-    'meter_data_from_json',
-    'meter_data_to_csv',
-    'temperature_data_from_csv',
-    'temperature_data_from_json',
-    'temperature_data_to_csv',
+    "meter_data_from_csv",
+    "meter_data_from_json",
+    "meter_data_to_csv",
+    "temperature_data_from_csv",
+    "temperature_data_from_json",
+    "temperature_data_to_csv",
 )
 
 
 def meter_data_from_csv(
-    filepath_or_buffer, tz=None, start_col='start', value_col='value', gzipped=False,
-    freq=None, **kwargs
+    filepath_or_buffer,
+    tz=None,
+    start_col="start",
+    value_col="value",
+    gzipped=False,
+    freq=None,
+    **kwargs
 ):
-    ''' Load meter data from a CSV file.
+    """ Load meter data from a CSV file.
 
     Default format::
 
@@ -41,38 +46,43 @@ def meter_data_from_csv(
     **kwargs
         Extra keyword arguments to pass to :any:`pandas.read_csv`, such as
         ``sep='|'``.
-    '''
+    """
 
     read_csv_kwargs = {
-        'usecols': [start_col, value_col],
-        'dtype': {value_col: np.float64},
-        'parse_dates': [start_col],
-        'index_col': start_col,
+        "usecols": [start_col, value_col],
+        "dtype": {value_col: np.float64},
+        "parse_dates": [start_col],
+        "index_col": start_col,
     }
 
     if gzipped:
-        read_csv_kwargs.update({'compression': 'gzip'})
+        read_csv_kwargs.update({"compression": "gzip"})
 
     # allow passing extra kwargs
     read_csv_kwargs.update(kwargs)
 
-    df = pd.read_csv(filepath_or_buffer, **read_csv_kwargs).tz_localize('UTC')
+    df = pd.read_csv(filepath_or_buffer, **read_csv_kwargs).tz_localize("UTC")
     if tz is not None:
         df = df.tz_convert(tz)
 
-    if freq == 'hourly':
-        df = df.resample('H').sum()
-    elif freq == 'daily':
-        df = df.resample('D').sum()
+    if freq == "hourly":
+        df = df.resample("H").sum()
+    elif freq == "daily":
+        df = df.resample("D").sum()
 
     return df
 
 
 def temperature_data_from_csv(
-    filepath_or_buffer, tz=None, date_col='dt', temp_col='tempF',
-    gzipped=False, freq=None, **kwargs
+    filepath_or_buffer,
+    tz=None,
+    date_col="dt",
+    temp_col="tempF",
+    gzipped=False,
+    freq=None,
+    **kwargs
 ):
-    ''' Load temperature data from a CSV file.
+    """ Load temperature data from a CSV file.
 
     Default format::
 
@@ -98,33 +108,33 @@ def temperature_data_from_csv(
     **kwargs
         Extra keyword arguments to pass to :any:`pandas.read_csv`, such as
         ``sep='|'``.
-    '''
+    """
     read_csv_kwargs = {
-        'usecols': [date_col, temp_col],
-        'dtype': {temp_col: np.float64},
-        'parse_dates': [date_col],
-        'index_col': date_col,
+        "usecols": [date_col, temp_col],
+        "dtype": {temp_col: np.float64},
+        "parse_dates": [date_col],
+        "index_col": date_col,
     }
 
     if gzipped:
-        read_csv_kwargs.update({'compression': 'gzip'})
+        read_csv_kwargs.update({"compression": "gzip"})
 
     # allow passing extra kwargs
     read_csv_kwargs.update(kwargs)
 
     if tz is None:
-        tz = 'UTC'
+        tz = "UTC"
 
     df = pd.read_csv(filepath_or_buffer, **read_csv_kwargs).tz_localize(tz)
 
-    if freq == 'hourly':
-        df = df.resample('H').sum()
+    if freq == "hourly":
+        df = df.resample("H").sum()
 
     return df[temp_col]
 
 
-def meter_data_from_json(data, orient='list'):
-    ''' Load meter data from json.
+def meter_data_from_json(data, orient="list"):
+    """ Load meter data from json.
 
     Default format::
 
@@ -144,18 +154,18 @@ def meter_data_from_json(data, orient='list'):
     df : :any:`pandas.DataFrame`
         DataFrame with a single column (``'value'``) and a
         :any:`pandas.DatetimeIndex`.
-    '''
-    if orient == 'list':
-        df = pd.DataFrame(data, columns=['start', 'value'])
-        df['start'] = pd.DatetimeIndex(df.start).tz_localize('UTC')
-        df = df.set_index('start')
+    """
+    if orient == "list":
+        df = pd.DataFrame(data, columns=["start", "value"])
+        df["start"] = pd.DatetimeIndex(df.start).tz_localize("UTC")
+        df = df.set_index("start")
         return df
     else:
-        raise ValueError('orientation not recognized.')
+        raise ValueError("orientation not recognized.")
 
 
-def temperature_data_from_json(data, orient='list'):
-    ''' Load temperature data from json. (Must be given in degrees
+def temperature_data_from_json(data, orient="list"):
+    """ Load temperature data from json. (Must be given in degrees
     Fahrenheit).
 
     Default format::
@@ -176,18 +186,18 @@ def temperature_data_from_json(data, orient='list'):
     series : :any:`pandas.Series`
         DataFrame with a single column (``'tempF'``) and a
         :any:`pandas.DatetimeIndex`.
-    '''
-    if orient == 'list':
-        df = pd.DataFrame(data, columns=['dt', 'tempF'])
+    """
+    if orient == "list":
+        df = pd.DataFrame(data, columns=["dt", "tempF"])
         series = df.tempF
-        series.index = pd.DatetimeIndex(df.dt).tz_localize('UTC')
+        series.index = pd.DatetimeIndex(df.dt).tz_localize("UTC")
         return series
     else:
-        raise ValueError('orientation not recognized.')
+        raise ValueError("orientation not recognized.")
 
 
 def meter_data_to_csv(meter_data, path_or_buf):
-    ''' Write meter data to CSV. See also :any:`pandas.DataFrame.to_csv`.
+    """ Write meter data to CSV. See also :any:`pandas.DataFrame.to_csv`.
 
     Parameters
     ----------
@@ -196,14 +206,14 @@ def meter_data_to_csv(meter_data, path_or_buf):
         :any:`pandas.DatetimeIndex`.
     path_or_buf : :any:`str` or file handle, default None
         File path or object, if None is provided the result is returned as a string.
-    '''
+    """
     if meter_data.index.name is None:
-        meter_data.index.name = 'start'
+        meter_data.index.name = "start"
     return meter_data.to_csv(path_or_buf, index=True)
 
 
 def temperature_data_to_csv(temperature_data, path_or_buf):
-    ''' Write temperature data to CSV. See also :any:`pandas.DataFrame.to_csv`.
+    """ Write temperature data to CSV. See also :any:`pandas.DataFrame.to_csv`.
 
     Parameters
     ----------
@@ -211,9 +221,9 @@ def temperature_data_to_csv(temperature_data, path_or_buf):
         Temperature data series with :any:`pandas.DatetimeIndex`.
     path_or_buf : :any:`str` or file handle, default None
         File path or object, if None is provided the result is returned as a string.
-    '''
+    """
     if temperature_data.index.name is None:
-        temperature_data.index.name = 'dt'
+        temperature_data.index.name = "dt"
     if temperature_data.name is None:
-        temperature_data.name = 'temperature'
+        temperature_data.name = "temperature"
     return temperature_data.to_frame().to_csv(path_or_buf, index=True)

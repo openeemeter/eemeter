@@ -15,12 +15,7 @@ import logging
 from .__version__ import __title__, __description__, __url__, __version__
 from .__version__ import __author__, __author_email__, __license__
 from .__version__ import __copyright__
-from .api import (
-    CandidateModel,
-    DataSufficiency,
-    EEMeterWarning,
-    ModelResults,
-)
+from .api import CandidateModel, DataSufficiency, EEMeterWarning, ModelResults
 from .caltrack import (
     caltrack_method,
     caltrack_sufficiency_criteria,
@@ -48,9 +43,7 @@ from .exceptions import (
     MissingModelParameterError,
     UnrecognizedModelTypeError,
 )
-from .metrics import (
-    ModelMetrics,
-)
+from .metrics import ModelMetrics
 from .transform import (
     as_freq,
     compute_temperature_features,
@@ -68,17 +61,13 @@ from .io import (
     temperature_data_from_json,
     temperature_data_to_csv,
 )
-from .visualization import (
-    plot_energy_signature,
-    plot_time_series,
-)
-from .samples.load import (
-    samples,
-    load_sample,
-)
+from .visualization import plot_energy_signature, plot_time_series
+from .samples.load import samples, load_sample
+
 
 def get_version():
     return __version__
+
 
 # Set default logging handler to avoid "No handler found" warnings.
 from logging import NullHandler

@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* [placeholder]
+* Apply black code style for easy opinionated PEP 008 formatting
 
 2.0.2
 -----

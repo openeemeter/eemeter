@@ -18,6 +18,7 @@ scipy = "*"
 
 [dev-packages]
 
+black = {version = "==18.6b4", markers="python_version >= '3.6'"}
 pytest = "*"
 coverage = "*"
 pytest-cov = "*"
