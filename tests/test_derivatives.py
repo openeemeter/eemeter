@@ -61,7 +61,7 @@ def reporting_temperature_data():
     return pd.Series(np.arange(30.0, 90.0), index=index).asfreq("H").ffill()
 
 
-def test_metered_savings_cdd_hdd(
+def test_metered_savings_cdd_hdd_daily(
     baseline_model_results, reporting_meter_data, reporting_temperature_data
 ):
 
@@ -79,6 +79,32 @@ def test_metered_savings_cdd_hdd(
         "metered_savings",
     ]
     assert round(results.metered_savings.sum(), 2) == 1569.57
+
+
+@pytest.fixture
+def reporting_meter_data_billing():
+    index = pd.date_range("2011-01-01", freq="MS", periods=13, tz="UTC")
+    return pd.DataFrame({"value": 1}, index=index)
+
+
+def test_metered_savings_cdd_hdd_billing(
+    baseline_model_results, reporting_meter_data_billing, reporting_temperature_data
+):
+
+    results, error_bands = metered_savings(
+        baseline_model_results,
+        reporting_meter_data_billing,
+        reporting_temperature_data,
+        degree_day_method="daily",
+        frequency="billing",
+        t_stat=1.649,
+    )
+    assert list(results.columns) == [
+        "reporting_observed",
+        "counterfactual_usage",
+        "metered_savings",
+    ]
+    assert round(results.metered_savings.sum(), 2) == 1626.57
 
 
 def test_metered_savings_cdd_hdd_hourly_degree_days(

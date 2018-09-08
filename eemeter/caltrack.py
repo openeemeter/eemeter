@@ -1848,3 +1848,30 @@ def fit_caltrack_hourly_model_segment(segment_name, segment_data):
         model_params=model_params,
         warnings=warnings,
     )
+
+
+# make this a function: actually running caltrack
+# baseline_model_results_hourly = eemeter.fit_segmented_model(
+#     segmented_design_matrices_hourly,
+#     eemeter.fit_hourly_model_segment,
+#     prediction_segment_type='one_month',
+#     prediction_segment_name_mapping={
+#         'jan': 'dec-jan-feb-weighted',
+#         'feb': 'jan-feb-mar-weighted',
+#         'mar': 'feb-mar-apr-weighted',
+#         'apr': 'mar-apr-may-weighted',
+#         'may': 'apr-may-jun-weighted',
+#         'jun': 'may-jun-jul-weighted',
+#         'jul': 'jun-jul-aug-weighted',
+#         'aug': 'jul-aug-sep-weighted',
+#         'sep': 'aug-sep-oct-weighted',
+#         'oct': 'sep-oct-nov-weighted',
+#         'nov': 'oct-nov-dec-weighted',
+#         'dec': 'nov-dec-jan-weighted',
+#     },
+#     prediction_feature_processor=eemeter.caltrack_hourly_prediction_feature_processor,
+#     prediction_feature_processor_kwargs={
+#         'occupancy_lookup': occupancy_lookup_hourly,
+#         'temperature_bins': temperature_bins_hourly,
+#     },
+# )

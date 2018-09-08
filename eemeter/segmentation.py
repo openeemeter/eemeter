@@ -169,7 +169,7 @@ def _segment_weights_one_month(index):
             "oct",
             "nov",
             "dec",
-        ]  # guarantee order
+        ],  # guarantee order
     )
 
 
@@ -281,6 +281,7 @@ def fit_segmented_model(
     for segment_name, segment_data in segmented_dataset_dict.items():
         segment_model = fit_segment(segment_name, segment_data)
         segment_models.append(segment_model)
+
     segmented_model = SegmentedModel(
         segment_models,
         prediction_segment_type=prediction_segment_type,

@@ -1,5 +1,5 @@
+from .api import EEMeterWarning
 from .transform import day_counts, overwrite_partial_rows_with_nan
-
 from .segmentation import iterate_segmented_dataset
 
 import numpy as np
@@ -14,7 +14,9 @@ __all__ = (
     "compute_temperature_bin_features",
     "compute_time_features",
     "estimate_hour_of_week_occupancy",
-    "fit_temperature_bins" "merge_features",
+    "fit_temperature_bins",
+    "get_missing_hours_of_week_warning",
+    "merge_features",
 )
 
 
@@ -32,33 +34,55 @@ def merge_features(features, keep_partial_nan_rows=False):
 
 
 def compute_usage_per_day_feature(meter_data, series_name="usage_per_day"):
-
     # CalTrack 3.3.1.1
     # convert to average daily meter values.
     usage_per_day = meter_data.value / day_counts(meter_data.index)
     return pd.Series(usage_per_day, name=series_name)
 
 
-def _get_missing_hours_of_week_warning():
-    pass
-
-
-def compute_time_features(index, hour_of_week=True):
-    if hour_of_week:
-        time_features = pd.DataFrame(
-            {
-                "hour_of_week": (index.dayofweek * 24 + (index.hour + 1)).astype(
-                    "category"
-                )
-            },
-            index=index,
-        )
+def get_missing_hours_of_week_warning(hours_of_week):
+    unique = set(hours_of_week.unique())
+    total = set(range(168))
+    missing = sorted(total - unique)
+    if len(missing) == 0:
+        return None
     else:
-        time_features = pd.DataFrame({}, index=index)
+        return EEMeterWarning(
+            qualified_name="eemeter.hour_of_week.missing",
+            description="Missing some of the (zero-indexed) 168 hours of the week.",
+            data={"missing_hours_of_week": missing},
+        )
 
-    # TODO: do something with this
-    _get_missing_hours_of_week_warning()
 
+def compute_time_features(index, hour_of_week=True, day_of_week=True, hour_of_day=True):
+    if index.freq != "H":
+        raise ValueError(
+            "index must have hourly frequency (freq='H')."
+            " Found: {}".format(index.freq)
+        )
+
+    dow_feature = pd.Series(index.dayofweek, index=index, name="day_of_week")
+    hod_feature = pd.Series(index.hour, index=index, name="hour_of_day")
+    how_feature = (dow_feature * 24 + hod_feature).rename("hour_of_week")
+
+    features = []
+    warnings = []
+
+    if day_of_week:
+        features.append(dow_feature.astype("category"))
+    if hour_of_day:
+        features.append(hod_feature.astype("category"))
+    if hour_of_week:
+        how_feature = how_feature.astype("category")
+        features.append(how_feature)
+        warning = get_missing_hours_of_week_warning(how_feature)
+        if warning is not None:
+            warnings.append(warning)
+
+    if len(features) == 0:
+        raise ValueError("No features selected.")
+
+    time_features = merge_features(features)
     return time_features
 
 
@@ -310,8 +334,16 @@ def compute_temperature_features(
     if cooling_balance_points is None:
         cooling_balance_points = []
 
-    if tolerance is None and meter_data_index.freq is not None:
-        tolerance = pd.Timedelta(meter_data_index.freq)
+    if meter_data_index.freq is not None:
+        try:
+            freq_timedelta = pd.Timedelta(meter_data_index.freq)
+        except ValueError:  # freq cannot be converted to timedelta
+            freq_timedelta = None
+    else:
+        freq_timedelta = None
+
+    if tolerance is None:
+        tolerance = freq_timedelta
 
     if not (heating_balance_points == [] and cooling_balance_points == []):
         if degree_day_method == "hourly":
@@ -325,7 +357,7 @@ def compute_temperature_features(
         else:
             raise ValueError("method not supported: {}".format(degree_day_method))
 
-    if pd.Timedelta(meter_data_index.freq) == pd.Timedelta("1H"):
+    if freq_timedelta == pd.Timedelta("1H"):
         # special fast route for hourly data.
         df = temperature_data.to_frame("temperature_mean").reindex(meter_data_index)
 
@@ -455,6 +487,8 @@ def _estimate_hour_of_week_occupancy(model_data, threshold):
 
 
 def estimate_hour_of_week_occupancy(data, segmentation=None, threshold=0.65):
+    """
+    """
     occupancy_lookups = {}
     segmented_datasets = iterate_segmented_dataset(data, segmentation)
     for segment_name, segmented_data in segmented_datasets:
@@ -485,6 +519,9 @@ def _fit_temperature_bins(temperature_data, default_bins, min_temperature_count)
         )
 
     def _find_endpoints_to_remove(temp_summary):
+        if len(temp_summary) == 1:
+            return set()
+
         def _bin_count_invalid(i):
             count = temp_summary.iloc[i]
             return count < min_temperature_count or np.isnan(count)
@@ -506,18 +543,18 @@ def _fit_temperature_bins(temperature_data, default_bins, min_temperature_count)
 
         return endpoints
 
-    test_bins = default_bins.copy()
+    test_bins = set(default_bins)
 
     while True:
-        temp_summary = _compute_temp_summary(test_bins)
+        temp_summary = _compute_temp_summary(sorted(test_bins))
         endpoints_to_remove = _find_endpoints_to_remove(temp_summary)
 
         if len(endpoints_to_remove) == 0:
             break
         for endpoint in endpoints_to_remove:
-            test_bins.remove(endpoint)
+            test_bins.discard(endpoint)
 
-    return test_bins
+    return sorted(test_bins)
 
 
 def fit_temperature_bins(
@@ -534,7 +571,11 @@ def fit_temperature_bins(
         )
 
     if segmentation is None:
-        return segmented_bins[None]
+        bins = segmented_bins[None]
+        return pd.DataFrame(
+            {"keep_bin_endpoint": [endpoint in bins for endpoint in default_bins]},
+            index=pd.Series(default_bins, name="bin_endpoints"),
+        )
 
     return pd.DataFrame(
         {

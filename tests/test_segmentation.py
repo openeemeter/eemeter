@@ -2,7 +2,7 @@ import pytest
 
 import pandas as pd
 
-from eemeter.segmentation import segment_time_series
+from eemeter.segmentation import segment_time_series, iterate_segmented_dataset
 
 
 @pytest.fixture
@@ -80,3 +80,78 @@ def test_segment_time_series_three_month_weighted(index_8760):
     ]
     assert weights.shape == (8760, 12)
     assert weights.sum().sum() == 17520.0
+
+
+@pytest.fixture
+def dataset():
+    index = pd.date_range("2017-01-01", periods=1000, freq="H", tz="UTC")
+    return pd.DataFrame({"a": 1, "b": 2}, index=index, columns=["a", "b"])
+
+
+def test_iterate_segmented_dataset_no_segmentation(dataset):
+    iterator = iterate_segmented_dataset(dataset, segmentation=None)
+    segment_name, data = next(iterator)
+    assert segment_name is None
+    assert list(data.columns) == ["a", "b", "weight"]
+    assert data.shape == (1000, 3)
+    assert data.sum().sum() == 4000
+
+    with pytest.raises(StopIteration):
+        next(iterator)
+
+
+@pytest.fixture
+def segmentation(dataset):
+    return segment_time_series(dataset.index, segment_type="one_month")
+
+
+def test_iterate_segmented_dataset_with_segmentation(dataset, segmentation):
+    iterator = iterate_segmented_dataset(dataset, segmentation=segmentation)
+    segment_name, data = next(iterator)
+    assert segment_name == "jan"
+    assert list(data.columns) == ["a", "b", "weight"]
+    assert data.shape == (744, 3)
+    assert data.sum().sum() == 2976.0
+
+    segment_name, data = next(iterator)
+    assert segment_name == "feb"
+    assert list(data.columns) == ["a", "b", "weight"]
+    assert data.shape == (256, 3)
+    assert data.sum().sum() == 1024.0
+
+    segment_name, data = next(iterator)
+    assert segment_name == "mar"
+    assert list(data.columns) == ["a", "b", "weight"]
+    assert data.shape == (0, 3)
+    assert data.sum().sum() == 0.0
+
+
+def test_iterate_segmented_dataset_with_processor(dataset, segmentation):
+    feature_processor_segment_names = []
+
+    def feature_processor(
+        segment_name, dataset, column_mapping=None
+    ):  # rename some columns
+        feature_processor_segment_names.append(segment_name)
+        return dataset.rename(columns=column_mapping)
+
+    iterator = iterate_segmented_dataset(
+        dataset,
+        segmentation=segmentation,
+        feature_processor=feature_processor,
+        feature_processor_kwargs={"column_mapping": {"a": "c", "b": "d"}},
+        feature_processor_segment_name_mapping={"jan": "jan2", "feb": "feb2"},
+    )
+    segment_name, data = next(iterator)
+    assert feature_processor_segment_names == ["jan2"]
+    assert segment_name == "jan"
+    assert list(data.columns) == ["c", "d", "weight"]
+    assert data.shape == (744, 3)
+    assert data.sum().sum() == 2976.0
+
+    segment_name, data = next(iterator)
+    assert feature_processor_segment_names == ["jan2", "feb2"]
+    assert segment_name == "feb"
+    assert list(data.columns) == ["c", "d", "weight"]
+    assert data.shape == (256, 3)
+    assert data.sum().sum() == 1024.0
