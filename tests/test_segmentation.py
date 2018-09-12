@@ -1,8 +1,13 @@
+import numpy as np
+import pandas as pd
 import pytest
 
-import pandas as pd
-
-from eemeter.segmentation import segment_time_series, iterate_segmented_dataset
+from eemeter.segmentation import (
+    SegmentModel,
+    SegmentedModel,
+    segment_time_series,
+    iterate_segmented_dataset,
+)
 
 
 @pytest.fixture
@@ -119,11 +124,9 @@ def test_iterate_segmented_dataset_with_segmentation(dataset, segmentation):
     assert data.shape == (256, 3)
     assert data.sum().sum() == 1024.0
 
-    segment_name, data = next(iterator)
-    assert segment_name == "mar"
-    assert list(data.columns) == ["a", "b", "weight"]
-    assert data.shape == (0, 3)
-    assert data.sum().sum() == 0.0
+    # no other segments available
+    with pytest.raises(StopIteration):
+        next(iterator)
 
 
 def test_iterate_segmented_dataset_with_processor(dataset, segmentation):
@@ -155,3 +158,42 @@ def test_iterate_segmented_dataset_with_processor(dataset, segmentation):
     assert list(data.columns) == ["c", "d", "weight"]
     assert data.shape == (256, 3)
     assert data.sum().sum() == 1024.0
+
+
+def test_segment_model():
+    segment_model = SegmentModel(
+        segment_name="segment",
+        model=None,
+        formula="meter_value ~ a + b - 1",
+        model_params={"a": 1, "b": 1},
+        warnings=None,
+    )
+    index = pd.date_range("2017-01-01", periods=2, freq="H", tz="UTC")
+    data = pd.DataFrame({"a": [1, 1], "b": [1, 1]}, index=index)
+    prediction = segment_model.predict(data)
+    assert prediction.sum() == 4
+
+
+def test_segmented_model():
+    segment_model = SegmentModel(
+        segment_name="jan",
+        model=None,
+        formula="meter_value ~ a + b - 1",
+        model_params={"a": 1, "b": 1},
+        warnings=None,
+    )
+    def fake_feature_processor(segment_name, segment_data):
+        return pd.DataFrame({"a": 1, "b": 1}, index=segment_data.index)
+    segmented_model = SegmentedModel(
+        segment_models=[segment_model],
+        prediction_segment_type="one_month",
+        prediction_segment_name_mapping=None,
+        prediction_feature_processor=fake_feature_processor,
+        prediction_feature_processor_kwargs=None,
+    )
+
+    # make this cover jan and feb but only supply feb model
+    index = pd.date_range("2017-01-01", periods=24*60, freq="H", tz="UTC")
+    temps = pd.Series(np.linspace(0, 100, 24*60), index=index)
+    prediction = segmented_model.predict(temps.index, temps)
+    assert prediction.sum() == 1488.0

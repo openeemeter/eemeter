@@ -961,6 +961,13 @@ def test_fit_temperature_bins_one_month_segmentation(
     assert bins.sum().sum() == 12
 
 
+def test_fit_temperature_bins_empty(temperature_means):
+    bins = fit_temperature_bins(temperature_means.iloc[:0])
+    assert list(bins.columns) == ['keep_bin_endpoint']
+    assert bins.shape == (6, 1)
+    assert bins.sum().sum() == 0
+
+
 def test_compute_temperature_bin_features(temperature_means):
     temps = temperature_means.temperature_mean
     bin_features = compute_temperature_bin_features(temps, [25, 75])

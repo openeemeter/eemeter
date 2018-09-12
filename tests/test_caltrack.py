@@ -10,6 +10,8 @@ from eemeter.caltrack import (
     caltrack_method,
     caltrack_predict,
     caltrack_sufficiency_criteria,
+    caltrack_hourly_fit_feature_processor,
+    caltrack_hourly_prediction_feature_processor,
     get_intercept_only_candidate_models,
     get_too_few_non_zero_degree_day_warning,
     get_total_degree_day_too_low_warning,
@@ -18,10 +20,13 @@ from eemeter.caltrack import (
     get_cdd_only_candidate_models,
     get_hdd_only_candidate_models,
     get_cdd_hdd_candidate_models,
+    fit_caltrack_hourly_model_segment,
+    fit_caltrack_hourly_model,
     select_best_candidate,
 )
 from eemeter.exceptions import MissingModelParameterError, UnrecognizedModelTypeError
 from eemeter.features import (
+    compute_time_features,
     compute_temperature_features,
     compute_usage_per_day_feature,
     merge_features,
@@ -1287,6 +1292,40 @@ def test_caltrack_method_cdd_hdd(
     assert round(prediction_df.predicted_usage.sum(), 2) == 7059.48
 
 
+@pytest.fixture
+def cdd_hdd_c65(il_electricity_cdd_hdd_daily):
+    meter_data = il_electricity_cdd_hdd_daily["meter_data"]
+    temperature_data = il_electricity_cdd_hdd_daily["temperature_data"]
+    blackout_start_date = il_electricity_cdd_hdd_daily["blackout_start_date"]
+    temperature_features = compute_temperature_features(
+        meter_data.index,
+        temperature_data,
+        heating_balance_points=[],
+        cooling_balance_points=[65],
+        use_mean_daily_values=True,
+    )
+    meter_data_feature = compute_usage_per_day_feature(meter_data, "meter_value")
+    data = merge_features([meter_data_feature, temperature_features])
+    baseline_data, warnings = get_baseline_data(data, end=blackout_start_date)
+    return baseline_data
+
+
+def test_caltrack_method_cdd_only(
+    cdd_hdd_c65, temperature_data, prediction_index, degree_day_method
+):
+    model_results = caltrack_method(cdd_hdd_c65)
+    assert len(model_results.candidates) == 2
+    assert model_results.candidates[0].model_type == "intercept_only"
+    assert model_results.candidates[1].model_type == "cdd_only"
+    assert model_results.model.status == "QUALIFIED"
+    assert model_results.model.model_type == "cdd_only"
+    model_prediction = model_results.model.predict(
+        temperature_data, prediction_index, degree_day_method
+    )
+    prediction_df = model_prediction.result
+    assert round(prediction_df.predicted_usage.sum(), 2) == 10192.0
+
+
 def test_caltrack_method_cdd_hdd_use_billing_presets(
     cdd_hdd_h60_c65, temperature_data, prediction_index, degree_day_method
 ):
@@ -1676,3 +1715,127 @@ def test_caltrack_sufficiency_criteria_handle_single_input():
 
     assert data_sufficiency.status == "FAIL"
     assert len(data_sufficiency.warnings) == 3
+
+
+@pytest.fixture
+def segmented_data():
+    index = pd.date_range(start="2017-01-01", periods=24, freq="H", tz="UTC")
+    time_features = compute_time_features(index)
+    segmented_data = pd.DataFrame({
+        "hour_of_week": time_features.hour_of_week,
+        "temperature_mean": np.linspace(0, 100, 24),
+        "meter_value": np.linspace(10, 70, 24),
+        "weight": np.ones((24,))
+    }, index=index)
+    return segmented_data
+
+
+@pytest.fixture
+def occupancy_lookup():
+    return pd.DataFrame({
+        "dec-jan-feb-weighted": pd.Series([i % 2 == 0 for i in range(168)], index=pd.Categorical(range(168)))
+    })
+
+@pytest.fixture
+def temperature_bins():
+    return pd.DataFrame({
+        "dec-jan-feb-weighted": pd.Series([True, True, True], index=[30, 60, 90]),
+    })
+
+
+def test_caltrack_hourly_fit_feature_processor(
+    segmented_data, occupancy_lookup, temperature_bins
+):
+    result = caltrack_hourly_fit_feature_processor(
+        "dec-jan-feb-weighted",
+        segmented_data,
+        occupancy_lookup,
+        temperature_bins
+    )
+    assert list(result.columns) == [
+        'meter_value',
+        'hour_of_week',
+        'occupancy',
+        'bin_0',
+        'bin_1',
+        'bin_2',
+        'bin_3',
+        'weight',
+    ]
+    assert result.shape == (24, 8)
+    assert round(result.sum().sum(), 2) == 5928.0
+
+
+def test_caltrack_hourly_prediction_feature_processor(
+    segmented_data, occupancy_lookup, temperature_bins
+):
+    result = caltrack_hourly_prediction_feature_processor(
+        "dec-jan-feb-weighted",
+        segmented_data,
+        occupancy_lookup,
+        temperature_bins
+    )
+    assert list(result.columns) == [
+        'hour_of_week',
+        'occupancy',
+        'bin_0',
+        'bin_1',
+        'bin_2',
+        'bin_3',
+        'weight',
+    ]
+    assert result.shape == (24, 7)
+    assert round(result.sum().sum(), 2) == 4968.0
+
+
+@pytest.fixture
+def segmented_design_matrices(
+    segmented_data, occupancy_lookup, temperature_bins
+):
+    return {
+        "dec-jan-feb-weighted": caltrack_hourly_fit_feature_processor(
+            "dec-jan-feb-weighted",
+            segmented_data,
+            occupancy_lookup,
+            temperature_bins
+        )
+    }
+
+
+def test_fit_caltrack_hourly_model_segment(segmented_design_matrices):
+    segment_name = "dec-jan-feb-weighted"
+    segment_data = segmented_design_matrices[segment_name]
+    segment_model = fit_caltrack_hourly_model_segment(segment_name, segment_data)
+    assert segment_model.formula == (
+        "meter_value ~ C(hour_of_week) - 1 + bin_0:occupancy"
+        " + bin_1:occupancy + bin_2:occupancy + bin_3:occupancy"
+    )
+    assert segment_model.segment_name == "dec-jan-feb-weighted"
+    assert len(segment_model.model_params.keys()) == 32
+    assert segment_model.model is not None
+    assert segment_model.warnings is not None
+    prediction = segment_model.predict(segment_data)
+    assert round(prediction.sum(), 2) == 960.0
+
+
+@pytest.fixture
+def temps():
+    index = pd.date_range(start="2017-01-01", periods=24, freq="H", tz="UTC")
+    temps = pd.Series(np.linspace(0, 100, 24), index=index)
+    return temps
+
+
+def test_fit_caltrack_hourly_model(
+    segmented_design_matrices,
+    occupancy_lookup,
+    temperature_bins,
+    temps
+):
+    segmented_model = fit_caltrack_hourly_model(
+        segmented_design_matrices,
+        occupancy_lookup,
+        temperature_bins
+    )
+
+    assert segmented_model.segment_models is not None
+    prediction = segmented_model.predict(temps.index, temps)

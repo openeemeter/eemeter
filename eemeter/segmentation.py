@@ -121,6 +121,9 @@ def iterate_segmented_dataset(
         for segment_name, segment_weights in segmentation.iteritems():
             weights = segment_weights.to_frame("weight")
             segment_data = _add_weights(data, weights)
+            # don't yield empty data (for prediction)
+            if segment_data.empty:
+                continue
             yield segment_name, _apply_feature_processor(segment_name, segment_data)
 
 
