@@ -497,7 +497,9 @@ def estimate_hour_of_week_occupancy(data, segmentation=None, threshold=0.65):
         )
         column = "occupancy" if segment_name is None else segment_name
         occupancy_lookups[column] = hour_of_week_occupancy
-    return pd.DataFrame(occupancy_lookups)
+    # make sure columns stay in same order
+    columns = ["occupancy"] if segmentation is None else segmentation.columns
+    return pd.DataFrame(occupancy_lookups, columns=columns)
 
 
 def _fit_temperature_bins(temperature_data, default_bins, min_temperature_count):
