@@ -923,7 +923,7 @@ def test_estimate_hour_of_week_occupancy_one_month_segmentation(
         "dec",
     ]
     assert occupancy.shape == (168, 12)
-    assert occupancy.sum().sum() == 82.0
+    assert occupancy.sum().sum() == 84.0
 
 
 @pytest.fixture

@@ -482,7 +482,7 @@ def _estimate_hour_of_week_occupancy(model_data, threshold):
         model_data_with_residuals.groupby(["hour_of_week"])
         .apply(_is_high_usage)
         .rename("occupancy")
-        .reindex(pd.CategoricalIndex(range(1, 169)))
+        .reindex(pd.CategoricalIndex(range(168)))
     )  # guarantee an index value for all hours
 
 
