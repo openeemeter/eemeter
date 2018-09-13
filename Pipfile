@@ -19,13 +19,14 @@ scipy = "*"
 [dev-packages]
 
 black = {version = "==18.6b4", markers="python_version >= '3.6'"}
-pytest = "*"
 coverage = "*"
+jupyterlab = "*"
+pytest = "*"
 pytest-cov = "*"
-tox = "*"
-twine = "*"
 pytest-xdist = "*"
 sphinx = "*"
 sphinx-autobuild = "*"
-typing = "*"
 sphinxcontrib-spelling = "*"
+tox = "*"
+twine = "*"
+typing = "*"
