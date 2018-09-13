@@ -23,9 +23,13 @@ from .api import (
     ModelPrediction,
 )
 from .caltrack import (
+    caltrack_hourly_fit_feature_processor,
+    caltrack_hourly_prediction_feature_processor,
     caltrack_method,
     caltrack_sufficiency_criteria,
     caltrack_predict,
+    fit_caltrack_hourly_model_segment,
+    fit_caltrack_hourly_model,
     get_single_cdd_only_candidate_model,
     get_single_hdd_only_candidate_model,
     get_single_cdd_hdd_candidate_model,
@@ -39,9 +43,6 @@ from .caltrack import (
     get_total_degree_day_too_low_warning,
     plot_caltrack_candidate,
     select_best_candidate,
-    caltrack_hourly_fit_feature_processor,
-    caltrack_hourly_prediction_feature_processor,
-    fit_caltrack_hourly_model_segment,
 )
 from .derivatives import metered_savings, modeled_savings
 from .exceptions import (
