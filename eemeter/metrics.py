@@ -241,10 +241,10 @@ class ModelMetrics(object):
         with :any:`json.dumps`.
         """
         return {
-            "observed_length": self.observed_length,
-            "predicted_length": self.predicted_length,
-            "merged_length": self.merged_length,
-            "num_parameters": self.num_parameters,
+            "observed_length": _json_safe_float(self.observed_length),
+            "predicted_length": _json_safe_float(self.predicted_length),
+            "merged_length": _json_safe_float(self.merged_length),
+            "num_parameters": _json_safe_float(self.num_parameters),
             "observed_mean": _json_safe_float(self.observed_mean),
             "predicted_mean": _json_safe_float(self.predicted_mean),
             "observed_variance": _json_safe_float(self.observed_variance),
@@ -263,7 +263,7 @@ class ModelMetrics(object):
             "cvrmse_adj": _json_safe_float(self.cvrmse_adj),
             "mape": _json_safe_float(self.mape),
             "mape_no_zeros": _json_safe_float(self.mape_no_zeros),
-            "num_meter_zeros": self.num_meter_zeros,
+            "num_meter_zeros": _json_safe_float(self.num_meter_zeros),
             "nmae": _json_safe_float(self.nmae),
             "nmbe": _json_safe_float(self.nmbe),
             "autocorr_resid": _json_safe_float(self.autocorr_resid),

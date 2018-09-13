@@ -4,7 +4,13 @@ Changelog
 Development
 -----------
 
+* [placeholder]
+
+2.0.3
+-----
+
 * Apply black code style for easy opinionated PEP 008 formatting
+* Apply JSON-safe float conversion to all metrics.
 
 2.0.2
 -----
