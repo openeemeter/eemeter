@@ -5,7 +5,7 @@ Development
 -----------
 
 * Apply black code style for easy opinionated PEP 008 formatting
-* Apply _json_safe_float conversion to all metrics.
+* Apply JSON-safe float conversion to all metrics.
 
 2.0.2
 -----
