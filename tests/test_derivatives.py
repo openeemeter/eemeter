@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from eemeter.caltrack import caltrack_method
+from eemeter.caltrack.usage_per_day import fit_caltrack_usage_per_day_model
 from eemeter.derivatives import metered_savings, modeled_savings
 from eemeter.exceptions import MissingModelParameterError
 from eemeter.features import (
@@ -33,19 +33,19 @@ def cdd_hdd_h60_c65(il_electricity_cdd_hdd_daily):
 
 @pytest.fixture
 def baseline_model(cdd_hdd_h60_c65):
-    model_results = caltrack_method(cdd_hdd_h60_c65)
+    model_results = fit_caltrack_usage_per_day_model(cdd_hdd_h60_c65)
     return model_results.model
 
 
 @pytest.fixture
 def baseline_model_results(cdd_hdd_h60_c65):
-    model_results = caltrack_method(cdd_hdd_h60_c65)
+    model_results = fit_caltrack_usage_per_day_model(cdd_hdd_h60_c65)
     return model_results
 
 
 @pytest.fixture
 def reporting_model(cdd_hdd_h60_c65):
-    model_results = caltrack_method(cdd_hdd_h60_c65)
+    model_results = fit_caltrack_usage_per_day_model(cdd_hdd_h60_c65)
     return model_results.model
 
 

@@ -6,7 +6,7 @@ import pandas as pd
 import pytz
 
 from .exceptions import NoBaselineDataError, NoReportingDataError
-from .api import EEMeterWarning
+from .warnings import EEMeterWarning
 
 
 __all__ = (

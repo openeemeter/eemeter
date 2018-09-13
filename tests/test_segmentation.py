@@ -182,8 +182,10 @@ def test_segmented_model():
         model_params={"a": 1, "b": 1},
         warnings=None,
     )
+
     def fake_feature_processor(segment_name, segment_data):
         return pd.DataFrame({"a": 1, "b": 1}, index=segment_data.index)
+
     segmented_model = SegmentedModel(
         segment_models=[segment_model],
         prediction_segment_type="one_month",
@@ -193,7 +195,7 @@ def test_segmented_model():
     )
 
     # make this cover jan and feb but only supply feb model
-    index = pd.date_range("2017-01-01", periods=24*60, freq="H", tz="UTC")
-    temps = pd.Series(np.linspace(0, 100, 24*60), index=index)
+    index = pd.date_range("2017-01-01", periods=24 * 60, freq="H", tz="UTC")
+    temps = pd.Series(np.linspace(0, 100, 24 * 60), index=index)
     prediction = segmented_model.predict(temps.index, temps)
     assert prediction.sum() == 1488.0

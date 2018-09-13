@@ -4,14 +4,14 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from eemeter.api import CandidateModel
-from eemeter.caltrack import (
+from eemeter.caltrack.usage_per_day import (
+    CalTRACKUsagePerDayCandidateModel,
+    CalTRACKUsagePerDayModelResults,
+    DataSufficiency,
     _caltrack_predict_design_matrix,
-    caltrack_method,
-    caltrack_predict,
+    fit_caltrack_usage_per_day_model,
+    caltrack_usage_per_day_predict,
     caltrack_sufficiency_criteria,
-    caltrack_hourly_fit_feature_processor,
-    caltrack_hourly_prediction_feature_processor,
     get_intercept_only_candidate_models,
     get_too_few_non_zero_degree_day_warning,
     get_total_degree_day_too_low_warning,
@@ -20,8 +20,6 @@ from eemeter.caltrack import (
     get_cdd_only_candidate_models,
     get_hdd_only_candidate_models,
     get_cdd_hdd_candidate_models,
-    fit_caltrack_hourly_model_segment,
-    fit_caltrack_hourly_model,
     select_best_candidate,
 )
 from eemeter.exceptions import MissingModelParameterError, UnrecognizedModelTypeError
@@ -31,7 +29,244 @@ from eemeter.features import (
     compute_usage_per_day_feature,
     merge_features,
 )
+from eemeter.metrics import ModelMetrics
+from eemeter.warnings import EEMeterWarning
 from eemeter.transform import day_counts, get_baseline_data
+
+
+def test_candidate_model_minimal():
+    candidate_model = CalTRACKUsagePerDayCandidateModel(
+        model_type="model_type", formula="formula", status="status"
+    )
+    assert candidate_model.model_type == "model_type"
+    assert candidate_model.formula == "formula"
+    assert candidate_model.status == "status"
+    assert candidate_model.model_params == {}
+    assert candidate_model.warnings == []
+    assert str(candidate_model).startswith("CalTRACKUsagePerDayCandidateModel")
+    assert candidate_model.json() == {
+        "formula": "formula",
+        "model_params": {},
+        "model_type": "model_type",
+        "r_squared_adj": None,
+        "status": "status",
+        "warnings": [],
+    }
+
+
+def test_candidate_model_json_with_warning():
+    eemeter_warning = EEMeterWarning(
+        qualified_name="qualified_name", description="description", data={}
+    )
+    candidate_model = CalTRACKUsagePerDayCandidateModel(
+        model_type="model_type",
+        formula="formula",
+        status="status",
+        warnings=[eemeter_warning],
+    )
+    assert candidate_model.json() == {
+        "formula": "formula",
+        "model_params": {},
+        "model_type": "model_type",
+        "r_squared_adj": None,
+        "status": "status",
+        "warnings": [
+            {
+                "data": {},
+                "description": "description",
+                "qualified_name": "qualified_name",
+            }
+        ],
+    }
+
+
+def test_data_sufficiency_minimal():
+    data_sufficiency = DataSufficiency(status="status", criteria_name="criteria_name")
+    assert data_sufficiency.status == "status"
+    assert data_sufficiency.criteria_name == "criteria_name"
+    assert data_sufficiency.warnings == []
+    assert data_sufficiency.settings == {}
+    assert str(data_sufficiency).startswith("DataSufficiency")
+    assert data_sufficiency.json() == {
+        "criteria_name": "criteria_name",
+        "settings": {},
+        "status": "status",
+        "warnings": [],
+    }
+
+
+def test_data_sufficiency_json_with_warning():
+    eemeter_warning = EEMeterWarning(
+        qualified_name="qualified_name", description="description", data={}
+    )
+    data_sufficiency = DataSufficiency(
+        status="status", criteria_name="criteria_name", warnings=[eemeter_warning]
+    )
+    assert data_sufficiency.json() == {
+        "criteria_name": "criteria_name",
+        "settings": {},
+        "status": "status",
+        "warnings": [
+            {
+                "data": {},
+                "description": "description",
+                "qualified_name": "qualified_name",
+            }
+        ],
+    }
+
+
+def test_model_results_minimal():
+    model_results = CalTRACKUsagePerDayModelResults(
+        status="status", method_name="method_name"
+    )
+    assert model_results.status == "status"
+    assert model_results.method_name == "method_name"
+    assert model_results.model is None
+    assert model_results.r_squared_adj is None
+    assert model_results.candidates == []
+    assert model_results.warnings == []
+    assert model_results.metadata == {}
+    assert model_results.settings == {}
+    assert str(model_results).startswith("CalTRACKUsagePerDayModelResults")
+    assert model_results.json() == {
+        "candidates": None,
+        "metadata": {},
+        "method_name": "method_name",
+        "totals_metrics": None,
+        "avgs_metrics": None,
+        "model": None,
+        "settings": {},
+        "status": "status",
+        "r_squared_adj": None,
+        "warnings": [],
+    }
+
+
+def test_model_results_json_with_objects():
+    candidate_model = CalTRACKUsagePerDayCandidateModel(
+        model_type="model_type", formula="formula", status="status"
+    )
+    eemeter_warning = EEMeterWarning(
+        qualified_name="qualified_name", description="description", data={}
+    )
+    model_results = CalTRACKUsagePerDayModelResults(
+        status="status",
+        method_name="method_name",
+        model=candidate_model,
+        candidates=[candidate_model],
+        warnings=[eemeter_warning],
+    )
+    assert model_results.json(with_candidates=True) == {
+        "candidates": [
+            {
+                "formula": "formula",
+                "model_params": {},
+                "model_type": "model_type",
+                "r_squared_adj": None,
+                "status": "status",
+                "warnings": [],
+            }
+        ],
+        "metadata": {},
+        "method_name": "method_name",
+        "totals_metrics": None,
+        "avgs_metrics": None,
+        "model": {
+            "formula": "formula",
+            "model_params": {},
+            "model_type": "model_type",
+            "r_squared_adj": None,
+            "status": "status",
+            "warnings": [],
+        },
+        "settings": {},
+        "status": "status",
+        "r_squared_adj": None,
+        "warnings": [
+            {
+                "data": {},
+                "description": "description",
+                "qualified_name": "qualified_name",
+            }
+        ],
+    }
+
+
+def test_model_results_json_with_nan_r_squared_adj():
+    candidate_model = CalTRACKUsagePerDayCandidateModel(
+        model_type="model_type",
+        formula="formula",
+        status="status",
+        r_squared_adj=np.nan,
+    )
+    model_results = CalTRACKUsagePerDayModelResults(
+        status="status",
+        method_name="method_name",
+        model=candidate_model,
+        r_squared_adj=np.nan,
+    )
+    assert model_results.json() == {
+        "candidates": None,
+        "metadata": {},
+        "method_name": "method_name",
+        "totals_metrics": None,
+        "avgs_metrics": None,
+        "model": {
+            "formula": "formula",
+            "model_params": {},
+            "model_type": "model_type",
+            "r_squared_adj": None,
+            "status": "status",
+            "warnings": [],
+        },
+        "settings": {},
+        "status": "status",
+        "r_squared_adj": None,
+        "warnings": [],
+    }
+
+
+def test_model_results_json_with_model_metrics():
+    candidate_model = CalTRACKUsagePerDayCandidateModel(
+        model_type="model_type", formula="formula", status="status", r_squared_adj=0.5
+    )
+    model_results = CalTRACKUsagePerDayModelResults(
+        status="status",
+        method_name="method_name",
+        model=candidate_model,
+        r_squared_adj=np.nan,
+    )
+    model_metrics = ModelMetrics(
+        observed_input=pd.Series([0, 1, 2]), predicted_input=pd.Series([1, 0, 2])
+    )
+    json_result = model_results.json()
+    json.dumps(json_result)  # just make sure it's valid json
+
+    assert "totals_metrics" in json_result
+    assert "avgs_metrics" in json_result
+    json_result["totals_metrics"] = {}  # overwrite because of floats
+    json_result["avgs_metrics"] = {}  # overwrite because of floats
+
+    assert json_result == {
+        "candidates": None,
+        "metadata": {},
+        "method_name": "method_name",
+        "totals_metrics": {},
+        "avgs_metrics": {},
+        "model": {
+            "formula": "formula",
+            "model_params": {},
+            "model_type": "model_type",
+            "r_squared_adj": 0.5,
+            "status": "status",
+            "warnings": [],
+        },
+        "settings": {},
+        "status": "status",
+        "r_squared_adj": None,
+        "warnings": [],
+    }
 
 
 @pytest.fixture
@@ -63,29 +298,11 @@ def degree_day_method():
 
 
 @pytest.fixture
-def candidate_model_no_model_status():
-    return CandidateModel(model_type="", formula="formula", status="NO MODEL")
-
-
-def test_caltrack_predict_no_model_status(
-    candidate_model_no_model_status,
-    temperature_data,
-    prediction_index,
-    degree_day_method,
-):
-    with pytest.raises(ValueError):
-        candidate_model_no_model_status.predict(
-            temperature_data, prediction_index, degree_day_method
-        )
-
-
-@pytest.fixture
 def candidate_model_no_model_none():
-    return CandidateModel(
+    return CalTRACKUsagePerDayCandidateModel(
         model_type=None,
         formula="formula",
         status="QUALIFIED",
-        predict_func=caltrack_predict,
         model_params={"intercept": 1},
     )
 
@@ -101,11 +318,10 @@ def test_caltrack_predict_no_model_none(
 
 @pytest.fixture
 def candidate_model_intercept_only():
-    return CandidateModel(
+    return CalTRACKUsagePerDayCandidateModel(
         model_type="intercept_only",
         formula="formula",
         status="QUALIFIED",
-        predict_func=caltrack_predict,
         model_params={"intercept": 1},
     )
 
@@ -172,11 +388,10 @@ def test_caltrack_predict_intercept_only_with_design_matrix(
 
 @pytest.fixture
 def candidate_model_missing_params():
-    return CandidateModel(
+    return CalTRACKUsagePerDayCandidateModel(
         model_type="intercept_only",
         formula="formula",
         status="QUALIFIED",
-        predict_func=caltrack_predict,
         model_params={},
     )
 
@@ -195,11 +410,10 @@ def test_caltrack_predict_missing_params(
 
 @pytest.fixture
 def candidate_model_cdd_only():
-    return CandidateModel(
+    return CalTRACKUsagePerDayCandidateModel(
         model_type="cdd_only",
         formula="formula",
         status="QUALIFIED",
-        predict_func=caltrack_predict,
         model_params={"intercept": 1, "beta_cdd": 1, "cooling_balance_point": 65},
     )
 
@@ -252,11 +466,10 @@ def test_caltrack_predict_cdd_only_with_design_matrix(
 
 @pytest.fixture
 def candidate_model_hdd_only():
-    return CandidateModel(
+    return CalTRACKUsagePerDayCandidateModel(
         model_type="hdd_only",
         formula="formula",
         status="QUALIFIED",
-        predict_func=caltrack_predict,
         model_params={"intercept": 1, "beta_hdd": 1, "heating_balance_point": 65},
     )
 
@@ -309,11 +522,10 @@ def test_caltrack_predict_hdd_only_with_design_matrix(
 
 @pytest.fixture
 def candidate_model_cdd_hdd():
-    return CandidateModel(
+    return CalTRACKUsagePerDayCandidateModel(
         model_type="cdd_hdd",
         formula="formula",
         status="QUALIFIED",
-        predict_func=caltrack_predict,
         model_params={
             "intercept": 1,
             "beta_hdd": 1,
@@ -374,12 +586,8 @@ def test_caltrack_predict_cdd_hdd_with_design_matrix(
 
 @pytest.fixture
 def candidate_model_bad_model_type():
-    return CandidateModel(
-        model_type="unknown",
-        formula="formula",
-        status="QUALIFIED",
-        predict_func=caltrack_predict,
-        model_params={},
+    return CalTRACKUsagePerDayCandidateModel(
+        model_type="unknown", formula="formula", status="QUALIFIED", model_params={}
     )
 
 
@@ -843,8 +1051,6 @@ def test_get_cdd_only_candidate_models_not_attempted():
     assert model.model is None
     assert model.result is None
     assert model.model_params == {}
-    with pytest.raises(ValueError):
-        assert model.predict(np.ones(3))
     assert model.r_squared_adj is None
     assert len(model.warnings) == 2
     assert json.dumps(model.json()) is not None
@@ -972,8 +1178,6 @@ def test_get_hdd_only_candidate_models_not_attempted():
     assert model.model is None
     assert model.result is None
     assert model.model_params == {}
-    with pytest.raises(ValueError):
-        assert model.predict(np.ones(3))
     assert model.r_squared_adj is None
     assert len(model.warnings) == 2
     assert json.dumps(model.json()) is not None
@@ -1126,8 +1330,6 @@ def test_get_cdd_hdd_candidate_models_not_attempted():
     assert model.model is None
     assert model.result is None
     assert model.model_params == {}
-    with pytest.raises(ValueError):
-        assert model.predict(np.ones(3))
     assert model.r_squared_adj is None
     assert len(model.warnings) == 4
     assert json.dumps(model.json()) is not None
@@ -1190,21 +1392,21 @@ def test_get_cdd_hdd_candidate_models_error():
 
 @pytest.fixture
 def candidate_model_qualified_high_r2():
-    return CandidateModel(
+    return CalTRACKUsagePerDayCandidateModel(
         model_type="model_type", formula="formula1", status="QUALIFIED", r_squared_adj=1
     )
 
 
 @pytest.fixture
 def candidate_model_qualified_low_r2():
-    return CandidateModel(
+    return CalTRACKUsagePerDayCandidateModel(
         model_type="model_type", formula="formula2", status="QUALIFIED", r_squared_adj=0
     )
 
 
 @pytest.fixture
 def candidate_model_disqualified():
-    return CandidateModel(
+    return CalTRACKUsagePerDayCandidateModel(
         model_type="model_type",
         formula="formula3",
         status="DISQUALIFIED",
@@ -1244,14 +1446,14 @@ def test_select_best_candidate_none(candidate_model_disqualified,):
     assert warning.data == {"status_count:DISQUALIFIED": 1}
 
 
-def test_caltrack_method_empty():
+def test_fit_caltrack_usage_per_day_model_empty():
     data = pd.DataFrame({"meter_value": [], "hdd_65": [], "cdd_65": []})
-    model_results = caltrack_method(data)
-    assert model_results.method_name == "caltrack_method"
+    model_results = fit_caltrack_usage_per_day_model(data)
+    assert model_results.method_name == "caltrack_usage_per_day"
     assert model_results.status == "NO DATA"
     assert len(model_results.warnings) == 1
     warning = model_results.warnings[0]
-    assert warning.qualified_name == ("eemeter.caltrack_method.no_data")
+    assert warning.qualified_name == ("eemeter.caltrack_usage_per_day.no_data")
     assert warning.description == ("No data available. Cannot fit model.")
     assert warning.data == {}
 
@@ -1274,10 +1476,10 @@ def cdd_hdd_h60_c65(il_electricity_cdd_hdd_daily):
     return baseline_data
 
 
-def test_caltrack_method_cdd_hdd(
+def test_fit_caltrack_usage_per_day_model_cdd_hdd(
     cdd_hdd_h60_c65, temperature_data, prediction_index, degree_day_method
 ):
-    model_results = caltrack_method(cdd_hdd_h60_c65)
+    model_results = fit_caltrack_usage_per_day_model(cdd_hdd_h60_c65)
     assert len(model_results.candidates) == 4
     assert model_results.candidates[0].model_type == "intercept_only"
     assert model_results.candidates[1].model_type == "hdd_only"
@@ -1310,10 +1512,10 @@ def cdd_hdd_c65(il_electricity_cdd_hdd_daily):
     return baseline_data
 
 
-def test_caltrack_method_cdd_only(
+def test_fit_caltrack_usage_per_day_model_cdd_only(
     cdd_hdd_c65, temperature_data, prediction_index, degree_day_method
 ):
-    model_results = caltrack_method(cdd_hdd_c65)
+    model_results = fit_caltrack_usage_per_day_model(cdd_hdd_c65)
     assert len(model_results.candidates) == 2
     assert model_results.candidates[0].model_type == "intercept_only"
     assert model_results.candidates[1].model_type == "cdd_only"
@@ -1326,10 +1528,12 @@ def test_caltrack_method_cdd_only(
     assert round(prediction_df.predicted_usage.sum(), 2) == 10192.0
 
 
-def test_caltrack_method_cdd_hdd_use_billing_presets(
+def test_fit_caltrack_usage_per_day_model_cdd_hdd_use_billing_presets(
     cdd_hdd_h60_c65, temperature_data, prediction_index, degree_day_method
 ):
-    model_results = caltrack_method(cdd_hdd_h60_c65, use_billing_presets=True)
+    model_results = fit_caltrack_usage_per_day_model(
+        cdd_hdd_h60_c65, use_billing_presets=True
+    )
     assert len(model_results.candidates) == 4
     assert model_results.candidates[0].model_type == "intercept_only"
     assert model_results.candidates[1].model_type == "hdd_only"
@@ -1345,7 +1549,7 @@ def test_caltrack_method_cdd_hdd_use_billing_presets(
 
 
 # When model is intercept-only, num_parameters should = 0 with cvrmse = cvrmse_adj
-def test_caltrack_method_num_parameters_equals_zero():
+def test_fit_caltrack_usage_per_day_model_num_parameters_equals_zero():
     data = pd.DataFrame(
         {
             "meter_value": [6, 1, 1, 6],
@@ -1355,7 +1559,7 @@ def test_caltrack_method_num_parameters_equals_zero():
         }
     ).set_index("start")
 
-    model_results = caltrack_method(data, fit_intercept_only=True)
+    model_results = fit_caltrack_usage_per_day_model(data, fit_intercept_only=True)
     assert (
         model_results.totals_metrics.num_parameters
         == model_results.totals_metrics.num_parameters
@@ -1370,7 +1574,7 @@ def test_caltrack_method_num_parameters_equals_zero():
     assert model_results.avgs_metrics.cvrmse == model_results.avgs_metrics.cvrmse_adj
 
 
-def test_caltrack_method_no_model():
+def test_fit_caltrack_usage_per_day_model_no_model():
     data = pd.DataFrame(
         {
             "meter_value": [4, 1, 1, 4],
@@ -1378,14 +1582,14 @@ def test_caltrack_method_no_model():
             "hdd_65": [0, 0.1, 0, 5],
         }
     )
-    model_results = caltrack_method(
+    model_results = fit_caltrack_usage_per_day_model(
         data,
         fit_hdd_only=False,
         fit_cdd_hdd=False,
         fit_cdd_only=False,
         fit_intercept_only=False,
     )
-    assert model_results.method_name == "caltrack_method"
+    assert model_results.method_name == "caltrack_usage_per_day"
     assert model_results.status == "NO MODEL"
     assert len(model_results.warnings) == 1
     warning = model_results.warnings[0]
@@ -1715,127 +1919,3 @@ def test_caltrack_sufficiency_criteria_handle_single_input():
 
     assert data_sufficiency.status == "FAIL"
     assert len(data_sufficiency.warnings) == 3
-
-
-@pytest.fixture
-def segmented_data():
-    index = pd.date_range(start="2017-01-01", periods=24, freq="H", tz="UTC")
-    time_features = compute_time_features(index)
-    segmented_data = pd.DataFrame({
-        "hour_of_week": time_features.hour_of_week,
-        "temperature_mean": np.linspace(0, 100, 24),
-        "meter_value": np.linspace(10, 70, 24),
-        "weight": np.ones((24,))
-    }, index=index)
-    return segmented_data
-
-
-@pytest.fixture
-def occupancy_lookup():
-    return pd.DataFrame({
-        "dec-jan-feb-weighted": pd.Series([i % 2 == 0 for i in range(168)], index=pd.Categorical(range(168)))
-    })
-
-@pytest.fixture
-def temperature_bins():
-    return pd.DataFrame({
-        "dec-jan-feb-weighted": pd.Series([True, True, True], index=[30, 60, 90]),
-    })
-
-
-def test_caltrack_hourly_fit_feature_processor(
-    segmented_data, occupancy_lookup, temperature_bins
-):
-    result = caltrack_hourly_fit_feature_processor(
-        "dec-jan-feb-weighted",
-        segmented_data,
-        occupancy_lookup,
-        temperature_bins
-    )
-    assert list(result.columns) == [
-        'meter_value',
-        'hour_of_week',
-        'occupancy',
-        'bin_0',
-        'bin_1',
-        'bin_2',
-        'bin_3',
-        'weight',
-    ]
-    assert result.shape == (24, 8)
-    assert round(result.sum().sum(), 2) == 5928.0
-
-
-def test_caltrack_hourly_prediction_feature_processor(
-    segmented_data, occupancy_lookup, temperature_bins
-):
-    result = caltrack_hourly_prediction_feature_processor(
-        "dec-jan-feb-weighted",
-        segmented_data,
-        occupancy_lookup,
-        temperature_bins
-    )
-    assert list(result.columns) == [
-        'hour_of_week',
-        'occupancy',
-        'bin_0',
-        'bin_1',
-        'bin_2',
-        'bin_3',
-        'weight',
-    ]
-    assert result.shape == (24, 7)
-    assert round(result.sum().sum(), 2) == 4968.0
-
-
-@pytest.fixture
-def segmented_design_matrices(
-    segmented_data, occupancy_lookup, temperature_bins
-):
-    return {
-        "dec-jan-feb-weighted": caltrack_hourly_fit_feature_processor(
-            "dec-jan-feb-weighted",
-            segmented_data,
-            occupancy_lookup,
-            temperature_bins
-        )
-    }
-
-
-def test_fit_caltrack_hourly_model_segment(segmented_design_matrices):
-    segment_name = "dec-jan-feb-weighted"
-    segment_data = segmented_design_matrices[segment_name]
-    segment_model = fit_caltrack_hourly_model_segment(segment_name, segment_data)
-    assert segment_model.formula == (
-        "meter_value ~ C(hour_of_week) - 1 + bin_0:occupancy"
-        " + bin_1:occupancy + bin_2:occupancy + bin_3:occupancy"
-    )
-    assert segment_model.segment_name == "dec-jan-feb-weighted"
-    assert len(segment_model.model_params.keys()) == 32
-    assert segment_model.model is not None
-    assert segment_model.warnings is not None
-    prediction = segment_model.predict(segment_data)
-    assert round(prediction.sum(), 2) == 960.0
-
-
-@pytest.fixture
-def temps():
-    index = pd.date_range(start="2017-01-01", periods=24, freq="H", tz="UTC")
-    temps = pd.Series(np.linspace(0, 100, 24), index=index)
-    return temps
-
-
-def test_fit_caltrack_hourly_model(
-    segmented_design_matrices,
-    occupancy_lookup,
-    temperature_bins,
-    temps
-):
-    segmented_model = fit_caltrack_hourly_model(
-        segmented_design_matrices,
-        occupancy_lookup,
-        temperature_bins
-    )
-
-    assert segmented_model.segment_models is not None
-    prediction = segmented_model.predict(temps.index, temps)

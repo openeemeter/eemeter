@@ -3,14 +3,13 @@ import json
 
 import click
 
-from eemeter import (
-    caltrack_method,
+from .caltrack import fit_caltrack_usage_per_day_model
+from .features import (
     compute_usage_per_day_feature,
     compute_temperature_features,
-    meter_data_from_csv,
-    temperature_data_from_csv,
     merge_features,
 )
+from .io import meter_data_from_csv, temperature_data_from_csv
 
 
 @click.group()
@@ -114,7 +113,7 @@ def caltrack(
         heating_balance_points,
         cooling_balance_points,
     )
-    model_results = caltrack_method(data, fit_cdd=fit_cdd)
+    model_results = fit_caltrack_usage_per_day_model(data, fit_cdd=fit_cdd)
     json_str = json.dumps(model_results.json(with_candidates=show_candidates), indent=2)
 
     if output_file is None:

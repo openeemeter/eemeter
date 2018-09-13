@@ -1,4 +1,4 @@
-from .api import EEMeterWarning
+from .warnings import EEMeterWarning
 from .transform import day_counts, overwrite_partial_rows_with_nan
 from .segmentation import iterate_segmented_dataset
 
@@ -589,6 +589,7 @@ def fit_temperature_bins(
     )
 
 
+# TODO(philngo): combine with compute_temperature_features?
 def compute_temperature_bin_features(temperatures, bin_endpoints):
     bin_endpoints = [-np.inf] + bin_endpoints + [np.inf]
 
