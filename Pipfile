@@ -20,7 +20,7 @@ scipy = "*"
 
 black = {version = "==18.6b4", markers="python_version >= '3.6'"}
 coverage = "*"
-jupyterlab = "*"
+jupyterlab = {version = "*", markers="python_version >= '3.5'"}
 pytest = "*"
 pytest-cov = "*"
 pytest-xdist = "*"
