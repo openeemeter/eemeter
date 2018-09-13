@@ -26,8 +26,8 @@ Releasing
 8. commit changes
 9. create a tag called vX.X.X on release/vX.X.X branch
 10. push tag and branch
-11. merge release branch to master
-12. submit to pypi with `pipenv run python setup.py upload` (must have proper credentials)
+11. submit to pypi with `pipenv run python setup.py upload` (must have proper credentials)
+12. merge release branch to master
 
 Release command cheatsheet
 
@@ -40,10 +40,9 @@ vim eemeter/CHANGELOG.md
 git commit -m "Bump version"
 
 git tag vX.X.X
-git push --tags
 git push -u origin release/vX.X.X
+docker-compose run --rm pipenv run python setup.py upload
 git checkout master
 git merge release/vX.X.X
 git push
-docker-compose run --rm pipenv run python setup.py upload
 ```
