@@ -36,13 +36,15 @@ def segmented_data():
 def occupancy_lookup():
     index = pd.Categorical(range(168))
     occupancy = pd.Series([i % 2 == 0 for i in range(168)], index=index)
-    return pd.DataFrame({"dec-jan-feb-weighted": occupancy})
+    return pd.DataFrame(
+        {"dec-jan-feb-weighted": occupancy, "jan-feb-mar-weighted": occupancy}
+    )
 
 
 @pytest.fixture
 def temperature_bins():
     bins = pd.Series([True, True, True], index=[30, 60, 90])
-    return pd.DataFrame({"dec-jan-feb-weighted": bins})
+    return pd.DataFrame({"dec-jan-feb-weighted": bins, "jan-feb-mar-weighted": bins})
 
 
 def test_caltrack_hourly_fit_feature_processor(
@@ -124,4 +126,4 @@ def test_fit_caltrack_hourly_model(
     )
 
     assert segmented_model.segment_models is not None
-    prediction = segmented_model.predict(temps.index, temps)
+    prediction = segmented_model.predict(temps.index, temps).result

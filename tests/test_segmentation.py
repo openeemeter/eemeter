@@ -87,6 +87,15 @@ def test_segment_time_series_three_month_weighted(index_8760):
     assert weights.sum().sum() == 17520.0
 
 
+def test_segment_time_series_drop_zero_weight_segments(index_8760):
+    weights = segment_time_series(
+        index_8760[:100], segment_type="one_month", drop_zero_weight_segments=True
+    )
+    assert list(weights.columns) == ["jan"]
+    assert weights.shape == (100, 1)
+    assert weights.sum().sum() == 100.0
+
+
 @pytest.fixture
 def dataset():
     index = pd.date_range("2017-01-01", periods=1000, freq="H", tz="UTC")
@@ -124,9 +133,11 @@ def test_iterate_segmented_dataset_with_segmentation(dataset, segmentation):
     assert data.shape == (256, 3)
     assert data.sum().sum() == 1024.0
 
-    # no other segments available
-    with pytest.raises(StopIteration):
-        next(iterator)
+    segment_name, data = next(iterator)
+    assert segment_name == "mar"
+    assert list(data.columns) == ["a", "b", "weight"]
+    assert data.shape == (0, 3)
+    assert data.sum().sum() == 0.0
 
 
 def test_iterate_segmented_dataset_with_processor(dataset, segmentation):
@@ -136,7 +147,7 @@ def test_iterate_segmented_dataset_with_processor(dataset, segmentation):
         segment_name, dataset, column_mapping=None
     ):  # rename some columns
         feature_processor_segment_names.append(segment_name)
-        return dataset.rename(columns=column_mapping)
+        return dataset.rename(columns=column_mapping).assign(weight=1)
 
     iterator = iterate_segmented_dataset(
         dataset,
@@ -149,15 +160,15 @@ def test_iterate_segmented_dataset_with_processor(dataset, segmentation):
     assert feature_processor_segment_names == ["jan2"]
     assert segment_name == "jan"
     assert list(data.columns) == ["c", "d", "weight"]
-    assert data.shape == (744, 3)
-    assert data.sum().sum() == 2976.0
+    assert data.shape == (1000, 3)
+    assert data.sum().sum() == 4000.0
 
     segment_name, data = next(iterator)
     assert feature_processor_segment_names == ["jan2", "feb2"]
     assert segment_name == "feb"
     assert list(data.columns) == ["c", "d", "weight"]
-    assert data.shape == (256, 3)
-    assert data.sum().sum() == 1024.0
+    assert data.shape == (1000, 3)
+    assert data.sum().sum() == 4000.0
 
 
 def test_segment_model():
@@ -184,7 +195,9 @@ def test_segmented_model():
     )
 
     def fake_feature_processor(segment_name, segment_data):
-        return pd.DataFrame({"a": 1, "b": 1}, index=segment_data.index)
+        return pd.DataFrame(
+            {"a": 1, "b": 1, "weight": segment_data.weight}, index=segment_data.index
+        )
 
     segmented_model = SegmentedModel(
         segment_models=[segment_model],
@@ -194,8 +207,8 @@ def test_segmented_model():
         prediction_feature_processor_kwargs=None,
     )
 
-    # make this cover jan and feb but only supply feb model
-    index = pd.date_range("2017-01-01", periods=24 * 60, freq="H", tz="UTC")
-    temps = pd.Series(np.linspace(0, 100, 24 * 60), index=index)
-    prediction = segmented_model.predict(temps.index, temps)
+    # make this cover jan and feb but only supply jan model
+    index = pd.date_range("2017-01-01", periods=24 * 50, freq="H", tz="UTC")
+    temps = pd.Series(np.linspace(0, 100, 24 * 50), index=index)
+    prediction = segmented_model.predict(temps.index, temps).result.predicted_usage
     assert prediction.sum() == 1488.0

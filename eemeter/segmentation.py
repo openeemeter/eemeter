@@ -1,12 +1,19 @@
+from collections import namedtuple
+
 import pandas as pd
 from patsy import dmatrix
+
 
 __all__ = (
     "iterate_segmented_dataset",
     "segment_time_series",
     "SegmentModel",
     "SegmentedModel",
+    "HourlyModelPrediction",
 )
+
+
+HourlyModelPrediction = namedtuple("HourlyModelPrediction", ["result"])
 
 
 class SegmentModel(object):
@@ -59,9 +66,13 @@ class SegmentedModel(object):
         self.prediction_feature_processor = prediction_feature_processor
         self.prediction_feature_processor_kwargs = prediction_feature_processor_kwargs
 
-    def predict(self, prediction_index, temperature):
+    def predict(
+        self, prediction_index, temperature, **kwargs
+    ):  # ignore extra args with kwargs
         prediction_segmentation = segment_time_series(
-            temperature.index, self.prediction_segment_type
+            temperature.index,
+            self.prediction_segment_type,
+            drop_zero_weight_segments=True,
         )
         iterator = iterate_segmented_dataset(
             temperature.to_frame("temperature_mean"),
@@ -75,10 +86,17 @@ class SegmentedModel(object):
             segment_model = self.model_lookup.get(segment_name)
             if segment_model is None:
                 continue
-            prediction = segment_model.predict(segmented_data).reindex(prediction_index)
+            prediction = segment_model.predict(segmented_data) * segmented_data.weight
+            # NaN the zero weights and reindex
+            prediction = prediction[segmented_data.weight > 0].reindex(prediction_index)
             predictions[segment_name] = prediction
         predictions = pd.DataFrame(predictions)
-        return predictions.sum(axis=1)
+        result = pd.DataFrame({"predicted_usage": predictions.sum(axis=1)})
+        return HourlyModelPrediction(result=result)
+
+
+def filter_zero_weights_feature_processor(segment_name, segment_data):
+    return segment_data[segment_data.weight > 0]
 
 
 def iterate_segmented_dataset(
@@ -88,6 +106,8 @@ def iterate_segmented_dataset(
     feature_processor_kwargs=None,
     feature_processor_segment_name_mapping=None,
 ):
+    if feature_processor is None:
+        feature_processor = filter_zero_weights_feature_processor
 
     if feature_processor_kwargs is None:
         feature_processor_kwargs = {}
@@ -107,9 +127,7 @@ def iterate_segmented_dataset(
         return segment_data
 
     def _add_weights(data, weights):
-        return pd.merge(data, weights, left_index=True, right_index=True)[
-            weights.weight > 0
-        ]  # take only non zero weights
+        return pd.merge(data, weights, left_index=True, right_index=True)
 
     if segmentation is None:
         # spoof segment name and weights column
@@ -121,10 +139,8 @@ def iterate_segmented_dataset(
         for segment_name, segment_weights in segmentation.iteritems():
             weights = segment_weights.to_frame("weight")
             segment_data = _add_weights(data, weights)
-            # don't yield empty data (for prediction)
-            if segment_data.empty:
-                continue
-            yield segment_name, _apply_feature_processor(segment_name, segment_data)
+            segment_data = _apply_feature_processor(segment_name, segment_data)
+            yield segment_name, segment_data
 
 
 def _get_calendar_year_coverage_warning(index):
@@ -252,7 +268,7 @@ def _segment_weights_three_month_weighted(index):
     )
 
 
-def segment_time_series(index, segment_type="single"):
+def segment_time_series(index, segment_type="single", drop_zero_weight_segments=False):
     segment_weight_func = {
         "single": _segment_weights_single,
         "one_month": _segment_weights_one_month,
@@ -264,6 +280,12 @@ def segment_time_series(index, segment_type="single"):
         raise ValueError("Invalid segment type: %s" % (segment_type))
 
     segment_weights = segment_weight_func(index)
+
+    if drop_zero_weight_segments:
+        # keep only columns with non-zero weights
+        total_weights = segment_weights.sum()
+        columns_to_keep = total_weights[total_weights > 0].index.tolist()
+        segment_weights = segment_weights[columns_to_keep]
 
     # TODO: Do something with these
     _get_hourly_coverage_warning(segment_weights)  # each model

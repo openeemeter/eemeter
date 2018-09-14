@@ -97,6 +97,7 @@ class CalTRACKUsagePerDayModelResults(object):
         self,
         status,
         method_name,
+        interval=None,
         model=None,
         r_squared_adj=None,
         candidates=None,
@@ -106,6 +107,8 @@ class CalTRACKUsagePerDayModelResults(object):
     ):
         self.status = status  # NO DATA | NO MODEL | SUCCESS
         self.method_name = method_name
+
+        self.interval = interval
         self.model = model
         self.r_squared_adj = r_squared_adj
 
@@ -161,6 +164,22 @@ class CalTRACKUsagePerDayModelResults(object):
         if with_candidates:
             data["candidates"] = [candidate.json() for candidate in self.candidates]
         return data
+
+    def predict(
+        self,
+        prediction_index,
+        temperature_data,
+        with_disaggregated=False,
+        with_design_matrix=False,
+        **kwargs
+    ):
+        return self.model.predict(
+            prediction_index,
+            temperature_data,
+            with_disaggregated=with_disaggregated,
+            with_design_matrix=with_design_matrix,
+            **kwargs
+        )
 
     def plot(
         self,
@@ -307,24 +326,24 @@ class CalTRACKUsagePerDayCandidateModel(object):
 
     def predict(
         self,
-        temperature_data,
         prediction_index,
-        degree_day_method,
+        temperature_data,
         with_disaggregated=False,
         with_design_matrix=False,
+        **kwargs
     ):
         return caltrack_usage_per_day_predict(
             self.model_type,
             self.model_params,
-            temperature_data,
             prediction_index,
-            degree_day_method,
+            temperature_data,
             with_disaggregated=with_disaggregated,
             with_design_matrix=with_design_matrix,
+            **kwargs
         )
 
     def plot(
-        candidate,
+        self,
         best=False,
         ax=None,
         title=None,
@@ -334,7 +353,7 @@ class CalTRACKUsagePerDayCandidateModel(object):
         **kwargs
     ):
         return plot_caltrack_candidate(
-            candidate,
+            self,
             best=best,
             ax=ax,
             title=title,
@@ -537,9 +556,9 @@ def _caltrack_predict_design_matrix(
 def caltrack_usage_per_day_predict(
     model_type,
     model_params,
-    temperature_data,
     prediction_index,
-    degree_day_method,
+    temperature_data,
+    degree_day_method="daily",
     with_disaggregated=False,
     with_design_matrix=False,
 ):
@@ -1624,6 +1643,9 @@ def fit_caltrack_usage_per_day_model(
         minimum_non_zero_hdd = 0
         minimum_total_cdd = 0
         minimum_total_hdd = 0
+        interval = "billing"
+    else:
+        interval = "daily"
 
     # cleans data to fully NaN rows that have missing temp or meter data
     data = overwrite_partial_rows_with_nan(data)
@@ -1703,6 +1725,7 @@ def fit_caltrack_usage_per_day_model(
     model_result = CalTRACKUsagePerDayModelResults(
         status=status,
         method_name="caltrack_usage_per_day",
+        interval=interval,
         model=best_candidate,
         candidates=candidates,
         r_squared_adj=r_squared_adj,
@@ -2070,7 +2093,7 @@ def plot_caltrack_candidate(
 
     temps_hourly = pd.Series(temps, index=prediction_index).resample("H").ffill()
 
-    prediction = candidate.predict(temps_hourly, prediction_index, "daily").result
+    prediction = candidate.predict(prediction_index, temps_hourly, "daily").result.predicted_usage
 
     plot_kwargs = {"color": color, "alpha": alpha or 0.3}
     plot_kwargs.update(kwargs)

@@ -1,3 +1,6 @@
+from eemeter.caltrack.usage_per_day import CalTRACKUsagePerDayModelResults
+
+
 __all__ = ("metered_savings", "modeled_savings")
 
 
@@ -28,7 +31,7 @@ def _compute_ols_error(
 
 def _compute_fsu_error(
     t_stat,
-    frequency,
+    interval,
     post_obs,
     total_base_energy,
     rmse_base_residuals,
@@ -36,12 +39,12 @@ def _compute_fsu_error(
     base_obs,
     nprime,
 ):
-    if frequency == "billing":
+    if interval.startswith("billing"):
         a_coeff = -0.00022
         b_coeff = 0.03306
         c_coeff = 0.94054
         months_reporting = post_obs
-    else:
+    else:  # daily
         a_coeff = -0.00024
         b_coeff = 0.03535
         c_coeff = 1.00286
@@ -57,14 +60,62 @@ def _compute_fsu_error(
     return fsu_error_band
 
 
+def _compute_error_bands(totals_metrics, results, interval, t_stat):
+    num_parameters = totals_metrics.num_parameters
+
+    base_obs = totals_metrics.observed_length
+    post_obs = results["reporting_observed"].dropna().shape[0]
+
+    rmse_base_residuals = totals_metrics.rmse_adj
+    autocorr_resid = totals_metrics.autocorr_resid
+
+    base_avg = totals_metrics.observed_mean
+    post_avg = results["reporting_observed"].mean()
+    post_prediction_avg = results["counterfactual_usage"].mean()
+
+    base_var = totals_metrics.observed_variance
+
+    nprime = base_obs * (1 - autocorr_resid) / (1 + autocorr_resid)
+
+    total_base_energy = base_avg * base_obs
+
+    ols_total_agg_error, ols_model_agg_error, ols_noise_agg_error = _compute_ols_error(
+        t_stat,
+        rmse_base_residuals,
+        post_obs,
+        base_obs,
+        base_avg,
+        post_avg,
+        base_var,
+        nprime,
+    )
+
+    fsu_error_band = _compute_fsu_error(
+        t_stat,
+        interval,
+        post_obs,
+        total_base_energy,
+        rmse_base_residuals,
+        base_avg,
+        base_obs,
+        nprime,
+    )
+
+    return {
+        "FSU Error Band": fsu_error_band,
+        "OLS Error Band": ols_total_agg_error,
+        "OLS Error Band: Model Error": ols_model_agg_error,
+        "OLS Error Band: Noise": ols_noise_agg_error,
+    }
+
+
 def metered_savings(
-    baseline_model_results,
+    baseline_model,
     reporting_meter_data,
     temperature_data,
-    degree_day_method="daily",
     with_disaggregated=False,
-    frequency="unknown",
     t_stat=1.649,
+    predict_kwargs=None,
 ):
     """ Compute metered savings, i.e., savings in which the baseline model
     is used to calculate the modeled usage in the reporting period. This
@@ -75,30 +126,27 @@ def metered_savings(
 
     Parameters
     ----------
-    baseline_model_results : :any:`eemeter.ModelResults`
-        ModelResult object to use for predicting pre-intervention usage.
+    baseline_model : :any:`eemeter.CalTRACKUsagePerDayModelResults`
+        Object to use for predicting pre-intervention usage.
     reporting_meter_data : :any:`pandas.DataFrame`
         The observed reporting period data (totals). Savings will be computed for the
         periods supplied in the reporting period data.
     temperature_data : :any:`pandas.Series`
         Hourly-frequency timeseries of temperature data during the reporting
         period.
-    degree_day_method : :any:`str`, optional
-        The method to use to calculate degree days using hourly temperature
-        data. Can be either ``'hourly'`` or ``'daily'``.
     with_disaggregated : :any:`bool`, optional
         If True, calculate baseline counterfactual disaggregated usage
         estimates. Savings cannot be disaggregated for metered savings. For
         that, use :any:`eemeter.caltrack_modeled_savings`.
-    frequency : :any`str`, optional
-        The frequency used for calculating the FSU error band. Frequency can be
-        ``'billing'`` or ``'daily'``. If frequency is anything else, the FSU and OLS
-        error bands will not be calculated.
-    t_stat : :any`float`
+    t_stat : :any:`float`, optional
         The t-statistic associated with the desired confidence level and degrees of
         freedom (number of baseline observations minus the number of parameters).
         Defaults to 1.649, the t-statistic associated with 363 degrees of freedom (365
         observations minus two parameters) and a two-tailed 90% confidence level.
+
+        Leave blank if not computing error bands.
+    predict_kwargs : :any:`dict`, optional
+        Extra kwargs to pass to the baseline_model.predict method.
 
     Returns
     -------
@@ -118,12 +166,23 @@ def metered_savings(
         - ``counterfactual_cooling_load``
 
     error_bands : :any:`dict`, optional
-        If frequency is 'daily' or 'billing', will also return a dictionary of FSU and
-        OLS error bands for the aggregated energy savings over the post period.
+        If baseline_model is an instance of CalTRACKUsagePerDayModelResults,
+        will also return a dictionary of FSU and OLS error bands for the
+        aggregated energy savings over the post period.
     """
+    if predict_kwargs is None:
+        predict_kwargs = {}
+
+    model_type = None  # generic
+    if isinstance(baseline_model, CalTRACKUsagePerDayModelResults):
+        model_type = "usage_per_day"
+
+    if model_type == "usage_per_day" and with_disaggregated:
+        predict_kwargs["with_disaggregated"] = True
+
     prediction_index = reporting_meter_data.index
-    model_prediction = baseline_model_results.model.predict(
-        temperature_data, prediction_index, degree_day_method, with_disaggregated=True
+    model_prediction = baseline_model.predict(
+        prediction_index, temperature_data, **predict_kwargs
     )
 
     predicted_baseline_usage = model_prediction.result
@@ -142,7 +201,7 @@ def metered_savings(
         metered_savings=metered_savings_func
     )
 
-    if with_disaggregated:
+    if model_type == "usage_per_day" and with_disaggregated:
         counterfactual_usage_disaggregated = predicted_baseline_usage[
             ["base_load", "heating_load", "cooling_load"]
         ].rename(
@@ -154,57 +213,14 @@ def metered_savings(
         )
         results = results.join(counterfactual_usage_disaggregated)
 
+    results = results.dropna().reindex(results.index)  # carry NaNs
+
     error_bands = None
-
-    if frequency == "daily" or frequency == "billing":
-        num_parameters = baseline_model_results.totals_metrics.num_parameters
-
-        base_obs = baseline_model_results.totals_metrics.observed_length
-        post_obs = results["reporting_observed"].dropna().shape[0]
-
-        rmse_base_residuals = baseline_model_results.totals_metrics.rmse_adj
-        autocorr_resid = baseline_model_results.totals_metrics.autocorr_resid
-
-        base_avg = baseline_model_results.totals_metrics.observed_mean
-        post_avg = results["reporting_observed"].mean()
-        post_prediction_avg = results["counterfactual_usage"].mean()
-
-        base_var = baseline_model_results.totals_metrics.observed_variance
-
-        nprime = base_obs * (1 - autocorr_resid) / (1 + autocorr_resid)
-
-        total_base_energy = base_avg * base_obs
-
-        ols_total_agg_error, ols_model_agg_error, ols_noise_agg_error = _compute_ols_error(
-            t_stat,
-            rmse_base_residuals,
-            post_obs,
-            base_obs,
-            base_avg,
-            post_avg,
-            base_var,
-            nprime,
+    if model_type == "usage_per_day":  # has totals_metrics
+        error_bands = _compute_error_bands(
+            baseline_model.totals_metrics, results, baseline_model.interval, t_stat
         )
-
-        fsu_error_band = _compute_fsu_error(
-            t_stat,
-            frequency,
-            post_obs,
-            total_base_energy,
-            rmse_base_residuals,
-            base_avg,
-            base_obs,
-            nprime,
-        )
-
-        error_bands = {
-            "FSU Error Band": fsu_error_band,
-            "OLS Error Band": ols_total_agg_error,
-            "OLS Error Band: Model Error": ols_model_agg_error,
-            "OLS Error Band: Noise": ols_noise_agg_error,
-        }
-
-    return results.dropna().reindex(results.index), error_bands
+    return results, error_bands
 
 
 def modeled_savings(
@@ -212,8 +228,8 @@ def modeled_savings(
     reporting_model,
     result_index,
     temperature_data,
-    degree_day_method="daily",
     with_disaggregated=False,
+    predict_kwargs=None,
 ):
     """ Compute modeled savings, i.e., savings in which baseline and reporting
     usage values are based on models. This is appropriate for annualizing or
@@ -230,11 +246,12 @@ def modeled_savings(
     temperature_data : :any:`pandas.Series`
         Hourly-frequency timeseries of temperature data during the modeled
         period.
-    degree_day_method : :any:`str`, optional
-        The method to use to calculate degree days using hourly temperature
-        data. Can be either ``'hourly'`` or ``'daily'``.
     with_disaggregated : :any:`bool`, optional
         If True, calculate modeled disaggregated usage estimates and savings.
+
+    predict_kwargs : :any:`dict`, optional
+        Extra kwargs to pass to the baseline_model.predict and
+        reporting_model.predict methods.
 
     Returns
     -------
@@ -261,12 +278,19 @@ def modeled_savings(
     """
     prediction_index = result_index
 
+    if predict_kwargs is None:
+        predict_kwargs = {}
+
+    model_type = None  # generic
+    if isinstance(baseline_model, CalTRACKUsagePerDayModelResults):
+        model_type = "usage_per_day"
+
+    if model_type == "usage_per_day" and with_disaggregated:
+        predict_kwargs["with_disaggregated"] = True
+
     def _predicted_usage(model):
         model_prediction = model.predict(
-            temperature_data,
-            prediction_index,
-            degree_day_method,
-            with_disaggregated=True,
+            prediction_index, temperature_data, **predict_kwargs
         )
         predicted_usage = model_prediction.result
         return predicted_usage
@@ -287,7 +311,7 @@ def modeled_savings(
         modeled_savings=modeled_savings_func
     )
 
-    if with_disaggregated:
+    if model_type == "usage_per_day" and with_disaggregated:
         modeled_baseline_usage_disaggregated = predicted_baseline_usage[
             ["base_load", "heating_load", "cooling_load"]
         ].rename(
@@ -331,4 +355,5 @@ def modeled_savings(
             )
         )
 
-    return results.dropna().reindex(results.index)
+    results = results.dropna().reindex(results.index)  # carry NaNs
+    return results
