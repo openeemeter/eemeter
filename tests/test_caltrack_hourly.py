@@ -100,8 +100,8 @@ def test_fit_caltrack_hourly_model_segment(segmented_design_matrices):
     segment_data = segmented_design_matrices[segment_name]
     segment_model = fit_caltrack_hourly_model_segment(segment_name, segment_data)
     assert segment_model.formula == (
-        "meter_value ~ C(hour_of_week) - 1 + bin_0:occupancy"
-        " + bin_1:occupancy + bin_2:occupancy + bin_3:occupancy"
+        "meter_value ~ C(hour_of_week) - 1 + bin_0:C(occupancy)"
+        " + bin_1:C(occupancy) + bin_2:C(occupancy) + bin_3:C(occupancy)"
     )
     assert segment_model.segment_name == "dec-jan-feb-weighted"
     assert len(segment_model.model_params.keys()) == 32

@@ -460,6 +460,10 @@ def compute_temperature_features(
 
 
 def _estimate_hour_of_week_occupancy(model_data, threshold):
+    index = pd.CategoricalIndex(range(168))
+    if model_data.empty:
+        return pd.Series(np.nan, index=index, name="occupancy")
+
     usage_model = smf.wls(
         formula="meter_value ~ cdd_65 + hdd_50",
         data=model_data,
@@ -473,6 +477,8 @@ def _estimate_hour_of_week_occupancy(model_data, threshold):
     )
 
     def _is_high_usage(df):
+        if df.empty:
+            return np.nan
         n_positive_residuals = sum(df.residuals > 0)
         n_residuals = float(len(df.residuals))
         ratio_positive_residuals = n_positive_residuals / n_residuals
@@ -482,7 +488,8 @@ def _estimate_hour_of_week_occupancy(model_data, threshold):
         model_data_with_residuals.groupby(["hour_of_week"])
         .apply(_is_high_usage)
         .rename("occupancy")
-        .reindex(pd.CategoricalIndex(range(168)))
+        .reindex(index)
+        .astype(bool)
     )  # guarantee an index value for all hours
 
 
@@ -499,7 +506,7 @@ def estimate_hour_of_week_occupancy(data, segmentation=None, threshold=0.65):
         occupancy_lookups[column] = hour_of_week_occupancy
     # make sure columns stay in same order
     columns = ["occupancy"] if segmentation is None else segmentation.columns
-    return pd.DataFrame(occupancy_lookups, columns=columns, dtype=bool)
+    return pd.DataFrame(occupancy_lookups, columns=columns)
 
 
 def _fit_temperature_bins(temperature_data, default_bins, min_temperature_count):

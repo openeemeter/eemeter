@@ -243,7 +243,7 @@ def preliminary_hourly_design_matrix(il_electricity_cdd_hdd_hourly):
 
 @pytest.fixture
 def segmentation(preliminary_hourly_design_matrix):
-    segment_time_series(
+    return segment_time_series(
         preliminary_hourly_design_matrix.index,
         'three_month_weighted'
     )
@@ -271,12 +271,34 @@ def test_create_caltrack_hourly_segmented_design_matrices(
     occupancy_lookup,
     temperature_bins
 ):
-    design_matrix = create_caltrack_hourly_segmented_design_matrices(
+    design_matrices = create_caltrack_hourly_segmented_design_matrices(
         preliminary_hourly_design_matrix,
         segmentation,
         occupancy_lookup,
         temperature_bins
     )
-    assert design_matrix.shape == (10, 88)
-    assert list(design_matrix.columns) == []
+
+    design_matrix = design_matrices["dec-jan-feb-weighted"]
+    assert design_matrix.shape == (1000, 8)
+    assert list(design_matrix.columns) == [
+        'meter_value',
+        'hour_of_week',
+        'occupancy',
+        'bin_0',
+        'bin_1',
+        'bin_2',
+        'bin_3',
+        'weight'
+    ]
+    assert round(design_matrix.sum().sum(), 2) == 126433.71
+
+    design_matrix = design_matrices["mar-apr-may-weighted"]
+    assert design_matrix.shape == (1000, 5)
+    assert list(design_matrix.columns) == [
+        'meter_value',
+        'hour_of_week',
+        'occupancy',
+        'bin_0',
+        'weight'
+    ]
     assert round(design_matrix.sum().sum(), 2) == 0.0
