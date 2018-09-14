@@ -302,10 +302,10 @@ def fit_segmented_model(
     prediction_feature_processor,
     prediction_feature_processor_kwargs,
 ):
-    segment_models = []
-    for segment_name, segment_data in segmented_dataset_dict.items():
-        segment_model = fit_segment(segment_name, segment_data)
-        segment_models.append(segment_model)
+    segment_models = [
+        fit_segment(segment_name, segment_data)
+        for segment_name, segment_data in segmented_dataset_dict.items()
+    ]
 
     segmented_model = SegmentedModel(
         segment_models,

@@ -82,7 +82,7 @@ def caltrack_hourly_prediction_feature_processor(
 def fit_caltrack_hourly_model_segment(segment_name, segment_data):
     def _get_hourly_model_formula(data):
         bin_occupancy_interactions = "".join(
-            [" + {}:occupancy".format(c) for c in data.columns if "bin" in c]
+            [" + {}:C(occupancy)".format(c) for c in data.columns if "bin" in c]
         )
         return "meter_value ~ C(hour_of_week) - 1{}".format(bin_occupancy_interactions)
 
