@@ -39,6 +39,8 @@ services:
   pipenv:
     image: eemeter_shell
     entrypoint: pipenv
+    environment:
+      - PIPENV_CACHE_DIR=/app/.docker-pipenv-cache  # if you get weird caching behavior remove this dir
     volumes:
       - .:/app
 
