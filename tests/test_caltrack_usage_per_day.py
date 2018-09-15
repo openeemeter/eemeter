@@ -80,6 +80,22 @@ def test_candidate_model_json_with_warning():
     }
 
 
+def test_candidate_model_json_none_and_nan_values():
+    eemeter_warning = EEMeterWarning(
+        qualified_name="qualified_name", description="description", data={}
+    )
+    candidate_model = CalTRACKUsagePerDayCandidateModel(
+        model_type="model_type",
+        formula="formula",
+        status="status",
+        warnings=[eemeter_warning],
+        r_squared_adj=None,
+    )
+    assert candidate_model.json()["r_squared_adj"] is None
+    candidate_model.r_squared_adj = np.nan
+    assert candidate_model.json()["r_squared_adj"] is None
+
+
 def test_data_sufficiency_minimal():
     data_sufficiency = DataSufficiency(status="status", criteria_name="criteria_name")
     assert data_sufficiency.status == "status"
@@ -1850,3 +1866,21 @@ def test_caltrack_sufficiency_criteria_handle_single_input():
 
     assert data_sufficiency.status == "FAIL"
     assert len(data_sufficiency.warnings) == 3
+
+
+def test_caltrack_usage_per_day_predict_empty(prediction_index, temperature_data):
+    prediction = caltrack_usage_per_day_predict(
+        "intercept_only",
+        {"intercept": 1},
+        prediction_index[:0],
+        temperature_data,
+        with_disaggregated=True,
+        with_design_matrix=True,
+    )
+    assert sorted(prediction.result.columns) == [
+        "base_load",
+        "cooling_load",
+        "heating_load",
+        "predicted_usage",
+    ]
+    assert round(prediction.result.predicted_usage.sum(), 2) == 0

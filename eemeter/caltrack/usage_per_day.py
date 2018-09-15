@@ -2093,7 +2093,9 @@ def plot_caltrack_candidate(
 
     temps_hourly = pd.Series(temps, index=prediction_index).resample("H").ffill()
 
-    prediction = candidate.predict(prediction_index, temps_hourly, "daily").result.predicted_usage
+    prediction = candidate.predict(
+        prediction_index, temps_hourly, "daily"
+    ).result.predicted_usage
 
     plot_kwargs = {"color": color, "alpha": alpha or 0.3}
     plot_kwargs.update(kwargs)
