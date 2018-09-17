@@ -9,6 +9,7 @@ dist/
 .ipynb_checkpoints/
 
 .*
+!.github/*
 !.travis.yml
 !.coveragerc
 !.gitignore
