@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 
+from .api import EEMeterWarning
+
 __all__ = ("ModelMetrics",)
 
 
@@ -174,6 +176,8 @@ class ModelMetrics(object):
         if autocorr_lags <= 0:
             raise ValueError("autocorr_lags must be greater than zero")
 
+        self.warnings = []
+
         observed = observed_input.to_frame().dropna()
         predicted = predicted_input.to_frame().dropna()
         observed.columns = ["observed"]
@@ -182,14 +186,25 @@ class ModelMetrics(object):
         self.observed_length = observed.shape[0]
         self.predicted_length = predicted.shape[0]
 
-        if self.observed_length != self.predicted_length:
-            raise ValueError("Input series are of different lengths")
-
         # Do an inner join on the two input series to make sure that we only
         # use observations with the same time stamps.
         combined = observed.merge(predicted, left_index=True, right_index=True)
+        self.merged_length = len(combined)
 
-        self.merged_length = combined.shape[0]
+        if self.observed_length != self.predicted_length:
+            self.warnings.append(
+                EEMeterWarning(
+                    qualified_name="eemeter.metrics.input_series_are_of_different_lengths",
+                    description="Input series are of different lengths.",
+                    data={
+                        "observed_input_length": len(observed_input),
+                        "predicted_input_length": len(predicted_input),
+                        "observed_length_without_nan": self.observed_length,
+                        "predicted_length_without_nan": self.predicted_length,
+                        "merged_length": self.merged_length,
+                    },
+                )
+            )
 
         # Calculate residuals because these are an input for most of the metrics.
         combined["residuals"] = combined.predicted - combined.observed
