@@ -93,14 +93,14 @@ def test_ModelMetrics_diff_length_error_no_nan(sample_data_diff_length_no_nan):
     model_metrics = ModelMetrics(series_one, series_two)
     assert len(model_metrics.warnings) == 1
     warning = model_metrics.warnings[0]
-    assert warning.qualified_name.startswith('eemeter.metrics.input_series_are_of')
-    assert warning.description.startswith('Input series')
+    assert warning.qualified_name.startswith("eemeter.metrics.input_series_are_of")
+    assert warning.description.startswith("Input series")
     assert warning.data == {
-        'merged_length': 5,
-        'observed_input_length': 7,
-        'observed_length_without_nan': 7,
-        'predicted_input_length': 5,
-        'predicted_length_without_nan': 5
+        "merged_length": 5,
+        "observed_input_length": 7,
+        "observed_length_without_nan": 7,
+        "predicted_input_length": 5,
+        "predicted_length_without_nan": 5,
     }
 
 
@@ -116,14 +116,14 @@ def test_ModelMetrics_diff_length_error_with_nan(sample_data_diff_length_with_na
     model_metrics = ModelMetrics(series_one, series_two)
     assert len(model_metrics.warnings) == 1
     warning = model_metrics.warnings[0]
-    assert warning.qualified_name.startswith('eemeter.metrics.input_series_are_of')
-    assert warning.description.startswith('Input series')
+    assert warning.qualified_name.startswith("eemeter.metrics.input_series_are_of")
+    assert warning.description.startswith("Input series")
     assert warning.data == {
-        'merged_length': 5,
-        'observed_input_length': 7,
-        'observed_length_without_nan': 7,
-        'predicted_input_length': 7,
-        'predicted_length_without_nan': 5
+        "merged_length": 5,
+        "observed_input_length": 7,
+        "observed_length_without_nan": 7,
+        "predicted_input_length": 7,
+        "predicted_length_without_nan": 5,
     }
 
 

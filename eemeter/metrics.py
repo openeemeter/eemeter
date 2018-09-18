@@ -202,7 +202,7 @@ class ModelMetrics(object):
                         "observed_length_without_nan": self.observed_length,
                         "predicted_length_without_nan": self.predicted_length,
                         "merged_length": self.merged_length,
-                    }
+                    },
                 )
             )
 
