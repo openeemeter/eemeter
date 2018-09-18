@@ -82,16 +82,49 @@ def test_ModelMetrics_autocorr_lags_error(sample_data):
 
 
 @pytest.fixture
-def sample_data_diff_length():
+def sample_data_diff_length_no_nan():
     series_one = pd.Series([1, 0, 0, 1, 6, 4, 5])
     series_two = pd.Series([2, 3, 3, 2, 4])
     return series_one, series_two
 
 
-def test_ModelMetrics_diff_length_error(sample_data_diff_length):
-    series_one, series_two = sample_data_diff_length
-    with pytest.raises(ValueError):
-        model_metrics = ModelMetrics(series_one, series_two)
+def test_ModelMetrics_diff_length_error_no_nan(sample_data_diff_length_no_nan):
+    series_one, series_two = sample_data_diff_length_no_nan
+    model_metrics = ModelMetrics(series_one, series_two)
+    assert len(model_metrics.warnings) == 1
+    warning = model_metrics.warnings[0]
+    assert warning.qualified_name.startswith("eemeter.metrics.input_series_are_of")
+    assert warning.description.startswith("Input series")
+    assert warning.data == {
+        "merged_length": 5,
+        "observed_input_length": 7,
+        "observed_length_without_nan": 7,
+        "predicted_input_length": 5,
+        "predicted_length_without_nan": 5,
+    }
+
+
+@pytest.fixture
+def sample_data_diff_length_with_nan():
+    series_one = pd.Series([1, 0, 0, 1, 6, 4, 5])
+    series_two = pd.Series([2, 3, 3, 2, 4, np.nan, np.nan])
+    return series_one, series_two
+
+
+def test_ModelMetrics_diff_length_error_with_nan(sample_data_diff_length_with_nan):
+    series_one, series_two = sample_data_diff_length_with_nan
+    model_metrics = ModelMetrics(series_one, series_two)
+    assert len(model_metrics.warnings) == 1
+    warning = model_metrics.warnings[0]
+    assert warning.qualified_name.startswith("eemeter.metrics.input_series_are_of")
+    assert warning.description.startswith("Input series")
+    assert warning.data == {
+        "merged_length": 5,
+        "observed_input_length": 7,
+        "observed_length_without_nan": 7,
+        "predicted_input_length": 7,
+        "predicted_length_without_nan": 5,
+    }
 
 
 def test_ModelMetrics_inputs_unchanged(sample_data):
