@@ -37,10 +37,10 @@ git checkout -b release/vX.X.X
 # then bump versions
 vim eemeter/__version__.py
 vim eemeter/CHANGELOG.md
-git commit -m "Bump version"
+git commit -am "Bump version"
 
 git tag vX.X.X
-git push -u origin release/vX.X.X
+git push -u origin release/vX.X.X --tags
 docker-compose run --rm pipenv run python setup.py upload
 git checkout master
 git merge release/vX.X.X

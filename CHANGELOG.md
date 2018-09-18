@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* [placeholder]
+
+2.0.4
+-----
+
 * Change metrics input length error to warning.
 
 2.0.3
