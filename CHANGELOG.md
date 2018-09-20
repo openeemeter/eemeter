@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* [placeholder]
+* Give better error for duplicated meter index in compute temperature features.
 
 2.0.4
 -----

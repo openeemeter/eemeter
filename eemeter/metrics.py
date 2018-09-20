@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from .api import EEMeterWarning
+from .warnings import EEMeterWarning
 
 __all__ = ("ModelMetrics",)
 

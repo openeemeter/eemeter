@@ -326,6 +326,9 @@ def compute_temperature_features(
             " meter_data.tz_localize(...)."
         )
 
+    if meter_data_index.duplicated().any():
+        raise ValueError("Duplicates found in input meter trace index.")
+
     temp_agg_funcs = []
     temp_agg_column_renames = {}
 

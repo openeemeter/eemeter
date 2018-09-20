@@ -696,6 +696,22 @@ def test_compute_temperature_features_shorter_meter_data(il_electricity_cdd_hdd_
     assert round(df.temperature_mean.sum()) == 43934.0
 
 
+def test_compute_temperature_features_with_duplicated_index(
+    il_electricity_cdd_hdd_billing_monthly
+):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]
+
+    # these are specifically formed to give a less readable error if
+    # duplicates are not caught
+    meter_data = meter_data.append(meter_data).sort_index()
+    temperature_data = temperature_data.iloc[8000:]
+
+    with pytest.raises(ValueError) as excinfo:
+        compute_temperature_features(meter_data.indextemperature_data)
+    assert str(excinfo.value) == "Duplicates found in input meter trace index."
+
+
 def test_compute_temperature_features_empty_temperature_data():
     index = pd.DatetimeIndex([], tz="UTC", name="dt", freq="H")
     temperature_data = pd.Series({"value": []}, index=index).astype(float)
