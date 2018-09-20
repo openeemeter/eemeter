@@ -708,7 +708,7 @@ def test_compute_temperature_features_with_duplicated_index(
     temperature_data = temperature_data.iloc[8000:]
 
     with pytest.raises(ValueError) as excinfo:
-        compute_temperature_features(meter_data.indextemperature_data)
+        compute_temperature_features(meter_data.index, temperature_data)
     assert str(excinfo.value) == "Duplicates found in input meter trace index."
 
 
