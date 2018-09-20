@@ -32,6 +32,8 @@ Releasing
 Release command cheatsheet
 
 ```
+git checkout master
+git pull
 git checkout -b release/vX.X.X
 
 # then bump versions
@@ -43,6 +45,7 @@ git tag vX.X.X
 git push -u origin release/vX.X.X --tags
 docker-compose run --rm pipenv run python setup.py upload
 git checkout master
+git pull
 git merge release/vX.X.X
 git push
 ```
