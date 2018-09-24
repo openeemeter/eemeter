@@ -1481,7 +1481,7 @@ def test_fit_caltrack_usage_per_day_model_cdd_hdd_use_billing_presets(
     cdd_hdd_h60_c65, prediction_index, temperature_data
 ):
     model_results = fit_caltrack_usage_per_day_model(
-        cdd_hdd_h60_c65, use_billing_presets=True
+        cdd_hdd_h60_c65, use_billing_presets=True, weights_col='n_days_kept'
     )
     assert len(model_results.candidates) == 4
     assert model_results.candidates[0].model_type == "intercept_only"
@@ -1493,6 +1493,23 @@ def test_fit_caltrack_usage_per_day_model_cdd_hdd_use_billing_presets(
     model_prediction = model_results.model.predict(prediction_index, temperature_data)
     prediction = model_prediction.result
     assert round(prediction.predicted_usage.sum(), 2) == 7059.48
+
+
+def test_fit_caltrack_usage_per_day_model_cdd_hdd_use_billing_presets_no_weights(
+    cdd_hdd_h60_c65, prediction_index, temperature_data
+):
+    model_results = fit_caltrack_usage_per_day_model(
+        cdd_hdd_h60_c65, use_billing_presets=True
+    )
+    assert model_results.status == "ERROR"
+    assert model_results.method_name == "caltrack_usage_per_day"
+    assert model_results.interval == "billing"
+    assert len(model_results.warnings) == 1
+    warning = model_results.warnings[0]
+    assert warning.qualified_name == ("eemeter.caltrack_usage_per_day.missing_weights")
+    assert warning.description == ("Attempting to use billing presets without"
+                                   " providing the weights_col arg.")
+    assert warning.data == {}
 
 
 # When model is intercept-only, num_parameters should = 0 with cvrmse = cvrmse_adj
