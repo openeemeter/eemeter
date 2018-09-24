@@ -1197,8 +1197,9 @@ def test_caltrack_method_cdd_hdd(
 def test_caltrack_method_cdd_hdd_use_billing_presets(
     cdd_hdd_h60_c65, temperature_data, prediction_index, degree_day_method
 ):
-    model_results = caltrack_method(cdd_hdd_h60_c65, use_billing_presets=True,
-                                    weights_col='n_days_kept')
+    model_results = caltrack_method(
+        cdd_hdd_h60_c65, use_billing_presets=True, weights_col="n_days_kept"
+    )
     assert len(model_results.candidates) == 4
     assert model_results.candidates[0].model_type == "intercept_only"
     assert model_results.candidates[1].model_type == "hdd_only"
@@ -1221,8 +1222,9 @@ def test_caltrack_method_cdd_hdd_use_billing_presets_no_weights(
     assert len(model_results.warnings) == 1
     warning = model_results.warnings[0]
     assert warning.qualified_name == ("eemeter.caltrack_method.missing_weights")
-    assert warning.description == ("Attempting to use billing presets without"
-                                   " providing the weights_col arg.")
+    assert warning.description == (
+        "Attempting to use billing presets without" " providing the weights_col arg."
+    )
     assert warning.data == {}
 
 

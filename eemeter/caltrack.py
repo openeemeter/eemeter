@@ -1276,8 +1276,10 @@ def caltrack_method(
                 warnings=[
                     EEMeterWarning(
                         qualified_name="eemeter.caltrack_method.missing_weights",
-                        description=("Attempting to use billing presets without"
-                                     " providing the weights_col arg."),
+                        description=(
+                            "Attempting to use billing presets without"
+                            " providing the weights_col arg."
+                        ),
                         data={},
                     )
                 ],
