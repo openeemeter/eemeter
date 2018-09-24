@@ -1259,11 +1259,29 @@ def caltrack_method(
         Results of running CalTRACK daily method. See :any:`eemeter.ModelResults`
         for more details.
     """
+
     if use_billing_presets:
+        # CalTrack 3.2.2.2.1
         minimum_non_zero_cdd = 0
         minimum_non_zero_hdd = 0
-        minimum_total_cdd = 0
-        minimum_total_hdd = 0
+        # CalTrack 3.2.2.2.2
+        minimum_total_cdd = 20
+        minimum_total_hdd = 20
+
+        # CalTrack 3.4.2
+        if weights_col is None:
+            return ModelResults(
+                status="ERROR",
+                method_name="caltrack_method",
+                warnings=[
+                    EEMeterWarning(
+                        qualified_name="eemeter.caltrack_method.missing_weights",
+                        description=("Attempting to use billing presets without"
+                                     " providing the weights_col arg."),
+                        data={},
+                    )
+                ],
+            )
 
     # cleans data to fully NaN rows that have missing temp or meter data
     data = overwrite_partial_rows_with_nan(data)
