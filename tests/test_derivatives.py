@@ -102,7 +102,7 @@ def baseline_model_billing(il_electricity_cdd_hdd_billing_monthly):
         baseline_meter_data, temperature_data
     )
     model_results = fit_caltrack_usage_per_day_model(
-        baseline_data, use_billing_presets=True
+        baseline_data, use_billing_presets=True, weights_col='n_days_kept'
     )
     return model_results
 
@@ -125,7 +125,7 @@ def test_metered_savings_cdd_hdd_billing(
         "counterfactual_usage",
         "metered_savings",
     ]
-    assert round(results.metered_savings.sum(), 2) == 1626.22
+    assert round(results.metered_savings.sum(), 2) == 1625.73
     assert sorted(error_bands.keys()) == [
         "FSU Error Band",
         "OLS Error Band",
