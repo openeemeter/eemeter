@@ -4,7 +4,8 @@ Changelog
 Development
 -----------
 
-* [placeholder]
+* Fix the warning for total degree days to use total degree days instead of
+  average degree days.
 
 2.1.0
 -----
