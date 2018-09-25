@@ -7,6 +7,8 @@ from eemeter import ModelMetrics
 from eemeter.metrics import (
     _compute_r_squared,
     _compute_r_squared_adj,
+    _compute_rmse,
+    _compute_rmse_adj,
     _compute_cvrmse,
     _compute_cvrmse_adj,
     _compute_mape,
@@ -20,10 +22,8 @@ from eemeter.metrics import (
 @pytest.fixture
 def sample_data():
     # Could have included DatetimeIndex, but made it more general
-    series_one = pd.Series([1, 3, 4, 1, 6])
-    series_two = pd.Series([2, 3, 3, 2, 4])
-    series_one.name = "NameOne"
-    series_two.name = "NameTwo"
+    series_one = pd.Series([1, 3, 4, 1, 6], name="NameOne")
+    series_two = pd.Series([2, 3, 3, 2, 4], name="NameTwo")
     return series_one, series_two
 
 
@@ -159,18 +159,23 @@ def test_model_metrics_json_valid(model_metrics):
         "nmae",
         "nmbe",
         "num_meter_zeros",
+        "num_parameters",
         "observed_cvstd",
         "observed_kurtosis",
         "observed_length",
         "observed_mean",
         "observed_skew",
+        "observed_variance",
         "predicted_cvstd",
         "predicted_kurtosis",
         "predicted_length",
         "predicted_mean",
         "predicted_skew",
+        "predicted_variance",
         "r_squared",
         "r_squared_adj",
+        "rmse",
+        "rmse_adj",
     ]
 
 
@@ -198,12 +203,17 @@ def test_compute_r_squared_adj(sample_data_merged):
 
 def test_compute_cvrmse(sample_data_merged):
     combined = sample_data_merged
-    assert round(_compute_cvrmse(combined), 3) == 0.394
+    observed_mean = combined["observed"].mean()
+    assert round(_compute_cvrmse(_compute_rmse(combined), observed_mean), 3) == 0.394
 
 
 def test_compute_cvrmse_adj(sample_data_merged):
     combined = sample_data_merged
-    assert round(_compute_cvrmse_adj(combined, 5, 2), 3) == 0.509
+    observed_mean = combined["observed"].mean()
+    observed_length = len(combined["observed"])
+    num_parameters = 2
+    rmse_adj = _compute_rmse_adj(combined, observed_length, num_parameters)
+    assert round(_compute_cvrmse_adj(rmse_adj, observed_mean), 3) == 0.509
 
 
 def test_compute_mape(sample_data_merged):

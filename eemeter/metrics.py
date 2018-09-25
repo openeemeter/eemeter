@@ -1,83 +1,62 @@
 import numpy as np
 import pandas as pd
 
-from .api import EEMeterWarning
+from .warnings import EEMeterWarning
 
 __all__ = ("ModelMetrics",)
 
 
 def _compute_r_squared(combined):
-
-    r_squared = combined[["predicted", "observed"]].corr().iloc[0, 1] ** 2
-
-    return r_squared
+    return combined[["predicted", "observed"]].corr().iloc[0, 1] ** 2
 
 
 def _compute_r_squared_adj(r_squared, length, num_parameters):
-
-    r_squared_adj = 1 - (1 - r_squared) * (length - 1) / (length - num_parameters - 1)
-
-    return r_squared_adj
+    return 1 - (1 - r_squared) * (length - 1) / (length - num_parameters - 1)
 
 
-def _compute_cvrmse(combined):
-
-    cvrmse = ((combined["residuals"] ** 2).mean() ** 0.5) / (
-        combined["observed"].mean()
-    )
-
-    return cvrmse
+def _compute_rmse(combined):
+    return (combined["residuals"].astype(float) ** 2).mean() ** 0.5
 
 
-def _compute_cvrmse_adj(combined, length, num_parameters):
+def _compute_rmse_adj(combined, length, num_parameters):
+    return (
+        (combined["residuals"].astype(float) ** 2).sum() / (length - num_parameters)
+    ) ** 0.5
 
-    cvrmse_adj = (
-        ((combined["residuals"].astype(float) ** 2).sum() / (length - num_parameters))
-        ** 0.5
-    ) / (combined["observed"].mean())
 
-    return cvrmse_adj
+def _compute_cvrmse(rmse, observed_mean):
+    return rmse / observed_mean
+
+
+def _compute_cvrmse_adj(rmse_adj, observed_mean):
+    return rmse_adj / observed_mean
 
 
 def _compute_mape(combined):
-
-    mape = (combined["residuals"] / combined["observed"]).abs().mean()
-
-    return mape
+    return (combined["residuals"] / combined["observed"]).abs().mean()
 
 
 def _compute_nmae(combined):
-
-    nmae = (combined["residuals"].astype(float).abs().sum()) / (
+    return (combined["residuals"].astype(float).abs().sum()) / (
         combined["observed"].sum()
     )
 
-    return nmae
-
 
 def _compute_nmbe(combined):
-
-    nmbe = combined["residuals"].astype(float).sum() / combined["observed"].sum()
-
-    return nmbe
+    return combined["residuals"].astype(float).sum() / combined["observed"].sum()
 
 
 def _compute_autocorr_resid(combined, autocorr_lags):
-
-    autocorr_resid = combined["residuals"].autocorr(lag=autocorr_lags)
-
-    return autocorr_resid
+    return combined["residuals"].autocorr(lag=autocorr_lags)
 
 
 def _json_safe_float(number):
     """
-    json serialization for infinity can be problematic.
-    Refer https://docs.python.org/2/library/json.html#basic-usage
-    This function return None if number is infinity or negative infinity
-    if the data type of number is not float then this function tries to
-    convert float, it will raise exception if it cannot be converted.
-    :param number:
-    :return:
+    JSON serialization for infinity can be problematic.
+    See https://docs.python.org/2/library/json.html#basic-usage
+    This function returns None if `number` is infinity or negative infinity.
+
+    If the `number` cannot be converted to float, this will raise an exception.
     """
     if number is None:
         return None
@@ -85,8 +64,7 @@ def _json_safe_float(number):
     if isinstance(number, float):
         return None if np.isinf(number) or np.isnan(number) else number
 
-    # Number might be string or some other type, try converting to float,
-    # will raise exception if not a valid data type.
+    # errors if number is not float compatible
     return float(number)
 
 
@@ -215,6 +193,9 @@ class ModelMetrics(object):
         self.observed_mean = combined["observed"].mean()
         self.predicted_mean = combined["predicted"].mean()
 
+        self.observed_variance = combined["observed"].var(ddof=0)
+        self.predicted_variance = combined["predicted"].var(ddof=0)
+
         self.observed_skew = combined["observed"].skew()
         self.predicted_skew = combined["predicted"].skew()
 
@@ -229,10 +210,13 @@ class ModelMetrics(object):
             self.r_squared, self.merged_length, self.num_parameters
         )
 
-        self.cvrmse = _compute_cvrmse(combined)
-        self.cvrmse_adj = _compute_cvrmse_adj(
+        self.rmse = _compute_rmse(combined)
+        self.rmse_adj = _compute_rmse_adj(
             combined, self.merged_length, self.num_parameters
         )
+
+        self.cvrmse = _compute_cvrmse(self.rmse, self.observed_mean)
+        self.cvrmse_adj = _compute_cvrmse_adj(self.rmse_adj, self.observed_mean)
 
         # Create a new DataFrame with all rows removed where observed is
         # zero, so we can calculate a version of MAPE with the zeros excluded.
@@ -275,8 +259,11 @@ class ModelMetrics(object):
             "observed_length": _json_safe_float(self.observed_length),
             "predicted_length": _json_safe_float(self.predicted_length),
             "merged_length": _json_safe_float(self.merged_length),
+            "num_parameters": _json_safe_float(self.num_parameters),
             "observed_mean": _json_safe_float(self.observed_mean),
             "predicted_mean": _json_safe_float(self.predicted_mean),
+            "observed_variance": _json_safe_float(self.observed_variance),
+            "predicted_variance": _json_safe_float(self.predicted_variance),
             "observed_skew": _json_safe_float(self.observed_skew),
             "predicted_skew": _json_safe_float(self.predicted_skew),
             "observed_kurtosis": _json_safe_float(self.observed_kurtosis),
@@ -285,6 +272,8 @@ class ModelMetrics(object):
             "predicted_cvstd": _json_safe_float(self.predicted_cvstd),
             "r_squared": _json_safe_float(self.r_squared),
             "r_squared_adj": _json_safe_float(self.r_squared_adj),
+            "rmse": _json_safe_float(self.rmse),
+            "rmse_adj": _json_safe_float(self.rmse_adj),
             "cvrmse": _json_safe_float(self.cvrmse),
             "cvrmse_adj": _json_safe_float(self.cvrmse_adj),
             "mape": _json_safe_float(self.mape),
