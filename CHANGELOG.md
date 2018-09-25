@@ -4,7 +4,11 @@ Changelog
 Development
 -----------
 
-* [placeholder]
+* Update the `use_billing_presets` option in `fit_caltrack_usage_per_day_model`
+  to use a minimum data sufficiency requirement for qualifying CandidateModels
+  (similar to daily methods).
+* Add an error when attempting to use billing presets without passing a weights
+  column to facilitate weighted least squares.
 
 2.0.5
 -----
