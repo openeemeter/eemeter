@@ -799,7 +799,8 @@ def test_get_total_degree_day_too_low_warning_ok():
         balance_point=65,
         degree_day_type="xdd",
         degree_days=pd.Series([1, 1, 1]),
-        minimum_total=2,
+        period_days=pd.Series([3, 1, 2]),
+        minimum_total=4,
     )
     assert warnings == []
 
@@ -810,7 +811,8 @@ def test_get_total_degree_day_too_low_warning_fail():
         balance_point=65,
         degree_day_type="xdd",
         degree_days=pd.Series([0.5, 0.5, 0.5]),
-        minimum_total=2,
+        period_days=pd.Series([3, 1, 2]),
+        minimum_total=4,
     )
     assert len(warnings) == 1
     warning = warnings[0]
@@ -821,8 +823,8 @@ def test_get_total_degree_day_too_low_warning_fail():
         "Total XDD below accepted minimum. Candidate fit not attempted."
     )
     assert warning.data == {
-        "total_xdd": 1.5,
-        "total_xdd_minimum": 2,
+        "total_xdd": 3.0,
+        "total_xdd_minimum": 4,
         "xdd_balance_point": 65,
     }
 
@@ -1498,18 +1500,11 @@ def test_fit_caltrack_usage_per_day_model_cdd_hdd_use_billing_presets(
 def test_fit_caltrack_usage_per_day_model_cdd_hdd_use_billing_presets_no_weights(
     cdd_hdd_h60_c65, prediction_index, temperature_data
 ):
-    model_results = fit_caltrack_usage_per_day_model(
-        cdd_hdd_h60_c65, use_billing_presets=True
-    )
-    assert model_results.status == "ERROR"
-    assert model_results.method_name == "caltrack_usage_per_day"
-    assert model_results.interval == "billing"
-    assert len(model_results.warnings) == 1
-    warning = model_results.warnings[0]
-    assert warning.qualified_name == ("eemeter.caltrack_usage_per_day.missing_weights")
-    assert warning.description == ("Attempting to use billing presets without"
-                                   " providing the weights_col arg.")
-    assert warning.data == {}
+    with pytest.raises(ValueError) as exc_info:
+        fit_caltrack_usage_per_day_model(
+            cdd_hdd_h60_c65, use_billing_presets=True
+        )
+    assert 'weights_col' in str(excinfo.value)
 
 
 # When model is intercept-only, num_parameters should = 0 with cvrmse = cvrmse_adj
