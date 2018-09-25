@@ -798,7 +798,7 @@ def test_get_total_degree_day_too_low_warning_ok():
         model_type="model_type",
         balance_point=65,
         degree_day_type="xdd",
-        degree_days=pd.Series([1, 1, 1]),
+        avg_degree_days=pd.Series([1, 1, 1]),
         period_days=pd.Series([3, 1, 2]),
         minimum_total=4,
     )
@@ -810,7 +810,7 @@ def test_get_total_degree_day_too_low_warning_fail():
         model_type="model_type",
         balance_point=65,
         degree_day_type="xdd",
-        degree_days=pd.Series([0.5, 0.5, 0.5]),
+        avg_degree_days=pd.Series([0.5, 0.5, 0.5]),
         period_days=pd.Series([3, 1, 2]),
         minimum_total=4,
     )
@@ -1504,7 +1504,7 @@ def test_fit_caltrack_usage_per_day_model_cdd_hdd_use_billing_presets_no_weights
         fit_caltrack_usage_per_day_model(
             cdd_hdd_h60_c65, use_billing_presets=True
         )
-    assert 'weights_col' in str(excinfo.value)
+    assert 'weights_col' in str(exc_info.value)
 
 
 # When model is intercept-only, num_parameters should = 0 with cvrmse = cvrmse_adj
