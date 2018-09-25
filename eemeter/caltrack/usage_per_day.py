@@ -1638,6 +1638,7 @@ def fit_caltrack_usage_per_day_model(
         Results of running CalTRACK daily method. See :any:`eemeter.CalTRACKUsagePerDayModelResults`
         for more details.
     """
+
     if use_billing_presets:
         # CalTrack 3.2.2.2.1
         minimum_non_zero_cdd = 0
@@ -1645,22 +1646,24 @@ def fit_caltrack_usage_per_day_model(
         # CalTrack 3.2.2.2.2
         minimum_total_cdd = 20
         minimum_total_hdd = 20
+
         # CalTrack 3.4.2
         if weights_col is None:
             return CalTRACKUsagePerDayModelResults(
                 status="ERROR",
                 method_name="caltrack_usage_per_day",
-                interval='billing',
+                interval="billing",
                 warnings=[
                     EEMeterWarning(
                         qualified_name="eemeter.caltrack_usage_per_day.missing_weights",
-                        description=("Attempting to use billing presets without"
-                                     " providing the weights_col arg."),
+                        description=(
+                            "Attempting to use billing presets without"
+                            " providing the weights_col arg."
+                        ),
                         data={},
                     )
                 ],
             )
-        
         interval = "billing"
     else:
         interval = "daily"
