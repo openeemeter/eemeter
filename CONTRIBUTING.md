@@ -38,7 +38,7 @@ git checkout -b release/vX.X.X
 
 # then bump versions
 vim eemeter/__version__.py
-vim eemeter/CHANGELOG.md
+vim CHANGELOG.md
 git commit -am "Bump version"
 
 git tag vX.X.X
