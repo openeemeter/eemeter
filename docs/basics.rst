@@ -110,62 +110,22 @@ methods do the right thing.
 Creating design matrix datasets
 -------------------------------
 
-To merge temperature data with meter data, use :any:`eemeter.merge_temperature_data`::
+To create a design matrix, use one of the following functions:
 
+- :any:`eemeter.create_caltrack_hourly_preliminary_design_matrix`
+- :any:`eemeter.create_caltrack_hourly_segmented_design_matrices`
+- :any:`eemeter.create_caltrack_daily_design_matrix`
+- :any:`eemeter.create_caltrack_billing_design_matrix`
+
+For example::
 
     >>> meter_data, temperature_data, metadata = \
     ...     eemeter.load_sample('il-electricity-cdd-hdd-daily')
-    >>> data = eemeter.merge_temperature_data(meter_data, temperature_data)
-
-By default, this will give you a :any:`pandas.DataFrame` with two columns:
-``meter_value`` and ``temperature_mean``::
-
-    >>> data.head()
-                               meter_value  temperature_mean
-    2015-11-22 00:00:00+00:00        32.34         26.740000
-    2015-11-23 00:00:00+00:00        23.80         38.831667
-    2015-11-24 00:00:00+00:00        26.26         41.304583
-    2015-11-25 00:00:00+00:00        21.32         49.198333
-    2015-11-26 00:00:00+00:00         6.70         57.856667
-
-Other options for constructing datasets are available, such as data quality::
-
-    >>> data = eemeter.merge_temperature_data(
-    ...     meter_data, temperature_data, temperature_mean=False,
-    ...     data_quality=True)
-    >>> data.head()
-                               meter_value  temperature_not_null  temperature_null
-    start
-    2015-11-22 00:00:00+00:00        32.34                    18               0.0
-    2015-11-23 00:00:00+00:00        23.80                    24               0.0
-    2015-11-24 00:00:00+00:00        26.26                    24               0.0
-    2015-11-25 00:00:00+00:00        21.32                    24               0.0
-    2015-11-26 00:00:00+00:00         6.70                    24               0.0
-
-To make a dataset with computed heating and cooling degrees for balance point
-ranges, you can use the following::
-
-    >>> data = eemeter.merge_temperature_data(
-    ...     meter_data, temperature_data, temperature_mean=False,
-    ...     heating_balance_points=[60, 61], cooling_balance_points=[70])
-    >>> data.head()
-                               meter_value  cdd_70     hdd_60     hdd_61  \
-    2015-11-22 00:00:00+00:00        32.34     0.0  33.260000  34.260000   
-    2015-11-23 00:00:00+00:00        23.80     0.0  21.168333  22.168333   
-    2015-11-24 00:00:00+00:00        26.26     0.0  18.695417  19.695417   
-    2015-11-25 00:00:00+00:00        21.32     0.0  10.801667  11.801667   
-    2015-11-26 00:00:00+00:00         6.70     0.0   2.143333   3.143333   
-
-                               n_days_dropped  n_days_kept  
-    2015-11-22 00:00:00+00:00             0.0          1.0  
-    2015-11-23 00:00:00+00:00             0.0          1.0  
-    2015-11-24 00:00:00+00:00             0.0          1.0  
-    2015-11-25 00:00:00+00:00             0.0          1.0  
-    2015-11-26 00:00:00+00:00             0.0          1.0  
+    >>> data = eemeter.create_caltrack_daily_design_matrix(meter_data, temperature_data)
 
 
-Running the CalTRACK methods
-----------------------------
+Running Daily and Billing CalTRACK methods
+------------------------------------------
 
 .. note::
 
@@ -185,9 +145,8 @@ the following columns:
 For each balance point you want to include in the grid search, you must
 provide a separate ``cdd_<>`` or ``hdd_<>`` column.
 
-Armed with this DataFrame (:any:`eemeter.merge_temperature_data` is a utility
-that simplifies the process of creating this DataFrame), you can use
-:any:`eemeter.caltrack_method` to fit a model.
+Armed with a design matrix of the form created above, you can use
+:any:`eemeter.fit_caltrack_usage_per_day_model` to fit a model.
 
 You may also wish to filter your data to a baseline period or a reporting
 period. To do so, use :any:`eemeter.get_baseline_data` or
@@ -217,19 +176,17 @@ CalTRACK Daily Methods
 ----------------------
 
 Running caltrack daily methods is easy once you have the data in the right
-format. This method returns a :any:`eemeter.ModelResults` object::
+format. This method returns a :any:`eemeter.CalTRACKUsagePerDayModelResults` object::
 
-    >>> model_results = eemeter.caltrack_method(data)
+    >>> model_results = eemeter.fit_caltrack_usage_per_day_model(baseline_data)
 
 This object can be dumped into a JSON string::
 
-    >>> import json
-    >>> model_results = eemeter.caltrack_method(data)
     >>> print(json.dumps(model_results.json(), indent=2))
 
 It can be inspected for more detailed information::
 
-    >>> model_results.r_squared_adj
+    >>> model_results.totals_metrics.r_squared_adj
     0.7294645737524558
 
 Or plotted (use with :any:`eemeter.plot_energy_signature` for an overlay on the
@@ -243,14 +200,14 @@ CalTRACK Billing Methods
 
 Running caltrack billing methods::
 
-    >>> model_results = eemeter.caltrack_method(data, use_billing_preset=True)
+    >>> model_results = eemeter.fit_caltrack_usage_per_day_model(
+    ...     baseline_data, use_billing_presets=True)
 
 It is essential that the data used in the CalTRACK billing methods is
 *average daily* period usage (UPDm) and degree day values.
 
 Data with this property is created by default by the
-:any:`eemeter.merge_temperature_data` method, but can be controlled explicitly
-with the ``use_mean_daily_values`` flag of that method.
+:any:`eemeter.create_caltrack_billing_design_matrix` method.
 
 
 Using the CLI
@@ -352,7 +309,7 @@ Plot a time series of meter data and temperature data
 
 .. image:: _static/plot_time_series.png
 
-Plot the selected model and all candidate models (:any:`eemeter.ModelResults.plot`)
+Plot the selected model and all candidate models (:any:`eemeter.CalTRACKUsagePerDayModelResults.plot`)
 on top of an energy signature::
 
     >>> ax = eemeter.plot_energy_signature(meter_data, temperature_data)
@@ -360,7 +317,7 @@ on top of an energy signature::
 
 .. image:: _static/plot_model_results.png
 
-Plot a single candidate model (:any:`eemeter.CandidateModel.plot`)::
+Plot a single candidate model (:any:`eemeter.CalTRACKUsagePerDayCandidateModel.plot`)::
 
     >>> model_results.model.plot()
 

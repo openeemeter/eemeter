@@ -332,6 +332,8 @@ class CalTRACKUsagePerDayCandidateModel(object):
         with_design_matrix=False,
         **kwargs
     ):
+        """ Predict
+        """
         return caltrack_usage_per_day_predict(
             self.model_type,
             self.model_params,
@@ -352,6 +354,8 @@ class CalTRACKUsagePerDayCandidateModel(object):
         alpha=None,
         **kwargs
     ):
+        """ Plot
+        """
         return plot_caltrack_candidate(
             self,
             best=best,

@@ -1,34 +1,54 @@
 API Docs
 ========
 
-Results
--------
 
-.. autoclass:: eemeter.CandidateModel
+CalTRACK
+--------
+
+CalTRACK design matrix creation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autofunction:: eemeter.create_caltrack_hourly_preliminary_design_matrix
+
+.. autofunction:: eemeter.create_caltrack_hourly_segmented_design_matrices
+
+.. autofunction:: eemeter.create_caltrack_daily_design_matrix
+
+.. autofunction:: eemeter.create_caltrack_billing_design_matrix
+
+CalTRACK Hourly
+~~~~~~~~~~~~~~~
+
+.. autofunction:: eemeter.caltrack_hourly_fit_feature_processor
+
+.. autofunction:: eemeter.caltrack_hourly_prediction_feature_processor
+
+.. autofunction:: eemeter.fit_caltrack_hourly_model_segment
+
+.. autofunction:: eemeter.fit_caltrack_hourly_model
+
+CalTRACK Daily and Billing (Usage per Day)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: eemeter.CalTRACKUsagePerDayCandidateModel
+   :members:
+
+.. autoclass:: eemeter.CalTRACKUsagePerDayModelResults
    :members:
 
 .. autoclass:: eemeter.DataSufficiency
    :members:
 
-.. autoclass:: eemeter.ModelResults
+.. autoclass:: eemeter.ModelPrediction
    :members:
 
-.. autoclass:: eemeter.ModelMetrics
-   :members:
-
-
-CalTRACK methods
-----------------
-
-.. autofunction:: eemeter.caltrack_method
+.. autofunction:: eemeter.fit_caltrack_usage_per_day_model
 
 .. autofunction:: eemeter.caltrack_sufficiency_criteria
 
-.. autofunction:: eemeter.caltrack_metered_savings
+.. autofunction:: eemeter.caltrack_usage_per_day_predict
 
-.. autofunction:: eemeter.caltrack_modeled_savings
-
-.. autofunction:: eemeter.caltrack_predict
+.. autofunction:: eemeter.plot_caltrack_candidate
 
 .. autofunction:: eemeter.get_too_few_non_zero_degree_day_warning
 
@@ -55,61 +75,12 @@ CalTRACK methods
 .. autofunction:: eemeter.select_best_candidate
 
 
-Data transformation utilities
------------------------------
-
-.. autofunction:: eemeter.as_freq
-
-.. autofunction:: eemeter.compute_temperature_features
-
-.. autofunction:: eemeter.day_counts
-
-.. autofunction:: eemeter.get_baseline_data
-
-.. autofunction:: eemeter.get_reporting_data
-
-.. autofunction:: eemeter.merge_temperature_data
-
-.. autofunction:: eemeter.remove_duplicates
-
-
-Data loading
-------------
-
-.. autofunction:: eemeter.meter_data_from_csv
-
-.. autofunction:: eemeter.meter_data_from_json
-
-.. autofunction:: eemeter.meter_data_to_csv
-
-.. autofunction:: eemeter.temperature_data_from_csv
-
-.. autofunction:: eemeter.temperature_data_from_json
-
-.. autofunction:: eemeter.temperature_data_to_csv
-
-
-Sample Data
+Derivatives
 -----------
 
-.. autofunction:: eemeter.samples
+.. autofunction:: eemeter.metered_savings
 
-.. autofunction:: eemeter.load_sample
-
-
-Visualization
--------------
-
-.. autofunction:: eemeter.plot_time_series
-
-.. autofunction:: eemeter.plot_energy_signature
-
-
-Warnings
---------
-
-.. autoclass:: eemeter.EEMeterWarning
-   :members:
+.. autofunction:: eemeter.modeled_savings
 
 
 Exceptions
@@ -126,6 +97,108 @@ Exceptions
 .. autoexception:: eemeter.UnrecognizedModelTypeError
 
 
+Features
+--------
+
+.. autofunction:: eemeter.compute_usage_per_day_feature
+
+.. autofunction:: eemeter.compute_occupancy_feature
+
+.. autofunction:: eemeter.compute_temperature_features
+
+.. autofunction:: eemeter.compute_temperature_bin_features
+
+.. autofunction:: eemeter.compute_time_features
+
+.. autofunction:: eemeter.estimate_hour_of_week_occupancy
+
+.. autofunction:: eemeter.fit_temperature_bins
+
+.. autofunction:: eemeter.get_missing_hours_of_week_warning
+
+.. autofunction:: eemeter.merge_features
+
+
+Input and Output Utilities
+--------------------------
+
+.. autofunction:: eemeter.meter_data_from_csv
+
+.. autofunction:: eemeter.meter_data_from_json
+
+.. autofunction:: eemeter.meter_data_to_csv
+
+.. autofunction:: eemeter.temperature_data_from_csv
+
+.. autofunction:: eemeter.temperature_data_from_json
+
+.. autofunction:: eemeter.temperature_data_to_csv
+
+
+Metrics
+-------
+
+.. autoclass:: eemeter.ModelMetrics
+   :members:
+
+
+Sample Data
+-----------
+
+.. autofunction:: eemeter.samples
+
+.. autofunction:: eemeter.load_sample
+
+
+Segmentation
+------------
+
+.. autofunction:: eemeter.iterate_segmented_dataset
+
+.. autofunction:: eemeter.segment_time_series
+
+.. autoclass:: eemeter.SegmentModel
+   :members:
+
+.. autoclass:: eemeter.SegmentedModel
+   :members:
+
+.. autoclass:: eemeter.HourlyModelPrediction
+   :members:
+
+
+Transformation utilities
+------------------------
+
+
+.. autofunction:: eemeter.as_freq
+
+.. autofunction:: eemeter.day_counts
+
+.. autofunction:: eemeter.get_baseline_data
+
+.. autofunction:: eemeter.get_reporting_data
+
+.. autofunction:: eemeter.remove_duplicates
+
+.. autofunction:: eemeter.overwrite_partial_rows_with_nan
+
+
 Version
 -------
 .. autofunction:: eemeter.get_version
+
+
+Visualization
+-------------
+
+.. autofunction:: eemeter.plot_time_series
+
+.. autofunction:: eemeter.plot_energy_signature
+
+
+Warnings
+--------
+
+.. autoclass:: eemeter.EEMeterWarning
+   :members:

@@ -52,6 +52,7 @@ Features
 
   - CalTRACK Daily Method
   - CalTRACK Monthly Method
+  - CalTRACK Hourly Method
 
 - Flexible sources of temperature data. See :any:`EEweather <eeweather:index>`.
 - Model serialization
