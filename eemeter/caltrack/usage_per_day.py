@@ -748,7 +748,12 @@ def get_too_few_non_zero_degree_day_warning(
 
 
 def get_total_degree_day_too_low_warning(
-    model_type, balance_point, degree_day_type, avg_degree_days, period_days, minimum_total
+    model_type,
+    balance_point,
+    degree_day_type,
+    avg_degree_days,
+    period_days,
+    minimum_total,
 ):
     """ Return an empty list or a single warning wrapped in a list regarding
     the total summed degree day values.
@@ -1033,7 +1038,12 @@ def get_single_cdd_only_candidate_model(
     degree_day_warnings = []
     degree_day_warnings.extend(
         get_total_degree_day_too_low_warning(
-            model_type, balance_point, "cdd", data[cdd_column], period_days, minimum_total_cdd
+            model_type,
+            balance_point,
+            "cdd",
+            data[cdd_column],
+            period_days,
+            minimum_total_cdd,
         )
     )
     degree_day_warnings.extend(
@@ -1190,7 +1200,12 @@ def get_single_hdd_only_candidate_model(
     degree_day_warnings = []
     degree_day_warnings.extend(
         get_total_degree_day_too_low_warning(
-            model_type, balance_point, "hdd", data[hdd_column], period_days, minimum_total_hdd
+            model_type,
+            balance_point,
+            "hdd",
+            data[hdd_column],
+            period_days,
+            minimum_total_hdd,
         )
     )
     degree_day_warnings.extend(

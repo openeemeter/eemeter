@@ -1483,7 +1483,7 @@ def test_fit_caltrack_usage_per_day_model_cdd_hdd_use_billing_presets(
     cdd_hdd_h60_c65, prediction_index, temperature_data
 ):
     model_results = fit_caltrack_usage_per_day_model(
-        cdd_hdd_h60_c65, use_billing_presets=True, weights_col='n_days_kept'
+        cdd_hdd_h60_c65, use_billing_presets=True, weights_col="n_days_kept"
     )
     assert len(model_results.candidates) == 4
     assert model_results.candidates[0].model_type == "intercept_only"
@@ -1501,10 +1501,8 @@ def test_fit_caltrack_usage_per_day_model_cdd_hdd_use_billing_presets_no_weights
     cdd_hdd_h60_c65, prediction_index, temperature_data
 ):
     with pytest.raises(ValueError) as exc_info:
-        fit_caltrack_usage_per_day_model(
-            cdd_hdd_h60_c65, use_billing_presets=True
-        )
-    assert 'weights_col' in str(exc_info.value)
+        fit_caltrack_usage_per_day_model(cdd_hdd_h60_c65, use_billing_presets=True)
+    assert "weights_col" in str(exc_info.value)
 
 
 # When model is intercept-only, num_parameters should = 0 with cvrmse = cvrmse_adj
