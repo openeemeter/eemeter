@@ -1,27 +1,26 @@
-from collections import Counter
+from collections import Counter, namedtuple
+import traceback
 
 import numpy as np
 import pandas as pd
 import pytz
 import statsmodels.formula.api as smf
-import traceback
 
-from .api import CandidateModel, DataSufficiency, EEMeterWarning, ModelResults
-from .exceptions import MissingModelParameterError, UnrecognizedModelTypeError
-from .transform import (
-    day_counts,
-    compute_temperature_features,
-    overwrite_partial_rows_with_nan,
-)
-from .metrics import ModelMetrics
+from ..exceptions import MissingModelParameterError, UnrecognizedModelTypeError
+from ..features import compute_temperature_features
+from ..metrics import ModelMetrics
+from ..transform import day_counts, overwrite_partial_rows_with_nan
+from ..warnings import EEMeterWarning
 
 
 __all__ = (
-    "caltrack_method",
+    "CalTRACKUsagePerDayCandidateModel",
+    "CalTRACKUsagePerDayModelResults",
+    "DataSufficiency",
+    "ModelPrediction",
+    "fit_caltrack_usage_per_day_model",
     "caltrack_sufficiency_criteria",
-    "caltrack_metered_savings",
-    "caltrack_modeled_savings",
-    "caltrack_predict",
+    "caltrack_usage_per_day_predict",
     "plot_caltrack_candidate",
     "get_too_few_non_zero_degree_day_warning",
     "get_total_degree_day_too_low_warning",
@@ -38,34 +37,384 @@ __all__ = (
 )
 
 
-def _candidate_model_factory(
-    model_type,
-    formula,
-    status,
-    warnings=None,
-    model_params=None,
-    model=None,
-    result=None,
-    r_squared_adj=None,
-    use_predict_func=True,
-):
-    if use_predict_func:
-        predict_func = caltrack_predict
-    else:
-        predict_func = None
+ModelPrediction = namedtuple("ModelPrediction", ["result", "design_matrix", "warnings"])
 
-    return CandidateModel(
-        model_type=model_type,
-        formula=formula,
-        status=status,
-        warnings=warnings,
-        predict_func=predict_func,
-        plot_func=plot_caltrack_candidate,
-        model_params=model_params,
-        model=model,
-        result=result,
-        r_squared_adj=r_squared_adj,
-    )
+
+def _noneify(value):
+    if value is None:
+        return None
+    return None if np.isnan(value) else value
+
+
+class CalTRACKUsagePerDayModelResults(object):
+    """ Contains information about the chosen model.
+
+    Attributes
+    ----------
+    status : :any:`str`
+        A string indicating the status of this result. Possible statuses:
+
+        - ``'NO DATA'``: No baseline data was available.
+        - ``'NO MODEL'``: No candidate models qualified.
+        - ``'SUCCESS'``: A qualified candidate model was chosen.
+
+    method_name : :any:`str`
+        The name of the method used to fit the baseline model.
+    model : :any:`eemeter.CandidateModel` or :any:`None`
+        The selected candidate model, if any.
+    r_squared_adj : :any:`float`
+        The adjusted r-squared of the selected model.
+    candidates : :any:`list` of :any:`eemeter.CandidateModel`
+        A list of any model candidates encountered during the model
+        selection and fitting process.
+    warnings : :any:`list` of :any:`eemeter.EEMeterWarning`
+        A list of any warnings reported during the model selection and fitting
+        process.
+    metadata : :any:`dict`
+        An arbitrary dictionary of metadata to be associated with this result.
+        This can be used, for example, to tag the results with attributes like
+        an ID::
+
+            {
+                'id': 'METER_12345678',
+            }
+
+    settings : :any:`dict`
+        A dictionary of settings used by the method.
+    totals_metrics : :any:`ModelMetrics`
+        A ModelMetrics object, if one is calculated and associated with this
+        model. (This initializes to None.) The ModelMetrics object contains
+        model fit information and descriptive statistics about the underlying data,
+        with that data expressed as period totals.
+    avgs_metrics : :any:`ModelMetrics`
+        A ModelMetrics object, if one is calculated and associated with this
+        model. (This initializes to None.) The ModelMetrics object contains
+        model fit information and descriptive statistics about the underlying data,
+        with that data expressed as daily averages.
+    """
+
+    def __init__(
+        self,
+        status,
+        method_name,
+        interval=None,
+        model=None,
+        r_squared_adj=None,
+        candidates=None,
+        warnings=None,
+        metadata=None,
+        settings=None,
+    ):
+        self.status = status  # NO DATA | NO MODEL | SUCCESS
+        self.method_name = method_name
+
+        self.interval = interval
+        self.model = model
+        self.r_squared_adj = r_squared_adj
+
+        if candidates is None:
+            candidates = []
+        self.candidates = candidates
+
+        if warnings is None:
+            warnings = []
+        self.warnings = warnings
+
+        if metadata is None:
+            metadata = {}
+        self.metadata = metadata
+
+        if settings is None:
+            settings = {}
+        self.settings = settings
+
+        self.totals_metrics = None
+        self.avgs_metrics = None
+
+    def __repr__(self):
+        return (
+            "CalTRACKUsagePerDayModelResults(status='{}', method_name='{}',"
+            " r_squared_adj={})".format(
+                self.status, self.method_name, self.r_squared_adj
+            )
+        )
+
+    def json(self, with_candidates=False):
+        """ Return a JSON-serializable representation of this result.
+
+        The output of this function can be converted to a serialized string
+        with :any:`json.dumps`.
+        """
+
+        def _json_or_none(obj):
+            return None if obj is None else obj.json()
+
+        data = {
+            "status": self.status,
+            "method_name": self.method_name,
+            "model": _json_or_none(self.model),
+            "r_squared_adj": _noneify(self.r_squared_adj),
+            "warnings": [w.json() for w in self.warnings],
+            "metadata": self.metadata,
+            "settings": self.settings,
+            "totals_metrics": _json_or_none(self.totals_metrics),
+            "avgs_metrics": _json_or_none(self.avgs_metrics),
+            "candidates": None,
+        }
+        if with_candidates:
+            data["candidates"] = [candidate.json() for candidate in self.candidates]
+        return data
+
+    def predict(
+        self,
+        prediction_index,
+        temperature_data,
+        with_disaggregated=False,
+        with_design_matrix=False,
+        **kwargs
+    ):
+        return self.model.predict(
+            prediction_index,
+            temperature_data,
+            with_disaggregated=with_disaggregated,
+            with_design_matrix=with_design_matrix,
+            **kwargs
+        )
+
+    def plot(
+        self,
+        ax=None,
+        title=None,
+        figsize=None,
+        with_candidates=False,
+        candidate_alpha=None,
+        temp_range=None,
+    ):
+        """ Plot a model fit.
+
+        Parameters
+        ----------
+        ax : :any:`matplotlib.axes.Axes`, optional
+            Existing axes to plot on.
+        title : :any:`str`, optional
+            Chart title.
+        figsize : :any:`tuple`, optional
+            (width, height) of chart.
+        with_candidates : :any:`bool`
+            If True, also plot candidate models.
+        candidate_alpha : :any:`float` between 0 and 1
+            Transparency at which to plot candidate models. 0 fully transparent,
+            1 fully opaque.
+
+        Returns
+        -------
+        ax : :any:`matplotlib.axes.Axes`
+            Matplotlib axes.
+        """
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:  # pragma: no cover
+            raise ImportError("matplotlib is required for plotting.")
+
+        if figsize is None:
+            figsize = (10, 4)
+
+        if ax is None:
+            fig, ax = plt.subplots(figsize=figsize)
+
+        if temp_range is None:
+            temp_range = (20, 90)
+
+        if with_candidates:
+            for candidate in self.candidates:
+                candidate.plot(ax=ax, temp_range=temp_range, alpha=candidate_alpha)
+        self.model.plot(ax=ax, best=True, temp_range=temp_range)
+
+        if title is not None:
+            ax.set_title(title)
+
+        return ax
+
+
+class CalTRACKUsagePerDayCandidateModel(object):
+    """ Contains information about a candidate model.
+
+    Attributes
+    ----------
+    model_type : :any:`str`
+        The type of model, e..g., :code:`'hdd_only'`.
+    formula : :any:`str`
+        The R-style formula for the design matrix of this model, e.g., :code:`'meter_value ~ hdd_65'`.
+    status : :any:`str`
+        A string indicating the status of this model. Possible statuses:
+
+        - ``'NOT ATTEMPTED'``: Candidate model not fitted due to an issue
+          encountered in data before attempt.
+        - ``'ERROR'``: A fatal error occurred during model fit process.
+        - ``'DISQUALIFIED'``: The candidate model fit was disqualified
+          from the model selection process because of a decision made after
+          candidate model fit completed, e.g., a bad fit, or a parameter out
+          of acceptable range.
+        - ``'QUALIFIED'``: The candidate model fit is acceptable and can be
+          considered during model selection.
+    model_params : :any:`dict`, default :any:`None`
+        A flat dictionary of model parameters which must be serializable
+        using the :any:`json.dumps` method.
+    model : :any:`object`
+        The raw model (if any) used in fitting. Not serialized.
+    result : :any:`object`
+        The raw modeling result (if any) returned by the `model`. Not serialized.
+    r_squared_adj : :any:`float`
+        The adjusted r-squared of the candidate model.
+    warnings : :any:`list` of :any:`eemeter.EEMeterWarning`
+        A list of any warnings reported during creation of the candidate model.
+    """
+
+    def __init__(
+        self,
+        model_type,
+        formula,
+        status,
+        model_params=None,
+        model=None,
+        result=None,
+        r_squared_adj=None,
+        warnings=None,
+    ):
+        self.model_type = model_type
+        self.formula = formula
+        self.status = status  # NOT ATTEMPTED | ERROR | QUALIFIED | DISQUALIFIED
+        self.model = model
+        self.result = result
+        self.r_squared_adj = r_squared_adj
+
+        if model_params is None:
+            model_params = {}
+        self.model_params = model_params
+
+        if warnings is None:
+            warnings = []
+        self.warnings = warnings
+
+    def __repr__(self):
+        return (
+            "CalTRACKUsagePerDayCandidateModel(model_type='{}', formula='{}', status='{}',"
+            " r_squared_adj={})".format(
+                self.model_type,
+                self.formula,
+                self.status,
+                round(self.r_squared_adj, 3)
+                if self.r_squared_adj is not None
+                else None,
+            )
+        )
+
+    def json(self):
+        """ Return a JSON-serializable representation of this result.
+
+        The output of this function can be converted to a serialized string
+        with :any:`json.dumps`.
+        """
+        return {
+            "model_type": self.model_type,
+            "formula": self.formula,
+            "status": self.status,
+            "model_params": self.model_params,
+            "r_squared_adj": _noneify(self.r_squared_adj),
+            "warnings": [w.json() for w in self.warnings],
+        }
+
+    def predict(
+        self,
+        prediction_index,
+        temperature_data,
+        with_disaggregated=False,
+        with_design_matrix=False,
+        **kwargs
+    ):
+        return caltrack_usage_per_day_predict(
+            self.model_type,
+            self.model_params,
+            prediction_index,
+            temperature_data,
+            with_disaggregated=with_disaggregated,
+            with_design_matrix=with_design_matrix,
+            **kwargs
+        )
+
+    def plot(
+        self,
+        best=False,
+        ax=None,
+        title=None,
+        figsize=None,
+        temp_range=None,
+        alpha=None,
+        **kwargs
+    ):
+        return plot_caltrack_candidate(
+            self,
+            best=best,
+            ax=ax,
+            title=title,
+            figsize=figsize,
+            temp_range=temp_range,
+            alpha=alpha,
+            **kwargs
+        )
+
+
+class DataSufficiency(object):
+    """ Contains the result of a data sufficiency check.
+
+    Attributes
+    ----------
+    status : :any:`str`
+        A string indicating the status of this result. Possible statuses:
+
+        - ``'NO DATA'``: No baseline data was available.
+        - ``'FAIL'``: Data did not meet criteria.
+        - ``'PASS'``: Data met criteria.
+    criteria_name : :any:`str`
+        The name of the criteria method used to check for baseline data sufficiency.
+    warnings : :any:`list` of :any:`eemeter.EEMeterWarning`
+        A list of any warnings reported during the check for baseline data sufficiency.
+    settings : :any:`dict`
+        A dictionary of settings (keyword arguments) used.
+    """
+
+    def __init__(self, status, criteria_name, warnings=None, settings=None):
+        self.status = status  # NO DATA | FAIL | PASS
+        self.criteria_name = criteria_name
+
+        if warnings is None:
+            warnings = []
+        self.warnings = warnings
+
+        if settings is None:
+            settings = {}
+        self.settings = settings
+
+    def __repr__(self):
+        return (
+            "DataSufficiency("
+            "status='{status}', criteria_name='{criteria_name}')".format(
+                status=self.status, criteria_name=self.criteria_name
+            )
+        )
+
+    def json(self):
+        """ Return a JSON-serializable representation of this result.
+
+        The output of this function can be converted to a serialized string
+        with :any:`json.dumps`.
+        """
+        return {
+            "status": self.status,
+            "criteria_name": self.criteria_name,
+            "warnings": [w.json() for w in self.warnings],
+            "settings": self.settings,
+        }
 
 
 def _get_parameter_or_raise(model_type, model_params, param):
@@ -124,7 +473,12 @@ def _caltrack_predict_design_matrix(
     ones = zeros + 1
 
     if isinstance(data.index, pd.DatetimeIndex):
-        days_per_period = day_counts(zeros)
+        days_per_period = day_counts(data.index)
+    else:
+        try:
+            days_per_period = data["n_days"]
+        except KeyError:
+            raise ValueError("Data needs DatetimeIndex or an n_days column.")
 
     # TODO(philngo): handle different degree day methods and hourly temperatures
     if model_type in ["intercept_only", "hdd_only", "cdd_only", "cdd_hdd"]:
@@ -133,8 +487,6 @@ def _caltrack_predict_design_matrix(
             base_load = intercept * days_per_period
         else:
             base_load = intercept * ones
-        # The last row of data was nan -- Restore the NaN
-        base_load[-1] = np.nan
     elif model_type is None:
         raise ValueError("Model not valid for prediction: model_type=None")
     else:
@@ -178,6 +530,17 @@ def _caltrack_predict_design_matrix(
     else:
         cooling_load = zeros
 
+    # If any of the rows of input data contained NaNs, restore the NaNs
+    # Note: If data contains ANY NaNs at all, this declares the entire row a NaN.
+    # TODO(philngo): Consider making this more nuanced.
+    def _restore_nans(load):
+        load = load[data.sum(axis=1, skipna=False).notnull()].reindex(data.index)
+        return load
+
+    base_load = _restore_nans(base_load)
+    heating_load = _restore_nans(heating_load)
+    cooling_load = _restore_nans(cooling_load)
+
     if disaggregated:
         return pd.DataFrame(
             {
@@ -190,12 +553,12 @@ def _caltrack_predict_design_matrix(
         return base_load + heating_load + cooling_load
 
 
-def caltrack_predict(
+def caltrack_usage_per_day_predict(
     model_type,
     model_params,
-    temperature_data,
     prediction_index,
-    degree_day_method,
+    temperature_data,
+    degree_day_method="daily",
     with_disaggregated=False,
     with_design_matrix=False,
 ):
@@ -243,10 +606,11 @@ def caltrack_predict(
           (only for ``with_design_matrix=True``).
         - ``temperature_mean``: mean temperature during given period.
           (only for ``with_design_matrix=True``).
+    predict_warnings: :any: list of EEMeterWarning if any.
     """
     if model_params is None:
         raise MissingModelParameterError("model_params is None.")
-
+    predict_warnings = []
     cooling_balance_points = []
     heating_balance_points = []
 
@@ -256,8 +620,8 @@ def caltrack_predict(
         heating_balance_points.append(model_params["heating_balance_point"])
 
     design_matrix = compute_temperature_features(
-        temperature_data,
         prediction_index,
+        temperature_data,
         heating_balance_points=heating_balance_points,
         cooling_balance_points=cooling_balance_points,
         degree_day_method=degree_day_method,
@@ -274,7 +638,22 @@ def caltrack_predict(
             }
         else:
             empty_columns = {"predicted_usage": []}
-        return pd.DataFrame(empty_columns, index=prediction_index)
+
+        predict_warnings.append(
+            EEMeterWarning(
+                qualified_name=("eemeter.caltrack.compute_temperature_features"),
+                description=(
+                    "Design matrix empty, compute_temperature_features failed"
+                ),
+                data={"temperature_data": temperature_data},
+            )
+        )
+
+        return ModelPrediction(
+            pd.DataFrame(empty_columns, index=prediction_index),
+            design_matrix=pd.DataFrame(),
+            warnings=predict_warnings,
+        )
 
     if degree_day_method == "daily":
         design_matrix["n_days"] = (
@@ -307,7 +686,9 @@ def caltrack_predict(
     if with_design_matrix:
         results = results.join(design_matrix)
 
-    return results
+    return ModelPrediction(
+        result=results, design_matrix=design_matrix, warnings=predict_warnings
+    )
 
 
 def get_too_few_non_zero_degree_day_warning(
@@ -535,7 +916,9 @@ def get_fit_failed_candidate_model(model_type, formula):
             data={"traceback": traceback.format_exc()},
         )
     ]
-    return _candidate_model_factory(model_type, formula, "ERROR", warnings)
+    return CalTRACKUsagePerDayCandidateModel(
+        model_type=model_type, formula=formula, status="ERROR", warnings=warnings
+    )
 
 
 def get_intercept_only_candidate_models(data, weights_col):
@@ -587,10 +970,10 @@ def get_intercept_only_candidate_models(data, weights_col):
         status = "QUALIFIED"
 
     return [
-        _candidate_model_factory(
-            model_type,
-            formula,
-            status,
+        CalTRACKUsagePerDayCandidateModel(
+            model_type=model_type,
+            formula=formula,
+            status=status,
             warnings=model_warnings,
             model_params=model_params,
             model=model,
@@ -651,12 +1034,11 @@ def get_single_cdd_only_candidate_model(
     )
 
     if len(degree_day_warnings) > 0:
-        return _candidate_model_factory(
-            model_type,
-            formula,
-            "NOT ATTEMPTED",
+        return CalTRACKUsagePerDayCandidateModel(
+            model_type=model_type,
+            formula=formula,
+            status="NOT ATTEMPTED",
             warnings=degree_day_warnings,
-            use_predict_func=False,
         )
 
     if weights_col is None:
@@ -702,10 +1084,10 @@ def get_single_cdd_only_candidate_model(
     else:
         status = "QUALIFIED"
 
-    return _candidate_model_factory(
-        model_type,
-        formula,
-        status,
+    return CalTRACKUsagePerDayCandidateModel(
+        model_type=model_type,
+        formula=formula,
+        status=status,
         warnings=model_warnings,
         model_params=model_params,
         model=model,
@@ -807,12 +1189,11 @@ def get_single_hdd_only_candidate_model(
     )
 
     if len(degree_day_warnings) > 0:
-        return _candidate_model_factory(
-            model_type,
-            formula,
-            "NOT ATTEMPTED",
+        return CalTRACKUsagePerDayCandidateModel(
+            model_type=model_type,
+            formula=formula,
+            status="NOT ATTEMPTED",
             warnings=degree_day_warnings,
-            use_predict_func=False,
         )
 
     if weights_col is None:
@@ -858,10 +1239,10 @@ def get_single_hdd_only_candidate_model(
     else:
         status = "QUALIFIED"
 
-    return _candidate_model_factory(
-        model_type,
-        formula,
-        status,
+    return CalTRACKUsagePerDayCandidateModel(
+        model_type=model_type,
+        formula=formula,
+        status=status,
         warnings=model_warnings,
         model_params=model_params,
         model=model,
@@ -925,7 +1306,7 @@ def get_single_cdd_hdd_candidate_model(
     cooling_balance_point,
     heating_balance_point,
 ):
-    """ Return a single candidate cdd_hdd model for a particular selection
+    """ Return and fit a single candidate cdd_hdd model for a particular selection
     of cooling balance point and heating balance point
 
     Parameters
@@ -1003,12 +1384,8 @@ def get_single_cdd_hdd_candidate_model(
     )
 
     if len(degree_day_warnings) > 0:
-        return _candidate_model_factory(
-            model_type,
-            formula,
-            "NOT ATTEMPTED",
-            warnings=degree_day_warnings,
-            use_predict_func=False,
+        return CalTRACKUsagePerDayCandidateModel(
+            model_type, formula, "NOT ATTEMPTED", warnings=degree_day_warnings
         )
 
     if weights_col is None:
@@ -1066,10 +1443,10 @@ def get_single_cdd_hdd_candidate_model(
     else:
         status = "QUALIFIED"
 
-    return _candidate_model_factory(
-        model_type,
-        formula,
-        status,
+    return CalTRACKUsagePerDayCandidateModel(
+        model_type=model_type,
+        formula=formula,
+        status=status,
         warnings=model_warnings,
         model_params=model_params,
         model=model,
@@ -1193,7 +1570,7 @@ def select_best_candidate(candidate_models):
     return best_candidate, []
 
 
-def caltrack_method(
+def fit_caltrack_usage_per_day_model(
     data,
     fit_cdd=True,
     use_billing_presets=False,
@@ -1209,7 +1586,8 @@ def caltrack_method(
     fit_hdd_only=True,
     fit_cdd_hdd=True,
 ):
-    """ CalTRACK method.
+    """ CalTRACK daily and billing methods using a usage-per-day modeling
+    strategy.
 
     Parameters
     ----------
@@ -1217,7 +1595,8 @@ def caltrack_method(
         A DataFrame containing at least the column ``meter_value`` and 1 to n
         columns each of the form ``hdd_<heating_balance_point>``
         and ``cdd_<cooling_balance_point>``. DataFrames of this form can be
-        made using the :any:`eemeter.merge_temperature_data` method.
+        made using the :any:`eemeter.merge_temperature_data` method. Should
+        have a :any:`pandas.DatetimeIndex`.
     fit_cdd : :any:`bool`, optional
         If True, fit CDD models unless overridden by ``fit_cdd_only`` or
         ``fit_cdd_hdd`` flags. Should be set to ``False`` for gas meter data.
@@ -1255,8 +1634,8 @@ def caltrack_method(
 
     Returns
     -------
-    model_results : :any:`eemeter.ModelResults`
-        Results of running CalTRACK daily method. See :any:`eemeter.ModelResults`
+    model_results : :any:`eemeter.CalTRACKUsagePerDayModelResults`
+        Results of running CalTRACK daily method. See :any:`eemeter.CalTRACKUsagePerDayModelResults`
         for more details.
     """
 
@@ -1270,12 +1649,13 @@ def caltrack_method(
 
         # CalTrack 3.4.2
         if weights_col is None:
-            return ModelResults(
+            return CalTRACKUsagePerDayModelResults(
                 status="ERROR",
-                method_name="caltrack_method",
+                method_name="caltrack_usage_per_day",
+                interval="billing",
                 warnings=[
                     EEMeterWarning(
-                        qualified_name="eemeter.caltrack_method.missing_weights",
+                        qualified_name="eemeter.caltrack_usage_per_day.missing_weights",
                         description=(
                             "Attempting to use billing presets without"
                             " providing the weights_col arg."
@@ -1284,17 +1664,20 @@ def caltrack_method(
                     )
                 ],
             )
+        interval = "billing"
+    else:
+        interval = "daily"
 
     # cleans data to fully NaN rows that have missing temp or meter data
     data = overwrite_partial_rows_with_nan(data)
 
     if data.empty:
-        return ModelResults(
+        return CalTRACKUsagePerDayModelResults(
             status="NO DATA",
-            method_name="caltrack_method",
+            method_name="caltrack_usage_per_day",
             warnings=[
                 EEMeterWarning(
-                    qualified_name="eemeter.caltrack_method.no_data",
+                    qualified_name="eemeter.caltrack_usage_per_day.no_data",
                     description=("No data available. Cannot fit model."),
                     data={},
                 )
@@ -1360,9 +1743,10 @@ def caltrack_method(
         status = "SUCCESS"
         r_squared_adj = best_candidate.r_squared_adj
 
-    model_result = ModelResults(
+    model_result = CalTRACKUsagePerDayModelResults(
         status=status,
-        method_name="caltrack_method",
+        method_name="caltrack_usage_per_day",
+        interval=interval,
         model=best_candidate,
         candidates=candidates,
         r_squared_adj=r_squared_adj,
@@ -1386,14 +1770,30 @@ def caltrack_method(
         else:
             num_parameters = 0
 
-        predicted = _caltrack_predict_design_matrix(
+        predicted_avgs = _caltrack_predict_design_matrix(
             best_candidate.model_type,
             best_candidate.model_params,
             data,
             input_averages=True,
             output_averages=True,
         )
-        model_result.metrics = ModelMetrics(data.meter_value, predicted, num_parameters)
+        model_result.avgs_metrics = ModelMetrics(
+            data.meter_value, predicted_avgs, num_parameters
+        )
+
+        predicted_totals = _caltrack_predict_design_matrix(
+            best_candidate.model_type,
+            best_candidate.model_params,
+            data,
+            input_averages=True,
+            output_averages=False,
+        )
+
+        days_per_period = day_counts(data.index)
+        data_totals = data.meter_value * days_per_period
+        model_result.totals_metrics = ModelMetrics(
+            data_totals, predicted_totals, num_parameters
+        )
 
     return model_result
 
@@ -1551,7 +1951,7 @@ def caltrack_sufficiency_criteria(
     valid_rows = valid_meter_value_rows & valid_temperature_rows
 
     # get number of days per period - for daily this should be a series of ones
-    row_day_counts = day_counts(data_quality.meter_value)
+    row_day_counts = day_counts(data_quality.index)
 
     # apply masks, giving total
     n_valid_meter_value_days = int((valid_meter_value_rows * row_day_counts).sum())
@@ -1644,208 +2044,6 @@ def caltrack_sufficiency_criteria(
     )
 
 
-def caltrack_metered_savings(
-    baseline_model,
-    reporting_meter_data,
-    temperature_data,
-    degree_day_method="daily",
-    with_disaggregated=False,
-):
-    """ Compute metered savings, i.e., savings in which the baseline model
-    is used to calculate the modeled usage in the reporting period. This
-    modeled usage is then compared to the actual usage from the reporting period.
-
-    Parameters
-    ----------
-    baseline_model : :any:`eemeter.CandidateModel`
-        Model to use for predicting pre-intervention usage.
-    reporting_meter_data : :any:`pandas.DataFrame`
-        The observed reporting period data. Savings will be computed for the
-        periods supplied in the reporting period data.
-    temperature_data : :any:`pandas.Series`
-        Hourly-frequency timeseries of temperature data during the reporting
-        period.
-    degree_day_method : :any:`str`, optional
-        The method to use to calculate degree days using hourly temperature
-        data. Can be either ``'hourly'`` or ``'daily'``.
-    with_disaggregated : :any:`bool`, optional
-        If True, calculate baseline counterfactual disaggregated usage
-        estimates. Savings cannot be disaggregated for metered savings. For
-        that, use :any:`eemeter.caltrack_modeled_savings`.
-
-    Returns
-    -------
-    results : :any:`pandas.DataFrame`
-        DataFrame with metered savings, indexed with
-        ``reporting_meter_data.index``. Will include the following columns:
-
-        - ``counterfactual_usage`` (baseline model projected into reporting period)
-        - ``reporting_observed`` (given by reporting_meter_data)
-        - ``metered_savings``
-
-        If `with_disaggregated` is set to True, the following columns will also
-        be in the results DataFrame:
-
-        - ``counterfactual_base_load``
-        - ``counterfactual_heating_load``
-        - ``counterfactual_cooling_load``
-
-    """
-    prediction_index = reporting_meter_data.index
-    predicted_baseline_usage = baseline_model.predict(
-        temperature_data, prediction_index, degree_day_method, with_disaggregated=True
-    )
-    # CalTrack 3.5.1
-    counterfactual_usage = predicted_baseline_usage["predicted_usage"].to_frame(
-        "counterfactual_usage"
-    )
-
-    reporting_observed = reporting_meter_data["value"].to_frame("reporting_observed")
-
-    def metered_savings_func(row):
-        return row.counterfactual_usage - row.reporting_observed
-
-    results = reporting_observed.join(counterfactual_usage).assign(
-        metered_savings=metered_savings_func
-    )
-
-    if with_disaggregated:
-        counterfactual_usage_disaggregated = predicted_baseline_usage[
-            ["base_load", "heating_load", "cooling_load"]
-        ].rename(
-            columns={
-                "base_load": "counterfactual_base_load",
-                "heating_load": "counterfactual_heating_load",
-                "cooling_load": "counterfactual_cooling_load",
-            }
-        )
-        results = results.join(counterfactual_usage_disaggregated)
-
-    return results.dropna().reindex(results.index)
-
-
-def caltrack_modeled_savings(
-    baseline_model,
-    reporting_model,
-    result_index,
-    temperature_data,
-    degree_day_method="daily",
-    with_disaggregated=False,
-):
-    """ Compute modeled savings, i.e., savings in which baseline and reporting
-    usage values are based on models. This is appropriate for annualizing or
-    weather normalizing models.
-
-    Parameters
-    ----------
-    baseline_model : :any:`eemeter.CandidateModel`
-        Model to use for predicting pre-intervention usage.
-    reporting_model : :any:`eemeter.CandidateModel`
-        Model to use for predicting post-intervention usage.
-    result_index : :any:`pandas.DatetimeIndex`
-        The dates for which usage should be modeled.
-    temperature_data : :any:`pandas.Series`
-        Hourly-frequency timeseries of temperature data during the modeled
-        period.
-    degree_day_method : :any:`str`, optional
-        The method to use to calculate degree days using hourly temperature
-        data. Can be either ``'hourly'`` or ``'daily'``.
-    with_disaggregated : :any:`bool`, optional
-        If True, calculate modeled disaggregated usage estimates and savings.
-
-    Returns
-    -------
-    results : :any:`pandas.DataFrame`
-        DataFrame with modeled savings, indexed with the result_index. Will
-        include the following columns:
-
-        - ``modeled_baseline_usage``
-        - ``modeled_reporting_usage``
-        - ``modeled_savings``
-
-        If `with_disaggregated` is set to True, the following columns will also
-        be in the results DataFrame:
-
-        - ``modeled_baseline_base_load``
-        - ``modeled_baseline_cooling_load``
-        - ``modeled_baseline_heating_load``
-        - ``modeled_reporting_base_load``
-        - ``modeled_reporting_cooling_load``
-        - ``modeled_reporting_heating_load``
-        - ``modeled_base_load_savings``
-        - ``modeled_cooling_load_savings``
-        - ``modeled_heating_load_savings``
-    """
-    prediction_index = result_index
-
-    predicted_baseline_usage = baseline_model.predict(
-        temperature_data, prediction_index, degree_day_method, with_disaggregated=True
-    )
-    modeled_baseline_usage = predicted_baseline_usage["predicted_usage"].to_frame(
-        "modeled_baseline_usage"
-    )
-
-    predicted_reporting_usage = reporting_model.predict(
-        temperature_data, prediction_index, degree_day_method, with_disaggregated=True
-    )
-    modeled_reporting_usage = predicted_reporting_usage["predicted_usage"].to_frame(
-        "modeled_reporting_usage"
-    )
-
-    def modeled_savings_func(row):
-        return row.modeled_baseline_usage - row.modeled_reporting_usage
-
-    results = modeled_baseline_usage.join(modeled_reporting_usage).assign(
-        modeled_savings=modeled_savings_func
-    )
-
-    if with_disaggregated:
-        modeled_baseline_usage_disaggregated = predicted_baseline_usage[
-            ["base_load", "heating_load", "cooling_load"]
-        ].rename(
-            columns={
-                "base_load": "modeled_baseline_base_load",
-                "heating_load": "modeled_baseline_heating_load",
-                "cooling_load": "modeled_baseline_cooling_load",
-            }
-        )
-
-        modeled_reporting_usage_disaggregated = predicted_reporting_usage[
-            ["base_load", "heating_load", "cooling_load"]
-        ].rename(
-            columns={
-                "base_load": "modeled_reporting_base_load",
-                "heating_load": "modeled_reporting_heating_load",
-                "cooling_load": "modeled_reporting_cooling_load",
-            }
-        )
-
-        def modeled_base_load_savings_func(row):
-            return row.modeled_baseline_base_load - row.modeled_reporting_base_load
-
-        def modeled_heating_load_savings_func(row):
-            return (
-                row.modeled_baseline_heating_load - row.modeled_reporting_heating_load
-            )
-
-        def modeled_cooling_load_savings_func(row):
-            return (
-                row.modeled_baseline_cooling_load - row.modeled_reporting_cooling_load
-            )
-
-        results = (
-            results.join(modeled_baseline_usage_disaggregated)
-            .join(modeled_reporting_usage_disaggregated)
-            .assign(
-                modeled_base_load_savings=modeled_base_load_savings_func,
-                modeled_heating_load_savings=modeled_heating_load_savings_func,
-                modeled_cooling_load_savings=modeled_cooling_load_savings_func,
-            )
-        )
-
-    return results.dropna().reindex(results.index)
-
-
 def plot_caltrack_candidate(
     candidate,
     best=False,
@@ -1916,7 +2114,9 @@ def plot_caltrack_candidate(
 
     temps_hourly = pd.Series(temps, index=prediction_index).resample("H").ffill()
 
-    prediction = candidate.predict(temps_hourly, prediction_index, "daily")
+    prediction = candidate.predict(
+        prediction_index, temps_hourly, "daily"
+    ).result.predicted_usage
 
     plot_kwargs = {"color": color, "alpha": alpha or 0.3}
     plot_kwargs.update(kwargs)

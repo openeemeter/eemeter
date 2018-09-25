@@ -3,12 +3,13 @@ import json
 
 import click
 
-from eemeter import (
-    caltrack_method,
-    meter_data_from_csv,
-    temperature_data_from_csv,
-    merge_temperature_data,
+from .caltrack import fit_caltrack_usage_per_day_model
+from .features import (
+    compute_usage_per_day_feature,
+    compute_temperature_features,
+    merge_features,
 )
+from .io import meter_data_from_csv, temperature_data_from_csv
 
 
 @click.group()
@@ -79,12 +80,14 @@ def _get_data(
     else:
         raise click.ClickException("Temperature data not specified.")
 
-    return merge_temperature_data(
-        meter_data,
+    usage_per_day = compute_usage_per_day_feature(meter_data)
+    temperature_features = compute_temperature_features(
+        meter_data.index,
         temperature_data,
         heating_balance_points=heating_balance_points,
         cooling_balance_points=cooling_balance_points,
     )
+    return merge_features([usage_per_day, temperature_features])
 
 
 @cli.command()
@@ -110,7 +113,7 @@ def caltrack(
         heating_balance_points,
         cooling_balance_points,
     )
-    model_results = caltrack_method(data, fit_cdd=fit_cdd)
+    model_results = fit_caltrack_usage_per_day_model(data, fit_cdd=fit_cdd)
     json_str = json.dumps(model_results.json(with_candidates=show_candidates), indent=2)
 
     if output_file is None:

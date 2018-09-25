@@ -4,7 +4,7 @@ from pkg_resources import resource_stream
 from dateutil.parser import parse as parse_date
 import pytz
 
-from eemeter import meter_data_from_csv, temperature_data_from_csv
+from ..io import meter_data_from_csv, temperature_data_from_csv
 
 __all__ = ("samples", "load_sample")
 

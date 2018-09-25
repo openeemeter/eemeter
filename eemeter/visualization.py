@@ -1,7 +1,12 @@
 import numpy as np
 import pandas as pd
 
-from eemeter import merge_temperature_data
+from .features import (
+    merge_features,
+    compute_usage_per_day_feature,
+    compute_temperature_features,
+)
+
 
 __all__ = ("plot_energy_signature", "plot_time_series")
 
@@ -34,7 +39,13 @@ def plot_time_series(meter_data, temperature_data, **kwargs):
     default_kwargs.update(kwargs)
     fig, ax1 = plt.subplots(**default_kwargs)
 
-    ax1.plot(meter_data.index, meter_data.value, color="C0", label="Energy Use")
+    ax1.plot(
+        meter_data.index,
+        meter_data.value,
+        color="C0",
+        label="Energy Use",
+        drawstyle="steps-post",
+    )
     ax1.set_ylabel("Energy Use")
 
     ax2 = ax1.twinx()
@@ -92,7 +103,9 @@ def plot_energy_signature(
         raise ImportError("matplotlib is required for plotting.")
 
     # format data
-    df = merge_temperature_data(meter_data, temperature_data)
+    temperature_mean = compute_temperature_features(meter_data.index, temperature_data)
+    usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
+    df = merge_features([usage_per_day, temperature_mean.temperature_mean])
 
     if figsize is None:
         figsize = (10, 4)
@@ -105,7 +118,7 @@ def plot_energy_signature(
 
     ax.scatter(df[temp_col], df.meter_value, **kwargs)
     ax.set_xlabel("Temperature")
-    ax.set_ylabel("Energy Use")
+    ax.set_ylabel("Energy Use per Day")
 
     if title is not None:
         ax.set_title(title)
