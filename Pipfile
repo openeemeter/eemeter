@@ -25,6 +25,7 @@ jupyterlab-launcher = {version = "*", markers="python_version >= '3.5'"}  # py2.
 ipython = {version = "*",  markers="python_version >= '3.5'"}  # py2.7 travis build fails without this
 pytest = "*"
 pytest-cov = "*"
+pytest-profiling = "*"
 pytest-xdist = "*"
 sphinx = "*"
 sphinx-autobuild = "*"
