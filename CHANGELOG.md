@@ -4,6 +4,12 @@ Changelog
 Development
 -----------
 
+* [placeholder]
+
+
+2.1.1
+-----
+
 * Fix degree day ranges (30-90) for prefab caltrack design matrix creation
   methods.
 * Fix the warning for total degree days to use total degree days instead of
