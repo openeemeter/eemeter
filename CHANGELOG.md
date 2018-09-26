@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* [placeholder]
+
+2.1.2
+-----
+
 * Add automatic t-stat computation for metered savings error bands, the
   implementation of which requires expicitly adding scipy to setup.py
   requirements.

@@ -1,7 +1,7 @@
 __title__ = "eemeter"
 __description__ = "Open Energy Efficiency Meter"
 __url__ = "http://github.com/openeemeter/eemeter"
-__version__ = "2.1.1"
+__version__ = "2.1.2"
 __author__ = "Phil Ngo"
 __author_email__ = "admin@openee.io"
 __license__ = "Apache 2.0"
