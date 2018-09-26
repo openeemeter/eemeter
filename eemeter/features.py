@@ -402,8 +402,7 @@ def compute_temperature_features(
                 cooling_balance_points=cooling_balance_points,
                 degree_day_method=degree_day_method,
                 percent_hourly_coverage_per_day=percent_hourly_coverage_per_day,
-                percent_hourly_coverage_per_billing_period
-                    =percent_hourly_coverage_per_billing_period,
+                percent_hourly_coverage_per_billing_period=percent_hourly_coverage_per_billing_period,
                 use_mean_daily_values=use_mean_daily_values,
             )
         )

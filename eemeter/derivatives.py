@@ -225,8 +225,10 @@ def metered_savings(
     if model_type == "usage_per_day":  # has totals_metrics
         if not results.empty:
             error_bands = _compute_error_bands(
-                baseline_model.totals_metrics, results, baseline_model.interval,
-                confidence_level
+                baseline_model.totals_metrics,
+                results,
+                baseline_model.interval,
+                confidence_level,
             )
         else:
             error_bands = None

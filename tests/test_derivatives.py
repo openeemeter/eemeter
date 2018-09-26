@@ -139,8 +139,9 @@ def test_metered_savings_cdd_hdd_billing_no_reporting_data(
 ):
 
     results, error_bands = metered_savings(
-        baseline_model_billing, reporting_meter_data_billing[:0],
-        reporting_temperature_data
+        baseline_model_billing,
+        reporting_meter_data_billing[:0],
+        reporting_temperature_data,
     )
     assert list(results.columns) == [
         "reporting_observed",
