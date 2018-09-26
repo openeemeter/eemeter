@@ -37,8 +37,28 @@ def test_create_caltrack_daily_design_matrix(il_electricity_cdd_hdd_daily):
     design_matrix = create_caltrack_daily_design_matrix(
         meter_data[:100], temperature_data
     )
-    assert design_matrix.shape == (100, 88)
+    assert design_matrix.shape == (100, 128)
     assert sorted(design_matrix.columns) == [
+        "cdd_30",
+        "cdd_31",
+        "cdd_32",
+        "cdd_33",
+        "cdd_34",
+        "cdd_35",
+        "cdd_36",
+        "cdd_37",
+        "cdd_38",
+        "cdd_39",
+        "cdd_40",
+        "cdd_41",
+        "cdd_42",
+        "cdd_43",
+        "cdd_44",
+        "cdd_45",
+        "cdd_46",
+        "cdd_47",
+        "cdd_48",
+        "cdd_49",
         "cdd_50",
         "cdd_51",
         "cdd_52",
@@ -80,6 +100,16 @@ def test_create_caltrack_daily_design_matrix(il_electricity_cdd_hdd_daily):
         "cdd_88",
         "cdd_89",
         "cdd_90",
+        "hdd_30",
+        "hdd_31",
+        "hdd_32",
+        "hdd_33",
+        "hdd_34",
+        "hdd_35",
+        "hdd_36",
+        "hdd_37",
+        "hdd_38",
+        "hdd_39",
         "hdd_40",
         "hdd_41",
         "hdd_42",
@@ -121,6 +151,16 @@ def test_create_caltrack_daily_design_matrix(il_electricity_cdd_hdd_daily):
         "hdd_78",
         "hdd_79",
         "hdd_80",
+        "hdd_81",
+        "hdd_82",
+        "hdd_83",
+        "hdd_84",
+        "hdd_85",
+        "hdd_86",
+        "hdd_87",
+        "hdd_88",
+        "hdd_89",
+        "hdd_90",
         "meter_value",
         "n_days_dropped",
         "n_days_kept",
@@ -128,7 +168,7 @@ def test_create_caltrack_daily_design_matrix(il_electricity_cdd_hdd_daily):
         "temperature_not_null",
         "temperature_null",
     ]
-    assert round(design_matrix.sum().sum(), 2) == 107987.68
+    assert round(design_matrix.sum().sum(), 2) == 167795.89
 
 
 def test_create_caltrack_billing_design_matrix(il_electricity_cdd_hdd_billing_monthly):
@@ -137,8 +177,28 @@ def test_create_caltrack_billing_design_matrix(il_electricity_cdd_hdd_billing_mo
     design_matrix = create_caltrack_billing_design_matrix(
         meter_data[:10], temperature_data
     )
-    assert design_matrix.shape == (10, 88)
+    assert design_matrix.shape == (10, 128)
     assert sorted(design_matrix.columns) == [
+        "cdd_30",
+        "cdd_31",
+        "cdd_32",
+        "cdd_33",
+        "cdd_34",
+        "cdd_35",
+        "cdd_36",
+        "cdd_37",
+        "cdd_38",
+        "cdd_39",
+        "cdd_40",
+        "cdd_41",
+        "cdd_42",
+        "cdd_43",
+        "cdd_44",
+        "cdd_45",
+        "cdd_46",
+        "cdd_47",
+        "cdd_48",
+        "cdd_49",
         "cdd_50",
         "cdd_51",
         "cdd_52",
@@ -180,6 +240,16 @@ def test_create_caltrack_billing_design_matrix(il_electricity_cdd_hdd_billing_mo
         "cdd_88",
         "cdd_89",
         "cdd_90",
+        "hdd_30",
+        "hdd_31",
+        "hdd_32",
+        "hdd_33",
+        "hdd_34",
+        "hdd_35",
+        "hdd_36",
+        "hdd_37",
+        "hdd_38",
+        "hdd_39",
         "hdd_40",
         "hdd_41",
         "hdd_42",
@@ -221,6 +291,16 @@ def test_create_caltrack_billing_design_matrix(il_electricity_cdd_hdd_billing_mo
         "hdd_78",
         "hdd_79",
         "hdd_80",
+        "hdd_81",
+        "hdd_82",
+        "hdd_83",
+        "hdd_84",
+        "hdd_85",
+        "hdd_86",
+        "hdd_87",
+        "hdd_88",
+        "hdd_89",
+        "hdd_90",
         "meter_value",
         "n_days_dropped",
         "n_days_kept",
@@ -228,7 +308,7 @@ def test_create_caltrack_billing_design_matrix(il_electricity_cdd_hdd_billing_mo
         "temperature_not_null",
         "temperature_null",
     ]
-    assert round(design_matrix.sum().sum(), 2) == 13191.98
+    assert round(design_matrix.sum().sum(), 2) == 19365.12
 
 
 @pytest.fixture
