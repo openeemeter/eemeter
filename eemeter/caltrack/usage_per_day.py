@@ -752,7 +752,12 @@ def get_too_few_non_zero_degree_day_warning(
 
 
 def get_total_degree_day_too_low_warning(
-    model_type, balance_point, degree_day_type, degree_days, minimum_total
+    model_type,
+    balance_point,
+    degree_day_type,
+    avg_degree_days,
+    period_days,
+    minimum_total,
 ):
     """ Return an empty list or a single warning wrapped in a list regarding
     the total summed degree day values.
@@ -765,8 +770,10 @@ def get_total_degree_day_too_low_warning(
         The balance point in question.
     degree_day_type : :any:`str`
         The type of degree days (``'cdd'`` or ``'hdd'``).
-    degree_days : :any:`pandas.Series`
+    avg_degree_days : :any:`pandas.Series`
         A series of degree day values.
+    period_days : :any:`pandas.Series`
+        A series of containing day counts.
     minimum_total : :any:`float`
         Minimum allowable total sum of degree day values.
 
@@ -777,7 +784,7 @@ def get_total_degree_day_too_low_warning(
     """
 
     warnings = []
-    total_degree_days = degree_days.sum()
+    total_degree_days = (avg_degree_days * period_days).sum()
     if total_degree_days < minimum_total:
         warnings.append(
             EEMeterWarning(
@@ -1025,10 +1032,22 @@ def get_single_cdd_only_candidate_model(
     cdd_column = "cdd_%s" % balance_point
     formula = "meter_value ~ %s" % cdd_column
 
+    if weights_col is None:
+        weights = 1
+    else:
+        weights = data[weights_col]
+
+    period_days = weights
+
     degree_day_warnings = []
     degree_day_warnings.extend(
         get_total_degree_day_too_low_warning(
-            model_type, balance_point, "cdd", data[cdd_column], minimum_total_cdd
+            model_type,
+            balance_point,
+            "cdd",
+            data[cdd_column],
+            period_days,
+            minimum_total_cdd,
         )
     )
     degree_day_warnings.extend(
@@ -1044,11 +1063,6 @@ def get_single_cdd_only_candidate_model(
             status="NOT ATTEMPTED",
             warnings=degree_day_warnings,
         )
-
-    if weights_col is None:
-        weights = 1
-    else:
-        weights = data[weights_col]
 
     try:
         model = smf.wls(formula=formula, data=data, weights=weights)
@@ -1180,10 +1194,22 @@ def get_single_hdd_only_candidate_model(
     hdd_column = "hdd_%s" % balance_point
     formula = "meter_value ~ %s" % hdd_column
 
+    if weights_col is None:
+        weights = 1
+    else:
+        weights = data[weights_col]
+
+    period_days = weights
+
     degree_day_warnings = []
     degree_day_warnings.extend(
         get_total_degree_day_too_low_warning(
-            model_type, balance_point, "hdd", data[hdd_column], minimum_total_hdd
+            model_type,
+            balance_point,
+            "hdd",
+            data[hdd_column],
+            period_days,
+            minimum_total_hdd,
         )
     )
     degree_day_warnings.extend(
@@ -1199,11 +1225,6 @@ def get_single_hdd_only_candidate_model(
             status="NOT ATTEMPTED",
             warnings=degree_day_warnings,
         )
-
-    if weights_col is None:
-        weights = 1
-    else:
-        weights = data[weights_col]
 
     try:
         model = smf.wls(formula=formula, data=data, weights=weights)
@@ -1348,6 +1369,14 @@ def get_single_cdd_hdd_candidate_model(
     cdd_column = "cdd_%s" % cooling_balance_point
     hdd_column = "hdd_%s" % heating_balance_point
     formula = "meter_value ~ %s + %s" % (cdd_column, hdd_column)
+    n_days_column = None
+
+    if weights_col is None:
+        weights = 1
+    else:
+        weights = data[weights_col]
+
+    period_days = weights
 
     degree_day_warnings = []
     degree_day_warnings.extend(
@@ -1356,6 +1385,7 @@ def get_single_cdd_hdd_candidate_model(
             cooling_balance_point,
             "cdd",
             data[cdd_column],
+            period_days,
             minimum_total_cdd,
         )
     )
@@ -1374,6 +1404,7 @@ def get_single_cdd_hdd_candidate_model(
             heating_balance_point,
             "hdd",
             data[hdd_column],
+            period_days,
             minimum_total_hdd,
         )
     )
@@ -1391,11 +1422,6 @@ def get_single_cdd_hdd_candidate_model(
         return CalTRACKUsagePerDayCandidateModel(
             model_type, formula, "NOT ATTEMPTED", warnings=degree_day_warnings
         )
-
-    if weights_col is None:
-        weights = 1
-    else:
-        weights = data[weights_col]
 
     try:
         model = smf.wls(formula=formula, data=data, weights=weights)
@@ -1624,7 +1650,8 @@ def fit_caltrack_usage_per_day_model(
         value is the most permissive possible (i.e., 1). This is here
         for backwards compatibility with CalTRACK 1.0 methods.
     weights_col : :any:`str` or None, optional
-        The name of the column (if any) in ``data`` to use as weights.
+        The name of the column (if any) in ``data`` to use as weights. Weight
+        must be the number of days of data in the period.
     fit_intercept_only : :any:`bool`, optional
         If True, fit and consider intercept_only model candidates.
     fit_cdd_only : :any:`bool`, optional
@@ -1651,20 +1678,9 @@ def fit_caltrack_usage_per_day_model(
         minimum_total_hdd = 20
         # CalTrack 3.4.2
         if weights_col is None:
-            return CalTRACKUsagePerDayModelResults(
-                status="ERROR",
-                method_name="caltrack_usage_per_day",
-                interval='billing',
-                warnings=[
-                    EEMeterWarning(
-                        qualified_name="eemeter.caltrack_usage_per_day.missing_weights",
-                        description=("Attempting to use billing presets without"
-                                     " providing the weights_col arg."),
-                        data={},
-                    )
-                ],
+            raise ValueError(
+                "If using billing presets, the weights_col argument must be specified."
             )
-        
         interval = "billing"
     else:
         interval = "daily"

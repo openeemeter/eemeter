@@ -40,10 +40,8 @@ def create_caltrack_billing_design_matrix(meter_data, temperature_data):
     temperature_features = compute_temperature_features(
         meter_data.index,
         temperature_data,
-        heating_balance_points=range(
-            40, 81
-        ),  # a list like this [40, 41, 42, ... 79, 80]
-        cooling_balance_points=range(50, 91),
+        heating_balance_points=range(30, 91),
+        cooling_balance_points=range(30, 91),
         data_quality=True,
         tolerance=pd.Timedelta(
             "35D"
@@ -58,10 +56,8 @@ def create_caltrack_daily_design_matrix(meter_data, temperature_data):
     temperature_features = compute_temperature_features(
         meter_data.index,
         temperature_data,
-        heating_balance_points=range(
-            40, 81
-        ),  # a list like this [40, 41, 42, ... 79, 80]
-        cooling_balance_points=range(50, 91),
+        heating_balance_points=range(30, 91),
+        cooling_balance_points=range(30, 91),
         data_quality=True,
     )
     design_matrix = merge_features([usage_per_day, temperature_features])
