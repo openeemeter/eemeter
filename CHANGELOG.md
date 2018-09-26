@@ -4,8 +4,11 @@ Changelog
 Development
 -----------
 
-* [placeholder]
-
+* Add automatic t-stat computation for metered savings error bands, the
+  implementation of which requires expicitly adding scipy to setup.py
+  requirements.
+* Don't compute error bands if reporting period data is empty for metered
+  savings.
 
 2.1.1
 -----
