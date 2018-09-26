@@ -1,4 +1,6 @@
-from eemeter.caltrack.usage_per_day import CalTRACKUsagePerDayModelResults
+from scipy.stats import t
+
+from .caltrack.usage_per_day import CalTRACKUsagePerDayModelResults
 
 
 __all__ = ("metered_savings", "modeled_savings")
@@ -60,11 +62,15 @@ def _compute_fsu_error(
     return fsu_error_band
 
 
-def _compute_error_bands(totals_metrics, results, interval, t_stat):
+def _compute_error_bands(totals_metrics, results, interval, confidence_level):
     num_parameters = totals_metrics.num_parameters
 
     base_obs = totals_metrics.observed_length
     post_obs = results["reporting_observed"].dropna().shape[0]
+
+    degrees_of_freedom = base_obs - num_parameters
+    single_tailed_confidence_level = 1 - ((1 - confidence_level) / 2)
+    t_stat = t.ppf(single_tailed_confidence_level, degrees_of_freedom)
 
     rmse_base_residuals = totals_metrics.rmse_adj
     autocorr_resid = totals_metrics.autocorr_resid
@@ -114,7 +120,7 @@ def metered_savings(
     reporting_meter_data,
     temperature_data,
     with_disaggregated=False,
-    t_stat=1.649,
+    confidence_level=0.90,
     predict_kwargs=None,
 ):
     """ Compute metered savings, i.e., savings in which the baseline model
@@ -138,13 +144,11 @@ def metered_savings(
         If True, calculate baseline counterfactual disaggregated usage
         estimates. Savings cannot be disaggregated for metered savings. For
         that, use :any:`eemeter.caltrack_modeled_savings`.
-    t_stat : :any:`float`, optional
-        The t-statistic associated with the desired confidence level and degrees of
-        freedom (number of baseline observations minus the number of parameters).
-        Defaults to 1.649, the t-statistic associated with 363 degrees of freedom (365
-        observations minus two parameters) and a two-tailed 90% confidence level.
+    confidence_level : :any:`float`, optional
+        The two-tailed confidence level used to calculate the t-statistic used
+        in calculation of the error bands.
 
-        Leave blank if not computing error bands.
+        Ignored if not computing error bands.
     predict_kwargs : :any:`dict`, optional
         Extra kwargs to pass to the baseline_model.predict method.
 
@@ -215,11 +219,17 @@ def metered_savings(
 
     results = results.dropna().reindex(results.index)  # carry NaNs
 
+    # compute t-statistic associated with n degrees of freedom
+    # and a two-tailed confidence level.
     error_bands = None
     if model_type == "usage_per_day":  # has totals_metrics
-        error_bands = _compute_error_bands(
-            baseline_model.totals_metrics, results, baseline_model.interval, t_stat
-        )
+        if not results.empty:
+            error_bands = _compute_error_bands(
+                baseline_model.totals_metrics, results, baseline_model.interval,
+                confidence_level
+            )
+        else:
+            error_bands = None
     return results, error_bands
 
 
