@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* [placeholder]
+
+2.1.3
+-----
+
 * Fix bug related to caltrack billing design matrix creation during empty temperature traces.
 
 2.1.2
