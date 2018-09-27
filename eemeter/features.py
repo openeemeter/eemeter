@@ -439,15 +439,14 @@ def compute_temperature_features(
         )
         del df["meter_value"]
 
-        if df.empty:
-            if "degree_day_columns" in df:
+        if "degree_day_columns" in df:
+            if df["degree_day_columns"].dropna().empty:
                 column_defaults = {
-                    column: [] for column in ["n_days_dropped", "n_days_kept"]
+                    column: np.full(df["degree_day_columns"].shape, np.nan)
+                    for column in ["n_days_dropped", "n_days_kept"]
                 }
                 df = df.drop(["degree_day_columns"], axis=1).assign(**column_defaults)
-        else:
-            # expand degree_day_columns
-            if "degree_day_columns" in df:
+            else:
                 df = pd.concat(
                     [
                         df.drop(["degree_day_columns"], axis=1),
