@@ -170,6 +170,7 @@ def test_create_caltrack_daily_design_matrix(il_electricity_cdd_hdd_daily):
     ]
     assert round(design_matrix.sum().sum(), 2) == 167795.89
 
+
 def test_create_caltrack_billing_design_matrix(il_electricity_cdd_hdd_billing_monthly):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]
@@ -376,19 +377,23 @@ def test_create_caltrack_hourly_segmented_design_matrices(
     assert round(design_matrix.sum().sum(), 2) == 0.0
 
 
-def test_create_caltrack_billing_design_matrix_empty_temp(il_electricity_cdd_hdd_billing_monthly):
+def test_create_caltrack_billing_design_matrix_empty_temp(
+    il_electricity_cdd_hdd_billing_monthly
+):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"][:0]
     design_matrix = create_caltrack_billing_design_matrix(
         meter_data[:10], temperature_data
     )
-    assert 'n_days_kept' in design_matrix.columns
+    assert "n_days_kept" in design_matrix.columns
 
 
-def test_create_caltrack_billing_design_matrix_partial_empty_temp(il_electricity_cdd_hdd_billing_monthly):
+def test_create_caltrack_billing_design_matrix_partial_empty_temp(
+    il_electricity_cdd_hdd_billing_monthly
+):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"][:200]
     design_matrix = create_caltrack_billing_design_matrix(
         meter_data[:10], temperature_data
     )
-    assert 'n_days_kept' in design_matrix.columns
+    assert "n_days_kept" in design_matrix.columns
