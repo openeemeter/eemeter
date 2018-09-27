@@ -23,6 +23,7 @@ coverage = "*"
 jupyterlab = {version = "*", markers="python_version >= '3.5'"}
 jupyterlab-launcher = {version = "*", markers="python_version >= '3.5'"}  # py2.7 travis build fails without this
 ipython = {version = "*",  markers="python_version >= '3.5'"}  # py2.7 travis build fails without this
+nbsphinx = "*"
 pytest = "*"
 pytest-cov = "*"
 pytest-profiling = "*"

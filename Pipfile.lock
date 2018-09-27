@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "f4dc6c8267aefa090623e24165553ecbd6dabcefa2c3b7e2b47935d09f8a003d"
+            "sha256": "f2d35196883b63f45c67dd44e0dffd6f0432c39183c176c5afed8236d22e3dd6"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -604,11 +604,10 @@
         },
         "ipykernel": {
             "hashes": [
-                "sha256:00d88b7e628e4e893359119b894451611214bce09776a3bf8248fe42cb48ada6",
-                "sha256:a706b975376efef98b70e10cd167ab9506cf08a689d689a3c7daf344c15040f6",
-                "sha256:c5a498c70f7765c34f3397cf943b069057f5bef4e0218e4cfbb733e9f38fa5fa"
+                "sha256:3e0ffdf545c0bf80d9dab6523ec6829831408c474772487aeb6eb9f0348b6a1e",
+                "sha256:7cd5e90bc882c13f9c5e76330cb5242280e293cbe9f1a622508762124a103a82"
             ],
-            "version": "==4.9.0"
+            "version": "==5.0.0"
         },
         "ipython": {
             "hashes": [
@@ -709,10 +708,10 @@
         },
         "nbconvert": {
             "hashes": [
-                "sha256:08d21cf4203fabafd0d09bbd63f06131b411db8ebeede34b0fd4be4548351779",
-                "sha256:a8a2749f972592aa9250db975304af6b7337f32337e523a2c995cc9e12c07807"
+                "sha256:12b1a4671d4463ab73af6e4cbcc965b62254e05d182cd54995dda0d0ef9e2db9",
+                "sha256:260d390b989a647575b8ecae2cd06a9eaead10d396733d6e50185d5ebd08996e"
             ],
-            "version": "==5.4.0"
+            "version": "==5.3.1"
         },
         "nbformat": {
             "hashes": [
@@ -720,6 +719,14 @@
                 "sha256:f7494ef0df60766b7cabe0a3651556345a963b74dbc16bc7c18479041170d402"
             ],
             "version": "==4.4.0"
+        },
+        "nbsphinx": {
+            "hashes": [
+                "sha256:31a9e7f68da93f69ab98971976d3919274ee734148ed0157c8f2b3288159471a",
+                "sha256:b4ed539a106ee0ff6b5e450ad38547944096cdd6896bb226d040fd9f3300bdfa"
+            ],
+            "index": "pypi",
+            "version": "==0.3.5"
         },
         "notebook": {
             "hashes": [
