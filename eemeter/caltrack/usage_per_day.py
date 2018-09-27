@@ -152,6 +152,7 @@ class CalTRACKUsagePerDayModelResults(object):
         data = {
             "status": self.status,
             "method_name": self.method_name,
+            "interval": self.interval,
             "model": _json_or_none(self.model),
             "r_squared_adj": _noneify(self.r_squared_adj),
             "warnings": [w.json() for w in self.warnings],

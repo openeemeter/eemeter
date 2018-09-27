@@ -147,6 +147,7 @@ def test_model_results_minimal():
     assert str(model_results).startswith("CalTRACKUsagePerDayModelResults")
     assert model_results.json() == {
         "candidates": None,
+        "interval": None,
         "metadata": {},
         "method_name": "method_name",
         "totals_metrics": None,
@@ -185,6 +186,7 @@ def test_model_results_json_with_objects():
             }
         ],
         "metadata": {},
+        "interval": None,
         "method_name": "method_name",
         "totals_metrics": None,
         "avgs_metrics": None,
@@ -224,6 +226,7 @@ def test_model_results_json_with_nan_r_squared_adj():
     )
     assert model_results.json() == {
         "candidates": None,
+        "interval": None,
         "metadata": {},
         "method_name": "method_name",
         "totals_metrics": None,
@@ -266,6 +269,7 @@ def test_model_results_json_with_model_metrics():
 
     assert json_result == {
         "candidates": None,
+        "interval": None,
         "metadata": {},
         "method_name": "method_name",
         "totals_metrics": {},

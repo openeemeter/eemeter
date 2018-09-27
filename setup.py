@@ -13,7 +13,7 @@ from shutil import rmtree
 from setuptools import find_packages, setup, Command
 
 NAME = "eemeter"
-REQUIRED = ["click", "pandas", "statsmodels"]
+REQUIRED = ["click", "pandas", "statsmodels", "scipy"]
 
 here = os.path.abspath(os.path.dirname(__file__))
 

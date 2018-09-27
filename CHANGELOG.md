@@ -4,6 +4,20 @@ Changelog
 Development
 -----------
 
+* [placeholder]
+
+2.1.2
+-----
+
+* Add automatic t-stat computation for metered savings error bands, the
+  implementation of which requires expicitly adding scipy to setup.py
+  requirements.
+* Don't compute error bands if reporting period data is empty for metered
+  savings.
+
+2.1.1
+-----
+
 * Fix degree day ranges (30-90) for prefab caltrack design matrix creation
   methods.
 * Fix the warning for total degree days to use total degree days instead of
