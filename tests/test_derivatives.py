@@ -159,8 +159,9 @@ def reporting_meter_data_billing_single_record():
 
 
 def test_metered_savings_cdd_hdd_billing_single_record_reporting_data(
-    baseline_model_billing, reporting_meter_data_billing_single_record,
-    reporting_temperature_data
+    baseline_model_billing,
+    reporting_meter_data_billing_single_record,
+    reporting_temperature_data,
 ):
 
     results, error_bands = metered_savings(
@@ -184,8 +185,9 @@ def reporting_meter_data_billing_wrong_timestamp():
 
 
 def test_metered_savings_cdd_hdd_billing_reporting_data_wrong_timestamp(
-    baseline_model_billing, reporting_meter_data_billing_wrong_timestamp,
-    reporting_temperature_data
+    baseline_model_billing,
+    reporting_meter_data_billing_wrong_timestamp,
+    reporting_temperature_data,
 ):
 
     results, error_bands = metered_savings(
@@ -486,8 +488,9 @@ def reporting_meter_data_billing_not_aligned():
 
 
 def test_metered_savings_not_aligned_reporting_data(
-    baseline_model_billing, reporting_meter_data_billing_not_aligned,
-    reporting_temperature_data
+    baseline_model_billing,
+    reporting_meter_data_billing_not_aligned,
+    reporting_temperature_data,
 ):
 
     results, error_bands = metered_savings(
