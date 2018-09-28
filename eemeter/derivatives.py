@@ -81,6 +81,10 @@ def _compute_error_bands(totals_metrics, results, interval, confidence_level):
 
     base_var = totals_metrics.observed_variance
 
+    # these result in division by zero error for fsu_error_band
+    if post_obs == 0 or abs(autocorr_resid) == 1 or base_obs == 0 or base_avg == 0:
+        return None
+
     nprime = base_obs * (1 - autocorr_resid) / (1 + autocorr_resid)
 
     total_base_energy = base_avg * base_obs
@@ -223,15 +227,12 @@ def metered_savings(
     # and a two-tailed confidence level.
     error_bands = None
     if model_type == "usage_per_day":  # has totals_metrics
-        if len(results) > 1:  # fails with zero division error for 0 or 1
-            error_bands = _compute_error_bands(
-                baseline_model.totals_metrics,
-                results,
-                baseline_model.interval,
-                confidence_level,
-            )
-        else:
-            error_bands = None
+        error_bands = _compute_error_bands(
+            baseline_model.totals_metrics,
+            results,
+            baseline_model.interval,
+            confidence_level,
+        )
     return results, error_bands
 
 

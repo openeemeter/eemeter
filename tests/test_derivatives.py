@@ -189,6 +189,32 @@ def test_metered_savings_cdd_hdd_billing_single_record_reporting_data(
     assert error_bands is None
 
 
+@pytest.fixture
+def reporting_meter_data_billing_wrong_timestamp():
+    index = pd.date_range("2003-01-01", freq="MS", periods=13, tz="UTC")
+    return pd.DataFrame({"value": 1}, index=index)
+
+
+def test_metered_savings_cdd_hdd_billing_reporting_data_wrong_timestamp(
+    baseline_model_billing,
+    reporting_meter_data_billing_wrong_timestamp,
+    reporting_temperature_data,
+):
+
+    results, error_bands = metered_savings(
+        baseline_model_billing,
+        reporting_meter_data_billing_wrong_timestamp,
+        reporting_temperature_data,
+    )
+    assert list(results.columns) == [
+        "reporting_observed",
+        "counterfactual_usage",
+        "metered_savings",
+    ]
+    assert round(results.metered_savings.sum(), 2) == 0.0
+    assert error_bands is None
+
+
 def test_metered_savings_cdd_hdd_daily_hourly_degree_days(
     baseline_model_daily, reporting_meter_data_daily, reporting_temperature_data
 ):
@@ -464,3 +490,29 @@ def test_modeled_savings_cdd_hdd_hourly(
         "modeled_savings",
     ]
     assert round(results.modeled_savings.sum(), 2) == 20.76
+
+
+@pytest.fixture
+def reporting_meter_data_billing_not_aligned():
+    index = pd.date_range("2001-01-01", freq="MS", periods=13, tz="UTC")
+    return pd.DataFrame({"value": None}, index=index)
+
+
+def test_metered_savings_not_aligned_reporting_data(
+    baseline_model_billing,
+    reporting_meter_data_billing_not_aligned,
+    reporting_temperature_data,
+):
+
+    results, error_bands = metered_savings(
+        baseline_model_billing,
+        reporting_meter_data_billing_not_aligned,
+        reporting_temperature_data,
+    )
+    assert list(results.columns) == [
+        "reporting_observed",
+        "counterfactual_usage",
+        "metered_savings",
+    ]
+    assert round(results.metered_savings.sum(), 2) == 0.0
+    assert error_bands is None
