@@ -143,7 +143,7 @@ def metered_savings(
     with_disaggregated : :any:`bool`, optional
         If True, calculate baseline counterfactual disaggregated usage
         estimates. Savings cannot be disaggregated for metered savings. For
-        that, use :any:`eemeter.caltrack_modeled_savings`.
+        that, use :any:`eemeter.modeled_savings`.
     confidence_level : :any:`float`, optional
         The two-tailed confidence level used to calculate the t-statistic used
         in calculation of the error bands.
@@ -249,9 +249,9 @@ def modeled_savings(
 
     Parameters
     ----------
-    baseline_model : :any:`eemeter.CandidateModel`
+    baseline_model : :any:`eemeter.CalTRACKUsagePerDayCandidateModel`
         Model to use for predicting pre-intervention usage.
-    reporting_model : :any:`eemeter.CandidateModel`
+    reporting_model : :any:`eemeter.CalTRACKUsagePerDayCandidateModel`
         Model to use for predicting post-intervention usage.
     result_index : :any:`pandas.DatetimeIndex`
         The dates for which usage should be modeled.

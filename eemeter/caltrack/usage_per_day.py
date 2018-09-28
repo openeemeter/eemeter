@@ -60,11 +60,11 @@ class CalTRACKUsagePerDayModelResults(object):
 
     method_name : :any:`str`
         The name of the method used to fit the baseline model.
-    model : :any:`eemeter.CandidateModel` or :any:`None`
+    model : :any:`eemeter.CalTRACKUsagePerDayCandidateModel` or :any:`None`
         The selected candidate model, if any.
     r_squared_adj : :any:`float`
         The adjusted r-squared of the selected model.
-    candidates : :any:`list` of :any:`eemeter.CandidateModel`
+    candidates : :any:`list` of :any:`eemeter.CalTRACKUsagePerDayCandidateModel`
         A list of any model candidates encountered during the model
         selection and fitting process.
     warnings : :any:`list` of :any:`eemeter.EEMeterWarning`
@@ -450,7 +450,7 @@ def _caltrack_predict_design_matrix(
     model_type : :any:`str`
         Model type (e.g., ``'cdd_hdd'``).
     model_params : :any:`dict`
-        Parameters as stored in :any:`eemeter.CandidateModel.model_params`.
+        Parameters as stored in :any:`eemeter.CalTRACKUsagePerDayCandidateModel.model_params`.
     data : :any:`pandas.DataFrame`
         Data over which to predict. Assumed to be like the format of the data used
         for fitting, although it need only have the columns. If not giving data
@@ -580,7 +580,7 @@ def caltrack_usage_per_day_predict(
     model_type : :any:`str`
         Model type (e.g., ``'cdd_hdd'``).
     model_params : :any:`dict`
-        Parameters as stored in :any:`eemeter.CandidateModel.model_params`.
+        Parameters as stored in :any:`eemeter.CalTRACKUsagePerDayCandidateModel.model_params`.
     temperature_data : :any:`pandas.DataFrame`
         Hourly temperature data to use for prediction. Time period should match
         the ``prediction_index`` argument.
@@ -825,7 +825,7 @@ def get_parameter_negative_warning(model_type, model_params, parameter):
     model_type : :any:`str`
         Model type (e.g., ``'cdd_hdd'``).
     model_params : :any:`dict`
-        Parameters as stored in :any:`eemeter.CandidateModel.model_params`.
+        Parameters as stored in :any:`eemeter.CalTRACKUsagePerDayCandidateModel.model_params`.
     parameter : :any:`str`
         The name of the parameter, e.g., ``'intercept'``.
 
@@ -865,7 +865,7 @@ def get_parameter_p_value_too_high_warning(
     model_type : :any:`str`
         Model type (e.g., ``'cdd_hdd'``).
     model_params : :any:`dict`
-        Parameters as stored in :any:`eemeter.CandidateModel.model_params`.
+        Parameters as stored in :any:`eemeter.CalTRACKUsagePerDayCandidateModel.model_params`.
     parameter : :any:`str`
         The name of the parameter, e.g., ``'intercept'``.
     p_value : :any:`float`
@@ -915,7 +915,7 @@ def get_fit_failed_candidate_model(model_type, formula):
 
     Returns
     -------
-    candidate_model : :any:`eemeter.CandidateModel`
+    candidate_model : :any:`eemeter.CalTRACKUsagePerDayCandidateModel`
         Candidate model instance with status ``'ERROR'``, and warning with
         traceback.
     """
@@ -941,13 +941,14 @@ def get_intercept_only_candidate_models(data, weights_col):
     data : :any:`pandas.DataFrame`
         A DataFrame containing at least the column ``meter_value``.
         DataFrames of this form can be made using the
-        :any:`eemeter.merge_temperature_data` method.
+        :any:`eemeter.create_caltrack_daily_design_matrix` or
+        :any:`eemeter.create_caltrack_billing_design_matrix` methods.
     weights_col : :any:`str` or None
         The name of the column (if any) in ``data`` to use as weights.
 
     Returns
     -------
-    candidate_models : :any:`list` of :any:`CandidateModel`
+    candidate_models : :any:`list` of :any:`CalTRACKUsagePerDayCandidateModel`
         List containing a single intercept-only candidate model.
     """
     model_type = "intercept_only"
@@ -1012,7 +1013,8 @@ def get_single_cdd_only_candidate_model(
         A DataFrame containing at least the column ``meter_value`` and
         ``cdd_<balance_point>``
         DataFrames of this form can be made using the
-        :any:`eemeter.merge_temperature_data` method.
+        :any:`eemeter.create_caltrack_daily_design_matrix` or
+        :any:`eemeter.create_caltrack_billing_design_matrix` methods.
     minimum_non_zero_cdd : :any:`int`
         Minimum allowable number of non-zero cooling degree day values.
     minimum_total_cdd : :any:`float`
@@ -1026,7 +1028,7 @@ def get_single_cdd_only_candidate_model(
 
     Returns
     -------
-    candidate_model : :any:`CandidateModel`
+    candidate_model : :any:`CalTRACKUsagePerDayCandidateModel`
         A single cdd-only candidate model, with any associated warnings.
     """
     model_type = "cdd_only"
@@ -1127,7 +1129,8 @@ def get_cdd_only_candidate_models(
         columns with names of the form ``cdd_<balance_point>``. All columns
         with names of this form will be used to fit a candidate model.
         DataFrames of this form can be made using the
-        :any:`eemeter.merge_temperature_data` method.
+        :any:`eemeter.create_caltrack_daily_design_matrix` or
+        :any:`eemeter.create_caltrack_billing_design_matrix` methods.
     minimum_non_zero_cdd : :any:`int`
         Minimum allowable number of non-zero cooling degree day values.
     minimum_total_cdd : :any:`float`
@@ -1139,7 +1142,7 @@ def get_cdd_only_candidate_models(
 
     Returns
     -------
-    candidate_models : :any:`list` of :any:`CandidateModel`
+    candidate_models : :any:`list` of :any:`CalTRACKUsagePerDayCandidateModel`
         A list of cdd-only candidate models, with any associated warnings.
     """
     balance_points = [int(col[4:]) for col in data.columns if col.startswith("cdd")]
@@ -1174,7 +1177,8 @@ def get_single_hdd_only_candidate_model(
         A DataFrame containing at least the column ``meter_value`` and
         ``hdd_<balance_point>``
         DataFrames of this form can be made using the
-        :any:`eemeter.merge_temperature_data` method.
+        :any:`eemeter.create_caltrack_daily_design_matrix` or
+        :any:`eemeter.create_caltrack_billing_design_matrix` methods.
     minimum_non_zero_hdd : :any:`int`
         Minimum allowable number of non-zero heating degree day values.
     minimum_total_hdd : :any:`float`
@@ -1188,7 +1192,7 @@ def get_single_hdd_only_candidate_model(
 
     Returns
     -------
-    candidate_model : :any:`CandidateModel`
+    candidate_model : :any:`CalTRACKUsagePerDayCandidateModel`
         A single hdd-only candidate model, with any associated warnings.
     """
     model_type = "hdd_only"
@@ -1288,7 +1292,8 @@ def get_hdd_only_candidate_models(
         columns with names of the form ``hdd_<balance_point>``. All columns
         with names of this form will be used to fit a candidate model.
         DataFrames of this form can be made using the
-        :any:`eemeter.merge_temperature_data` method.
+        :any:`eemeter.create_caltrack_daily_design_matrix` or
+        :any:`eemeter.create_caltrack_billing_design_matrix` methods.
     minimum_non_zero_hdd : :any:`int`
         Minimum allowable number of non-zero heating degree day values.
     minimum_total_hdd : :any:`float`
@@ -1300,7 +1305,7 @@ def get_hdd_only_candidate_models(
 
     Returns
     -------
-    candidate_models : :any:`list` of :any:`CandidateModel`
+    candidate_models : :any:`list` of :any:`CalTRACKUsagePerDayCandidateModel`
         A list of hdd-only candidate models, with any associated warnings.
     """
 
@@ -1341,7 +1346,8 @@ def get_single_cdd_hdd_candidate_model(
         A DataFrame containing at least the column ``meter_value`` and
         ``hdd_<heating_balance_point>`` and ``cdd_<cooling_balance_point>``
         DataFrames of this form can be made using the
-        :any:`eemeter.merge_temperature_data` method.
+        :any:`eemeter.create_caltrack_daily_design_matrix` or
+        :any:`eemeter.create_caltrack_billing_design_matrix` methods.
     minimum_non_zero_cdd : :any:`int`
         Minimum allowable number of non-zero cooling degree day values.
     minimum_non_zero_hdd : :any:`int`
@@ -1363,7 +1369,7 @@ def get_single_cdd_hdd_candidate_model(
 
     Returns
     -------
-    candidate_model : :any:`CandidateModel`
+    candidate_model : :any:`CalTRACKUsagePerDayCandidateModel`
         A single cdd-hdd candidate model, with any associated warnings.
     """
     model_type = "cdd_hdd"
@@ -1505,7 +1511,9 @@ def get_cdd_hdd_candidate_models(
         A DataFrame containing at least the column ``meter_value`` and 1 to n
         columns each of the form ``hdd_<heating_balance_point>``
         and ``cdd_<cooling_balance_point>``. DataFrames of this form can be
-        made using the :any:`eemeter.merge_temperature_data` method.
+        made using the
+        :any:`eemeter.create_caltrack_daily_design_matrix` or
+        :any:`eemeter.create_caltrack_billing_design_matrix` methods.
     minimum_non_zero_cdd : :any:`int`
         Minimum allowable number of non-zero cooling degree day values.
     minimum_non_zero_hdd : :any:`int`
@@ -1523,7 +1531,7 @@ def get_cdd_hdd_candidate_models(
 
     Returns
     -------
-    candidate_models : :any:`list` of :any:`CandidateModel`
+    candidate_models : :any:`list` of :any:`CalTRACKUsagePerDayCandidateModel`
         A list of cdd_hdd candidate models, with any associated warnings.
     """
 
@@ -1561,12 +1569,12 @@ def select_best_candidate(candidate_models):
 
     Parameters
     ----------
-    candidate_models : :any:`list` of :any:`eemeter.CandidateModel`
+    candidate_models : :any:`list` of :any:`eemeter.CalTRACKUsagePerDayCandidateModel`
         Candidate models to select from.
 
     Returns
     -------
-    (best_candidate, warnings) : :any:`tuple` of :any:`eemeter.CandidateModel` or :any:`None` and :any:`list` of `eemeter.EEMeterWarning`
+    (best_candidate, warnings) : :any:`tuple` of :any:`eemeter.CalTRACKUsagePerDayCandidateModel` or :any:`None` and :any:`list` of `eemeter.EEMeterWarning`
         Return the candidate model with highest r-squared or None if none meet
         the requirements, and a list of warnings about this selection (or lack
         of selection).
@@ -1626,8 +1634,9 @@ def fit_caltrack_usage_per_day_model(
         A DataFrame containing at least the column ``meter_value`` and 1 to n
         columns each of the form ``hdd_<heating_balance_point>``
         and ``cdd_<cooling_balance_point>``. DataFrames of this form can be
-        made using the :any:`eemeter.merge_temperature_data` method. Should
-        have a :any:`pandas.DatetimeIndex`.
+        made using the :any:`eemeter.create_caltrack_daily_design_matrix` or
+        :any:`eemeter.create_caltrack_billing_design_matrix` methods.
+        Should have a :any:`pandas.DatetimeIndex`.
     fit_cdd : :any:`bool`, optional
         If True, fit CDD models unless overridden by ``fit_cdd_only`` or
         ``fit_cdd_hdd`` flags. Should be set to ``False`` for gas meter data.
@@ -2076,7 +2085,7 @@ def plot_caltrack_candidate(
 
     Parameters
     ----------
-    candidate : :any:`eemeter.CandidateModel`
+    candidate : :any:`eemeter.CalTRACKUsagePerDayCandidateModel`
         A candidate model with a predict function.
     best : :any:`bool`, optional
         Whether this is the best candidate or not.
