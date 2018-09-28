@@ -4,7 +4,8 @@ Changelog
 Development
 -----------
 
-* Fix zero division error in metrics calculation for post_obs of len > 0.
+* Fix zero division error in metrics calculation for several metrics that
+  would otherwise cause division by zero errors in fsu_error_band calculation.
 
 2.1.4
 -----
