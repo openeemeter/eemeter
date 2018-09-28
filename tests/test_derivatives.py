@@ -171,21 +171,15 @@ def test_metered_savings_cdd_hdd_billing_no_reporting_data(
     assert error_bands is None
 
 
-@pytest.fixture
-def reporting_meter_data_billing_single_record():
-    index = pd.date_range("2011-01-01", freq="MS", periods=13, tz="UTC")
-    return pd.DataFrame({"value": None}, index=index)[:1]
-
-
 def test_metered_savings_cdd_hdd_billing_single_record_reporting_data(
     baseline_model_billing,
-    reporting_meter_data_billing_single_record,
+    reporting_meter_data_billing,
     reporting_temperature_data,
 ):
 
     results, error_bands = metered_savings(
         baseline_model_billing,
-        reporting_meter_data_billing_single_record,
+        reporting_meter_data_billing[:1],
         reporting_temperature_data,
     )
     assert list(results.columns) == [
