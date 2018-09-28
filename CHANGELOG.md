@@ -4,6 +4,7 @@ Changelog
 Development
 -----------
 
+* Fix zero division error in metrics calculation for series of length 1.
 * Fix bug related to caltrack billing design matrix creation during empty temperature traces.
 
 2.1.2
