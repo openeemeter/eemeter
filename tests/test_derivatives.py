@@ -172,9 +172,7 @@ def test_metered_savings_cdd_hdd_billing_no_reporting_data(
 
 
 def test_metered_savings_cdd_hdd_billing_single_record_reporting_data(
-    baseline_model_billing,
-    reporting_meter_data_billing,
-    reporting_temperature_data,
+    baseline_model_billing, reporting_meter_data_billing, reporting_temperature_data
 ):
 
     results, error_bands = metered_savings(
