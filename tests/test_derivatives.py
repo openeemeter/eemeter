@@ -1,3 +1,22 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+
+   Copyright 2018 Open Energy Efficiency, Inc.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+"""
 import numpy as np
 import pandas as pd
 import pytest
@@ -141,6 +160,50 @@ def test_metered_savings_cdd_hdd_billing_no_reporting_data(
     results, error_bands = metered_savings(
         baseline_model_billing,
         reporting_meter_data_billing[:0],
+        reporting_temperature_data,
+    )
+    assert list(results.columns) == [
+        "reporting_observed",
+        "counterfactual_usage",
+        "metered_savings",
+    ]
+    assert round(results.metered_savings.sum(), 2) == 0.0
+    assert error_bands is None
+
+
+def test_metered_savings_cdd_hdd_billing_single_record_reporting_data(
+    baseline_model_billing, reporting_meter_data_billing, reporting_temperature_data
+):
+
+    results, error_bands = metered_savings(
+        baseline_model_billing,
+        reporting_meter_data_billing[:1],
+        reporting_temperature_data,
+    )
+    assert list(results.columns) == [
+        "reporting_observed",
+        "counterfactual_usage",
+        "metered_savings",
+    ]
+    assert round(results.metered_savings.sum(), 2) == 0.0
+    assert error_bands is None
+
+
+@pytest.fixture
+def reporting_meter_data_billing_wrong_timestamp():
+    index = pd.date_range("2003-01-01", freq="MS", periods=13, tz="UTC")
+    return pd.DataFrame({"value": 1}, index=index)
+
+
+def test_metered_savings_cdd_hdd_billing_reporting_data_wrong_timestamp(
+    baseline_model_billing,
+    reporting_meter_data_billing_wrong_timestamp,
+    reporting_temperature_data,
+):
+
+    results, error_bands = metered_savings(
+        baseline_model_billing,
+        reporting_meter_data_billing_wrong_timestamp,
         reporting_temperature_data,
     )
     assert list(results.columns) == [
@@ -427,3 +490,29 @@ def test_modeled_savings_cdd_hdd_hourly(
         "modeled_savings",
     ]
     assert round(results.modeled_savings.sum(), 2) == 20.76
+
+
+@pytest.fixture
+def reporting_meter_data_billing_not_aligned():
+    index = pd.date_range("2001-01-01", freq="MS", periods=13, tz="UTC")
+    return pd.DataFrame({"value": None}, index=index)
+
+
+def test_metered_savings_not_aligned_reporting_data(
+    baseline_model_billing,
+    reporting_meter_data_billing_not_aligned,
+    reporting_temperature_data,
+):
+
+    results, error_bands = metered_savings(
+        baseline_model_billing,
+        reporting_meter_data_billing_not_aligned,
+        reporting_temperature_data,
+    )
+    assert list(results.columns) == [
+        "reporting_observed",
+        "counterfactual_usage",
+        "metered_savings",
+    ]
+    assert round(results.metered_savings.sum(), 2) == 0.0
+    assert error_bands is None

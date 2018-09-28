@@ -6,6 +6,22 @@ Development
 
 * [placeholder]
 
+2.1.5
+-----
+
+* Fix zero division error in metrics calculation for several metrics that
+  would otherwise cause division by zero errors in fsu_error_band calculation.
+
+2.1.4
+-----
+
+* Fix zero division error in metrics calculation for series of length 1.
+
+2.1.3
+-----
+
+* Fix bug related to caltrack billing design matrix creation during empty temperature traces.
+
 2.1.2
 -----
 

@@ -1,3 +1,22 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+
+   Copyright 2018 Open Energy Efficiency, Inc.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+"""
 from .warnings import EEMeterWarning
 from .transform import day_counts, overwrite_partial_rows_with_nan
 from .segmentation import iterate_segmented_dataset
@@ -439,15 +458,14 @@ def compute_temperature_features(
         )
         del df["meter_value"]
 
-        if df.empty:
-            if "degree_day_columns" in df:
+        if "degree_day_columns" in df:
+            if df["degree_day_columns"].dropna().empty:
                 column_defaults = {
-                    column: [] for column in ["n_days_dropped", "n_days_kept"]
+                    column: np.full(df["degree_day_columns"].shape, np.nan)
+                    for column in ["n_days_dropped", "n_days_kept"]
                 }
                 df = df.drop(["degree_day_columns"], axis=1).assign(**column_defaults)
-        else:
-            # expand degree_day_columns
-            if "degree_day_columns" in df:
+            else:
                 df = pd.concat(
                     [
                         df.drop(["degree_day_columns"], axis=1),
