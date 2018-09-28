@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* [placeholder]
+* Fix zero division error in metrics calculation for post_obs of len > 0.
 
 2.1.3
 -----
