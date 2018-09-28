@@ -152,6 +152,24 @@ def test_metered_savings_cdd_hdd_billing_no_reporting_data(
     assert error_bands is None
 
 
+def test_metered_savings_cdd_hdd_billing_single_record_reporting_data(
+    baseline_model_billing, reporting_meter_data_billing, reporting_temperature_data
+):
+
+    results, error_bands = metered_savings(
+        baseline_model_billing,
+        reporting_meter_data_billing[:1],
+        reporting_temperature_data,
+    )
+    assert list(results.columns) == [
+        "reporting_observed",
+        "counterfactual_usage",
+        "metered_savings",
+    ]
+    assert round(results.metered_savings.sum(), 2) == 0.0
+    assert error_bands is None
+
+
 def test_metered_savings_cdd_hdd_daily_hourly_degree_days(
     baseline_model_daily, reporting_meter_data_daily, reporting_temperature_data
 ):
