@@ -223,7 +223,9 @@ def metered_savings(
     # and a two-tailed confidence level.
     error_bands = None
     if model_type == "usage_per_day":  # has totals_metrics
-        if len(results) > 1:  # fails with zero division error for 0 or 1
+        # fails with zero division error for 0 or 1
+        post_obs = results["reporting_observed"].dropna().shape[0]
+        if post_obs > 0:
             error_bands = _compute_error_bands(
                 baseline_model.totals_metrics,
                 results,
