@@ -71,3 +71,26 @@ Run the tests::
 Open up a shell::
 
     $ docker-compose up shell
+
+
+Command-line Usage
+------------------
+
+Once installed, ``eemeter`` can be run from the command-line. To see all available commands, run ``eemeter --help``.
+
+Use CalTRACK methods on sample data::
+
+    $ eemeter caltrack --sample=il-electricity-cdd-hdd-daily
+
+Save output::
+
+    $ eemeter caltrack --sample=il-electricity-cdd-only-billing_monthly --output-file=/path/to/output.json
+
+Load custom data (see :any:`eemeter.meter_data_from_csv` and :any:`eemeter.temperature_data_from_csv` for formatting)::
+
+    $ eemeter caltrack --meter-file=/path/to/meter/data.csv --temperature-file=/path/to/temperature/data.csv
+
+Do not fit CDD-based candidate models (intended for gas data)::
+
+    $ eemeter caltrack --sample=il-gas-hdd-only-billing_bimonthly --no-fit-cdd
+
