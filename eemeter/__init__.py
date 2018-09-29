@@ -27,13 +27,13 @@ from .caltrack import *
 from .derivatives import *
 from .exceptions import *
 from .features import *
-from .metrics import *
-from .warnings import *
-from .transform import *
 from .io import *
-from .visualization import *
+from .metrics import *
 from .samples.load import *
 from .segmentation import *
+from .transform import *
+from .visualization import *
+from .warnings import *
 
 
 def get_version():

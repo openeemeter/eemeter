@@ -21,8 +21,7 @@ scipy = "*"
 black = {version = "==18.6b4", markers="python_version >= '3.6'"}
 coverage = "*"
 jupyterlab = {version = "*", markers="python_version >= '3.5'"}
-jupyterlab-launcher = {version = "*", markers="python_version >= '3.5'"}  # py2.7 travis build fails without this
-ipython = {version = "*",  markers="python_version >= '3.5'"}  # py2.7 travis build fails without this
+nbsphinx = "*"
 pytest = "*"
 pytest-cov = "*"
 pytest-profiling = "*"
@@ -33,3 +32,11 @@ sphinxcontrib-spelling = "*"
 tox = "*"
 twine = "*"
 typing = "*"
+
+# py2.7 travis build fails without these explicitly defined, but they are
+# dependencies of jupyterlab. It is possible someday specifying the marker on
+# jupyterlab will cascade to dependencies but currently not supported.
+# See https://github.com/pypa/pipenv/issues/1705
+jupyterlab-launcher = {version = "*", markers="python_version >= '3.5'"}
+ipython = {version = "*",  markers="python_version >= '3.5'"}
+ipykernel = {version = "*",  markers="python_version >= '3.5'"}
