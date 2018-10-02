@@ -230,7 +230,7 @@ def get_baseline_data(data, start=None, end=None, max_days=365):
     # copying prevents setting on slice warnings
     baseline_data = data[start:end].copy()
 
-    if baseline_data.empty:
+    if baseline_data.dropna().empty:
         raise NoBaselineDataError()
 
     baseline_data.iloc[-1] = np.nan
@@ -320,7 +320,7 @@ def get_reporting_data(data, start=None, end=None, max_days=365):
     # copying prevents setting on slice warnings
     reporting_data = data[start:end].copy()
 
-    if reporting_data.empty:
+    if reporting_data.dropna().empty:
         raise NoReportingDataError()
 
     reporting_data.iloc[-1] = np.nan
