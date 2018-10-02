@@ -4,6 +4,7 @@ Changelog
 Development
 -----------
 
+* Update multiple places where `df.empty` is used and replaced with `df.dropna().empty`.
 * Update documentation for running CalTRACK hourly methods.
 
 2.1.5

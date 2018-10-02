@@ -1670,10 +1670,33 @@ def test_caltrack_sufficiency_criteria_pass():
     }
 
 
-def test_caltrack_sufficiency_criteria_fail_no_gap():
+def test_caltrack_sufficiency_criteria_fail_no_data():
     data_quality = pd.DataFrame(
         {
             "meter_value": [np.nan, np.nan],
+            "temperature_not_null": [1, 5],
+            "temperature_null": [0, 5],
+            "start": pd.date_range(start="2016-01-02", periods=2, freq="D", tz="UTC"),
+        }
+    ).set_index("start")
+    requested_start = pd.Timestamp("2016-01-02").tz_localize("UTC")
+    requested_end = pd.Timestamp("2016-01-04").tz_localize("UTC")
+    data_sufficiency = caltrack_sufficiency_criteria(
+        data_quality,
+        requested_start,
+        requested_end,
+        num_days=3,
+        min_fraction_daily_coverage=0.9,
+        min_fraction_hourly_temperature_coverage_per_period=0.9,
+    )
+    assert data_sufficiency.status == "NO DATA"
+    assert data_sufficiency.criteria_name == ("caltrack_sufficiency_criteria")
+
+
+def test_caltrack_sufficiency_criteria_fail_no_gap():
+    data_quality = pd.DataFrame(
+        {
+            "meter_value": [1, 1],
             "temperature_not_null": [1, 5],
             "temperature_null": [0, 5],
             "start": pd.date_range(start="2016-01-02", periods=2, freq="D", tz="UTC"),
@@ -1709,7 +1732,7 @@ def test_caltrack_sufficiency_criteria_fail_no_gap():
     assert warning1.description == (
         "Too many days in data have missing meter data or temperature data."
     )
-    assert warning1.data == {"n_days_total": 2, "n_valid_days": 0}
+    assert warning1.data == {"n_days_total": 2, "n_valid_days": 1}
 
     warning2 = data_sufficiency.warnings[2]
     assert warning2.qualified_name == (
@@ -1717,7 +1740,7 @@ def test_caltrack_sufficiency_criteria_fail_no_gap():
     )
     assert warning2.description == ("Too many days in data have missing meter data.")
     # zero because nan value and last point dropped
-    assert warning2.data == {"n_days_total": 2, "n_valid_meter_data_days": 0}
+    assert warning2.data == {"n_days_total": 2, "n_valid_meter_data_days": 1}
 
     warning3 = data_sufficiency.warnings[3]
     assert warning3.qualified_name == (
@@ -1882,7 +1905,7 @@ def test_caltrack_sufficiency_criteria_handle_single_input():
     # just make sure this case is handled.
     data_quality = pd.DataFrame(
         {
-            "meter_value": [np.nan],
+            "meter_value": [1],
             "temperature_not_null": [1],
             "temperature_null": [0],
             "start": pd.date_range(start="2016-01-02", periods=1, freq="D", tz="UTC"),

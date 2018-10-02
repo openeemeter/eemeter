@@ -652,7 +652,7 @@ def caltrack_usage_per_day_predict(
         use_mean_daily_values=False,
     )
 
-    if design_matrix.empty:
+    if design_matrix.dropna().empty:
         if with_disaggregated:
             empty_columns = {
                 "predicted_usage": [],
@@ -1717,7 +1717,7 @@ def fit_caltrack_usage_per_day_model(
     # cleans data to fully NaN rows that have missing temp or meter data
     data = overwrite_partial_rows_with_nan(data)
 
-    if data.empty:
+    if data.dropna().empty:
         return CalTRACKUsagePerDayModelResults(
             status="NO DATA",
             method_name="caltrack_usage_per_day",
@@ -1898,7 +1898,7 @@ def caltrack_sufficiency_criteria(
     """
     criteria_name = "caltrack_sufficiency_criteria"
 
-    if data_quality.empty:
+    if data_quality.dropna().empty:
         return DataSufficiency(
             status="NO DATA",
             criteria_name=criteria_name,
