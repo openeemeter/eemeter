@@ -516,3 +516,35 @@ def test_metered_savings_not_aligned_reporting_data(
     ]
     assert round(results.metered_savings.sum(), 2) == 0.0
     assert error_bands is None
+
+
+@pytest.fixture
+def baseline_model_billing_single_record(il_electricity_cdd_hdd_billing_monthly):
+    baseline_meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"][-2:]
+    temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]
+    blackout_start_date = il_electricity_cdd_hdd_billing_monthly["blackout_start_date"]
+    baseline_data = create_caltrack_billing_design_matrix(
+        baseline_meter_data, temperature_data
+    )
+    model_results = fit_caltrack_usage_per_day_model(
+        baseline_data, use_billing_presets=True, weights_col="n_days_kept"
+    )
+    return model_results
+
+
+def test_metered_savings_model_single_record(
+    baseline_model_billing_single_record,
+    reporting_meter_data_billing,
+    reporting_temperature_data,
+):
+
+    assert pd.isnull(baseline_model_billing_single_record.totals_metrics.autocorr_resid)
+
+    # simulating deserialization
+    baseline_model_billing_single_record.totals_metrics.autocorr_resid = None
+
+    results, error_bands = metered_savings(
+        baseline_model_billing_single_record,
+        reporting_meter_data_billing,
+        reporting_temperature_data,
+    )

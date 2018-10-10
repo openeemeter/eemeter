@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* [placeholder]
+* Update so that models built from a single record won't result in error.
 
 2.1.6
 -----

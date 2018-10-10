@@ -82,7 +82,13 @@ def _compute_error_bands(totals_metrics, results, interval, confidence_level):
     base_var = totals_metrics.observed_variance
 
     # these result in division by zero error for fsu_error_band
-    if post_obs == 0 or abs(autocorr_resid) == 1 or base_obs == 0 or base_avg == 0:
+    if (
+        post_obs == 0
+        or autocorr_resid is None
+        or abs(autocorr_resid) == 1
+        or base_obs == 0
+        or base_avg == 0
+    ):
         return None
 
     nprime = base_obs * (1 - autocorr_resid) / (1 + autocorr_resid)
