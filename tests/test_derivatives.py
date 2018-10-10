@@ -519,9 +519,7 @@ def test_metered_savings_not_aligned_reporting_data(
 
 
 @pytest.fixture
-def baseline_model_billing_single_record(
-    il_electricity_cdd_hdd_billing_monthly
-):
+def baseline_model_billing_single_record(il_electricity_cdd_hdd_billing_monthly):
     baseline_meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"][-2:]
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]
     blackout_start_date = il_electricity_cdd_hdd_billing_monthly["blackout_start_date"]
@@ -540,10 +538,7 @@ def test_metered_savings_model_single_record(
     reporting_temperature_data,
 ):
 
-    assert pd.isnull(
-        baseline_model_billing_single_record.
-        totals_metrics.autocorr_resid
-    )
+    assert pd.isnull(baseline_model_billing_single_record.totals_metrics.autocorr_resid)
 
     # simulating deserialization
     baseline_model_billing_single_record.totals_metrics.autocorr_resid = None
