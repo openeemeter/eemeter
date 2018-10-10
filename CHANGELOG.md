@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* [placheolder]
+
+2.1.7
+-----
+
 * Update so that models built from a single record won't result in error.
 
 2.1.6
