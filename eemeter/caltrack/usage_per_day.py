@@ -674,7 +674,7 @@ def caltrack_usage_per_day_predict(
         )
 
         return ModelPrediction(
-            pd.DataFrame(empty_columns, index=prediction_index),
+            pd.DataFrame(empty_columns),
             design_matrix=pd.DataFrame(),
             warnings=predict_warnings,
         )
