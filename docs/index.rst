@@ -48,7 +48,7 @@ help in implementing a CalTRACK compliant analysis (see :ref:`caltrack-complianc
 It contains a modular set of of functions, parameters, and classes which can be
 configured to run the CalTRACK methods and close variants.
 
-.. _CalTRACK Methods: https://caltrack.org/
+.. _CalTRACK Methods: http://caltrack.org/
 
 .. note::
 
