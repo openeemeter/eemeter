@@ -1940,3 +1940,22 @@ def test_caltrack_usage_per_day_predict_empty(prediction_index, temperature_data
         "predicted_usage",
     ]
     assert round(prediction.result.predicted_usage.sum(), 2) == 0
+
+
+def test_caltrack_usage_per_day_temp_empty(prediction_index, temperature_data):
+    prediction = caltrack_usage_per_day_predict(
+        "intercept_only",
+        {"intercept": 1},
+        prediction_index,
+        temperature_data[:0],
+        with_disaggregated=True,
+        with_design_matrix=True,
+    )
+    assert sorted(prediction.result.columns) == [
+        "base_load",
+        "cooling_load",
+        "heating_load",
+        "predicted_usage",
+    ]
+    assert round(prediction.result.predicted_usage.sum(), 2) == 0
+    assert prediction.result.predicted_usage.shape[0] == 0

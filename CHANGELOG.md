@@ -4,7 +4,12 @@ Changelog
 Development
 -----------
 
-* [placheolder]
+* [placeholder]
+
+2.1.8
+-----
+
+* Update so that models built with empty temperature data won't result in error.
 
 2.1.7
 -----
