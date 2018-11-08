@@ -283,6 +283,7 @@ def test_modeled_savings_cdd_hdd_daily(
     assert round(results.modeled_savings.sum(), 2) == 168.58
     assert round(error_bands["FSU Error Band: Baseline"], 2) == 601.52
     assert round(error_bands["FSU Error Band: Reporting"], 2) == 534.78
+    assert round(error_bands["FSU Error Band"], 2) == 804.87
 
 
 def test_modeled_savings_cdd_hdd_daily_hourly_degree_days(
@@ -307,6 +308,7 @@ def test_modeled_savings_cdd_hdd_daily_hourly_degree_days(
     assert round(results.modeled_savings.sum(), 2) == 168.58
     assert round(error_bands["FSU Error Band: Baseline"], 2) == 601.52
     assert round(error_bands["FSU Error Band: Reporting"], 2) == 534.78
+    assert round(error_bands["FSU Error Band"], 2) == 804.87
 
 
 def test_modeled_savings_cdd_hdd_daily_baseline_model_no_params(
@@ -371,6 +373,7 @@ def test_modeled_savings_cdd_hdd_daily_with_disaggregated(
     ]
     assert round(error_bands["FSU Error Band: Baseline"], 2) == 601.52
     assert round(error_bands["FSU Error Band: Reporting"], 2) == 534.78
+    assert round(error_bands["FSU Error Band"], 2) == 804.87
 
 
 def test_modeled_savings_daily_empty_temperature_data(

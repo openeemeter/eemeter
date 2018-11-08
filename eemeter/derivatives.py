@@ -329,6 +329,8 @@ def _compute_error_bands_modeled_savings(
     return {
         "FSU Error Band: Baseline": fsu_error_band_baseline,
         "FSU Error Band: Reporting": fsu_error_band_reporting,
+        "FSU Error Band": (fsu_error_band_baseline ** 2 + fsu_error_band_reporting ** 2)
+        ** 0.5,
     }
 
 
