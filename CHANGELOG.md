@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* [placeholder]
+
+2.2.0
+-----
+
 * Add fractional savings uncertainty to modeled savings derivatives.
 
 2.1.8
