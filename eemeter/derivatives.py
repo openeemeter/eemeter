@@ -62,7 +62,9 @@ def _compute_fsu_error(
     return fsu_error_band
 
 
-def _compute_error_bands(totals_metrics, results, interval, confidence_level):
+def _compute_error_bands_metered_savings(
+    totals_metrics, results, interval, confidence_level
+):
     num_parameters = totals_metrics.num_parameters
 
     base_obs = totals_metrics.observed_length
@@ -77,7 +79,6 @@ def _compute_error_bands(totals_metrics, results, interval, confidence_level):
 
     base_avg = totals_metrics.observed_mean
     post_avg = results["reporting_observed"].mean()
-    post_prediction_avg = results["counterfactual_usage"].mean()
 
     base_var = totals_metrics.observed_variance
 
@@ -233,7 +234,7 @@ def metered_savings(
     # and a two-tailed confidence level.
     error_bands = None
     if model_type == "usage_per_day":  # has totals_metrics
-        error_bands = _compute_error_bands(
+        error_bands = _compute_error_bands_metered_savings(
             baseline_model.totals_metrics,
             results,
             baseline_model.interval,
@@ -242,12 +243,102 @@ def metered_savings(
     return results, error_bands
 
 
+def _compute_error_bands_modeled_savings(
+    totals_metrics_baseline,
+    totals_metrics_reporting,
+    results,
+    interval_baseline,
+    interval_reporting,
+    confidence_level,
+):
+    num_parameters_baseline = totals_metrics_baseline.num_parameters
+    num_parameters_reporting = totals_metrics_reporting.num_parameters
+
+    base_obs_baseline = totals_metrics_baseline.observed_length
+    base_obs_reporting = totals_metrics_reporting.observed_length
+    post_obs_baseline = results["modeled_baseline_usage"].dropna().shape[0]
+    post_obs_reporting = results["modeled_reporting_usage"].dropna().shape[0]
+
+    degrees_of_freedom_baseline = base_obs_baseline - num_parameters_baseline
+    degrees_of_freedom_reporting = base_obs_reporting - num_parameters_reporting
+    single_tailed_confidence_level = 1 - ((1 - confidence_level) / 2)
+    t_stat_baseline = t.ppf(single_tailed_confidence_level, degrees_of_freedom_baseline)
+    t_stat_reporting = t.ppf(
+        single_tailed_confidence_level, degrees_of_freedom_reporting
+    )
+
+    rmse_base_residuals_baseline = totals_metrics_baseline.rmse_adj
+    rmse_base_residuals_reporting = totals_metrics_reporting.rmse_adj
+    autocorr_resid_baseline = totals_metrics_baseline.autocorr_resid
+    autocorr_resid_reporting = totals_metrics_reporting.autocorr_resid
+
+    base_avg_baseline = totals_metrics_baseline.observed_mean
+    base_avg_reporting = totals_metrics_reporting.observed_mean
+
+    # these result in division by zero error for fsu_error_band
+    if (
+        post_obs_baseline == 0
+        or autocorr_resid_baseline is None
+        or abs(autocorr_resid_baseline) == 1
+        or base_obs_baseline == 0
+        or base_avg_baseline == 0
+        or post_obs_reporting == 0
+        or autocorr_resid_reporting is None
+        or abs(autocorr_resid_reporting) == 1
+        or base_obs_reporting == 0
+        or base_avg_reporting == 0
+    ):
+        return None
+
+    nprime_baseline = (
+        base_obs_baseline
+        * (1 - autocorr_resid_baseline)
+        / (1 + autocorr_resid_baseline)
+    )
+    nprime_reporting = (
+        base_obs_reporting
+        * (1 - autocorr_resid_reporting)
+        / (1 + autocorr_resid_reporting)
+    )
+
+    total_base_energy_baseline = base_avg_baseline * base_obs_baseline
+    total_base_energy_reporting = base_avg_reporting * base_obs_reporting
+
+    fsu_error_band_baseline = _compute_fsu_error(
+        t_stat_baseline,
+        interval_baseline,
+        post_obs_baseline,
+        total_base_energy_baseline,
+        rmse_base_residuals_baseline,
+        base_avg_baseline,
+        base_obs_baseline,
+        nprime_baseline,
+    )
+
+    fsu_error_band_reporting = _compute_fsu_error(
+        t_stat_reporting,
+        interval_reporting,
+        post_obs_reporting,
+        total_base_energy_reporting,
+        rmse_base_residuals_reporting,
+        base_avg_reporting,
+        base_obs_reporting,
+        nprime_reporting,
+    )
+
+    return {
+        "FSU Error Band: Baseline": fsu_error_band_baseline,
+        "FSU Error Band: Reporting": fsu_error_band_reporting,
+    }
+
+
 def modeled_savings(
     baseline_model,
     reporting_model,
     result_index,
     temperature_data,
     with_disaggregated=False,
+    confidence_level=0.90,
     predict_kwargs=None,
 ):
     """ Compute modeled savings, i.e., savings in which baseline and reporting
@@ -267,7 +358,11 @@ def modeled_savings(
         period.
     with_disaggregated : :any:`bool`, optional
         If True, calculate modeled disaggregated usage estimates and savings.
+    confidence_level : :any:`float`, optional
+        The two-tailed confidence level used to calculate the t-statistic used
+        in calculation of the error bands.
 
+        Ignored if not computing error bands.
     predict_kwargs : :any:`dict`, optional
         Extra kwargs to pass to the baseline_model.predict and
         reporting_model.predict methods.
@@ -294,6 +389,11 @@ def modeled_savings(
         - ``modeled_base_load_savings``
         - ``modeled_cooling_load_savings``
         - ``modeled_heating_load_savings``
+    error_bands : :any:`dict`, optional
+        If baseline_model and reporting_model are instances of
+        CalTRACKUsagePerDayModelResults, will also return a dictionary of
+        FSU and error bands for the aggregated energy savings over the
+        normal year period.
     """
     prediction_index = result_index
 
@@ -375,4 +475,15 @@ def modeled_savings(
         )
 
     results = results.dropna().reindex(results.index)  # carry NaNs
-    return results
+
+    error_bands = None
+    if model_type == "usage_per_day":  # has totals_metrics
+        error_bands = _compute_error_bands_modeled_savings(
+            baseline_model.totals_metrics,
+            reporting_model.totals_metrics,
+            results,
+            baseline_model.interval,
+            reporting_model.interval,
+            confidence_level,
+        )
+    return results, error_bands

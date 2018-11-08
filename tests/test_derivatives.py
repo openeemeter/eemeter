@@ -228,6 +228,7 @@ def test_metered_savings_cdd_hdd_daily_hourly_degree_days(
         "metered_savings",
     ]
     assert round(results.metered_savings.sum(), 2) == 1571.28
+    assert round(error_bands['FSU Error Band'], 2) == 601.52
 
 
 def test_metered_savings_cdd_hdd_no_params(
@@ -258,6 +259,7 @@ def test_metered_savings_cdd_hdd_daily_with_disaggregated(
         "metered_savings",
         "reporting_observed",
     ]
+    assert round(error_bands['FSU Error Band'], 2) == 601.52
 
 
 def test_modeled_savings_cdd_hdd_daily(
@@ -267,7 +269,7 @@ def test_modeled_savings_cdd_hdd_daily(
     reporting_temperature_data,
 ):
     # using reporting data for convenience, but intention is to use normal data
-    results = modeled_savings(
+    results, error_bands = modeled_savings(
         baseline_model_daily,
         reporting_model_daily,
         reporting_meter_data_daily.index,
@@ -279,6 +281,8 @@ def test_modeled_savings_cdd_hdd_daily(
         "modeled_savings",
     ]
     assert round(results.modeled_savings.sum(), 2) == 168.58
+    assert round(error_bands['FSU Error Band: Baseline'], 2) == 601.52
+    assert round(error_bands['FSU Error Band: Reporting'], 2) == 534.78
 
 
 def test_modeled_savings_cdd_hdd_daily_hourly_degree_days(
@@ -288,7 +292,7 @@ def test_modeled_savings_cdd_hdd_daily_hourly_degree_days(
     reporting_temperature_data,
 ):
     # using reporting data for convenience, but intention is to use normal data
-    results = modeled_savings(
+    results, error_bands = modeled_savings(
         baseline_model_daily,
         reporting_model_daily,
         reporting_meter_data_daily.index,
@@ -301,6 +305,8 @@ def test_modeled_savings_cdd_hdd_daily_hourly_degree_days(
         "modeled_savings",
     ]
     assert round(results.modeled_savings.sum(), 2) == 168.58
+    assert round(error_bands['FSU Error Band: Baseline'], 2) == 601.52
+    assert round(error_bands['FSU Error Band: Reporting'], 2) == 534.78
 
 
 def test_modeled_savings_cdd_hdd_daily_baseline_model_no_params(
@@ -341,9 +347,8 @@ def test_modeled_savings_cdd_hdd_daily_with_disaggregated(
     reporting_meter_data_daily,
     reporting_temperature_data,
 ):
-
     # using reporting data for convenience, but intention is to use normal data
-    results = modeled_savings(
+    results, error_bands = modeled_savings(
         baseline_model_daily,
         reporting_model_daily,
         reporting_meter_data_daily.index,
@@ -364,6 +369,8 @@ def test_modeled_savings_cdd_hdd_daily_with_disaggregated(
         "modeled_reporting_usage",
         "modeled_savings",
     ]
+    assert round(error_bands['FSU Error Band: Baseline'], 2) == 601.52
+    assert round(error_bands['FSU Error Band: Reporting'], 2) == 534.78
 
 
 def test_modeled_savings_daily_empty_temperature_data(
@@ -375,7 +382,7 @@ def test_modeled_savings_daily_empty_temperature_data(
     meter_data_index = temperature_data.resample("D").sum().index
 
     # using reporting data for convenience, but intention is to use normal data
-    results = modeled_savings(
+    results, error_bands = modeled_savings(
         baseline_model_daily, reporting_model_daily, meter_data_index, temperature_data
     )
     assert results.shape == (0, 3)
@@ -384,6 +391,7 @@ def test_modeled_savings_daily_empty_temperature_data(
         "modeled_reporting_usage",
         "modeled_savings",
     ]
+    assert error_bands is None
 
 
 @pytest.fixture
@@ -469,6 +477,7 @@ def test_metered_savings_cdd_hdd_hourly(
         "metered_savings",
     ]
     assert round(results.metered_savings.sum(), 2) == -428.63
+    assert error_bands is None
 
 
 def test_modeled_savings_cdd_hdd_hourly(
@@ -490,6 +499,7 @@ def test_modeled_savings_cdd_hdd_hourly(
         "modeled_savings",
     ]
     assert round(results.modeled_savings.sum(), 2) == 20.76
+    assert error_bands is None
 
 
 @pytest.fixture
@@ -548,3 +558,4 @@ def test_metered_savings_model_single_record(
         reporting_meter_data_billing,
         reporting_temperature_data,
     )
+    assert error_bands is None
