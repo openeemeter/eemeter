@@ -19,14 +19,14 @@ def _compute_ols_error(
     ols_model_agg_error = (
         (t_stat * rmse_base_residuals * post_obs)
         / (base_obs ** 0.5)
-        * (1 + ((base_avg - post_avg) ** 2 / base_var)) ** 0.5
+        * (1.0 + ((base_avg - post_avg) ** 2.0 / base_var)) ** 0.5
     )
 
     ols_noise_agg_error = (
         t_stat * rmse_base_residuals * (post_obs * base_obs / nprime) ** 0.5
     )
 
-    ols_total_agg_error = (ols_model_agg_error ** 2 + ols_noise_agg_error ** 2) ** 0.5
+    ols_total_agg_error = (ols_model_agg_error ** 2.0 + ols_noise_agg_error ** 2.0) ** 0.5
 
     return ols_total_agg_error, ols_model_agg_error, ols_noise_agg_error
 
@@ -45,41 +45,42 @@ def _compute_fsu_error(
         a_coeff = -0.00022
         b_coeff = 0.03306
         c_coeff = 0.94054
-        months_reporting = post_obs
+        months_reporting = float(post_obs)
     else:  # daily
         a_coeff = -0.00024
         b_coeff = 0.03535
         c_coeff = 1.00286
-        months_reporting = post_obs / 30
+        months_reporting = float(post_obs) / 30.0
 
     fsu_error_band = total_base_energy * (
         t_stat
-        * (a_coeff * months_reporting ** 2 + b_coeff * months_reporting + c_coeff)
+        * (a_coeff * months_reporting ** 2.0 + b_coeff * months_reporting + c_coeff)
         * (rmse_base_residuals / base_avg)
-        * ((base_obs / nprime) * (1 + (2 / nprime)) * (1 / post_obs)) ** 0.5
+        * ((base_obs / nprime) * (1.0 + (2.0 / nprime)) * (1.0 / post_obs)) ** 0.5
     )
 
     return fsu_error_band
 
 
-def _compute_error_bands(totals_metrics, results, interval, confidence_level):
-    num_parameters = totals_metrics.num_parameters
+def _compute_error_bands_metered_savings(
+    totals_metrics, results, interval, confidence_level
+):
+    num_parameters = float(totals_metrics.num_parameters)
 
-    base_obs = totals_metrics.observed_length
-    post_obs = results["reporting_observed"].dropna().shape[0]
+    base_obs = float(totals_metrics.observed_length)
+    post_obs = float(results["reporting_observed"].dropna().shape[0])
 
-    degrees_of_freedom = base_obs - num_parameters
+    degrees_of_freedom = float(base_obs - num_parameters)
     single_tailed_confidence_level = 1 - ((1 - confidence_level) / 2)
     t_stat = t.ppf(single_tailed_confidence_level, degrees_of_freedom)
 
-    rmse_base_residuals = totals_metrics.rmse_adj
+    rmse_base_residuals = float(totals_metrics.rmse_adj)
     autocorr_resid = totals_metrics.autocorr_resid
 
-    base_avg = totals_metrics.observed_mean
-    post_avg = results["reporting_observed"].mean()
-    post_prediction_avg = results["counterfactual_usage"].mean()
+    base_avg = float(totals_metrics.observed_mean)
+    post_avg = float(results["reporting_observed"].mean())
 
-    base_var = totals_metrics.observed_variance
+    base_var = float(totals_metrics.observed_variance)
 
     # these result in division by zero error for fsu_error_band
     if (
@@ -91,9 +92,11 @@ def _compute_error_bands(totals_metrics, results, interval, confidence_level):
     ):
         return None
 
-    nprime = base_obs * (1 - autocorr_resid) / (1 + autocorr_resid)
+    autocorr_resid = float(autocorr_resid)
 
-    total_base_energy = base_avg * base_obs
+    nprime = float(base_obs * (1 - autocorr_resid) / (1 + autocorr_resid))
+
+    total_base_energy = float(base_avg * base_obs)
 
     ols_total_agg_error, ols_model_agg_error, ols_noise_agg_error = _compute_ols_error(
         t_stat,
@@ -233,7 +236,7 @@ def metered_savings(
     # and a two-tailed confidence level.
     error_bands = None
     if model_type == "usage_per_day":  # has totals_metrics
-        error_bands = _compute_error_bands(
+        error_bands = _compute_error_bands_metered_savings(
             baseline_model.totals_metrics,
             results,
             baseline_model.interval,
@@ -242,12 +245,107 @@ def metered_savings(
     return results, error_bands
 
 
+def _compute_error_bands_modeled_savings(
+    totals_metrics_baseline,
+    totals_metrics_reporting,
+    results,
+    interval_baseline,
+    interval_reporting,
+    confidence_level,
+):
+    num_parameters_baseline = float(totals_metrics_baseline.num_parameters)
+    num_parameters_reporting = float(totals_metrics_reporting.num_parameters)
+
+    base_obs_baseline = float(totals_metrics_baseline.observed_length)
+    base_obs_reporting = float(totals_metrics_reporting.observed_length)
+    post_obs_baseline = float(results["modeled_baseline_usage"].dropna().shape[0])
+    post_obs_reporting = float(results["modeled_reporting_usage"].dropna().shape[0])
+
+    degrees_of_freedom_baseline = float(base_obs_baseline - num_parameters_baseline)
+    degrees_of_freedom_reporting = float(base_obs_reporting - num_parameters_reporting)
+    single_tailed_confidence_level = 1 - ((1 - confidence_level) / 2)
+    t_stat_baseline = t.ppf(single_tailed_confidence_level, degrees_of_freedom_baseline)
+    t_stat_reporting = t.ppf(
+        single_tailed_confidence_level, degrees_of_freedom_reporting
+    )
+
+    rmse_base_residuals_baseline = float(totals_metrics_baseline.rmse_adj)
+    rmse_base_residuals_reporting = float(totals_metrics_reporting.rmse_adj)
+    autocorr_resid_baseline = totals_metrics_baseline.autocorr_resid
+    autocorr_resid_reporting = totals_metrics_reporting.autocorr_resid
+
+    base_avg_baseline = float(totals_metrics_baseline.observed_mean)
+    base_avg_reporting = float(totals_metrics_reporting.observed_mean)
+
+    # these result in division by zero error for fsu_error_band
+    if (
+        post_obs_baseline == 0
+        or autocorr_resid_baseline is None
+        or abs(autocorr_resid_baseline) == 1
+        or base_obs_baseline == 0
+        or base_avg_baseline == 0
+        or post_obs_reporting == 0
+        or autocorr_resid_reporting is None
+        or abs(autocorr_resid_reporting) == 1
+        or base_obs_reporting == 0
+        or base_avg_reporting == 0
+    ):
+        return None
+
+    autocorr_resid_baseline = float(autocorr_resid_baseline)
+    autocorr_resid_reporting = float(autocorr_resid_reporting)
+
+    nprime_baseline = float(
+        base_obs_baseline
+        * (1 - autocorr_resid_baseline)
+        / (1 + autocorr_resid_baseline)
+    )
+    nprime_reporting = float(
+        base_obs_reporting
+        * (1 - autocorr_resid_reporting)
+        / (1 + autocorr_resid_reporting)
+    )
+
+    total_base_energy_baseline = float(base_avg_baseline * base_obs_baseline)
+    total_base_energy_reporting = float(base_avg_reporting * base_obs_reporting)
+
+    fsu_error_band_baseline = _compute_fsu_error(
+        t_stat_baseline,
+        interval_baseline,
+        post_obs_baseline,
+        total_base_energy_baseline,
+        rmse_base_residuals_baseline,
+        base_avg_baseline,
+        base_obs_baseline,
+        nprime_baseline,
+    )
+
+    fsu_error_band_reporting = _compute_fsu_error(
+        t_stat_reporting,
+        interval_reporting,
+        post_obs_reporting,
+        total_base_energy_reporting,
+        rmse_base_residuals_reporting,
+        base_avg_reporting,
+        base_obs_reporting,
+        nprime_reporting,
+    )
+
+    return {
+        "FSU Error Band: Baseline": fsu_error_band_baseline,
+        "FSU Error Band: Reporting": fsu_error_band_reporting,
+        "FSU Error Band": (fsu_error_band_baseline ** 2.0 + fsu_error_band_reporting ** 2.0)
+        ** 0.5,
+    }
+
+
 def modeled_savings(
     baseline_model,
     reporting_model,
     result_index,
     temperature_data,
     with_disaggregated=False,
+    confidence_level=0.90,
     predict_kwargs=None,
 ):
     """ Compute modeled savings, i.e., savings in which baseline and reporting
@@ -267,7 +365,11 @@ def modeled_savings(
         period.
     with_disaggregated : :any:`bool`, optional
         If True, calculate modeled disaggregated usage estimates and savings.
+    confidence_level : :any:`float`, optional
+        The two-tailed confidence level used to calculate the t-statistic used
+        in calculation of the error bands.
 
+        Ignored if not computing error bands.
     predict_kwargs : :any:`dict`, optional
         Extra kwargs to pass to the baseline_model.predict and
         reporting_model.predict methods.
@@ -294,6 +396,11 @@ def modeled_savings(
         - ``modeled_base_load_savings``
         - ``modeled_cooling_load_savings``
         - ``modeled_heating_load_savings``
+    error_bands : :any:`dict`, optional
+        If baseline_model and reporting_model are instances of
+        CalTRACKUsagePerDayModelResults, will also return a dictionary of
+        FSU and error bands for the aggregated energy savings over the
+        normal year period.
     """
     prediction_index = result_index
 
@@ -375,4 +482,15 @@ def modeled_savings(
         )
 
     results = results.dropna().reindex(results.index)  # carry NaNs
-    return results
+
+    error_bands = None
+    if model_type == "usage_per_day":  # has totals_metrics
+        error_bands = _compute_error_bands_modeled_savings(
+            baseline_model.totals_metrics,
+            reporting_model.totals_metrics,
+            results,
+            baseline_model.interval,
+            reporting_model.interval,
+            confidence_level,
+        )
+    return results, error_bands
