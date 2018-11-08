@@ -75,7 +75,7 @@ def _compute_error_bands_metered_savings(
     t_stat = t.ppf(single_tailed_confidence_level, degrees_of_freedom)
 
     rmse_base_residuals = float(totals_metrics.rmse_adj)
-    autocorr_resid = float(totals_metrics.autocorr_resid)
+    autocorr_resid = totals_metrics.autocorr_resid
 
     base_avg = float(totals_metrics.observed_mean)
     post_avg = float(results["reporting_observed"].mean())
@@ -91,6 +91,8 @@ def _compute_error_bands_metered_savings(
         or base_avg == 0
     ):
         return None
+
+    autocorr_resid = float(autocorr_resid)
 
     nprime = float(base_obs * (1 - autocorr_resid) / (1 + autocorr_resid))
 
@@ -269,8 +271,8 @@ def _compute_error_bands_modeled_savings(
 
     rmse_base_residuals_baseline = float(totals_metrics_baseline.rmse_adj)
     rmse_base_residuals_reporting = float(totals_metrics_reporting.rmse_adj)
-    autocorr_resid_baseline = float(totals_metrics_baseline.autocorr_resid)
-    autocorr_resid_reporting = float(totals_metrics_reporting.autocorr_resid)
+    autocorr_resid_baseline = totals_metrics_baseline.autocorr_resid
+    autocorr_resid_reporting = totals_metrics_reporting.autocorr_resid
 
     base_avg_baseline = float(totals_metrics_baseline.observed_mean)
     base_avg_reporting = float(totals_metrics_reporting.observed_mean)
@@ -289,6 +291,9 @@ def _compute_error_bands_modeled_savings(
         or base_avg_reporting == 0
     ):
         return None
+
+    autocorr_resid_baseline = float(autocorr_resid_baseline)
+    autocorr_resid_reporting = float(autocorr_resid_reporting)
 
     nprime_baseline = float(
         base_obs_baseline
