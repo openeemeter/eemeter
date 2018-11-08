@@ -490,7 +490,7 @@ def test_modeled_savings_cdd_hdd_hourly(
     reporting_temperature_data,
 ):
     # using reporting data for convenience, but intention is to use normal data
-    results = modeled_savings(
+    results, error_bands = modeled_savings(
         baseline_model_hourly,
         reporting_model_hourly,
         reporting_meter_data_hourly.index,
