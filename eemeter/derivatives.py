@@ -70,7 +70,7 @@ def _compute_error_bands_metered_savings(
     num_parameters = float(totals_metrics.num_parameters)
 
     base_obs = float(totals_metrics.observed_length)
-    if interval.startswith("billing") & len(results.dropna().index) > 0:
+    if (interval.startswith("billing")) & (len(results.dropna().index) > 0):
         post_obs = float(round((results.index[-1] - results.index[0]).days / 30.0))
     else:
         post_obs = float(results["reporting_observed"].dropna().shape[0])
@@ -264,14 +264,14 @@ def _compute_error_bands_modeled_savings(
     base_obs_baseline = float(totals_metrics_baseline.observed_length)
     base_obs_reporting = float(totals_metrics_reporting.observed_length)
 
-    if interval_baseline.startswith("billing") & len(results.dropna().index) > 0:
+    if (interval_baseline.startswith("billing")) & (len(results.dropna().index) > 0):
         post_obs_baseline = float(
             round((results.index[-1] - results.index[0]).days / 30.0)
         )
     else:
         post_obs_baseline = float(results["modeled_baseline_usage"].dropna().shape[0])
 
-    if interval_reporting.startswith("billing") & len(results.dropna().index) > 0:
+    if (interval_reporting.startswith("billing")) & (len(results.dropna().index) > 0):
         post_obs_reporting = float(
             round((results.index[-1] - results.index[0]).days / 30.0)
         )

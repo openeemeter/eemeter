@@ -551,6 +551,7 @@ def test_modeled_savings_cdd_hdd_billing(
         "FSU Error Band: Baseline",
         "FSU Error Band: Reporting",
     ]
+    assert round(error_bands["FSU Error Band"], 2) == 156.89
 
 
 @pytest.fixture
