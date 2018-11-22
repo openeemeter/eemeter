@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* [placeholder]
+* Fix bug in fractional savings uncertainty calculations using billing data.
 
 2.2.0
 -----
