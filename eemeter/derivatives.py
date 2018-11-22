@@ -26,7 +26,9 @@ def _compute_ols_error(
         t_stat * rmse_base_residuals * (post_obs * base_obs / nprime) ** 0.5
     )
 
-    ols_total_agg_error = (ols_model_agg_error ** 2.0 + ols_noise_agg_error ** 2.0) ** 0.5
+    ols_total_agg_error = (
+        ols_model_agg_error ** 2.0 + ols_noise_agg_error ** 2.0
+    ) ** 0.5
 
     return ols_total_agg_error, ols_model_agg_error, ols_noise_agg_error
 
@@ -261,14 +263,18 @@ def _compute_error_bands_modeled_savings(
 
     base_obs_baseline = float(totals_metrics_baseline.observed_length)
     base_obs_reporting = float(totals_metrics_reporting.observed_length)
-    
+
     if interval_baseline.startswith("billing") & len(results.dropna().index) > 0:
-        post_obs_baseline = float(round((results.index[-1] - results.index[0]).days / 30.0))
+        post_obs_baseline = float(
+            round((results.index[-1] - results.index[0]).days / 30.0)
+        )
     else:
         post_obs_baseline = float(results["modeled_baseline_usage"].dropna().shape[0])
-    
+
     if interval_reporting.startswith("billing") & len(results.dropna().index) > 0:
-        post_obs_reporting = float(round((results.index[-1] - results.index[0]).days / 30.0))
+        post_obs_reporting = float(
+            round((results.index[-1] - results.index[0]).days / 30.0)
+        )
     else:
         post_obs_reporting = float(results["modeled_reporting_usage"].dropna().shape[0])
 
@@ -345,7 +351,9 @@ def _compute_error_bands_modeled_savings(
     return {
         "FSU Error Band: Baseline": fsu_error_band_baseline,
         "FSU Error Band: Reporting": fsu_error_band_reporting,
-        "FSU Error Band": (fsu_error_band_baseline ** 2.0 + fsu_error_band_reporting ** 2.0)
+        "FSU Error Band": (
+            fsu_error_band_baseline ** 2.0 + fsu_error_band_reporting ** 2.0
+        )
         ** 0.5,
     }
 

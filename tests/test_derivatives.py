@@ -531,16 +531,14 @@ def normal_year_temperature_data():
 
 
 def test_modeled_savings_cdd_hdd_billing(
-    baseline_model_billing,
-    reporting_model_billing,
-    normal_year_temperature_data
+    baseline_model_billing, reporting_model_billing, normal_year_temperature_data
 ):
 
     results, error_bands = modeled_savings(
         baseline_model_billing,
         reporting_model_billing,
         pd.date_range("2015-01-01", freq="D", periods=365, tz="UTC"),
-        normal_year_temperature_data
+        normal_year_temperature_data,
     )
     assert list(results.columns) == [
         "modeled_baseline_usage",
