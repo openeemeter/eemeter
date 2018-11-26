@@ -127,6 +127,24 @@ def baseline_model_billing(il_electricity_cdd_hdd_billing_monthly):
 
 
 @pytest.fixture
+def reporting_model_billing(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    meter_data.value = meter_data.value - 50
+    temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]
+    blackout_start_date = il_electricity_cdd_hdd_billing_monthly["blackout_start_date"]
+    baseline_meter_data, warnings = get_baseline_data(
+        meter_data, end=blackout_start_date
+    )
+    baseline_data = create_caltrack_billing_design_matrix(
+        baseline_meter_data, temperature_data
+    )
+    model_results = fit_caltrack_usage_per_day_model(
+        baseline_data, use_billing_presets=True, weights_col="n_days_kept"
+    )
+    return model_results
+
+
+@pytest.fixture
 def reporting_meter_data_billing():
     index = pd.date_range("2011-01-01", freq="MS", periods=13, tz="UTC")
     return pd.DataFrame({"value": 1}, index=index)
@@ -503,6 +521,37 @@ def test_modeled_savings_cdd_hdd_hourly(
     ]
     assert round(results.modeled_savings.sum(), 2) == 20.76
     assert error_bands is None
+
+
+@pytest.fixture
+def normal_year_temperature_data():
+    index = pd.date_range("2015-01-01", freq="D", periods=365, tz="UTC")
+    np.random.seed(0)
+    return pd.Series(np.random.rand(365) * 30 + 45, index=index).asfreq("H").ffill()
+
+
+def test_modeled_savings_cdd_hdd_billing(
+    baseline_model_billing, reporting_model_billing, normal_year_temperature_data
+):
+
+    results, error_bands = modeled_savings(
+        baseline_model_billing,
+        reporting_model_billing,
+        pd.date_range("2015-01-01", freq="D", periods=365, tz="UTC"),
+        normal_year_temperature_data,
+    )
+    assert list(results.columns) == [
+        "modeled_baseline_usage",
+        "modeled_reporting_usage",
+        "modeled_savings",
+    ]
+    assert round(results.modeled_savings.sum(), 2) == 587.44
+    assert sorted(error_bands.keys()) == [
+        "FSU Error Band",
+        "FSU Error Band: Baseline",
+        "FSU Error Band: Reporting",
+    ]
+    assert round(error_bands["FSU Error Band"], 2) == 156.89
 
 
 @pytest.fixture
