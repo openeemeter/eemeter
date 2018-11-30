@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* [placeholder]
+* Bump requests and jupyter versions (and others).
 
 2.2.1
 -----
