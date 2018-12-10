@@ -1697,13 +1697,12 @@ def test_caltrack_sufficiency_criteria_pass_extreme_value_warning():
     assert warning0.qualified_name == (
         "eemeter.caltrack_sufficiency_criteria.extreme_values_detected"
     )
-    assert warning0.data['n_extreme_values'] == 1
+    assert warning0.data["n_extreme_values"] == 1
     assert data_sufficiency.settings == {
         "num_days": 4,
         "min_fraction_daily_coverage": 0.9,
         "min_fraction_hourly_temperature_coverage_per_period": 0.9,
     }
-
 
 
 def test_caltrack_sufficiency_criteria_fail_no_data():

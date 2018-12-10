@@ -2091,8 +2091,7 @@ def caltrack_sufficiency_criteria(
         non_critical_warnings.append(
             EEMeterWarning(
                 qualified_name=(
-                    "eemeter.caltrack_sufficiency_criteria"
-                    ".extreme_values_detected"
+                    "eemeter.caltrack_sufficiency_criteria" ".extreme_values_detected"
                 ),
                 description=(
                     "Extreme values (greater than (median + (3 * IQR)),"
@@ -2108,7 +2107,6 @@ def caltrack_sufficiency_criteria(
                 },
             )
         )
-
 
     warnings = critical_warnings + non_critical_warnings
 
