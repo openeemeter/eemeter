@@ -1860,7 +1860,6 @@ def caltrack_sufficiency_criteria(
         at ``0.9`` (section 2.2.1.2), and requested_start and requested_end must
         not be None (section 2.2.4).
 
-    TODO: add warning for outliers (CalTrack 2.3.6)
 
     Parameters
     ----------
@@ -2088,6 +2087,7 @@ def caltrack_sufficiency_criteria(
 
     non_critical_warnings = []
     if n_extreme_values > 0:
+        # CalTRACK 2.3.6
         non_critical_warnings.append(
             EEMeterWarning(
                 qualified_name=(
