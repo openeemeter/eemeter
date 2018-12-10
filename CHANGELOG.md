@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* [placeholder]
+* Add warning to `caltrack_sufficiency_criteria` regarding extreme values.
 
 2.2.1
 -----
