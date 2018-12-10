@@ -1860,7 +1860,6 @@ def caltrack_sufficiency_criteria(
         at ``0.9`` (section 2.2.1.2), and requested_start and requested_end must
         not be None (section 2.2.4).
 
-    TODO: add warning for outliers (CalTrack 2.3.6)
 
     Parameters
     ----------
@@ -2004,6 +2003,16 @@ def caltrack_sufficiency_criteria(
     n_valid_temperature_days = int((valid_temperature_rows * row_day_counts).sum())
     n_valid_days = int((valid_rows * row_day_counts).sum())
 
+    median = data_quality.meter_value.median()
+    upper_quantile = data_quality.meter_value.quantile(.75)
+    lower_quantile = data_quality.meter_value.quantile(.25)
+    iqr = upper_quantile - lower_quantile
+    extreme_value_limit = median + (3 * iqr)
+    n_extreme_values = data_quality.meter_value[
+        data_quality.meter_value > extreme_value_limit
+    ].shape[0]
+    max_value = data_quality.meter_value.max()
+
     if n_days_total > 0:
         fraction_valid_meter_value_days = n_valid_meter_value_days / float(n_days_total)
         fraction_valid_temperature_days = n_valid_temperature_days / float(n_days_total)
@@ -2076,7 +2085,30 @@ def caltrack_sufficiency_criteria(
     else:
         status = "PASS"
 
-    warnings = critical_warnings
+    non_critical_warnings = []
+    if n_extreme_values > 0:
+        # CalTRACK 2.3.6
+        non_critical_warnings.append(
+            EEMeterWarning(
+                qualified_name=(
+                    "eemeter.caltrack_sufficiency_criteria" ".extreme_values_detected"
+                ),
+                description=(
+                    "Extreme values (greater than (median + (3 * IQR)),"
+                    " must be flagged for manual review."
+                ),
+                data={
+                    "n_extreme_values": n_extreme_values,
+                    "median": median,
+                    "upper_quantile": upper_quantile,
+                    "lower_quantile": lower_quantile,
+                    "extreme_value_limit": extreme_value_limit,
+                    "max_value": max_value,
+                },
+            )
+        )
+
+    warnings = critical_warnings + non_critical_warnings
 
     return DataSufficiency(
         status=status,

@@ -1670,6 +1670,41 @@ def test_caltrack_sufficiency_criteria_pass():
     }
 
 
+def test_caltrack_sufficiency_criteria_pass_extreme_value_warning():
+    data_quality = pd.DataFrame(
+        {
+            "meter_value": [1, 1, 99999, 1, np.nan],
+            "temperature_not_null": np.ones(5),
+            "temperature_null": np.zeros(5),
+            "start": pd.date_range(start="2016-01-02", periods=5, freq="D", tz="UTC"),
+        }
+    ).set_index("start")
+    requested_start = pd.Timestamp("2016-01-02").tz_localize("UTC").to_pydatetime()
+    requested_end = pd.Timestamp("2016-01-06").tz_localize("UTC")
+    data_sufficiency = caltrack_sufficiency_criteria(
+        data_quality,
+        requested_start,
+        requested_end,
+        num_days=4,
+        min_fraction_daily_coverage=0.9,
+        min_fraction_hourly_temperature_coverage_per_period=0.9,
+    )
+    assert data_sufficiency.status == "PASS"
+    assert data_sufficiency.criteria_name == ("caltrack_sufficiency_criteria")
+    assert len(data_sufficiency.warnings) == 1
+
+    warning0 = data_sufficiency.warnings[0]
+    assert warning0.qualified_name == (
+        "eemeter.caltrack_sufficiency_criteria.extreme_values_detected"
+    )
+    assert warning0.data["n_extreme_values"] == 1
+    assert data_sufficiency.settings == {
+        "num_days": 4,
+        "min_fraction_daily_coverage": 0.9,
+        "min_fraction_hourly_temperature_coverage_per_period": 0.9,
+    }
+
+
 def test_caltrack_sufficiency_criteria_fail_no_data():
     data_quality = pd.DataFrame(
         {
