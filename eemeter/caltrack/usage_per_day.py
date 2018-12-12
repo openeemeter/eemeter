@@ -2011,7 +2011,7 @@ def caltrack_sufficiency_criteria(
     n_extreme_values = data_quality.meter_value[
         data_quality.meter_value > extreme_value_limit
     ].shape[0]
-    max_value = data_quality.meter_value.max()
+    max_value = float(data_quality.meter_value.max())
 
     if n_days_total > 0:
         fraction_valid_meter_value_days = n_valid_meter_value_days / float(n_days_total)

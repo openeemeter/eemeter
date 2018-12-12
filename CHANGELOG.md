@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Change max_value to float so that it can be json serialized even if the input is int64s.
 
 2.2.2
 -----
