@@ -57,6 +57,25 @@ class SegmentModel(object):
         )
         return prediction
 
+    def json(self):
+        """ Return a JSON-serializable representation of this result.
+
+        The output of this function can be converted to a serialized string
+        with :any:`json.dumps`.
+        """
+
+        def _json_or_none(obj):
+            return None if obj is None else obj.json()
+
+        data = {
+            "segment_name": self.segment_name,
+            "model": _json_or_none(self.model),
+            "formula": self.formula,
+            "warnings": [w.json() for w in self.warnings],
+            "model_params": self.model_params,
+        }
+        return data
+
 
 class SegmentedModel(object):
     def __init__(
@@ -112,6 +131,27 @@ class SegmentedModel(object):
         predictions = pd.DataFrame(predictions)
         result = pd.DataFrame({"predicted_usage": predictions.sum(axis=1)})
         return HourlyModelPrediction(result=result)
+
+    def json(self, with_feature_processor=False):
+        """ Return a JSON-serializable representation of this result.
+
+        The output of this function can be converted to a serialized string
+        with :any:`json.dumps`.
+        """
+
+        def _json_or_none(obj):
+            return None if obj is None else obj.json()
+
+        data = {
+            "segment_models": [_json_or_none(m) for m in self.segment_models],
+            "model_lookup": {key: _json_or_none(val) for key, val in self.model_lookup.items()},
+            "prediction_segment_type": self.prediction_segment_type,
+            "prediction_segment_name_mapping": self.prediction_segment_name_mapping,
+            "prediction_feature_processor_kwargs": self.prediction_feature_processor_kwargs,
+        }
+        if with_feature_processor:
+            data["prediction_feature_processor"] = self.prediction_feature_processor
+        return data
 
 
 def filter_zero_weights_feature_processor(segment_name, segment_data):
