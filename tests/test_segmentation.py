@@ -270,5 +270,6 @@ def test_segmented_model_serialized():
         prediction_feature_processor_kwargs=None,
     )
     assert segmented_model.json()['prediction_segment_type'] == "one_month"
+    assert segmented_model.json()['prediction_feature_processor'] == "fake_feature_processor"
     assert json.dumps(segmented_model.json())
 
