@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Add `json()` serialization for `SegmentModel` and `SegmentedModel`.
 
 2.2.3
 -----
