@@ -136,9 +136,6 @@ class SegmentedModel(object):
         with :any:`json.dumps`.
         """
 
-        def _json_or_none(obj):
-            return None if obj is None else obj.json()
-
         data = {
             "segment_models": [_json_or_none(m) for m in self.segment_models],
             "model_lookup": {
