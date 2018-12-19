@@ -257,7 +257,7 @@ def test_segmented_model_serialized():
         warnings=None,
     )
 
-    def fake_feature_processor(segment_name, segment_data): # pragma: no cover
+    def fake_feature_processor(segment_name, segment_data):  # pragma: no cover
         return pd.DataFrame(
             {"a": 1, "b": 1, "weight": segment_data.weight}, index=segment_data.index
         )
