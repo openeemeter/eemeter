@@ -57,6 +57,21 @@ class SegmentModel(object):
         )
         return prediction
 
+    def json(self):
+        """ Return a JSON-serializable representation of this result.
+
+        The output of this function can be converted to a serialized string
+        with :any:`json.dumps`.
+        """
+
+        data = {
+            "segment_name": self.segment_name,
+            "formula": self.formula,
+            "warnings": [w.json() for w in self.warnings],
+            "model_params": self.model_params,
+        }
+        return data
+
 
 class SegmentedModel(object):
     def __init__(
@@ -93,6 +108,7 @@ class SegmentedModel(object):
             self.prediction_segment_type,
             drop_zero_weight_segments=True,
         )
+
         iterator = iterate_segmented_dataset(
             temperature.to_frame("temperature_mean"),
             segmentation=prediction_segmentation,
@@ -112,6 +128,27 @@ class SegmentedModel(object):
         predictions = pd.DataFrame(predictions)
         result = pd.DataFrame({"predicted_usage": predictions.sum(axis=1)})
         return HourlyModelPrediction(result=result)
+
+    def json(self):
+        """ Return a JSON-serializable representation of this result.
+
+        The output of this function can be converted to a serialized string
+        with :any:`json.dumps`.
+        """
+
+        def _json_or_none(obj):
+            return None if obj is None else obj.json()
+
+        data = {
+            "segment_models": [_json_or_none(m) for m in self.segment_models],
+            "model_lookup": {
+                key: _json_or_none(val) for key, val in self.model_lookup.items()
+            },
+            "prediction_segment_type": self.prediction_segment_type,
+            "prediction_segment_name_mapping": self.prediction_segment_name_mapping,
+            "prediction_feature_processor": self.prediction_feature_processor.__name__,
+        }
+        return data
 
 
 def filter_zero_weights_feature_processor(segment_name, segment_data):
@@ -313,24 +350,10 @@ def segment_time_series(index, segment_type="single", drop_zero_weight_segments=
     return segment_weights
 
 
-def fit_segmented_model(
-    segmented_dataset_dict,
-    fit_segment,
-    prediction_segment_type,
-    prediction_segment_name_mapping,
-    prediction_feature_processor,
-    prediction_feature_processor_kwargs,
-):
+def fit_model_segments(segmented_dataset_dict, fit_segment):
     segment_models = [
         fit_segment(segment_name, segment_data)
         for segment_name, segment_data in segmented_dataset_dict.items()
     ]
 
-    segmented_model = SegmentedModel(
-        segment_models,
-        prediction_segment_type=prediction_segment_type,
-        prediction_segment_name_mapping=prediction_segment_name_mapping,
-        prediction_feature_processor=prediction_feature_processor,
-        prediction_feature_processor_kwargs=prediction_feature_processor_kwargs,
-    )
-    return segmented_model
+    return segment_models

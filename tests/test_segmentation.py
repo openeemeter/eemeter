@@ -17,6 +17,7 @@
    limitations under the License.
 
 """
+import json
 import numpy as np
 import pandas as pd
 import pytest
@@ -231,3 +232,46 @@ def test_segmented_model():
     temps = pd.Series(np.linspace(0, 100, 24 * 50), index=index)
     prediction = segmented_model.predict(temps.index, temps).result.predicted_usage
     assert prediction.sum() == 1488.0
+
+
+def test_segment_model_serialized():
+    segment_model = SegmentModel(
+        segment_name="jan",
+        model=None,
+        formula="meter_value ~ a + b - 1",
+        model_params={"a": 1, "b": 1},
+        warnings=None,
+    )
+    assert segment_model.json()["formula"] == "meter_value ~ a + b - 1"
+    assert segment_model.json()["model_params"] == {"a": 1, "b": 1}
+    assert segment_model.json()["warnings"] == []
+    assert json.dumps(segment_model.json())
+
+
+def test_segmented_model_serialized():
+    segment_model = SegmentModel(
+        segment_name="jan",
+        model=None,
+        formula="meter_value ~ a + b - 1",
+        model_params={"a": 1, "b": 1},
+        warnings=None,
+    )
+
+    def fake_feature_processor(segment_name, segment_data):  # pragma: no cover
+        return pd.DataFrame(
+            {"a": 1, "b": 1, "weight": segment_data.weight}, index=segment_data.index
+        )
+
+    segmented_model = SegmentedModel(
+        segment_models=[segment_model],
+        prediction_segment_type="one_month",
+        prediction_segment_name_mapping=None,
+        prediction_feature_processor=fake_feature_processor,
+        prediction_feature_processor_kwargs=None,
+    )
+    assert segmented_model.json()["prediction_segment_type"] == "one_month"
+    assert (
+        segmented_model.json()["prediction_feature_processor"]
+        == "fake_feature_processor"
+    )
+    assert json.dumps(segmented_model.json())

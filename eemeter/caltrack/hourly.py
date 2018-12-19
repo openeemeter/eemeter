@@ -25,7 +25,7 @@ from ..features import (
     compute_occupancy_feature,
     merge_features,
 )
-from ..segmentation import SegmentModel, fit_segmented_model
+from ..segmentation import SegmentModel, SegmentedModel, fit_model_segments
 
 
 __all__ = (
@@ -34,6 +34,51 @@ __all__ = (
     "fit_caltrack_hourly_model_segment",
     "fit_caltrack_hourly_model",
 )
+
+
+class CalTRACKHourlyModel(SegmentedModel):
+    def __init__(self, segment_models, occupancy_lookup, temperature_bins):
+
+        self.occupancy_lookup = occupancy_lookup
+        self.temperature_bins = temperature_bins
+        super(CalTRACKHourlyModel, self).__init__(
+            segment_models=segment_models,
+            prediction_segment_type="one_month",
+            prediction_segment_name_mapping={
+                "jan": "dec-jan-feb-weighted",
+                "feb": "jan-feb-mar-weighted",
+                "mar": "feb-mar-apr-weighted",
+                "apr": "mar-apr-may-weighted",
+                "may": "apr-may-jun-weighted",
+                "jun": "may-jun-jul-weighted",
+                "jul": "jun-jul-aug-weighted",
+                "aug": "jul-aug-sep-weighted",
+                "sep": "aug-sep-oct-weighted",
+                "oct": "sep-oct-nov-weighted",
+                "nov": "oct-nov-dec-weighted",
+                "dec": "nov-dec-jan-weighted",
+            },
+            prediction_feature_processor=caltrack_hourly_prediction_feature_processor,
+            prediction_feature_processor_kwargs={
+                "occupancy_lookup": self.occupancy_lookup,
+                "temperature_bins": self.temperature_bins,
+            },
+        )
+
+    def json(self):
+        """ Return a JSON-serializable representation of this result.
+
+        The output of this function can be converted to a serialized string
+        with :any:`json.dumps`.
+        """
+        data = super(CalTRACKHourlyModel, self).json()
+        data.update(
+            {
+                "occupancy_lookup": self.occupancy_lookup.to_json(orient="split"),
+                "temperature_bins": self.temperature_bins.to_json(orient="split"),
+            }
+        )
+        return data
 
 
 def caltrack_hourly_fit_feature_processor(
@@ -121,28 +166,7 @@ def fit_caltrack_hourly_model_segment(segment_name, segment_data):
 def fit_caltrack_hourly_model(
     segmented_design_matrices, occupancy_lookup, temperature_bins
 ):
-    segmented_model = fit_segmented_model(
-        segmented_design_matrices,
-        fit_caltrack_hourly_model_segment,
-        prediction_segment_type="one_month",
-        prediction_segment_name_mapping={
-            "jan": "dec-jan-feb-weighted",
-            "feb": "jan-feb-mar-weighted",
-            "mar": "feb-mar-apr-weighted",
-            "apr": "mar-apr-may-weighted",
-            "may": "apr-may-jun-weighted",
-            "jun": "may-jun-jul-weighted",
-            "jul": "jun-jul-aug-weighted",
-            "aug": "jul-aug-sep-weighted",
-            "sep": "aug-sep-oct-weighted",
-            "oct": "sep-oct-nov-weighted",
-            "nov": "oct-nov-dec-weighted",
-            "dec": "nov-dec-jan-weighted",
-        },
-        prediction_feature_processor=caltrack_hourly_prediction_feature_processor,
-        prediction_feature_processor_kwargs={
-            "occupancy_lookup": occupancy_lookup,
-            "temperature_bins": temperature_bins,
-        },
+    segment_models = fit_model_segments(
+        segmented_design_matrices, fit_caltrack_hourly_model_segment
     )
-    return segmented_model
+    return CalTRACKHourlyModel(segment_models, occupancy_lookup, temperature_bins)

@@ -17,6 +17,7 @@
    limitations under the License.
 
 """
+import json
 import numpy as np
 import pandas as pd
 import pytest
@@ -146,3 +147,12 @@ def test_fit_caltrack_hourly_model(
 
     assert segmented_model.segment_models is not None
     prediction = segmented_model.predict(temps.index, temps).result
+
+
+def test_serialize_caltrack_hourly_model(
+    segmented_design_matrices, occupancy_lookup, temperature_bins, temps
+):
+    segmented_model = fit_caltrack_hourly_model(
+        segmented_design_matrices, occupancy_lookup, temperature_bins
+    )
+    assert json.dumps(segmented_model.json())
