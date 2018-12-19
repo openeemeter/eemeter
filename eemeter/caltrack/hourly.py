@@ -72,11 +72,14 @@ class CalTRACKHourlyModel(SegmentedModel):
         with :any:`json.dumps`.
         """
         data = super(CalTRACKHourlyModel, self).json()
-        data.update({
-            "occupancy_lookup": self.occupancy_lookup.to_json(orient='split'),
-            "temperature_bins": self.temperature_bins.to_json(orient='split'),
-        })
+        data.update(
+            {
+                "occupancy_lookup": self.occupancy_lookup.to_json(orient="split"),
+                "temperature_bins": self.temperature_bins.to_json(orient="split"),
+            }
+        )
         return data
+
 
 def caltrack_hourly_fit_feature_processor(
     segment_name, segmented_data, occupancy_lookup, temperature_bins
@@ -164,11 +167,6 @@ def fit_caltrack_hourly_model(
     segmented_design_matrices, occupancy_lookup, temperature_bins
 ):
     segment_models = fit_model_segments(
-        segmented_design_matrices,
-        fit_caltrack_hourly_model_segment,
+        segmented_design_matrices, fit_caltrack_hourly_model_segment
     )
-    return CalTRACKHourlyModel(
-        segment_models,
-        occupancy_lookup,
-        temperature_bins,
-    )
+    return CalTRACKHourlyModel(segment_models, occupancy_lookup, temperature_bins)

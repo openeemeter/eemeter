@@ -74,7 +74,6 @@ class SegmentModel(object):
 
 
 class SegmentedModel(object):
-
     def __init__(
         self,
         segment_models,
@@ -142,7 +141,9 @@ class SegmentedModel(object):
 
         data = {
             "segment_models": [_json_or_none(m) for m in self.segment_models],
-            "model_lookup": {key: _json_or_none(val) for key, val in self.model_lookup.items()},
+            "model_lookup": {
+                key: _json_or_none(val) for key, val in self.model_lookup.items()
+            },
             "prediction_segment_type": self.prediction_segment_type,
             "prediction_segment_name_mapping": self.prediction_segment_name_mapping,
             "prediction_feature_processor": self.prediction_feature_processor.__name__,
@@ -349,10 +350,7 @@ def segment_time_series(index, segment_type="single", drop_zero_weight_segments=
     return segment_weights
 
 
-def fit_model_segments(
-    segmented_dataset_dict,
-    fit_segment,
-):
+def fit_model_segments(segmented_dataset_dict, fit_segment):
     segment_models = [
         fit_segment(segment_name, segment_data)
         for segment_name, segment_data in segmented_dataset_dict.items()

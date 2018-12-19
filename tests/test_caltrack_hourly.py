@@ -156,4 +156,3 @@ def test_serialize_caltrack_hourly_model(
         segmented_design_matrices, occupancy_lookup, temperature_bins
     )
     assert json.dumps(segmented_model.json())
-

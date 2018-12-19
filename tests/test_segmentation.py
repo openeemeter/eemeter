@@ -242,9 +242,9 @@ def test_segment_model_serialized():
         model_params={"a": 1, "b": 1},
         warnings=None,
     )
-    assert segment_model.json()['formula'] == "meter_value ~ a + b - 1"
-    assert segment_model.json()['model_params'] == {"a": 1, "b": 1}
-    assert segment_model.json()['warnings'] == []
+    assert segment_model.json()["formula"] == "meter_value ~ a + b - 1"
+    assert segment_model.json()["model_params"] == {"a": 1, "b": 1}
+    assert segment_model.json()["warnings"] == []
     assert json.dumps(segment_model.json())
 
 
@@ -257,7 +257,7 @@ def test_segmented_model_serialized():
         warnings=None,
     )
 
-    def fake_feature_processor(segment_name, segment_data):
+    def fake_feature_processor(segment_name, segment_data): # pragma: no cover
         return pd.DataFrame(
             {"a": 1, "b": 1, "weight": segment_data.weight}, index=segment_data.index
         )
@@ -269,7 +269,9 @@ def test_segmented_model_serialized():
         prediction_feature_processor=fake_feature_processor,
         prediction_feature_processor_kwargs=None,
     )
-    assert segmented_model.json()['prediction_segment_type'] == "one_month"
-    assert segmented_model.json()['prediction_feature_processor'] == "fake_feature_processor"
+    assert segmented_model.json()["prediction_segment_type"] == "one_month"
+    assert (
+        segmented_model.json()["prediction_feature_processor"]
+        == "fake_feature_processor"
+    )
     assert json.dumps(segmented_model.json())
-
