@@ -9,7 +9,7 @@ name = "pypi"
 
 click = "*"
 pandas = "*"
-eeweather = "*"
+eeweather = ">=0.3.12"
 matplotlib = "<3.0.0"  # until we drop python 2 support
 statsmodels = "*"
 sqlalchemy = "*"
@@ -38,5 +38,6 @@ typing = "*"
 # jupyterlab will cascade to dependencies but currently not supported.
 # See https://github.com/pypa/pipenv/issues/1705
 jupyterlab-launcher = {version = "*", markers="python_version >= '3.5'"}
+jupyterlab-server = {version = "*", markers="python_version >= '3.5'"}
 ipython = {version = "*",  markers="python_version >= '3.5'"}
 ipykernel = {version = "*",  markers="python_version >= '3.5'"}

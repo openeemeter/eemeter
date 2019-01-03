@@ -4,7 +4,10 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Bump dev eeweather version.
+* Add `bump_version` script.
+* Filter two specific warnings when running tests:
+  statsmodels pandas .ix warning, and eemeter model fitting warning.
 
 2.2.4
 -----
@@ -14,7 +17,7 @@ Development
 2.2.3
 -----
 
-* Change max_value to float so that it can be json serialized even if the input is int64s.
+* Change `max_value` to float so that it can be json serialized even if the input is int64s.
 
 2.2.2
 -----

@@ -49,3 +49,10 @@ git pull
 git merge release/vX.X.X
 git push
 ```
+
+Or, you can use the `bump_verion.sh` to print out versions of these commands
+that are populated with the appropriate version number.
+
+```
+./bump_version.sh X.X.X Y.Y.Y
+```
