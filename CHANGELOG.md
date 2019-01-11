@@ -4,6 +4,7 @@ Changelog
 Development
 -----------
 
+* Fix bug with small data (1<week) for hourly occupancy feature calculation.
 * Bump dev eeweather version.
 * Add `bump_version` script.
 * Filter two specific warnings when running tests:
