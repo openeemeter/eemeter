@@ -1028,12 +1028,12 @@ def test_compute_occupancy_feature(even_occupancy):
 
 
 def test_compute_occupancy_feature_with_nans(even_occupancy):
-    '''If there are less than 168 periods, the NaN at the end causes problems'''
+    """If there are less than 168 periods, the NaN at the end causes problems"""
     index = pd.date_range("2017-01-01", periods=100, freq="H", tz="UTC")
     time_features = compute_time_features(index, hour_of_week=True)
     hour_of_week = time_features.hour_of_week
     hour_of_week[-1] = np.nan
-    #  comment out line below to see the error from not dropping na when 
+    #  comment out line below to see the error from not dropping na when
     # calculationg _add_weights when there are less than 168 periods.
-    hour_of_week.dropna(inplace=True) # simulates fix on _add_weights()
+    hour_of_week.dropna(inplace=True)  # simulates fix on _add_weights()
     occupancy = compute_occupancy_feature(hour_of_week, even_occupancy)
