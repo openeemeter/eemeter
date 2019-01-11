@@ -183,7 +183,7 @@ def iterate_segmented_dataset(
         return segment_data
 
     def _add_weights(data, weights):
-        return pd.merge(data, weights, left_index=True, right_index=True)
+        return pd.merge(data, weights, left_index=True, right_index=True).dropna()
 
     if segmentation is None:
         # spoof segment name and weights column
