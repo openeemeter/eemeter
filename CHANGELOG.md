@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+2.2.6
+-----
+
 * Reverts small data bug fix.
 
 2.2.5
