@@ -1035,5 +1035,8 @@ def test_compute_occupancy_feature_with_nans(even_occupancy):
     hour_of_week[-1] = np.nan
     #  comment out line below to see the error from not dropping na when
     # calculationg _add_weights when there are less than 168 periods.
-    hour_of_week.dropna(inplace=True)  # simulates fix on _add_weights()
+
+    # TODO (ssuffian): Refactor so get_missing_hours_warnings propogates.
+    # right now, it will error if the dropna below isn't used.
+    hour_of_week.dropna(inplace=True)
     occupancy = compute_occupancy_feature(hour_of_week, even_occupancy)
