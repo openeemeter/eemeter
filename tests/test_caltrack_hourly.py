@@ -174,44 +174,60 @@ def segmented_data_nans():
     )
     return segmented_data
 
+
 @pytest.fixture
 def occupancy_lookup_nans():
     index = pd.Categorical(range(168))
     occupancy = pd.Series([i % 2 == 0 for i in range(168)], index=index)
     occupancy_nans = pd.Series([np.nan for i in range(168)], index=index)
-    return pd.DataFrame({
-        "dec-jan-feb-weighted": occupancy,
-        "jan-feb-mar-weighted": occupancy,
-        "apr-may-jun-weighted": occupancy_nans,
-    })
+    return pd.DataFrame(
+        {
+            "dec-jan-feb-weighted": occupancy,
+            "jan-feb-mar-weighted": occupancy,
+            "apr-may-jun-weighted": occupancy_nans,
+        }
+    )
 
 
 @pytest.fixture
 def temperature_bins_nans():
     bins = pd.Series([True, True, True], index=[30, 60, 90])
     bins_nans = pd.Series([False, False, False], index=[30, 60, 90])
-    return pd.DataFrame({
-        "dec-jan-feb-weighted": bins,
-        "jan-feb-mar-weighted": bins,
-        "apr-may-jun-weighted": bins_nans,
-    })
+    return pd.DataFrame(
+        {
+            "dec-jan-feb-weighted": bins,
+            "jan-feb-mar-weighted": bins,
+            "apr-may-jun-weighted": bins_nans,
+        }
+    )
 
 
 @pytest.fixture
-def segmented_design_matrices_nans(segmented_data_nans, occupancy_lookup_nans, temperature_bins_nans):
+def segmented_design_matrices_nans(
+    segmented_data_nans, occupancy_lookup_nans, temperature_bins_nans
+):
     return {
         "dec-jan-feb-weighted": caltrack_hourly_fit_feature_processor(
-            "dec-jan-feb-weighted", segmented_data_nans, occupancy_lookup_nans, temperature_bins_nans
+            "dec-jan-feb-weighted",
+            segmented_data_nans,
+            occupancy_lookup_nans,
+            temperature_bins_nans,
         ),
         "apr-may-jun-weighted": caltrack_hourly_fit_feature_processor(
-            "apr-may-jun-weighted", segmented_data_nans, occupancy_lookup_nans, temperature_bins_nans
-        )
+            "apr-may-jun-weighted",
+            segmented_data_nans,
+            occupancy_lookup_nans,
+            temperature_bins_nans,
+        ),
     }
 
 
 def test_fit_caltrack_hourly_model_nans_less_than_week_predict(
-    segmented_design_matrices_nans, occupancy_lookup_nans, temperature_bins_nans,
-    temps_extended, temps
+    segmented_design_matrices_nans,
+    occupancy_lookup_nans,
+    temperature_bins_nans,
+    temps_extended,
+    temps,
 ):
     segmented_model = fit_caltrack_hourly_model(
         segmented_design_matrices_nans, occupancy_lookup_nans, temperature_bins_nans
@@ -222,11 +238,11 @@ def test_fit_caltrack_hourly_model_nans_less_than_week_predict(
     assert segmented_model.segment_models[1].model is None
     assert (
         segmented_model.segment_models[1].warnings[0].qualified_name
-        == 'eemeter.fit_caltrack_hourly_model_segment.no_nonnull_data'
-        )
+        == "eemeter.fit_caltrack_hourly_model_segment.no_nonnull_data"
+    )
     prediction = segmented_model.predict(temps.index, temps).result
     assert prediction.shape[0] == 24
-    assert prediction['predicted_usage'].sum().round() == 955.0
+    assert prediction["predicted_usage"].sum().round() == 955.0
 
 
 @pytest.fixture
@@ -251,33 +267,47 @@ def occupancy_lookup_nans_less_than_week():
     index = pd.Categorical(range(168))
     occupancy = pd.Series([i % 2 == 0 for i in range(168)], index=index)
     occupancy_nans_less_than_week = pd.Series([np.nan for i in range(168)], index=index)
-    return pd.DataFrame({
-        "dec-jan-feb-weighted": occupancy,
-        "jan-feb-mar-weighted": occupancy,
-        "apr-may-jun-weighted": occupancy_nans_less_than_week,
-    })
+    return pd.DataFrame(
+        {
+            "dec-jan-feb-weighted": occupancy,
+            "jan-feb-mar-weighted": occupancy,
+            "apr-may-jun-weighted": occupancy_nans_less_than_week,
+        }
+    )
 
 
 @pytest.fixture
 def temperature_bins_nans_less_than_week():
     bins = pd.Series([True, True, True], index=[30, 60, 90])
     bins_nans_less_than_week = pd.Series([False, False, False], index=[30, 60, 90])
-    return pd.DataFrame({
-        "dec-jan-feb-weighted": bins,
-        "jan-feb-mar-weighted": bins,
-        "apr-may-jun-weighted": bins_nans_less_than_week,
-    })
+    return pd.DataFrame(
+        {
+            "dec-jan-feb-weighted": bins,
+            "jan-feb-mar-weighted": bins,
+            "apr-may-jun-weighted": bins_nans_less_than_week,
+        }
+    )
 
 
 @pytest.fixture
-def segmented_design_matrices_nans_less_than_week(segmented_data_nans_less_than_week, occupancy_lookup_nans_less_than_week, temperature_bins_nans_less_than_week):
+def segmented_design_matrices_nans_less_than_week(
+    segmented_data_nans_less_than_week,
+    occupancy_lookup_nans_less_than_week,
+    temperature_bins_nans_less_than_week,
+):
     return {
         "dec-jan-feb-weighted": caltrack_hourly_fit_feature_processor(
-            "dec-jan-feb-weighted", segmented_data_nans_less_than_week, occupancy_lookup_nans_less_than_week, temperature_bins_nans_less_than_week
+            "dec-jan-feb-weighted",
+            segmented_data_nans_less_than_week,
+            occupancy_lookup_nans_less_than_week,
+            temperature_bins_nans_less_than_week,
         ),
         "apr-may-jun-weighted": caltrack_hourly_fit_feature_processor(
-            "apr-may-jun-weighted", segmented_data_nans_less_than_week, occupancy_lookup_nans_less_than_week, temperature_bins_nans_less_than_week
-        )
+            "apr-may-jun-weighted",
+            segmented_data_nans_less_than_week,
+            occupancy_lookup_nans_less_than_week,
+            temperature_bins_nans_less_than_week,
+        ),
     }
 
 
@@ -289,11 +319,15 @@ def temps_extended():
 
 
 def test_fit_caltrack_hourly_model_nans_less_than_week_fit(
-    segmented_design_matrices_nans_less_than_week, occupancy_lookup_nans_less_than_week, temperature_bins_nans_less_than_week,
-    temps_extended
+    segmented_design_matrices_nans_less_than_week,
+    occupancy_lookup_nans_less_than_week,
+    temperature_bins_nans_less_than_week,
+    temps_extended,
 ):
     segmented_model = fit_caltrack_hourly_model(
-        segmented_design_matrices_nans_less_than_week, occupancy_lookup_nans_less_than_week, temperature_bins_nans_less_than_week
+        segmented_design_matrices_nans_less_than_week,
+        occupancy_lookup_nans_less_than_week,
+        temperature_bins_nans_less_than_week,
     )
 
     assert segmented_model.segment_models is not None
@@ -301,8 +335,8 @@ def test_fit_caltrack_hourly_model_nans_less_than_week_fit(
     assert segmented_model.segment_models[1].model is None
     assert (
         segmented_model.segment_models[1].warnings[0].qualified_name
-        == 'eemeter.fit_caltrack_hourly_model_segment.no_nonnull_data'
-        )
+        == "eemeter.fit_caltrack_hourly_model_segment.no_nonnull_data"
+    )
     prediction = segmented_model.predict(temps_extended.index, temps_extended).result
     assert prediction.shape[0] == 168
     assert prediction.dropna().shape[0] == 4

@@ -216,7 +216,8 @@ def test_segmented_model():
 
     def fake_feature_processor(segment_name, segment_data):
         return pd.DataFrame(
-            {"hour_of_week": 1, "a": 1, "weight": segment_data.weight}, index=segment_data.index
+            {"hour_of_week": 1, "a": 1, "weight": segment_data.weight},
+            index=segment_data.index,
         )
 
     segmented_model = SegmentedModel(

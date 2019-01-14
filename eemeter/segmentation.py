@@ -53,10 +53,11 @@ class CalTRACKSegmentModel(object):
         )
         parameters = pd.Series(self.model_params)
 
-        # Step 1, slice 
-        col_type = 'C(hour_of_week)'
+        # Step 1, slice
+        col_type = "C(hour_of_week)"
         hour_of_week_cols = [
-            c for c in design_matrix_granular.columns
+            c
+            for c in design_matrix_granular.columns
             if col_type in c and c in parameters.keys()
         ]
 
@@ -66,9 +67,7 @@ class CalTRACKSegmentModel(object):
         ]
 
         cols_to_predict = list(
-            set(parameters.keys()).intersection(
-                set(design_matrix_granular.keys())
-            )
+            set(parameters.keys()).intersection(set(design_matrix_granular.keys()))
         )
         design_matrix_granular = design_matrix_granular[cols_to_predict]
         parameters = parameters[cols_to_predict]
