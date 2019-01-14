@@ -385,7 +385,7 @@ def test_create_caltrack_hourly_segmented_design_matrices(
     assert round(design_matrix.sum().sum(), 2) == 126433.71
 
     design_matrix = design_matrices["mar-apr-may-weighted"]
-    assert design_matrix.shape == (1000, 5)
+    assert design_matrix.shape == (0, 5)
     assert sorted(design_matrix.columns) == [
         "bin_0",
         "hour_of_week",
