@@ -23,7 +23,7 @@ import pandas as pd
 import pytest
 
 from eemeter.segmentation import (
-    SegmentModel,
+    CalTRACKSegmentModel,
     SegmentedModel,
     segment_time_series,
     iterate_segmented_dataset,
@@ -192,7 +192,7 @@ def test_iterate_segmented_dataset_with_processor(dataset, segmentation):
 
 
 def test_segment_model():
-    segment_model = SegmentModel(
+    segment_model = CalTRACKSegmentModel(
         segment_name="segment",
         model=None,
         formula="meter_value ~ a + b - 1",
@@ -206,7 +206,7 @@ def test_segment_model():
 
 
 def test_segmented_model():
-    segment_model = SegmentModel(
+    segment_model = CalTRACKSegmentModel(
         segment_name="jan",
         model=None,
         formula="meter_value ~ a + b - 1",
@@ -235,7 +235,7 @@ def test_segmented_model():
 
 
 def test_segment_model_serialized():
-    segment_model = SegmentModel(
+    segment_model = CalTRACKSegmentModel(
         segment_name="jan",
         model=None,
         formula="meter_value ~ a + b - 1",
@@ -249,7 +249,7 @@ def test_segment_model_serialized():
 
 
 def test_segmented_model_serialized():
-    segment_model = SegmentModel(
+    segment_model = CalTRACKSegmentModel(
         segment_name="jan",
         model=None,
         formula="meter_value ~ a + b - 1",

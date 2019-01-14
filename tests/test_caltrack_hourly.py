@@ -156,3 +156,153 @@ def test_serialize_caltrack_hourly_model(
         segmented_design_matrices, occupancy_lookup, temperature_bins
     )
     assert json.dumps(segmented_model.json())
+
+
+@pytest.fixture
+def segmented_data_nans():
+    num_periods = 200
+    index = pd.date_range(start="2017-01-01", periods=num_periods, freq="H", tz="UTC")
+    time_features = compute_time_features(index)
+    segmented_data = pd.DataFrame(
+        {
+            "hour_of_week": time_features.hour_of_week,
+            "temperature_mean": np.linspace(0, 100, num_periods),
+            "meter_value": np.linspace(10, 70, num_periods),
+            "weight": np.ones((num_periods,)),
+        },
+        index=index,
+    )
+    return segmented_data
+
+@pytest.fixture
+def occupancy_lookup_nans():
+    index = pd.Categorical(range(168))
+    occupancy = pd.Series([i % 2 == 0 for i in range(168)], index=index)
+    occupancy_nans = pd.Series([np.nan for i in range(168)], index=index)
+    return pd.DataFrame({
+        "dec-jan-feb-weighted": occupancy,
+        "jan-feb-mar-weighted": occupancy,
+        "apr-may-jun-weighted": occupancy_nans,
+    })
+
+
+@pytest.fixture
+def temperature_bins_nans():
+    bins = pd.Series([True, True, True], index=[30, 60, 90])
+    bins_nans = pd.Series([False, False, False], index=[30, 60, 90])
+    return pd.DataFrame({
+        "dec-jan-feb-weighted": bins,
+        "jan-feb-mar-weighted": bins,
+        "apr-may-jun-weighted": bins_nans,
+    })
+
+
+@pytest.fixture
+def segmented_design_matrices_nans(segmented_data_nans, occupancy_lookup_nans, temperature_bins_nans):
+    return {
+        "dec-jan-feb-weighted": caltrack_hourly_fit_feature_processor(
+            "dec-jan-feb-weighted", segmented_data_nans, occupancy_lookup_nans, temperature_bins_nans
+        ),
+        "apr-may-jun-weighted": caltrack_hourly_fit_feature_processor(
+            "apr-may-jun-weighted", segmented_data_nans, occupancy_lookup_nans, temperature_bins_nans
+        )
+    }
+
+
+def test_fit_caltrack_hourly_model_nans_less_than_week_predict(
+    segmented_design_matrices_nans, occupancy_lookup_nans, temperature_bins_nans,
+    temps_extended, temps
+):
+    segmented_model = fit_caltrack_hourly_model(
+        segmented_design_matrices_nans, occupancy_lookup_nans, temperature_bins_nans
+    )
+
+    assert segmented_model.segment_models is not None
+    assert segmented_model.segment_models[0].model is not None
+    assert segmented_model.segment_models[1].model is None
+    assert (
+        segmented_model.segment_models[1].warnings[0].qualified_name
+        == 'eemeter.fit_caltrack_hourly_model_segment.no_nonnull_data'
+        )
+    prediction = segmented_model.predict(temps.index, temps).result
+    assert prediction.shape[0] == 24
+    assert prediction['predicted_usage'].sum().round() == 955.0
+
+
+@pytest.fixture
+def segmented_data_nans_less_than_week():
+    num_periods = 4
+    index = pd.date_range(start="2017-01-01", periods=num_periods, freq="H", tz="UTC")
+    time_features = compute_time_features(index)
+    segmented_data = pd.DataFrame(
+        {
+            "hour_of_week": time_features.hour_of_week,
+            "temperature_mean": np.linspace(0, 100, num_periods),
+            "meter_value": np.linspace(10, 70, num_periods),
+            "weight": np.ones((num_periods,)),
+        },
+        index=index,
+    )
+    return segmented_data
+
+
+@pytest.fixture
+def occupancy_lookup_nans_less_than_week():
+    index = pd.Categorical(range(168))
+    occupancy = pd.Series([i % 2 == 0 for i in range(168)], index=index)
+    occupancy_nans_less_than_week = pd.Series([np.nan for i in range(168)], index=index)
+    return pd.DataFrame({
+        "dec-jan-feb-weighted": occupancy,
+        "jan-feb-mar-weighted": occupancy,
+        "apr-may-jun-weighted": occupancy_nans_less_than_week,
+    })
+
+
+@pytest.fixture
+def temperature_bins_nans_less_than_week():
+    bins = pd.Series([True, True, True], index=[30, 60, 90])
+    bins_nans_less_than_week = pd.Series([False, False, False], index=[30, 60, 90])
+    return pd.DataFrame({
+        "dec-jan-feb-weighted": bins,
+        "jan-feb-mar-weighted": bins,
+        "apr-may-jun-weighted": bins_nans_less_than_week,
+    })
+
+
+@pytest.fixture
+def segmented_design_matrices_nans_less_than_week(segmented_data_nans_less_than_week, occupancy_lookup_nans_less_than_week, temperature_bins_nans_less_than_week):
+    return {
+        "dec-jan-feb-weighted": caltrack_hourly_fit_feature_processor(
+            "dec-jan-feb-weighted", segmented_data_nans_less_than_week, occupancy_lookup_nans_less_than_week, temperature_bins_nans_less_than_week
+        ),
+        "apr-may-jun-weighted": caltrack_hourly_fit_feature_processor(
+            "apr-may-jun-weighted", segmented_data_nans_less_than_week, occupancy_lookup_nans_less_than_week, temperature_bins_nans_less_than_week
+        )
+    }
+
+
+@pytest.fixture
+def temps_extended():
+    index = pd.date_range(start="2017-01-01", periods=168, freq="H", tz="UTC")
+    temps = pd.Series(1, index=index)
+    return temps
+
+
+def test_fit_caltrack_hourly_model_nans_less_than_week_fit(
+    segmented_design_matrices_nans_less_than_week, occupancy_lookup_nans_less_than_week, temperature_bins_nans_less_than_week,
+    temps_extended
+):
+    segmented_model = fit_caltrack_hourly_model(
+        segmented_design_matrices_nans_less_than_week, occupancy_lookup_nans_less_than_week, temperature_bins_nans_less_than_week
+    )
+
+    assert segmented_model.segment_models is not None
+    assert segmented_model.segment_models[0].model is not None
+    assert segmented_model.segment_models[1].model is None
+    assert (
+        segmented_model.segment_models[1].warnings[0].qualified_name
+        == 'eemeter.fit_caltrack_hourly_model_segment.no_nonnull_data'
+        )
+    prediction = segmented_model.predict(temps_extended.index, temps_extended).result
+    assert prediction.shape[0] == 168
+    assert prediction.dropna().shape[0] == 4
