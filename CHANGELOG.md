@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* `iterate_segmented_dataset` returns empty segment_data if segment_data is all nans.
 
 2.2.6
 -----

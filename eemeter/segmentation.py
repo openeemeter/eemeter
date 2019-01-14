@@ -190,12 +190,20 @@ def iterate_segmented_dataset(
         segment_name = None
         weights = pd.DataFrame({"weight": 1}, index=data.index)
         segment_data = _add_weights(data, weights)
-        yield segment_name, _apply_feature_processor(segment_name, segment_data)
+
+        segment_data = _apply_feature_processor(segment_name, segment_data)
+        if segment_data.dropna().shape[0] == 0:
+            # for segments that are all nan, it returns an empty segment
+            segment_data = segment_data[:0]
+        yield segment_name, segment_data
     else:
         for segment_name, segment_weights in segmentation.iteritems():
             weights = segment_weights.to_frame("weight")
             segment_data = _add_weights(data, weights)
             segment_data = _apply_feature_processor(segment_name, segment_data)
+            if segment_data.dropna().shape[0] == 0:
+                # for segments that are all nan, it returns an empty segment
+                segment_data = segment_data[:0]
             yield segment_name, segment_data
 
 

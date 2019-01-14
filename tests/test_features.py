@@ -17,6 +17,7 @@
    limitations under the License.
 
 """
+from datetime import datetime
 import numpy as np
 import pandas as pd
 import pytest
@@ -1040,3 +1041,38 @@ def test_compute_occupancy_feature_with_nans(even_occupancy):
     # right now, it will error if the dropna below isn't used.
     hour_of_week.dropna(inplace=True)
     occupancy = compute_occupancy_feature(hour_of_week, even_occupancy)
+
+
+@pytest.fixture
+def occupancy_precursor_only_nan(il_electricity_cdd_hdd_hourly):
+    meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
+    meter_data = meter_data[datetime(2017, 1, 4) : datetime(2017, 6, 1)]
+    meter_data.iloc[-1] = np.nan
+    # Simulates a segment where there is only a single nan value
+    temperature_data = il_electricity_cdd_hdd_hourly["temperature_data"]
+    time_features = compute_time_features(meter_data.index)
+    temperature_features = compute_temperature_features(
+        meter_data.index,
+        temperature_data,
+        heating_balance_points=[50],
+        cooling_balance_points=[65],
+        degree_day_method="hourly",
+    )
+    return merge_features(
+        [meter_data.value.to_frame("meter_value"), temperature_features, time_features]
+    )
+
+
+@pytest.fixture
+def segmentation_only_nan(occupancy_precursor_only_nan):
+    return segment_time_series(
+        occupancy_precursor_only_nan.index, segment_type="three_month_weighted"
+    )
+
+
+def test_estimate_hour_of_week_occupancy_segmentation_only_nan(
+    occupancy_precursor_only_nan, segmentation_only_nan
+):
+    occupancy = estimate_hour_of_week_occupancy(
+        occupancy_precursor_only_nan, segmentation=segmentation_only_nan
+    )
