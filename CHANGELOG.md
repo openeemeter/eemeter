@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* `iterate_segmented_dataset` returns empty segment_data if segment_data is all nans.
+* SegmentModel becomes CalTRACKSegmentModel, which includes a hard-coded check that the same hours of week are in the model fit parameters and the prediction design matrix.
 
 2.2.6
 -----

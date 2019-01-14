@@ -195,12 +195,12 @@ def test_segment_model():
     segment_model = CalTRACKSegmentModel(
         segment_name="segment",
         model=None,
-        formula="meter_value ~ a + b - 1",
-        model_params={"a": 1, "b": 1},
+        formula="meter_value ~ C(hour_of_week) + a - 1",
+        model_params={"C(hour_of_week)[1]": 1, "a": 1},
         warnings=None,
     )
     index = pd.date_range("2017-01-01", periods=2, freq="H", tz="UTC")
-    data = pd.DataFrame({"a": [1, 1], "b": [1, 1]}, index=index)
+    data = pd.DataFrame({"a": [1, 1], "hour_of_week": [1, 1]}, index=index)
     prediction = segment_model.predict(data)
     assert prediction.sum() == 4
 
@@ -209,14 +209,14 @@ def test_segmented_model():
     segment_model = CalTRACKSegmentModel(
         segment_name="jan",
         model=None,
-        formula="meter_value ~ a + b - 1",
-        model_params={"a": 1, "b": 1},
+        formula="meter_value ~ C(hour_of_week) + a- 1",
+        model_params={"C(hour_of_week)[1]": 1, "a": 1},
         warnings=None,
     )
 
     def fake_feature_processor(segment_name, segment_data):
         return pd.DataFrame(
-            {"a": 1, "b": 1, "weight": segment_data.weight}, index=segment_data.index
+            {"hour_of_week": 1, "a": 1, "weight": segment_data.weight}, index=segment_data.index
         )
 
     segmented_model = SegmentedModel(
