@@ -657,9 +657,9 @@ def compute_temperature_bin_features(temperatures, bin_endpoints):
 
 def compute_occupancy_feature(hour_of_week, occupancy):
     return pd.merge(
-        hour_of_week.to_frame(),
+        hour_of_week.dropna().to_frame(),
         occupancy.to_frame("occupancy"),
         how="left",
         left_on="hour_of_week",
         right_index=True,
-    ).occupancy
+    ).occupancy.reindex(hour_of_week.index)
