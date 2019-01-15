@@ -234,10 +234,10 @@ def test_fit_caltrack_hourly_model_nans_less_than_week_predict(
     )
 
     assert segmented_model.segment_models is not None
-    assert segmented_model.model_lookup['jan'].model is not None
-    assert segmented_model.model_lookup['may'].model is None
+    assert segmented_model.model_lookup["jan"].model is not None
+    assert segmented_model.model_lookup["may"].model is None
     assert (
-        segmented_model.model_lookup['may'].warnings[0].qualified_name
+        segmented_model.model_lookup["may"].warnings[0].qualified_name
         == "eemeter.fit_caltrack_hourly_model_segment.no_nonnull_data"
     )
     prediction = segmented_model.predict(temps.index, temps).result
