@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+2.2.7
+-----
+
 * SegmentModel becomes CalTRACKSegmentModel, which includes a hard-coded check that the same hours of week are in the model fit parameters and the prediction design matrix.
 
 2.2.6
