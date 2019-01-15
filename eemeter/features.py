@@ -482,7 +482,7 @@ def compute_temperature_features(
 
 def _estimate_hour_of_week_occupancy(model_data, threshold):
     index = pd.CategoricalIndex(range(168))
-    if model_data.empty:
+    if model_data.dropna().empty:
         return pd.Series(np.nan, index=index, name="occupancy")
 
     usage_model = smf.wls(

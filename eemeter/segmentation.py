@@ -19,6 +19,7 @@
 """
 from collections import namedtuple
 
+import numpy as np
 import pandas as pd
 from patsy import dmatrix
 
@@ -26,7 +27,7 @@ from patsy import dmatrix
 __all__ = (
     "iterate_segmented_dataset",
     "segment_time_series",
-    "SegmentModel",
+    "CalTRACKSegmentModel",
     "SegmentedModel",
     "HourlyModelPrediction",
 )
@@ -35,7 +36,7 @@ __all__ = (
 HourlyModelPrediction = namedtuple("HourlyModelPrediction", ["result"])
 
 
-class SegmentModel(object):
+class CalTRACKSegmentModel(object):
     def __init__(self, segment_name, model, formula, model_params, warnings=None):
         self.segment_name = segment_name
         self.model = model
@@ -50,11 +51,34 @@ class SegmentModel(object):
         design_matrix_granular = dmatrix(
             self.formula.split("~", 1)[1], data, return_type="dataframe"
         )
-
         parameters = pd.Series(self.model_params)
+
+        # Step 1, slice
+        col_type = "C(hour_of_week)"
+        hour_of_week_cols = [
+            c
+            for c in design_matrix_granular.columns
+            if col_type in c and c in parameters.keys()
+        ]
+
+        # Step 2, cut out all 0s
+        design_matrix_granular = design_matrix_granular[
+            (design_matrix_granular[hour_of_week_cols] != 0).any(axis=1)
+        ]
+
+        cols_to_predict = list(
+            set(parameters.keys()).intersection(set(design_matrix_granular.keys()))
+        )
+        design_matrix_granular = design_matrix_granular[cols_to_predict]
+        parameters = parameters[cols_to_predict]
+
+        # Step 3, predict
         prediction = design_matrix_granular.dot(parameters).rename(
             columns={0: "predicted_usage"}
         )
+        # Step 4, put nans back in
+        prediction = prediction.reindex(data.index)
+
         return prediction
 
     def json(self):
@@ -126,7 +150,7 @@ class SegmentedModel(object):
             prediction = prediction[segmented_data.weight > 0].reindex(prediction_index)
             predictions[segment_name] = prediction
         predictions = pd.DataFrame(predictions)
-        result = pd.DataFrame({"predicted_usage": predictions.sum(axis=1)})
+        result = pd.DataFrame({"predicted_usage": predictions.sum(axis=1, min_count=1)})
         return HourlyModelPrediction(result=result)
 
     def json(self):
@@ -190,7 +214,9 @@ def iterate_segmented_dataset(
         segment_name = None
         weights = pd.DataFrame({"weight": 1}, index=data.index)
         segment_data = _add_weights(data, weights)
-        yield segment_name, _apply_feature_processor(segment_name, segment_data)
+
+        segment_data = _apply_feature_processor(segment_name, segment_data)
+        yield segment_name, segment_data
     else:
         for segment_name, segment_weights in segmentation.iteritems():
             weights = segment_weights.to_frame("weight")

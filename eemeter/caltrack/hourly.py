@@ -25,7 +25,8 @@ from ..features import (
     compute_occupancy_feature,
     merge_features,
 )
-from ..segmentation import SegmentModel, SegmentedModel, fit_model_segments
+from ..segmentation import CalTRACKSegmentModel, SegmentedModel, fit_model_segments
+from ..warnings import EEMeterWarning
 
 
 __all__ = (
@@ -150,11 +151,27 @@ def fit_caltrack_hourly_model_segment(segment_name, segment_data):
         )
         return "meter_value ~ C(hour_of_week) - 1{}".format(bin_occupancy_interactions)
 
-    formula = _get_hourly_model_formula(segment_data)
-    model = smf.wls(formula=formula, data=segment_data, weights=segment_data.weight)
-    model_params = {coeff: value for coeff, value in model.fit().params.items()}
     warnings = []
-    return SegmentModel(
+    if segment_data.dropna().empty:
+        model = None
+        formula = None
+        model_params = None
+        warnings.append(
+            EEMeterWarning(
+                qualified_name="eemeter.fit_caltrack_hourly_model_segment.no_nonnull_data",
+                description="The segment contains either an empty dataset or all NaNs.",
+                data={
+                    "n_rows": segment_data.shape[0],
+                    "n_rows_after_dropna": segment_data.dropna().shape[0],
+                },
+            )
+        )
+    else:
+        formula = _get_hourly_model_formula(segment_data)
+        model = smf.wls(formula=formula, data=segment_data, weights=segment_data.weight)
+        model_params = {coeff: value for coeff, value in model.fit().params.items()}
+
+    return CalTRACKSegmentModel(
         segment_name=segment_name,
         model=model,
         formula=formula,
