@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Update `compute_occupancy_feature` so it can handle instances where there are less than 168 values in the data.
 
 2.2.7
 -----

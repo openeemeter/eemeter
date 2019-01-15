@@ -1076,3 +1076,14 @@ def test_estimate_hour_of_week_occupancy_segmentation_only_nan(
     occupancy = estimate_hour_of_week_occupancy(
         occupancy_precursor_only_nan, segmentation=segmentation_only_nan
     )
+
+
+def test_compute_occupancy_feature_hour_of_week_has_nan(even_occupancy):
+    index = pd.date_range("2017-01-01", periods=72, freq="H", tz="UTC")
+    time_features = compute_time_features(index, hour_of_week=True)
+    hour_of_week = time_features.hour_of_week
+    hour_of_week.iloc[-1] = np.nan
+    occupancy = compute_occupancy_feature(hour_of_week, even_occupancy)
+    assert occupancy.name == "occupancy"
+    assert occupancy.shape == (72,)
+    assert occupancy.sum() == 36
