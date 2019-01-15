@@ -331,5 +331,6 @@ def test_fit_caltrack_hourly_model_nans_less_than_week_fit(
     )
 
     assert segmented_model.segment_models is not None
+    prediction = segmented_model.predict(temps_extended.index, temps_extended).result
     assert prediction.shape[0] == 168
     assert prediction.dropna().shape[0] == 4
