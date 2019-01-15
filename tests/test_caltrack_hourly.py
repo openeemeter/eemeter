@@ -331,12 +331,5 @@ def test_fit_caltrack_hourly_model_nans_less_than_week_fit(
     )
 
     assert segmented_model.segment_models is not None
-    assert segmented_model.segment_models[0].model is not None
-    assert segmented_model.segment_models[1].model is None
-    assert (
-        segmented_model.segment_models[1].warnings[0].qualified_name
-        == "eemeter.fit_caltrack_hourly_model_segment.no_nonnull_data"
-    )
-    prediction = segmented_model.predict(temps_extended.index, temps_extended).result
     assert prediction.shape[0] == 168
     assert prediction.dropna().shape[0] == 4
