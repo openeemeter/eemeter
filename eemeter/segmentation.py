@@ -49,13 +49,11 @@ class CalTRACKSegmentModel(object):
 
     def predict(self, data):
         if self.formula is None:
-            var_str = ''
+            var_str = ""
         else:
             var_str = self.formula.split("~", 1)[1]
 
-        design_matrix_granular = dmatrix(
-            var_str, data, return_type="dataframe"
-        )
+        design_matrix_granular = dmatrix(var_str, data, return_type="dataframe")
         parameters = pd.Series(self.model_params)
 
         # Step 1, slice
