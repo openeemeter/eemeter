@@ -48,8 +48,13 @@ class CalTRACKSegmentModel(object):
         self.warnings = warnings
 
     def predict(self, data):
+        if self.formula is None:
+            var_str = ''
+        else:
+            var_str = self.formula.split("~", 1)[1]
+
         design_matrix_granular = dmatrix(
-            self.formula.split("~", 1)[1], data, return_type="dataframe"
+            var_str, data, return_type="dataframe"
         )
         parameters = pd.Series(self.model_params)
 
