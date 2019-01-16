@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+2.2.9
+-----
+
 * Predict with empty formula now returns NaNs.
 
 2.2.8
