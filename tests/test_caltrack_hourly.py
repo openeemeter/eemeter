@@ -337,24 +337,24 @@ def test_fit_caltrack_hourly_model_nans_less_than_week_fit(
 
 
 @pytest.fixture
-def segmented_design_matrices_empty_models(segmented_data, occupancy_lookup, temperature_bins):
+def segmented_design_matrices_empty_models(
+    segmented_data, occupancy_lookup, temperature_bins
+):
     return {
         "dec-jan-feb-weighted": caltrack_hourly_fit_feature_processor(
-            "dec-jan-feb-weighted", segmented_data[:0], occupancy_lookup, temperature_bins
+            "dec-jan-feb-weighted",
+            segmented_data[:0],
+            occupancy_lookup,
+            temperature_bins,
         )
     }
 
 
 def test_predict_caltrack_hourly_model_empty_models(
-    temps,
-    segmented_design_matrices_empty_models,
-    occupancy_lookup,
-    temperature_bins,
+    temps, segmented_design_matrices_empty_models, occupancy_lookup, temperature_bins
 ):
     segmented_model = fit_caltrack_hourly_model(
-        segmented_design_matrices_empty_models,
-        occupancy_lookup,
-        temperature_bins,
+        segmented_design_matrices_empty_models, occupancy_lookup, temperature_bins
     )
 
     assert segmented_model.segment_models is not None
