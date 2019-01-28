@@ -59,8 +59,8 @@ def remove_duplicates(df_or_series):
     return df_or_series[~df_or_series.index.duplicated(keep="first")]
 
 
-def as_freq(meter_data_series, freq, atomic_freq="1 Min"):
-    """Resample meter data to a different frequency.
+def as_freq(data_series, freq, atomic_freq="1 Min", series_type="cumulative"):
+    """Resample data to a different frequency.
 
     This method can be used to upsample or downsample meter data. The
     assumption it makes to do so is that meter data is constant and averaged
@@ -68,7 +68,8 @@ def as_freq(meter_data_series, freq, atomic_freq="1 Min"):
     daily data, this method first upsamples to the atomic frequency
     (1 minute freqency, by default), "spreading" usage evenly across all
     minutes in each period. Then it downsamples to hourly frequency and
-    returns that result.
+    returns that result. With instantaneous series, the data is copied to all
+    contiguous time intervals and the mean over `freq` is returned.
 
     **Caveats**:
 
@@ -78,14 +79,10 @@ def as_freq(meter_data_series, freq, atomic_freq="1 Min"):
        observed data at large enough frequencies, so this caveat should not be
        taken lightly).
 
-     - This method should not be used for sampled (e.g., temperature data)
-       rather than recorded data (e.g., meter data), as sampled data cannot be
-       "spread" in the same way.
-
     Parameters
     ----------
-    meter_data_series : :any:`pandas.Series`
-        Meter data to resample. Should have a :any:`pandas.DatetimeIndex`.
+    data_series : :any:`pandas.Series`
+        Data to resample. Should have a :any:`pandas.DatetimeIndex`.
     freq : :any:`str`
         The frequency to resample to. This should be given in a form recognized
         by the :any:`pandas.Series.resample` method.
@@ -93,30 +90,41 @@ def as_freq(meter_data_series, freq, atomic_freq="1 Min"):
         The "atomic" frequency of the intermediate data form. This can be
         adjusted to a higher atomic frequency to increase speed or memory
         performance.
+    series_type : :any:`str`, {'cumulative', ‘instantaneous’},
+        default 'cumulative'
+        Type of data sampling. 'cumulative' data can be spread over smaller
+        time intervals and is aggregated using addition (e.g. meter data).
+        'instantaneous' data is copied (not spread) over smaller time intervals
+        and is aggregated by averaging (e.g. weather data).
 
     Returns
     -------
-    resampled_meter_data : :any:`pandas.Series`
-        Meter data resampled to the given frequency.
+    resampled_data : :any:`pandas.Series`
+        Data resampled to the given frequency.
     """
     # TODO(philngo): make sure this complies with CalTRACK 2.2.2.1
-    if not isinstance(meter_data_series, pd.Series):
+    if not isinstance(data_series, pd.Series):
         raise ValueError(
             "expected series, got object with class {}".format(
-                meter_data_series.__class__
+                data_series.__class__
             )
         )
-    if meter_data_series.empty:
-        return meter_data_series
-    series = remove_duplicates(meter_data_series)
+    if data_series.empty:
+        return data_series
+    series = remove_duplicates(data_series)
     target_freq = pd.Timedelta(atomic_freq)
     timedeltas = (series.index[1:] - series.index[:-1]).append(
         pd.TimedeltaIndex([pd.NaT])
     )
-    spread_factor = target_freq.total_seconds() / timedeltas.total_seconds()
-    series_spread = series * spread_factor
-    atomic_series = series_spread.asfreq(atomic_freq, method="ffill")
-    resampled = atomic_series.resample(freq).sum()
+    if series_type == 'cumulative':
+        spread_factor = target_freq.total_seconds() / \
+            timedeltas.total_seconds()
+        series_spread = series * spread_factor
+        atomic_series = series_spread.asfreq(atomic_freq, method="ffill")
+        resampled = atomic_series.resample(freq).sum()
+    elif series_type == 'instantaneous':
+        atomic_series = series.asfreq(atomic_freq, method="ffill")
+        resampled = atomic_series.resample(freq).mean()
     return resampled
 
 
