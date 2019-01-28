@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Added option in `transform.as_freq` to handle instantaneous data such as temperature and other weather variables.
 
 2.2.9
 -----
