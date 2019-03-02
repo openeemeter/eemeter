@@ -8,7 +8,7 @@ name = "pypi"
 [packages]
 
 click = "*"
-pandas = "*"
+pandas = "<=0.23.4"  # 0.24.0 treats DatetimeIndex differently
 eeweather = ">=0.3.12"
 matplotlib = "<3.0.0"  # until we drop python 2 support
 statsmodels = "*"
@@ -26,6 +26,7 @@ pytest = "*"
 pytest-cov = "*"
 pytest-profiling = "*"
 pytest-xdist = "*"
+snapshottest = {git = "git://github.com/syrusakbary/snapshottest.git", editable = true, ref = "54117098bd756c0fa6936f3bafab4bf85c58e943"}
 sphinx = "*"
 sphinx-autobuild = "*"
 sphinxcontrib-spelling = "*"
