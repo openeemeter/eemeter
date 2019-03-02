@@ -477,6 +477,8 @@ def compute_temperature_features(
     if not keep_partial_nan_rows:
         df = overwrite_partial_rows_with_nan(df)
 
+    # nan last row
+    df = df.iloc[:-1].reindex(df.index)
     return df
 
 
