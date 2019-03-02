@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Fix bug where the model prediction includes features in the last row that should be null.
 
 2.2.10
 ------
