@@ -197,8 +197,9 @@ def get_baseline_data(data, start=None, end=None, max_days=365):
         end = pytz.UTC.localize(pd.Timestamp.max)
         end_inf = True
     else:
+        baseline_data_end = data[:end].index.max()
         if max_days is not None:
-            min_start = end - timedelta(days=max_days)
+            min_start = baseline_data_end - timedelta(days=max_days)
             if start < min_start:
                 start = min_start
 
@@ -287,8 +288,9 @@ def get_reporting_data(data, start=None, end=None, max_days=365):
         start = pytz.UTC.localize(pd.Timestamp.min)
         start_inf = True
     else:
+        reporting_data_start = data[start:].index.min()
         if max_days is not None:
-            max_end = start + timedelta(days=max_days)
+            max_end = reporting_data_start + timedelta(days=max_days)
             if end > max_end:
                 end = max_end
 
