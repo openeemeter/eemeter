@@ -40,5 +40,6 @@ typing = "*"
 # See https://github.com/pypa/pipenv/issues/1705
 jupyterlab-launcher = {version = "*", markers="python_version >= '3.5'"}
 jupyterlab-server = {version = "*", markers="python_version >= '3.5'"}
-ipython = {version = "*",  markers="python_version >= '3.5'"}
-ipykernel = {version = "*",  markers="python_version >= '3.5'"}
+ipython = {version = "*", markers="python_version >= '3.5'"}
+ipykernel = {version = "*", markers="python_version >= '3.5'"}
+more-itertools = {version = "*", markers="python_version >= '3.5'"}
