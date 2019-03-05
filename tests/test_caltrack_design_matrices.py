@@ -47,7 +47,7 @@ def test_create_caltrack_hourly_preliminary_design_matrix(
         "n_hours_kept",
         "temperature_mean",
     ]
-    assert round(design_matrix.sum().sum(), 2) == 136544.91
+    assert round(design_matrix.sum().sum(), 2) == 136352.61
 
 
 def test_create_caltrack_daily_design_matrix(il_electricity_cdd_hdd_daily):
@@ -382,7 +382,7 @@ def test_create_caltrack_hourly_segmented_design_matrices(
         "occupancy",
         "weight",
     ]
-    assert round(design_matrix.sum().sum(), 2) == 126433.71
+    assert round(design_matrix.sum().sum(), 2) == 126252.07
 
     design_matrix = design_matrices["mar-apr-may-weighted"]
     assert design_matrix.shape == (1000, 5)

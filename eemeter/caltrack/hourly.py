@@ -167,6 +167,7 @@ def fit_caltrack_hourly_model_segment(segment_name, segment_data):
             )
         )
     else:
+        segment_data = segment_data.dropna()
         formula = _get_hourly_model_formula(segment_data)
         model = smf.wls(formula=formula, data=segment_data, weights=segment_data.weight)
         model_params = {coeff: value for coeff, value in model.fit().params.items()}
