@@ -402,8 +402,8 @@ def test_caltrack_predict_intercept_only_with_design_matrix(
         "predicted_usage",
         "temperature_mean",
     ]
-    assert prediction.n_days.sum() == 366.0
-    assert prediction.n_days_dropped.sum() == 1
+    assert prediction.n_days.sum() == 365.0
+    assert prediction.n_days_dropped.sum() == 0.0
     assert prediction.n_days_kept.sum() == 365
     assert prediction.predicted_usage.sum() == 365.0
     assert round(prediction.temperature_mean.mean()) == 65.0
@@ -1600,7 +1600,7 @@ def test_caltrack_merge_temperatures_insufficient_temperature_per_period(
     baseline_meter_data_billing, baseline_temperature_data
 ):
     baseline_temperature_data_missing = baseline_temperature_data.copy(deep=True)
-    baseline_temperature_data_missing.iloc[: (4 * 24)] = np.nan
+    baseline_temperature_data_missing.iloc[: (8 * 24)] = np.nan
 
     # test without percent_hourly_coverage_per_billing_period constraint
     temperature_features_no_constraint = compute_temperature_features(
@@ -1613,7 +1613,7 @@ def test_caltrack_merge_temperatures_insufficient_temperature_per_period(
         percent_hourly_coverage_per_billing_period=0,
     )
 
-    assert temperature_features_no_constraint["n_days_kept"].isnull().sum() == 0
+    assert temperature_features_no_constraint["n_days_kept"].isnull().sum() == 1
 
     # test with default percent_hourly_coverage_per_billing_period=0.9 constraint
     temperature_features_with_constraint = compute_temperature_features(
@@ -1624,7 +1624,7 @@ def test_caltrack_merge_temperatures_insufficient_temperature_per_period(
         data_quality=True,
         keep_partial_nan_rows=False,
     )
-    assert temperature_features_with_constraint["n_days_kept"].isnull().sum() == 1
+    assert temperature_features_with_constraint["n_days_kept"].isnull().sum() == 2
 
 
 def test_caltrack_sufficiency_criteria_no_data():

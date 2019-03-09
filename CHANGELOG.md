@@ -6,6 +6,17 @@ Development
 
 * Placeholder
 
+2.3.0
+-----
+
+* Fix bug where the model prediction includes features in the last row that should be null.
+* Fix in `transform.get_baseline_data` and `transform.get_reporting_data` to enable pulling a full year of data even with irregular billing periods
+
+2.2.10
+------
+
+* Added option in `transform.as_freq` to handle instantaneous data such as temperature and other weather variables.
+
 2.2.9
 -----
 
