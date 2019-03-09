@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+2.3.1
+-----
+
 * Hot fix for bug that occasionally leads to `LinAlgError: SVD did not converge` error when fitting caltrack hourly models by converting the weights from `np.float64` ton `np.float32`.
 
 2.3.0
