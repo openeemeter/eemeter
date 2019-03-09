@@ -110,14 +110,17 @@ def test_compute_temperature_features_hourly_hourly_degree_days(
         "n_hours_kept",
     ]
     assert df.shape == (2952, 6)
-    snapshot.assert_match([
-        round(df.hdd_60.mean(), 2),
-        round(df.hdd_61.mean(), 2),
-        round(df.cdd_65.mean(), 2),
-        round(df.cdd_66.mean(), 2),
-        round(df.n_hours_kept.mean(), 2),
-        round(df.n_hours_dropped.mean(), 2),
-    ], 'values')
+    snapshot.assert_match(
+        [
+            round(df.hdd_60.mean(), 2),
+            round(df.hdd_61.mean(), 2),
+            round(df.cdd_65.mean(), 2),
+            round(df.cdd_66.mean(), 2),
+            round(df.n_hours_kept.mean(), 2),
+            round(df.n_hours_dropped.mean(), 2),
+        ],
+        "values",
+    )
 
 
 def test_compute_temperature_features_hourly_hourly_degree_days_use_mean_false(
@@ -146,14 +149,17 @@ def test_compute_temperature_features_hourly_hourly_degree_days_use_mean_false(
         "n_hours_dropped",
         "n_hours_kept",
     ]
-    snapshot.assert_match([
-        round(df.hdd_60.mean(), 2),
-        round(df.hdd_61.mean(), 2),
-        round(df.cdd_65.mean(), 2),
-        round(df.cdd_66.mean(), 2),
-        round(df.n_hours_kept.mean(), 2),
-        round(df.n_hours_dropped.mean(), 2),
-    ], 'values')
+    snapshot.assert_match(
+        [
+            round(df.hdd_60.mean(), 2),
+            round(df.hdd_61.mean(), 2),
+            round(df.cdd_65.mean(), 2),
+            round(df.cdd_66.mean(), 2),
+            round(df.n_hours_kept.mean(), 2),
+            round(df.n_hours_dropped.mean(), 2),
+        ],
+        "values",
+    )
 
 
 def test_compute_temperature_features_hourly_daily_degree_days_fail(
@@ -273,14 +279,17 @@ def test_compute_temperature_features_daily_daily_degree_days(
         "n_days_dropped",
         "n_days_kept",
     ]
-    snapshot.assert_match([
-        round(df.hdd_60.mean(), 2),
-        round(df.hdd_61.mean(), 2),
-        round(df.cdd_65.mean(), 2),
-        round(df.cdd_66.mean(), 2),
-        round(df.n_days_kept.mean(), 2),
-        round(df.n_days_dropped.mean(), 2),
-    ], 'values')
+    snapshot.assert_match(
+        [
+            round(df.hdd_60.mean(), 2),
+            round(df.hdd_61.mean(), 2),
+            round(df.cdd_65.mean(), 2),
+            round(df.cdd_66.mean(), 2),
+            round(df.n_days_kept.mean(), 2),
+            round(df.n_days_dropped.mean(), 2),
+        ],
+        "values",
+    )
 
 
 def test_compute_temperature_features_daily_daily_degree_days_use_mean_false(
@@ -306,14 +315,17 @@ def test_compute_temperature_features_daily_daily_degree_days_use_mean_false(
         "n_days_dropped",
         "n_days_kept",
     ]
-    snapshot.assert_match([
-        round(df.hdd_60.mean(), 2),
-        round(df.hdd_61.mean(), 2),
-        round(df.cdd_65.mean(), 2),
-        round(df.cdd_66.mean(), 2),
-        round(df.n_days_kept.mean(), 2),
-        round(df.n_days_dropped.mean(), 2),
-    ], 'values')
+    snapshot.assert_match(
+        [
+            round(df.hdd_60.mean(), 2),
+            round(df.hdd_61.mean(), 2),
+            round(df.cdd_65.mean(), 2),
+            round(df.cdd_66.mean(), 2),
+            round(df.n_days_kept.mean(), 2),
+            round(df.n_days_dropped.mean(), 2),
+        ],
+        "values",
+    )
 
 
 def test_compute_temperature_features_daily_hourly_degree_days(
@@ -338,14 +350,17 @@ def test_compute_temperature_features_daily_hourly_degree_days(
         "n_hours_dropped",
         "n_hours_kept",
     ]
-    snapshot.assert_match([
-        round(df.hdd_60.mean(), 2),
-        round(df.hdd_61.mean(), 2),
-        round(df.cdd_65.mean(), 2),
-        round(df.cdd_66.mean(), 2),
-        round(df.n_hours_kept.mean(), 2),
-        round(df.n_hours_dropped.mean(), 2),
-    ], 'values')
+    snapshot.assert_match(
+        [
+            round(df.hdd_60.mean(), 2),
+            round(df.hdd_61.mean(), 2),
+            round(df.cdd_65.mean(), 2),
+            round(df.cdd_66.mean(), 2),
+            round(df.n_hours_kept.mean(), 2),
+            round(df.n_hours_dropped.mean(), 2),
+        ],
+        "values",
+    )
 
 
 def test_compute_temperature_features_daily_hourly_degree_days_use_mean_false(
@@ -371,14 +386,17 @@ def test_compute_temperature_features_daily_hourly_degree_days_use_mean_false(
         "n_hours_dropped",
         "n_hours_kept",
     ]
-    snapshot.assert_match([
-        round(df.hdd_60.mean(), 2),
-        round(df.hdd_61.mean(), 2),
-        round(df.cdd_65.mean(), 2),
-        round(df.cdd_66.mean(), 2),
-        round(df.n_hours_kept.mean(), 2),
-        round(df.n_hours_dropped.mean(), 2),
-    ], 'values')
+    snapshot.assert_match(
+        [
+            round(df.hdd_60.mean(), 2),
+            round(df.hdd_61.mean(), 2),
+            round(df.cdd_65.mean(), 2),
+            round(df.cdd_66.mean(), 2),
+            round(df.n_hours_kept.mean(), 2),
+            round(df.n_hours_dropped.mean(), 2),
+        ],
+        "values",
+    )
 
 
 def test_compute_temperature_features_daily_bad_degree_days(
@@ -450,14 +468,17 @@ def test_compute_temperature_features_billing_monthly_daily_degree_days(
         "n_days_dropped",
         "n_days_kept",
     ]
-    snapshot.assert_match([
-        round(df.hdd_60.mean(), 2),
-        round(df.hdd_61.mean(), 2),
-        round(df.cdd_65.mean(), 2),
-        round(df.cdd_66.mean(), 2),
-        round(df.n_days_kept.mean(), 2),
-        round(df.n_days_dropped.mean(), 2),
-    ], 'values')
+    snapshot.assert_match(
+        [
+            round(df.hdd_60.mean(), 2),
+            round(df.hdd_61.mean(), 2),
+            round(df.cdd_65.mean(), 2),
+            round(df.cdd_66.mean(), 2),
+            round(df.n_days_kept.mean(), 2),
+            round(df.n_days_dropped.mean(), 2),
+        ],
+        "values",
+    )
 
 
 def test_compute_temperature_features_billing_monthly_daily_degree_days_use_mean_false(
@@ -483,14 +504,17 @@ def test_compute_temperature_features_billing_monthly_daily_degree_days_use_mean
         "n_days_dropped",
         "n_days_kept",
     ]
-    snapshot.assert_match([
-        round(df.hdd_60.mean(), 2),
-        round(df.hdd_61.mean(), 2),
-        round(df.cdd_65.mean(), 2),
-        round(df.cdd_66.mean(), 2),
-        round(df.n_days_kept.mean(), 2),
-        round(df.n_days_dropped.mean(), 2),
-    ], 'values')
+    snapshot.assert_match(
+        [
+            round(df.hdd_60.mean(), 2),
+            round(df.hdd_61.mean(), 2),
+            round(df.cdd_65.mean(), 2),
+            round(df.cdd_66.mean(), 2),
+            round(df.n_days_kept.mean(), 2),
+            round(df.n_days_dropped.mean(), 2),
+        ],
+        "values",
+    )
 
 
 def test_compute_temperature_features_billing_monthly_hourly_degree_days(
@@ -515,14 +539,17 @@ def test_compute_temperature_features_billing_monthly_hourly_degree_days(
         "n_hours_dropped",
         "n_hours_kept",
     ]
-    snapshot.assert_match([
-        round(df.hdd_60.mean(), 2),
-        round(df.hdd_61.mean(), 2),
-        round(df.cdd_65.mean(), 2),
-        round(df.cdd_66.mean(), 2),
-        round(df.n_hours_kept.mean(), 2),
-        round(df.n_hours_dropped.mean(), 2),
-    ], 'values')
+    snapshot.assert_match(
+        [
+            round(df.hdd_60.mean(), 2),
+            round(df.hdd_61.mean(), 2),
+            round(df.cdd_65.mean(), 2),
+            round(df.cdd_66.mean(), 2),
+            round(df.n_hours_kept.mean(), 2),
+            round(df.n_hours_dropped.mean(), 2),
+        ],
+        "values",
+    )
 
 
 def test_compute_temperature_features_billing_monthly_hourly_degree_days_use_mean_false(
@@ -548,14 +575,17 @@ def test_compute_temperature_features_billing_monthly_hourly_degree_days_use_mea
         "n_hours_dropped",
         "n_hours_kept",
     ]
-    snapshot.assert_match([
-        round(df.hdd_60.mean(), 2),
-        round(df.hdd_61.mean(), 2),
-        round(df.cdd_65.mean(), 2),
-        round(df.cdd_66.mean(), 2),
-        round(df.n_hours_kept.mean(), 2),
-        round(df.n_hours_dropped.mean(), 2),
-    ], 'values')
+    snapshot.assert_match(
+        [
+            round(df.hdd_60.mean(), 2),
+            round(df.hdd_61.mean(), 2),
+            round(df.cdd_65.mean(), 2),
+            round(df.cdd_66.mean(), 2),
+            round(df.n_hours_kept.mean(), 2),
+            round(df.n_hours_dropped.mean(), 2),
+        ],
+        "values",
+    )
 
 
 def test_compute_temperature_features_billing_monthly_bad_degree_day_method(
@@ -629,14 +659,17 @@ def test_compute_temperature_features_billing_bimonthly_daily_degree_days(
         "n_days_dropped",
         "n_days_kept",
     ]
-    snapshot.assert_match([
-        round(df.hdd_60.mean(), 2),
-        round(df.hdd_61.mean(), 2),
-        round(df.cdd_65.mean(), 2),
-        round(df.cdd_66.mean(), 2),
-        round(df.n_days_kept.mean(), 2),
-        round(df.n_days_dropped.mean(), 2),
-    ], 'values')
+    snapshot.assert_match(
+        [
+            round(df.hdd_60.mean(), 2),
+            round(df.hdd_61.mean(), 2),
+            round(df.cdd_65.mean(), 2),
+            round(df.cdd_66.mean(), 2),
+            round(df.n_days_kept.mean(), 2),
+            round(df.n_days_dropped.mean(), 2),
+        ],
+        "values",
+    )
 
 
 def test_compute_temperature_features_billing_bimonthly_hourly_degree_days(
@@ -661,14 +694,17 @@ def test_compute_temperature_features_billing_bimonthly_hourly_degree_days(
         "n_hours_dropped",
         "n_hours_kept",
     ]
-    snapshot.assert_match([
-        round(df.hdd_60.mean(), 2),
-        round(df.hdd_61.mean(), 2),
-        round(df.cdd_65.mean(), 2),
-        round(df.cdd_66.mean(), 2),
-        round(df.n_hours_kept.mean(), 2),
-        round(df.n_hours_dropped.mean(), 2),
-    ], 'values')
+    snapshot.assert_match(
+        [
+            round(df.hdd_60.mean(), 2),
+            round(df.hdd_61.mean(), 2),
+            round(df.cdd_65.mean(), 2),
+            round(df.cdd_66.mean(), 2),
+            round(df.n_hours_kept.mean(), 2),
+            round(df.n_hours_dropped.mean(), 2),
+        ],
+        "values",
+    )
 
 
 def test_compute_temperature_features_billing_bimonthly_bad_degree_days(

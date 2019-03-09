@@ -105,9 +105,7 @@ def as_freq(data_series, freq, atomic_freq="1 Min", series_type="cumulative"):
     # TODO(philngo): make sure this complies with CalTRACK 2.2.2.1
     if not isinstance(data_series, pd.Series):
         raise ValueError(
-            "expected series, got object with class {}".format(
-                data_series.__class__
-            )
+            "expected series, got object with class {}".format(data_series.__class__)
         )
     if data_series.empty:
         return data_series
@@ -116,13 +114,12 @@ def as_freq(data_series, freq, atomic_freq="1 Min", series_type="cumulative"):
     timedeltas = (series.index[1:] - series.index[:-1]).append(
         pd.TimedeltaIndex([pd.NaT])
     )
-    if series_type == 'cumulative':
-        spread_factor = target_freq.total_seconds() / \
-            timedeltas.total_seconds()
+    if series_type == "cumulative":
+        spread_factor = target_freq.total_seconds() / timedeltas.total_seconds()
         series_spread = series * spread_factor
         atomic_series = series_spread.asfreq(atomic_freq, method="ffill")
         resampled = atomic_series.resample(freq).sum()
-    elif series_type == 'instantaneous':
+    elif series_type == "instantaneous":
         atomic_series = series.asfreq(atomic_freq, method="ffill")
         resampled = atomic_series.resample(freq).mean()
     return resampled

@@ -67,33 +67,33 @@ def test_as_freq_month_start(il_electricity_cdd_hdd_billing_monthly):
 
 def test_as_freq_hourly_temperature(il_electricity_cdd_hdd_billing_monthly):
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]
-    assert temperature_data.shape == (19417, )
-    as_hourly = as_freq(temperature_data, freq="H", series_type='instantaneous')
+    assert temperature_data.shape == (19417,)
+    as_hourly = as_freq(temperature_data, freq="H", series_type="instantaneous")
     assert as_hourly.shape == (19417,)
     assert round(temperature_data.mean(), 1) == round(as_hourly.mean(), 1) == 54.6
 
 
 def test_as_freq_daily_temperature(il_electricity_cdd_hdd_billing_monthly):
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]
-    assert temperature_data.shape == (19417, )
-    as_daily = as_freq(temperature_data, freq="D", series_type='instantaneous')
+    assert temperature_data.shape == (19417,)
+    as_daily = as_freq(temperature_data, freq="D", series_type="instantaneous")
     assert as_daily.shape == (810,)
     assert abs(temperature_data.mean() - as_daily.mean()) <= 0.1
 
 
 def test_as_freq_month_start_temperature(il_electricity_cdd_hdd_billing_monthly):
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]
-    assert temperature_data.shape == (19417, )
-    as_month_start = as_freq(temperature_data, freq="MS", series_type='instantaneous')
+    assert temperature_data.shape == (19417,)
+    as_month_start = as_freq(temperature_data, freq="MS", series_type="instantaneous")
     assert as_month_start.shape == (28,)
     assert round(as_month_start.mean(), 1) == 53.4
 
 
 def test_as_freq_daily_temperature_monthly(il_electricity_cdd_hdd_billing_monthly):
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]
-    temperature_data = temperature_data.groupby(pd.Grouper(freq='MS')).mean()
-    assert temperature_data.shape == (28, )
-    as_daily = as_freq(temperature_data, freq="D", series_type='instantaneous')
+    temperature_data = temperature_data.groupby(pd.Grouper(freq="MS")).mean()
+    assert temperature_data.shape == (28,)
+    as_daily = as_freq(temperature_data, freq="D", series_type="instantaneous")
     assert as_daily.shape == (824,)
     assert round(as_daily.mean(), 1) == 54.5
 
