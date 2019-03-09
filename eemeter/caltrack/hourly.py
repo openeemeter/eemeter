@@ -169,7 +169,7 @@ def fit_caltrack_hourly_model_segment(segment_name, segment_data):
         )
     else:
         # Prevents machine-specific 'LinAlgError: SVD did not converge' error.
-        #float64_cols = segment_data.dtypes[segment_data.dtypes == np.float64].index
+        # float64_cols = segment_data.dtypes[segment_data.dtypes == np.float64].index
         segment_data.weight = segment_data.weight.astype(np.float32)
 
         formula = _get_hourly_model_formula(segment_data)
