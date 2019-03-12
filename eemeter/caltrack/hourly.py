@@ -147,7 +147,10 @@ def caltrack_hourly_prediction_feature_processor(
 
 def fit_caltrack_hourly_model_segment(segment_name, segment_data):
     def _get_hourly_model_formula(data):
-        if np.sum(data.loc[data.weight > 0].occupancy) == 0:
+        if (np.sum(data.loc[data.weight > 0].occupancy) == 0) or (
+            np.sum(data.loc[data.weight > 0].occupancy)
+            == len(data.loc[data.weight > 0].occupancy)
+        ):
             bin_occupancy_interactions = "".join(
                 [" + {}".format(c) for c in data.columns if "bin" in c]
             )
