@@ -147,10 +147,16 @@ def caltrack_hourly_prediction_feature_processor(
 
 def fit_caltrack_hourly_model_segment(segment_name, segment_data):
     def _get_hourly_model_formula(data):
-        bin_occupancy_interactions = "".join(
-            [" + {}:C(occupancy)".format(c) for c in data.columns if "bin" in c]
-        )
-        return "meter_value ~ C(hour_of_week) - 1{}".format(bin_occupancy_interactions)
+        if np.sum(data.loc[data.weight > 0].occupancy) == 0:
+            bin_occupancy_interactions = "".join(
+                [" + {}".format(c) for c in data.columns if "bin" in c]
+            )
+            return "meter_value ~ C(hour_of_week) - 1{}".format(bin_occupancy_interactions)
+        else:
+            bin_occupancy_interactions = "".join(
+                [" + {}:C(occupancy)".format(c) for c in data.columns if "bin" in c]
+            )
+            return "meter_value ~ C(hour_of_week) - 1{}".format(bin_occupancy_interactions)
 
     warnings = []
     if segment_data.dropna().empty:
@@ -168,9 +174,6 @@ def fit_caltrack_hourly_model_segment(segment_name, segment_data):
             )
         )
     else:
-        # Prevents machine-specific 'LinAlgError: SVD did not converge' error.
-        # float64_cols = segment_data.dtypes[segment_data.dtypes == np.float64].index
-        segment_data.weight = segment_data.weight.astype(np.float32)
 
         formula = _get_hourly_model_formula(segment_data)
         model = smf.wls(formula=formula, data=segment_data, weights=segment_data.weight)
