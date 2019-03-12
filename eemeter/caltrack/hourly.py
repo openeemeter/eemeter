@@ -151,12 +151,16 @@ def fit_caltrack_hourly_model_segment(segment_name, segment_data):
             bin_occupancy_interactions = "".join(
                 [" + {}".format(c) for c in data.columns if "bin" in c]
             )
-            return "meter_value ~ C(hour_of_week) - 1{}".format(bin_occupancy_interactions)
+            return "meter_value ~ C(hour_of_week) - 1{}".format(
+                bin_occupancy_interactions
+            )
         else:
             bin_occupancy_interactions = "".join(
                 [" + {}:C(occupancy)".format(c) for c in data.columns if "bin" in c]
             )
-            return "meter_value ~ C(hour_of_week) - 1{}".format(bin_occupancy_interactions)
+            return "meter_value ~ C(hour_of_week) - 1{}".format(
+                bin_occupancy_interactions
+            )
 
     warnings = []
     if segment_data.dropna().empty:

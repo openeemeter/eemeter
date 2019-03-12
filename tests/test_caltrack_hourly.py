@@ -363,35 +363,37 @@ def test_predict_caltrack_hourly_model_empty_models(
     assert prediction.dropna().shape[0] == 0
 
 
-
 @pytest.fixture
 def occupancy_lookup_zeroes():
     index = pd.Categorical(range(168))
     occupancy = pd.Series([False] * 168, index=index)
     return pd.DataFrame(
-        {
-            "dec-jan-feb-weighted": occupancy,
-            "jan-feb-mar-weighted": occupancy
-        }
+        {"dec-jan-feb-weighted": occupancy, "jan-feb-mar-weighted": occupancy}
     )
 
 
 @pytest.fixture
-def segmented_design_matrices_single_mode(segmented_data, occupancy_lookup_zeroes, temperature_bins):
+def segmented_design_matrices_single_mode(
+    segmented_data, occupancy_lookup_zeroes, temperature_bins
+):
     return {
         "dec-jan-feb-weighted": caltrack_hourly_fit_feature_processor(
-            "dec-jan-feb-weighted", segmented_data, occupancy_lookup_zeroes, temperature_bins
+            "dec-jan-feb-weighted",
+            segmented_data,
+            occupancy_lookup_zeroes,
+            temperature_bins,
         )
     }
 
 
-def test_fit_caltrack_hourly_model_segment_single_mode(segmented_design_matrices_single_mode):
+def test_fit_caltrack_hourly_model_segment_single_mode(
+    segmented_design_matrices_single_mode
+):
     segment_name = "dec-jan-feb-weighted"
     segment_data = segmented_design_matrices_single_mode[segment_name]
     segment_model = fit_caltrack_hourly_model_segment(segment_name, segment_data)
     assert segment_model.formula == (
-        "meter_value ~ C(hour_of_week) - 1 + bin_0"
-        " + bin_1 + bin_2 + bin_3"
+        "meter_value ~ C(hour_of_week) - 1 + bin_0" " + bin_1 + bin_2 + bin_3"
     )
     assert segment_model.segment_name == "dec-jan-feb-weighted"
     assert len(segment_model.model_params.keys()) == 28
