@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Fix for bug that occasionally leads to `LinAlgError: SVD did not converge` error when fitting caltrack hourly models by addressing multi-collinearity when only a single occupancy mode is detected
 
 2.3.1
 -----
