@@ -255,12 +255,12 @@ def get_baseline_data(
                     start, max_days
                 )
             )
-        if end is None:
-            raise ValueError(
-                "If max_days is set, end cannot be None: end={}, max_days={}.".format(
-                    end, max_days
-                )
-            )
+        # if end is None:
+        #     raise ValueError(
+        #         "If max_days is set, end cannot be None: end={}, max_days={}.".format(
+        #             end, max_days
+        #         )
+        #     )
 
     start_inf = False
     if start is None:
@@ -412,12 +412,12 @@ def get_reporting_data(
                     end, max_days
                 )
             )
-        if start is None:
-            raise ValueError(
-                "If max_days is set, start cannot be None: start={}, max_days={}.".format(
-                    start, max_days
-                )
-            )
+        # if start is None:
+        #     raise ValueError(
+        #         "If max_days is set, start cannot be None: start={}, max_days={}.".format(
+        #             start, max_days
+        #         )
+        #     )
 
     start_inf = False
     if start is None:
