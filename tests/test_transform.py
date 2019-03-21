@@ -22,6 +22,7 @@ from pkg_resources import resource_stream
 
 import pandas as pd
 import pytest
+import pytz
 
 from eemeter.transform import (
     as_freq,
@@ -189,6 +190,99 @@ def test_get_baseline_data_end_gap(il_electricity_cdd_hdd_hourly):
     }
 
 
+def test_get_baseline_data_with_overshoot(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    baseline_data, warnings = get_baseline_data(
+        meter_data,
+        end=datetime(2016, 11, 9, tzinfo=pytz.UTC),
+        max_days=32,
+        allow_billing_period_overshoot=True,
+    )
+    assert baseline_data.shape == (2, 1)
+    assert round(baseline_data.value.sum(), 2) == 632.31
+    assert len(warnings) == 0
+
+    baseline_data, warnings = get_baseline_data(
+        meter_data,
+        end=datetime(2016, 11, 9, tzinfo=pytz.UTC),
+        max_days=32,
+        allow_billing_period_overshoot=False,
+    )
+    assert baseline_data.shape == (1, 1)
+    assert round(baseline_data.value.sum(), 2) == 0
+    assert len(warnings) == 0
+
+    baseline_data, warnings = get_baseline_data(
+        meter_data,
+        end=datetime(2016, 11, 9, tzinfo=pytz.UTC),
+        max_days=25,
+        allow_billing_period_overshoot=True,
+    )
+    assert baseline_data.shape == (1, 1)
+    assert round(baseline_data.value.sum(), 2) == 0
+    assert len(warnings) == 0
+
+
+def test_get_baseline_data_with_ignored_gap(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    baseline_data, warnings = get_baseline_data(
+        meter_data,
+        end=datetime(2016, 11, 9, tzinfo=pytz.UTC),
+        max_days=45,
+        ignore_billing_period_gap_for_day_count=True,
+    )
+    assert baseline_data.shape == (2, 1)
+    assert round(baseline_data.value.sum(), 2) == 632.31
+    assert len(warnings) == 0
+
+    baseline_data, warnings = get_baseline_data(
+        meter_data,
+        end=datetime(2016, 11, 9, tzinfo=pytz.UTC),
+        max_days=45,
+        ignore_billing_period_gap_for_day_count=False,
+    )
+    assert baseline_data.shape == (1, 1)
+    assert round(baseline_data.value.sum(), 2) == 0
+    assert len(warnings) == 0
+
+    baseline_data, warnings = get_baseline_data(
+        meter_data,
+        end=datetime(2016, 11, 9, tzinfo=pytz.UTC),
+        max_days=25,
+        ignore_billing_period_gap_for_day_count=True,
+    )
+    assert baseline_data.shape == (1, 1)
+    assert round(baseline_data.value.sum(), 2) == 0
+    assert len(warnings) == 0
+
+
+def test_get_baseline_data_with_overshoot_and_ignored_gap(
+    il_electricity_cdd_hdd_billing_monthly
+):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    baseline_data, warnings = get_baseline_data(
+        meter_data,
+        end=datetime(2016, 11, 9, tzinfo=pytz.UTC),
+        max_days=25,
+        allow_billing_period_overshoot=True,
+        ignore_billing_period_gap_for_day_count=True,
+    )
+    assert baseline_data.shape == (2, 1)
+    assert round(baseline_data.value.sum(), 2) == 632.31
+    assert len(warnings) == 0
+
+    baseline_data, warnings = get_baseline_data(
+        meter_data,
+        end=datetime(2016, 11, 9, tzinfo=pytz.UTC),
+        max_days=25,
+        allow_billing_period_overshoot=False,
+        ignore_billing_period_gap_for_day_count=False,
+    )
+    assert baseline_data.shape == (1, 1)
+    assert round(baseline_data.value.sum(), 2) == 0
+    assert len(warnings) == 0
+
+
 def test_get_reporting_data(il_electricity_cdd_hdd_hourly):
     meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
     reporting_data, warnings = get_reporting_data(meter_data)
@@ -257,6 +351,99 @@ def test_get_reporting_data_end_gap(il_electricity_cdd_hdd_hourly):
         "data_end": "2018-02-08T06:00:00+00:00",
         "requested_end": "2018-02-09T06:00:00+00:00",
     }
+
+
+def test_get_reporting_data_with_overshoot(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    reporting_data, warnings = get_reporting_data(
+        meter_data,
+        start=datetime(2016, 9, 9, tzinfo=pytz.UTC),
+        max_days=30,
+        allow_billing_period_overshoot=True,
+    )
+    assert reporting_data.shape == (2, 1)
+    assert round(reporting_data.value.sum(), 2) == 632.31
+    assert len(warnings) == 0
+
+    reporting_data, warnings = get_reporting_data(
+        meter_data,
+        start=datetime(2016, 9, 9, tzinfo=pytz.UTC),
+        max_days=30,
+        allow_billing_period_overshoot=False,
+    )
+    assert reporting_data.shape == (1, 1)
+    assert round(reporting_data.value.sum(), 2) == 0
+    assert len(warnings) == 0
+
+    reporting_data, warnings = get_reporting_data(
+        meter_data,
+        start=datetime(2016, 9, 9, tzinfo=pytz.UTC),
+        max_days=25,
+        allow_billing_period_overshoot=True,
+    )
+    assert reporting_data.shape == (1, 1)
+    assert round(reporting_data.value.sum(), 2) == 0
+    assert len(warnings) == 0
+
+
+def test_get_reporting_data_with_ignored_gap(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    reporting_data, warnings = get_reporting_data(
+        meter_data,
+        start=datetime(2016, 9, 9, tzinfo=pytz.UTC),
+        max_days=45,
+        ignore_billing_period_gap_for_day_count=True,
+    )
+    assert reporting_data.shape == (2, 1)
+    assert round(reporting_data.value.sum(), 2) == 632.31
+    assert len(warnings) == 0
+
+    reporting_data, warnings = get_reporting_data(
+        meter_data,
+        start=datetime(2016, 9, 9, tzinfo=pytz.UTC),
+        max_days=45,
+        ignore_billing_period_gap_for_day_count=False,
+    )
+    assert reporting_data.shape == (1, 1)
+    assert round(reporting_data.value.sum(), 2) == 0
+    assert len(warnings) == 0
+
+    reporting_data, warnings = get_reporting_data(
+        meter_data,
+        start=datetime(2016, 9, 9, tzinfo=pytz.UTC),
+        max_days=25,
+        ignore_billing_period_gap_for_day_count=True,
+    )
+    assert reporting_data.shape == (1, 1)
+    assert round(reporting_data.value.sum(), 2) == 0
+    assert len(warnings) == 0
+
+
+def test_get_reporting_data_with_overshoot_and_ignored_gap(
+    il_electricity_cdd_hdd_billing_monthly
+):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    reporting_data, warnings = get_reporting_data(
+        meter_data,
+        start=datetime(2016, 9, 9, tzinfo=pytz.UTC),
+        max_days=25,
+        allow_billing_period_overshoot=True,
+        ignore_billing_period_gap_for_day_count=True,
+    )
+    assert reporting_data.shape == (2, 1)
+    assert round(reporting_data.value.sum(), 2) == 632.31
+    assert len(warnings) == 0
+
+    reporting_data, warnings = get_reporting_data(
+        meter_data,
+        start=datetime(2016, 9, 9, tzinfo=pytz.UTC),
+        max_days=25,
+        allow_billing_period_overshoot=False,
+        ignore_billing_period_gap_for_day_count=False,
+    )
+    assert reporting_data.shape == (1, 1)
+    assert round(reporting_data.value.sum(), 2) == 0
+    assert len(warnings) == 0
 
 
 def test_remove_duplicates_df():
