@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+2.5.1
+-----
+
 * Capture an additional exception type (`KeyError`) in recently adjusted
   `get_baseline_data` and `get_reporting_data` methods.
 
