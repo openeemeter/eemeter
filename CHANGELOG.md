@@ -4,7 +4,10 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Add parameters to `get_baseline_data` and `get_reporting_data` to help make
+  these methods a bit more correct for billing data.
+* Preserve nulls properly in `as_freq`.
+* Update jupyter version to be compatible with latest tornado version.
 
 2.4.0
 -----
