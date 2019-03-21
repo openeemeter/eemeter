@@ -55,7 +55,9 @@ def test_as_freq_daily(il_electricity_cdd_hdd_billing_monthly):
     assert meter_data.shape == (27, 1)
     as_daily = as_freq(meter_data.value, freq="D")
     assert as_daily.shape == (791,)
-    assert round(meter_data.value.sum(), 1) == round(as_daily.sum(), 1) + 12.0 == 21290.2
+    assert (
+        round(meter_data.value.sum(), 1) == round(as_daily.sum(), 1) + 12.0 == 21290.2
+    )
 
 
 def test_as_freq_month_start(il_electricity_cdd_hdd_billing_monthly):
@@ -63,7 +65,11 @@ def test_as_freq_month_start(il_electricity_cdd_hdd_billing_monthly):
     assert meter_data.shape == (27, 1)
     as_month_start = as_freq(meter_data.value, freq="MS")
     assert as_month_start.shape == (27,)
-    assert round(meter_data.value.sum(), 1) == round(as_month_start.sum(), 1) + 925.0 == 21290.2
+    assert (
+        round(meter_data.value.sum(), 1)
+        == round(as_month_start.sum(), 1) + 925.0
+        == 21290.2
+    )
 
 
 def test_as_freq_hourly_temperature(il_electricity_cdd_hdd_billing_monthly):
