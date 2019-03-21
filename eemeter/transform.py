@@ -285,7 +285,7 @@ def get_baseline_data(
         # also consider ffill for get_loc method - always picks previous
         try:
             loc = data_before_end_limit.index.get_loc(start_target, method="nearest")
-        except IndexError:  # pragma: no cover
+        except KeyError, IndexError:  # pragma: no cover
             baseline_data = data_before_end_limit
             start_limit = start_target
         else:
@@ -436,7 +436,7 @@ def get_reporting_data(
         # also consider bfill for get_loc method - always picks next
         try:
             loc = data_after_start_limit.index.get_loc(end_target, method="nearest")
-        except IndexError:  # pragma: no cover
+        except KeyError, IndexError:  # pragma: no cover
             reporting_data = data_after_start_limit
             end_limit = end_target
         else:
