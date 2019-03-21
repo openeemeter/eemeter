@@ -250,17 +250,11 @@ def get_baseline_data(
     """
     if max_days is not None:
         if start is not None:
-            raise ValueError(
+            raise ValueError(  # pragma: no cover
                 "If max_days is set, start cannot be set: start={}, max_days={}.".format(
                     start, max_days
                 )
             )
-        # if end is None:
-        #     raise ValueError(
-        #         "If max_days is set, end cannot be None: end={}, max_days={}.".format(
-        #             end, max_days
-        #         )
-        #     )
 
     start_inf = False
     if start is None:
@@ -291,7 +285,7 @@ def get_baseline_data(
         # also consider ffill for get_loc method - always picks previous
         try:
             loc = data_before_end_limit.index.get_loc(start_target, method="nearest")
-        except IndexError:
+        except IndexError:  # pragma: no cover
             baseline_data = data_before_end_limit
             start_limit = start_target
         else:
@@ -407,17 +401,11 @@ def get_reporting_data(
     """
     if max_days is not None:
         if end is not None:
-            raise ValueError(
+            raise ValueError(  # pragma: no cover
                 "If max_days is set, end cannot be set: end={}, max_days={}.".format(
                     end, max_days
                 )
             )
-        # if start is None:
-        #     raise ValueError(
-        #         "If max_days is set, start cannot be None: start={}, max_days={}.".format(
-        #             start, max_days
-        #         )
-        #     )
 
     start_inf = False
     if start is None:
@@ -448,7 +436,7 @@ def get_reporting_data(
         # also consider bfill for get_loc method - always picks next
         try:
             loc = data_after_start_limit.index.get_loc(end_target, method="nearest")
-        except IndexError:
+        except IndexError:  # pragma: no cover
             reporting_data = data_after_start_limit
             end_limit = end_target
         else:
