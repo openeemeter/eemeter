@@ -162,7 +162,7 @@ def test_metered_savings_cdd_hdd_billing(
         "counterfactual_usage",
         "metered_savings",
     ]
-    assert round(results.metered_savings.sum(), 2) == 1626.39
+    assert round(results.metered_savings.sum(), 2) == 1625.73
     assert sorted(error_bands.keys()) == [
         "FSU Error Band",
         "OLS Error Band",
@@ -545,13 +545,13 @@ def test_modeled_savings_cdd_hdd_billing(
         "modeled_reporting_usage",
         "modeled_savings",
     ]
-    assert round(results.modeled_savings.sum(), 2) == 592.54
+    assert round(results.modeled_savings.sum(), 2) == 587.44
     assert sorted(error_bands.keys()) == [
         "FSU Error Band",
         "FSU Error Band: Baseline",
         "FSU Error Band: Reporting",
     ]
-    assert round(error_bands["FSU Error Band"], 2) == 166.57
+    assert round(error_bands["FSU Error Band"], 2) == 156.89
 
 
 @pytest.fixture
