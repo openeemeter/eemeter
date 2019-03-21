@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+2.5.0
+-----
+
 * Add parameters to `get_baseline_data` and `get_reporting_data` to help make
   these methods a bit more correct for billing data.
 * Preserve nulls properly in `as_freq`.
