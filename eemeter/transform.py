@@ -127,7 +127,14 @@ def as_freq(data_series, freq, atomic_freq="1 Min", series_type="cumulative"):
         atomic_series = series.asfreq(atomic_freq, method="ffill")
         resampled = atomic_series.resample(freq).mean()
 
-    resampled.iloc[-1] = np.nan
+    if resampled.index[-1] < series.index[-1]:
+        # this adds a null at the end using the target frequency
+        last_index = pd.date_range(resampled.index[-1], freq=freq, periods=2)[1:]
+        resampled = (
+            pd.concat([resampled, pd.Series(np.nan, index=last_index)])
+            .resample(freq)
+            .mean()
+        )
     return resampled
 
 
