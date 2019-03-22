@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+2.5.2
+-----
+
 * Fix `as_freq` behavior to preserve sum and add a null last index at the target
   frequency if necessary.
 
