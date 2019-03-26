@@ -56,7 +56,7 @@ configured to run the CalTRACK methods and close variants.
     sufficient for compliance with the CalTRACK method specification. For example,
     while the CalTRACK methods set specific hard limits for the purpose of
     standardization and consistency, the EEmeter library can be configured to edit
-    or entirely ignore those limits. This is becuase the emeter package is used not
+    or entirely ignore those limits. This is becuase the eemeter package is used not
     only for compliance with, but also for *development of* the CalTRACK methods.
 
     Please also keep in mind that the EEmeter assumes that certain data cleaning
