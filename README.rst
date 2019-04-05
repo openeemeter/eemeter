@@ -86,3 +86,8 @@ Features
 - First-class warnings reporting
 - Pandas dataframe support
 - Visualization tools
+
+License
+-------
+
+This project is licensed under [Apache 2.0](LICENSE).
