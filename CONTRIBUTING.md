@@ -207,4 +207,5 @@ Other resources
   Copied and lightly modified for formatting from [docs/index.rst](docs/index.rst)
 - [MAINTAINERS](MAINTAINERS.md): an ordered list of project maintainers.
 - [LICENSE](LICENSE): Apache 2.0.
-- [CHARTER](CHARTER): Open source project charter.
+- [CHARTER](CHARTER): open source project charter.
+- [CODE_OF_CONDUCT](CODE_OF_CONDUCT.md): code of conduct for contributors.
