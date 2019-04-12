@@ -1,7 +1,7 @@
 # Maintainers
 
 The OpenEEmeter was originally created in late 2014 by Phil Ngo and later
-developed and icubated at Open Energy Efficiency, Inc and The Impact Lab.
+developed and incubated at Open Energy Efficiency, Inc and The Impact Lab.
 Development was funded partially by grants from the California Energy
 Commission.
 
