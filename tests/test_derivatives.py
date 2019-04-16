@@ -208,6 +208,52 @@ def test_metered_savings_cdd_hdd_billing_single_record_reporting_data(
 
 
 @pytest.fixture
+def baseline_model_billing_single_record_baseline_data(
+    il_electricity_cdd_hdd_billing_monthly
+):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]
+    blackout_start_date = il_electricity_cdd_hdd_billing_monthly["blackout_start_date"]
+    baseline_meter_data, warnings = get_baseline_data(
+        meter_data, end=blackout_start_date
+    )
+    baseline_data = create_caltrack_billing_design_matrix(
+        baseline_meter_data, temperature_data
+    )
+    baseline_data = baseline_data[:2]
+    model_results = fit_caltrack_usage_per_day_model(
+        baseline_data, use_billing_presets=True, weights_col="n_days_kept"
+    )
+    return model_results
+
+
+def test_metered_savings_cdd_hdd_billing_single_record_baseline_data(
+    baseline_model_billing_single_record_baseline_data,
+    reporting_meter_data_billing, reporting_temperature_data
+):
+
+    results, error_bands = metered_savings(
+        baseline_model_billing_single_record_baseline_data,
+        reporting_meter_data_billing, reporting_temperature_data
+    )
+    '''
+    assert list(results.columns) == [
+        "reporting_observed",
+        "counterfactual_usage",
+        "metered_savings",
+    ]
+    assert round(results.metered_savings.sum(), 2) == 1625.73
+    assert sorted(error_bands.keys()) == [
+        "FSU Error Band",
+        "OLS Error Band",
+        "OLS Error Band: Model Error",
+        "OLS Error Band: Noise",
+    ]
+    '''
+
+
+
+@pytest.fixture
 def reporting_meter_data_billing_wrong_timestamp():
     index = pd.date_range("2003-01-01", freq="MS", periods=13, tz="UTC")
     return pd.DataFrame({"value": 1}, index=index)

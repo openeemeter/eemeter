@@ -94,6 +94,7 @@ def _compute_error_bands_metered_savings(
         or abs(autocorr_resid) == 1
         or base_obs == 0
         or base_avg == 0
+        or base_var == 0
     ):
         return None
 
