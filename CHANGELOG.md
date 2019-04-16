@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Fix `metered_savings` behavior so that it does not fail to compute error bands when there is 0 variance in the baseline.
 
 2.5.2
 -----
