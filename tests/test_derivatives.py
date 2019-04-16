@@ -229,14 +229,16 @@ def baseline_model_billing_single_record_baseline_data(
 
 def test_metered_savings_cdd_hdd_billing_single_record_baseline_data(
     baseline_model_billing_single_record_baseline_data,
-    reporting_meter_data_billing, reporting_temperature_data
+    reporting_meter_data_billing,
+    reporting_temperature_data,
 ):
 
     results, error_bands = metered_savings(
         baseline_model_billing_single_record_baseline_data,
-        reporting_meter_data_billing, reporting_temperature_data
+        reporting_meter_data_billing,
+        reporting_temperature_data,
     )
-    '''
+    """
     assert list(results.columns) == [
         "reporting_observed",
         "counterfactual_usage",
@@ -249,8 +251,7 @@ def test_metered_savings_cdd_hdd_billing_single_record_baseline_data(
         "OLS Error Band: Model Error",
         "OLS Error Band: Noise",
     ]
-    '''
-
+    """
 
 
 @pytest.fixture
