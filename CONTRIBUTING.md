@@ -62,6 +62,13 @@ Travis CI configuration can be found in `.travis.yml`.
 When writing tests using py.test fixtures, place fixtures as close as possible
 to the test functions or classes that call them.
 
+General Discussion
+------------------
+
+Discussions for this project take place on the
+[openeemeter@lists.lfenergy.org](https://lists.lfenergy.org/g/openeemeter/)
+mailing list.
+
 License
 -------
 
