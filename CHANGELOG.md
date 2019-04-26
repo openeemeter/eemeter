@@ -6,6 +6,12 @@ Development
 
 * Placeholder
 
+2.5.3-post2
+-----------
+
+* Attempt 2 to fix release .whl file by removing local build and dist
+  directories before running `python setup.py upload`.
+
 2.5.3-post1
 -----------
 
