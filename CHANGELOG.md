@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Add draft MAINTAINERS.md.
 
 2.5.3
 -----

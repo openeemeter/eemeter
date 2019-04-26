@@ -35,7 +35,7 @@ Background - why use the EEMeter library
 ----------------------------------------
 
 At time of writing (Sept 2018), the OpenEEmeter, as implemented in the eemeter
-package and sister :any:`eeweather <eeweather:index>` package, contains the
+package and sister `eeweather <http://eeweather.openee.io>`_ package, contains the
 most complete open source implementation of the
 `CalTRACK Methods <https://caltrack.org/>`_, which
 specify a family of ways to calculate and aggregate estimates avoided energy
@@ -43,7 +43,8 @@ use at a single meter particularly suitable for use in pay-for-performance
 (P4P) programs.
 
 The eemeter package contains a toolkit written in the python langage which may
-help in implementing a CalTRACK compliant analysis (see :ref:`caltrack-compliance`).
+help in implementing a CalTRACK compliant analysis.
+
 It contains a modular set of of functions, parameters, and classes which can be
 configured to run the CalTRACK methods and close variants.
 
@@ -86,3 +87,16 @@ Features
 - First-class warnings reporting
 - Pandas dataframe support
 - Visualization tools
+
+License
+-------
+
+This project is licensed under [Apache 2.0](LICENSE).
+
+Other resources
+---------------
+
+- `CONTRIBUTING <CONTRIBUTING.md>`_: how to contribute to the project.
+- `MAINTAINERS <MAINTAINERS.md>`_: an ordered list of project maintainers.
+- `CHARTER <CHARTER.md>`_: open source project charter.
+- `CODE_OF_CONDUCT <CODE_OF_CONDUCT.md>`_: Code of conduct for contributors.
