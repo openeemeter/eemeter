@@ -4,6 +4,12 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+2.5.3-post1
+-----------
+
+* Fix release .whl file which had some extra directories.
 * Add draft MAINTAINERS.md.
 
 2.5.3
