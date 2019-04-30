@@ -403,17 +403,23 @@ class DataSufficiency(object):
         The name of the criteria method used to check for baseline data sufficiency.
     warnings : :any:`list` of :any:`eemeter.EEMeterWarning`
         A list of any warnings reported during the check for baseline data sufficiency.
+    data : :any:`dict`
+        A dictionary of data related to determining whether a warning should be generated.
     settings : :any:`dict`
         A dictionary of settings (keyword arguments) used.
     """
 
-    def __init__(self, status, criteria_name, warnings=None, settings=None):
+    def __init__(self, status, criteria_name, warnings=None, data=None, settings=None):
         self.status = status  # NO DATA | FAIL | PASS
         self.criteria_name = criteria_name
 
         if warnings is None:
             warnings = []
         self.warnings = warnings
+
+        if data is None:
+            data = {}
+        self.data = data
 
         if settings is None:
             settings = {}
@@ -437,6 +443,7 @@ class DataSufficiency(object):
             "status": self.status,
             "criteria_name": self.criteria_name,
             "warnings": [w.json() for w in self.warnings],
+            "data": self.data,
             "settings": self.settings,
         }
 
@@ -2109,11 +2116,49 @@ def caltrack_sufficiency_criteria(
         )
 
     warnings = critical_warnings + non_critical_warnings
+    sufficiency_data = {
+        "extra_data_after_requested_end_date": {
+            "requested_end": requested_end.isoformat() if requested_end else None,
+            "data_end": data_end.isoformat(),
+            "n_days_end_gap": n_days_end_gap,
+        },
+        "extra_data_before_requested_start_date": {
+            "requested_start": requested_start.isoformat() if requested_start else None,
+            "data_start": data_start.isoformat(),
+            "n_days_start_gap": n_days_start_gap,
+        },
+        "negative_meter_values": {"n_negative_meter_values": n_negative_meter_values},
+        "incorrect_number_of_total_days": {
+            "num_days": num_days,
+            "n_days_total": n_days_total,
+        },
+        "too_many_days_with_missing_data": {
+            "n_valid_days": n_valid_days,
+            "n_days_total": n_days_total,
+        },
+        "too_many_days_with_missing_meter_data": {
+            "n_valid_meter_data_days": n_valid_meter_value_days,
+            "n_days_total": n_days_total,
+        },
+        "too_many_days_with_missing_temperature_data": {
+            "n_valid_temperature_data_days": n_valid_temperature_days,
+            "n_days_total": n_days_total,
+        },
+        "extreme_values_detected": {
+            "n_extreme_values": n_extreme_values,
+            "median": median,
+            "upper_quantile": upper_quantile,
+            "lower_quantile": lower_quantile,
+            "extreme_value_limit": extreme_value_limit,
+            "max_value": max_value,
+        },
+    }
 
     return DataSufficiency(
         status=status,
         criteria_name=criteria_name,
         warnings=warnings,
+        data=sufficiency_data,
         settings={
             "num_days": num_days,
             "min_fraction_daily_coverage": min_fraction_daily_coverage,

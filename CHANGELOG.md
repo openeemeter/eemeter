@@ -4,6 +4,7 @@ Changelog
 Development
 -----------
 
+* Add data to `DataSufficiency` even if there are no warnings.
 * Add draft MAINTAINERS.md.
 
 2.5.3
