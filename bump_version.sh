@@ -31,3 +31,7 @@ echo "git checkout master"
 echo "git pull"
 echo "git merge release/v${NEW_VERSION}"
 echo "git push"
+echo ""
+echo "git checkout v${NEW_VERSION}"
+echo "python setup.py upload"  # requires PyPI credentials
+echo "git checkout master"
