@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Add data to `DataSufficiency` even if there are no warnings.
+* Add data field to `DataSufficiency` even if there are no warnings.
 
 2.5.3-post2
 -----------
