@@ -5,6 +5,17 @@ Development
 -----------
 
 * Add data to `DataSufficiency` even if there are no warnings.
+
+2.5.3-post2
+-----------
+
+* Attempt 2 to fix release .whl file by removing local build and dist
+  directories before running `python setup.py upload`.
+
+2.5.3-post1
+-----------
+
+* Fix release .whl file which had some extra directories.
 * Add draft MAINTAINERS.md.
 
 2.5.3
