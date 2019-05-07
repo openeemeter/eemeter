@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+2.5.4
+-----
+
 * Add data fields to the `DataSufficiency` even if there are no warnings when calculating sufficiency.
 
 2.5.3-post2
