@@ -124,6 +124,7 @@ def test_data_sufficiency_minimal():
     assert str(data_sufficiency).startswith("DataSufficiency")
     assert data_sufficiency.json() == {
         "criteria_name": "criteria_name",
+        "data": {},
         "settings": {},
         "status": "status",
         "warnings": [],
@@ -141,6 +142,7 @@ def test_data_sufficiency_json_with_warning():
         "criteria_name": "criteria_name",
         "settings": {},
         "status": "status",
+        "data": {},
         "warnings": [
             {
                 "data": {},
