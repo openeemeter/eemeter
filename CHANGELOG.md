@@ -9,7 +9,8 @@ Development
 2.5.4-post1
 -----------
 
-* Placeholder
+* Update MANIFEST.in to fix release and update `./bump_version.sh` script
+  to remove build directories.
 
 2.5.4
 -----
