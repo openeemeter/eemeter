@@ -6,6 +6,11 @@ Development
 
 * Placeholder
 
+2.5.4-post1
+-----------
+
+* Placeholder
+
 2.5.4
 -----
 
