@@ -32,6 +32,7 @@ echo "git pull"
 echo "git merge release/v${NEW_VERSION}"
 echo "git push"
 echo ""
+echo "rm -r dist build eemeter.egg-info"  # reset build dirs
 echo "git checkout v${NEW_VERSION}"
 echo "python setup.py upload"  # requires PyPI credentials
 echo "git checkout master"
