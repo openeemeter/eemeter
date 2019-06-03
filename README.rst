@@ -35,7 +35,7 @@ Background - why use the EEMeter library
 ----------------------------------------
 
 At time of writing (Sept 2018), the OpenEEmeter, as implemented in the eemeter
-package and sister `eeweather <http://eeweather.openee.io>`_ package, contains the
+package and sister `eeweather package <http://eeweather.openee.io>`_, contains the
 most complete open source implementation of the
 `CalTRACK Methods <https://caltrack.org/>`_, which
 specify a family of ways to calculate and aggregate estimates avoided energy
@@ -80,7 +80,7 @@ Features
   - CalTRACK Monthly Billing Method
   - CalTRACK Hourly Method
 
-- Flexible sources of temperature data. See `EEweather <https://eeweather.readthedocs.io>`_.
+- Flexible sources of temperature data. See `EEweather <https://eeweather.openee.io>`_.
 - Candidate model selection
 - Data sufficiency checking
 - Model serialization

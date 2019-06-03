@@ -6,6 +6,12 @@ Development
 
 * Change `fit_caltrack_hourly_model` so it returns a `CalTRACKHourlyModelResults` object rather than a `CalTRACKHourlyModel`, in order to bring it in line with the `caltrack_usage_per_day` model outputs.
 
+2.5.4-post1
+-----------
+
+* Update MANIFEST.in to fix release and update `./bump_version.sh` script
+  to remove build directories.
+
 2.5.4
 -----
 
