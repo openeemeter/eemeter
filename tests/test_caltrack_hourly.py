@@ -141,12 +141,13 @@ def temps():
 def test_fit_caltrack_hourly_model(
     segmented_design_matrices, occupancy_lookup, temperature_bins, temps
 ):
-    segmented_model = fit_caltrack_hourly_model(
+    segmented_model_results = fit_caltrack_hourly_model(
         segmented_design_matrices, occupancy_lookup, temperature_bins
     )
 
-    assert segmented_model.segment_models is not None
-    prediction = segmented_model.predict(temps.index, temps).result
+    assert segmented_model_results.model.segment_models is not None
+    assert str(segmented_model_results).startswith("CalTRACKHourlyModelResults")
+    prediction = segmented_model_results.predict(temps.index, temps).result
 
 
 def test_serialize_caltrack_hourly_model(
@@ -229,18 +230,18 @@ def test_fit_caltrack_hourly_model_nans_less_than_week_predict(
     temps_extended,
     temps,
 ):
-    segmented_model = fit_caltrack_hourly_model(
+    segmented_model_results = fit_caltrack_hourly_model(
         segmented_design_matrices_nans, occupancy_lookup_nans, temperature_bins_nans
     )
 
-    assert segmented_model.segment_models is not None
-    assert segmented_model.model_lookup["jan"].model is not None
-    assert segmented_model.model_lookup["may"].model is None
+    assert segmented_model_results.model.segment_models is not None
+    assert segmented_model_results.model.model_lookup["jan"].model is not None
+    assert segmented_model_results.model.model_lookup["may"].model is None
     assert (
-        segmented_model.model_lookup["may"].warnings[0].qualified_name
+        segmented_model_results.model.model_lookup["may"].warnings[0].qualified_name
         == "eemeter.fit_caltrack_hourly_model_segment.no_nonnull_data"
     )
-    prediction = segmented_model.predict(temps.index, temps).result
+    prediction = segmented_model_results.predict(temps.index, temps).result
     assert prediction.shape[0] == 24
     assert prediction["predicted_usage"].sum().round() == 955.0
 
@@ -324,14 +325,14 @@ def test_fit_caltrack_hourly_model_nans_less_than_week_fit(
     temperature_bins_nans_less_than_week,
     temps_extended,
 ):
-    segmented_model = fit_caltrack_hourly_model(
+    segmented_model_results = fit_caltrack_hourly_model(
         segmented_design_matrices_nans_less_than_week,
         occupancy_lookup_nans_less_than_week,
         temperature_bins_nans_less_than_week,
     )
 
-    assert segmented_model.segment_models is not None
-    prediction = segmented_model.predict(temps_extended.index, temps_extended).result
+    assert segmented_model_results.model.segment_models is not None
+    prediction = segmented_model_results.predict(temps_extended.index, temps_extended).result
     assert prediction.shape[0] == 168
     assert prediction.dropna().shape[0] == 4
 
@@ -353,12 +354,12 @@ def segmented_design_matrices_empty_models(
 def test_predict_caltrack_hourly_model_empty_models(
     temps, segmented_design_matrices_empty_models, occupancy_lookup, temperature_bins
 ):
-    segmented_model = fit_caltrack_hourly_model(
+    segmented_model_results = fit_caltrack_hourly_model(
         segmented_design_matrices_empty_models, occupancy_lookup, temperature_bins
     )
 
-    assert segmented_model.segment_models is not None
-    prediction = segmented_model.predict(temps.index, temps).result
+    assert segmented_model_results.model.segment_models is not None
+    prediction = segmented_model_results.predict(temps.index, temps).result
     assert prediction.shape[0] == 24
     assert prediction.dropna().shape[0] == 0
 
