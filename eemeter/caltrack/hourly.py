@@ -82,13 +82,7 @@ class CalTRACKHourlyModelResults(object):
     """
 
     def __init__(
-        self,
-        status,
-        method_name,
-        model=None,
-        warnings=[],
-        metadata=None,
-        settings=None,
+        self, status, method_name, model=None, warnings=[], metadata=None, settings=None
     ):
         self.status = status
         self.method_name = method_name
@@ -109,10 +103,8 @@ class CalTRACKHourlyModelResults(object):
         self.avgs_metrics = None
 
     def __repr__(self):
-        return (
-            "CalTRACKHourlyModelResults(status='{}', method_name='{}')".format(
-                self.status, self.method_name
-            )
+        return "CalTRACKHourlyModelResults(status='{}', method_name='{}')".format(
+            self.status, self.method_name
         )
 
     def json(self, with_candidates=False):
@@ -137,17 +129,8 @@ class CalTRACKHourlyModelResults(object):
         }
         return data
 
-    def predict(
-        self,
-        prediction_index,
-        temperature_data,
-        **kwargs
-    ):
-        return self.model.predict(
-            prediction_index,
-            temperature_data,
-            **kwargs
-        )
+    def predict(self, prediction_index, temperature_data, **kwargs):
+        return self.model.predict(prediction_index, temperature_data, **kwargs)
 
 
 class CalTRACKHourlyModel(SegmentedModel):
@@ -314,13 +297,14 @@ def fit_caltrack_hourly_model(
         segmented_design_matrices, fit_caltrack_hourly_model_segment
     )
     all_warnings = [
-        warning for segment_model in segment_models
+        warning
+        for segment_model in segment_models
         for warning in segment_model.warnings
     ]
     model = CalTRACKHourlyModel(segment_models, occupancy_lookup, temperature_bins)
     return CalTRACKHourlyModelResults(
-        status='SUCCEEDED',
-        method_name='caltrack_hourly',
+        status="SUCCEEDED",
+        method_name="caltrack_hourly",
         warnings=all_warnings,
-        model=model
+        model=model,
     )
