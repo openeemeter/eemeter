@@ -384,5 +384,4 @@ def fit_model_segments(segmented_dataset_dict, fit_segment):
         fit_segment(segment_name, segment_data)
         for segment_name, segment_data in segmented_dataset_dict.items()
     ]
-
     return segment_models

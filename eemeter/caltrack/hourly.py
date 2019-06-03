@@ -31,11 +31,106 @@ from ..warnings import EEMeterWarning
 
 
 __all__ = (
+    "CalTRACKHourlyModelResults",
+    "CalTRACKHourlyModel",
     "caltrack_hourly_fit_feature_processor",
     "caltrack_hourly_prediction_feature_processor",
     "fit_caltrack_hourly_model_segment",
     "fit_caltrack_hourly_model",
 )
+
+
+class CalTRACKHourlyModelResults(object):
+    """ Contains information about the chosen model.
+
+    Attributes
+    ----------
+    status : :any:`str`
+        A string indicating the status of this result. Possible statuses:
+
+        - ``'NO DATA'``: No baseline data was available.
+        - ``'NO MODEL'``: A complete model could not be constructed.
+        - ``'SUCCESS'``: A model was constructed.
+    method_name : :any:`str`
+        The name of the method used to fit the baseline model.
+    model : :any:`eemeter.CalTRACKHourlyModel` or :any:`None`
+        The selected model, if any.
+    warnings : :any:`list` of :any:`eemeter.EEMeterWarning`
+        A list of any warnings reported during the model selection and fitting
+        process.
+    metadata : :any:`dict`
+        An arbitrary dictionary of metadata to be associated with this result.
+        This can be used, for example, to tag the results with attributes like
+        an ID::
+
+            {
+                'id': 'METER_12345678',
+            }
+
+    settings : :any:`dict`
+        A dictionary of settings used by the method.
+    totals_metrics : :any:`ModelMetrics`
+        A ModelMetrics object, if one is calculated and associated with this
+        model. (This initializes to None.) The ModelMetrics object contains
+        model fit information and descriptive statistics about the underlying data,
+        with that data expressed as period totals.
+    avgs_metrics : :any:`ModelMetrics`
+        A ModelMetrics object, if one is calculated and associated with this
+        model. (This initializes to None.) The ModelMetrics object contains
+        model fit information and descriptive statistics about the underlying data,
+        with that data expressed as daily averages.
+    """
+
+    def __init__(
+        self, status, method_name, model=None, warnings=[], metadata=None, settings=None
+    ):
+        self.status = status
+        self.method_name = method_name
+
+        self.model = model
+
+        self.warnings = warnings
+
+        if metadata is None:
+            metadata = {}
+        self.metadata = metadata
+
+        if settings is None:
+            settings = {}
+        self.settings = settings
+
+        self.totals_metrics = None
+        self.avgs_metrics = None
+
+    def __repr__(self):
+        return "CalTRACKHourlyModelResults(status='{}', method_name='{}')".format(
+            self.status, self.method_name
+        )
+
+    def json(self, with_candidates=False):
+        """ Return a JSON-serializable representation of this result.
+
+        The output of this function can be converted to a serialized string
+        with :any:`json.dumps`.
+        """
+
+        def _json_or_none(obj):
+            return None if obj is None else obj.json()
+
+        data = {
+            "status": self.status,
+            "method_name": self.method_name,
+            "model": _json_or_none(self.model),
+            "warnings": [w.json() for w in self.warnings],
+            "metadata": self.metadata,
+            "settings": self.settings,
+            "totals_metrics": _json_or_none(self.totals_metrics),
+            "avgs_metrics": _json_or_none(self.avgs_metrics),
+        }
+        return data
+
+    def predict(self, prediction_index, temperature_data, **kwargs):
+        return self.model.predict(prediction_index, temperature_data, **kwargs)
 
 
 class CalTRACKHourlyModel(SegmentedModel):
@@ -201,4 +296,15 @@ def fit_caltrack_hourly_model(
     segment_models = fit_model_segments(
         segmented_design_matrices, fit_caltrack_hourly_model_segment
     )
-    return CalTRACKHourlyModel(segment_models, occupancy_lookup, temperature_bins)
+    all_warnings = [
+        warning
+        for segment_model in segment_models
+        for warning in segment_model.warnings
+    ]
+    model = CalTRACKHourlyModel(segment_models, occupancy_lookup, temperature_bins)
+    return CalTRACKHourlyModelResults(
+        status="SUCCEEDED",
+        method_name="caltrack_hourly",
+        warnings=all_warnings,
+        model=model,
+    )
