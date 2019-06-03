@@ -19,6 +19,12 @@ CalTRACK design matrix creation
 CalTRACK Hourly
 ~~~~~~~~~~~~~~~
 
+.. autoclass:: eemeter.CalTRACKHourlyModel
+   :members:
+
+.. autoclass:: eemeter.CalTRACKHourlyModelResults
+   :members:
+
 .. autofunction:: eemeter.caltrack_hourly_fit_feature_processor
 
 .. autofunction:: eemeter.caltrack_hourly_prediction_feature_processor
@@ -157,7 +163,7 @@ Segmentation
 
 .. autofunction:: eemeter.segment_time_series
 
-.. autoclass:: eemeter.SegmentModel
+.. autoclass:: eemeter.CalTRACKSegmentModel
    :members:
 
 .. autoclass:: eemeter.SegmentedModel
