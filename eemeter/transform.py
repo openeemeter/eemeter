@@ -33,6 +33,7 @@ __all__ = (
     "day_counts",
     "get_baseline_data",
     "get_reporting_data",
+    "get_terms",
     "remove_duplicates",
     "overwrite_partial_rows_with_nan",
 )
@@ -403,7 +404,8 @@ def get_reporting_data(
 
     Returns
     -------
-    reporting_data, warnings : :any:`tuple` of (:any:`pandas.DataFrame` or :any:`pandas.Series`, :any:`list` of :any:`eemeter.EEMeterWarning`)
+    reporting_data, warnings : :any:`tuple` of (:any:`pandas.DataFrame` or
+    :any:`pandas.Series`, :any:`list` of :any:`eemeter.EEMeterWarning`)
         Data for only the specified reporting period and any associated warnings.
     """
     if max_days is not None:
@@ -468,3 +470,90 @@ def get_reporting_data(
             end_inf, start_inf, data_start, data_end, start_limit, end_limit
         ),
     )
+
+
+def get_terms(
+    index,
+    term_lengths,
+    term_labels=None,
+    start=None,
+    method='strict',
+):
+    """ Label a time series index with terms.
+
+    Parameters
+    ----------
+    index : :any:`pandas.DatetimeIndex`
+        The index to split into terms, generally `meter_data.index`
+        or `temperature_data.index`.
+    term_lengths : :any:`list` of :any:`int`
+        The lengths (in days) of the terms into which to split the data.
+    term_labels : :any:`list` of :any:`str`, default None
+        Labels to use for each term. List must be the same length as the
+        `term_lengths` list.
+    start : :any:`datetime.datetime`, default None
+        A timezone-aware datetime that represents the earliest allowable start
+        date for the terms. If None, use the first element of the index.
+    method: one of ['strict', 'nearest'], default 'strict'
+        The method to use to get terms.
+
+        - "strict": Ensures that the term end will come on or before the length of
+
+    Returns
+    -------
+    reporting_data, warnings : :any:`pandas.DataFrame`
+        A dataframe of term labels with the same :any:`pandas.DatetimeIndex`
+        given as `index`. This can be used to filter the original data into
+        terms of approximately the desired length.
+
+
+    """
+    if method == "strict":
+        get_loc_method = "pad"
+    elif method == "nearest":
+        get_loc_method = "nearest"
+    else:
+        raise ValueError(
+            "method {} not supported - use either 'strict' or 'closest'"
+            .format(method)
+        )
+
+    if not index.is_monotonic_increasing:
+        raise ValueError("get_terms requires a sorted index")
+
+    if term_labels is None:
+        term_labels = ['term_{:03d}'.format(i + 1) for i, term_length in enumerate(term_lengths)]
+
+    elif len(term_labels) != len(term_lengths):
+        raise ValueError(
+            "term_labels (len {}) must be the same length as term_length (len {})"
+            .format(len(term_labels), len(term_lengths))
+        )
+
+    if start is None:
+        prev_start = index.min()
+    else:
+        prev_start = start
+
+    term_end_targets = [
+        prev_start + timedelta(days=sum(term_lengths[:i+1]))
+        for i in range(len(term_lengths))
+    ]
+
+    terms = [None] * len(index[index < prev_start])
+    remaining_index = index[index >= prev_start]
+
+    # copying prevents setting on slice warnings
+
+    for label, end_target in zip(term_labels, term_end_targets):
+        if remaining_index.empty:
+            return pd.Series(terms, index=index, name="term")
+
+        next_index = remaining_index.get_loc(end_target, method=get_loc_method)
+
+        terms.extend([label] * len(remaining_index[:next_index]))
+        prev_start = remaining_index[next_index]
+        remaining_index = remaining_index[next_index:]
+
+    terms.extend([None for i in remaining_index])
+    return pd.Series(terms, index=index, name="term")
