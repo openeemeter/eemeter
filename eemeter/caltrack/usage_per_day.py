@@ -2011,8 +2011,8 @@ def caltrack_sufficiency_criteria(
     n_valid_days = int((valid_rows * row_day_counts).sum())
 
     median = data_quality.meter_value.median()
-    upper_quantile = data_quality.meter_value.quantile(.75)
-    lower_quantile = data_quality.meter_value.quantile(.25)
+    upper_quantile = data_quality.meter_value.quantile(0.75)
+    lower_quantile = data_quality.meter_value.quantile(0.25)
     iqr = upper_quantile - lower_quantile
     extreme_value_limit = median + (3 * iqr)
     n_extreme_values = data_quality.meter_value[

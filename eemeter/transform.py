@@ -472,13 +472,7 @@ def get_reporting_data(
     )
 
 
-def get_terms(
-    index,
-    term_lengths,
-    term_labels=None,
-    start=None,
-    method='strict',
-):
+def get_terms(index, term_lengths, term_labels=None, start=None, method="strict"):
     """ Label a time series index with terms.
 
     Parameters
@@ -514,20 +508,22 @@ def get_terms(
         get_loc_method = "nearest"
     else:
         raise ValueError(
-            "method {} not supported - use either 'strict' or 'closest'"
-            .format(method)
+            "method {} not supported - use either 'strict' or 'closest'".format(method)
         )
 
     if not index.is_monotonic_increasing:
         raise ValueError("get_terms requires a sorted index")
 
     if term_labels is None:
-        term_labels = ['term_{:03d}'.format(i + 1) for i, term_length in enumerate(term_lengths)]
+        term_labels = [
+            "term_{:03d}".format(i + 1) for i, term_length in enumerate(term_lengths)
+        ]
 
     elif len(term_labels) != len(term_lengths):
         raise ValueError(
-            "term_labels (len {}) must be the same length as term_length (len {})"
-            .format(len(term_labels), len(term_lengths))
+            "term_labels (len {}) must be the same length as term_length (len {})".format(
+                len(term_labels), len(term_lengths)
+            )
         )
 
     if start is None:
@@ -536,7 +532,7 @@ def get_terms(
         prev_start = start
 
     term_end_targets = [
-        prev_start + timedelta(days=sum(term_lengths[:i+1]))
+        prev_start + timedelta(days=sum(term_lengths[: i + 1]))
         for i in range(len(term_lengths))
     ]
 
