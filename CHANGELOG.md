@@ -6,6 +6,10 @@ Development
 
 * Add `get_terms` method to allow splitting reporting data into any number
   of terms specified by day length.
+
+2.6.0
+-----
+
 * Change `fit_caltrack_hourly_model` so it returns a `CalTRACKHourlyModelResults` object rather than a `CalTRACKHourlyModel`, in order to bring it in line with the `caltrack_usage_per_day` model outputs.
 
 2.5.4-post1
