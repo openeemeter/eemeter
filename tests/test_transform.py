@@ -558,16 +558,6 @@ def test_get_terms_nearest(il_electricity_cdd_hdd_billing_monthly):
     assert year2.index[-1] == pd.Timestamp('2017-12-22 06:00:00+00:00', tz='UTC')
 
 
-def test_get_terms_strict(il_electricity_cdd_hdd_billing_monthly):
-    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
-
-    terms = get_terms(
-        meter_data.index,
-        term_lengths=[365, 365],
-        term_labels=["year1", "year2"],
-    )
-
-
 def test_remove_duplicates_df():
     index = pd.DatetimeIndex(["2017-01-01", "2017-01-02", "2017-01-02"])
     df = pd.DataFrame({"value": [1, 2, 3]}, index=index)
