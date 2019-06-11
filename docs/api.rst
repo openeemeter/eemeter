@@ -1,6 +1,7 @@
 API Docs
 ========
 
+.. _caltrack:
 
 CalTRACK
 --------
@@ -184,6 +185,8 @@ Transformation utilities
 .. autofunction:: eemeter.get_baseline_data
 
 .. autofunction:: eemeter.get_reporting_data
+
+.. autofunction:: eemeter.get_terms
 
 .. autofunction:: eemeter.remove_duplicates
 

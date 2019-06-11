@@ -29,6 +29,7 @@ from eemeter.transform import (
     day_counts,
     get_baseline_data,
     get_reporting_data,
+    get_terms,
     remove_duplicates,
     NoBaselineDataError,
     NoReportingDataError,
@@ -459,6 +460,102 @@ def test_get_reporting_data_with_overshoot_and_ignored_gap(
     assert reporting_data.shape == (1, 1)
     assert round(reporting_data.value.sum(), 2) == 0
     assert len(warnings) == 0
+
+
+def test_get_terms_unrecognized_method(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+
+    with pytest.raises(ValueError):
+        get_terms(meter_data.index, term_lengths=[365], method="unrecognized")
+
+
+def test_get_terms_unsorted_index(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+
+    with pytest.raises(ValueError):
+        get_terms(meter_data.index[::-1], term_lengths=[365])
+
+
+def test_get_terms_bad_term_labels(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+
+    with pytest.raises(ValueError):
+        terms = get_terms(
+            meter_data.index,
+            term_lengths=[60, 60, 60],
+            term_labels=['abc', 'def'],  # too short
+        )
+
+
+def test_get_terms_default_term_labels(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+
+    terms = get_terms(meter_data.index, term_lengths=[60, 60, 60])
+    assert set(terms) == {None, 'term_001', 'term_003', 'term_002'}
+
+
+def test_get_terms_custom_term_labels(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+
+    terms = get_terms(
+        meter_data.index,
+        term_lengths=[60, 60, 60],
+        term_labels=['abc', 'def', 'ghi']
+    )
+    assert set(terms) == {None, 'abc', 'def', 'ghi'}
+
+
+def test_get_terms_empty_index_input(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+
+    terms = get_terms(
+        meter_data.index[:0],
+        term_lengths=[60, 60, 60],
+    )
+    assert terms.empty
+
+
+def test_get_terms_strict(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+
+    strict_terms = get_terms(
+        meter_data.index,
+        term_lengths=[365, 365],
+        term_labels=["year1", "year2"],
+        start=datetime(2016, 1, 15, tzinfo=pytz.UTC),
+        method="strict",
+    )
+
+    year1 = strict_terms[strict_terms == 'year1']
+    assert year1.shape == (11,)
+    assert year1.index[0] == pd.Timestamp('2016-01-22 06:00:00+0000', tz='UTC')
+    assert year1.index[-1] == pd.Timestamp('2016-11-23 06:00:00+0000', tz='UTC')
+
+    year2 = strict_terms[strict_terms == 'year2']
+    assert year2.shape == (12,)
+    assert year2.index[0] == pd.Timestamp('2016-12-19 06:00:00+00:00', tz='UTC')
+    assert year2.index[-1] == pd.Timestamp('2017-11-25 06:00:00+00:00', tz='UTC')
+
+
+def test_get_terms_nearest(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    nearest_terms = get_terms(
+        meter_data.index,
+        term_lengths=[365, 365],
+        term_labels=["year1", "year2"],
+        start=datetime(2016, 1, 15, tzinfo=pytz.UTC),
+        method="nearest",
+    )
+
+    year1 = nearest_terms[nearest_terms == 'year1']
+    assert year1.shape == (12,)
+    assert year1.index[0] == pd.Timestamp('2016-01-22 06:00:00+0000', tz='UTC')
+    assert year1.index[-1] == pd.Timestamp('2016-12-19 06:00:00+0000', tz='UTC')
+
+    year2 = nearest_terms[nearest_terms == 'year2']
+    assert year2.shape == (12,)
+    assert year2.index[0] == pd.Timestamp('2017-01-21 06:00:00+00:00', tz='UTC')
+    assert year2.index[-1] == pd.Timestamp('2017-12-22 06:00:00+00:00', tz='UTC')
 
 
 def test_remove_duplicates_df():
