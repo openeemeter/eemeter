@@ -4,7 +4,7 @@ Advanced Usage
 CalTRACK method options
 -----------------------
 
-TODO. For now, see :any:`eemeter.caltrack_method` for full set of options.
+TODO. For now, see :ref:`caltrack` for full set of options.
 
 CalTRACK Data Sufficiency Criteria
 ----------------------------------
@@ -21,16 +21,16 @@ The eemeter library is the reference implementation of the CalTRACK methods,
 but it is *not* the CalTRACK methods. CalTRACK refers to the methods
 themselves, for which the documentation is not kept in this repository.
 The most current information about methods and proposed changes can be found
-on `github <https://github.com/CalTRACK-2/caltrack/>`_.
+on `github <https://github.com/energy-market-methods/caltrack/>`_.
 
 How the models work
 ///////////////////
 
 We're planning a deeper dive on the methods here, but for now, see
 `openee.io <https://www.openee.io/open-source/how-it-works>`_, dig into
-the :any:`code <eemeter.caltrack_method>` (try viewing the source link),
-or try :any:`visualizing <eemeter.ModelResults.plot>` some the models built with
-the sample data.
+the :ref:`caltrack` (try viewing the source link),
+or try :any:`visualizing <eemeter.CalTRACKUsagePerDayModelResults.plot>` some
+the models built with the sample data.
 
 
 For developers
