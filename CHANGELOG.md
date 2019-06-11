@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+2.7.0
+-----
+
 * Add `get_terms` method to allow splitting reporting data into any number
   of terms specified by day length.
 
