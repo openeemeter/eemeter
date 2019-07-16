@@ -121,7 +121,7 @@ def as_freq(data_series, freq, atomic_freq="1 Min", series_type="cumulative"):
         series_spread = series * spread_factor
         atomic_series = series_spread.asfreq(atomic_freq, method="ffill")
         resampled = atomic_series.resample(freq).sum()
-        resampled_with_nans = atomic_series.resample(freq).mean()
+        resampled_with_nans = atomic_series.resample(freq).first()
         resampled = resampled[resampled_with_nans.notnull()].reindex(resampled.index)
 
     elif series_type == "instantaneous":

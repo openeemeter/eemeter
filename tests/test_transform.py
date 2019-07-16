@@ -59,6 +59,15 @@ def test_as_freq_daily(il_electricity_cdd_hdd_billing_monthly):
     assert round(meter_data.value.sum(), 1) == round(as_daily.sum(), 1) == 21290.2
 
 
+def test_as_freq_daily_all_nones(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    meter_data['value'] = None
+    assert meter_data.shape == (27, 1)
+    as_daily = as_freq(meter_data.value, freq="D")
+    assert as_daily.shape == (792,)
+    assert round(meter_data.value.sum(), 1) == round(as_daily.sum(), 1) == 0
+
+
 def test_as_freq_month_start(il_electricity_cdd_hdd_billing_monthly):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     assert meter_data.shape == (27, 1)
