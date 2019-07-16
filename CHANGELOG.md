@@ -6,7 +6,7 @@ Development
 
 * Placeholder
 
-2.6.1
+2.7.1
 -----
 
 * Change `as_freq` to handle all Null series.
