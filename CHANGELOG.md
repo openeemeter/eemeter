@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Add test for `as_freq`.
 
 2.7.1
 -----

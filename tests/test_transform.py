@@ -20,6 +20,7 @@
 from datetime import datetime, timedelta
 from pkg_resources import resource_stream
 
+import numpy as np
 import pandas as pd
 import pytest
 import pytz
@@ -59,11 +60,22 @@ def test_as_freq_daily(il_electricity_cdd_hdd_billing_monthly):
     assert round(meter_data.value.sum(), 1) == round(as_daily.sum(), 1) == 21290.2
 
 
+def test_as_freq_daily_all_nones_instantaneous(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    meter_data['value'] = np.nan
+    assert meter_data.shape == (27, 1)
+    as_daily = as_freq(meter_data.value, freq="D", series_type="instantaneous")
+    assert as_daily.shape == (792,)
+    assert round(meter_data.value.sum(), 1) == round(as_daily.sum(), 1) == 0
+
+
+
 def test_as_freq_daily_all_nones(il_electricity_cdd_hdd_billing_monthly):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
-    meter_data['value'] = None
+    meter_data['value'] = np.nan
     assert meter_data.shape == (27, 1)
     as_daily = as_freq(meter_data.value, freq="D")
+    import pdb;pdb.set_trace()
     assert as_daily.shape == (792,)
     assert round(meter_data.value.sum(), 1) == round(as_daily.sum(), 1) == 0
 
