@@ -75,7 +75,6 @@ def test_as_freq_daily_all_nones(il_electricity_cdd_hdd_billing_monthly):
     meter_data['value'] = np.nan
     assert meter_data.shape == (27, 1)
     as_daily = as_freq(meter_data.value, freq="D")
-    import pdb;pdb.set_trace()
     assert as_daily.shape == (792,)
     assert round(meter_data.value.sum(), 1) == round(as_daily.sum(), 1) == 0
 
