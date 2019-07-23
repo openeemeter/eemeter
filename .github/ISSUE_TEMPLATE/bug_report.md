@@ -22,21 +22,24 @@ Bug reports must:
 2. Include the full version string of eemeter, pandas, and their dependencies. You can
   use the built-in function:
 
+    ```python
     >>> import eemeter
     >>> import pandas as pd
     >>> eemeter.get_version()
     >>> pd.show_versions()
-
+    ```
 3. Explain why the current behavior is wrong/not desired and what you expect instead.
 
 
 ### Template
 
 **Report installed package versions**
-- eemeter: vX.X.X
-- pandas: vX.X.X
-- scipy: vX.X.X
-- numpy: vX.X.X
+```
+eemeter==X.X.X
+pandas==X.X.X
+scipy==X.X.X
+numpy==X.X.X
+```
 
 **Describe the bug**
 A clear and concise description of what the bug is, including code samples and
