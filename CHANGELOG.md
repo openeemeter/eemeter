@@ -4,6 +4,7 @@ Changelog
 Development
 -----------
 
+* Update bug report github issue template.
 * Add test for `as_freq`.
 
 2.7.1
