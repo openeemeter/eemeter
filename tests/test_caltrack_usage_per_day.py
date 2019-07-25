@@ -17,11 +17,13 @@
    limitations under the License.
 
 """
+from datetime import datetime
 import json
 
 import numpy as np
 import pandas as pd
 import pytest
+import pytz
 
 from eemeter.caltrack.usage_per_day import (
     CalTRACKUsagePerDayCandidateModel,
@@ -602,6 +604,37 @@ def test_caltrack_predict_cdd_hdd_with_design_matrix(
     assert prediction.n_days_kept.sum() == 365.0
     assert round(prediction.predicted_usage.sum()) == 1582.0
     assert round(prediction.temperature_mean.mean()) == 65.0
+
+
+def test_caltrack_predict_cdd_hdd_with_design_matrix_missing_temp_data(
+    candidate_model_cdd_hdd, il_electricity_cdd_hdd_billing_monthly
+):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    prediction_index = meter_data.index[2:4]
+
+    temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]
+    temp_data = temperature_data["2015-11":"2016-03"]
+    temp_data_greater_90perc_missing = temp_data[
+        ~(
+            (datetime(2016, 1, 27, 12, tzinfo=pytz.utc) < temp_data.index)
+            & (temp_data.index < datetime(2016, 1, 31, 12, tzinfo=pytz.utc))
+        )
+    ].reindex(temp_data.index)
+
+    model_prediction = candidate_model_cdd_hdd.predict(
+        prediction_index, temp_data_greater_90perc_missing, with_design_matrix=True
+    )
+    prediction = model_prediction.result
+    assert sorted(prediction.columns) == [
+        "cdd_70",
+        "hdd_60",
+        "n_days",
+        "n_days_dropped",
+        "n_days_kept",
+        "predicted_usage",
+        "temperature_mean",
+    ]
+    assert prediction.shape == (0, 7)
 
 
 @pytest.fixture
@@ -1977,6 +2010,25 @@ def test_caltrack_usage_per_day_predict_empty(prediction_index, temperature_data
         "predicted_usage",
     ]
     assert round(prediction.result.predicted_usage.sum(), 2) == 0
+
+
+def test_caltrack_usage_per_day_temp_empty(prediction_index, temperature_data):
+    prediction = caltrack_usage_per_day_predict(
+        "intercept_only",
+        {"intercept": 1},
+        prediction_index,
+        temperature_data[:0],
+        with_disaggregated=True,
+        with_design_matrix=True,
+    )
+    assert sorted(prediction.result.columns) == [
+        "base_load",
+        "cooling_load",
+        "heating_load",
+        "predicted_usage",
+    ]
+    assert round(prediction.result.predicted_usage.sum(), 2) == 0
+    assert prediction.result.predicted_usage.shape[0] == 0
 
 
 def test_caltrack_usage_per_day_temp_empty(prediction_index, temperature_data):

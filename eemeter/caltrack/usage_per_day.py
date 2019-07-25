@@ -659,6 +659,15 @@ def caltrack_usage_per_day_predict(
         use_mean_daily_values=False,
     )
 
+    if degree_day_method == "daily":
+        design_matrix["n_days"] = (
+            design_matrix.n_days_kept + design_matrix.n_days_dropped
+        )
+    else:
+        design_matrix["n_days"] = (
+            design_matrix.n_hours_kept + design_matrix.n_hours_dropped
+        ) / 24
+
     if design_matrix.dropna().empty:
         if with_disaggregated:
             empty_columns = {
@@ -669,6 +678,9 @@ def caltrack_usage_per_day_predict(
             }
         else:
             empty_columns = {"predicted_usage": []}
+
+        if with_design_matrix:
+            empty_columns.update({col: [] for col in design_matrix.columns})
 
         predict_warnings.append(
             EEMeterWarning(
@@ -685,15 +697,6 @@ def caltrack_usage_per_day_predict(
             design_matrix=pd.DataFrame(),
             warnings=predict_warnings,
         )
-
-    if degree_day_method == "daily":
-        design_matrix["n_days"] = (
-            design_matrix.n_days_kept + design_matrix.n_days_dropped
-        )
-    else:
-        design_matrix["n_days"] = (
-            design_matrix.n_hours_kept + design_matrix.n_hours_dropped
-        ) / 24
 
     results = _caltrack_predict_design_matrix(
         model_type,
