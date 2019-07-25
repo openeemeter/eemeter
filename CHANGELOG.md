@@ -4,6 +4,8 @@ Changelog
 Development
 -----------
 
+* Fixes the columns that are given in an empty prediction result called with the
+  ` with_design_matrix=True` flag set for caltrack usage per day methods.
 * Update bug report github issue template.
 * Add test for `as_freq`.
 
