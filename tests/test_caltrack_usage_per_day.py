@@ -17,13 +17,11 @@
    limitations under the License.
 
 """
-from datetime import datetime
 import json
 
 import numpy as np
 import pandas as pd
 import pytest
-import pytz
 
 from eemeter.caltrack.usage_per_day import (
     CalTRACKUsagePerDayCandidateModel,
@@ -616,8 +614,8 @@ def test_caltrack_predict_cdd_hdd_with_design_matrix_missing_temp_data(
     temp_data = temperature_data["2015-11":"2016-03"]
     temp_data_greater_90perc_missing = temp_data[
         ~(
-            (datetime(2016, 1, 27, 12, tzinfo=pytz.utc) < temp_data.index)
-            & (temp_data.index < datetime(2016, 1, 31, 12, tzinfo=pytz.utc))
+            (pd.Timestamp('2016-01-27T12:00:00', tz='utc') < temp_data.index)
+            & (temp_data.index < pd.Timestamp('2016-01-31T12:00:00', tz='utc'))
         )
     ].reindex(temp_data.index)
 
