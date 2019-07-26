@@ -604,6 +604,37 @@ def test_caltrack_predict_cdd_hdd_with_design_matrix(
     assert round(prediction.temperature_mean.mean()) == 65.0
 
 
+def test_caltrack_predict_cdd_hdd_with_design_matrix_missing_temp_data(
+    candidate_model_cdd_hdd, il_electricity_cdd_hdd_billing_monthly
+):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    prediction_index = meter_data.index[2:4]
+
+    temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]
+    temp_data = temperature_data["2015-11":"2016-03"]
+    temp_data_greater_90perc_missing = temp_data[
+        ~(
+            (pd.Timestamp("2016-01-27T12:00:00", tz="utc") < temp_data.index)
+            & (temp_data.index < pd.Timestamp("2016-01-31T12:00:00", tz="utc"))
+        )
+    ].reindex(temp_data.index)
+
+    model_prediction = candidate_model_cdd_hdd.predict(
+        prediction_index, temp_data_greater_90perc_missing, with_design_matrix=True
+    )
+    prediction = model_prediction.result
+    assert sorted(prediction.columns) == [
+        "cdd_70",
+        "hdd_60",
+        "n_days",
+        "n_days_dropped",
+        "n_days_kept",
+        "predicted_usage",
+        "temperature_mean",
+    ]
+    assert prediction.shape == (0, 7)
+
+
 @pytest.fixture
 def candidate_model_bad_model_type():
     return CalTRACKUsagePerDayCandidateModel(
@@ -1974,7 +2005,11 @@ def test_caltrack_usage_per_day_predict_empty(prediction_index, temperature_data
         "base_load",
         "cooling_load",
         "heating_load",
+        "n_days",
+        "n_days_dropped",
+        "n_days_kept",
         "predicted_usage",
+        "temperature_mean",
     ]
     assert round(prediction.result.predicted_usage.sum(), 2) == 0
 
@@ -1992,7 +2027,11 @@ def test_caltrack_usage_per_day_temp_empty(prediction_index, temperature_data):
         "base_load",
         "cooling_load",
         "heating_load",
+        "n_days",
+        "n_days_dropped",
+        "n_days_kept",
         "predicted_usage",
+        "temperature_mean",
     ]
     assert round(prediction.result.predicted_usage.sum(), 2) == 0
     assert prediction.result.predicted_usage.shape[0] == 0

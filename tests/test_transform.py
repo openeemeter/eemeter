@@ -62,17 +62,16 @@ def test_as_freq_daily(il_electricity_cdd_hdd_billing_monthly):
 
 def test_as_freq_daily_all_nones_instantaneous(il_electricity_cdd_hdd_billing_monthly):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
-    meter_data['value'] = np.nan
+    meter_data["value"] = np.nan
     assert meter_data.shape == (27, 1)
     as_daily = as_freq(meter_data.value, freq="D", series_type="instantaneous")
     assert as_daily.shape == (792,)
     assert round(meter_data.value.sum(), 1) == round(as_daily.sum(), 1) == 0
 
 
-
 def test_as_freq_daily_all_nones(il_electricity_cdd_hdd_billing_monthly):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
-    meter_data['value'] = np.nan
+    meter_data["value"] = np.nan
     assert meter_data.shape == (27, 1)
     as_daily = as_freq(meter_data.value, freq="D")
     assert as_daily.shape == (792,)
@@ -503,7 +502,7 @@ def test_get_terms_bad_term_labels(il_electricity_cdd_hdd_billing_monthly):
         terms = get_terms(
             meter_data.index,
             term_lengths=[60, 60, 60],
-            term_labels=['abc', 'def'],  # too short
+            term_labels=["abc", "def"],  # too short
         )
 
 
@@ -511,27 +510,22 @@ def test_get_terms_default_term_labels(il_electricity_cdd_hdd_billing_monthly):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
 
     terms = get_terms(meter_data.index, term_lengths=[60, 60, 60])
-    assert set(terms) == {None, 'term_001', 'term_003', 'term_002'}
+    assert set(terms) == {None, "term_001", "term_003", "term_002"}
 
 
 def test_get_terms_custom_term_labels(il_electricity_cdd_hdd_billing_monthly):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
 
     terms = get_terms(
-        meter_data.index,
-        term_lengths=[60, 60, 60],
-        term_labels=['abc', 'def', 'ghi']
+        meter_data.index, term_lengths=[60, 60, 60], term_labels=["abc", "def", "ghi"]
     )
-    assert set(terms) == {None, 'abc', 'def', 'ghi'}
+    assert set(terms) == {None, "abc", "def", "ghi"}
 
 
 def test_get_terms_empty_index_input(il_electricity_cdd_hdd_billing_monthly):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
 
-    terms = get_terms(
-        meter_data.index[:0],
-        term_lengths=[60, 60, 60],
-    )
+    terms = get_terms(meter_data.index[:0], term_lengths=[60, 60, 60])
     assert terms.empty
 
 
@@ -546,15 +540,15 @@ def test_get_terms_strict(il_electricity_cdd_hdd_billing_monthly):
         method="strict",
     )
 
-    year1 = strict_terms[strict_terms == 'year1']
+    year1 = strict_terms[strict_terms == "year1"]
     assert year1.shape == (11,)
-    assert year1.index[0] == pd.Timestamp('2016-01-22 06:00:00+0000', tz='UTC')
-    assert year1.index[-1] == pd.Timestamp('2016-11-23 06:00:00+0000', tz='UTC')
+    assert year1.index[0] == pd.Timestamp("2016-01-22 06:00:00+0000", tz="UTC")
+    assert year1.index[-1] == pd.Timestamp("2016-11-23 06:00:00+0000", tz="UTC")
 
-    year2 = strict_terms[strict_terms == 'year2']
+    year2 = strict_terms[strict_terms == "year2"]
     assert year2.shape == (12,)
-    assert year2.index[0] == pd.Timestamp('2016-12-19 06:00:00+00:00', tz='UTC')
-    assert year2.index[-1] == pd.Timestamp('2017-11-25 06:00:00+00:00', tz='UTC')
+    assert year2.index[0] == pd.Timestamp("2016-12-19 06:00:00+00:00", tz="UTC")
+    assert year2.index[-1] == pd.Timestamp("2017-11-25 06:00:00+00:00", tz="UTC")
 
 
 def test_get_terms_nearest(il_electricity_cdd_hdd_billing_monthly):
@@ -567,15 +561,15 @@ def test_get_terms_nearest(il_electricity_cdd_hdd_billing_monthly):
         method="nearest",
     )
 
-    year1 = nearest_terms[nearest_terms == 'year1']
+    year1 = nearest_terms[nearest_terms == "year1"]
     assert year1.shape == (12,)
-    assert year1.index[0] == pd.Timestamp('2016-01-22 06:00:00+0000', tz='UTC')
-    assert year1.index[-1] == pd.Timestamp('2016-12-19 06:00:00+0000', tz='UTC')
+    assert year1.index[0] == pd.Timestamp("2016-01-22 06:00:00+0000", tz="UTC")
+    assert year1.index[-1] == pd.Timestamp("2016-12-19 06:00:00+0000", tz="UTC")
 
-    year2 = nearest_terms[nearest_terms == 'year2']
+    year2 = nearest_terms[nearest_terms == "year2"]
     assert year2.shape == (12,)
-    assert year2.index[0] == pd.Timestamp('2017-01-21 06:00:00+00:00', tz='UTC')
-    assert year2.index[-1] == pd.Timestamp('2017-12-22 06:00:00+00:00', tz='UTC')
+    assert year2.index[0] == pd.Timestamp("2017-01-21 06:00:00+00:00", tz="UTC")
+    assert year2.index[-1] == pd.Timestamp("2017-12-22 06:00:00+00:00", tz="UTC")
 
 
 def test_remove_duplicates_df():

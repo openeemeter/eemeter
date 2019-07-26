@@ -907,7 +907,7 @@ def meter_data_billing():
 
 def test_compute_usage_per_day_feature_billing(meter_data_billing):
     usage_per_day = compute_usage_per_day_feature(meter_data_billing)
-    assert usage_per_day["2017-01-01T00:00:00Z"] == 1. / 31
+    assert usage_per_day["2017-01-01T00:00:00Z"] == 1.0 / 31
     assert usage_per_day.sum().round(3) == 3.257
 
 
