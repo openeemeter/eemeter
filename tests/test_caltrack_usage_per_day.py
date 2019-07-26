@@ -614,8 +614,8 @@ def test_caltrack_predict_cdd_hdd_with_design_matrix_missing_temp_data(
     temp_data = temperature_data["2015-11":"2016-03"]
     temp_data_greater_90perc_missing = temp_data[
         ~(
-            (pd.Timestamp('2016-01-27T12:00:00', tz='utc') < temp_data.index)
-            & (temp_data.index < pd.Timestamp('2016-01-31T12:00:00', tz='utc'))
+            (pd.Timestamp("2016-01-27T12:00:00", tz="utc") < temp_data.index)
+            & (temp_data.index < pd.Timestamp("2016-01-31T12:00:00", tz="utc"))
         )
     ].reindex(temp_data.index)
 
@@ -2009,7 +2009,7 @@ def test_caltrack_usage_per_day_predict_empty(prediction_index, temperature_data
         "n_days_dropped",
         "n_days_kept",
         "predicted_usage",
-        "temperature_mean"
+        "temperature_mean",
     ]
     assert round(prediction.result.predicted_usage.sum(), 2) == 0
 
@@ -2031,7 +2031,7 @@ def test_caltrack_usage_per_day_temp_empty(prediction_index, temperature_data):
         "n_days_dropped",
         "n_days_kept",
         "predicted_usage",
-        "temperature_mean"
+        "temperature_mean",
     ]
     assert round(prediction.result.predicted_usage.sum(), 2) == 0
     assert prediction.result.predicted_usage.shape[0] == 0
