@@ -1147,7 +1147,13 @@ def get_single_cdd_only_candidate_model(
 
 
 def get_cdd_only_candidate_models(
-    data, minimum_non_zero_cdd, minimum_total_cdd, beta_cdd_maximum_p_value, weights_col
+    data,
+    minimum_non_zero_cdd,
+    minimum_total_cdd,
+    beta_cdd_maximum_p_value,
+    weights_col,
+    minimum_cooling_balance_point=-np.inf,
+    maximum_cooling_balance_point=np.inf,
 ):
     """ Return a list of all possible candidate cdd-only models.
 
@@ -1174,7 +1180,10 @@ def get_cdd_only_candidate_models(
     candidate_models : :any:`list` of :any:`CalTRACKUsagePerDayCandidateModel`
         A list of cdd-only candidate models, with any associated warnings.
     """
-    balance_points = [int(col[4:]) for col in data.columns if col.startswith("cdd")]
+    balance_points = [
+        int(col[4:]) for col in data.columns if col.startswith("cdd")
+        if minimum_cooling_balance_point < int(col[4:]) < maximum_cooling_balance_point
+    ]
     candidate_models = [
         get_single_cdd_only_candidate_model(
             data,
@@ -1311,7 +1320,13 @@ def get_single_hdd_only_candidate_model(
 
 
 def get_hdd_only_candidate_models(
-    data, minimum_non_zero_hdd, minimum_total_hdd, beta_hdd_maximum_p_value, weights_col
+    data,
+    minimum_non_zero_hdd,
+    minimum_total_hdd,
+    beta_hdd_maximum_p_value,
+    weights_col,
+    minimum_heating_balance_point=-np.inf,
+    maximum_heating_balance_point=np.inf,
 ):
     """
     Parameters
@@ -1338,7 +1353,10 @@ def get_hdd_only_candidate_models(
         A list of hdd-only candidate models, with any associated warnings.
     """
 
-    balance_points = [int(col[4:]) for col in data.columns if col.startswith("hdd")]
+    balance_points = [
+        int(col[4:]) for col in data.columns if col.startswith("hdd")
+        if minimum_heating_balance_point < int(col[4:]) < maximum_heating_balance_point
+    ]
 
     candidate_models = [
         get_single_hdd_only_candidate_model(
@@ -1530,6 +1548,10 @@ def get_cdd_hdd_candidate_models(
     beta_cdd_maximum_p_value,
     beta_hdd_maximum_p_value,
     weights_col,
+    minimum_cooling_balance_point=-np.inf,
+    minimum_heating_balance_point=-np.inf,
+    maximum_cooling_balance_point=np.inf,
+    maximum_heating_balance_point=np.inf,
 ):
     """ Return a list of candidate cdd_hdd models for a particular selection
     of cooling balance point and heating balance point
@@ -1566,9 +1588,11 @@ def get_cdd_hdd_candidate_models(
 
     cooling_balance_points = [
         int(col[4:]) for col in data.columns if col.startswith("cdd")
+        if minimum_cooling_balance_point < int(col[4:]) < maximum_cooling_balance_point
     ]
     heating_balance_points = [
         int(col[4:]) for col in data.columns if col.startswith("hdd")
+        if minimum_heating_balance_point < int(col[4:]) < maximum_heating_balance_point
     ]
 
     # CalTrack 3.2.2.1
@@ -1708,6 +1732,7 @@ def fit_caltrack_usage_per_day_model(
         Results of running CalTRACK daily method. See :any:`eemeter.CalTRACKUsagePerDayModelResults`
         for more details.
     """
+
     if use_billing_presets:
         # CalTrack 3.2.2.2.1
         minimum_non_zero_cdd = 0
@@ -1726,6 +1751,18 @@ def fit_caltrack_usage_per_day_model(
 
     # cleans data to fully NaN rows that have missing temp or meter data
     data = overwrite_partial_rows_with_nan(data)
+
+    if 'temperature_mean' in data:
+        min_temp = data.temperature_mean.min()
+        max_temp = data.temperature_mean.max()
+    else:
+        min_temp = -np.inf
+        max_temp = np.inf
+
+    minimum_cooling_balance_point = min_temp
+    minimum_heating_balance_point = min_temp
+    maximum_cooling_balance_point = max_temp
+    maximum_heating_balance_point = max_temp
 
     if data.dropna().empty:
         return CalTRACKUsagePerDayModelResults(
@@ -1757,6 +1794,8 @@ def fit_caltrack_usage_per_day_model(
                 minimum_total_hdd=minimum_total_hdd,
                 beta_hdd_maximum_p_value=beta_hdd_maximum_p_value,
                 weights_col=weights_col,
+                minimum_heating_balance_point=minimum_heating_balance_point,
+                maximum_heating_balance_point=maximum_heating_balance_point,
             )
         )
 
@@ -1770,6 +1809,8 @@ def fit_caltrack_usage_per_day_model(
                     minimum_total_cdd=minimum_total_cdd,
                     beta_cdd_maximum_p_value=beta_cdd_maximum_p_value,
                     weights_col=weights_col,
+                    minimum_cooling_balance_point=minimum_cooling_balance_point,
+                    maximum_cooling_balance_point=maximum_cooling_balance_point,
                 )
             )
 
@@ -1784,6 +1825,10 @@ def fit_caltrack_usage_per_day_model(
                     beta_cdd_maximum_p_value=beta_cdd_maximum_p_value,
                     beta_hdd_maximum_p_value=beta_hdd_maximum_p_value,
                     weights_col=weights_col,
+                    minimum_cooling_balance_point=minimum_cooling_balance_point,
+                    minimum_heating_balance_point=minimum_heating_balance_point,
+                    maximum_cooling_balance_point=maximum_cooling_balance_point,
+                    maximum_heating_balance_point=maximum_heating_balance_point,
                 )
             )
 
