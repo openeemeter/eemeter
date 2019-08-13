@@ -60,7 +60,13 @@ def remove_duplicates(df_or_series):
     return df_or_series[~df_or_series.index.duplicated(keep="first")]
 
 
-def as_freq(data_series, freq, atomic_freq="1 Min", series_type="cumulative"):
+def as_freq(
+    data_series,
+    freq,
+    atomic_freq="1 Min",
+    series_type="cumulative",
+    include_coverage=False,
+):
     """Resample data to a different frequency.
 
     This method can be used to upsample or downsample meter data. The
@@ -122,6 +128,7 @@ def as_freq(data_series, freq, atomic_freq="1 Min", series_type="cumulative"):
         atomic_series = series_spread.asfreq(atomic_freq, method="ffill")
         resampled = atomic_series.resample(freq).sum()
         resampled_with_nans = atomic_series.resample(freq).first()
+        n_coverage = atomic_series.resample(freq).count()
         resampled = resampled[resampled_with_nans.notnull()].reindex(resampled.index)
 
     elif series_type == "instantaneous":
@@ -136,7 +143,13 @@ def as_freq(data_series, freq, atomic_freq="1 Min", series_type="cumulative"):
             .resample(freq)
             .mean()
         )
-    return resampled
+    if include_coverage:
+        n_total = resampled.resample(atomic_freq).count().resample(freq).count()
+        resampled = resampled.to_frame("value")
+        resampled["coverage"] = n_coverage / n_total
+        return resampled
+    else:
+        return resampled
 
 
 def day_counts(index):
