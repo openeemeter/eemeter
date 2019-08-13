@@ -103,11 +103,16 @@ def as_freq(
         time intervals and is aggregated using addition (e.g. meter data).
         'instantaneous' data is copied (not spread) over smaller time intervals
         and is aggregated by averaging (e.g. weather data).
+    include_coverage: :any:`bool`,
+        default `False`
+        Option of whether to return a series with just the resampled values
+        or a dataframe with a column that includes percent coverage of source data
+        used for each sample.
 
     Returns
     -------
-    resampled_data : :any:`pandas.Series`
-        Data resampled to the given frequency.
+    resampled_data : :any:`pandas.Series` or :any:`pandas.DataFrame`
+        Data resampled to the given frequency (optionally as a dataframe with a coverage column if `include_coverage` is used.
     """
     # TODO(philngo): make sure this complies with CalTRACK 2.2.2.1
     if not isinstance(data_series, pd.Series):
