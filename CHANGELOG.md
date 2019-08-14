@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Update `as_freq` so it has an optional `include_coverage` parameter where it returns a dataframe with one column including the percent coverage of data used to create each sample.
 
 2.7.2
 -----

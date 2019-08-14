@@ -588,3 +588,29 @@ def test_remove_duplicates_series():
     series_dedupe = remove_duplicates(series)
     assert series_dedupe.shape == (2,)
     assert list(series_dedupe) == [1, 2]
+
+
+def test_as_freq_hourly_to_daily(il_electricity_cdd_hdd_hourly):
+    meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
+    meter_data.iloc[-1]["value"] = np.nan
+    assert meter_data.shape == (19417, 1)
+    as_daily = as_freq(meter_data.value, freq="D")
+    assert as_daily.shape == (811,)
+    assert round(meter_data.value.sum(), 1) == round(as_daily.sum(), 1) == 21926.0
+
+
+def test_as_freq_daily_to_daily(il_electricity_cdd_hdd_daily):
+    meter_data = il_electricity_cdd_hdd_daily["meter_data"]
+    assert meter_data.shape == (810, 1)
+    as_daily = as_freq(meter_data.value, freq="D")
+    assert as_daily.shape == (810,)
+    assert round(meter_data.value.sum(), 1) == round(as_daily.sum(), 1) == 21925.8
+
+
+def test_as_freq_hourly_to_daily_include_coverage(il_electricity_cdd_hdd_hourly):
+    meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
+    meter_data.iloc[-1]["value"] = np.nan
+    assert meter_data.shape == (19417, 1)
+    as_daily = as_freq(meter_data.value, freq="D", include_coverage=True)
+    assert as_daily.shape == (811, 2)
+    assert round(meter_data.value.sum(), 1) == round(as_daily.value.sum(), 1) == 21926.0

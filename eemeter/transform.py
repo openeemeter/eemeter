@@ -60,7 +60,13 @@ def remove_duplicates(df_or_series):
     return df_or_series[~df_or_series.index.duplicated(keep="first")]
 
 
-def as_freq(data_series, freq, atomic_freq="1 Min", series_type="cumulative"):
+def as_freq(
+    data_series,
+    freq,
+    atomic_freq="1 Min",
+    series_type="cumulative",
+    include_coverage=False,
+):
     """Resample data to a different frequency.
 
     This method can be used to upsample or downsample meter data. The
@@ -97,11 +103,16 @@ def as_freq(data_series, freq, atomic_freq="1 Min", series_type="cumulative"):
         time intervals and is aggregated using addition (e.g. meter data).
         'instantaneous' data is copied (not spread) over smaller time intervals
         and is aggregated by averaging (e.g. weather data).
+    include_coverage: :any:`bool`,
+        default `False`
+        Option of whether to return a series with just the resampled values
+        or a dataframe with a column that includes percent coverage of source data
+        used for each sample.
 
     Returns
     -------
-    resampled_data : :any:`pandas.Series`
-        Data resampled to the given frequency.
+    resampled_data : :any:`pandas.Series` or :any:`pandas.DataFrame`
+        Data resampled to the given frequency (optionally as a dataframe with a coverage column if `include_coverage` is used.
     """
     # TODO(philngo): make sure this complies with CalTRACK 2.2.2.1
     if not isinstance(data_series, pd.Series):
@@ -122,6 +133,7 @@ def as_freq(data_series, freq, atomic_freq="1 Min", series_type="cumulative"):
         atomic_series = series_spread.asfreq(atomic_freq, method="ffill")
         resampled = atomic_series.resample(freq).sum()
         resampled_with_nans = atomic_series.resample(freq).first()
+        n_coverage = atomic_series.resample(freq).count()
         resampled = resampled[resampled_with_nans.notnull()].reindex(resampled.index)
 
     elif series_type == "instantaneous":
@@ -136,7 +148,13 @@ def as_freq(data_series, freq, atomic_freq="1 Min", series_type="cumulative"):
             .resample(freq)
             .mean()
         )
-    return resampled
+    if include_coverage:
+        n_total = resampled.resample(atomic_freq).count().resample(freq).count()
+        resampled = resampled.to_frame("value")
+        resampled["coverage"] = n_coverage / n_total
+        return resampled
+    else:
+        return resampled
 
 
 def day_counts(index):
