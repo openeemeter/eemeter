@@ -29,6 +29,7 @@ from .warnings import EEMeterWarning
 
 
 __all__ = (
+    "Term",
     "as_freq",
     "day_counts",
     "get_baseline_data",
@@ -490,8 +491,73 @@ def get_reporting_data(
     )
 
 
+class Term(object):
+    """
+    The term object represents a subset of an index.
+
+    Attributes
+    ----------
+    index : :any:`pandas.DatetimeIndex`
+        The index of the term. Includes a period at the end meant to be NaN-value.
+    label : :any:`str`
+        The label for the term.
+    target_start_date : :any:`pandas.Timestamp` or :any:`datetime.datetime`
+        The start date inferred for this term from the start date and target term
+        lenths.
+    target_end_date : :any:`pandas.Timestamp` or :any:`datetime.datetime`
+        The end date inferred for this term from the start date and target term
+        lenths.
+    target_term_length_days : :any:`int`
+        The number of days targeted for this term.
+    actual_start_date : :any:`pandas.Timestamp`
+        The first date in the index.
+    actual_end_date : :any:`pandas.Timestamp`
+        The last date in the index.
+    actual_term_length_days : :any:`int`
+        The number of days between the actual start date and actual end date.
+    complete : :any:`bool`
+        True if this term is conclusively complete, such that additional data added
+        to the series would not add more data to this term.
+
+    """
+
+    def __init__(
+        self,
+        index,
+        label,
+        target_start_date,
+        target_end_date,
+        target_term_length_days,
+        actual_start_date,
+        actual_end_date,
+        actual_term_length_days,
+        complete,
+    ):
+        self.index = index
+        self.label = label
+        self.target_start_date = target_start_date
+        self.target_end_date = target_end_date
+        self.target_term_length_days = target_term_length_days
+        self.actual_start_date = actual_start_date
+        self.actual_end_date = actual_end_date
+        self.actual_term_length_days = actual_term_length_days
+        self.complete = complete
+
+    def __repr__(self):
+        return (
+            "Term(label={}, target_term_length_days={}, actual_term_length_days={},"
+            " complete={})"
+        ).format(
+            self.label,
+            self.target_term_length_days,
+            self.actual_term_length_days,
+            self.complete,
+        )
+
+
 def get_terms(index, term_lengths, term_labels=None, start=None, method="strict"):
-    """ Label a time series index with terms.
+    """ Breaks a :any:`pandas.DatetimeIndex` into consecutive terms of specified
+    lengths.
 
     Parameters
     ----------
@@ -513,7 +579,7 @@ def get_terms(index, term_lengths, term_labels=None, start=None, method="strict"
 
     Returns
     -------
-    reporting_data, warnings : :any:`pandas.DataFrame`
+    terms : :any:`list` of :any:`eemeter.Term`
         A dataframe of term labels with the same :any:`pandas.DatetimeIndex`
         given as `index`. This can be used to filter the original data into
         terms of approximately the desired length.
@@ -554,20 +620,42 @@ def get_terms(index, term_lengths, term_labels=None, start=None, method="strict"
         for i in range(len(term_lengths))
     ]
 
-    terms = [None] * len(index[index < prev_start])
+    terms = []
     remaining_index = index[index >= prev_start]
 
-    # copying prevents setting on slice warnings
-
-    for label, end_target in zip(term_labels, term_end_targets):
-        if remaining_index.empty:
-            return pd.Series(terms, index=index, name="term")
+    for label, target_term_length, end_target in zip(
+        term_labels, term_lengths, term_end_targets
+    ):
+        if len(remaining_index) <= 1:
+            break
 
         next_index = remaining_index.get_loc(end_target, method=get_loc_method)
 
-        terms.extend([label] * len(remaining_index[:next_index]))
+        # keep one extra index point for the end NaN
+        term_index = remaining_index[: next_index + 1]
+
+        # There may be a better way to tell if the term is conclusively complete,
+        # but the logic here is that if there's more than one remaining point then
+        # the term must be complete - since that final point was a worse candidate
+        # than the one before it which was chosen.
+        complete = len(remaining_index) > 1
+
+        terms.append(
+            Term(
+                index=term_index,
+                label=label,
+                target_start_date=prev_start,
+                target_end_date=end_target,
+                target_term_length_days=target_term_length,
+                actual_start_date=term_index[0],
+                actual_end_date=term_index[-1],
+                actual_term_length_days=(term_index[-1] - term_index[0]).days,
+                complete=complete,
+            )
+        )
+
+        # reset the remaining index
         prev_start = remaining_index[next_index]
         remaining_index = remaining_index[next_index:]
 
-    terms.extend([None for i in remaining_index])
-    return pd.Series(terms, index=index, name="term")
+    return terms

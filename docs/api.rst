@@ -186,6 +186,9 @@ Transformation utilities
 
 .. autofunction:: eemeter.get_reporting_data
 
+.. autoclass:: eemeter.Term
+   :members:
+
 .. autofunction:: eemeter.get_terms
 
 .. autofunction:: eemeter.remove_duplicates

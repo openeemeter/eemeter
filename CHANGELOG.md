@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Make more usable outputs for the `get_terms` function (list of eemeter.Term objects).
 
 2.7.3
 -----
