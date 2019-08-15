@@ -483,17 +483,17 @@ class Term(object):
         The index of the term. Includes a period at the end meant to be NaN-value.
     label : :any:`str`
         The label for the term.
-    target_start_date : :any:`pd.Timestamp`
+    target_start_date : :any:`pandas.Timestamp` or :any:`datetime.datetime`
         The start date inferred for this term from the start date and target term
         lenths.
-    target_end_date : :any:`pd.Timestamp`
+    target_end_date : :any:`pandas.Timestamp` or :any:`datetime.datetime`
         The end date inferred for this term from the start date and target term
         lenths.
     target_term_length_days : :any:`int`
         The number of days targeted for this term.
-    actual_start_date : :any:`pd.Timestamp`
+    actual_start_date : :any:`pandas.Timestamp`
         The first date in the index.
-    actual_end_date : :any:`pd.Timestamp`
+    actual_end_date : :any:`pandas.Timestamp`
         The last date in the index.
     actual_term_length_days : :any:`int`
         The number of days between the actual start date and actual end date.
