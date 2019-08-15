@@ -602,6 +602,17 @@ def test_get_terms_nearest(il_electricity_cdd_hdd_billing_monthly):
     assert year2.complete
 
 
+def test_term_repr(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+
+    terms = get_terms(meter_data.index, term_lengths=[60, 60, 60])
+    assert repr(terms[0]) == (
+        "Term(label=term_001, target_term_length_days=60, actual_term_length_days=29,"
+        " complete=True)"
+    )
+
+
+
 def test_remove_duplicates_df():
     index = pd.DatetimeIndex(["2017-01-01", "2017-01-02", "2017-01-02"])
     df = pd.DataFrame({"value": [1, 2, 3]}, index=index)
