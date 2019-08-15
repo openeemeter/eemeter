@@ -640,5 +640,4 @@ def get_terms(index, term_lengths, term_labels=None, start=None, method="strict"
         prev_start = remaining_index[next_index]
         remaining_index = remaining_index[next_index:]
 
-
     return terms

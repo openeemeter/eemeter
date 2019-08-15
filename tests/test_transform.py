@@ -543,28 +543,49 @@ def test_get_terms_strict(il_electricity_cdd_hdd_billing_monthly):
     assert len(strict_terms) == 2
 
     year1 = strict_terms[0]
-    assert year1.label == 'year1'
+    assert year1.label == "year1"
     assert year1.index.shape == (12,)
-    assert year1.target_start_date == pd.Timestamp(
-        "2016-01-15 00:00:00+0000", tz="UTC"
-    ).to_pydatetime()
-    assert year1.target_end_date == pd.Timestamp(
-        "2017-01-14 00:00:00+0000", tz="UTC"
-    ).to_pydatetime()
+    assert (
+        year1.target_start_date
+        == pd.Timestamp("2016-01-15 00:00:00+0000", tz="UTC").to_pydatetime()
+    )
+    assert (
+        year1.target_end_date
+        == pd.Timestamp("2017-01-14 00:00:00+0000", tz="UTC").to_pydatetime()
+    )
     assert year1.target_term_length_days == 365
-    assert year1.actual_start_date == year1.index[0] == pd.Timestamp("2016-01-22 06:00:00+0000", tz="UTC")
-    assert year1.actual_end_date == year1.index[-1] == pd.Timestamp("2016-12-19 06:00:00+0000", tz="UTC")
+    assert (
+        year1.actual_start_date
+        == year1.index[0]
+        == pd.Timestamp("2016-01-22 06:00:00+0000", tz="UTC")
+    )
+    assert (
+        year1.actual_end_date
+        == year1.index[-1]
+        == pd.Timestamp("2016-12-19 06:00:00+0000", tz="UTC")
+    )
     assert year1.actual_term_length_days == 332
     assert year1.complete
 
     year2 = strict_terms[1]
     assert year2.index.shape == (13,)
-    assert year2.label == 'year2'
+    assert year2.label == "year2"
     assert year2.target_start_date == pd.Timestamp("2016-12-19 06:00:00+0000", tz="UTC")
-    assert year2.target_end_date == pd.Timestamp("2018-01-14 00:00:00+0000", tz="UTC").to_pydatetime()
+    assert (
+        year2.target_end_date
+        == pd.Timestamp("2018-01-14 00:00:00+0000", tz="UTC").to_pydatetime()
+    )
     assert year2.target_term_length_days == 365
-    assert year2.actual_start_date == year2.index[0] == pd.Timestamp("2016-12-19 06:00:00+00:00", tz="UTC")
-    assert year2.actual_end_date == year2.index[-1] == pd.Timestamp("2017-12-22 06:00:00+0000", tz="UTC")
+    assert (
+        year2.actual_start_date
+        == year2.index[0]
+        == pd.Timestamp("2016-12-19 06:00:00+00:00", tz="UTC")
+    )
+    assert (
+        year2.actual_end_date
+        == year2.index[-1]
+        == pd.Timestamp("2017-12-22 06:00:00+0000", tz="UTC")
+    )
     assert year2.actual_term_length_days == 368
     assert year2.complete
 
@@ -582,17 +603,20 @@ def test_get_terms_nearest(il_electricity_cdd_hdd_billing_monthly):
     assert len(nearest_terms) == 2
 
     year1 = nearest_terms[0]
-    assert year1.label == 'year1'
+    assert year1.label == "year1"
     assert year1.index.shape == (13,)
     assert year1.index[0] == pd.Timestamp("2016-01-22 06:00:00+0000", tz="UTC")
     assert year1.index[-1] == pd.Timestamp("2017-01-21 06:00:00+0000", tz="UTC")
-    assert year1.target_start_date == pd.Timestamp("2016-01-15 00:00:00+0000", tz="UTC").to_pydatetime()
+    assert (
+        year1.target_start_date
+        == pd.Timestamp("2016-01-15 00:00:00+0000", tz="UTC").to_pydatetime()
+    )
     assert year1.target_term_length_days == 365
     assert year1.actual_term_length_days == 365
     assert year1.complete
 
     year2 = nearest_terms[1]
-    assert year2.label == 'year2'
+    assert year2.label == "year2"
     assert year2.index.shape == (13,)
     assert year2.index[0] == pd.Timestamp("2017-01-21 06:00:00+0000", tz="UTC")
     assert year2.index[-1] == pd.Timestamp("2018-01-20 06:00:00+0000", tz="UTC")
@@ -610,7 +634,6 @@ def test_term_repr(il_electricity_cdd_hdd_billing_monthly):
         "Term(label=term_001, target_term_length_days=60, actual_term_length_days=29,"
         " complete=True)"
     )
-
 
 
 def test_remove_duplicates_df():
