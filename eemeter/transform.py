@@ -616,10 +616,6 @@ def get_terms(index, term_lengths, term_labels=None, start=None, method="strict"
         # keep one extra index point for the end NaN
         term_index = remaining_index[: next_index + 1]
 
-        # reset the remaining index
-        prev_start = remaining_index[next_index]
-        remaining_index = remaining_index[next_index:]
-
         # There may be a better way to tell if the term is conclusively complete,
         # but the logic here is that if there's more than one remaining point then
         # the term must be complete - since that final point was a worse candidate
@@ -639,5 +635,10 @@ def get_terms(index, term_lengths, term_labels=None, start=None, method="strict"
                 complete=complete,
             )
         )
+
+        # reset the remaining index
+        prev_start = remaining_index[next_index]
+        remaining_index = remaining_index[next_index:]
+
 
     return terms
