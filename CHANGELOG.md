@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+2.7.5
+-----
+
 * Fix completeness check for `get_terms` for last term.
 
 2.7.4
