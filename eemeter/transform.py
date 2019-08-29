@@ -631,8 +631,15 @@ def get_terms(index, term_lengths, term_labels=None, start=None, method="strict"
 
         next_index = remaining_index.get_loc(end_target, method=get_loc_method)
 
-        # keep one extra index point for the end NaN
+        # keep one extra index point for the end NaN - this could be confusing, but
+        # helps identify the full range of the last data point
         term_index = remaining_index[: next_index + 1]
+
+        # find the next start
+        next_start = remaining_index[next_index]
+
+        # reset the remaining index
+        remaining_index = remaining_index[next_index:]
 
         # There may be a better way to tell if the term is conclusively complete,
         # but the logic here is that if there's more than one remaining point then
@@ -654,8 +661,7 @@ def get_terms(index, term_lengths, term_labels=None, start=None, method="strict"
             )
         )
 
-        # reset the remaining index
-        prev_start = remaining_index[next_index]
-        remaining_index = remaining_index[next_index:]
+        # reset the previous start
+        prev_start = next_start
 
     return terms

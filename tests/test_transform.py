@@ -623,7 +623,25 @@ def test_get_terms_nearest(il_electricity_cdd_hdd_billing_monthly):
     assert year2.target_start_date == pd.Timestamp("2017-01-21 06:00:00+0000", tz="UTC")
     assert year1.target_term_length_days == 365
     assert year2.actual_term_length_days == 364
-    assert year2.complete
+    assert not year2.complete  # no remaining index
+
+    # check completeness case with a shorter final term
+    nearest_terms = get_terms(
+        meter_data.index,
+        term_lengths=[365, 340],
+        term_labels=["year1", "year2"],
+        start=datetime(2016, 1, 15, tzinfo=pytz.UTC),
+        method="nearest",
+    )
+    year2 = nearest_terms[1]
+    assert year2.label == "year2"
+    assert year2.index.shape == (12,)
+    assert year2.index[0] == pd.Timestamp("2017-01-21 06:00:00+0000", tz="UTC")
+    assert year2.index[-1] == pd.Timestamp("2017-12-22 06:00:00+00:00", tz="UTC")
+    assert year2.target_start_date == pd.Timestamp("2017-01-21 06:00:00+0000", tz="UTC")
+    assert year2.target_term_length_days == 340
+    assert year2.actual_term_length_days == 335
+    assert year2.complete  # has remaining index
 
 
 def test_term_repr(il_electricity_cdd_hdd_billing_monthly):
