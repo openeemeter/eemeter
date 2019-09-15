@@ -64,6 +64,7 @@ configured to run the CalTRACK methods and close variants.
     eemeter. The package proactively exposes warnings to point out issues of this
     nature where possible.
 
+.. _installation:
 
 Installation
 ------------
@@ -103,5 +104,6 @@ Usage Guides
 
    basics
    advanced
+   tutorial
    caltrack_compliance
    api
