@@ -21,14 +21,6 @@ cover the following:
 
    tutorial
 
-- :ref:`quickstart`
-- :ref:`data-formats`
-- :ref:`baseline-model`
-- Fitting baseline (and reporting) models
-- Using fitted models for prediction
-- Computing CalTRACK metered savings
-- :ref:`cautions`
-
 The tutorial demonstrates how to use the package to run the CalTRACK Hourly, Daily,
 and Billing methods.
 
@@ -37,7 +29,11 @@ and Billing methods.
 Quickstart
 ----------
 
-Some folks may just want to jump right to the meat and potatoes.
+Some folks may just want to see the code all in one place. This code is explained
+in more detail in the course of the tutorial below.
+
+Quickstart for CalTRACK Billing/Daily
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Here's how to run the CalTRACK billing/daily model::
 
@@ -80,8 +76,11 @@ Here's how to run the CalTRACK billing/daily model::
     # total metered savings
     total_metered_savings = metered_savings_dataframe.metered_savings.sum()
 
+Quickstart for CalTRACK Hourly
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-And here's now to run the CalTRACK hourly model::
+And here's now to run the CalTRACK hourly model. Again, this is explained in more
+detail below::
 
     import eemeter
 
