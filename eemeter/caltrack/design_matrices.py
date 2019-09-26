@@ -84,7 +84,11 @@ def create_caltrack_daily_design_matrix(meter_data, temperature_data):
 
 
 def create_caltrack_hourly_segmented_design_matrices(
-    preliminary_design_matrix, segmentation, occupancy_lookup, temperature_bins
+    preliminary_design_matrix,
+    segmentation,
+    occupancy_lookup,
+    occupied_temperature_bins,
+    unoccupied_temperature_bins,
 ):
     return {
         segment_name: segmented_data
@@ -94,7 +98,8 @@ def create_caltrack_hourly_segmented_design_matrices(
             feature_processor=caltrack_hourly_fit_feature_processor,
             feature_processor_kwargs={
                 "occupancy_lookup": occupancy_lookup,
-                "temperature_bins": temperature_bins,
+                "occupied_temperature_bins": occupied_temperature_bins,
+                "unoccupied_temperature_bins": unoccupied_temperature_bins,
             },
         )
     }

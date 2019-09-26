@@ -592,31 +592,103 @@ def _fit_temperature_bins(temperature_data, default_bins, min_temperature_count)
 def fit_temperature_bins(
     data,
     segmentation=None,
+    occupancy_lookup=None,
     default_bins=[30, 45, 55, 65, 75, 90],
     min_temperature_count=20,
 ):
-    segmented_bins = {}
-    segmented_datasets = iterate_segmented_dataset(data, segmentation)
-    for segment_name, segmented_data in segmented_datasets:
-        segmented_bins[segment_name] = _fit_temperature_bins(
-            segmented_data.temperature_mean, default_bins, min_temperature_count
-        )
+    if occupancy_lookup is None:
+        segmented_bins = {}
+        segmented_datasets = iterate_segmented_dataset(data, segmentation)
+        for segment_name, segmented_data in segmented_datasets:
+            segmented_bins[segment_name] = _fit_temperature_bins(
+                segmented_data.temperature_mean, default_bins, min_temperature_count
+            )
 
-    if segmentation is None:
-        bins = segmented_bins[None]
+        if segmentation is None:
+            bins = segmented_bins[None]
+            return pd.DataFrame(
+                {"keep_bin_endpoint": [endpoint in bins for endpoint in default_bins]},
+                index=pd.Series(default_bins, name="bin_endpoints"),
+            )
+
         return pd.DataFrame(
-            {"keep_bin_endpoint": [endpoint in bins for endpoint in default_bins]},
+            {
+                segment_name: [endpoint in bins for endpoint in default_bins]
+                for segment_name, bins in segmented_bins.items()
+            },
+            columns=segmentation.columns,
             index=pd.Series(default_bins, name="bin_endpoints"),
         )
+    else:
+        occupied_segmented_bins = {}
+        unoccupied_segmented_bins = {}
+        segmented_datasets = iterate_segmented_dataset(data, segmentation)
+        for segment_name, segmented_data in segmented_datasets:
+            hourly_segmented_data = segmented_data.resample("H").mean()
+            time_features = compute_time_features(
+                hourly_segmented_data.index,
+                hour_of_week=True,
+                day_of_week=False,
+                hour_of_day=False,
+            )
+            if segment_name is None:
+                occupancy = occupancy_lookup["occupancy"]
+            else:
+                occupancy = occupancy_lookup[segment_name]
+            occupancy_features = compute_occupancy_feature(
+                time_features.hour_of_week, occupancy
+            )
+            occupied_temperatures = segmented_data.temperature_mean[occupancy_features]
+            unoccupied_temperatures = segmented_data.temperature_mean[
+                ~occupancy_features
+            ]
+            occupied_segmented_bins[segment_name] = _fit_temperature_bins(
+                occupied_temperatures, default_bins, min_temperature_count
+            )
+            unoccupied_segmented_bins[segment_name] = _fit_temperature_bins(
+                unoccupied_temperatures, default_bins, min_temperature_count
+            )
 
-    return pd.DataFrame(
-        {
-            segment_name: [endpoint in bins for endpoint in default_bins]
-            for segment_name, bins in segmented_bins.items()
-        },
-        columns=segmentation.columns,
-        index=pd.Series(default_bins, name="bin_endpoints"),
-    )
+        if segmentation is None:
+            occupied_bins = occupied_segmented_bins[None]
+            unoccupied_bins = unoccupied_segmented_bins[None]
+            return (
+                pd.DataFrame(
+                    {
+                        "keep_bin_endpoint": [
+                            endpoint in occupied_bins for endpoint in default_bins
+                        ]
+                    },
+                    index=pd.Series(default_bins, name="bin_endpoints"),
+                ),
+                pd.DataFrame(
+                    {
+                        "keep_bin_endpoint": [
+                            endpoint in unoccupied_bins for endpoint in default_bins
+                        ]
+                    },
+                    index=pd.Series(default_bins, name="bin_endpoints"),
+                ),
+            )
+
+        return (
+            pd.DataFrame(
+                {
+                    segment_name: [endpoint in bins for endpoint in default_bins]
+                    for segment_name, bins in occupied_segmented_bins.items()
+                },
+                columns=segmentation.columns,
+                index=pd.Series(default_bins, name="bin_endpoints"),
+            ),
+            pd.DataFrame(
+                {
+                    segment_name: [endpoint in bins for endpoint in default_bins]
+                    for segment_name, bins in unoccupied_segmented_bins.items()
+                },
+                columns=segmentation.columns,
+                index=pd.Series(default_bins, name="bin_endpoints"),
+            ),
+        )
 
 
 # TODO(philngo): combine with compute_temperature_features?

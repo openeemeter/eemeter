@@ -134,10 +134,17 @@ class CalTRACKHourlyModelResults(object):
 
 
 class CalTRACKHourlyModel(SegmentedModel):
-    def __init__(self, segment_models, occupancy_lookup, temperature_bins):
+    def __init__(
+        self,
+        segment_models,
+        occupancy_lookup,
+        occupied_temperature_bins,
+        unoccupied_temperature_bins,
+    ):
 
         self.occupancy_lookup = occupancy_lookup
-        self.temperature_bins = temperature_bins
+        self.occupied_temperature_bins = occupied_temperature_bins
+        self.unoccupied_temperature_bins = unoccupied_temperature_bins
         super(CalTRACKHourlyModel, self).__init__(
             segment_models=segment_models,
             prediction_segment_type="one_month",
@@ -158,7 +165,8 @@ class CalTRACKHourlyModel(SegmentedModel):
             prediction_feature_processor=caltrack_hourly_prediction_feature_processor,
             prediction_feature_processor_kwargs={
                 "occupancy_lookup": self.occupancy_lookup,
-                "temperature_bins": self.temperature_bins,
+                "occupied_temperature_bins": self.occupied_temperature_bins,
+                "unoccupied_temperature_bins": self.unoccupied_temperature_bins,
             },
         )
 
@@ -172,14 +180,23 @@ class CalTRACKHourlyModel(SegmentedModel):
         data.update(
             {
                 "occupancy_lookup": self.occupancy_lookup.to_json(orient="split"),
-                "temperature_bins": self.temperature_bins.to_json(orient="split"),
+                "occupied_temperature_bins": self.occupied_temperature_bins.to_json(
+                    orient="split"
+                ),
+                "unoccupied_temperature_bins": self.unoccupied_temperature_bins.to_json(
+                    orient="split"
+                ),
             }
         )
         return data
 
 
 def caltrack_hourly_fit_feature_processor(
-    segment_name, segmented_data, occupancy_lookup, temperature_bins
+    segment_name,
+    segmented_data,
+    occupancy_lookup,
+    occupied_temperature_bins,
+    unoccupied_temperature_bins,
 ):
     # get occupied feature
     hour_of_week = segmented_data.hour_of_week
@@ -188,26 +205,52 @@ def caltrack_hourly_fit_feature_processor(
 
     # get temperature bin features
     temperatures = segmented_data.temperature_mean
-    bin_endpoints_list = (
-        temperature_bins[segment_name].index[temperature_bins[segment_name]].tolist()
+    occupied_bin_endpoints_list = (
+        occupied_temperature_bins[segment_name]
+        .index[occupied_temperature_bins[segment_name]]
+        .tolist()
     )
-    temperature_bin_features = compute_temperature_bin_features(
-        segmented_data.temperature_mean, bin_endpoints_list
+    unoccupied_bin_endpoints_list = (
+        unoccupied_temperature_bins[segment_name]
+        .index[unoccupied_temperature_bins[segment_name]]
+        .tolist()
+    )
+    occupied_temperature_bin_features = compute_temperature_bin_features(
+        segmented_data.temperature_mean, occupied_bin_endpoints_list
+    )
+    occupied_temperature_bin_features[occupancy_feature == 0] = 0
+    occupied_temperature_bin_features.rename(
+        columns={c: f"{c}_occupied" for c in occupied_temperature_bin_features.columns},
+        inplace=True,
+    )
+    unoccupied_temperature_bin_features = compute_temperature_bin_features(
+        segmented_data.temperature_mean, unoccupied_bin_endpoints_list
+    )
+    unoccupied_temperature_bin_features[occupancy_feature == 1] = 0
+    unoccupied_temperature_bin_features.rename(
+        columns={
+            c: f"{c}_unoccupied" for c in unoccupied_temperature_bin_features.columns
+        },
+        inplace=True,
     )
 
     # combine features
     return merge_features(
         [
             segmented_data[["meter_value", "hour_of_week"]],
-            occupancy_feature,
-            temperature_bin_features,
+            occupied_temperature_bin_features,
+            unoccupied_temperature_bin_features,
             segmented_data.weight,
         ]
     )
 
 
 def caltrack_hourly_prediction_feature_processor(
-    segment_name, segmented_data, occupancy_lookup, temperature_bins
+    segment_name,
+    segmented_data,
+    occupancy_lookup,
+    occupied_temperature_bins,
+    unoccupied_temperature_bins,
 ):
     # hour of week feature
     hour_of_week_feature = compute_time_features(
@@ -222,44 +265,47 @@ def caltrack_hourly_prediction_feature_processor(
 
     # get temperature bin features
     temperatures = segmented_data
-    bin_endpoints_list = (
-        temperature_bins[segment_name].index[temperature_bins[segment_name]].tolist()
+    occupied_bin_endpoints_list = (
+        occupied_temperature_bins[segment_name]
+        .index[occupied_temperature_bins[segment_name]]
+        .tolist()
     )
-    temperature_bin_features = compute_temperature_bin_features(
-        segmented_data.temperature_mean, bin_endpoints_list
+    unoccupied_bin_endpoints_list = (
+        unoccupied_temperature_bins[segment_name]
+        .index[unoccupied_temperature_bins[segment_name]]
+        .tolist()
+    )
+    occupied_temperature_bin_features = compute_temperature_bin_features(
+        segmented_data.temperature_mean, occupied_bin_endpoints_list
+    )
+    occupied_temperature_bin_features[occupancy_feature == 0] = 0
+    occupied_temperature_bin_features.rename(
+        columns={c: f"{c}_occupied" for c in occupied_temperature_bin_features.columns},
+        inplace=True,
+    )
+    unoccupied_temperature_bin_features = compute_temperature_bin_features(
+        segmented_data.temperature_mean, unoccupied_bin_endpoints_list
+    )
+    unoccupied_temperature_bin_features[occupancy_feature == 1] = 0
+    unoccupied_temperature_bin_features.rename(
+        columns={
+            c: f"{c}_unoccupied" for c in unoccupied_temperature_bin_features.columns
+        },
+        inplace=True,
     )
 
     # combine features
     return merge_features(
         [
             hour_of_week_feature,
-            occupancy_feature,
-            temperature_bin_features,
+            occupied_temperature_bin_features,
+            unoccupied_temperature_bin_features,
             segmented_data.weight,
         ]
     )
 
 
 def fit_caltrack_hourly_model_segment(segment_name, segment_data):
-    def _get_hourly_model_formula(data):
-        if (np.sum(data.loc[data.weight > 0].occupancy) == 0) or (
-            np.sum(data.loc[data.weight > 0].occupancy)
-            == len(data.loc[data.weight > 0].occupancy)
-        ):
-            bin_occupancy_interactions = "".join(
-                [" + {}".format(c) for c in data.columns if "bin" in c]
-            )
-            return "meter_value ~ C(hour_of_week) - 1{}".format(
-                bin_occupancy_interactions
-            )
-        else:
-            bin_occupancy_interactions = "".join(
-                [" + {}:C(occupancy)".format(c) for c in data.columns if "bin" in c]
-            )
-            return "meter_value ~ C(hour_of_week) - 1{}".format(
-                bin_occupancy_interactions
-            )
-
     warnings = []
     if segment_data.dropna().empty:
         model = None
@@ -275,7 +321,12 @@ def fit_caltrack_hourly_model_segment(segment_name, segment_data):
                 },
             )
         )
+
     else:
+        def _get_hourly_model_formula(data):
+            return "meter_value ~ C(hour_of_week) - 1{}".format(
+                "".join([" + {}".format(c) for c in data.columns if c.startswith("bin")])
+            )
 
         formula = _get_hourly_model_formula(segment_data)
         model = smf.wls(formula=formula, data=segment_data, weights=segment_data.weight)
@@ -291,7 +342,10 @@ def fit_caltrack_hourly_model_segment(segment_name, segment_data):
 
 
 def fit_caltrack_hourly_model(
-    segmented_design_matrices, occupancy_lookup, temperature_bins
+    segmented_design_matrices,
+    occupancy_lookup,
+    occupied_temperature_bins,
+    unoccupied_temperature_bins,
 ):
     segment_models = fit_model_segments(
         segmented_design_matrices, fit_caltrack_hourly_model_segment
@@ -301,7 +355,12 @@ def fit_caltrack_hourly_model(
         for segment_model in segment_models
         for warning in segment_model.warnings
     ]
-    model = CalTRACKHourlyModel(segment_models, occupancy_lookup, temperature_bins)
+    model = CalTRACKHourlyModel(
+        segment_models,
+        occupancy_lookup,
+        occupied_temperature_bins,
+        unoccupied_temperature_bins,
+    )
     return CalTRACKHourlyModelResults(
         status="SUCCEEDED",
         method_name="caltrack_hourly",

@@ -354,46 +354,50 @@ def occupancy_lookup(preliminary_hourly_design_matrix, segmentation):
 
 
 @pytest.fixture
-def temperature_bins(preliminary_hourly_design_matrix, segmentation):
+def temperature_bins(preliminary_hourly_design_matrix, segmentation, occupancy_lookup):
     return fit_temperature_bins(
-        preliminary_hourly_design_matrix, segmentation=segmentation
+        preliminary_hourly_design_matrix,
+        segmentation=segmentation,
+        occupancy_lookup=occupancy_lookup,
     )
 
 
 def test_create_caltrack_hourly_segmented_design_matrices(
     preliminary_hourly_design_matrix, segmentation, occupancy_lookup, temperature_bins
 ):
+    occupied_temperature_bins, unoccupied_temperature_bins = temperature_bins
     design_matrices = create_caltrack_hourly_segmented_design_matrices(
         preliminary_hourly_design_matrix,
         segmentation,
         occupancy_lookup,
-        temperature_bins,
+        occupied_temperature_bins,
+        unoccupied_temperature_bins,
     )
 
     design_matrix = design_matrices["dec-jan-feb-weighted"]
     assert design_matrix.shape == (1000, 8)
     assert sorted(design_matrix.columns) == [
-        "bin_0",
-        "bin_1",
-        "bin_2",
-        "bin_3",
+        "bin_0_occupied",
+        "bin_0_unoccupied",
+        "bin_1_unoccupied",
+        "bin_2_unoccupied",
+        "bin_3_unoccupied",
         "hour_of_week",
         "meter_value",
-        "occupancy",
         "weight",
     ]
-    assert round(design_matrix.sum().sum(), 2) == 126252.07
+    assert round(design_matrix.sum().sum(), 2) == 126210.07
 
     design_matrix = design_matrices["mar-apr-may-weighted"]
     assert design_matrix.shape == (1000, 5)
     assert sorted(design_matrix.columns) == [
-        "bin_0",
+        "bin_0_occupied",
+        "bin_0_unoccupied",
         "hour_of_week",
         "meter_value",
-        "occupancy",
         "weight",
     ]
-    assert round(design_matrix.sum().sum(), 2) == 0.0
+    assert round(design_matrix.sum().sum(), 2) == 167659.28
 
 
 def test_create_caltrack_billing_design_matrix_empty_temp(

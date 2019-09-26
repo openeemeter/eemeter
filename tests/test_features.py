@@ -1032,10 +1032,35 @@ def temperature_means():
 
 
 def test_fit_temperature_bins_no_segmentation(temperature_means):
-    bins = fit_temperature_bins(temperature_means, segmentation=None)
+    bins = fit_temperature_bins(
+        temperature_means, segmentation=None, occupancy_lookup=None
+    )
     assert list(bins.columns) == ["keep_bin_endpoint"]
     assert bins.shape == (6, 1)
     assert bins.sum().sum() == 4
+
+
+@pytest.fixture
+def occupancy_lookup_no_segmentation(occupancy_precursor):
+    occupancy = estimate_hour_of_week_occupancy(occupancy_precursor)
+    return occupancy
+
+
+def test_fit_temperature_bins_no_segmentation_with_occupancy(
+    temperature_means, occupancy_lookup_no_segmentation
+):
+    occupied_bins, unoccupied_bins = fit_temperature_bins(
+        temperature_means,
+        segmentation=None,
+        occupancy_lookup=occupancy_lookup_no_segmentation,
+    )
+    assert list(occupied_bins.columns) == ["keep_bin_endpoint"]
+    assert occupied_bins.shape == (6, 1)
+    assert occupied_bins.sum().sum() == 0
+
+    assert list(unoccupied_bins.columns) == ["keep_bin_endpoint"]
+    assert unoccupied_bins.shape == (6, 1)
+    assert unoccupied_bins.sum().sum() == 4
 
 
 def test_fit_temperature_bins_one_month_segmentation(
@@ -1058,6 +1083,59 @@ def test_fit_temperature_bins_one_month_segmentation(
     ]
     assert bins.shape == (6, 12)
     assert bins.sum().sum() == 12
+
+
+@pytest.fixture
+def occupancy_lookup_one_month_segmentation(
+    occupancy_precursor, one_month_segmentation
+):
+    occupancy_lookup = estimate_hour_of_week_occupancy(
+        occupancy_precursor, segmentation=one_month_segmentation
+    )
+    return occupancy_lookup
+
+
+def test_fit_temperature_bins_with_occupancy_lookup(
+    temperature_means, one_month_segmentation, occupancy_lookup_one_month_segmentation
+):
+    occupied_bins, unoccupied_bins = fit_temperature_bins(
+        temperature_means,
+        segmentation=one_month_segmentation,
+        occupancy_lookup=occupancy_lookup_one_month_segmentation,
+    )
+    assert list(occupied_bins.columns) == [
+        "jan",
+        "feb",
+        "mar",
+        "apr",
+        "may",
+        "jun",
+        "jul",
+        "aug",
+        "sep",
+        "oct",
+        "nov",
+        "dec",
+    ]
+    assert occupied_bins.shape == (6, 12)
+    assert occupied_bins.sum().sum() == 0
+
+    assert list(unoccupied_bins.columns) == [
+        "jan",
+        "feb",
+        "mar",
+        "apr",
+        "may",
+        "jun",
+        "jul",
+        "aug",
+        "sep",
+        "oct",
+        "nov",
+        "dec",
+    ]
+    assert unoccupied_bins.shape == (6, 12)
+    assert unoccupied_bins.sum().sum() == 12
 
 
 def test_fit_temperature_bins_empty(temperature_means):
