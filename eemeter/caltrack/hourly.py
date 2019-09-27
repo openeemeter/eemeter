@@ -174,9 +174,6 @@ class CalTRACKHourlyModel(SegmentedModel):
         occupied_temperature_bins,
         unoccupied_temperature_bins,
     ):
-
-    def __init__(self, segment_models, occupancy_lookup, temperature_bins):
-
         self.occupancy_lookup = occupancy_lookup
         self.occupied_temperature_bins = occupied_temperature_bins
         self.unoccupied_temperature_bins = unoccupied_temperature_bins
