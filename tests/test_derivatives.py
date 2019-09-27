@@ -556,7 +556,7 @@ def test_metered_savings_cdd_hdd_hourly(
         "counterfactual_usage",
         "metered_savings",
     ]
-    assert round(results.metered_savings.sum(), 2) == -428.63
+    assert round(results.metered_savings.sum(), 2) == -403.7
     assert error_bands is None
 
 
@@ -578,7 +578,7 @@ def test_modeled_savings_cdd_hdd_hourly(
         "modeled_reporting_usage",
         "modeled_savings",
     ]
-    assert round(results.modeled_savings.sum(), 2) == 20.76
+    assert round(results.modeled_savings.sum(), 2) == 55.3
     assert error_bands is None
 
 
