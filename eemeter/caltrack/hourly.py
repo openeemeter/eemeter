@@ -265,7 +265,10 @@ def caltrack_hourly_fit_feature_processor(
     )
     occupied_temperature_bin_features[occupancy_feature == 0] = 0
     occupied_temperature_bin_features.rename(
-        columns={c: f"{c}_occupied" for c in occupied_temperature_bin_features.columns},
+        columns={
+            c: "{}_occupied".format(c)
+            for c in occupied_temperature_bin_features.columns
+        },
         inplace=True,
     )
     unoccupied_temperature_bin_features = compute_temperature_bin_features(
@@ -274,7 +277,8 @@ def caltrack_hourly_fit_feature_processor(
     unoccupied_temperature_bin_features[occupancy_feature == 1] = 0
     unoccupied_temperature_bin_features.rename(
         columns={
-            c: f"{c}_unoccupied" for c in unoccupied_temperature_bin_features.columns
+            c: "{}_unoccupied".format(c)
+            for c in unoccupied_temperature_bin_features.columns
         },
         inplace=True,
     )
@@ -353,7 +357,10 @@ def caltrack_hourly_prediction_feature_processor(
     )
     occupied_temperature_bin_features[occupancy_feature == 0] = 0
     occupied_temperature_bin_features.rename(
-        columns={c: f"{c}_occupied" for c in occupied_temperature_bin_features.columns},
+        columns={
+            c: "{}_occupied".format(c)
+            for c in occupied_temperature_bin_features.columns
+        },
         inplace=True,
     )
     unoccupied_temperature_bin_features = compute_temperature_bin_features(
@@ -362,7 +369,8 @@ def caltrack_hourly_prediction_feature_processor(
     unoccupied_temperature_bin_features[occupancy_feature == 1] = 0
     unoccupied_temperature_bin_features.rename(
         columns={
-            c: f"{c}_unoccupied" for c in unoccupied_temperature_bin_features.columns
+            c: "{}_unoccupied".format(c)
+            for c in unoccupied_temperature_bin_features.columns
         },
         inplace=True,
     )
