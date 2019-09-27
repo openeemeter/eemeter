@@ -11,6 +11,8 @@ CalTRACK
 CalTRACK design matrix creation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+These functions are designed as shortcuts to common CalTRACK design matrix inputs.
+
 .. autofunction:: eemeter.create_caltrack_hourly_preliminary_design_matrix
 
 .. autofunction:: eemeter.create_caltrack_hourly_segmented_design_matrices
@@ -19,8 +21,13 @@ CalTRACK design matrix creation
 
 .. autofunction:: eemeter.create_caltrack_billing_design_matrix
 
+.. _caltrack-hourly-api:
+
 CalTRACK Hourly
 ~~~~~~~~~~~~~~~
+
+These classes and functions are designed to assist with running the CalTRACK Hourly
+methods. See also :ref:`caltrack-hourly-quickstart`.
 
 .. autoclass:: eemeter.CalTRACKHourlyModel
    :members:
@@ -36,8 +43,13 @@ CalTRACK Hourly
 
 .. autofunction:: eemeter.fit_caltrack_hourly_model
 
+.. _caltrack-billing-daily-api:
+
 CalTRACK Daily and Billing (Usage per Day)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+These classes and functions are designed to assist with running the CalTRACK Daily
+and Billing methods. See also :ref:`caltrack-billing-daily-quickstart`.
 
 .. autoclass:: eemeter.CalTRACKUsagePerDayCandidateModel
    :members:
@@ -84,8 +96,10 @@ CalTRACK Daily and Billing (Usage per Day)
 .. autofunction:: eemeter.select_best_candidate
 
 
-Derivatives
------------
+Savings
+-------
+
+These methods are designed for computing metered and normal year savings.
 
 .. autofunction:: eemeter.metered_savings
 
@@ -94,6 +108,8 @@ Derivatives
 
 Exceptions
 ----------
+
+These exceptions are used in the package to indicate various common issues.
 
 .. autoexception:: eemeter.EEMeterError
 
@@ -108,6 +124,8 @@ Exceptions
 
 Features
 --------
+
+These methods are used to compute features that are used in creating CalTRACK models.
 
 .. autofunction:: eemeter.compute_usage_per_day_feature
 
@@ -131,6 +149,8 @@ Features
 Input and Output Utilities
 --------------------------
 
+These functions are used for reading and writing meter and temperature data.
+
 .. autofunction:: eemeter.meter_data_from_csv
 
 .. autofunction:: eemeter.meter_data_from_json
@@ -147,12 +167,16 @@ Input and Output Utilities
 Metrics
 -------
 
+This class is used for computing model metrics.
+
 .. autoclass:: eemeter.ModelMetrics
    :members:
 
 
 Sample Data
 -----------
+
+These sample data are provided to make things easier for new users.
 
 .. autofunction:: eemeter.samples
 
@@ -161,6 +185,9 @@ Sample Data
 
 Segmentation
 ------------
+
+These methods are used within CalTRACK hourly to support building multiple partial
+models and combining them into one full model.
 
 .. autofunction:: eemeter.iterate_segmented_dataset
 
@@ -179,6 +206,7 @@ Segmentation
 Transformation utilities
 ------------------------
 
+These functions are used to various common data transformations based on pandas inputs.
 
 .. autofunction:: eemeter.as_freq
 
@@ -200,11 +228,17 @@ Transformation utilities
 
 Version
 -------
+
+This method can used to verify the eemeter version.
+
 .. autofunction:: eemeter.get_version
 
 
 Visualization
 -------------
+
+These functions are used to visualization of models and meter and temperature data
+inputs.
 
 .. autofunction:: eemeter.plot_time_series
 

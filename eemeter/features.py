@@ -40,6 +40,24 @@ __all__ = (
 
 
 def merge_features(features, keep_partial_nan_rows=False):
+    """
+    Combine dataframes of features which share a datetime index.
+
+    Parameters
+    ----------
+    features : :any:`list` of :any:`pandas.DataFrame`
+        List of dataframes to be concatenated to share an index.
+    keep_partial_nan_rows : :any:`bool`, default False
+        If True, don't overwrite partial rows with NaN, otherwise any row with a NaN
+        value gets changed to all NaN values.
+
+    Returns
+    -------
+    merged_features : :any:`pandas.DataFrame`
+        A single dataframe with the index of the input data and all of the columns
+        in the input feature dataframes.
+    """
+
     def _to_frame_if_needed(df_or_series):
         if isinstance(df_or_series, pd.Series):
             return df_or_series.to_frame()
@@ -53,6 +71,20 @@ def merge_features(features, keep_partial_nan_rows=False):
 
 
 def compute_usage_per_day_feature(meter_data, series_name="usage_per_day"):
+    """ Compute average usage per day for billing/daily data.
+
+    Parameters
+    ----------
+    meter_data : :any:`pandas.DataFrame`
+        Meter data for which to compute usage per day.
+    series_name : :any:`str`
+        Name of the output pandas series
+
+    Returns
+    -------
+    usage_per_day_feature : :any:`pandas.Series`
+        The usage per day feature.
+    """
     # CalTrack 3.3.1.1
     # convert to average daily meter values.
     usage_per_day = meter_data.value / day_counts(meter_data.index)
@@ -60,6 +92,18 @@ def compute_usage_per_day_feature(meter_data, series_name="usage_per_day"):
 
 
 def get_missing_hours_of_week_warning(hours_of_week):
+    """ Warn if any hours of week (0-167) are missing.
+
+    Parameters
+    ----------
+    hours_of_week : :any:`pandas.Series`
+        Hour of week feature as given by :any:`eemeter.compute_time_features`.
+
+    Returns
+    -------
+    warning : :any:`eemeter.EEMeterWarning`
+        Warning with qualified name "eemeter.hour_of_week.missing"
+    """
     unique = set(hours_of_week.unique())
     total = set(range(168))
     missing = sorted(total - unique)
@@ -74,6 +118,27 @@ def get_missing_hours_of_week_warning(hours_of_week):
 
 
 def compute_time_features(index, hour_of_week=True, day_of_week=True, hour_of_day=True):
+    """ Compute hour of week, day of week, or hour of day features.
+
+    Parameters
+    ----------
+    index : :any:`pandas.DatetimeIndex`
+        Datetime index with hourly frequency.
+    hour_of_week : :any:`bool`
+        Include the `hour_of_week` feature.
+    day_of_week : :any:`bool`
+        Include the `day_of_week` feature.
+    hour_of_day : :any:`bool`
+        Include the `hour_of_day` feature.
+
+    Returns
+    -------
+    time_features : :any:`pandas.DataFrame`
+        A dataframe with the input datetime index and up to three columns
+        - hour_of_week : Label for hour of week, 0-167, 0 is 12-1am Monday
+        - day_of_week : Label for day of week, 0-6, 0 is Monday.
+        - hour_of_day : Label for hour of day, 0-23, 0 is 12-1am.
+    """
     if index.freq != "H":
         raise ValueError(
             "index must have hourly frequency (freq='H')."
@@ -517,7 +582,32 @@ def _estimate_hour_of_week_occupancy(model_data, threshold):
 
 
 def estimate_hour_of_week_occupancy(data, segmentation=None, threshold=0.65):
-    """
+    """ Estimate occupancy features for each segment.
+
+    Parameters
+    ----------
+    data : :any:`pandas.DataFrame`
+        Input data for the weighted least squares ("meter_value ~ cdd_65 + hdd_50")
+        used to estimate occupancy. Must contain meter_value, hour_of_week, cdd_65, and
+        hdd_50 columns with an hourly :any:`pandas.DatetimeIndex`.
+    segmentation : :any:`pandas.DataFrame`, default None
+        A segmentation expressed as a dataframe which shares the timeseries index of
+        the data and has named columns of weights, which are of the form returned by
+        :any:`eemeter.segment_time_series`.
+    threshold : :any:`float`, default 0.65
+        To be marked as unoccupied, the ratio of points with negative residuals in the
+        weighted least squares in a particular hour of week must exceed this threshold.
+        Said another way, in the default case, if more than 35% of values are greater
+        than the basic degree day model for any particular hour of the week, that hour
+        of week is marked as being occupied.
+
+    Returns
+    -------
+    occupancy_lookup : :any:`pandas.DataFrame`
+        The occupancy lookup has a categorical index with values from 0 to 167 - one
+        for each hour of the week, and boolean values indicating an occupied (1, True)
+        or unoccupied (0, False) for each of the segments. Each segment has a column
+        labeled by its segment name.
     """
     occupancy_lookups = {}
     segmented_datasets = iterate_segmented_dataset(data, segmentation)
@@ -595,6 +685,29 @@ def fit_temperature_bins(
     default_bins=[30, 45, 55, 65, 75, 90],
     min_temperature_count=20,
 ):
+    """ Determine appropriate temperature bins for a particular set of temperature
+    data given segmentation and occupancy.
+
+    Parameters
+    ----------
+    data : :any:`pandas.Series`
+        Input temperature data with an hourly :any:`pandas.DatetimeIndex`
+    segmentation : :any:`pandas.DataFrame`, default None
+        A dataframe containing segment weights with one column per segment. If
+        left off, segmentation will not be considered.
+    default_bins : :any:`list` of :any:`float` or :any:`int`
+        A list of candidate bin endpoints to begin the search with.
+    min_temperature_count : :any:`int`
+        The minimum number of temperatre values that must be included in any bin. If
+        this threshold is not met, bins are dropped from the outside in following the
+        algorithm described in the CalTRACK documentation.
+
+    Returns
+    -------
+    temperature_bins : :any:`pandas.DataFrame`
+        A dataframe with boolean values indicating whether or not a bin was kept, with a
+        categorical index for each candidate bin endpoint and a column for each segment.
+    """
     segmented_bins = {}
     segmented_datasets = iterate_segmented_dataset(data, segmentation)
     for segment_name, segmented_data in segmented_datasets:
@@ -621,6 +734,22 @@ def fit_temperature_bins(
 
 # TODO(philngo): combine with compute_temperature_features?
 def compute_temperature_bin_features(temperatures, bin_endpoints):
+    """ Compute temperature bin features.
+
+    Parameters
+    ----------
+    temperatures : :any:`pandas.Series`
+        Hourly temperature data.
+    bin_endpoints : :any:`list` of :any:`int` or :any:`float`
+        List of bin endpoints to use when assigning features.
+
+    Returns
+    -------
+    temperature_bin_features : :any:`pandas.DataFrame`
+        A datafame with the input index and one column per bin. The sum of each
+        row (with all of the temperature bins) equals the input temperature. More
+        details on this bin feature are available in the CalTRACK documentation.
+    """
     bin_endpoints = [-np.inf] + bin_endpoints + [np.inf]
 
     bins = {}
@@ -658,6 +787,21 @@ def compute_temperature_bin_features(temperatures, bin_endpoints):
 
 
 def compute_occupancy_feature(hour_of_week, occupancy):
+    """ Given an hour of week feature, determine the occupancy for that hour of week.
+
+    Parameters
+    ----------
+    hour_of_week : :any:`pandas.Series`
+        Hour of week feature as given by :any:`eemeter.compute_time_features`.
+    occupancy : :any:`pandas.Series`
+        Boolean occupancy assignents for each hour of week as determined by
+        :any:`eemeter.estimate_hour_of_week_occupancy`
+
+    Returns
+    -------
+    occupancy_feature : :any:`pandas.Series`
+        Occupancy labels for the timeseries.
+    """
     return pd.merge(
         hour_of_week.dropna().to_frame(),
         occupancy.to_frame("occupancy"),
