@@ -141,6 +141,7 @@ class SegmentedModel(object):
         A dict of keyword arguments to be passed as `**kwargs` to the
         `prediction_feature_processor` function.
     """
+
     def __init__(
         self,
         segment_models,

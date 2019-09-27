@@ -149,6 +149,7 @@ class CalTRACKHourlyModel(SegmentedModel):
     unoccupied_temperature_bins : :any:`pandas.DataFrame`
         Ditto for the unoccupied mode.
     """
+
     def __init__(
         self,
         segment_models,
@@ -246,7 +247,6 @@ def caltrack_hourly_fit_feature_processor(
     hour_of_week = segmented_data.hour_of_week
     occupancy = occupancy_lookup[segment_name]
     occupancy_feature = compute_occupancy_feature(hour_of_week, occupancy)
-
 
     # get temperature bin features
     temperatures = segmented_data.temperature_mean
@@ -411,9 +411,12 @@ def fit_caltrack_hourly_model_segment(segment_name, segment_data):
         )
 
     else:
+
         def _get_hourly_model_formula(data):
             return "meter_value ~ C(hour_of_week) - 1{}".format(
-                "".join([" + {}".format(c) for c in data.columns if c.startswith("bin")])
+                "".join(
+                    [" + {}".format(c) for c in data.columns if c.startswith("bin")]
+                )
             )
 
         formula = _get_hourly_model_formula(segment_data)

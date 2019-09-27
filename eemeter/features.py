@@ -57,6 +57,7 @@ def merge_features(features, keep_partial_nan_rows=False):
         A single dataframe with the index of the input data and all of the columns
         in the input feature dataframes.
     """
+
     def _to_frame_if_needed(df_or_series):
         if isinstance(df_or_series, pd.Series):
             return df_or_series.to_frame()
