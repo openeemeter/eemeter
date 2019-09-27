@@ -130,6 +130,24 @@ class CalTRACKHourlyModelResults(object):
         return data
 
     def predict(self, prediction_index, temperature_data, **kwargs):
+        """ Predict over a particular index using temperature data.
+
+        Parameters
+        ----------
+        prediction_index : :any:`pandas.DatetimeIndex`
+            Time period over which to predict.
+        temperature_data : :any:`pandas.DataFrame`
+            Hourly temperature data to use for prediction. Time period should match
+            the ``prediction_index`` argument.
+        **kwargs
+            Extra keyword arguments to send to self.model.predict
+
+        Returns
+        -------
+        prediction : :any:`pandas.DataFrame`
+            The predicted usage values.
+        """
+
         return self.model.predict(prediction_index, temperature_data, **kwargs)
 
 
