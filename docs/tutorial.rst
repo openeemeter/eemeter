@@ -35,10 +35,13 @@ in more detail in the course of the tutorial below.  See also
 
 .. _caltrack-billing-daily-quickstart:
 
+.. _caltrack-billing-daily-quickstart:
+
 Quickstart for CalTRACK Billing/Daily
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Here's how to run the CalTRACK billing/daily model::
+Here's how to run the CalTRACK billing/daily model.  See also
+:ref:`caltrack-billing-daily-api`::
 
     import eemeter
 
@@ -85,7 +88,7 @@ Quickstart for CalTRACK Hourly
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 And here's now to run the CalTRACK hourly model. Again, this is explained in more
-detail below. See also :ref:`caltrack-hourly-api`.::
+detail below. See also :ref:`caltrack-hourly-api`::
 
     import eemeter
 
@@ -558,9 +561,10 @@ To run the CalTRACK Hourly methods::
     )
 
     # assign temperatures to bins
-    temperature_bins = eemeter.fit_temperature_bins(
+    occupied_temperature_bins, unoccupied_temperature_bins = eemeter.fit_temperature_bins(
         preliminary_design_matrix,
         segmentation=segmentation,
+        occupancy_lookup=occupancy_lookup,
     )
 
     # build a design matrix for each monthly segment
@@ -569,7 +573,8 @@ To run the CalTRACK Hourly methods::
             preliminary_design_matrix,
             segmentation,
             occupancy_lookup,
-            temperature_bins,
+            occupied_temperature_bins,
+            unoccupied_temperature_bins,
         )
     )
 
@@ -577,7 +582,8 @@ To run the CalTRACK Hourly methods::
     baseline_model = eemeter.fit_caltrack_hourly_model(
         segmented_design_matrices,
         occupancy_lookup,
-        temperature_bins,
+        occupied_temperature_bins,
+        unoccupied_temperature_bins,
     )
 
 Computing CalTRACK metered savings

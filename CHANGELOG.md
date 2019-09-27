@@ -8,7 +8,8 @@ Development
   fit different temperature bins for occupied/unoccupied modes.
 * Update CalTRACK hourly model formula to use different bins for occupied and
   unoccupied mode.
-* Add tutorial and update documentation for CalTRACK Hourly methods.
+* Update documentation for CalTRACK Hourly methods.
+* Add tutorial.
 
 2.7.5
 -----

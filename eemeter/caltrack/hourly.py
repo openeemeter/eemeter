@@ -147,7 +147,6 @@ class CalTRACKHourlyModelResults(object):
         prediction : :any:`pandas.DataFrame`
             The predicted usage values.
         """
-
         return self.model.predict(prediction_index, temperature_data, **kwargs)
 
 
@@ -175,6 +174,8 @@ class CalTRACKHourlyModel(SegmentedModel):
         occupied_temperature_bins,
         unoccupied_temperature_bins,
     ):
+
+    def __init__(self, segment_models, occupancy_lookup, temperature_bins):
 
         self.occupancy_lookup = occupancy_lookup
         self.occupied_temperature_bins = occupied_temperature_bins
@@ -332,16 +333,24 @@ def caltrack_hourly_prediction_feature_processor(
     occupancy_lookup : :any:`pandas.DataFrame`
         A dataframe with occupancy flags for each hour of the week and each segment.
         Segment names are columns, occupancy flags are 0 or 1.
+<<<<<<< HEAD
     occupied_temperature_bins : :any:`pandas.DataFrame`
         A dataframe of bin endpoint flags for each segment. Segment names are columns.
     unoccupied_temperature_bins : :any:`pandas.DataFrame`
         Ditto for the unoccupied mode.
+=======
+    temperature_bins : :any:`pandas.DataFrame`
+        A dataframe of bin endpoint flags for each segment. Segment names are columns.
+>>>>>>> master
 
     Returns
     -------
     features : :any:`pandas.DataFrame`
         A dataframe of features with the following columns:
+<<<<<<< HEAD
 
+=======
+>>>>>>> master
         - 'hour_of_week': 0-167
         - 'bin_<0-6>_occupied': temp bin feature, or 0 if unoccupied
         - 'bin_<0-6>_unoccupied': temp bin feature or 0 in occupied
@@ -406,6 +415,41 @@ def caltrack_hourly_prediction_feature_processor(
 
 def fit_caltrack_hourly_model_segment(segment_name, segment_data):
     """ Fit a model for a single segment.
+<<<<<<< HEAD
+=======
+
+    Parameters
+    ----------
+    segment_name : :any:`str`
+        The name of the segment.
+    segment_data : :any:`pandas.DataFrame`
+        A design matrix for caltrack hourly, of the form returned by
+        :any:`eemeter.caltrack_hourly_prediction_feature_processor`.
+
+    Returns
+    -------
+    segment_model : :any:`CalTRACKSegmentModel`
+        A model that represents the fitted model.
+    """
+    def _get_hourly_model_formula(data):
+        if (np.sum(data.loc[data.weight > 0].occupancy) == 0) or (
+            np.sum(data.loc[data.weight > 0].occupancy)
+            == len(data.loc[data.weight > 0].occupancy)
+        ):
+            bin_occupancy_interactions = "".join(
+                [" + {}".format(c) for c in data.columns if "bin" in c]
+            )
+            return "meter_value ~ C(hour_of_week) - 1{}".format(
+                bin_occupancy_interactions
+            )
+        else:
+            bin_occupancy_interactions = "".join(
+                [" + {}:C(occupancy)".format(c) for c in data.columns if "bin" in c]
+            )
+            return "meter_value ~ C(hour_of_week) - 1{}".format(
+                bin_occupancy_interactions
+            )
+>>>>>>> master
 
     Parameters
     ----------
@@ -474,10 +518,15 @@ def fit_caltrack_hourly_model(
     occupancy_lookup : :any:`pandas.DataFrame`
         A dataframe with occupancy flags for each hour of the week and each segment.
         Segment names are columns, occupancy flags are 0 or 1.
+<<<<<<< HEAD
     occupied_temperature_bins : :any:`pandas.DataFrame`
         A dataframe of bin endpoint flags for each segment. Segment names are columns.
     unoccupied_temperature_bins : :any:`pandas.DataFrame`
         Ditto for the unoccupied mode.
+=======
+    temperature_bins : :any:`pandas.DataFrame`
+        A dataframe of bin endpoint flags for each segment. Segment names are columns.
+>>>>>>> master
 
     Returns
     -------

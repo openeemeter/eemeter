@@ -229,7 +229,7 @@ These functions are used to various common data transformations based on pandas 
 Version
 -------
 
-This method can used to verify eemeter versions.
+This method can used to verify the eemeter version.
 
 .. autofunction:: eemeter.get_version
 

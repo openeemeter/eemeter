@@ -171,8 +171,7 @@ class SegmentedModel(object):
     def predict(
         self, prediction_index, temperature, **kwargs
     ):  # ignore extra args with kwargs
-        """
-        Predict over a prediction index by combining results from all models.
+        """ Predict over a prediction index by combining results from all models.
 
         Parameters
         ----------
@@ -180,7 +179,7 @@ class SegmentedModel(object):
             The index over which to predict.
         temperature : :any:`pandas.Series`
             Hourly temperatures.
-        **kwargs : :any:`dict`
+        **kwargs
             Extra argmuents will be ignored
         """
         prediction_segmentation = segment_time_series(
