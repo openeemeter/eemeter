@@ -37,6 +37,22 @@ HourlyModelPrediction = namedtuple("HourlyModelPrediction", ["result"])
 
 
 class CalTRACKSegmentModel(object):
+    """ An object that captures the model fit for one segment.
+
+    Attributes
+    ----------
+    segment_name : :any:`str`
+        The name of the segment of data this model was fit to.
+    model : :any:`object`
+        The fitted model object.
+    formula : :any:`str`
+        The formula of the model regression.
+    model_param : :any:`dict`
+        A dictionary of parameters
+    warnings : :any:`list`
+        A list of eemeter warnings.
+    """
+
     def __init__(self, segment_name, model, formula, model_params, warnings=None):
         self.segment_name = segment_name
         self.model = model
@@ -48,6 +64,8 @@ class CalTRACKSegmentModel(object):
         self.warnings = warnings
 
     def predict(self, data):
+        """ A function which takes input data and predicts for this segment model.
+        """
         if self.formula is None:
             var_str = ""
         else:
@@ -101,6 +119,29 @@ class CalTRACKSegmentModel(object):
 
 
 class SegmentedModel(object):
+    """ Represent a model which has been broken into multiple model segments (for
+    CalTRACK Hourly, these are month-by-month segments, each of which is associated
+    with a different model.
+
+    Parameters
+    ----------
+    segment_models : :any:`dict` of :any:`eemeter.CalTRACKSegmentModel`
+        Dictionary of segment models, keyed by segment name.
+    prediction_segment_type : :any:`str`
+        Any segment_type that can be passed to :any:`eemeter.segment_time_series`,
+        currently "single", "one_month", "three_month", or "three_month_weighted".
+    prediction_segment_name_mapping : :any:`dict` of :any:`str`
+        A dictionary mapping the segment names for the segment type used for predicting to the
+        segment names for the segment type used for fitting,
+        e.g., `{"<predict_segment_name>": "<fit_segment_name>"}`.
+    prediction_feature_processor : :any:`function`
+        A function that transforms raw inputs (temperatures) into features for each
+        segment.
+    prediction_feature_processor_kwargs : :any:`dict`
+        A dict of keyword arguments to be passed as `**kwargs` to the
+        `prediction_feature_processor` function.
+    """
+
     def __init__(
         self,
         segment_models,
@@ -130,6 +171,17 @@ class SegmentedModel(object):
     def predict(
         self, prediction_index, temperature, **kwargs
     ):  # ignore extra args with kwargs
+        """ Predict over a prediction index by combining results from all models.
+
+        Parameters
+        ----------
+        prediction_index : :any:`pandas.DatetimeIndex`
+            The index over which to predict.
+        temperature : :any:`pandas.Series`
+            Hourly temperatures.
+        **kwargs
+            Extra argmuents will be ignored
+        """
         prediction_segmentation = segment_time_series(
             temperature.index,
             self.prediction_segment_type,
@@ -179,6 +231,8 @@ class SegmentedModel(object):
 
 
 def filter_zero_weights_feature_processor(segment_name, segment_data):
+    """ A default segment processor to use if none is provided.
+    """
     return segment_data[segment_data.weight > 0]
 
 
@@ -189,6 +243,28 @@ def iterate_segmented_dataset(
     feature_processor_kwargs=None,
     feature_processor_segment_name_mapping=None,
 ):
+    """ A utility for iterating over segments which allows providing a function for
+    processing outputs into features.
+
+    Parameters
+    ----------
+    data : :any:`pandas.DataFrame`, required
+        Data to segment,
+    segmentation : :any:`pandas.DataFrame`, default None
+        A segmentation of the input dataframe expressed as a dataframe which shares
+        the timeseries index of the data and has named columns of weights, which
+        are iterated over to create the outputs (or inputs to the feature processor,
+        which then creates the actual outputs).
+    feature_processor : :any:`function`, default None
+        A function that transforms raw inputs (temperatures) into features for each
+        segment.
+    feature_processor_kwargs : :any:`dict`, default None
+        A dict of keyword arguments to be passed as `**kwargs` to the
+        `feature_processor` function.
+    feature_processor_segment_name_mapping : :any:`dict`, default None
+        A mapping from the default segmentation segment names to alternate names. This
+        is useful when prediction uses a different segment type than fitting.
+    """
     if feature_processor is None:
         feature_processor = filter_zero_weights_feature_processor
 
@@ -354,6 +430,31 @@ def _segment_weights_three_month_weighted(index):
 
 
 def segment_time_series(index, segment_type="single", drop_zero_weight_segments=False):
+    """ Split a time series index into segments by applying weights.
+
+    Parameters
+    ----------
+    index : :any:`pandas.DatetimeIndex`
+        A time series index which gets split into segments.
+    segment_type : :any:`str`
+        The method to use when creating segments.
+         - "single": creates one big segment with the name "all".
+         - "one_month": creates up to twelve segments, each of which contains a single
+           month. Segment names are "jan", "feb", ... "dec".
+         - "three_month": creates up to twelve overlapping segments, each of which
+           contains three calendar months of data. Segment names are "dec-jan-feb",
+           "jan-feb-mar", ... "nov-dec-jan"
+         - "three_month_weighted": creates up to twelve overlapping segments, each of
+           contains three calendar months of data with first and third month in each
+           segment having weights of one half. Segment names are
+           "dec-jan-feb-weighted", "jan-feb-mar-weighted", ... "nov-dec-jan-weighted".
+
+    Returns
+    -------
+    segmentation : `pandas.DataFrame`
+        A segmentation of the input index expressed as a dataframe which shares
+        the input index and has named columns of weights.
+    """
     segment_weight_func = {
         "single": _segment_weights_single,
         "one_month": _segment_weights_one_month,
@@ -380,6 +481,20 @@ def segment_time_series(index, segment_type="single", drop_zero_weight_segments=
 
 
 def fit_model_segments(segmented_dataset_dict, fit_segment):
+    """ A function which fits a model to each item in a dataset.
+
+    Parameters
+    ----------
+    segmented_dataset_dict : :any:`dict` of :any:`pandas.DataFrame`
+        A dict with keys as segment names and values as dataframes of model input.
+    fit_segment : :any:`function`
+        A function which fits a model to a dataset in the `segmented_dataset_dict`.
+
+    Returns
+    -------
+    segment_models : :any:`list` of :any:`object`
+        List of fitted model objects - the return values of the fit_segment function.
+    """
     segment_models = [
         fit_segment(segment_name, segment_data)
         for segment_name, segment_data in segmented_dataset_dict.items()

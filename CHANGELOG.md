@@ -4,6 +4,7 @@ Changelog
 Development
 -----------
 
+* Update documentation for CalTRACK Hourly methods.
 * Add tutorial.
 
 2.7.5

@@ -32,10 +32,13 @@ Quickstart
 Some folks may just want to see the code all in one place. This code is explained
 in more detail in the course of the tutorial below.
 
+.. _caltrack-billing-daily-quickstart:
+
 Quickstart for CalTRACK Billing/Daily
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Here's how to run the CalTRACK billing/daily model::
+Here's how to run the CalTRACK billing/daily model.  See also
+:ref:`caltrack-billing-daily-api`::
 
     import eemeter
 
@@ -76,11 +79,13 @@ Here's how to run the CalTRACK billing/daily model::
     # total metered savings
     total_metered_savings = metered_savings_dataframe.metered_savings.sum()
 
+.. _caltrack-hourly-quickstart:
+
 Quickstart for CalTRACK Hourly
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 And here's now to run the CalTRACK hourly model. Again, this is explained in more
-detail below::
+detail below. See also :ref:`caltrack-hourly-api`::
 
     import eemeter
 
