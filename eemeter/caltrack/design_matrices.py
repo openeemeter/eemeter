@@ -38,6 +38,21 @@ __all__ = (
 
 
 def create_caltrack_hourly_preliminary_design_matrix(meter_data, temperature_data):
+    """ A helper function which calls basic feature creation methods to create an
+    input suitable for use in the first step of creating a CalTRACK hourly model.
+
+    Parameters
+    ----------
+    meter_data : :any:`pandas.DataFrame`
+        Hourly meter data in eemeter format.
+    temperature_data : :any:`pandas.Series`
+        Hourly temperature data in eemeter format.
+
+    Returns
+    -------
+    design_matrix : :any:`pandas.DataFrame`
+        A design matrix with meter_value, hour_of_week, hdd_50, and cdd_65 features.
+    """
     time_features = compute_time_features(
         meter_data.index, hour_of_week=True, hour_of_day=False, day_of_week=False
     )
@@ -55,6 +70,22 @@ def create_caltrack_hourly_preliminary_design_matrix(meter_data, temperature_dat
 
 
 def create_caltrack_billing_design_matrix(meter_data, temperature_data):
+    """ A helper function which calls basic feature creation methods to create a
+    design matrix suitable for use with CalTRACK Billing methods.
+
+    Parameters
+    ----------
+    meter_data : :any:`pandas.DataFrame`
+        Hourly meter data in eemeter format.
+    temperature_data : :any:`pandas.Series`
+        Hourly temperature data in eemeter format.
+
+    Returns
+    -------
+    design_matrix : :any:`pandas.DataFrame`
+        A design matrics with mean usage_per_day, hdd_30-hdd_90, and cdd_30-cdd_90
+        features.
+    """
     usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
     temperature_features = compute_temperature_features(
         meter_data.index,
@@ -71,6 +102,22 @@ def create_caltrack_billing_design_matrix(meter_data, temperature_data):
 
 
 def create_caltrack_daily_design_matrix(meter_data, temperature_data):
+    """ A helper function which calls basic feature creation methods to create a
+    design matrix suitable for use with CalTRACK daily methods.
+
+    Parameters
+    ----------
+    meter_data : :any:`pandas.DataFrame`
+        Hourly meter data in eemeter format.
+    temperature_data : :any:`pandas.Series`
+        Hourly temperature data in eemeter format.
+
+    Returns
+    -------
+    design_matrix : :any:`pandas.DataFrame`
+        A design matrics with mean usage_per_day, hdd_30-hdd_90, and cdd_30-cdd_90
+        features.
+    """
     usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
     temperature_features = compute_temperature_features(
         meter_data.index,
@@ -90,6 +137,32 @@ def create_caltrack_hourly_segmented_design_matrices(
     occupied_temperature_bins,
     unoccupied_temperature_bins,
 ):
+    """ A helper function which calls basic feature creation methods to create a
+    design matrix suitable for use with segmented CalTRACK hourly models.
+
+    Parameters
+    ----------
+    preliminary_design_matrix : :any:`pandas.DataFrame`
+        A dataframe of the form returned by
+        :any:`eemeter.create_caltrack_hourly_preliminary_design_matrix`.
+    segmentation : :any:`pandas.DataFrame`
+        Weights for each segment. This is a dataframe of the form returned by
+        :any:`eemeter.segment_time_series` on the `preliminary_design_matrix`.
+    occupancy_lookup : any:`pandas.DataFrame`
+        Occupancy for each segment. This is a dataframe of the form returned by
+        :any:`eemeter.estimate_hour_of_week_occupancy`.
+    occupied_temperature_bins : :any:``
+        Occupied temperature bin settings for each segment. This is a dataframe of the
+        form returned by :any:`eemeter.fit_temperature_bins`.
+    unoccupied_temperature_bins : :any:``
+        Ditto, for unoccupied.
+
+    Returns
+    -------
+    design_matrix : :any:`dict` of :any:`pandas.DataFrame`
+        A dict of design matrixes created using the
+        :any:`eemeter.caltrack_hourly_fit_feature_processor`.
+    """
     return {
         segment_name: segmented_data
         for segment_name, segmented_data in iterate_segmented_dataset(
