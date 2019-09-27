@@ -35,8 +35,6 @@ in more detail in the course of the tutorial below.  See also
 
 .. _caltrack-billing-daily-quickstart:
 
-.. _caltrack-billing-daily-quickstart:
-
 Quickstart for CalTRACK Billing/Daily
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
