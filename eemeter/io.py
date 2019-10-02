@@ -80,14 +80,20 @@ def meter_data_from_csv(
     # allow passing extra kwargs
     read_csv_kwargs.update(kwargs)
 
-    df = pd.read_csv(filepath_or_buffer, **read_csv_kwargs).tz_localize("UTC")
+    df = pd.read_csv(filepath_or_buffer, **read_csv_kwargs)
+    df.index = pd.to_datetime(df.index, utc=True)
+
+    # for pandas<0.24, which doesn't localize even with utc=True
+    if df.index.tz is None:
+        df.index = df.index.tz_localize('UTC')
+
     if tz is not None:
         df = df.tz_convert(tz)
 
     if freq == "hourly":
-        df = df.resample("H").sum()
+        df = df.resample("H").sum(min_count=1)
     elif freq == "daily":
-        df = df.resample("D").sum()
+        df = df.resample("D").sum(min_count=1)
 
     return df
 
@@ -141,13 +147,18 @@ def temperature_data_from_csv(
     # allow passing extra kwargs
     read_csv_kwargs.update(kwargs)
 
-    if tz is None:
-        tz = "UTC"
+    df = pd.read_csv(filepath_or_buffer, **read_csv_kwargs)
+    df.index = pd.to_datetime(df.index, utc=True)
 
-    df = pd.read_csv(filepath_or_buffer, **read_csv_kwargs).tz_localize(tz)
+    # for pandas<0.24, which doesn't localize even with utc=True
+    if df.index.tz is None:
+        df.index = df.index.tz_localize('UTC')
+
+    if tz is not None:
+        df = df.tz_convert(tz)
 
     if freq == "hourly":
-        df = df.resample("H").sum()
+        df = df.resample("H").sum(min_count=1)
 
     return df[temp_col]
 
@@ -176,8 +187,14 @@ def meter_data_from_json(data, orient="list"):
     """
     if orient == "list":
         df = pd.DataFrame(data, columns=["start", "value"])
-        df["start"] = pd.DatetimeIndex(df.start).tz_localize("UTC")
+        df["start"] = pd.to_datetime(df.start, utc=True)
+
         df = df.set_index("start")
+
+        # for pandas<0.24, which doesn't localize even with utc=True
+        if df.index.tz is None:
+            df.index = df.index.tz_localize('UTC')
+
         return df
     else:
         raise ValueError("orientation not recognized.")
@@ -209,7 +226,12 @@ def temperature_data_from_json(data, orient="list"):
     if orient == "list":
         df = pd.DataFrame(data, columns=["dt", "tempF"])
         series = df.tempF
-        series.index = pd.DatetimeIndex(df.dt).tz_localize("UTC")
+        series.index = pd.to_datetime(df.dt, utc=True)
+
+        # for pandas<0.24, which doesn't localize even with utc=True
+        if series.index.tz is None:
+            seriesindex = series.index.tz_localize('UTC')
+
         return series
     else:
         raise ValueError("orientation not recognized.")
