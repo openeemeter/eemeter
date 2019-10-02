@@ -85,7 +85,7 @@ def meter_data_from_csv(
 
     # for pandas<0.24, which doesn't localize even with utc=True
     if df.index.tz is None:
-        df.index = df.index.tz_localize('UTC')
+        df.index = df.index.tz_localize("UTC")
 
     if tz is not None:
         df = df.tz_convert(tz)
@@ -152,7 +152,7 @@ def temperature_data_from_csv(
 
     # for pandas<0.24, which doesn't localize even with utc=True
     if df.index.tz is None:
-        df.index = df.index.tz_localize('UTC')
+        df.index = df.index.tz_localize("UTC")
 
     if tz is not None:
         df = df.tz_convert(tz)
@@ -193,7 +193,7 @@ def meter_data_from_json(data, orient="list"):
 
         # for pandas<0.24, which doesn't localize even with utc=True
         if df.index.tz is None:
-            df.index = df.index.tz_localize('UTC')
+            df.index = df.index.tz_localize("UTC")
 
         return df
     else:
@@ -230,7 +230,7 @@ def temperature_data_from_json(data, orient="list"):
 
         # for pandas<0.24, which doesn't localize even with utc=True
         if series.index.tz is None:
-            seriesindex = series.index.tz_localize('UTC')
+            series.index = series.index.tz_localize("UTC")
 
         return series
     else:
