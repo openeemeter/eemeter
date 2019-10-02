@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+2.7.6
+-----
+
 * Update io functions to support latest pandas (>=0.24.x).
 * Update documentation for CalTRACK Hourly methods.
 * Add tutorial.
