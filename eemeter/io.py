@@ -188,13 +188,7 @@ def meter_data_from_json(data, orient="list"):
     if orient == "list":
         df = pd.DataFrame(data, columns=["start", "value"])
         df["start"] = pd.to_datetime(df.start, utc=True)
-
         df = df.set_index("start")
-
-        # for pandas<0.24, which doesn't localize even with utc=True
-        if df.index.tz is None:
-            df.index = df.index.tz_localize("UTC")
-
         return df
     else:
         raise ValueError("orientation not recognized.")
@@ -227,11 +221,6 @@ def temperature_data_from_json(data, orient="list"):
         df = pd.DataFrame(data, columns=["dt", "tempF"])
         series = df.tempF
         series.index = pd.to_datetime(df.dt, utc=True)
-
-        # for pandas<0.24, which doesn't localize even with utc=True
-        if series.index.tz is None:
-            series.index = series.index.tz_localize("UTC")
-
         return series
     else:
         raise ValueError("orientation not recognized.")
