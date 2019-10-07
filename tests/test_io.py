@@ -115,11 +115,13 @@ def test_meter_data_from_json_bad_orient(sample_metadata):
 
 
 def test_meter_data_to_csv(sample_metadata):
-    df = pd.DataFrame({"value": [5]}, index=pd.DatetimeIndex(["2017-01-01T00:00:00Z"]))
+    df = pd.DataFrame(
+        {"value": [5]}, index=pd.to_datetime(["2017-01-01T00:00:00Z"], utc=True)
+    )
     with TemporaryFile("w+") as f:
         meter_data_to_csv(df, f)
         f.seek(0)
-        assert f.read() == ("start,value\n" "2017-01-01,5\n")
+        assert f.read() == ("start,value\n" "2017-01-01 00:00:00+00:00,5\n")
 
 
 def test_temperature_data_from_csv(sample_metadata):
@@ -142,6 +144,17 @@ def test_temperature_data_from_csv_gzipped(sample_metadata):
         temperature_data = temperature_data_from_csv(f, gzipped=True)
     assert temperature_data.shape == (19417,)
     assert temperature_data.index.tz.zone == "UTC"
+    assert temperature_data.index.freq is None
+
+
+def test_temperature_data_from_csv_with_tz(sample_metadata):
+    meter_item = sample_metadata["il-electricity-cdd-hdd-daily"]
+    temperature_filename = meter_item["temperature_filename"]
+
+    with resource_stream("eemeter.samples", temperature_filename) as f:
+        temperature_data = temperature_data_from_csv(f, gzipped=True, tz="US/Eastern")
+    assert temperature_data.shape == (19417,)
+    assert temperature_data.index.tz.zone == "US/Eastern"
     assert temperature_data.index.freq is None
 
 
@@ -183,8 +196,8 @@ def test_temperature_data_from_json_bad_orient(sample_metadata):
 
 
 def test_temperature_data_to_csv(sample_metadata):
-    series = pd.Series(10, index=pd.DatetimeIndex(["2017-01-01T00:00:00Z"]))
+    series = pd.Series(10, index=pd.to_datetime(["2017-01-01T00:00:00Z"], utc=True))
     with TemporaryFile("w+") as f:
         temperature_data_to_csv(series, f)
         f.seek(0)
-        assert f.read() == ("dt,temperature\n" "2017-01-01,10\n")
+        assert f.read() == ("dt,temperature\n" "2017-01-01 00:00:00+00:00,10\n")
