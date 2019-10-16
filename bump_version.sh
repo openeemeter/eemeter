@@ -24,7 +24,7 @@ ${DASHES}\\
 echo "rm -f eemeter/__version__.py-e"
 echo "rm -f CHANGELOG.md-e"
 echo ""
-echo "git commit -am \"Bump version\""
+echo "git commit -am \"Bump version\" -s"
 echo "git tag v${NEW_VERSION}"
 echo "git push -u origin release/v${NEW_VERSION} --tags"
 echo "git checkout master"
