@@ -731,4 +731,23 @@ def test_clean_caltrack_billing_data_uneven_datetimes(
         [datetime(2016, 12, 19, 6).replace(tzinfo=pytz.UTC)]
     )
     cleaned_data = clean_caltrack_billing_data(too_long_meter_data, "billing_monthly")
+
+
+    too_long_meter_data = meter_data.drop(
+        [
+            datetime(2016, 12, 19, 6).replace(tzinfo=pytz.UTC),
+            datetime(2017, 1, 21, 6).replace(tzinfo=pytz.UTC)
+        ]
+    )
+    cleaned_data = clean_caltrack_billing_data(too_long_meter_data, "billing_bimonthly")
     assert cleaned_data.dropna().shape[0] == cleaned_data.shape[0] - 2
+    assert cleaned_data.dropna().shape[0] == cleaned_data.shape[0] - 2
+
+    pre_empty_meter_data = meter_data[:0]
+    cleaned_data = clean_caltrack_billing_data(pre_empty_meter_data, "billing_monthly")
+    assert cleaned_data.empty
+
+    post_empty_meter_data = meter_data[:4].drop([datetime(2015,12,21,6).replace(tzinfo=pytz.UTC),datetime(2016,1,22,6).replace(tzinfo=pytz.UTC)])
+    assert not post_empty_meter_data["value"].dropna().empty
+    cleaned_data = clean_caltrack_billing_data(post_empty_meter_data, "billing_monthly")
+    assert cleaned_data.empty
