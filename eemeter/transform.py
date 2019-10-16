@@ -37,6 +37,7 @@ __all__ = (
     "get_terms",
     "remove_duplicates",
     "overwrite_partial_rows_with_nan",
+    "clean_caltrack_billing_data",
 )
 
 
@@ -665,3 +666,85 @@ def get_terms(index, term_lengths, term_labels=None, start=None, method="strict"
         prev_start = next_start
 
     return terms
+
+
+def clean_caltrack_billing_data(data, source_interval):
+    # check for empty data
+    if data["value"].dropna().empty:
+        return data[:0]
+
+    if source_interval.startswith("billing"):
+        diff = list((data.index[1:] - data.index[:-1]).days)
+        filter_ = pd.Series(diff + [np.nan], index=data.index)
+
+        # CalTRACK 2.2.3.4, 2.2.3.5
+        if source_interval == "billing_monthly":
+            data = data[
+                (filter_ <= 35) & (filter_ >= 25)  # keep these, inclusive
+            ].reindex(data.index)
+
+        # CalTRACK 2.2.3.4, 2.2.3.5
+        if source_interval == "billing_bimonthly":
+            data = data[
+                (filter_ <= 70) & (filter_ >= 25)  # keep these, inclusive
+            ].reindex(data.index)
+
+        # CalTRACK 2.2.3.1
+        """
+        Adds estimate to subsequent read if there aren't more than one estimate in a row
+        and then removes the estimated row.
+
+        Input:
+        index   value   estimated
+        1       2       False
+        2       3       False
+        3       5       True
+        4       4       False
+        5       6       True
+        6       3       True
+        7       4       False
+        8       NaN     NaN
+
+        Output:
+        index   value
+        1       2
+        2       3
+        4       9
+        5       NaN
+        7       7
+        8       NaN
+        """
+        add_estimated = []
+        remove_estimated_fixed_rows = []
+        orig_data = data.copy()
+        if "estimated" in data.columns:
+            data["unestimated_value"] = (
+                data[:-1].value[(data[:-1].estimated == False)].reindex(data.index)
+            )
+            data["estimated_value"] = (
+                data[:-1].value[(data[:-1].estimated)].reindex(data.index)
+            )
+            for i, (index, row) in enumerate(data[:-1].iterrows()):
+                # ensures there is a prev_row and previous row value is null
+                if i > 0 and pd.isnull(prev_row["unestimated_value"]):
+                    # current row value is not null
+                    add_estimated.append(prev_row["estimated_value"])
+                    if not pd.isnull(row["unestimated_value"]):
+                        # get all rows that had only estimated reads that will be
+                        # added to the subsequent row meaning this row
+                        # needs to be removed
+                        remove_estimated_fixed_rows.append(prev_index)
+                else:
+                    add_estimated.append(0)
+                prev_row = row
+                prev_index = index
+            add_estimated.append(np.nan)
+            data["value"] = data["unestimated_value"] + add_estimated
+            data = data[~data.index.isin(remove_estimated_fixed_rows)]
+            data = data[["value"]]  # remove the estimated column
+
+    # check again for empty data
+    if data.dropna().empty:
+        return data[:0]
+
+    return data

@@ -338,6 +338,7 @@ def fit_caltrack_hourly_model_segment(segment_name, segment_data):
     segment_model : :any:`CalTRACKSegmentModel`
         A model that represents the fitted model.
     """
+
     def _get_hourly_model_formula(data):
         if (np.sum(data.loc[data.weight > 0].occupancy) == 0) or (
             np.sum(data.loc[data.weight > 0].occupancy)

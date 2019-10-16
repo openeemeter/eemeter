@@ -27,6 +27,7 @@ import pytz
 
 from eemeter.transform import (
     as_freq,
+    clean_caltrack_billing_data,
     day_counts,
     get_baseline_data,
     get_reporting_data,
@@ -696,3 +697,57 @@ def test_as_freq_hourly_to_daily_include_coverage(il_electricity_cdd_hdd_hourly)
     as_daily = as_freq(meter_data.value, freq="D", include_coverage=True)
     assert as_daily.shape == (811, 2)
     assert round(meter_data.value.sum(), 1) == round(as_daily.value.sum(), 1) == 21926.0
+
+
+def test_clean_caltrack_billing_data_estimated(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    meter_data["estimated"] = False
+    meter_data.estimated.iloc[2] = True
+    meter_data.estimated.iloc[5] = True
+    meter_data.estimated.iloc[6] = True
+    meter_data.estimated.iloc[10] = True
+
+    cleaned_data = clean_caltrack_billing_data(meter_data, "billing_monthly")
+    assert cleaned_data.dropna().shape[0] == cleaned_data.shape[0] - 2
+
+
+def test_clean_caltrack_billing_data_uneven_datetimes(
+    il_electricity_cdd_hdd_billing_monthly
+):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    too_short_meter_data = pd.concat(
+        [
+            meter_data,
+            pd.DataFrame(
+                data=[{"value": 100}],
+                index=[datetime(2017, 1, 1, 6).replace(tzinfo=pytz.UTC)],
+            ),
+        ]
+    ).sort_index()
+    cleaned_data = clean_caltrack_billing_data(too_short_meter_data, "billing_monthly")
+    assert cleaned_data.dropna().shape[0] == cleaned_data.shape[0] - 3
+
+    too_long_meter_data = meter_data.drop(
+        [datetime(2016, 12, 19, 6).replace(tzinfo=pytz.UTC)]
+    )
+    cleaned_data = clean_caltrack_billing_data(too_long_meter_data, "billing_monthly")
+
+
+    too_long_meter_data = meter_data.drop(
+        [
+            datetime(2016, 12, 19, 6).replace(tzinfo=pytz.UTC),
+            datetime(2017, 1, 21, 6).replace(tzinfo=pytz.UTC)
+        ]
+    )
+    cleaned_data = clean_caltrack_billing_data(too_long_meter_data, "billing_bimonthly")
+    assert cleaned_data.dropna().shape[0] == cleaned_data.shape[0] - 2
+    assert cleaned_data.dropna().shape[0] == cleaned_data.shape[0] - 2
+
+    pre_empty_meter_data = meter_data[:0]
+    cleaned_data = clean_caltrack_billing_data(pre_empty_meter_data, "billing_monthly")
+    assert cleaned_data.empty
+
+    post_empty_meter_data = meter_data[:4].drop([datetime(2015,12,21,6).replace(tzinfo=pytz.UTC),datetime(2016,1,22,6).replace(tzinfo=pytz.UTC)])
+    assert not post_empty_meter_data["value"].dropna().empty
+    cleaned_data = clean_caltrack_billing_data(post_empty_meter_data, "billing_monthly")
+    assert cleaned_data.empty
