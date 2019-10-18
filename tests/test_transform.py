@@ -319,31 +319,31 @@ def test_get_baseline_data_with_overshoot_and_ignored_gap(
     assert len(warnings) == 0
 
 
-def test_get_baseline_data_too_far_from_date(il_electricity_cdd_hdd_billing_monthly):
+def test_get_baseline_data_n_days_billing_period_overshoot(
+    il_electricity_cdd_hdd_billing_monthly
+):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     baseline_data, warnings = get_baseline_data(
         meter_data,
-        end=datetime(2020, 11, 9, tzinfo=pytz.UTC),
+        end=datetime(2017, 11, 9, tzinfo=pytz.UTC),
         max_days=45,
         allow_billing_period_overshoot=True,
+        n_days_billing_period_overshoot=45,
         ignore_billing_period_gap_for_day_count=True,
     )
-    assert baseline_data.shape == (3, 1)
-    assert round(baseline_data.value.sum(), 2) == 2043.92
+    assert baseline_data.shape == (2, 1)
+    assert round(baseline_data.value.sum(), 2) == 526.25
     assert len(warnings) == 0
-    with pytest.raises(NoBaselineDataError):
-        get_baseline_data(
-            meter_data,
-            end=datetime(2020, 11, 9, tzinfo=pytz.UTC),
-            max_days=45,
-            allow_billing_period_overshoot=True,
-            n_days_billing_period_overshoot=45,
-            ignore_billing_period_gap_for_day_count=True,
-        )
+
+
+def test_get_baseline_data_too_far_from_date(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    end_date = datetime(2020, 11, 9, tzinfo=pytz.UTC)
+    max_days = 45
     baseline_data, warnings = get_baseline_data(
         meter_data,
-        end=datetime(2020, 11, 9, tzinfo=pytz.UTC),
-        max_days=45,
+        end=end_date,
+        max_days=max_days,
         ignore_billing_period_gap_for_day_count=True,
     )
     assert baseline_data.shape == (2, 1)
@@ -352,8 +352,33 @@ def test_get_baseline_data_too_far_from_date(il_electricity_cdd_hdd_billing_mont
     with pytest.raises(NoBaselineDataError):
         get_baseline_data(
             meter_data,
-            end=datetime(2020, 11, 9, tzinfo=pytz.UTC),
-            max_days=45,
+            end=end_date,
+            max_days=max_days,
+            n_days_billing_period_overshoot=45,
+            ignore_billing_period_gap_for_day_count=True,
+        )
+    baseline_data, warnings = get_baseline_data(
+        meter_data,
+        end=end_date,
+        max_days=max_days,
+        allow_billing_period_overshoot=True,
+        ignore_billing_period_gap_for_day_count=True,
+    )
+    assert baseline_data.shape == (3, 1)
+    assert round(baseline_data.value.sum(), 2) == 2043.92
+    assert len(warnings) == 0
+    # Includes 3 data points because data at index -3 is closer to start target
+    # then data at index -2
+    start_target = baseline_data.index[-1] - timedelta(days=max_days)
+    assert abs((baseline_data.index[0] - start_target).days) < abs(
+        (baseline_data.index[1] - start_target).days
+    )
+    with pytest.raises(NoBaselineDataError):
+        get_baseline_data(
+            meter_data,
+            end=end_date,
+            max_days=max_days,
+            allow_billing_period_overshoot=True,
             n_days_billing_period_overshoot=45,
             ignore_billing_period_gap_for_day_count=True,
         )
