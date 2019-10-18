@@ -319,6 +319,46 @@ def test_get_baseline_data_with_overshoot_and_ignored_gap(
     assert len(warnings) == 0
 
 
+def test_get_baseline_data_too_far_from_date(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    baseline_data, warnings = get_baseline_data(
+        meter_data,
+        end=datetime(2020, 11, 9, tzinfo=pytz.UTC),
+        max_days=45,
+        allow_billing_period_overshoot=True,
+        ignore_billing_period_gap_for_day_count=True,
+    )
+    assert baseline_data.shape == (3, 1)
+    assert round(baseline_data.value.sum(), 2) == 2043.92
+    assert len(warnings) == 0
+    with pytest.raises(NoBaselineDataError):
+        get_baseline_data(
+            meter_data,
+            end=datetime(2020, 11, 9, tzinfo=pytz.UTC),
+            max_days=45,
+            allow_billing_period_overshoot=True,
+            n_days_billing_period_overshoot=45,
+            ignore_billing_period_gap_for_day_count=True,
+        )
+    baseline_data, warnings = get_baseline_data(
+        meter_data,
+        end=datetime(2020, 11, 9, tzinfo=pytz.UTC),
+        max_days=45,
+        ignore_billing_period_gap_for_day_count=True,
+    )
+    assert baseline_data.shape == (2, 1)
+    assert round(baseline_data.value.sum(), 2) == 1393.4
+    assert len(warnings) == 0
+    with pytest.raises(NoBaselineDataError):
+        get_baseline_data(
+            meter_data,
+            end=datetime(2020, 11, 9, tzinfo=pytz.UTC),
+            max_days=45,
+            n_days_billing_period_overshoot=45,
+            ignore_billing_period_gap_for_day_count=True,
+        )
+
+
 def test_get_reporting_data(il_electricity_cdd_hdd_hourly):
     meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
     reporting_data, warnings = get_reporting_data(meter_data)
@@ -732,11 +772,10 @@ def test_clean_caltrack_billing_data_uneven_datetimes(
     )
     cleaned_data = clean_caltrack_billing_data(too_long_meter_data, "billing_monthly")
 
-
     too_long_meter_data = meter_data.drop(
         [
             datetime(2016, 12, 19, 6).replace(tzinfo=pytz.UTC),
-            datetime(2017, 1, 21, 6).replace(tzinfo=pytz.UTC)
+            datetime(2017, 1, 21, 6).replace(tzinfo=pytz.UTC),
         ]
     )
     cleaned_data = clean_caltrack_billing_data(too_long_meter_data, "billing_bimonthly")
@@ -747,7 +786,12 @@ def test_clean_caltrack_billing_data_uneven_datetimes(
     cleaned_data = clean_caltrack_billing_data(pre_empty_meter_data, "billing_monthly")
     assert cleaned_data.empty
 
-    post_empty_meter_data = meter_data[:4].drop([datetime(2015,12,21,6).replace(tzinfo=pytz.UTC),datetime(2016,1,22,6).replace(tzinfo=pytz.UTC)])
+    post_empty_meter_data = meter_data[:4].drop(
+        [
+            datetime(2015, 12, 21, 6).replace(tzinfo=pytz.UTC),
+            datetime(2016, 1, 22, 6).replace(tzinfo=pytz.UTC),
+        ]
+    )
     assert not post_empty_meter_data["value"].dropna().empty
     cleaned_data = clean_caltrack_billing_data(post_empty_meter_data, "billing_monthly")
     assert cleaned_data.empty
