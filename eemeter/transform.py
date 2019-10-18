@@ -257,7 +257,7 @@ def get_baseline_data(
         If True, count `max_days` from the end of the last billing data period
         that ends before the `end` date, rather than from the exact `end` date.
         Otherwise use the exact `end` date as the cutoff.
-    n_billing_period_overshoot_days: :any:`float`, default np.inf
+    n_days_billing_period_overshoot: :any:`float`, default np.inf
         If `allow_billing_period_overshoot` is set to True, this determines
         the number of days of overshoot that will be tolerated.
     ignore_billing_period_gap_for_day_count : :any:`bool`, default False
@@ -313,7 +313,6 @@ def get_baseline_data(
         start_target = end_limit - timedelta(days=max_days)
 
     if allow_billing_period_overshoot:
-
         # adjust start limit to get a selection closest to max_days
         # also consider ffill for get_loc method - always picks previous
         try:
