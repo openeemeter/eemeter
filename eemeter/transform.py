@@ -226,6 +226,7 @@ def get_baseline_data(
     end=None,
     max_days=365,
     allow_billing_period_overshoot=False,
+    n_days_billing_period_overshoot=np.inf,
     ignore_billing_period_gap_for_day_count=False,
 ):
     """ Filter down to baseline period data.
@@ -256,6 +257,9 @@ def get_baseline_data(
         If True, count `max_days` from the end of the last billing data period
         that ends before the `end` date, rather than from the exact `end` date.
         Otherwise use the exact `end` date as the cutoff.
+    n_days_billing_period_overshoot: :any:`float`, default np.inf
+        If `allow_billing_period_overshoot` is set to True, this determines
+        the number of days of overshoot that will be tolerated.
     ignore_billing_period_gap_for_day_count : :any:`bool`, default False
         If True, instead of going back `max_days` from either the
         `end` date or end of the last billing period before that date (depending
@@ -325,7 +329,10 @@ def get_baseline_data(
         start_limit = start_target
         baseline_data = data_before_end_limit[start_limit:].copy()
 
-    if baseline_data.dropna().empty:
+    # If empty slice or if there was too much overshoot
+    if baseline_data.dropna().empty or (
+        not end_inf and (end - start_limit).days > n_days_billing_period_overshoot
+    ):
         raise NoBaselineDataError()
 
     baseline_data.iloc[-1] = np.nan

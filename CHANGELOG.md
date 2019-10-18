@@ -4,11 +4,10 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Update `get_baseline_data` to allow for limit to billing overshoot using `n_days_billing_period_overshoot` kwarg.
 
 2.7.7
 -----
-
 
 * Add function to clean billing data to fit caltrack specifications (`clean_caltrack_billing_data`).
 
