@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+2.8.1
+-----
+
 * Fix bug with `get_baseline_data` in regards to recent addition of `n_days_billing_period_overshoot` kwarg.
 
 2.8.0
