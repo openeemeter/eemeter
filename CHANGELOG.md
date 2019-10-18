@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+2.8.0
+-----
+
 * Update `get_baseline_data` to allow for limit to billing overshoot using `n_days_billing_period_overshoot` kwarg.
 
 2.7.7
