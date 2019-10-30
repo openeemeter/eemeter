@@ -18,6 +18,7 @@
 
 """
 import numpy as np
+import pandas as pd
 import statsmodels.formula.api as smf
 
 from ..features import (
@@ -26,6 +27,7 @@ from ..features import (
     compute_occupancy_feature,
     merge_features,
 )
+from ..metrics import ModelMetrics
 from ..segmentation import CalTRACKSegmentModel, SegmentedModel, fit_model_segments
 from ..warnings import EEMeterWarning
 
@@ -117,6 +119,9 @@ class CalTRACKHourlyModelResults(object):
         def _json_or_none(obj):
             return None if obj is None else obj.json()
 
+        def _json_or_none_in_dict(obj):
+            return None if obj is None else {key: _json_or_none(val) for key, val in obj.items()} 
+
         data = {
             "status": self.status,
             "method_name": self.method_name,
@@ -124,8 +129,8 @@ class CalTRACKHourlyModelResults(object):
             "warnings": [w.json() for w in self.warnings],
             "metadata": self.metadata,
             "settings": self.settings,
-            "totals_metrics": _json_or_none(self.totals_metrics),
-            "avgs_metrics": _json_or_none(self.avgs_metrics),
+            "totals_metrics": _json_or_none_in_dict(self.totals_metrics),
+            "avgs_metrics": _json_or_none_in_dict(self.avgs_metrics),
         }
         return data
 
@@ -379,13 +384,24 @@ def fit_caltrack_hourly_model_segment(segment_name, segment_data):
         model = smf.wls(formula=formula, data=segment_data, weights=segment_data.weight)
         model_params = {coeff: value for coeff, value in model.fit().params.items()}
 
-    return CalTRACKSegmentModel(
+    segment_model = CalTRACKSegmentModel(
         segment_name=segment_name,
         model=model,
         formula=formula,
         model_params=model_params,
         warnings=warnings,
     )
+    if model:
+        predicted_value = pd.Series(
+            model.predict(model.fit().params), index=segment_data.index
+        )
+        segment_model.totals_metrics = ModelMetrics(
+            segment_data.meter_value, predicted_value, len(model_params)
+        )
+    else:
+        segment_model.totals_metrics = None
+
+    return segment_model
 
 
 def fit_caltrack_hourly_model(
@@ -419,9 +435,15 @@ def fit_caltrack_hourly_model(
         for warning in segment_model.warnings
     ]
     model = CalTRACKHourlyModel(segment_models, occupancy_lookup, temperature_bins)
-    return CalTRACKHourlyModelResults(
+
+    model_results = CalTRACKHourlyModelResults(
         status="SUCCEEDED",
         method_name="caltrack_hourly",
         warnings=all_warnings,
         model=model,
     )
+    model_results.totals_metrics = {
+        seg_model.segment_name: seg_model.totals_metrics
+        for seg_model in segment_models
+    }
+    return model_results
