@@ -120,7 +120,11 @@ class CalTRACKHourlyModelResults(object):
             return None if obj is None else obj.json()
 
         def _json_or_none_in_dict(obj):
-            return None if obj is None else {key: _json_or_none(val) for key, val in obj.items()} 
+            return (
+                None
+                if obj is None
+                else {key: _json_or_none(val) for key, val in obj.items()}
+            )
 
         data = {
             "status": self.status,
@@ -443,7 +447,6 @@ def fit_caltrack_hourly_model(
         model=model,
     )
     model_results.totals_metrics = {
-        seg_model.segment_name: seg_model.totals_metrics
-        for seg_model in segment_models
+        seg_model.segment_name: seg_model.totals_metrics for seg_model in segment_models
     }
     return model_results
