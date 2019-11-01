@@ -397,7 +397,8 @@ def fit_caltrack_hourly_model_segment(segment_name, segment_data):
     )
     if model:
         predicted_value = pd.Series(
-            model.predict(model.fit().params), index=segment_data.index
+            model.fit().predict(),
+            index=segment_data[~pd.isnull(segment_data.weight)].index,
         )
         segment_model.totals_metrics = ModelMetrics(
             segment_data.meter_value, predicted_value, len(model_params)
