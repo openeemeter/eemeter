@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Add `totals_metrics` to hourly models.
 
 2.8.1
 -----
