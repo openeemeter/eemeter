@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Update hourly `totals_metrics` calculation to properly use only the segment of the model.
 
 2.8.2
 -----
