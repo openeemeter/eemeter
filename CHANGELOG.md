@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+2.8.4
+-----
+
 * Further limit segments used in hourly `totals_metrics` to only calculate when weight=1.
 
 2.8.3
