@@ -757,3 +757,34 @@ def clean_caltrack_billing_data(data, source_interval):
         return data[:0]
 
     return data
+
+
+def downsample_and_clean_caltrack_daily_data(data):
+    data = as_freq(
+        data.value, "D", include_coverage=True
+    )
+
+    # CalTRACK 2.2.2.1 - interpolate with average of non-null values
+    data.value[data.coverage > 0.5] = (
+        data[data.coverage > 0.5].value
+        / data[data.coverage > 0.5].coverage
+    )
+
+    # CalTRACK 2.2.2.1 - discard days with less than 50% coverage
+    return data[
+        data.coverage > 0.5
+    ].reindex(data.index)[["value"]]
+
+
+def clean_caltrack_billing_daily_data(data, source_interval):
+    # billing data is cleaned but not resampled
+    if source_interval.startswith("billing"):
+        # CalTRACK 2.2.3.4, 2.2.3.5
+        return clean_caltrack_billing_data(data, source_interval)
+
+    # higher intervals like daily, hourly, 30min, 15min are
+    # resampled (daily) or downsampled (hourly, 30min, 15min)
+    elif source_interval == "daily":
+        return data
+    else:
+        return downsample_and_clean_caltrack_daily_data(data)
