@@ -760,20 +760,15 @@ def clean_caltrack_billing_data(data, source_interval):
 
 
 def downsample_and_clean_caltrack_daily_data(data):
-    data = as_freq(
-        data.value, "D", include_coverage=True
-    )
+    data = as_freq(data.value, "D", include_coverage=True)
 
     # CalTRACK 2.2.2.1 - interpolate with average of non-null values
     data.value[data.coverage > 0.5] = (
-        data[data.coverage > 0.5].value
-        / data[data.coverage > 0.5].coverage
+        data[data.coverage > 0.5].value / data[data.coverage > 0.5].coverage
     )
 
     # CalTRACK 2.2.2.1 - discard days with less than 50% coverage
-    return data[
-        data.coverage > 0.5
-    ].reindex(data.index)[["value"]]
+    return data[data.coverage > 0.5].reindex(data.index)[["value"]]
 
 
 def clean_caltrack_billing_daily_data(data, source_interval):

@@ -127,7 +127,7 @@ def test_meter_data_from_json_orient_list_empty(sample_metadata):
 def test_meter_data_from_json_orient_records(sample_metadata):
     data = [
         {"start": "2017-01-01T00:00:00Z", "value": 11},
-        {"start": "2017-01-02T00:00:00Z", "value": ''},
+        {"start": "2017-01-02T00:00:00Z", "value": ""},
         {"start": "2017-01-03T00:00:00Z", "value": 10},
     ]
     meter_data = meter_data_from_json(data, orient="records")

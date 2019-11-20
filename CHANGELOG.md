@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Add functions to clean billing/daily data according to caltrack rules.
 
 2.8.4
 -----
