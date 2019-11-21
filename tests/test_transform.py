@@ -28,6 +28,8 @@ import pytz
 from eemeter.transform import (
     as_freq,
     clean_caltrack_billing_data,
+    downsample_and_clean_caltrack_daily_data,
+    clean_caltrack_billing_daily_data,
     day_counts,
     get_baseline_data,
     get_reporting_data,
@@ -35,6 +37,7 @@ from eemeter.transform import (
     remove_duplicates,
     NoBaselineDataError,
     NoReportingDataError,
+    overwrite_partial_rows_with_nan,
 )
 
 
@@ -764,6 +767,50 @@ def test_as_freq_hourly_to_daily_include_coverage(il_electricity_cdd_hdd_hourly)
     assert round(meter_data.value.sum(), 1) == round(as_daily.value.sum(), 1) == 21926.0
 
 
+def test_clean_caltrack_billing_daily_data_billing(
+    il_electricity_cdd_hdd_billing_monthly
+):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    cleaned_data = clean_caltrack_billing_daily_data(meter_data, "billing_monthly")
+    assert cleaned_data.shape == (27, 1)
+    pd.testing.assert_frame_equal(meter_data, cleaned_data)
+
+
+def test_clean_caltrack_billing_daily_data_daily(il_electricity_cdd_hdd_daily):
+    meter_data = il_electricity_cdd_hdd_daily["meter_data"]
+    cleaned_data = clean_caltrack_billing_daily_data(meter_data, "daily")
+    assert cleaned_data.shape == (810, 1)
+    pd.testing.assert_frame_equal(meter_data, cleaned_data)
+
+
+def test_clean_caltrack_billing_daily_data_daily_local_tz(il_electricity_cdd_hdd_daily):
+    meter_data = il_electricity_cdd_hdd_daily["meter_data"]
+    meter_data.index += timedelta(hours=6)
+    meter_data = meter_data.tz_convert("America/Chicago")
+    cleaned_data = clean_caltrack_billing_daily_data(meter_data, "daily")
+    assert cleaned_data.shape == (810, 1)
+    pd.testing.assert_frame_equal(meter_data, cleaned_data)
+
+
+def test_clean_caltrack_billing_daily_data_hourly(il_electricity_cdd_hdd_hourly):
+    meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
+    cleaned_data = clean_caltrack_billing_daily_data(meter_data, "hourly")
+    assert cleaned_data.shape == (811, 1)
+
+
+def test_clean_caltrack_daily_data_hourly(il_electricity_cdd_hdd_hourly):
+    meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
+    cleaned_data = downsample_and_clean_caltrack_daily_data(meter_data)
+    assert cleaned_data.shape == (811, 1)
+
+
+def test_clean_caltrack_daily_data_hourly_local_tz(il_electricity_cdd_hdd_hourly):
+    meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
+    meter_data = meter_data.tz_convert("America/Chicago")
+    cleaned_data = downsample_and_clean_caltrack_daily_data(meter_data)
+    assert cleaned_data.shape == (810, 1)
+
+
 def test_clean_caltrack_billing_data_estimated(il_electricity_cdd_hdd_billing_monthly):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     meter_data["estimated"] = False
@@ -820,3 +867,11 @@ def test_clean_caltrack_billing_data_uneven_datetimes(
     assert not post_empty_meter_data["value"].dropna().empty
     cleaned_data = clean_caltrack_billing_data(post_empty_meter_data, "billing_monthly")
     assert cleaned_data.empty
+
+
+def test_overwrite_partial_rows_with_nan(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    meter_data["other_column"] = meter_data["value"]
+    meter_data["other_column"][:3] = np.nan
+    meter_data_nanned = overwrite_partial_rows_with_nan(meter_data)
+    assert pd.isnull(meter_data_nanned["value"][:3]).all()
