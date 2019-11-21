@@ -38,6 +38,7 @@ __all__ = (
     "remove_duplicates",
     "overwrite_partial_rows_with_nan",
     "clean_caltrack_billing_data",
+    "clean_caltrack_billing_daily_data",
 )
 
 
