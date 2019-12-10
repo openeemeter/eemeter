@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Fix issue with `get_reporting_data` when passing data with non-UTC timezones.
+* Fix issue with `get_reporting_data` and `get_baseline_data` when passing data with non-UTC timezones.
 
 2.8.5
 -----

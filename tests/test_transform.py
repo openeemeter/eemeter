@@ -168,6 +168,14 @@ def test_get_baseline_data(il_electricity_cdd_hdd_hourly):
     assert len(warnings) == 0
 
 
+def test_get_baseline_data_with_timezones(il_electricity_cdd_hdd_hourly):
+    meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
+    baseline_data, warnings = get_baseline_data(meter_data.tz_convert('America/New_York'))
+    assert len(warnings) == 0
+    baseline_data, warnings = get_baseline_data(meter_data.tz_convert('Australia/Sydney'))
+    assert len(warnings) == 0
+
+
 def test_get_baseline_data_with_end(il_electricity_cdd_hdd_hourly):
     meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
     blackout_start_date = il_electricity_cdd_hdd_hourly["blackout_start_date"]
