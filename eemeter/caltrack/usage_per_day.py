@@ -186,7 +186,7 @@ class CalTRACKUsagePerDayModelResults(object):
         return data
 
     @classmethod
-    def fromJson(cls, data):
+    def from_json(cls, data):
         """ Loads a JSON-serializable representation into the model state.
 
         The input of this function is a dict which can be the result
@@ -197,7 +197,7 @@ class CalTRACKUsagePerDayModelResults(object):
         model = None
         d = data.get('model')
         if d:
-            model = CalTRACKUsagePerDayCandidateModel.fromJson(d)
+            model = CalTRACKUsagePerDayCandidateModel.from_json(d)
 
         c = cls(
             data.get('status'),
@@ -214,10 +214,10 @@ class CalTRACKUsagePerDayModelResults(object):
         # for reconstruction (like the input pandas) ...
         d = data.get('avgs_metrics')
         if d:
-            c.avgs_metrics = ModelMetrics.fromJson(d)
+            c.avgs_metrics = ModelMetrics.from_json(d)
         d = data.get('totals_metrics')
         if d:
-            c.totals_metrics = ModelMetrics.fromJson(d)
+            c.totals_metrics = ModelMetrics.from_json(d)
         return c
 
     def predict(
@@ -380,7 +380,7 @@ class CalTRACKUsagePerDayCandidateModel(object):
         }
 
     @classmethod
-    def fromJson(cls, data):
+    def from_json(cls, data):
         """ Loads a JSON-serializable representation into the model state.
 
         The input of this function is a dict which can be the result

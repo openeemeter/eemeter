@@ -139,7 +139,7 @@ class CalTRACKHourlyModelResults(object):
         return data
 
     @classmethod
-    def fromJson(cls, data):
+    def from_json(cls, data):
         """ Loads a JSON-serializable representation into the model state.
 
         The input of this function is a dict which can be the result
@@ -150,7 +150,7 @@ class CalTRACKHourlyModelResults(object):
         model = None
         d = data.get('model')
         if d:
-            model = CalTRACKHourlyModel.fromJson(d)
+            model = CalTRACKHourlyModel.from_json(d)
 
         c = cls(
             data.get('status'),
@@ -164,10 +164,10 @@ class CalTRACKHourlyModelResults(object):
         # for reconstruction (like the input pandas) ...
         d = data.get('avgs_metrics')
         if d:
-            c.avgs_metrics = ModelMetrics.fromJson(d)
+            c.avgs_metrics = ModelMetrics.from_json(d)
         d = data.get('totals_metrics')
         if d:
-            c.totals_metrics = ModelMetrics.fromJson(d)
+            c.totals_metrics = ModelMetrics.from_json(d)
         return c
 
     def predict(self, prediction_index, temperature_data, **kwargs):
@@ -250,7 +250,7 @@ class CalTRACKHourlyModel(SegmentedModel):
         return data
 
     @classmethod
-    def fromJson(cls, data):
+    def from_json(cls, data):
         """ Loads a JSON-serializable representation into the model state.
 
         The input of this function is a dict which can be the result
@@ -258,7 +258,7 @@ class CalTRACKHourlyModel(SegmentedModel):
         """
 
         segment_models = [
-            CalTRACKSegmentModel.fromJson(s)
+            CalTRACKSegmentModel.from_json(s)
             for s in data.get('segment_models')
         ]
 

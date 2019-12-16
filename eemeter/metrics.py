@@ -363,7 +363,7 @@ class ModelMetrics(object):
         }
 
     @classmethod
-    def fromJson(cls, data):
+    def from_json(cls, data):
         """ Loads a JSON-serializable representation into the model state.
 
         The input of this function is a dict which can be the result
