@@ -263,7 +263,7 @@ class CalTRACKHourlyModel(SegmentedModel):
         ]
 
         occupancy_lookup = pd.read_json(data.get('occupancy_lookup'), orient='split')
-        occupancy_lookup.index = occupancy_lookup.index.astype(pd.Categorical(range(0, 168)))
+        occupancy_lookup.index = occupancy_lookup.index.astype('category')
 
         c = cls(segment_models,
                 occupancy_lookup,
