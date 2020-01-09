@@ -170,9 +170,13 @@ def test_get_baseline_data(il_electricity_cdd_hdd_hourly):
 
 def test_get_baseline_data_with_timezones(il_electricity_cdd_hdd_hourly):
     meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
-    baseline_data, warnings = get_baseline_data(meter_data.tz_convert('America/New_York'))
+    baseline_data, warnings = get_baseline_data(
+        meter_data.tz_convert("America/New_York")
+    )
     assert len(warnings) == 0
-    baseline_data, warnings = get_baseline_data(meter_data.tz_convert('Australia/Sydney'))
+    baseline_data, warnings = get_baseline_data(
+        meter_data.tz_convert("Australia/Sydney")
+    )
     assert len(warnings) == 0
 
 
@@ -404,9 +408,13 @@ def test_get_reporting_data(il_electricity_cdd_hdd_hourly):
 
 def test_get_reporting_data_with_timezones(il_electricity_cdd_hdd_hourly):
     meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
-    reporting_data, warnings = get_reporting_data(meter_data.tz_convert('America/New_York'))
+    reporting_data, warnings = get_reporting_data(
+        meter_data.tz_convert("America/New_York")
+    )
     assert len(warnings) == 0
-    reporting_data, warnings = get_reporting_data(meter_data.tz_convert('Australia/Sydney'))
+    reporting_data, warnings = get_reporting_data(
+        meter_data.tz_convert("Australia/Sydney")
+    )
     assert len(warnings) == 0
 
 
