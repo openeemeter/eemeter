@@ -204,6 +204,7 @@ class CalTRACKUsagePerDayModelResults(object):
     def plot(
         self,
         ax=None,
+        figure=None,
         title=None,
         figsize=None,
         with_candidates=False,
@@ -216,6 +217,8 @@ class CalTRACKUsagePerDayModelResults(object):
         ----------
         ax : :any:`matplotlib.axes.Axes`, optional
             Existing axes to plot on.
+        figure : :any:`matplotlib.figure`, optional
+            Something that implements subplots, if left to None uses matplotlib.pyplot
         title : :any:`str`, optional
             Chart title.
         figsize : :any:`tuple`, optional
@@ -231,16 +234,23 @@ class CalTRACKUsagePerDayModelResults(object):
         ax : :any:`matplotlib.axes.Axes`
             Matplotlib axes.
         """
-        try:
-            import matplotlib.pyplot as plt
-        except ImportError:  # pragma: no cover
-            raise ImportError("matplotlib is required for plotting.")
 
-        if figsize is None:
-            figsize = (10, 4)
+        # note: to avoid memeory leaks some application might prefer using  matplotlib.figure
+        # instead of matplotlib.pyplot
+        if not figure:
+            try:
+                import matplotlib.pyplot as plt
+            except ImportError:  # pragma: no cover
+                raise ImportError("matplotlib is required for plotting.")
 
-        if ax is None:
-            fig, ax = plt.subplots(figsize=figsize)
+            if figsize is None:
+                figsize = (10, 4)
+
+            if ax is None:
+                fig, ax = plt.subplots(figsize=figsize)
+        else:
+            if ax is None:
+                ax = figure.subplots()
 
         if temp_range is None:
             temp_range = (20, 90)

@@ -49,14 +49,19 @@ def plot_time_series(meter_data, temperature_data, **kwargs):
         Tuple of ``(ax_meter_data, ax_temperature_data)``.
     """
     # TODO(philngo): include image in docs.
-    try:
-        import matplotlib.pyplot as plt
-    except ImportError:  # pragma: no cover
-        raise ImportError("matplotlib is required for plotting.")
+    figure = kwargs.pop('figure')
+    if not figure:
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:  # pragma: no cover
+            raise ImportError("matplotlib is required for plotting.")
 
-    default_kwargs = {"figsize": (16, 4)}
-    default_kwargs.update(kwargs)
-    fig, ax1 = plt.subplots(**default_kwargs)
+        default_kwargs = {"figsize": (16, 4)}
+        default_kwargs.update(kwargs)
+        fig, ax1 = plt.subplots(**default_kwargs)
+    else:
+        fig = figure
+        ax1 = figure.subplots(**default_kwargs)
 
     ax1.plot(
         meter_data.index,
@@ -87,6 +92,7 @@ def plot_energy_signature(
     temperature_data,
     temp_col=None,
     ax=None,
+    figure=None,
     title=None,
     figsize=None,
     **kwargs
@@ -103,6 +109,8 @@ def plot_energy_signature(
         The name of the temperature column.
     ax : :any:`matplotlib.axes.Axes`
         The axis on which to plot.
+    figure : :any:`matplotlib.figure`, optional
+        Something that implements subplots, if left to None uses matplotlib.pyplot
     title : :any:`str`, optional
         Chart title.
     figsize : :any:`tuple`, optional
@@ -116,21 +124,28 @@ def plot_energy_signature(
     ax : :any:`matplotlib.axes.Axes`
         Matplotlib axes.
     """
-    try:
-        import matplotlib.pyplot as plt
-    except ImportError:  # pragma: no cover
-        raise ImportError("matplotlib is required for plotting.")
+
+    # note: to avoid memeory leaks some application might prefer using  matplotlib.figure
+    # instead of matplotlib.pyplot
+    if not figure:
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:  # pragma: no cover
+            raise ImportError("matplotlib is required for plotting.")
+        if figsize is None:
+            figsize = (10, 4)
+
+        if ax is None:
+            fig, ax = plt.subplots(figsize=figsize)
 
     # format data
     temperature_mean = compute_temperature_features(meter_data.index, temperature_data)
     usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
     df = merge_features([usage_per_day, temperature_mean.temperature_mean])
 
-    if figsize is None:
-        figsize = (10, 4)
-
-    if ax is None:
-        fig, ax = plt.subplots(figsize=figsize)
+    if figure:
+        if ax is None:
+            ax = figure.subplots()
 
     if temp_col is None:
         temp_col = "temperature_mean"
