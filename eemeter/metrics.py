@@ -87,6 +87,65 @@ def _json_safe_float(number):
     return float(number)
 
 
+class ModelMetricsFromJson(object):
+
+    def __init__(
+        self,
+        observed_length,
+        predicted_length,
+        merged_length,
+        num_parameters,
+        observed_mean,
+        predicted_mean,
+        observed_variance,
+        predicted_variance,
+        observed_skew,
+        predicted_skew,
+        observed_kurtosis,
+        predicted_kurtosis,
+        observed_cvstd,
+        predicted_cvstd,
+        r_squared,
+        r_squared_adj,
+        rmse,
+        rmse_adj,
+        cvrmse,
+        cvrmse_adj,
+        mape,
+        mape_no_zeros,
+        num_meter_zeros,
+        nmae,
+        nmbe,
+        autocorr_resid
+    ):
+        self.observed_length = observed_length
+        self.predicted_length = predicted_length
+        self.merged_length = merged_length
+        self.num_parameters = num_parameters
+        self.observed_mean = observed_mean
+        self.predicted_mean = predicted_mean
+        self.observed_variance = observed_variance
+        self.predicted_variance = predicted_variance
+        self.observed_skew = observed_skew
+        self.predicted_skew = predicted_skew
+        self.observed_kurtosis = observed_kurtosis
+        self.predicted_kurtosis = predicted_kurtosis
+        self.observed_cvstd = observed_cvstd
+        self.predicted_cvstd = predicted_cvstd
+        self.r_squared = r_squared
+        self.r_squared_adj = r_squared_adj
+        self.rmse = rmse
+        self.rmse_adj = rmse_adj
+        self.cvrmse = cvrmse
+        self.cvrmse_adj = cvrmse_adj
+        self.mape = mape
+        self.mape_no_zeros = mape_no_zeros
+        self.num_meter_zeros = num_meter_zeros
+        self.nmae = nmae
+        self.nmbe = nmbe
+        self.autocorr_resid = autocorr_resid
+
+
 class ModelMetrics(object):
     """ Contains measures of model fit and summary statistics on the input series.
 
@@ -302,3 +361,41 @@ class ModelMetrics(object):
             "nmbe": _json_safe_float(self.nmbe),
             "autocorr_resid": _json_safe_float(self.autocorr_resid),
         }
+
+    @classmethod
+    def from_json(cls, data):
+        """ Loads a JSON-serializable representation into the model state.
+
+        The input of this function is a dict which can be the result
+        of :any:`json.loads`.
+        """
+
+        c = ModelMetricsFromJson(
+            data.get("observed_length"),
+            data.get("predicted_length"),
+            data.get("merged_length"),
+            data.get("num_parameters"),
+            data.get("observed_mean"),
+            data.get("predicted_mean"),
+            data.get("observed_variance"),
+            data.get("predicted_variance"),
+            data.get("observed_skew"),
+            data.get("predicted_skew"),
+            data.get("observed_kurtosis"),
+            data.get("predicted_kurtosis"),
+            data.get("observed_cvstd"),
+            data.get("predicted_cvstd"),
+            data.get("r_squared"),
+            data.get("r_squared_adj"),
+            data.get("rmse"),
+            data.get("rmse_adj"),
+            data.get("cvrmse"),
+            data.get("cvrmse_adj"),
+            data.get("mape"),
+            data.get("mape_no_zeros"),
+            data.get("num_meter_zeros"),
+            data.get("nmae"),
+            data.get("nmbe"),
+            data.get("autocorr_resid"))
+
+        return c

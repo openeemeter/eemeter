@@ -117,6 +117,24 @@ class CalTRACKSegmentModel(object):
         }
         return data
 
+    @classmethod
+    def from_json(cls, data):
+        """ Loads a JSON-serializable representation into the model state.
+
+        The input of this function is a dict which can be the result
+        of :any:`json.loads`.
+        """
+
+        c = cls(
+            data.get('segment_name'),
+            None,
+            data.get('formula'),
+            data.get('model_params'),
+            warnings=data.get('warnings')
+            )
+
+        return c
+
 
 class SegmentedModel(object):
     """ Represent a model which has been broken into multiple model segments (for

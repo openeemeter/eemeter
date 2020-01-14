@@ -138,6 +138,38 @@ class CalTRACKHourlyModelResults(object):
         }
         return data
 
+    @classmethod
+    def from_json(cls, data):
+        """ Loads a JSON-serializable representation into the model state.
+
+        The input of this function is a dict which can be the result
+        of :any:`json.loads`.
+        """
+
+        # "model" is a CalTRACKHourlyModel that was serialized
+        model = None
+        d = data.get('model')
+        if d:
+            model = CalTRACKHourlyModel.from_json(d)
+
+        c = cls(
+            data.get('status'),
+            data.get('method_name'),
+            model=model,
+            warnings=data.get('warnings'),
+            metadata=data.get('metadata'),
+            settings=data.get('settings'))
+
+        # Note the metrics do not contain all the data needed
+        # for reconstruction (like the input pandas) ...
+        d = data.get('avgs_metrics')
+        if d:
+            c.avgs_metrics = ModelMetrics.from_json(d)
+        d = data.get('totals_metrics')
+        if d:
+            c.totals_metrics = ModelMetrics.from_json(d)
+        return c
+
     def predict(self, prediction_index, temperature_data, **kwargs):
         """ Predict over a particular index using temperature data.
 
@@ -216,6 +248,29 @@ class CalTRACKHourlyModel(SegmentedModel):
             }
         )
         return data
+
+    @classmethod
+    def from_json(cls, data):
+        """ Loads a JSON-serializable representation into the model state.
+
+        The input of this function is a dict which can be the result
+        of :any:`json.loads`.
+        """
+
+        segment_models = [
+            CalTRACKSegmentModel.from_json(s)
+            for s in data.get('segment_models')
+        ]
+
+        occupancy_lookup = pd.read_json(data.get('occupancy_lookup'), orient='split')
+        occupancy_lookup.index = occupancy_lookup.index.astype('category')
+
+        c = cls(segment_models,
+                occupancy_lookup,
+                pd.read_json(data.get('temperature_bins'), orient="split")
+                )
+
+        return c
 
 
 def caltrack_hourly_fit_feature_processor(

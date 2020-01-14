@@ -185,6 +185,41 @@ class CalTRACKUsagePerDayModelResults(object):
             data["candidates"] = [candidate.json() for candidate in self.candidates]
         return data
 
+    @classmethod
+    def from_json(cls, data):
+        """ Loads a JSON-serializable representation into the model state.
+
+        The input of this function is a dict which can be the result
+        of :any:`json.loads`.
+        """
+
+        # "model" is a CalTRACKUsagePerDayCandidateModel that was serialized
+        model = None
+        d = data.get('model')
+        if d:
+            model = CalTRACKUsagePerDayCandidateModel.from_json(d)
+
+        c = cls(
+            data.get('status'),
+            data.get('method_name'),
+            interval=data.get('interval'),
+            model=model,
+            r_squared_adj=data.get('r_squared_adj'),
+            candidates=data.get('candidates'),
+            warnings=data.get('warnings'),
+            metadata=data.get('metadata'),
+            settings=data.get('settings'))
+
+        # Note the metrics do not contain all the data needed
+        # for reconstruction (like the input pandas) ...
+        d = data.get('avgs_metrics')
+        if d:
+            c.avgs_metrics = ModelMetrics.from_json(d)
+        d = data.get('totals_metrics')
+        if d:
+            c.totals_metrics = ModelMetrics.from_json(d)
+        return c
+
     def predict(
         self,
         prediction_index,
@@ -343,6 +378,24 @@ class CalTRACKUsagePerDayCandidateModel(object):
             "r_squared_adj": _noneify(self.r_squared_adj),
             "warnings": [w.json() for w in self.warnings],
         }
+
+    @classmethod
+    def from_json(cls, data):
+        """ Loads a JSON-serializable representation into the model state.
+
+        The input of this function is a dict which can be the result
+        of :any:`json.loads`.
+        """
+
+        c = cls(
+            data.get('model_type'),
+            data.get('formula'),
+            data.get('status'),
+            model_params=data.get('model_params'),
+            r_squared_adj=data.get('r_squared_adj'),
+            warnings=data.get('warnings'))
+
+        return c
 
     def predict(
         self,
