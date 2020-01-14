@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+2.9.0
+-----
+
 * Clarify blackout period.
 
 2.8.6
