@@ -96,6 +96,62 @@ Features
 - Pandas DataFrame support
 - Visualization tools
 
+Roadmap for 2020 development
+----------------------------
+
+The OpenEEmeter project growth goals for the year fall into two categories:
+
+1. Community goals - we want help our community thrive and continue to grow.
+2. Technical goals - we want to keep building the library in new ways that make it
+   as easy as possible to use.
+
+Community goals
+~~~~~~~~~~~~~~~
+
+1. Develop project documentation and tutorials
+
+A number of users have expressed how hard it is to get started when tutorials are
+out of date. We will dedicate time and energy this year to help create high quality
+tutorials that build upon the API documentation and existing tutorials.
+
+2. Make it easier to contribute
+
+As our user base grows, the need and desire for users to contribute back to the library
+also grows, and we want to make this as seamless as possible. This means writing and
+maintaining contribution guides, and creating checklists to guide users through the
+process.
+
+
+Technical goals
+~~~~~~~~~~~~~~~
+
+1. Implement new CalTRACK recommendations
+
+The CalTRACK process continues to improve the underlying methods used in the
+OpenEEmeter. Our primary technical goal is to keep up with these changes and continue
+to be a resource for testing and experimentation during the CalTRACK methods setting
+process.
+
+2. Hourly model visualizations
+
+The hourly methods implemented in the OpenEEMeter library are not yet packaged with
+high quality visualizations like the daily and billing methods are. As we build and
+package new visualizations with the library, more users will be able to understand,
+deploy, and contribute to the hourly methods.
+
+3. Weather normal and unusual scenarios
+
+The EEweather package, which supports the OpenEEmeter, comes packaged with publicly
+available weather normal scenarios, but one feature that could help make that easier
+would be to package methods for creating custom weather year scenarios.
+
+4. Greater weather coverage
+
+The weather station coverage in the EEweather package includes full coverage of US and
+Australia, but with some technical work, it could be expanded to include greater, or
+even worldwide coverage.
+
+
 Usage Guides
 ------------
 
