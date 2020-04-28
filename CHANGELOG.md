@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+2.9.2
+-----
+
 * Remove fixing of versions of libraries in setup.py to avoid unforeseen issues with library updates.
 
 2.9.1
