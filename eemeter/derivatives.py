@@ -21,7 +21,6 @@ from scipy.stats import t
 
 from .caltrack.usage_per_day import CalTRACKUsagePerDayModelResults
 
-
 __all__ = ("metered_savings", "modeled_savings")
 
 
@@ -56,7 +55,7 @@ def _compute_fsu_error(
     t_stat,
     interval,
     post_obs,
-    total_base_energy,
+    total_post_energy,
     rmse_base_residuals,
     base_avg,
     base_obs,
@@ -73,7 +72,7 @@ def _compute_fsu_error(
         c_coeff = 1.00286
         months_reporting = float(post_obs) / 30.0
 
-    fsu_error_band = total_base_energy * (
+    fsu_error_band = total_post_energy * (
         t_stat
         * (a_coeff * months_reporting ** 2.0 + b_coeff * months_reporting + c_coeff)
         * (rmse_base_residuals / base_avg)
@@ -121,7 +120,7 @@ def _compute_error_bands_metered_savings(
 
     nprime = float(base_obs * (1 - autocorr_resid) / (1 + autocorr_resid))
 
-    total_base_energy = float(base_avg * base_obs)
+    total_post_energy = float(post_avg * post_obs)
 
     ols_total_agg_error, ols_model_agg_error, ols_noise_agg_error = _compute_ols_error(
         t_stat,
@@ -138,7 +137,7 @@ def _compute_error_bands_metered_savings(
         t_stat,
         interval,
         post_obs,
-        total_base_energy,
+        total_post_energy,
         rmse_base_residuals,
         base_avg,
         base_obs,
@@ -313,6 +312,8 @@ def _compute_error_bands_modeled_savings(
 
     base_avg_baseline = float(totals_metrics_baseline.observed_mean)
     base_avg_reporting = float(totals_metrics_reporting.observed_mean)
+    post_avg_baseline = float(results["modeled_baseline_usage"].mean())
+    post_avg_reporting = float(results["modeled_reporting_usage"].mean())
 
     # these result in division by zero error for fsu_error_band
     if (
@@ -343,14 +344,14 @@ def _compute_error_bands_modeled_savings(
         / (1 + autocorr_resid_reporting)
     )
 
-    total_base_energy_baseline = float(base_avg_baseline * base_obs_baseline)
-    total_base_energy_reporting = float(base_avg_reporting * base_obs_reporting)
+    total_post_energy_baseline = float(post_avg_baseline * post_obs_baseline)
+    total_post_energy_reporting = float(post_avg_reporting * post_obs_reporting)
 
     fsu_error_band_baseline = _compute_fsu_error(
         t_stat_baseline,
         interval_baseline,
         post_obs_baseline,
-        total_base_energy_baseline,
+        total_post_energy_baseline,
         rmse_base_residuals_baseline,
         base_avg_baseline,
         base_obs_baseline,
@@ -361,7 +362,7 @@ def _compute_error_bands_modeled_savings(
         t_stat_reporting,
         interval_reporting,
         post_obs_reporting,
-        total_base_energy_reporting,
+        total_post_energy_reporting,
         rmse_base_residuals_reporting,
         base_avg_reporting,
         base_obs_reporting,
