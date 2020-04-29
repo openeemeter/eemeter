@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Bugfix for FSU post period.
 
 2.9.1
 -----
