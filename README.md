@@ -1,5 +1,8 @@
 Link to Slides: https://docs.google.com/presentation/d/1oEH9fJnjLwakBKbNXQ9ZD1vRyH4noltmxNf_i_6WVp8/edit?usp=sharing
 
+Please see Issues for discussions and feel free to open a new topic or contribute to an existing one: https://github.com/recurve-methods/comparison_groups/issues 
+
+
 # Project Overview
 Those of us working in the efficiency and flexibility business have seen COVID-19 upend most of our industry’s assumptions about energy consumption. As an industry rooted in forecasts of avoided energy use (and the ability to measure results on the backside), we now realize that forecasting even basic energy use, not to mention avoided energy use, will be laden with uncertainty for months if not years to come.
 
