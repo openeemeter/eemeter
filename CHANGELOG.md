@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Fix bug in segmentation.py causing a section of tutorial to fail.
 
 2.9.2
 -----
