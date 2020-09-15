@@ -1,0 +1,8 @@
+plotnine==0.5.1
+pandas==0.25.3
+pytest==6.0.2
+pytest-cov==2.10.1
+pytest-profiling==1.7.0
+pytest-xdist==2.1.0
+
+

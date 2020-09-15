@@ -1,0 +1,2 @@
+include README.rst LICENSE pytest.ini
+recursive-include tests *.py
