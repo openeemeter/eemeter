@@ -156,7 +156,7 @@ class DiagnosticPlotter:
             + facet_wrap("~population", nrow=1)
             + theme_bw()
         )
-        outlier_bins = self.data_train.outlier_bins
+        outlier_bins = self.data_treatment.outlier_bins
         outlier_bins = outlier_bins[outlier_bins["outlier"]]["bin"].values
         df_rects = self.binning.edges_xy(col_x, col_y)
         df_rects = df_rects[~df_rects["bin"].isin(outlier_bins)]
@@ -189,7 +189,7 @@ class DiagnosticPlotter:
             + theme_bw()
         )
 
-        outlier_bins = self.data_train.outlier_bins
+        outlier_bins = self.data_treatment.outlier_bins
         outlier_bins = outlier_bins[outlier_bins["outlier"]]["bin"].values
         df_rects = self.binning.edges_xy(col, col)
         df_rects = df_rects[~df_rects["bin"].isin(outlier_bins)]
@@ -211,22 +211,22 @@ class Diagnostics(DiagnosticPlotter):
     def __init__(self, model):
         self.model = model
         self.binning = self.model.binning
-        self.data_train = self.model.data_train
-        self.data_test = self.model.data_test
+        self.data_treatment = self.model.data_treatment
+        self.data_pool = self.model.data_pool
         self.sampled = self.model.sampled
 
-        self.train_label = self.model.train_label
-        self.test_label = self.model.test_label
+        self.treatment_label = self.model.treatment_label
+        self.pool_label = self.model.pool_label
         self.data_sample = self.model.data_sample
 
         # these two will always exist
-        df_train = self.model.data_train.df
-        df_test = self.model.data_test.df
+        df_treatment = self.model.data_treatment.df
+        df_pool = self.model.data_pool.df
         self.default_cols = self.model.col_names
 
         self.available_equiv_labels = [
-            self.train_label,
-            self.test_label,
+            self.treatment_label,
+            self.pool_label,
             "sample",
         ]
         df_sample = (
@@ -234,7 +234,7 @@ class Diagnostics(DiagnosticPlotter):
             if self.data_sample is not None
             else pd.DataFrame()
         )
-        self.labeled_dfs = [df_train, df_test, df_sample]
+        self.labeled_dfs = [df_treatment, df_pool, df_sample]
 
         self.df_all = concat_dfs(
             self.labeled_dfs, "population", self.available_equiv_labels
@@ -265,11 +265,11 @@ class Diagnostics(DiagnosticPlotter):
             raise ValueError(
                 f"equiv_label_y must be one of: {self.available_equiv_labels}"
             )
-        equiv_label_x = equiv_label_x if equiv_label_x else self.train_label
+        equiv_label_x = equiv_label_x if equiv_label_x else self.treatment_label
         equiv_label_y = (
             equiv_label_y
             if equiv_label_y
-            else ("sample" if self.data_sample else self.test_label)
+            else ("sample" if self.data_sample else self.pool_label)
         )
         return equiv_label_x, equiv_label_y
 
@@ -320,10 +320,10 @@ class Diagnostics(DiagnosticPlotter):
         Attributes
         ----------
         equiv_label_x: str
-            First label to measure equivalence against (defaults to training label) 
+            First label to measure equivalence against (defaults to treatment label) 
         equiv_label_y: str
             Second label to measure equivalence against (defaults to sample if available,
-             otherwise defaults to full test set)
+             otherwise defaults to full pool set)
         """
         equiv_label_x, equiv_label_y = self._check_equiv_labels(
             equiv_label_x, equiv_label_y
@@ -360,10 +360,10 @@ class Diagnostics(DiagnosticPlotter):
         Attributes
         ----------
         equiv_label_x: str
-            First label to measure equivalence against (defaults to training label) 
+            First label to measure equivalence against (defaults to treatment label) 
         equiv_label_y: str
             Second label to measure equivalence against (defaults to sample if available,
-             otherwise defaults to full test set)
+             otherwise defaults to full pool set)
         """
         equiv_label_x, equiv_label_y = self._check_equiv_labels(
             equiv_label_x, equiv_label_y
@@ -400,7 +400,7 @@ class Diagnostics(DiagnosticPlotter):
             binned_data_x = BinnedData(
                 df_equiv_x[[value_col]],
                 binning_x,
-                min_n_train_per_bin=chisquare_n_values_per_bin,
+                min_n_treatment_per_bin=chisquare_n_values_per_bin,
             )
 
             binning_y = Binning()
@@ -414,7 +414,7 @@ class Diagnostics(DiagnosticPlotter):
             binned_data_y = BinnedData(
                 df_equiv_y[[value_col]],
                 binning_y,
-                min_n_train_per_bin=chisquare_n_values_per_bin,
+                min_n_treatment_per_bin=chisquare_n_values_per_bin,
             )
             chisquare_x = binned_data_x.df.groupby("_bin_label")[value_col].mean()
             chisquare_y = binned_data_y.df.groupby("_bin_label")[value_col].mean()
@@ -440,10 +440,10 @@ class Diagnostics(DiagnosticPlotter):
         cols: str
             Columns to plot and calculate equivalence for. Defaults to all available cols. 
         equiv_label_x: str
-            First label to measure equivalence against (defaults to training label) 
+            First label to measure equivalence against (defaults to treatment label) 
         equiv_label_y: str
             Second label to measure equivalence against (defaults to sample if available,
-             otherwise defaults to full test set)
+             otherwise defaults to full pool set)
         """
         if (
             equiv_label_x is not None
@@ -459,11 +459,11 @@ class Diagnostics(DiagnosticPlotter):
             raise ValueError(
                 f"equiv_label_y must be one of: {self.available_equiv_labels}"
             )
-        equiv_label_x = equiv_label_x if equiv_label_x else self.train_label
+        equiv_label_x = equiv_label_x if equiv_label_x else self.treatment_label
         equiv_label_y = (
             equiv_label_y
             if equiv_label_y
-            else ("sample" if self.data_sample else self.test_label)
+            else ("sample" if self.data_sample else self.pool_label)
         )
         cols = cols if cols else self.default_cols
 
@@ -485,21 +485,21 @@ class Diagnostics(DiagnosticPlotter):
 
     def count_bins(self):
 
-        df_train = self.data_train.count_bins(skip_outliers=True).rename(
+        df_treatment = self.data_treatment.count_bins(skip_outliers=True).rename(
             columns={
-                "n": f"n_{self.train_label}",
-                "n_pct": f"n_pct_{self.train_label}",
+                "n": f"n_{self.treatment_label}",
+                "n_pct": f"n_pct_{self.treatment_label}",
             }
         )
 
-        df_test = self.data_test.count_bins(skip_outliers=False).rename(
+        df_pool = self.data_pool.count_bins(skip_outliers=False).rename(
             columns={
-                "n": f"n_{self.test_label}",
-                "n_pct": f"n_pct_{self.test_label}",
+                "n": f"n_{self.pool_label}",
+                "n_pct": f"n_pct_{self.pool_label}",
             }
         )
 
-        df = df_train.merge(df_test)
+        df = df_treatment.merge(df_pool)
 
         if self.sampled:
             df_sample = self.data_sample.count_bins(skip_outliers=False).rename(
@@ -508,13 +508,13 @@ class Diagnostics(DiagnosticPlotter):
             df = df.merge(df_sample)
         return df
 
-    def n_sampled_to_n_train_ratio(self):
+    def n_sampled_to_n_treatment_ratio(self):
         bin_df = self.count_bins()
         if bin_df.empty:
             return 0
         else:
             return (
-                (bin_df["n_sampled"] / bin_df[f"n_{self.train_label}"])
+                (bin_df["n_sampled"] / bin_df[f"n_{self.treatment_label}"])
                 .min()
                 .astype(int)
             )

@@ -28,44 +28,44 @@ from eesampling.bins import ModelSamplingException
 
 def test_stratified_sampling_fit_and_sample():
     stratified_sampling_obj = StratifiedSampling()
-    df_train = pd.DataFrame([{"id": f"id_{x}", "col1": x} for x in range(0, 10)])
-    df_test = pd.DataFrame([{"id": f"id_{x}", "col1": x / 2.0} for x in range(0, 1000)])
+    df_treatment = pd.DataFrame([{"id": f"id_{x}", "col1": x} for x in range(0, 10)])
+    df_pool = pd.DataFrame([{"id": f"id_{x}", "col1": x / 2.0} for x in range(0, 1000)])
     stratified_sampling_obj.add_column("col1")
 
     stratified_sampling_obj.fit_and_sample(
-        df_train,
-        df_test,
+        df_treatment,
+        df_pool,
         n_samples_approx=10,
         random_seed=1,
-        min_n_sampled_to_n_train_ratio=None,
+        min_n_sampled_to_n_treatment_ratio=None,
     )
     sample1 = stratified_sampling_obj.data_sample.df.index.values
 
     stratified_sampling_obj.fit_and_sample(
-        df_train,
-        df_test,
+        df_treatment,
+        df_pool,
         n_samples_approx=10,
         random_seed=1,
-        min_n_sampled_to_n_train_ratio=None,
+        min_n_sampled_to_n_treatment_ratio=None,
     )
     sample2 = stratified_sampling_obj.data_sample.df.index.values
     assert set(sample1) == set(sample2)
 
     stratified_sampling_obj.fit_and_sample(
-        df_train,
-        df_test,
+        df_treatment,
+        df_pool,
         n_samples_approx=10,
         random_seed=1,
-        min_n_sampled_to_n_train_ratio=None,
+        min_n_sampled_to_n_treatment_ratio=None,
     )
     sample1 = stratified_sampling_obj.data_sample.df.index.values
 
     stratified_sampling_obj.fit_and_sample(
-        df_train,
-        df_test,
+        df_treatment,
+        df_pool,
         n_samples_approx=10,
         random_seed=5,
-        min_n_sampled_to_n_train_ratio=None,
+        min_n_sampled_to_n_treatment_ratio=None,
     )
     sample2 = stratified_sampling_obj.data_sample.df.index.values
     assert set(sample1) != set(sample2)
@@ -99,21 +99,21 @@ def test_stratified_sampling_fit_and_sample_random_seed_check():
     stratification_params = ["baseline_annual_kwh", "baseline_bd_pct_heating_load"]
 
     model = StratifiedSampling(
-        train_label="treatment", test_label="comparison", output_name="control"
+        treatment_label="treatment", pool_label="comparison", output_name="control"
     )
     [model.add_column(col) for col in stratification_params]
 
-    model.fit(df_treatment, min_n_train_per_bin=0)
+    model.fit(df_treatment, min_n_treatment_per_bin=0)
     model.sample(
         df_comparison, n_samples_approx=n_samples_approx, random_seed=random_seed
     )
 
     for run_num in range(0, 10):
         model_temp = StratifiedSampling(
-            train_label="treatment", test_label="comparison", output_name="control"
+            treatment_label="treatment", pool_label="comparison", output_name="control"
         )
         [model_temp.add_column(col) for col in stratification_params]
-        model_temp.fit(df_treatment, min_n_train_per_bin=0)
+        model_temp.fit(df_treatment, min_n_treatment_per_bin=0)
         model_temp.sample(
             df_comparison, n_samples_approx=n_samples_approx, random_seed=random_seed
         )
@@ -141,8 +141,8 @@ def test_stratified_sampling_fit_and_sample_min_allowed_max_allowed(
     col_name = "col1"
     min_value_allowed = 5
     max_value_allowed = 8
-    df_train = pd.DataFrame([{"id": f"id_{x}", col_name: x} for x in range(0, 10)])
-    df_test = pd.DataFrame(
+    df_treatment = pd.DataFrame([{"id": f"id_{x}", col_name: x} for x in range(0, 10)])
+    df_pool = pd.DataFrame(
         [{"id": f"id_{x}", col_name: x} for x in np.arange(0, 20, 0.1)]
     )
     stratified_sampling_obj.add_column(
@@ -152,11 +152,11 @@ def test_stratified_sampling_fit_and_sample_min_allowed_max_allowed(
     )
 
     stratified_sampling_obj.fit_and_sample(
-        df_train,
-        df_test,
+        df_treatment,
+        df_pool,
         n_samples_approx=4,
         random_seed=1,
-        min_n_sampled_to_n_train_ratio=None,
+        min_n_sampled_to_n_treatment_ratio=None,
     )
     output = stratified_sampling_obj.data_sample.df[col_name].values
     assert min(output) > min_value_allowed
@@ -164,14 +164,14 @@ def test_stratified_sampling_fit_and_sample_min_allowed_max_allowed(
 
 
 def test_stratified_sampling_fit_and_sample_n_samples_approx_limit(
-    df_train, df_test, col_name
+    df_treatment, df_pool, col_name
 ):
     stratified_sampling_obj = StratifiedSampling()
     stratified_sampling_obj.add_column(col_name)
 
     n_samples_approx = 40
     stratified_sampling_obj.fit_and_sample(
-        df_train, df_test, n_samples_approx=n_samples_approx, random_seed=1
+        df_treatment, df_pool, n_samples_approx=n_samples_approx, random_seed=1
     )
     output = stratified_sampling_obj.data_sample.df
     assert output["_bin_label"].nunique() == 2
@@ -180,11 +180,11 @@ def test_stratified_sampling_fit_and_sample_n_samples_approx_limit(
 
 
 def test_stratified_sampling_fit_and_sample_n_samples_approx_limit(
-    df_train, df_test, col_name
+    df_treatment, df_pool, col_name
 ):
     stratified_sampling_obj = StratifiedSampling()
     col_name = "col1"
-    df_train = pd.DataFrame(
+    df_treatment = pd.DataFrame(
         [
             {"id": f"id_{x}", col_name: x}
             for x in (
@@ -195,18 +195,18 @@ def test_stratified_sampling_fit_and_sample_n_samples_approx_limit(
             )
         ]
     )
-    df_test = pd.DataFrame(
+    df_pool = pd.DataFrame(
         [{"id": f"id_{x}", col_name: x} for x in np.arange(0, 20, 0.01)]
     )
     stratified_sampling_obj.add_column(col_name)
 
     n_samples_approx = 40
     stratified_sampling_obj.fit_and_sample(
-        df_train,
-        df_test,
+        df_treatment,
+        df_pool,
         n_samples_approx=n_samples_approx,
         random_seed=1,
-        min_n_sampled_to_n_train_ratio=None,
+        min_n_sampled_to_n_treatment_ratio=None,
     )
     output = stratified_sampling_obj.data_sample.df
     assert output["_bin_label"].nunique() == 2
@@ -215,12 +215,12 @@ def test_stratified_sampling_fit_and_sample_n_samples_approx_limit(
 
 
 def test_stratified_sampling_fit_and_sample_n_samples_approx_variations(
-    df_train, df_test, col_name
+    df_treatment, df_pool, col_name
 ):
     stratified_sampling_obj = StratifiedSampling()
     stratified_sampling_obj.add_column(col_name)
     ## attempting to estimate both n_bins and n_samples
-    stratified_sampling_obj.fit_and_sample(df_train, df_test, random_seed=1)
+    stratified_sampling_obj.fit_and_sample(df_treatment, df_pool, random_seed=1)
     output = stratified_sampling_obj.data_sample.df
     bins_df = stratified_sampling_obj.diagnostics().count_bins()
     assert len(bins_df) == 3
@@ -228,14 +228,14 @@ def test_stratified_sampling_fit_and_sample_n_samples_approx_variations(
     ## enforcing 1 bin
     stratified_sampling_obj = StratifiedSampling()
     stratified_sampling_obj.add_column(col_name, n_bins=1)
-    stratified_sampling_obj.fit_and_sample(df_train, df_test, random_seed=1)
+    stratified_sampling_obj.fit_and_sample(df_treatment, df_pool, random_seed=1)
     output = stratified_sampling_obj.data_sample.df
     bins_df = stratified_sampling_obj.diagnostics().count_bins()
 
     ## enforcing 4 bins
     stratified_sampling_obj = StratifiedSampling()
     stratified_sampling_obj.add_column(col_name, n_bins=4)
-    stratified_sampling_obj.fit_and_sample(df_train, df_test, random_seed=1)
+    stratified_sampling_obj.fit_and_sample(df_treatment, df_pool, random_seed=1)
     output = stratified_sampling_obj.data_sample.df
     bins_df = stratified_sampling_obj.diagnostics().count_bins()
     assert len(bins_df) == 4
@@ -244,11 +244,11 @@ def test_stratified_sampling_fit_and_sample_n_samples_approx_variations(
     stratified_sampling_obj = StratifiedSampling()
     stratified_sampling_obj.add_column(col_name)
     stratified_sampling_obj.fit_and_sample(
-        df_train,
-        df_test,
+        df_treatment,
+        df_pool,
         n_samples_approx=40,
         random_seed=1,
-        min_n_sampled_to_n_train_ratio=None,
+        min_n_sampled_to_n_treatment_ratio=None,
     )
     output = stratified_sampling_obj.data_sample.df
     bins_df = stratified_sampling_obj.diagnostics().count_bins()
@@ -256,51 +256,51 @@ def test_stratified_sampling_fit_and_sample_n_samples_approx_variations(
     assert abs(len(output) - 40) <= 1
 
 
-def test_stratified_sampling_fit_and_sample_too_many_bins(df_train, df_test, col_name):
-    df_train["col2"] = df_train[col_name].astype(int)
-    df_test["col2"] = df_test[col_name].astype(int)
-    df_train["col3"] = df_train[col_name].astype(int) * 2
-    df_test["col3"] = df_test[col_name].astype(int) / 2
+def test_stratified_sampling_fit_and_sample_too_many_bins(df_treatment, df_pool, col_name):
+    df_treatment["col2"] = df_treatment[col_name].astype(int)
+    df_pool["col2"] = df_pool[col_name].astype(int)
+    df_treatment["col3"] = df_treatment[col_name].astype(int) * 2
+    df_pool["col3"] = df_pool[col_name].astype(int) / 2
     stratified_sampling_obj = StratifiedSampling()
     stratified_sampling_obj.add_column(col_name)
     stratified_sampling_obj.add_column("col2")
     stratified_sampling_obj.add_column("col3")
     ## attempting to estimate both n_bins and n_samples
     with pytest.raises(ValueError):
-        stratified_sampling_obj.fit_and_sample(df_train, df_test, random_seed=1)
+        stratified_sampling_obj.fit_and_sample(df_treatment, df_pool, random_seed=1)
 
 
 def test_stratified_sampling_fit_and_sample_dont_require_equivalence(
-    df_train, df_test, col_name
+    df_treatment, df_pool, col_name
 ):
-    df_train["col2"] = df_train[col_name].astype(int)
-    df_test["col2"] = df_test[col_name].astype(int)
-    df_train["col3"] = df_train[col_name].astype(int) * 2
-    df_test["col3"] = df_test[col_name].astype(int) / 2
+    df_treatment["col2"] = df_treatment[col_name].astype(int)
+    df_pool["col2"] = df_pool[col_name].astype(int)
+    df_treatment["col3"] = df_treatment[col_name].astype(int) * 2
+    df_pool["col3"] = df_pool[col_name].astype(int) / 2
     stratified_sampling_obj = StratifiedSampling()
     stratified_sampling_obj.add_column(col_name)
     stratified_sampling_obj.add_column("col2")
     stratified_sampling_obj.add_column("col3", auto_bin_require_equivalence=False)
     ## attempting to estimate both n_bins and n_samples
-    stratified_sampling_obj.fit_and_sample(df_train, df_test, random_seed=1)
+    stratified_sampling_obj.fit_and_sample(df_treatment, df_pool, random_seed=1)
     output = stratified_sampling_obj.data_sample.df
     bins_df = stratified_sampling_obj.diagnostics().count_bins()
     assert not output.empty
 
 
 def test_stratified_sampling_fit_and_sample_upper_limit_n_samples_approx(
-    df_train, df_test, col_name
+    df_treatment, df_pool, col_name
 ):
     stratified_sampling_obj = StratifiedSampling()
     stratified_sampling_obj.add_column(col_name)
     ## attempting to estimate both n_bins and n_samples
     with pytest.raises(ModelSamplingException):
         stratified_sampling_obj.fit_and_sample(
-            df_train, df_test, random_seed=1, n_samples_approx=1000
+            df_treatment, df_pool, random_seed=1, n_samples_approx=1000
         )
     stratified_sampling_obj.fit_and_sample(
-        df_train,
-        df_test,
+        df_treatment,
+        df_pool,
         random_seed=1,
         n_samples_approx=1000,
         relax_n_samples_approx_constraint=True,

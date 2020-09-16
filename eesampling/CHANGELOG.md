@@ -4,13 +4,13 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Rename train --> tretment, test --> pool 
 
 0.6.1
 -----
 
+* Fix Github URL
 
-* Placeholder
 
 0.6.0
 -----

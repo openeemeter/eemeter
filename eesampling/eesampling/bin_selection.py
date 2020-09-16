@@ -31,17 +31,17 @@ class StratifiedSamplingBinSelector(object):
     def __init__(
         self,
         model,
-        df_train,
-        df_test,
+        df_treatment,
+        df_pool,
         df_for_equivalence,
         equivalence_groupby_col,
         equivalence_value_col,
         equivalence_id_col,
         how,
         n_samples_approx=5000,
-        min_n_train_per_bin=0,
+        min_n_treatment_per_bin=0,
         random_seed=1,
-        min_n_sampled_to_n_train_ratio=0.25,
+        min_n_sampled_to_n_treatment_ratio=0.25,
         min_n_bins=1,
         max_n_bins=8,
         chisquare_n_values_per_bin=25,
@@ -52,23 +52,23 @@ class StratifiedSamplingBinSelector(object):
         Attributes
         ==========
 
-        df_train: pandas.DataFrame
+        df_treatment: pandas.DataFrame
             dataframe to use for constructing the stratified sampling bins.
-        df_test: pandas.DataFrame
+        df_pool: pandas.DataFrame
             dataframe to sample from according to the constructed stratified sampling bins.
         df_for_equivalence: pandas.DataFrame
             dataframe to join to for calculating distances
         n_samples_aprox: int
-            approximate number of total samples from df_test. It is approximate because
+            approximate number of total samples from df_pool. It is approximate because
             there may be some slight discrepencies around the total count to ensure
             that each bin has the correct percentage of the total.
             A None value means that it will take as many samples as it has available.
-        min_n_train_per_bin: int
-            Minimum number of training samples that must exist in a given bin for 
+        min_n_treatment_per_bin: int
+            Minimum number of treatment samples that must exist in a given bin for 
             it to be considered a non-outlier bin (only applicable if there are 
             cols with fixed_width=True)
-        min_n_sampled_to_n_train_ratio: int
-            Minimum number samples that must exist in each bin per training datapoint in that bin.
+        min_n_sampled_to_n_treatment_ratio: int
+            Minimum number samples that must exist in each bin per treatment datapoint in that bin.
         relax_n_samples_approx_constraint: bool
             If True, treats n_samples_approx as an upper bound, but gets as many comparison group
             meters as available up to n_samples_approx. If False, it raises an exception
@@ -77,9 +77,9 @@ class StratifiedSamplingBinSelector(object):
         # Settings
         self.how = how
         self.n_samples_approx = n_samples_approx
-        self.min_n_train_per_bin = min_n_train_per_bin
+        self.min_n_treatment_per_bin = min_n_treatment_per_bin
         self.random_seed = random_seed
-        self.min_n_sampled_to_n_train_ratio = min_n_sampled_to_n_train_ratio
+        self.min_n_sampled_to_n_treatment_ratio = min_n_sampled_to_n_treatment_ratio
         self.min_n_bins = min_n_bins
         self.max_n_bins = max_n_bins
         self.chisquare_n_values_per_bin = chisquare_n_values_per_bin
@@ -89,11 +89,11 @@ class StratifiedSamplingBinSelector(object):
         self.equivalence_id_col = equivalence_id_col
 
         self.model = model
-        self.df_train = df_train
-        self.df_test = df_test
+        self.df_treatment = df_treatment
+        self.df_pool = df_pool
         self.df_for_equivalence = df_for_equivalence
         self.n_bin_options_df = None
-        self.equiv_train = None
+        self.equiv_treatment = None
         self.equiv_samples = []
 
         if len(self.model.columns) == 0:
@@ -126,24 +126,24 @@ class StratifiedSamplingBinSelector(object):
                 logger.debug(f"Skipping {bins_selected_str} (disqualified)")
                 continue
             self.model.fit(
-                self.df_train,
-                min_n_train_per_bin=min_n_train_per_bin,
+                self.df_treatment,
+                min_n_treatment_per_bin=min_n_treatment_per_bin,
                 random_seed=random_seed,
             )
             self.model.sample(
-                self.df_test,
+                self.df_pool,
                 n_samples_approx=n_samples_approx,
                 random_seed=random_seed,
                 relax_n_samples_approx_constraint=relax_n_samples_approx_constraint,
             )
-            n_sampled_to_n_train_ratio = (
-                self.model.diagnostics().n_sampled_to_n_train_ratio()
+            n_sampled_to_n_treatment_ratio = (
+                self.model.diagnostics().n_sampled_to_n_treatment_ratio()
             )
-            if n_sampled_to_n_train_ratio < min_n_sampled_to_n_train_ratio:
+            if n_sampled_to_n_treatment_ratio < min_n_sampled_to_n_treatment_ratio:
                 logger.info(
-                    f"Insufficient test data for {bins_selected_str}:"
-                    f"found {n_sampled_to_n_train_ratio}:1 but need "
-                    f"{min_n_sampled_to_n_train_ratio}:1."
+                    f"Insufficient pool data for {bins_selected_str}:"
+                    f"found {n_sampled_to_n_treatment_ratio}:1 but need "
+                    f"{min_n_sampled_to_n_treatment_ratio}:1."
                 )
                 disqualified_options = self.n_bin_options_df.loc[
                     (
@@ -163,7 +163,7 @@ class StratifiedSamplingBinSelector(object):
                     )
                 )
                 continue
-            equiv_train, equiv_sample, equivalence_distance = self.model.diagnostics().records_based_equivalence(
+            equiv_treatment, equiv_sample, equivalence_distance = self.model.diagnostics().records_based_equivalence(
                 self.df_for_equivalence,
                 equivalence_groupby_col,
                 equivalence_value_col,
@@ -189,7 +189,7 @@ class StratifiedSamplingBinSelector(object):
             logging.info(
                 f"Computing bins: {bins_selected_str} distance: "
                 f"{equivalence_distance:.2f}, "
-                f"pct: {100*equivalence_distance/sum(equiv_train[equivalence_value_col]):.2f}"
+                f"pct: {100*equivalence_distance/sum(equiv_treatment[equivalence_value_col]):.2f}"
             )
             if equivalence_distance < min_distance:
                 min_distance = equivalence_distance
@@ -200,25 +200,25 @@ class StratifiedSamplingBinSelector(object):
 
         # same for all of them anyway
         # TODO (ssuffian): Calculate this cleaner
-        equiv_train.name = self.model.train_label
-        self.equiv_train = equiv_train
+        equiv_treatment.name = self.model.treatment_label
+        self.equiv_treatment = equiv_treatment
 
         self.model.columns = min_columns
         bins_selected_str = self.model.get_all_n_bins_as_str()
         logging.info(
             f"Selected bin: {bins_selected_str} distance: "
             f"{min_distance:.2f}, "
-            f"pct: {100*min_distance/sum(equiv_train[equivalence_value_col]):.2f}, "
+            f"pct: {100*min_distance/sum(equiv_treatment[equivalence_value_col]):.2f}, "
             f"random_seed: {random_seed}"
         )
         self.model.fit(
-            self.df_train,
-            min_n_train_per_bin=min_n_train_per_bin,
+            self.df_treatment,
+            min_n_treatment_per_bin=min_n_treatment_per_bin,
             random_seed=random_seed,
         )
         # if n_samples_approx is None, use the maximum available.
         self.model.sample(
-            self.df_test,
+            self.df_pool,
             n_samples_approx=n_samples_approx,
             random_seed=random_seed,
             relax_n_samples_approx_constraint=relax_n_samples_approx_constraint,
@@ -230,7 +230,7 @@ class StratifiedSamplingBinSelector(object):
         def _get_equiv_comparison_pool():
             df_combined = self.df_for_equivalence[
                 self.df_for_equivalence[self.equivalence_id_col].isin(
-                    self.df_test["id"]
+                    self.df_pool["id"]
                 )
             ]
             equiv_full_avg = df_combined.groupby(self.equivalence_groupby_col)[
@@ -239,12 +239,12 @@ class StratifiedSamplingBinSelector(object):
             equiv_full_avg.name = "comparison pool"
             return equiv_full_avg
 
-        self.equiv_test_avg = _get_equiv_comparison_pool()
+        self.equiv_pool_avg = _get_equiv_comparison_pool()
 
-        self.equiv_train_avg = self.equiv_train.groupby(
+        self.equiv_treatment_avg = self.equiv_treatment.groupby(
             self.equivalence_groupby_col
         ).mean()
-        self.equiv_train_avg.columns = ["treatment"]
+        self.equiv_treatment_avg.columns = ["treatment"]
 
         self.equiv_samples_avg = (
             pd.concat(self.equiv_samples)
@@ -263,9 +263,9 @@ class StratifiedSamplingBinSelector(object):
         return {
             "how": self.how,
             "n_samples_approx": self.n_samples_approx,
-            "min_n_train_per_bin": self.min_n_train_per_bin,
+            "min_n_treatment_per_bin": self.min_n_treatment_per_bin,
             "random_seed": self.random_seed,
-            "min_n_sampled_to_n_train_ratio": self.min_n_sampled_to_n_train_ratio,
+            "min_n_sampled_to_n_treatment_ratio": self.min_n_sampled_to_n_treatment_ratio,
             "min_n_bins": self.min_n_bins,
             "max_n_bins": self.max_n_bins,
             "chisquare_n_values_per_bin": self.chisquare_n_values_per_bin,
@@ -287,17 +287,17 @@ class StratifiedSamplingBinSelector(object):
             "n_bin_results": self.n_bin_results.to_dict("records"),
             "chisquare_averages": {
                 "selected_sample": selected_sample_df.to_dict("records"),
-                self.model.train_label: self.equiv_train.to_dict("records"),
+                self.model.treatment_label: self.equiv_treatment.to_dict("records"),
             },
             "averages": {
                 "samples": self.equiv_samples_avg.reset_index().to_dict("records"),
                 "selected_sample": self.equiv_samples_avg[self.bins_selected_str]
                 .reset_index()
                 .to_dict("records"),
-                self.model.train_label: self.equiv_train_avg.reset_index().to_dict(
+                self.model.treatment_label: self.equiv_treatment_avg.reset_index().to_dict(
                     "records"
                 ),
-                self.model.test_label: self.equiv_test_avg.reset_index().to_dict(
+                self.model.pool_label: self.equiv_pool_avg.reset_index().to_dict(
                     "records"
                 ),
             },
@@ -306,7 +306,7 @@ class StratifiedSamplingBinSelector(object):
     def plot_records_based_equiv_average(self, plot=True):
 
         equiv_df = pd.concat(
-            [self.equiv_train_avg, self.equiv_test_avg, self.equiv_samples_avg], axis=1
+            [self.equiv_treatment_avg, self.equiv_pool_avg, self.equiv_samples_avg], axis=1
         )
 
         wrong_models = [

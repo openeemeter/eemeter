@@ -9,10 +9,10 @@ def col_name():
 
 
 @pytest.fixture
-def df_train(col_name):
+def df_treatment(col_name):
     return pd.DataFrame(
         [
-            {"id": f"id_train_{x}", col_name: x}
+            {"id": f"id_treatment_{x}", col_name: x}
             for x in (
                 list(np.arange(0, 2, 0.1))
                 + list(np.arange(2, 4, 0.5))
@@ -24,10 +24,10 @@ def df_train(col_name):
 
 
 @pytest.fixture
-def df_test(col_name):
+def df_pool(col_name):
     return pd.DataFrame(
         [
-            {"id": f"id_test_{x}", col_name: x}
+            {"id": f"id_pool_{x}", col_name: x}
             for x in np.arange(0, 20, 0.01)
         ]
     )
@@ -35,8 +35,8 @@ def df_test(col_name):
 
 
 @pytest.fixture
-def df_equiv(df_train, df_test):
-    df_train_records = pd.DataFrame(
+def df_equiv(df_treatment, df_pool):
+    df_treatment_records = pd.DataFrame(
         [
             {
                 "id": dim_project_site_meter_id,
@@ -44,10 +44,10 @@ def df_equiv(df_train, df_test):
                 "baseline_predicted_usage": month*i,
             }
             for month in range(1, 13)
-            for i, dim_project_site_meter_id in enumerate(df_train["id"].values)
+            for i, dim_project_site_meter_id in enumerate(df_treatment["id"].values)
         ]
     )
-    df_test_records = pd.DataFrame(
+    df_pool_records = pd.DataFrame(
         [
             {
                 "id": dim_project_site_meter_id,
@@ -55,7 +55,7 @@ def df_equiv(df_train, df_test):
                 "baseline_predicted_usage": (13 - month) * i * 0.1,
             }
             for month in range(1, 13)
-            for i, dim_project_site_meter_id in enumerate(df_test["id"].values)
+            for i, dim_project_site_meter_id in enumerate(df_pool["id"].values)
         ]
     )
-    return pd.concat([df_train_records, df_test_records])
+    return pd.concat([df_treatment_records, df_pool_records])

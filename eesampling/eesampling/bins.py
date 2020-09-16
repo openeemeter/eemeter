@@ -30,10 +30,10 @@ class ModelSamplingException(Exception):
 
 
 class BinnedData:
-    def __init__(self, df, binning, min_n_train_per_bin=0):
+    def __init__(self, df, binning, min_n_treatment_per_bin=0):
         self.binning = binning
         self.df = self._map_bins(df)
-        self.min_n_train_per_bin = min_n_train_per_bin
+        self.min_n_treatment_per_bin = min_n_treatment_per_bin
         self.outlier_bins = self._outlier_bins()
         self._flag_outliers()
 
@@ -84,7 +84,7 @@ class BinnedData:
             .reset_index()
             .rename(columns={"_bin": "n", "index": "bin"})
         )
-        df_bins["outlier"] = df_bins["n"] < self.min_n_train_per_bin
+        df_bins["outlier"] = df_bins["n"] < self.min_n_treatment_per_bin
         return df_bins
 
     def _flag_outliers(self):
@@ -185,15 +185,15 @@ class MultiBin:
     def get_max_n_target(self, df):
         return len(df[self.filter_expr()(df)])
 
-    def sample(self, df, n_target, min_n_train_per_bin, random_seed=1):
+    def sample(self, df, n_target, min_n_treatment_per_bin, random_seed=1):
         """Sample n_target elements from dataframe df that fall 
         within each dimension of this bin."""
 
         d1 = df[self.filter_expr()(df)]
 
-        if n_target < min_n_train_per_bin:
+        if n_target < min_n_treatment_per_bin:
             raise ModelSamplingException(
-                f"Bin {self} has target of {n_target} control meters which is less than minimum of {min_n_train_per_bin}.  Try increasing n_outputs. \n\nBins: {chr(10).join([str(b) for b in self.bins])}"
+                f"Bin {self} has target of {n_target} control meters which is less than minimum of {min_n_treatment_per_bin}.  Try increasing n_outputs. \n\nBins: {chr(10).join([str(b) for b in self.bins])}"
             )
 
         if len(d1) < n_target:
@@ -224,22 +224,22 @@ class MultiBin:
 
 
 def sample_bins(
-    binned_data_train,
-    binned_data_test,
+    binned_data_treatment,
+    binned_data_pool,
     random_seed,
     n_samples_approx=None,
     skip_outliers=True,
     relax_n_samples_approx_constraint=False,
 ):
 
-    counts = binned_data_train.count_bins(skip_outliers=skip_outliers)
+    counts = binned_data_treatment.count_bins(skip_outliers=skip_outliers)
 
     if len(counts) == 0:
-        raise ValueError("No non-outlier training data remaining.")
+        raise ValueError("No non-outlier treatment data remaining.")
 
     # a way to ensure you get the max number of samples if n_samples_approx=None
     counts["n_samples_available"] = [
-        row["bin"].get_max_n_target(binned_data_test.df)
+        row["bin"].get_max_n_target(binned_data_pool.df)
         for index, row in counts.iterrows()
     ]
     max_possible_n_samples_approx = int(
@@ -263,9 +263,9 @@ def sample_bins(
     df = pd.concat(
         [
             row["bin"].sample(
-                binned_data_test.df,
+                binned_data_pool.df,
                 n_target=row["n_target"],
-                min_n_train_per_bin=binned_data_train.min_n_train_per_bin,
+                min_n_treatment_per_bin=binned_data_treatment.min_n_treatment_per_bin,
                 random_seed=random_seed,
             )
             for index, row in counts.iterrows()

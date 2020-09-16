@@ -25,17 +25,17 @@ import pytest
 
 
 def test_stratified_sampling_fit_and_sample_records_equivalence(
-    df_train, df_test, df_equiv, col_name
+    df_treatment, df_pool, df_equiv, col_name
 ):
     stratified_sampling_obj = StratifiedSampling()
-    df_test["col2"] = df_test[col_name]
-    df_train["col2"] = df_train[col_name]
+    df_pool["col2"] = df_pool[col_name]
+    df_treatment["col2"] = df_treatment[col_name]
     stratified_sampling_obj.add_column(col_name)
     stratified_sampling_obj.add_column("col2")
     ## attempting to estimate both n_bins and n_samples
     StratifiedSamplingBinSelector(stratified_sampling_obj,
-        df_train,
-        df_test,
+        df_treatment,
+        df_pool,
         df_equiv,
         equivalence_groupby_col="month",
         equivalence_value_col="baseline_predicted_usage",
@@ -50,7 +50,7 @@ def test_stratified_sampling_fit_and_sample_records_equivalence(
 
 
 def test_stratified_sampling_fit_and_sample_records_equivalence_too_many_bins(
-    df_train, df_test, df_equiv, col_name
+    df_treatment, df_pool, df_equiv, col_name
 ):
     stratified_sampling_obj = StratifiedSampling()
 
@@ -58,8 +58,8 @@ def test_stratified_sampling_fit_and_sample_records_equivalence_too_many_bins(
     ## attempting to estimate both n_bins and n_samples
     with pytest.raises(ModelSamplingException):
         model_w_selected_bins = StratifiedSamplingBinSelector(stratified_sampling_obj,
-            df_train,
-            df_test,
+            df_treatment,
+            df_pool,
             df_equiv,
             equivalence_groupby_col="month",
             equivalence_value_col="baseline_predicted_usage",
@@ -73,13 +73,13 @@ def test_stratified_sampling_fit_and_sample_records_equivalence_too_many_bins(
 
 
 def test_stratified_sampling_fit_and_sample_records_equivalence_idempotent_check(
-    df_train, df_test, df_equiv, col_name
+    df_treatment, df_pool, df_equiv, col_name
 ):
-    df_train["col2"] = df_train[col_name] * 2
-    df_train["col3"] = df_train[col_name] * 3
+    df_treatment["col2"] = df_treatment[col_name] * 2
+    df_treatment["col3"] = df_treatment[col_name] * 3
 
-    df_test["col2"] = df_test[col_name] * 2
-    df_test["col3"] = df_test[col_name] * 3
+    df_pool["col2"] = df_pool[col_name] * 2
+    df_pool["col3"] = df_pool[col_name] * 3
 
     stratified_sampling_obj = StratifiedSampling()
     stratified_sampling_obj.add_column(col_name)
@@ -87,8 +87,8 @@ def test_stratified_sampling_fit_and_sample_records_equivalence_idempotent_check
     stratified_sampling_obj.add_column("col3")
 
     StratifiedSamplingBinSelector(stratified_sampling_obj,
-        df_train,
-        df_test,
+        df_treatment,
+        df_pool,
         df_equiv,
         equivalence_groupby_col="month",
         equivalence_value_col="baseline_predicted_usage",
@@ -105,8 +105,8 @@ def test_stratified_sampling_fit_and_sample_records_equivalence_idempotent_check
     stratified_sampling_obj.add_column("col2")
     stratified_sampling_obj.add_column("col3")
     StratifiedSamplingBinSelector(stratified_sampling_obj,
-        df_train,
-        df_test,
+        df_treatment,
+        df_pool,
         df_equiv,
         equivalence_groupby_col="month",
         equivalence_value_col="baseline_predicted_usage",
@@ -121,13 +121,13 @@ def test_stratified_sampling_fit_and_sample_records_equivalence_idempotent_check
 
 
 def test_stratified_sampling_fit_and_sample_records_equivalence_euclidean_idempotent_check(
-    df_train, df_test, df_equiv, col_name
+    df_treatment, df_pool, df_equiv, col_name
 ):
-    df_train["col2"] = df_train[col_name] * 2
-    df_train["col3"] = df_train[col_name] * 3
+    df_treatment["col2"] = df_treatment[col_name] * 2
+    df_treatment["col3"] = df_treatment[col_name] * 3
 
-    df_test["col2"] = df_test[col_name] * 2
-    df_test["col3"] = df_test[col_name] * 3
+    df_pool["col2"] = df_pool[col_name] * 2
+    df_pool["col3"] = df_pool[col_name] * 3
 
     stratified_sampling_obj = StratifiedSampling()
     stratified_sampling_obj.add_column(col_name)
@@ -135,8 +135,8 @@ def test_stratified_sampling_fit_and_sample_records_equivalence_euclidean_idempo
     stratified_sampling_obj.add_column("col3")
 
     StratifiedSamplingBinSelector(stratified_sampling_obj,
-        df_train,
-        df_test,
+        df_treatment,
+        df_pool,
         df_equiv,
         equivalence_groupby_col="month",
         equivalence_value_col="baseline_predicted_usage",
@@ -153,8 +153,8 @@ def test_stratified_sampling_fit_and_sample_records_equivalence_euclidean_idempo
     stratified_sampling_obj.add_column("col2")
     stratified_sampling_obj.add_column("col3")
     StratifiedSamplingBinSelector(stratified_sampling_obj,
-        df_train,
-        df_test,
+        df_treatment,
+        df_pool,
         df_equiv,
         equivalence_groupby_col="month",
         equivalence_value_col="baseline_predicted_usage",
@@ -169,13 +169,13 @@ def test_stratified_sampling_fit_and_sample_records_equivalence_euclidean_idempo
 
 
 def test_stratified_sampling_fit_and_sample_records_equivalence_euclidean_idempotent_check(
-    df_train, df_test, df_equiv, col_name
+    df_treatment, df_pool, df_equiv, col_name
 ):
-    df_train["col2"] = df_train[col_name] * 2
-    df_train["col3"] = df_train[col_name] * 3
+    df_treatment["col2"] = df_treatment[col_name] * 2
+    df_treatment["col3"] = df_treatment[col_name] * 3
 
-    df_test["col2"] = df_test[col_name] * 2
-    df_test["col3"] = df_test[col_name] * 3
+    df_pool["col2"] = df_pool[col_name] * 2
+    df_pool["col3"] = df_pool[col_name] * 3
 
     stratified_sampling_obj = StratifiedSampling()
     stratified_sampling_obj.add_column(col_name)
@@ -183,8 +183,8 @@ def test_stratified_sampling_fit_and_sample_records_equivalence_euclidean_idempo
     stratified_sampling_obj.add_column("col3")
 
     StratifiedSamplingBinSelector(stratified_sampling_obj,
-        df_train,
-        df_test,
+        df_treatment,
+        df_pool,
         df_equiv,
         equivalence_groupby_col="month",
         equivalence_value_col="baseline_predicted_usage",
@@ -201,8 +201,8 @@ def test_stratified_sampling_fit_and_sample_records_equivalence_euclidean_idempo
     stratified_sampling_obj.add_column("col2")
     stratified_sampling_obj.add_column("col3")
     StratifiedSamplingBinSelector(stratified_sampling_obj,
-        df_train,
-        df_test,
+        df_treatment,
+        df_pool,
         df_equiv,
         equivalence_groupby_col="month",
         equivalence_value_col="baseline_predicted_usage",
@@ -217,13 +217,13 @@ def test_stratified_sampling_fit_and_sample_records_equivalence_euclidean_idempo
 
 
 def test_plot_records_based_equiv_average(
-    df_train, df_test, df_equiv, col_name
+    df_treatment, df_pool, df_equiv, col_name
 ):
-    df_train["col2"] = df_train[col_name] * 2
-    df_train["col3"] = df_train[col_name] * 3
+    df_treatment["col2"] = df_treatment[col_name] * 2
+    df_treatment["col3"] = df_treatment[col_name] * 3
 
-    df_test["col2"] = df_test[col_name] * 2
-    df_test["col3"] = df_test[col_name] * 3
+    df_pool["col2"] = df_pool[col_name] * 2
+    df_pool["col3"] = df_pool[col_name] * 3
 
     stratified_sampling_obj = StratifiedSampling()
     stratified_sampling_obj.add_column(col_name)
@@ -231,8 +231,8 @@ def test_plot_records_based_equiv_average(
     stratified_sampling_obj.add_column("col3")
 
     bin_selection = StratifiedSamplingBinSelector(stratified_sampling_obj,
-        df_train,
-        df_test,
+        df_treatment,
+        df_pool,
         df_equiv,
         equivalence_groupby_col="month",
         equivalence_value_col="baseline_predicted_usage",
@@ -247,13 +247,13 @@ def test_plot_records_based_equiv_average(
 
 
 def test_plot_records_based_equiv_average_chisquare(
-    df_train, df_test, df_equiv, col_name
+    df_treatment, df_pool, df_equiv, col_name
 ):
-    df_train["col2"] = df_train[col_name] * 2
-    df_train["col3"] = df_train[col_name] * 3
+    df_treatment["col2"] = df_treatment[col_name] * 2
+    df_treatment["col3"] = df_treatment[col_name] * 3
 
-    df_test["col2"] = df_test[col_name] * 2
-    df_test["col3"] = df_test[col_name] * 3
+    df_pool["col2"] = df_pool[col_name] * 2
+    df_pool["col3"] = df_pool[col_name] * 3
 
     stratified_sampling_obj = StratifiedSampling()
     stratified_sampling_obj.add_column(col_name)
@@ -261,8 +261,8 @@ def test_plot_records_based_equiv_average_chisquare(
     stratified_sampling_obj.add_column("col3")
 
     bin_selection = StratifiedSamplingBinSelector(stratified_sampling_obj,
-        df_train,
-        df_test,
+        df_treatment,
+        df_pool,
         df_equiv,
         equivalence_groupby_col="month",
         equivalence_value_col="baseline_predicted_usage",
