@@ -21,7 +21,7 @@
 __title__ = "eesampling"
 __description__ = "Tools for stratified sampling for comparison groups"
 __url__ = "http://github.com/recurve-methods/comparison_groups"
-__version__ = "0.6.1"
+__version__ = "0.7.0"
 __author__ = "Recurve Analytics, Inc"
 __author_email__ = "admin@openee.io"
 __license__ =  "Apache 2.0" 

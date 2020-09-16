@@ -4,6 +4,12 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+0.7.0
+-----
+
+
 * Rename train --> tretment, test --> pool 
 
 0.6.1
