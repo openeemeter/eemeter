@@ -1,19 +1,11 @@
-FROM python:3.6.6
+FROM python:3.7.4
 
-RUN set -ex && pip install pip pipenv --upgrade
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
-# sphinxcontrib-spelling dependency
-RUN apt-get update \
-  && apt-get install -yqq libenchant-dev
+COPY .pypirc /root
 
-COPY Pipfile Pipfile
-COPY Pipfile.lock Pipfile.lock
-RUN set -ex && pipenv install --system --deploy --dev
-ENV PYTHONPATH=/usr/local/bin:/app
-
-COPY setup.py README.rst /app/
-COPY eemeter/ /app/eemeter/
-RUN set -ex && pip install -e /app
-RUN set -ex && cd /usr/local/lib/ && python /app/setup.py develop
-
+COPY . /app
 WORKDIR /app
+
+RUN pip install --no-cache-dir -e .[off-dataflow] --extra-index-url https://PcRzRQf2ZEmeA81AskeG@pypi.fury.io/openee/

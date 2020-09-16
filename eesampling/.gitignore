@@ -1,0 +1,13 @@
+*.py[cod]
+*.egg-info/
+__pycache__/
+build/
+dist/
+.cache
+.DS_Store
+config.cfg
+test_data/
+oee-beam/
+*.db
+docs/_build/*
+.coverage

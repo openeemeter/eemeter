@@ -1,8 +1,20 @@
-plotnine==0.5.1
-pandas==0.25.3
-pytest==6.0.2
-pytest-cov==2.10.1
+--extra-index-url https://PcRzRQf2ZEmeA81AskeG@pypi.fury.io/openee/
+click>=7.1.2,<7.2.0
+simplejson==3.16.0
+
+# development
+jupyterlab==1.1.4
+
+# testing
+pytest==4.5.0
+pytest-cov==2.7.1
+pytest-xdist==1.28.0
+pytest-benchmark==3.2.2
 pytest-profiling==1.7.0
-pytest-xdist==2.1.0
+tox==3.13.2
+-e git://github.com/syrusakbary/snapshottest.git@54117098bd756c0fa6936f3bafab4bf85c58e943#egg=snapshottest
 
-
+# docs
+sphinx==2.2.1
+sphinx-autobuild==0.7.1
+autoapi==2.0.1
