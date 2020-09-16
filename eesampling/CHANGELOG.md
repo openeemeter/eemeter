@@ -4,6 +4,7 @@ Changelog
 Development
 -----------
 
+* First public release 
 * Update default params for bin_selection.StratifiedSamplingBinSelector(...) so n_samples_approx = 5000 and relax_n_samples_approx_constraint=False and min_n_sampled_to_n_train_ratio = 0.25, which means that we aim for 5000 comparison group meters but if we can't reach it, we need at least 0.25 sample to train ratio or else it fails. 
 * Add relax_n_samples_approx constraint so that you can use n_samples_approx as upper bound rather than a target.
 * Refactor results_as_json a bit so selected sample output is cleaner.
