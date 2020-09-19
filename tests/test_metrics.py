@@ -180,13 +180,13 @@ def test_model_metrics_json_valid(model_metrics):
         "confidence_level",
         "cvrmse",
         "cvrmse_adj",
-        'cvrmse_auto_corr_correction',
-        'degrees_of_freedom',
-        'fsu_base_term',
+        "cvrmse_auto_corr_correction",
+        "degrees_of_freedom",
+        "fsu_base_term",
         "mape",
         "mape_no_zeros",
         "merged_length",
-        'n_prime',
+        "n_prime",
         "nmae",
         "nmbe",
         "num_meter_zeros",
@@ -207,9 +207,8 @@ def test_model_metrics_json_valid(model_metrics):
         "r_squared_adj",
         "rmse",
         "rmse_adj",
-        'single_tailed_confidence_level',
-        't_stat',
-
+        "single_tailed_confidence_level",
+        "t_stat",
     ]
 
 

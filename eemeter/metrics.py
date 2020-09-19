@@ -41,8 +41,7 @@ def _compute_rmse(combined):
 
 def _compute_rmse_adj(combined, length, num_parameters):
     return (
-        (combined["residuals"].astype(float) **
-         2).sum() / (length - num_parameters)
+        (combined["residuals"].astype(float) ** 2).sum() / (length - num_parameters)
     ) ** 0.5
 
 
@@ -91,7 +90,6 @@ def _json_safe_float(number):
 
 
 class ModelMetricsFromJson(object):
-
     def __init__(
         self,
         observed_length,
@@ -127,7 +125,7 @@ class ModelMetricsFromJson(object):
         t_stat,
         cvrmse_auto_corr_correction,
         approx_factor_auto_corr_correction,
-        fsu_base_term
+        fsu_base_term,
     ):
         self.observed_length = observed_length
         self.predicted_length = predicted_length
@@ -262,12 +260,15 @@ class ModelMetrics(object):
     """
 
     def __init__(
-        self, observed_input, predicted_input, num_parameters=1, autocorr_lags=1,
-        confidence_level=0.90
+        self,
+        observed_input,
+        predicted_input,
+        num_parameters=1,
+        autocorr_lags=1,
+        confidence_level=0.90,
     ):
         if num_parameters < 0:
-            raise ValueError(
-                "num_parameters must be greater than or equal to zero")
+            raise ValueError("num_parameters must be greater than or equal to zero")
         if autocorr_lags <= 0:
             raise ValueError("autocorr_lags must be greater than zero")
         if (confidence_level <= 0) or (confidence_level >= 1):
@@ -322,8 +323,7 @@ class ModelMetrics(object):
         self.predicted_kurtosis = combined["predicted"].kurtosis()
 
         self.observed_cvstd = combined["observed"].std() / self.observed_mean
-        self.predicted_cvstd = combined["predicted"].std(
-        ) / self.predicted_mean
+        self.predicted_cvstd = combined["predicted"].std() / self.predicted_mean
 
         self.r_squared = _compute_r_squared(combined)
         self.r_squared_adj = _compute_r_squared_adj(
@@ -336,8 +336,7 @@ class ModelMetrics(object):
         )
 
         self.cvrmse = _compute_cvrmse(self.rmse, self.observed_mean)
-        self.cvrmse_adj = _compute_cvrmse_adj(
-            self.rmse_adj, self.observed_mean)
+        self.cvrmse_adj = _compute_cvrmse_adj(self.rmse_adj, self.observed_mean)
 
         # Create a new DataFrame with all rows removed where observed is
         # zero, so we can calculate a version of MAPE with the zeros excluded.
@@ -348,8 +347,7 @@ class ModelMetrics(object):
         self.mape = _compute_mape(combined)
         self.mape_no_zeros = _compute_mape(no_observed_zeros)
 
-        self.num_meter_zeros = (self.merged_length) - \
-            no_observed_zeros.shape[0]
+        self.num_meter_zeros = (self.merged_length) - no_observed_zeros.shape[0]
 
         self.nmae = _compute_nmae(combined)
 
@@ -361,9 +359,9 @@ class ModelMetrics(object):
 
         self.confidence_level = confidence_level
         self.n_prime = float(
-            self.observed_length * (1 - self.autocorr_resid) / (1 + self.autocorr_resid))
-        self.single_tailed_confidence_level = 1 - \
-            ((1 - self.confidence_level) / 2)
+            self.observed_length * (1 - self.autocorr_resid) / (1 + self.autocorr_resid)
+        )
+        self.single_tailed_confidence_level = 1 - ((1 - self.confidence_level) / 2)
 
         # convert to integer degrees of freedom, because n_prime could be non-integer
         if pd.isnull(self.n_prime) or not np.isfinite(self.n_prime):
@@ -372,30 +370,33 @@ class ModelMetrics(object):
         else:
             self.degrees_of_freedom = round(self.n_prime - self.num_parameters)
             self.t_stat = t.ppf(
-                self.single_tailed_confidence_level, self.degrees_of_freedom)
+                self.single_tailed_confidence_level, self.degrees_of_freedom
+            )
 
         if (
-                self.n_prime == 0
-                or pd.isnull(self.n_prime)
-                or not np.isfinite(self.n_prime)
-                or self.n_prime - self.num_parameters == 0
-                or self.degrees_of_freedom < 1):
+            self.n_prime == 0
+            or pd.isnull(self.n_prime)
+            or not np.isfinite(self.n_prime)
+            or self.n_prime - self.num_parameters == 0
+            or self.degrees_of_freedom < 1
+        ):
 
             self.cvrmse_auto_corr_correction = None
             self.approx_factor_auto_corr_correction = None
             self.fsu_base_term = None
         else:
 
-               # factor to correct cvrmse_adj for autocorrelation of inputs
+            # factor to correct cvrmse_adj for autocorrelation of inputs
             # i.e., divide by (n' - n_param) instead of by (n - n_param)
             self.cvrmse_auto_corr_correction = (
-                (self.observed_length - self.num_parameters) /
-                (self.n_prime - self.num_parameters)
+                (self.observed_length - self.num_parameters)
+                / (self.n_prime - self.num_parameters)
             ) ** 0.5
 
             # part of approximation factor used in ashrae 14 guideline
             self.approx_factor_auto_corr_correction = (
-                1.0 + (2.0 / self.n_prime)) ** 0.5
+                1.0 + (2.0 / self.n_prime)
+            ) ** 0.5
 
             # all the following values are unitless
             self.fsu_base_term = (
@@ -416,7 +417,7 @@ class ModelMetrics(object):
                 round(self.nmae, 3),
                 round(self.nmbe, 3),
                 round(self.autocorr_resid, 3),
-                round(self.confidence_level, 3)
+                round(self.confidence_level, 3),
             )
         )
 
@@ -455,12 +456,18 @@ class ModelMetrics(object):
             "autocorr_resid": _json_safe_float(self.autocorr_resid),
             "confidence_level": _json_safe_float(self.confidence_level),
             "n_prime": _json_safe_float(self.n_prime),
-            "single_tailed_confidence_level": _json_safe_float(self.single_tailed_confidence_level),
+            "single_tailed_confidence_level": _json_safe_float(
+                self.single_tailed_confidence_level
+            ),
             "degrees_of_freedom": _json_safe_float(self.degrees_of_freedom),
             "t_stat": _json_safe_float(self.t_stat),
-            "cvrmse_auto_corr_correction": _json_safe_float(self.cvrmse_auto_corr_correction),
-            "approx_factor_auto_corr_correction": _json_safe_float(self.approx_factor_auto_corr_correction),
-            "fsu_base_term": _json_safe_float(self.fsu_base_term)
+            "cvrmse_auto_corr_correction": _json_safe_float(
+                self.cvrmse_auto_corr_correction
+            ),
+            "approx_factor_auto_corr_correction": _json_safe_float(
+                self.approx_factor_auto_corr_correction
+            ),
+            "fsu_base_term": _json_safe_float(self.fsu_base_term),
         }
 
     @classmethod
@@ -504,6 +511,7 @@ class ModelMetrics(object):
             data.get("t_stat"),
             data.get("cvrmse_auto_corr_correction"),
             data.get("approx_factor_auto_corr_correction"),
-            data.get("fsu_base_term"))
+            data.get("fsu_base_term"),
+        )
 
         return c
