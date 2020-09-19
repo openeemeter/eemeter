@@ -19,6 +19,8 @@
 """
 import numpy as np
 import pandas as pd
+from scipy.stats import t
+
 
 from .warnings import EEMeterWarning
 
@@ -39,7 +41,8 @@ def _compute_rmse(combined):
 
 def _compute_rmse_adj(combined, length, num_parameters):
     return (
-        (combined["residuals"].astype(float) ** 2).sum() / (length - num_parameters)
+        (combined["residuals"].astype(float) **
+         2).sum() / (length - num_parameters)
     ) ** 0.5
 
 
@@ -116,7 +119,15 @@ class ModelMetricsFromJson(object):
         num_meter_zeros,
         nmae,
         nmbe,
-        autocorr_resid
+        autocorr_resid,
+        confidence_level,
+        n_prime,
+        single_tailed_confidence_level,
+        degrees_of_freedom,
+        t_stat,
+        cvrmse_auto_corr_correction,
+        approx_factor_auto_corr_correction,
+        fsu_base_term
     ):
         self.observed_length = observed_length
         self.predicted_length = predicted_length
@@ -144,6 +155,14 @@ class ModelMetricsFromJson(object):
         self.nmae = nmae
         self.nmbe = nmbe
         self.autocorr_resid = autocorr_resid
+        self.confidence_level = confidence_level
+        self.n_prime = n_prime
+        self.single_tailed_confidence_level = single_tailed_confidence_level
+        self.degrees_of_freedom = degrees_of_freedom
+        self.t_stat = t_stat
+        self.cvrmse_auto_corr_correction = cvrmse_auto_corr_correction
+        self.approx_factor_auto_corr_correction = approx_factor_auto_corr_correction
+        self.fsu_base_term = fsu_base_term
 
 
 class ModelMetrics(object):
@@ -162,7 +181,9 @@ class ModelMetrics(object):
         regression from which the predictions were derived.
     autocorr_lags : :any:`int`, optional
         The number of lags to use when calculating the autocorrelation of the
-        residuals
+        residuals.
+    confidence_level : :any:`int`, optional
+        Confidence level used in fractional savings uncertainty computations.
 
     Attributes
     ----------
@@ -222,15 +243,35 @@ class ModelMetrics(object):
         The autocorrelation of the residuals (where the residuals equal the
         predicted_input series minus the observed_input series), measured
         using a number of lags equal to autocorr_lags.
+    n_prime: :any:`float`
+        The number of baseline inputs corrected for autocorrelation -- used 
+        in fractional savings uncertainty computation.
+    single_tailed_confidence_level: :any:`float`
+        The adjusted confidence level for use in single-sided tests.
+    degrees_of_freedom: :any:`float
+        Maxmimum number of independent variables which have the freedom to vary
+    t_stat: :any:`float
+        t-statistic, used for hypothesis testing
+    cvrmse_auto_corr_correction: :any:`float
+        Correctoin factor the apply to cvrmse to account for autocorrelation of inputs.
+    approx_factor_auto_corr_correction: :any:`float
+        Approximation factor used in ashrae 14 guideline for uncertainty computation.
+    fsu_base_term: :any:`float
+        Base term used in fractional savings uncertainty computation.
+
     """
 
     def __init__(
-        self, observed_input, predicted_input, num_parameters=1, autocorr_lags=1
+        self, observed_input, predicted_input, num_parameters=1, autocorr_lags=1,
+        confidence_level=0.90
     ):
         if num_parameters < 0:
-            raise ValueError("num_parameters must be greater than or equal to zero")
+            raise ValueError(
+                "num_parameters must be greater than or equal to zero")
         if autocorr_lags <= 0:
             raise ValueError("autocorr_lags must be greater than zero")
+        if (confidence_level <= 0) or (confidence_level >= 1):
+            raise ValueError("confidence_level must be between zero and one.")
 
         self.warnings = []
 
@@ -243,7 +284,7 @@ class ModelMetrics(object):
         self.predicted_length = predicted.shape[0]
 
         # Do an inner join on the two input series to make sure that we only
-        # use observations with the same time stamps.
+        # use observations with the same time staapprox_factor_auto_corr_correctionmps.
         combined = observed.merge(predicted, left_index=True, right_index=True)
         self.merged_length = len(combined)
 
@@ -281,7 +322,8 @@ class ModelMetrics(object):
         self.predicted_kurtosis = combined["predicted"].kurtosis()
 
         self.observed_cvstd = combined["observed"].std() / self.observed_mean
-        self.predicted_cvstd = combined["predicted"].std() / self.predicted_mean
+        self.predicted_cvstd = combined["predicted"].std(
+        ) / self.predicted_mean
 
         self.r_squared = _compute_r_squared(combined)
         self.r_squared_adj = _compute_r_squared_adj(
@@ -294,7 +336,8 @@ class ModelMetrics(object):
         )
 
         self.cvrmse = _compute_cvrmse(self.rmse, self.observed_mean)
-        self.cvrmse_adj = _compute_cvrmse_adj(self.rmse_adj, self.observed_mean)
+        self.cvrmse_adj = _compute_cvrmse_adj(
+            self.rmse_adj, self.observed_mean)
 
         # Create a new DataFrame with all rows removed where observed is
         # zero, so we can calculate a version of MAPE with the zeros excluded.
@@ -305,7 +348,8 @@ class ModelMetrics(object):
         self.mape = _compute_mape(combined)
         self.mape_no_zeros = _compute_mape(no_observed_zeros)
 
-        self.num_meter_zeros = (self.merged_length) - no_observed_zeros.shape[0]
+        self.num_meter_zeros = (self.merged_length) - \
+            no_observed_zeros.shape[0]
 
         self.nmae = _compute_nmae(combined)
 
@@ -313,10 +357,58 @@ class ModelMetrics(object):
 
         self.autocorr_resid = _compute_autocorr_resid(combined, autocorr_lags)
 
+        # ** Compute terms needed for fractional savings uncertainty computation.
+
+        self.confidence_level = confidence_level
+        self.n_prime = float(
+            self.observed_length * (1 - self.autocorr_resid) / (1 + self.autocorr_resid))
+        self.single_tailed_confidence_level = 1 - \
+            ((1 - self.confidence_level) / 2)
+
+        # convert to integer degrees of freedom, because n_prime could be non-integer
+        if pd.isnull(self.n_prime) or not np.isfinite(self.n_prime):
+            self.degrees_of_freedom = None
+            self.t_stat = None
+        else:
+            self.degrees_of_freedom = round(self.n_prime - self.num_parameters)
+            self.t_stat = t.ppf(
+                self.single_tailed_confidence_level, self.degrees_of_freedom)
+
+        if (
+                self.n_prime == 0
+                or pd.isnull(self.n_prime)
+                or not np.isfinite(self.n_prime)
+                or self.n_prime - self.num_parameters == 0
+                or self.degrees_of_freedom < 1):
+
+            self.cvrmse_auto_corr_correction = None
+            self.approx_factor_auto_corr_correction = None
+            self.fsu_base_term = None
+        else:
+
+               # factor to correct cvrmse_adj for autocorrelation of inputs
+            # i.e., divide by (n' - n_param) instead of by (n - n_param)
+            self.cvrmse_auto_corr_correction = (
+                (self.observed_length - self.num_parameters) /
+                (self.n_prime - self.num_parameters)
+            ) ** 0.5
+
+            # part of approximation factor used in ashrae 14 guideline
+            self.approx_factor_auto_corr_correction = (
+                1.0 + (2.0 / self.n_prime)) ** 0.5
+
+            # all the following values are unitless
+            self.fsu_base_term = (
+                self.t_stat
+                * self.cvrmse_adj
+                * self.cvrmse_auto_corr_correction
+                * self.approx_factor_auto_corr_correction
+            )
+
     def __repr__(self):
         return (
             "ModelMetrics(merged_length={}, r_squared_adj={}, cvrmse_adj={}, "
-            "mape_no_zeros={}, nmae={}, nmbe={}, autocorr_resid={})".format(
+            "mape_no_zeros={}, nmae={}, nmbe={}, autocorr_resid={}, confidence_level={})".format(
                 self.merged_length,
                 round(self.r_squared_adj, 3),
                 round(self.cvrmse_adj, 3),
@@ -324,6 +416,7 @@ class ModelMetrics(object):
                 round(self.nmae, 3),
                 round(self.nmbe, 3),
                 round(self.autocorr_resid, 3),
+                round(self.confidence_level, 3)
             )
         )
 
@@ -360,6 +453,14 @@ class ModelMetrics(object):
             "nmae": _json_safe_float(self.nmae),
             "nmbe": _json_safe_float(self.nmbe),
             "autocorr_resid": _json_safe_float(self.autocorr_resid),
+            "confidence_level": _json_safe_float(self.confidence_level),
+            "n_prime": _json_safe_float(self.n_prime),
+            "single_tailed_confidence_level": _json_safe_float(self.single_tailed_confidence_level),
+            "degrees_of_freedom": _json_safe_float(self.degrees_of_freedom),
+            "t_stat": _json_safe_float(self.t_stat),
+            "cvrmse_auto_corr_correction": _json_safe_float(self.cvrmse_auto_corr_correction),
+            "approx_factor_auto_corr_correction": _json_safe_float(self.approx_factor_auto_corr_correction),
+            "fsu_base_term": _json_safe_float(self.fsu_base_term)
         }
 
     @classmethod
@@ -396,6 +497,13 @@ class ModelMetrics(object):
             data.get("num_meter_zeros"),
             data.get("nmae"),
             data.get("nmbe"),
-            data.get("autocorr_resid"))
+            data.get("autocorr_resid"),
+            data.get("n_prime"),
+            data.get("single_tailed_confidence_level"),
+            data.get("degrees_of_freedom"),
+            data.get("t_stat"),
+            data.get("cvrmse_auto_corr_correction"),
+            data.get("approx_factor_auto_corr_correction"),
+            data.get("fsu_base_term"))
 
         return c

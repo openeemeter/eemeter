@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Add additional terms into ModelMetricc() class which can be used in fractional savings uncertainy computations.
 
 2.9.2
 -----

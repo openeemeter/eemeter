@@ -70,6 +70,12 @@ def test_ModelMetrics(sample_data):
     assert round(model_metrics.nmae, 3) == 0.333
     assert round(model_metrics.nmbe, 3) == -0.067
     assert round(model_metrics.autocorr_resid, 3) == -0.674
+    assert round(model_metrics.n_prime, 3) == 25.694
+    assert round(model_metrics.single_tailed_confidence_level, 3) == 0.95
+    assert round(model_metrics.degrees_of_freedom, 3) == 24
+    assert round(model_metrics.t_stat, 3) == 1.711
+    assert round(model_metrics.cvrmse_auto_corr_correction, 3) == 0.356
+    assert round(model_metrics.approx_factor_auto_corr_correction, 3) == 1.038
     assert repr(model_metrics) is not None
     assert json.dumps(model_metrics.json()) is not None
 
@@ -169,12 +175,18 @@ def test_model_metrics_json_valid(model_metrics):
     json_rep = model_metrics.json()
     json.dumps(json_rep)
     assert sorted(json_rep.keys()) == [
+        "approx_factor_auto_corr_correction",
         "autocorr_resid",
+        "confidence_level",
         "cvrmse",
         "cvrmse_adj",
+        'cvrmse_auto_corr_correction',
+        'degrees_of_freedom',
+        'fsu_base_term',
         "mape",
         "mape_no_zeros",
         "merged_length",
+        'n_prime',
         "nmae",
         "nmbe",
         "num_meter_zeros",
@@ -195,6 +207,9 @@ def test_model_metrics_json_valid(model_metrics):
         "r_squared_adj",
         "rmse",
         "rmse_adj",
+        'single_tailed_confidence_level',
+        't_stat',
+
     ]
 
 
