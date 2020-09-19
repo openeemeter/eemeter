@@ -285,7 +285,7 @@ class ModelMetrics(object):
         self.predicted_length = predicted.shape[0]
 
         # Do an inner join on the two input series to make sure that we only
-        # use observations with the same time staapprox_factor_auto_corr_correctionmps.
+        # use observations with the same time stamps.
         combined = observed.merge(predicted, left_index=True, right_index=True)
         self.merged_length = len(combined)
 
