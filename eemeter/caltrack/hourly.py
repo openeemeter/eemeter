@@ -164,7 +164,7 @@ class CalTRACKHourlyModelResults(object):
         # for reconstruction (like the input pandas) ...
         d = data.get('avgs_metrics')
         if d:
-            c.avgs_metrics = ModelMetrics.from_json(d)
+            c.avgs_metrics = ModelMetrics.from_json(d) # pragma: no cover
         d = data.get('totals_metrics')
         if d:
             c.totals_metrics = ModelMetrics.from_json(d)
