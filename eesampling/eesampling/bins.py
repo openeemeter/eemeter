@@ -278,11 +278,16 @@ def get_counts_and_update_n_samples_approx(
         counts["n_samples_available"] < counts["n_target"]
     )
     relax_ratio_constraint = False
-    if relax_n_samples_approx_constraint and not has_enough_for_n_samples_approx:
-        # Scenario 2: n_samples_approx=value and that value can not be met
+    if has_enough_for_n_samples_approx:
+        # Scenario 2: n_samples_approx=value so we want to ignore the ratio constraint
+        relax_ratio_constraint = True
+    elif relax_n_samples_approx_constraint:
+        # Scenario 3: n_samples_approx=value and that value but that value can not
+        # be met, so we want as many as possible and it is valid as long as it
+        # meets the ratio constraint.
         n_samples_approx = max_possible_n_samples_approx
         counts["n_target"] = np.floor(counts["n_pct"] * n_samples_approx).astype(int)
-    elif has_enough_for_n_samples_approx:
-        # Scenario 3: n_samples_approx=value but we want to ignore the ratio
-        relax_ratio_constraint = True
+    # else:
+        # Scenario 4: It will fail during sampling because it can not meet 
+        # n_samples_approx and we did not relax that constraint.
     return n_samples_approx, relax_ratio_constraint, counts
