@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Add synthetic data generation for testing and tutorials
 
 0.7.0
 -----
