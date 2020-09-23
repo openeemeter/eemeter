@@ -96,6 +96,15 @@ class SyntheticPopulation:
                 shoulder_high_mean, shoulder_high_sigma,
                  
                 ):
+
+        self.key = "_".join(f"{x}" for x in [n_meters, id_prefix, 
+            winter_low_mean, winter_low_sigma, 
+            winter_high_mean, winter_high_sigma, 
+            summer_low_mean, summer_low_sigma, 
+            summer_high_mean, summer_high_sigma,
+            shoulder_low_mean, shoulder_low_sigma, 
+            shoulder_high_mean, shoulder_high_sigma])
+
         self.n_meters = n_meters
         self.id_prefix = id_prefix
       
@@ -109,7 +118,10 @@ class SyntheticPopulation:
             'shoulder_high': np.random.lognormal(mean=shoulder_high_mean, sigma=shoulder_high_sigma, size=n_meters),
 
         })
+
+        self.meters = None        
         
+    def generate_meters(self):
         self.meters = [SyntheticMeter(
                 meter_id = row['meter_id'],
                 winter_low = row['winter_low'],
@@ -119,14 +131,20 @@ class SyntheticPopulation:
                 shoulder_low = row['shoulder_low'],
                 shoulder_high = row['shoulder_high'])
             for ix, row in self.df_params.iterrows()]
-            
+
     def monthly(self):
+        if self.meters is None:
+            self.generate_meters()
         return pd.concat([m.monthly() for m in self.meters])
 
     def seasonal_168(self):
+        if self.meters is None:
+            self.generate_meters()
         return pd.concat([m.seasonal_168() for m in self.meters])
         
     def features(self):
+        if self.meters is None:
+            self.generate_meters()
         return pd.concat([m.features() for m in self.meters])
         artist
         
@@ -176,6 +194,8 @@ class TreatmentPoolPopulation:
                 shoulder_high_mean=pool_shoulder_high_mean,
                 shoulder_high_sigma=pool_shoulder_high_sigma)
         
+        self.key = f"{self.population_pool.key}__{self.population_treatment.key}"
+
     def features_treatment(self):
         return self.population_treatment.features()
     
