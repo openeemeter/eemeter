@@ -25,7 +25,13 @@ import logging
 from plotnine import *
 import plotnine
 import numpy as np
-from .bins import Binning, BinnedData, ModelSamplingException, sample_bins
+from .bins import (
+    Binning,
+    BinnedData,
+    ModelSamplingException,
+    sample_bins,
+    get_counts_and_update_n_samples_approx,
+)
 from .diagnostics import Diagnostics
 
 pd.options.mode.chained_assignment = None  # suppress warnings
@@ -34,7 +40,9 @@ logger = logging.getLogger(__name__)
 
 
 class StratifiedSampling(object):
-    def __init__(self, treatment_label="treatment", pool_label="pool", output_name="output"):
+    def __init__(
+        self, treatment_label="treatment", pool_label="pool", output_name="output"
+    ):
         self.columns = {}
         self.treatment_label = treatment_label
         self.pool_label = pool_label
@@ -174,7 +182,10 @@ class StratifiedSampling(object):
                         n_sampled_to_n_treatment_ratio = (
                             self.diagnostics().n_sampled_to_n_treatment_ratio()
                         )
-                        if n_sampled_to_n_treatment_ratio < min_n_sampled_to_n_treatment_ratio:
+                        if (
+                            n_sampled_to_n_treatment_ratio
+                            < min_n_sampled_to_n_treatment_ratio
+                        ):
                             logger.info(
                                 f"Insufficient pool data in one of the bins for {col['name']}:"
                                 f"found {n_sampled_to_n_treatment_ratio}:1 but need "
@@ -204,13 +215,17 @@ class StratifiedSampling(object):
                             self.set_n_bins(name, self.get_n_bins(name) + 1)
 
         self.fit(
-            df_treatment, min_n_treatment_per_bin=min_n_treatment_per_bin, random_seed=random_seed
+            df_treatment,
+            min_n_treatment_per_bin=min_n_treatment_per_bin,
+            random_seed=random_seed,
         )
         n_treatment = len(df_treatment)
         # if n_samples_approx is None, use the maximum available.
         df_sample = self.sample(
-            df_pool, n_samples_approx=n_samples_approx, random_seed=random_seed,
-                        relax_n_samples_approx_constraint=relax_n_samples_approx_constraint,
+            df_pool,
+            n_samples_approx=n_samples_approx,
+            random_seed=random_seed,
+            relax_n_samples_approx_constraint=relax_n_samples_approx_constraint,
         )
         self.n_samples_approx = n_samples_approx
         return df_sample
@@ -234,7 +249,9 @@ class StratifiedSampling(object):
 
     def fit(self, df_treatment, min_n_treatment_per_bin=0, random_seed=1):
         self._check_columns_present(df_treatment)
-        df_treatment = self._perturb(self._chop_outliers(df_treatment), random_seed=random_seed)
+        df_treatment = self._perturb(
+            self._chop_outliers(df_treatment), random_seed=random_seed
+        )
         self.df_treatment = df_treatment.copy()
         self.binning = Binning()
 
@@ -263,7 +280,9 @@ class StratifiedSampling(object):
             )
 
         self.data_treatment = BinnedData(
-            self.df_treatment, self.binning, min_n_treatment_per_bin=min_n_treatment_per_bin
+            self.df_treatment,
+            self.binning,
+            min_n_treatment_per_bin=min_n_treatment_per_bin,
         )
         self.trained = True
 
@@ -277,12 +296,29 @@ class StratifiedSampling(object):
     def diagnostics(self):
         return Diagnostics(model=self)
 
-    def sample(self, df_pool, n_samples_approx=None, random_seed=1, relax_n_samples_approx_constraint=False):
+    def sample(
+        self,
+        df_pool,
+        n_samples_approx=None,
+        random_seed=1,
+        relax_n_samples_approx_constraint=False,
+    ):
         if not self.trained and data_treatment is not None:
             raise ValueError("No model found; please run fit()")
         self._check_columns_present(df_pool)
         df_pool = self._perturb(self._chop_outliers(df_pool), random_seed=random_seed)
         self.data_pool = BinnedData(df_pool, self.binning)
+        (
+            n_samples_approx,
+            relax_ratio_constraint,
+            counts,
+        ) = get_counts_and_update_n_samples_approx(
+            self.data_treatment,
+            self.data_pool,
+            n_samples_approx=n_samples_approx,
+            relax_n_samples_approx_constraint=relax_n_samples_approx_constraint,
+        )
+        self.relax_ratio_constraint = relax_ratio_constraint
         df_sample = sample_bins(
             self.data_treatment,
             self.data_pool,

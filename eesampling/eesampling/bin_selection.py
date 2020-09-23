@@ -130,6 +130,7 @@ class StratifiedSamplingBinSelector(object):
                 min_n_treatment_per_bin=min_n_treatment_per_bin,
                 random_seed=random_seed,
             )
+
             self.model.sample(
                 self.df_pool,
                 n_samples_approx=n_samples_approx,
@@ -139,7 +140,10 @@ class StratifiedSamplingBinSelector(object):
             n_sampled_to_n_treatment_ratio = (
                 self.model.diagnostics().n_sampled_to_n_treatment_ratio()
             )
-            if n_sampled_to_n_treatment_ratio < min_n_sampled_to_n_treatment_ratio:
+            if (
+                not self.model.relax_ratio_constraint
+                and n_sampled_to_n_treatment_ratio < min_n_sampled_to_n_treatment_ratio
+            ):
                 logger.info(
                     f"Insufficient pool data for {bins_selected_str}:"
                     f"found {n_sampled_to_n_treatment_ratio}:1 but need "
@@ -306,7 +310,8 @@ class StratifiedSamplingBinSelector(object):
     def plot_records_based_equiv_average(self, plot=True):
 
         equiv_df = pd.concat(
-            [self.equiv_treatment_avg, self.equiv_pool_avg, self.equiv_samples_avg], axis=1
+            [self.equiv_treatment_avg, self.equiv_pool_avg, self.equiv_samples_avg],
+            axis=1,
         )
 
         wrong_models = [

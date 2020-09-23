@@ -4,11 +4,10 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Made adjustment to how n_samples_approx is calculated. It now works where the minimum sampled:treatment ratio can be violated if n_samples_approx is used as an upper bound and that upper bound is reached.
 
 0.7.0
 -----
-
 
 * Rename train --> tretment, test --> pool 
 
@@ -17,10 +16,8 @@ Development
 
 * Fix Github URL
 
-
 0.6.0
 -----
-
 
 * First public release 
 * Update default params for bin_selection.StratifiedSamplingBinSelector(...) so n_samples_approx = 5000 and relax_n_samples_approx_constraint=False and min_n_sampled_to_n_train_ratio = 0.25, which means that we aim for 5000 comparison group meters but if we can't reach it, we need at least 0.25 sample to train ratio or else it fails. 
@@ -117,4 +114,4 @@ Development
 0.0.1
 -----
 
-* Created by [cookiecutter-etl-beam](https://github.com/openeemeter/cookiecutter-etl-beam)
+* Initial creation of library.
