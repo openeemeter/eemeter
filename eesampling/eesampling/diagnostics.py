@@ -305,7 +305,8 @@ class Diagnostics(DiagnosticPlotter):
                 *args,
                 **kwargs,
             )
-        raise ValueError("how must be one of: ['euclidean', 'chisquare']")
+        else:
+            raise ValueError("how must be one of: ['euclidean', 'chisquare']")
 
     def records_based_equivalence_euclidean(
         self,
@@ -329,8 +330,8 @@ class Diagnostics(DiagnosticPlotter):
             equiv_label_x, equiv_label_y
         )
 
-        df = self.df_all[["population", "id"]].copy()
-        df_combined = df.set_index("id", drop=True).join(
+        df = self.df_all[["population", id_col]].copy()
+        df_combined = df.set_index(id_col, drop=True).join(
             df_for_equivalence.set_index(id_col, drop=True)
         )
         equiv_x = (
@@ -344,6 +345,7 @@ class Diagnostics(DiagnosticPlotter):
             .mean()
         )
         return equiv_x.to_frame(), equiv_y.to_frame(), pdist([equiv_x, equiv_y])[0]
+
 
     def records_based_equivalence_chisquare(
         self,
@@ -369,55 +371,31 @@ class Diagnostics(DiagnosticPlotter):
             equiv_label_x, equiv_label_y
         )
 
-        df = self.df_all[["population", "id"]].copy()
-        df_combined = df.set_index("id", drop=True).join(
+        df = self.df_all[["population", id_col]].copy()
+        df_combined = df.set_index(id_col, drop=True).join(
             df_for_equivalence.set_index(id_col, drop=True)
         )
+        features = df_combined[groupby_col].unique()
+        df_combined = df_combined.set_index(['population', groupby_col]).sort_index()
 
         chisquare_stats = []
         equiv_x = []
-        equiv_y = []
-        for groupby_col_num in df_combined[groupby_col].unique():
-            df_equiv_x = df_combined[
-                (df_combined["population"] == equiv_label_x)
-                & (df_combined[groupby_col] == groupby_col_num)
-            ]
-            df_equiv_y = df_combined[
-                (df_combined["population"] == equiv_label_y)
-                & (df_combined[groupby_col] == groupby_col_num)
-            ]
+        equiv_y = []        
+        for groupby_col_num in features:
+           
+            df_equiv_x = df_combined.loc[equiv_label_x, groupby_col_num]
+            df_equiv_y = df_combined.loc[equiv_label_y, groupby_col_num]             
             # Select num_bins from number of treatments / chosen ratio
             num_bins = max(int(len(df_equiv_x) / chisquare_n_values_per_bin), 1)
 
-            binning_x = Binning()
-            binning_x.bin(
-                df_equiv_x[value_col],
-                value_col,
-                num_bins,
-                fixed_width=chisquare_is_fixed_width,
-            )
+            binned_data_x = df_equiv_x
+            binned_data_x['_bin_label'] = pd.qcut(binned_data_x[value_col], q=num_bins).astype(str)
 
-            binned_data_x = BinnedData(
-                df_equiv_x[[value_col]],
-                binning_x,
-                min_n_treatment_per_bin=chisquare_n_values_per_bin,
-            )
+            binned_data_y = df_equiv_y
+            binned_data_y['_bin_label'] = pd.qcut(binned_data_y[value_col], q=num_bins).astype(str)
 
-            binning_y = Binning()
-            binning_y.bin(
-                df_equiv_y[value_col],
-                value_col,
-                num_bins,
-                fixed_width=chisquare_is_fixed_width,
-            )
-
-            binned_data_y = BinnedData(
-                df_equiv_y[[value_col]],
-                binning_y,
-                min_n_treatment_per_bin=chisquare_n_values_per_bin,
-            )
-            chisquare_x = binned_data_x.df.groupby("_bin_label")[value_col].mean()
-            chisquare_y = binned_data_y.df.groupby("_bin_label")[value_col].mean()
+            chisquare_x = binned_data_x.groupby("_bin_label")[value_col].mean()
+            chisquare_y = binned_data_y.groupby("_bin_label")[value_col].mean()
             chisquare_stats.append(chisquare(chisquare_x, chisquare_y).statistic)
 
             chisquare_x_df = chisquare_x.to_frame()
@@ -432,6 +410,8 @@ class Diagnostics(DiagnosticPlotter):
             pd.concat(equiv_y).reset_index(),
             sum(chisquare_stats) if chisquare_stats else np.inf,
         )
+
+ 
 
     def equivalence(self, cols=None, equiv_label_x=None, equiv_label_y=None):
         """
