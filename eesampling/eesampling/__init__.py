@@ -21,3 +21,6 @@
 from .__version__ import *
 from .model import StratifiedSampling
 from .bins import ModelSamplingException
+from .diagnostics import StratifiedSamplingDiagnostics
+from .bin_selection import StratifiedSamplingBinSelector
+from .synthetic_data import SyntheticMeter, SyntheticPopulation, SyntheticTreatmentPoolPopulation
