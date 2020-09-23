@@ -38,6 +38,7 @@ class StratifiedSamplingBinSelector(object):
         equivalence_value_col,
         equivalence_id_col,
         how,
+        df_id_col="id",
         n_samples_approx=5000,
         min_n_treatment_per_bin=0,
         random_seed=1,
@@ -87,6 +88,7 @@ class StratifiedSamplingBinSelector(object):
         self.equivalence_groupby_col = equivalence_groupby_col
         self.equivalence_value_col = equivalence_value_col
         self.equivalence_id_col = equivalence_id_col
+        self.df_id_col = df_id_col
 
         self.model = model
         self.df_treatment = df_treatment
@@ -169,9 +171,10 @@ class StratifiedSamplingBinSelector(object):
                 continue
             equiv_treatment, equiv_sample, equivalence_distance = self.model.diagnostics().records_based_equivalence(
                 self.df_for_equivalence,
-                equivalence_groupby_col,
-                equivalence_value_col,
-                id_col=equivalence_id_col,
+                equiv_groupby_col=equivalence_groupby_col,
+                equiv_value_col=equivalence_value_col,
+                equiv_id_col=equivalence_id_col,
+                id_col=df_id_col,
                 how=how,
                 chisquare_n_values_per_bin=chisquare_n_values_per_bin,
                 chisquare_is_fixed_width=chisquare_is_fixed_width,
@@ -234,7 +237,7 @@ class StratifiedSamplingBinSelector(object):
         def _get_equiv_comparison_pool():
             df_combined = self.df_for_equivalence[
                 self.df_for_equivalence[self.equivalence_id_col].isin(
-                    self.df_pool[self.equivalence_id_col]
+                    self.df_pool[self.df_id_col]
                 )
             ]
             equiv_full_avg = df_combined.groupby(self.equivalence_groupby_col)[
