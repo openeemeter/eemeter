@@ -49,17 +49,59 @@ class StratifiedSamplingBinSelector(object):
         relax_n_samples_approx_constraint=True,
     ):
         """
+        Finds an optimal stratified sampling bin configuration which minimizes
+        distance between treatmnt and comparison groups.  A bin configuration
+        is a number of bins, `n_c`, for each stratification column `c`, where 
+        c is an integer between `min_n_bins` and `max_n_bin` inclusive.  
+        Using a grid search, all possible bin configurations will be constructed and
+        tested, and the confiuration which minimizes treatment-comparison distance
+        will be returned.  Distance is measured on a set of features 
+        provided in `df_for_equivalence` in 'long' format, i.e. multiple rows
+        per meter, one column holds feature name, one column holds feature value.
+
+        Distance may be computed in one of two ways, according to the `how` parameter:
+
+        `euclidean`: Compute the mean value of each feature for treatment and comparison, 
+        and compute Euclidean distance of the means.
+
+        `chisquare`: For each feature, first cut into quantiles and compute the mean
+        value per quantile for treatment and comparison. Then compute the
+        chisquare statistic of the means for each feature, and sum the statistic
+        across all features.
+
+        Example usage:
+
+            m = StratifiedSampling()
+            m.add_column('annual_usage', min_value=0, max_value=20000)
+            m.add_column('summer_usage', min_value=0, max_value=1000)
+            s = StratifiedSamplingBinSelector(m, df_treatment, df_pool,
+                df_for_equivalence, 'month', 'value', 'id', 'chisquare')
+            results = s.results_as_json()
+            df_comparison = m.data_sample.df
+
+
         Attributes
         ==========
-
+        model: eesampling.StratifiedSampling
+            Model with stratification columns added.
         df_treatment: pandas.DataFrame
             dataframe to use for constructing the stratified sampling bins.
         df_pool: pandas.DataFrame
             dataframe to sample from according to the constructed stratified sampling bins.
         df_for_equivalence: pandas.DataFrame
-            dataframe to join to for calculating distances
+            dataframe with featues to use for computing equivalence, in 'long' form
+        equivalence_groupby_col: str
+            Name of column in `df_for_equivalence` which contains the feature name
+        equivalence_value_col: str
+            Name of column in `df_for_equivalence` which contains the feature value
+        equivalence_id_col: str
+            Name of column in `df_for_equivalence` which contains the ID.  `df_treatment`
+            and `df_pool` must have an ID column with the same name.
+        how: str
+            Method for computing distance -- either 'euclidean' or 'chisquare'.
         n_samples_aprox: int
-            approximate number of total samples from df_pool. It is approximate because
+            approximate number of total samples from df_pool which are used to construct
+            the comparison group. It is approximate because
             there may be some slight discrepencies around the total count to ensure
             that each bin has the correct percentage of the total.
             A None value means that it will take as many samples as it has available.
@@ -69,6 +111,15 @@ class StratifiedSamplingBinSelector(object):
             cols with fixed_width=True)
         min_n_sampled_to_n_treatment_ratio: int
             Minimum number samples that must exist in each bin per treatment datapoint in that bin.
+        min_n_bins: int
+            Minimum number of bins to use in stratified sampling.
+        max_n_bins: int
+            Maximum number of bins to use in stratified sampling.
+        chisquare_n_values_per_bin: int
+            When computing equivalence using `chisquare` method, number of samples per bin.
+        chisquare_is_fixed_width: boolean
+            When computing equivalence using `chisquare` method, whether to use fixed-width
+            bins, or fixed-quantity bins.
         relax_n_samples_approx_constraint: bool
             If True, treats n_samples_approx as an upper bound, but gets as many comparison group
             meters as available up to n_samples_approx. If False, it raises an exception

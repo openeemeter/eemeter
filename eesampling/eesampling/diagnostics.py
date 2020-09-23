@@ -207,7 +207,37 @@ class DiagnosticPlotter:
         return p
 
 
-class Diagnostics(DiagnosticPlotter):
+class StratifiedSamplingDiagnostics(DiagnosticPlotter):
+    """
+    Construct plots and tables summarizing results of stratified sampling.
+    Operates on a StratifiedSamplingModel.  Plots will show treatment, 
+    pool, and comparison group meters on the same axes to allow for easy comparisons.
+    If fitting failed, plots will be available with treatment and pool meters only.
+    
+    Methods
+    =======
+
+    scatter(): 
+        Construct 2-D scatter plots of all stratification columns with bins superimposed.
+
+    histogram():
+        Construct 1-D histogram plots of all stratification columns with bins superimposed.
+
+    quantile_equivalence():
+        Construct quantile plots to compare distributions; include t-test and ks-test 
+        p-values.
+
+    count_bins():
+        Construct a table of pins and relative densities for treatment, pool, and comparison.
+
+
+    Attributes
+    ==========
+
+    model:
+        A StratifiedSamplingModel, after fit() or fit_and_sample() have been run.
+
+    """
     def __init__(self, model):
         self.model = model
         self.binning = self.model.binning
