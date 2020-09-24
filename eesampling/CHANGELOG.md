@@ -13,7 +13,7 @@ Development
 0.7.0
 -----
 
-* Rename train --> tretment, test --> pool 
+* Rename train --> treatment, test --> pool 
 
 0.6.1
 -----
