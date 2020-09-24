@@ -285,7 +285,7 @@ class StratifiedSamplingBinSelector(object):
         def _get_equiv_comparison_pool():
             df_combined = self.df_for_equivalence[
                 self.df_for_equivalence[self.equivalence_id_col].isin(
-                    self.df_pool["id"]
+                    self.df_pool[self.equivalence_id_col]
                 )
             ]
             equiv_full_avg = df_combined.groupby(self.equivalence_groupby_col)[
