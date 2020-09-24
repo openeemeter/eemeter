@@ -354,128 +354,85 @@ class SyntheticTreatmentPoolPopulation:
         Number of meters to include in the population
     id_predix: str
         String value to be prefixed to each meter ID.
-    treatment_winter_base_mean: float
-        Mean term in lognormal random variable representing base usage in winter season, for treatment meters.
-    treatment_winter_base_sigma: float
-        Sigma term in lognormal random variable representing base usage in winter season, for treatment meters.
-    treatment_winter_peak_mean: float
-        Mean term in lognormal random variable representing peak usage in winter season, for treatment meters.
-    treatment_winter_peak_sigma: float
-        Sigma term in lognormal random variable representing peak usage in winter season, for treatment meters.
-    treatment_summer_base_mean: float
-        Mean term in lognormal random variable representing base usage in summer season, for treatment meters.
-    treatment_summer_base_sigma: float
-        Sigma term in lognormal random variable representing base usage in summer season, for treatment meters.
-    treatment_summer_peak_mean: float
-        Mean term in lognormal random variable representing peak usage in summer season, for treatment meters.
-    treatment_summer_peak_sigma: float
-        Sigma term in lognormal random variable representing peak usage in summer season, for treatment meters.
-    treatment_shoulder_base_mean: float
-        Mean term in lognormal random variable representing base usage in shoulder season, for treatment meters.
-    treatment_shoulder_base_sigma: float
-        Sigma term in lognormal random variable representing base usage in shoulder season, for treatment meters.
-    treatment_shoulder_peak_mean: float
-        Mean term in lognormal random variable representing peak usage in shoulder season, for treatment meters.
-    treatment_shoulder_peak_sigma: float
-        Sigma term in lognormal random variable representing peak usage in shoulder season, for treatment meters.
-    pool_winter_base_mean: float
-        Mean term in lognormal random variable representing base usage in winter season, for pool meters.
-    pool_winter_base_sigma: float
-        Sigma term in lognormal random variable representing base usage in winter season, for pool meters.
-    pool_winter_peak_mean: float
-        Mean term in lognormal random variable representing peak usage in winter season, for pool meters.
-    pool_winter_peak_sigma: float
-        Sigma term in lognormal random variable representing peak usage in winter season, for pool meters.
-    pool_summer_base_mean: float
-        Mean term in lognormal random variable representing base usage in summer season, for pool meters.
-    pool_summer_base_sigma: float
-        Sigma term in lognormal random variable representing base usage in summer season, for pool meters.
-    pool_summer_peak_mean: float
-        Mean term in lognormal random variable representing peak usage in summer season, for pool meters.
-    pool_summer_peak_sigma: float
-        Sigma term in lognormal random variable representing peak usage in summer season, for pool meters.
-    pool_shoulder_base_mean: float
-        Mean term in lognormal random variable representing base usage in shoulder season, for pool meters.
-    pool_shoulder_base_sigma: float
-        Sigma term in lognormal random variable representing base usage in shoulder season, for pool meters.
-    pool_shoulder_peak_mean: float
-        Mean term in lognormal random variable representing peak usage in shoulder season, for pool meters.
-    pool_shoulder_peak_sigma: float
-        Sigma term in lognormal random variable representing peak usage in shoulder season, for pool meters.
+    winter_base_mean: float
+        Mean term in lognormal random variable representing base usage in winter season, base population.
+    winter_base_sigma: float
+        Sigma term in lognormal random variable representing base usage in winter season, base population.
+    winter_peak_mean: float
+        Mean term in lognormal random variable representing peak usage in winter season, base population.
+    winter_peak_sigma: float
+        Sigma term in lognormal random variable representing peak usage in winter season, for base population.
+    summer_base_mean: float
+        Mean term in lognormal random variable representing base usage in summer season, for base population.
+    summer_base_sigma: float
+        Sigma term in lognormal random variable representing base usage in summer season, for base population.
+    summer_peak_mean: float
+        Mean term in lognormal random variable representing peak usage in summer season, for base population.
+    summer_peak_sigma: float
+        Sigma term in lognormal random variable representing peak usage in summer season, for base population.
+    shoulder_base_mean: float
+        Mean term in lognormal random variable representing base usage in shoulder season, for base population.
+    shoulder_base_sigma: float
+        Sigma term in lognormal random variable representing base usage in shoulder season, for base population.
+    shoulder_peak_mean: float
+        Mean term in lognormal random variable representing peak usage in shoulder season, for base population.
+    shoulder_peak_sigma: float
+        Sigma term in lognormal random variable representing peak usage in shoulder season, for base population.
+    treatment_filter_function: function
+        Function to filter the features data frame in order to extract the treatment group from 
+        the base population, e.g. lambda df: df[df.annual_usage > df.annual_usage.quantile(0.2)]
     cache_folder: str
         Folder in which to cache computed values.
     """
 
-    def __init__(self, 
+    def __init__(self,                 
                 n_treatment=100, n_pool=1000,
-                treatment_winter_base_mean=0.1, treatment_winter_base_sigma=0.1, 
-                treatment_winter_peak_mean=1, treatment_winter_peak_sigma=0.1, 
-                treatment_summer_base_mean=0.1, treatment_summer_base_sigma=0.1, 
-                treatment_summer_peak_mean=0.8, treatment_summer_peak_sigma=0.1, 
-                treatment_shoulder_base_mean=0.1, treatment_shoulder_base_sigma=0.1, 
-                treatment_shoulder_peak_mean=0.9, treatment_shoulder_peak_sigma=0.1, 
-                pool_winter_base_mean=0.1, pool_winter_base_sigma=0.1, 
-                pool_winter_peak_mean=1, pool_winter_peak_sigma=0.1, 
-                pool_summer_base_mean=0.1, pool_summer_base_sigma=0.1, 
-                pool_summer_peak_mean=0.8, pool_summer_peak_sigma=0.1, 
-                pool_shoulder_base_mean=0.1, pool_shoulder_base_sigma=0.1, 
-                pool_shoulder_peak_mean=0.9, pool_shoulder_peak_sigma=0.1, 
+                winter_base_mean=0.1, winter_base_sigma=0.1, 
+                winter_peak_mean=1, winter_peak_sigma=0.1, 
+                summer_base_mean=0.1, summer_base_sigma=0.1, 
+                summer_peak_mean=0.8, summer_peak_sigma=0.1, 
+                shoulder_base_mean=0.1, shoulder_base_sigma=0.1, 
+                shoulder_peak_mean=0.9, shoulder_peak_sigma=0.1, 
+                treatment_filter_function = lambda df: df[df.annual_usage > df.annual_usage.quantile(0.2)],
                 cache_folder = '.cache'    
                 ):
 
         logging.info(f"Caching objects to {cache_folder}")
-        
-        self.population_treatment = SyntheticPopulation(n_meters=n_treatment, id_prefix='treatment',
-                winter_base_mean=treatment_winter_base_mean, 
-                winter_base_sigma=treatment_winter_base_sigma, 
-                winter_peak_mean=treatment_winter_peak_mean,
-                winter_peak_sigma=treatment_winter_peak_sigma,
-                summer_base_mean=treatment_summer_base_mean,
-                summer_base_sigma=treatment_summer_base_sigma, 
-                summer_peak_mean=treatment_summer_peak_mean,
-                summer_peak_sigma=treatment_summer_peak_sigma,
-                shoulder_base_mean=treatment_shoulder_base_mean,
-                shoulder_base_sigma=treatment_shoulder_base_sigma, 
-                shoulder_peak_mean=treatment_shoulder_peak_mean,
-                shoulder_peak_sigma=treatment_shoulder_peak_sigma,
+
+        self.population = SyntheticPopulation(n_meters=n_treatment+n_pool, id_prefix='meter',
+                winter_base_mean=winter_base_mean, 
+                winter_base_sigma=winter_base_sigma, 
+                winter_peak_mean=winter_peak_mean,
+                winter_peak_sigma=winter_peak_sigma,
+                summer_base_mean=summer_base_mean,
+                summer_base_sigma=summer_base_sigma, 
+                summer_peak_mean=summer_peak_mean,
+                summer_peak_sigma=summer_peak_sigma,
+                shoulder_base_mean=shoulder_base_mean,
+                shoulder_base_sigma=shoulder_base_sigma, 
+                shoulder_peak_mean=shoulder_peak_mean,
+                shoulder_peak_sigma=shoulder_peak_sigma,
                 cache_folder = cache_folder)
-        
-        self.population_pool = SyntheticPopulation(n_meters=n_pool, id_prefix='pool',
-                winter_base_mean=pool_winter_base_mean, 
-                winter_base_sigma=pool_winter_base_sigma, 
-                winter_peak_mean=pool_winter_peak_mean,
-                winter_peak_sigma=pool_winter_peak_sigma,
-                summer_base_mean=pool_summer_base_mean,
-                summer_base_sigma=pool_summer_base_sigma, 
-                summer_peak_mean=pool_summer_peak_mean,
-                summer_peak_sigma=pool_summer_peak_sigma,
-                shoulder_base_mean=pool_shoulder_base_mean,
-                shoulder_base_sigma=pool_shoulder_base_sigma, 
-                shoulder_peak_mean=pool_shoulder_peak_mean,
-                shoulder_peak_sigma=pool_shoulder_peak_sigma, 
-                cache_folder = cache_folder)
-        
-        self.key = f"{self.population_pool.key}__{self.population_treatment.key}"
+
+        df_features = self.population.features()
+        self.treatment_meters = treatment_filter_function(df_features)['meter_id'].sample(n_treatment)
+        self.pool_meters = df_features.meter_id[~df_features.meter_id.isin(self.treatment_meters)]
+        meters_str = "_".join([f"{m}" for m in self.treatment_meters])
+        self.key = f"{self.population.key}__{meters_str}"
+
+    def add_set(self, df):
+        df['set'] = 'pool'
+        df.loc[df.meter_id.isin(self.treatment_meters), 'set'] = 'treatment'
+        return df
 
     def features(self):
-        return pd.concat([
-            self.population_treatment.features().assign(set='treatment'),
-            self.population_pool.features().assign(set='pool'),
-        ])
-    
-    def features_pool(self):
-        return self.population_pool.features()
-    
+        return self.add_set(self.population.features())
+
     def monthly(self):
-        return pd.concat([
-            self.population_treatment.monthly().assign(set='treatment'),
-            self.population_pool.monthly().assign(set='pool'),
-        ])
+        return self.add_set(self.population.monthly())
+
 
     def seasonal_168(self):
-        return pd.concat([
-            self.population_treatment.seasonal_168().assign(set='treatment'),
-            self.population_pool.seasonal_168().assign(set='pool'),
-        ])
+        return self.add_set(self.population.seasonal_168())
 
 
