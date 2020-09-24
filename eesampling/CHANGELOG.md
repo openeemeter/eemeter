@@ -4,6 +4,12 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+0.8.0
+-----
+
+
 * Add synthetic data generation for testing and tutorials
 * Add tutorial Jupyter notebook
 * Rename Diagnostics --> StratifiedSamplingDiagnostics
