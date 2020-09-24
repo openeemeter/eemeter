@@ -45,7 +45,7 @@ def test_record_based_equivalence_euclidean(diagnostics_obj, df_treatment, df_po
 
     
     equivalence = diagnostics_obj.records_based_equivalence_euclidean(
-        df_equiv, groupby_col="month", value_col="baseline_predicted_usage"
+        df_equiv, equiv_groupby_col="month", equiv_value_col="baseline_predicted_usage"
     )
     assert equivalence
 
@@ -54,6 +54,6 @@ def test_record_based_equivalence_chisquare(diagnostics_obj, df_treatment, df_po
 
     
     equivalence = diagnostics_obj.records_based_equivalence_chisquare(
-        df_equiv, groupby_col="month", value_col="baseline_predicted_usage"
+        df_equiv, equiv_groupby_col="month", equiv_value_col="baseline_predicted_usage"
     )
     assert equivalence

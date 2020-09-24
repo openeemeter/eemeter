@@ -306,9 +306,10 @@ class StratifiedSamplingDiagnostics(DiagnosticPlotter):
     def records_based_equivalence(
         self,
         df_for_equivalence,
-        groupby_col,
-        value_col,
+        equiv_groupby_col,
+        equiv_value_col,
         how,
+        equiv_id_col="id",
         id_col="id",
         equiv_label_x=None,
         equiv_label_y=None,
@@ -318,8 +319,9 @@ class StratifiedSamplingDiagnostics(DiagnosticPlotter):
         if how == "euclidean":
             return self.records_based_equivalence_euclidean(
                 df_for_equivalence=df_for_equivalence,
-                groupby_col=groupby_col,
-                value_col=value_col,
+                equiv_groupby_col=equiv_groupby_col,
+                equiv_value_col=equiv_value_col,
+                equiv_id_col=equiv_id_col,
                 id_col=id_col,
                 equiv_label_x=equiv_label_x,
                 equiv_label_y=equiv_label_y,
@@ -327,8 +329,9 @@ class StratifiedSamplingDiagnostics(DiagnosticPlotter):
         elif how == "chisquare":
             return self.records_based_equivalence_chisquare(
                 df_for_equivalence=df_for_equivalence,
-                groupby_col=groupby_col,
-                value_col=value_col,
+                equiv_groupby_col=equiv_groupby_col,
+                equiv_value_col=equiv_value_col,
+                equiv_id_col=equiv_id_col,
                 id_col=id_col,
                 equiv_label_x=equiv_label_x,
                 equiv_label_y=equiv_label_y,
@@ -341,8 +344,9 @@ class StratifiedSamplingDiagnostics(DiagnosticPlotter):
     def records_based_equivalence_euclidean(
         self,
         df_for_equivalence,
-        groupby_col,
-        value_col,
+        equiv_groupby_col,
+        equiv_value_col,
+        equiv_id_col="id",
         id_col="id",
         equiv_label_x=None,
         equiv_label_y=None,
@@ -362,16 +366,16 @@ class StratifiedSamplingDiagnostics(DiagnosticPlotter):
 
         df = self.df_all[["population", id_col]].copy()
         df_combined = df.set_index(id_col, drop=True).join(
-            df_for_equivalence.set_index(id_col, drop=True)
+            df_for_equivalence.set_index(equiv_id_col, drop=True)
         )
         equiv_x = (
             df_combined[df_combined["population"] == equiv_label_x]
-            .groupby(groupby_col)[value_col]
+            .groupby(equiv_groupby_col)[equiv_value_col]
             .mean()
         )
         equiv_y = (
             df_combined[df_combined["population"] == equiv_label_y]
-            .groupby(groupby_col)[value_col]
+            .groupby(equiv_groupby_col)[equiv_value_col]
             .mean()
         )
         return equiv_x.to_frame(), equiv_y.to_frame(), pdist([equiv_x, equiv_y])[0]
@@ -380,8 +384,9 @@ class StratifiedSamplingDiagnostics(DiagnosticPlotter):
     def records_based_equivalence_chisquare(
         self,
         df_for_equivalence,
-        groupby_col,
-        value_col,
+        equiv_groupby_col,
+        equiv_value_col,
+        equiv_id_col="id",
         id_col="id",
         equiv_label_x=None,
         equiv_label_y=None,
@@ -403,10 +408,10 @@ class StratifiedSamplingDiagnostics(DiagnosticPlotter):
 
         df = self.df_all[["population", id_col]].copy()
         df_combined = df.set_index(id_col, drop=True).join(
-            df_for_equivalence.set_index(id_col, drop=True)
+            df_for_equivalence.set_index(equiv_id_col, drop=True)
         )
-        features = df_combined[groupby_col].unique()
-        df_combined = df_combined.set_index(['population', groupby_col]).sort_index()
+        features = df_combined[equiv_groupby_col].unique()
+        df_combined = df_combined.set_index(['population', equiv_groupby_col]).sort_index()
 
         chisquare_stats = []
         equiv_x = []
@@ -419,19 +424,19 @@ class StratifiedSamplingDiagnostics(DiagnosticPlotter):
             num_bins = max(int(len(df_equiv_x) / chisquare_n_values_per_bin), 1)
 
             binned_data_x = df_equiv_x
-            binned_data_x['_bin_label'] = pd.qcut(binned_data_x[value_col], q=num_bins).astype(str)
+            binned_data_x['_bin_label'] = pd.qcut(binned_data_x[equiv_value_col], q=num_bins).astype(str)
 
             binned_data_y = df_equiv_y
-            binned_data_y['_bin_label'] = pd.qcut(binned_data_y[value_col], q=num_bins).astype(str)
+            binned_data_y['_bin_label'] = pd.qcut(binned_data_y[equiv_value_col], q=num_bins).astype(str)
 
-            chisquare_x = binned_data_x.groupby("_bin_label")[value_col].mean()
-            chisquare_y = binned_data_y.groupby("_bin_label")[value_col].mean()
+            chisquare_x = binned_data_x.groupby("_bin_label")[equiv_value_col].mean()
+            chisquare_y = binned_data_y.groupby("_bin_label")[equiv_value_col].mean()
             chisquare_stats.append(chisquare(chisquare_x, chisquare_y).statistic)
 
             chisquare_x_df = chisquare_x.to_frame()
-            chisquare_x_df[groupby_col] = groupby_col_num
+            chisquare_x_df[equiv_groupby_col] = groupby_col_num
             chisquare_y_df = chisquare_y.to_frame()
-            chisquare_y_df[groupby_col] = groupby_col_num
+            chisquare_y_df[equiv_groupby_col] = groupby_col_num
 
             equiv_x.append(chisquare_x_df)
             equiv_y.append(chisquare_y_df)
