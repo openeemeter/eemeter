@@ -227,39 +227,17 @@ def sample_bins(
     binned_data_treatment,
     binned_data_pool,
     random_seed,
-    n_samples_approx=None,
+    n_samples_approx,
+    counts=None,
     skip_outliers=True,
     relax_n_samples_approx_constraint=False,
 ):
-
-    counts = binned_data_treatment.count_bins(skip_outliers=skip_outliers)
+    if not counts:
+        counts = binned_data_treatment.count_bins(skip_outliers=True)
+        counts["n_target"] = np.floor(counts["n_pct"] * n_samples_approx).astype(int)
 
     if len(counts) == 0:
         raise ValueError("No non-outlier treatment data remaining.")
-
-    # a way to ensure you get the max number of samples if n_samples_approx=None
-    counts["n_samples_available"] = [
-        row["bin"].get_max_n_target(binned_data_pool.df)
-        for index, row in counts.iterrows()
-    ]
-    max_possible_n_samples_approx = int(
-        min(counts["n_samples_available"] / counts["n_pct"])
-    )
-    n_samples_approx = (
-        n_samples_approx if n_samples_approx else max_possible_n_samples_approx
-    )
-
-
-    # needs to be floor to ensure rounding errors don't leave one less than exists
-    counts["n_target"] = np.floor(counts["n_pct"] * n_samples_approx).astype(int)
-
-    # if you want to treat n_samples_approx as a max, but get as many as you can
-    # if you can't reach that, then set relax_n_samples_approx_constraint=True
-    if relax_n_samples_approx_constraint and any(
-        counts["n_samples_available"] - counts["n_target"] < 0
-    ):
-        n_samples_approx = max_possible_n_samples_approx
-        counts["n_target"] = np.floor(counts["n_pct"] * n_samples_approx).astype(int)
     df = pd.concat(
         [
             row["bin"].sample(
@@ -272,3 +250,44 @@ def sample_bins(
         ]
     )
     return df
+
+
+def get_counts_and_update_n_samples_approx(
+    binned_data_treatment, binned_data_pool, n_samples_approx, relax_n_samples_approx_constraint
+):
+    counts = binned_data_treatment.count_bins(skip_outliers=True)
+
+    # Scenario 1: n_samples_approx = None
+    # a way to ensure you get the max number of samples if n_samples_approx=None
+    counts["n_samples_available"] = [
+        row["bin"].get_max_n_target(binned_data_pool.df)
+        for index, row in counts.iterrows()
+    ]
+    max_possible_n_samples_approx = int(
+        min(counts["n_samples_available"] / counts["n_pct"])
+    )
+    n_samples_approx = (
+        n_samples_approx if n_samples_approx else max_possible_n_samples_approx
+    )
+    # needs to be floor to ensure rounding errors don't leave one less than exists
+    counts["n_target"] = np.floor(counts["n_pct"] * n_samples_approx).astype(int)
+
+    # if you want to treat n_samples_approx as a max, but get as many as you can
+    # if you can't reach that, then set relax_n_samples_approx_constraint=True
+    has_enough_for_n_samples_approx = not any(
+        counts["n_samples_available"] < counts["n_target"]
+    )
+    relax_ratio_constraint = False
+    if has_enough_for_n_samples_approx:
+        # Scenario 2: n_samples_approx=value so we want to ignore the ratio constraint
+        relax_ratio_constraint = True
+    elif relax_n_samples_approx_constraint:
+        # Scenario 3: n_samples_approx=value and that value but that value can not
+        # be met, so we want as many as possible and it is valid as long as it
+        # meets the ratio constraint.
+        n_samples_approx = max_possible_n_samples_approx
+        counts["n_target"] = np.floor(counts["n_pct"] * n_samples_approx).astype(int)
+    # else:
+        # Scenario 4: It will fail during sampling because it can not meet 
+        # n_samples_approx and we did not relax that constraint.
+    return n_samples_approx, relax_ratio_constraint, counts
