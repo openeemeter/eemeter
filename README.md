@@ -2,7 +2,7 @@ Link to Slides: https://docs.google.com/presentation/d/1oEH9fJnjLwakBKbNXQ9ZD1vR
 
 Please see [Issues](https://github.com/recurve-methods/comparison_groups/issues) for discussions and feel free to open a new topic or contribute to an existing one: https://github.com/recurve-methods/comparison_groups/issues 
 
-# Open source software - eesampling
+### Open source software - eesampling
 
 As of 2020-09-25 we have released `eesampling`, an open source Python library designed to perform stratified sampling for the purposes of constructing comparison groups.  The code is available in this repository in the [`eesampling` folder](https://github.com/recurve-methods/comparison_groups/tree/master/eesampling); the library's features are documented in an [introductory tutorial notebook](https://github.com/recurve-methods/comparison_groups/blob/master/eesampling/scripts/Tutorial.ipynb).  Additional features and functionality will be added over time; contributions are welcome.  Please raise an [Issue](https://github.com/recurve-methods/comparison_groups/issues) with any questions or feedback.
 
