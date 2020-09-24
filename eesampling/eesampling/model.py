@@ -25,6 +25,7 @@ import logging
 from plotnine import *
 import plotnine
 import numpy as np
+from .diagnostics import StratifiedSamplingDiagnostics
 from .bins import (
     Binning,
     BinnedData,
@@ -32,7 +33,6 @@ from .bins import (
     sample_bins,
     get_counts_and_update_n_samples_approx,
 )
-from .diagnostics import Diagnostics
 
 pd.options.mode.chained_assignment = None  # suppress warnings
 
@@ -40,6 +40,42 @@ logger = logging.getLogger(__name__)
 
 
 class StratifiedSampling(object):
+    """
+    Perform stratified sampling on a treatment group and comparison pool.  
+    
+    Input data must be provided in the form of two data frames, df_treatment and df_pool, 
+    which have identical columns.  These data frames should contain one row per meter, 
+    one ID column, and one or more numerical feature columns.  The comparison pool
+    will be stratified (i.e. binned) along one or more of these feature columns, and 
+    a comparison group will be selected such that the distribution of features in the 
+    comparison group is as close as possible to that of the treatment group.
+
+    Stratification columns must be configured as follows:
+
+        m = StratifiedSampling()
+        m.add_column('annual_usage', min_value=0, max_value=20000)
+        m.add_column('summer_usage', min_value=0, max_value=1000)
+
+    In this case, `annual_usage` and `summer_usage` are feature columns that 
+    are present in `df_treatment` and `df_pool`.
+    See `StratifiedSampling.add_column()` for more information on configuring columns.
+    Once columns are added, execute the model as follows:
+
+        m.fit_and_sample(df_treatment, df_pool)
+
+    See `StratifiedSampling.fit_and_sample()` for additional options, notably several
+    parameters which determine the number of meters in the comparison group.
+
+    After fitting the model, you can create a StratifiedSamplingDiagnostics object 
+    which has methods for producing diagnostic plots and tables:
+
+        d = m.diagnostics()
+        d.scatter()
+        d.bin_counts()
+
+
+    """
+
     def __init__(
         self, treatment_label="treatment", pool_label="pool", output_name="output"
     ):
@@ -82,6 +118,8 @@ class StratifiedSampling(object):
         auto_bin_require_equivalence: bool = True,
     ):
         """
+        Add a stratification column to the model.
+
         Attributes
         ----------
         name: str
@@ -143,7 +181,7 @@ class StratifiedSampling(object):
             dataframe to use for constructing the stratified sampling bins.
         df_pool: pandas.DataFrame
             dataframe to sample from according to the constructed stratified sampling bins.
-        n_samples_aprox: int
+        n_samples_approx: int
             approximate number of total samples from df_pool. It is approximate because
             there may be some slight discrepencies around the total count to ensure
             that each bin has the correct percentage of the total.
@@ -294,7 +332,7 @@ class StratifiedSampling(object):
     # - compare treatment data vs pool data, post-sampled
 
     def diagnostics(self):
-        return Diagnostics(model=self)
+        return StratifiedSamplingDiagnostics(model=self)
 
     def sample(
         self,

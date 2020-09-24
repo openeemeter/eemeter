@@ -4,6 +4,10 @@ Changelog
 Development
 -----------
 
+* Add synthetic data generation for testing and tutorials
+* Add tutorial Jupyter notebook
+* Rename Diagnostics --> StratifiedSamplingDiagnostics
+* Expose all classes for top-level imports.
 * Made adjustment to how n_samples_approx is calculated. It now works where the minimum sampled:treatment ratio can be violated if n_samples_approx is used as an upper bound and that upper bound is reached.
 
 0.7.0

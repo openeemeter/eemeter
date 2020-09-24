@@ -35,3 +35,13 @@ services:
     entrypoint: python setup.py sdist upload -r fury
     volumes:
       - .:/app
+
+  jupyter:
+    image: eesampling
+    entrypoint: jupyter lab scripts/ --port=${HOST_PORT_JUPYTER:-8888} --no-browser --ip=0.0.0.0 --allow-root
+    env_file:
+      - dev-env.env
+    volumes: 
+      - .:/app 
+    ports: 
+      - "${HOST_PORT_JUPYTER:-8888}:${HOST_PORT_JUPYTER:-8888}"
