@@ -162,8 +162,8 @@ class DiagnosticPlotter:
         df_rects = df_rects[~df_rects["bin"].isin(outlier_bins)]
 
         # due to plotnine bug
-        df_rects[col_x] = 0
-        df_rects[col_y] = 0
+        df_rects[col_x] = np.nan
+        df_rects[col_y] = np.nan
         p = base_plot + geom_rect(
             aes(xmin="x_min", xmax="x_max", ymin="y_min", ymax="y_max"),
             data=df_rects,
@@ -195,7 +195,7 @@ class DiagnosticPlotter:
         df_rects = df_rects[~df_rects["bin"].isin(outlier_bins)]
 
         # due to plotnine bug
-        df_rects[col] = 0
+        df_rects[col] = np.nan
         p = p + geom_rect(
             aes(xmin="x_min", xmax="x_max", ymin=-np.inf, ymax=np.inf),
             data=df_rects,
