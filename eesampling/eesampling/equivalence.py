@@ -5,10 +5,12 @@ from scipy.stats import chisquare
 
 
 class Equivalence:
-    def __init__(self, ix_x, ix_y, features_matrix, n_bins=None):
+    def __init__(self, ix_x, ix_y, features_matrix, n_quantiles=1, how='euclidean'):
         self.ix_x = ix_x
         self.ix_y = ix_y
-        self.n_bins = None
+        self.n_quantiles = n_quantiles
+        self.how = how 
+
         if type(features_matrix) == pd.DataFrame:
             features_matrix = features_matrix.to_numpy()
         elif type(features_matrix) == np.ndarray:
@@ -17,29 +19,14 @@ class Equivalence:
             raise ValueError("features_matrix must be a pandas DataFrame or numpy ndarray.")
 
         self.features_matrix = features_matrix
-        self.X = self.features_matrix[ix_x]
-        self.Y = self.features_matrix[ix_y]
-
-        self.prep_data()
-        self.compute()
-
-    def prep_data(self):
-        pass 
+        self.X = self.features_matrix[ix_x].transpose()
+        self.Y = self.features_matrix[ix_y].transpose()
 
     def compute(self):
-        pass 
+        self.means_x, self.means_y, self.distance, self.column_distances = quantile_distance(X=self.X, Y=self.Y, n_quantiles=self.n_quantiles, 
+                    how=self.how)
+        return self.means_x, self.means_y, self.distance, self.column_distances 
 
-
-def euclidean_distance_means(X, Y):
-    means_x = np.mean(X)
-    means_y = np.mean(Y)
-    return pdist(np.array([means_x, means_y]))
-
-
-def chisquare_distance_means(X, Y):
-    means_x = np.mean(X)
-    means_y = np.mean(Y)
-    return chisquare(means_x, means_y).statistic 
 
 
 def get_quantile_indexes(n_quantiles):
@@ -99,41 +86,13 @@ def get_distance_func(how="euclidean"):
 def quantile_distance(X, Y, n_quantiles, how="euclidean"):
     # compute distances for each column in X and Y, by slicing into quantiles and comparing means
     means_x, means_y = quantile_means_population(X, Y, n_quantiles)
-    distances = np.ndarray(len(means_x))
+    column_distances = np.ndarray(len(means_x))
     distance_func = get_distance_func(how)
     for i in range(len(means_x)):
-        distances[i] = distance_func(means_x[i], means_y[i])
-    return distances
+        column_distances[i] = distance_func(means_x[i], means_y[i])
+    return means_x, means_y, np.sum(column_distances), column_distances
 
 
-
-
-
-
-
-# class EquivalenceMeanBased(Equivalence):
-#     def prep_data(self):
-#         self.means_x = np.mean(self.X_x, axis=0)
-#         self.means_y = np.mean(self.X_y, axis=0)
-
-
-# class EquivalenceMeanBasedEuclidean(EquivalenceMeanBased):
-#     def compute(self):
-#         self.distance = pdist(np.array([self.means_x, self.means_y]))
-
-
-# class EquivalenceMeanBasedChisquare(EquivalenceMeanBased):
-#     def compute(self):
-#         self.distance = chisquare(self.means_x, self.means_y).statistic
-
-
-# class EquivalenceQuantileBased(Equivalence):
-#     def prep_data(self):
-#         if self.n_bins is None:
-#             raise ValueError("n_bins must not be 'None' to used bin-based equivalence.")
-
-#         self.bins_x = pass 
-#         self.bins_y = pass
 
 
 
