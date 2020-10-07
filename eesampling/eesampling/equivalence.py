@@ -4,28 +4,62 @@ from scipy.spatial.distance import pdist
 from scipy.stats import chisquare
 
 
+def ids_to_index(subset_ids, all_ids):
+    """Convert an array of ids to an array of indexes relative to a superset of ids."""
+    n = len(subset_ids)
+    ix = np.ndarray(n, int)
+    for i in range(n):
+        index = np.where(all_ids == subset_ids[i])
+        if len(index[0]) == 0:
+            raise ValueError(f"ID {subset_ids[i]} not found in superset of IDs")
+        ix[i] = index[0][0].astype(int)
+    return ix 
+
+
+# current todo:
+# DONE -- outputs of equivalence computation into data frame --see rehape_outputs below
+# DONE -- fix equivalence tests with new formats
+# DONE -- get bin selector tests running properly
+# refactor bin selector inputs, tests, notebook with new input format
+# then done?  test upstream as well, in comparison-groups
+
+
 class Equivalence:
     def __init__(self, ix_x, ix_y, features_matrix, n_quantiles=1, how='euclidean'):
         self.ix_x = ix_x
         self.ix_y = ix_y
         self.n_quantiles = n_quantiles
-        self.how = how 
+        self.how = how
 
         if type(features_matrix) == pd.DataFrame:
-            features_matrix = features_matrix.to_numpy()
+            features_matrix = features_matrix.to_numpy() # pragma: no cover
         elif type(features_matrix) == np.ndarray:
             pass
         else:
-            raise ValueError("features_matrix must be a pandas DataFrame or numpy ndarray.")
+            raise ValueError("features_matrix must be a pandas DataFrame or numpy ndarray.") # pragma: no cover
 
         self.features_matrix = features_matrix
         self.X = self.features_matrix[ix_x].transpose()
         self.Y = self.features_matrix[ix_y].transpose()
 
+
     def compute(self):
-        self.means_x, self.means_y, self.distance, self.column_distances = quantile_distance(X=self.X, Y=self.Y, n_quantiles=self.n_quantiles, 
-                    how=self.how)
-        return self.means_x, self.means_y, self.distance, self.column_distances 
+        means_x, means_y, quantiles_x, quantiles_y = quantile_means_population(self.X, self.Y, self.n_quantiles)
+        distance = sum_column_distance(means_x, means_y, how=self.how)
+        equiv_x = reshape_outputs(means_x, quantiles_x)
+        equiv_y = reshape_outputs(means_y, quantiles_y)
+        return equiv_x, equiv_y, distance
+
+
+
+def reshape_outputs(means, quantiles):
+    out = []
+    for feature in range(len(means)):
+        for q in range(len(quantiles[0])-1):
+            bin_label = f"[{quantiles[feature][q]}, {quantiles[feature][q+1]}]" 
+            mean = means[feature][q]
+            out.append({'_bin_label': bin_label, 'value': mean, 'feature_index': feature})
+    return pd.DataFrame(out)
 
 
 
@@ -49,24 +83,27 @@ def quantile_means_array(col, n_quantiles):
     means = np.ndarray(n_quantiles)
     for i in range(len(quantiles) - 1):
         means[i] = np.mean(cut_column(col, quantiles[i], quantiles[i+1]))
-    return means
+    return means, quantiles
 
 
 def quantile_means_population(X, Y, n_quantiles):
     # compute means per quantile, for each column in X and Y
     n_cols = len(X)
     if not len(X) == len(Y):
-        raise ValueError("Matrices must have the same number of columns.")
+        raise ValueError("Matrices must have the same number of columns.") # pragma: no cover
 
     means_x = np.ndarray((n_cols, n_quantiles))
     means_y = np.ndarray((n_cols, n_quantiles))
+    quantiles_x = np.ndarray((n_cols, n_quantiles + 1))
+    quantiles_y = np.ndarray((n_cols, n_quantiles + 1))
+
     for i in range(n_cols):
         col_x = X[i]
         col_y = Y[i]
-        means_x[i] = quantile_means_array(col_x, n_quantiles)
-        means_y[i] = quantile_means_array(col_y, n_quantiles)
+        means_x[i], quantiles_x[i] = quantile_means_array(col_x, n_quantiles)
+        means_y[i], quantiles_y[i] = quantile_means_array(col_y, n_quantiles)
 
-    return means_x, means_y
+    return means_x, means_y, quantiles_x, quantiles_y
 
 def chisquare_dist(X,Y):
     distance = 0
@@ -80,17 +117,17 @@ def get_distance_func(how="euclidean"):
     elif how == "chisquare":
         return chisquare_dist 
     else:
-        raise ValueError(f"Unsupported distance metric: {how}")
+        raise ValueError(f"Unsupported distance metric: {how}") # pragma: no cover
 
 
-def quantile_distance(X, Y, n_quantiles, how="euclidean"):
-    # compute distances for each column in X and Y, by slicing into quantiles and comparing means
-    means_x, means_y = quantile_means_population(X, Y, n_quantiles)
+def sum_column_distance(means_x, means_y, how="euclidean"):
     column_distances = np.ndarray(len(means_x))
     distance_func = get_distance_func(how)
     for i in range(len(means_x)):
         column_distances[i] = distance_func(means_x[i], means_y[i])
-    return means_x, means_y, np.sum(column_distances), column_distances
+    return np.sum(column_distances)
+
+
 
 
 

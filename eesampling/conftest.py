@@ -59,3 +59,15 @@ def df_equiv(df_treatment, df_pool):
         ]
     )
     return pd.concat([df_treatment_records, df_pool_records])
+
+
+@pytest.fixture
+def equivalence_feature_matrix(df_equiv):
+    df = df_equiv.pivot("id", "month", "baseline_predicted_usage")
+    return df.to_numpy()
+
+
+@pytest.fixture
+def equivalence_feature_ids(df_equiv):
+    df = df_equiv.pivot("id", "month", "baseline_predicted_usage")
+    return df.index.unique()

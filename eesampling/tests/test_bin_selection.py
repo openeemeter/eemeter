@@ -25,7 +25,7 @@ import pytest
 
 
 def test_stratified_sampling_fit_and_sample_records_equivalence(
-    df_treatment, df_pool, df_equiv, col_name
+    df_treatment, df_pool,  col_name, equivalence_feature_ids, equivalence_feature_matrix
 ):
     stratified_sampling_obj = StratifiedSampling()
     df_pool["col2"] = df_pool[col_name]
@@ -36,21 +36,20 @@ def test_stratified_sampling_fit_and_sample_records_equivalence(
     StratifiedSamplingBinSelector(stratified_sampling_obj,
         df_treatment,
         df_pool,
-        df_equiv,
-        equivalence_groupby_col="month",
-        equivalence_value_col="baseline_predicted_usage",
-        equivalence_id_col="id",
+        
         min_n_bins=4,
         max_n_bins=6,
         random_seed=1,
-        how='chisquare'
+        equivalence_method='chisquare',
+        equivalence_feature_ids = equivalence_feature_ids,
+        equivalence_feature_matrix = equivalence_feature_matrix
     )
     output = stratified_sampling_obj.data_sample.df
     bins_df = stratified_sampling_obj.diagnostics().count_bins()
 
 
 def test_stratified_sampling_fit_and_sample_records_equivalence_too_many_bins(
-    df_treatment, df_pool, df_equiv, col_name
+    df_treatment, df_pool,  col_name, equivalence_feature_ids, equivalence_feature_matrix
 ):
     stratified_sampling_obj = StratifiedSampling()
 
@@ -60,20 +59,19 @@ def test_stratified_sampling_fit_and_sample_records_equivalence_too_many_bins(
         model_w_selected_bins = StratifiedSamplingBinSelector(stratified_sampling_obj,
             df_treatment,
             df_pool,
-            df_equiv,
-            equivalence_groupby_col="month",
-            equivalence_value_col="baseline_predicted_usage",
-            equivalence_id_col="id",
+            
             min_n_bins=1000,
             max_n_bins=1002,
             random_seed=1,
-            how='chisquare',
+            equivalence_method='chisquare',
             relax_n_samples_approx_constraint=False,
+            equivalence_feature_ids = equivalence_feature_ids,
+            equivalence_feature_matrix = equivalence_feature_matrix
         )
 
 
 def test_stratified_sampling_fit_and_sample_records_equivalence_idempotent_check(
-    df_treatment, df_pool, df_equiv, col_name
+    df_treatment, df_pool,  col_name, equivalence_feature_ids, equivalence_feature_matrix
 ):
     df_treatment["col2"] = df_treatment[col_name] * 2
     df_treatment["col3"] = df_treatment[col_name] * 3
@@ -89,14 +87,12 @@ def test_stratified_sampling_fit_and_sample_records_equivalence_idempotent_check
     StratifiedSamplingBinSelector(stratified_sampling_obj,
         df_treatment,
         df_pool,
-        df_equiv,
-        equivalence_groupby_col="month",
-        equivalence_value_col="baseline_predicted_usage",
-        equivalence_id_col="id",
         min_n_bins=2,
         max_n_bins=3,
         random_seed=1,
-        how='chisquare'
+        equivalence_method='chisquare',
+        equivalence_feature_ids = equivalence_feature_ids,
+        equivalence_feature_matrix = equivalence_feature_matrix
     )
     sample1 = stratified_sampling_obj.data_sample.df.index.values
 
@@ -107,21 +103,19 @@ def test_stratified_sampling_fit_and_sample_records_equivalence_idempotent_check
     StratifiedSamplingBinSelector(stratified_sampling_obj,
         df_treatment,
         df_pool,
-        df_equiv,
-        equivalence_groupby_col="month",
-        equivalence_value_col="baseline_predicted_usage",
-        equivalence_id_col="id",
         min_n_bins=2,
         max_n_bins=3,
         random_seed=1,
-        how='chisquare'
+        equivalence_method='chisquare',
+        equivalence_feature_ids = equivalence_feature_ids,
+        equivalence_feature_matrix = equivalence_feature_matrix
     )
     sample2 = stratified_sampling_obj.data_sample.df.index.values
     assert set(sample1) == set(sample2)
 
 
 def test_stratified_sampling_fit_and_sample_records_equivalence_euclidean_idempotent_check(
-    df_treatment, df_pool, df_equiv, col_name
+    df_treatment, df_pool,  col_name, equivalence_feature_ids, equivalence_feature_matrix
 ):
     df_treatment["col2"] = df_treatment[col_name] * 2
     df_treatment["col3"] = df_treatment[col_name] * 3
@@ -137,14 +131,13 @@ def test_stratified_sampling_fit_and_sample_records_equivalence_euclidean_idempo
     StratifiedSamplingBinSelector(stratified_sampling_obj,
         df_treatment,
         df_pool,
-        df_equiv,
-        equivalence_groupby_col="month",
-        equivalence_value_col="baseline_predicted_usage",
-        equivalence_id_col="id",
+        
         min_n_bins=2,
         max_n_bins=3,
         random_seed=1,
-        how='euclidean'
+        equivalence_method='euclidean',
+        equivalence_feature_ids = equivalence_feature_ids,
+        equivalence_feature_matrix = equivalence_feature_matrix
     )
     sample1 = stratified_sampling_obj.data_sample.df.index.values
 
@@ -155,21 +148,19 @@ def test_stratified_sampling_fit_and_sample_records_equivalence_euclidean_idempo
     StratifiedSamplingBinSelector(stratified_sampling_obj,
         df_treatment,
         df_pool,
-        df_equiv,
-        equivalence_groupby_col="month",
-        equivalence_value_col="baseline_predicted_usage",
-        equivalence_id_col="id",
         min_n_bins=2,
         max_n_bins=3,
         random_seed=1,
-        how='euclidean'
+        equivalence_method='euclidean',
+        equivalence_feature_ids = equivalence_feature_ids,
+        equivalence_feature_matrix = equivalence_feature_matrix
     )
     sample2 = stratified_sampling_obj.data_sample.df.index.values
     assert set(sample1) == set(sample2)
 
 
 def test_stratified_sampling_fit_and_sample_records_equivalence_euclidean_idempotent_check(
-    df_treatment, df_pool, df_equiv, col_name
+    df_treatment, df_pool,  col_name, equivalence_feature_ids, equivalence_feature_matrix
 ):
     df_treatment["col2"] = df_treatment[col_name] * 2
     df_treatment["col3"] = df_treatment[col_name] * 3
@@ -185,14 +176,12 @@ def test_stratified_sampling_fit_and_sample_records_equivalence_euclidean_idempo
     StratifiedSamplingBinSelector(stratified_sampling_obj,
         df_treatment,
         df_pool,
-        df_equiv,
-        equivalence_groupby_col="month",
-        equivalence_value_col="baseline_predicted_usage",
-        equivalence_id_col="id",
         min_n_bins=2,
         max_n_bins=3,
         random_seed=1,
-        how='euclidean'
+        equivalence_method='euclidean',
+        equivalence_feature_ids = equivalence_feature_ids,
+        equivalence_feature_matrix = equivalence_feature_matrix
     )
     sample1 = stratified_sampling_obj.data_sample.df.index.values
 
@@ -203,21 +192,19 @@ def test_stratified_sampling_fit_and_sample_records_equivalence_euclidean_idempo
     StratifiedSamplingBinSelector(stratified_sampling_obj,
         df_treatment,
         df_pool,
-        df_equiv,
-        equivalence_groupby_col="month",
-        equivalence_value_col="baseline_predicted_usage",
-        equivalence_id_col="id",
         min_n_bins=2,
         max_n_bins=3,
         random_seed=1,
-        how='euclidean'
+        equivalence_method='euclidean',
+        equivalence_feature_ids = equivalence_feature_ids,
+        equivalence_feature_matrix = equivalence_feature_matrix        
     )
     sample2 = stratified_sampling_obj.data_sample.df.index.values
     assert set(sample1) == set(sample2)
 
 
 def test_plot_records_based_equiv_average(
-    df_treatment, df_pool, df_equiv, col_name
+    df_treatment, df_pool,  col_name, equivalence_feature_ids, equivalence_feature_matrix
 ):
     df_treatment["col2"] = df_treatment[col_name] * 2
     df_treatment["col3"] = df_treatment[col_name] * 3
@@ -233,21 +220,19 @@ def test_plot_records_based_equiv_average(
     bin_selection = StratifiedSamplingBinSelector(stratified_sampling_obj,
         df_treatment,
         df_pool,
-        df_equiv,
-        equivalence_groupby_col="month",
-        equivalence_value_col="baseline_predicted_usage",
-        equivalence_id_col="id",
         min_n_bins=2,
         max_n_bins=3,
         random_seed=1,
-        how='euclidean'
+        equivalence_method='euclidean',
+        equivalence_feature_ids = equivalence_feature_ids,
+        equivalence_feature_matrix = equivalence_feature_matrix
     )
     bin_selection.plot_records_based_equiv_average(plot=False)
     bin_selection.results_as_json()
 
 
 def test_plot_records_based_equiv_average_chisquare(
-    df_treatment, df_pool, df_equiv, col_name
+    df_treatment, df_pool,  col_name, equivalence_feature_ids, equivalence_feature_matrix
 ):
     df_treatment["col2"] = df_treatment[col_name] * 2
     df_treatment["col3"] = df_treatment[col_name] * 3
@@ -263,14 +248,12 @@ def test_plot_records_based_equiv_average_chisquare(
     bin_selection = StratifiedSamplingBinSelector(stratified_sampling_obj,
         df_treatment,
         df_pool,
-        df_equiv,
-        equivalence_groupby_col="month",
-        equivalence_value_col="baseline_predicted_usage",
-        equivalence_id_col="id",
         min_n_bins=2,
         max_n_bins=3,
         random_seed=1,
-        how='chisquare'
+        equivalence_method='chisquare',
+        equivalence_feature_ids = equivalence_feature_ids,
+        equivalence_feature_matrix = equivalence_feature_matrix
     )
     bin_selection.plot_records_based_equiv_average(plot=False)
     results = bin_selection.results_as_json()

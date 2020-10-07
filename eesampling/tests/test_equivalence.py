@@ -32,6 +32,34 @@ def feature_matrix(equiv_X, equiv_Y):
     return np.concatenate([x.transpose(), y.transpose()])
 
 
+
+def test_reshape_outputs():
+    means = [[11,12], [21,22]]
+
+    quantiles = [[11, 12, 13], 
+                 [21, 22, 23]]
+
+    df = pd.DataFrame({'_bin_label': ['[11, 12]', '[12, 13]', '[21, 22]', '[22, 23]'],
+                  'value': [11, 12, 21, 22], 'feature': [0,0,1,1]})
+    assert df.equals(reshape_outputs(means, quantiles))
+
+
+def test_equivalene_distance(feature_matrix):
+
+    eq = Equivalence(ix_x = [0,1,2,3,4,5], ix_y = [6,7,8,9,10,11], 
+        features_matrix = feature_matrix, n_quantiles=2, how="euclidean")
+    equiv_x, equiv_y, distance = eq.compute()
+    assert round(distance,2) == round(6 + 2*101**0.5,2)
+
+
+    eq = Equivalence(ix_x = [0,1,2,3,4,5], ix_y = [6,7,8,9,10,11], 
+        features_matrix = feature_matrix, n_quantiles=2, how="chisquare")
+    equiv_x, equiv_y, distance = eq.compute()
+    assert round(distance,2) == round(36/14 + 2*11,2)
+
+
+
+
 def test_get_quantiles():
     assert (get_quantile_indexes(1) == [0, 1]).all()
     assert (get_quantile_indexes(2) == [0, 0.5, 1]).all()
@@ -42,43 +70,29 @@ def test_get_quantiles():
 
 def test_quantile_means_array(equiv_X, equiv_Y):
     x = [0,1,2,3,4,5]
-    assert (quantile_means_array(x, n_quantiles=1) == np.mean(x)).all()
-    assert (quantile_means_array(x, n_quantiles=len(x)) == x).all()
+    means, quantiles = quantile_means_array(x, n_quantiles=1)
+    assert (means == np.mean(x)).all()
+    means, quantiles = quantile_means_array(x, n_quantiles=len(x))
+    assert (means == x).all()
 
     x = [1,1,1,10,10,10]
-    assert (quantile_means_array(x, n_quantiles=2) == [1, 10]).all()
+    means, quantiles = quantile_means_array(x, n_quantiles=2)
+    assert (means == [1, 10]).all()
 
-    means_x, means_y = quantile_means_population(equiv_X, equiv_Y, 2)
+    means_x, means_y, quantiles_x, quantiles_y = quantile_means_population(equiv_X, equiv_Y, 2)
     assert (means_x == np.array([[1,10], [1,10], [1,10]])).all()
     assert (means_y == np.array([[1,4], [0,0], [0,0]])).all()
 
 
 def test_quantile_distance(equiv_X, equiv_Y):
-    X = equiv_X
-    Y = equiv_Y
-
-    means_x, means_y, distance, column_distances = quantile_distance(X, Y, 2, "euclidean")
-    assert round(distance, 2) == round(6 + 2*101**0.5, 2)
-    assert (column_distances == np.array([
-            6,
-            101**0.5, 
-            101**0.5
-        ])).all()
-
-    means_x, means_y, distance, column_distances = quantile_distance(X, Y, 2, "chisquare")
-    assert round(distance,2) == round(36/14 + 2*11, 2)
-    assert (column_distances == np.array([
-            36/14,
-            11,
-            11
-        ])).all()
-
+    means_x, means_y, quantiles_x, quantiles_y = quantile_means_population(equiv_X, equiv_Y, 2)
+    assert round(sum_column_distance(means_x, means_y, "euclidean"),2) == round(6 + 2*101**0.5,2)
+    assert round(sum_column_distance(means_x, means_y, "chisquare"),2) == round(36/14 + 2*11,2)
 
 
 def test_equivalence_inputs(feature_matrix):
 
-    eq = Equivalence(ix_x = [1,2], ix_y = [3, 10, 11], features_matrix = feature_matrix)
-    
+    eq = Equivalence(ix_x = [1,2], ix_y = [3, 10, 11], features_matrix = feature_matrix)    
     # X should be [1,1,1] and [1,1,1]
     # eq.X should be sliced by column so [1,1], [1,1], [1,1]
     # Y should be [10, 10, 10], [4, 0, 0], [5, 0, 0]
@@ -87,32 +101,22 @@ def test_equivalence_inputs(feature_matrix):
     assert (eq.Y == np.array([[10,4,5], [10,0,0], [10,0,0]])).all()
 
 
-def test_equivalene_distance(feature_matrix):
-
-    eq = Equivalence(ix_x = [0,1,2,3,4,5], ix_y = [6,7,8,9,10,11], 
-        features_matrix = feature_matrix, n_quantiles=2, how="euclidean")
-    means_x, means_y, distance, column_distances = eq.compute()
-
-    assert (means_x == np.array([[1,10], [1,10], [1,10]])).all()
-    assert (means_y == np.array([[1,4], [0,0], [0,0]])).all()
-    assert round(distance,2) == round(6 + 2*101**0.5,2)
-    assert (column_distances == np.array([
-            6,
-            101**0.5, 
-            101**0.5
-        ])).all()
 
 
-    eq = Equivalence(ix_x = [0,1,2,3,4,5], ix_y = [6,7,8,9,10,11], 
-        features_matrix = feature_matrix, n_quantiles=2, how="chisquare")
-    means_x, means_y, distance, column_distances = eq.compute()
 
-    assert (means_x == np.array([[1,10], [1,10], [1,10]])).all()
-    assert (means_y == np.array([[1,4], [0,0], [0,0]])).all()
-    assert round(distance,2) == round(36/14 + 2*11,2)
-    assert (column_distances == np.array([
-            36/14,
-            11, 
-            11
-        ])).all()
+def test_index_to_ids():
+    t = np.array([11,17,15])
+    a = np.array([11,12,13,15,16,17,15])
+    assert (ids_to_index(t,a) == np.array([0,5,3])).all()
+
+    t1 = np.array(["11","17","15"])
+    a1 = np.array(["11","12","13","15","16","17","15"])
+    assert (ids_to_index(t1,a1) == np.array([0,5,3])).all()
+
+    with pytest.raises(ValueError):
+        t2 = np.array([98123])
+        ids_to_index(t2,a)
+
+
+
 

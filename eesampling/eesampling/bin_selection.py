@@ -23,6 +23,8 @@ import itertools
 import logging
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
+from . import equivalence 
 
 logger = logging.getLogger(__name__)
 
@@ -33,11 +35,9 @@ class StratifiedSamplingBinSelector(object):
         model,
         df_treatment,
         df_pool,
-        df_for_equivalence,
-        equivalence_groupby_col,
-        equivalence_value_col,
-        equivalence_id_col,
-        how,
+        equivalence_feature_ids,
+        equivalence_feature_matrix,
+        equivalence_method,
         df_id_col="id",
         n_samples_approx=5000,
         min_n_treatment_per_bin=0,
@@ -45,8 +45,7 @@ class StratifiedSamplingBinSelector(object):
         min_n_sampled_to_n_treatment_ratio=0.25,
         min_n_bins=1,
         max_n_bins=8,
-        chisquare_n_values_per_bin=25,
-        chisquare_is_fixed_width=False,
+        equivalence_quantile_size=25,
         relax_n_samples_approx_constraint=True,
     ):
         """
@@ -127,27 +126,25 @@ class StratifiedSamplingBinSelector(object):
             if there are not enough comparison pool meters to reach n_samples_approx.
         """
         # Settings
-        self.how = how
         self.n_samples_approx = n_samples_approx
         self.min_n_treatment_per_bin = min_n_treatment_per_bin
         self.random_seed = random_seed
         self.min_n_sampled_to_n_treatment_ratio = min_n_sampled_to_n_treatment_ratio
         self.min_n_bins = min_n_bins
         self.max_n_bins = max_n_bins
-        self.chisquare_n_values_per_bin = chisquare_n_values_per_bin
-        self.chisquare_is_fixed_width = chisquare_is_fixed_width
-        self.equivalence_groupby_col = equivalence_groupby_col
-        self.equivalence_value_col = equivalence_value_col
-        self.equivalence_id_col = equivalence_id_col
         self.df_id_col = df_id_col
+        self.equivalence_feature_ids = equivalence_feature_ids 
+        self.equivalence_feature_matrix = equivalence_feature_matrix
+        self.equivalence_method = equivalence_method
+        self.equivalence_quantile_size = equivalence_quantile_size
 
         self.model = model
         self.df_treatment = df_treatment
         self.df_pool = df_pool
-        self.df_for_equivalence = df_for_equivalence
         self.n_bin_options_df = None
         self.equiv_treatment = None
         self.equiv_samples = []
+
 
         if len(self.model.columns) == 0:
             raise ValueError("You must add at least one column before fitting.")
@@ -220,16 +217,35 @@ class StratifiedSamplingBinSelector(object):
                     )
                 )
                 continue
-            equiv_treatment, equiv_sample, equivalence_distance = self.model.diagnostics().records_based_equivalence(
-                self.df_for_equivalence,
-                equiv_groupby_col=equivalence_groupby_col,
-                equiv_value_col=equivalence_value_col,
-                equiv_id_col=equivalence_id_col,
-                id_col=df_id_col,
-                how=how,
-                chisquare_n_values_per_bin=chisquare_n_values_per_bin,
-                chisquare_is_fixed_width=chisquare_is_fixed_width,
-            )
+
+
+            # equiv_treatment, equiv_sample, equivalence_distance = self.model.diagnostics().records_based_equivalence(
+            #     self.df_for_equivalence,
+            #     equiv_groupby_col=equivalence_groupby_col,
+            #     equiv_value_col=equivalence_value_col,
+            #     equiv_id_col=equivalence_id_col,
+            #     id_col=df_id_col,
+            #     how=how,
+            #     chisquare_n_values_per_bin=chisquare_n_values_per_bin,
+            #     chisquare_is_fixed_width=chisquare_is_fixed_width,
+            # )
+
+
+            # todo set up equivalence_feature_matrix and equivalence_feature_ids
+
+            treatment_ids = self.model.data_treatment.df[df_id_col].unique()
+            comparison_ids = self.model.data_sample.df[df_id_col].unique()
+
+
+            ix_x = equivalence.ids_to_index(treatment_ids, equivalence_feature_ids)
+            ix_y = equivalence.ids_to_index(comparison_ids, equivalence_feature_ids)
+
+            equiv_treatment, equiv_sample, equivalence_distance = equivalence.Equivalence(
+                ix_x, ix_y, equivalence_feature_matrix, n_quantiles=equivalence_quantile_size,
+                 how=equivalence_method).compute()
+
+
+
             n_bin_results.append(
                 dict(
                     **n_bin_option,
@@ -240,6 +256,8 @@ class StratifiedSamplingBinSelector(object):
                     },
                 )
             )
+            #import pdb; pdb.set_trace()
+
             # build a dataframe with the equivalence vectors so we can plot them
             equiv_sample["bin_str"] = bins_selected_str
             self.equiv_samples.append(equiv_sample.copy(deep=True))
@@ -247,7 +265,7 @@ class StratifiedSamplingBinSelector(object):
             logging.info(
                 f"Computing bins: {bins_selected_str} distance: "
                 f"{equivalence_distance:.2f}, "
-                f"pct: {100*equivalence_distance/sum(equiv_treatment[equivalence_value_col]):.2f}"
+              #  f"pct: {100*equivalence_distance/sum(equiv_treatment[equivalence_value_col]):.2f}"
             )
             if equivalence_distance < min_distance:
                 min_distance = equivalence_distance
@@ -266,7 +284,7 @@ class StratifiedSamplingBinSelector(object):
         logging.info(
             f"Selected bin: {bins_selected_str} distance: "
             f"{min_distance:.2f}, "
-            f"pct: {100*min_distance/sum(equiv_treatment[equivalence_value_col]):.2f}, "
+           # f"pct: {100*min_distance/sum(equiv_treatment[equivalence_value_col]):.2f}, "
             f"random_seed: {random_seed}"
         )
         self.model.fit(
@@ -284,37 +302,33 @@ class StratifiedSamplingBinSelector(object):
         self.n_samples_approx = n_samples_approx
 
         # get averages that can be accessed later
+        # todo replace equiv average
 
-        def _get_equiv_comparison_pool():
-            df_combined = self.df_for_equivalence[
-                self.df_for_equivalence[self.equivalence_id_col].isin(
-                    self.df_pool[self.df_id_col]
-                )
-            ]
-            equiv_full_avg = df_combined.groupby(self.equivalence_groupby_col)[
-                self.equivalence_value_col
-            ].mean()
-            equiv_full_avg.name = "comparison pool"
-            return equiv_full_avg
+        # def _get_equiv_comparison_pool():
+        #     equiv_means = np.mean(equivalence_feature_matrix, axis=1)
+        #     equiv_full_avg = pd.DataFrame({'feature_index': range(len(equivalence_feature_matrix)),
+        #         'value': equiv_means})
+        #     equiv_full_avg.name = "comparison pool"
+        #     return equiv_full_avg
 
-        self.equiv_pool_avg = _get_equiv_comparison_pool()
+        # self.equiv_pool_avg = _get_equiv_comparison_pool()
 
-        self.equiv_treatment_avg = self.equiv_treatment.groupby(
-            self.equivalence_groupby_col
-        ).mean()
-        self.equiv_treatment_avg.columns = ["treatment"]
+        # self.equiv_treatment_avg = self.equiv_treatment.groupby(
+        #     self.equivalence_groupby_col
+        # ).mean()
+        # self.equiv_treatment_avg.columns = ["treatment"]
 
-        self.equiv_samples_avg = (
-            pd.concat(self.equiv_samples)
-            .groupby(["bin_str", equivalence_groupby_col])
-            .mean()
-            .reset_index()
-            .pivot(
-                index=equivalence_groupby_col,
-                columns="bin_str",
-                values=equivalence_value_col,
-            )
-        )
+        # self.equiv_samples_avg = (
+        #     pd.concat(self.equiv_samples)
+        #     .groupby(["bin_str", equivalence_groupby_col])
+        #     .mean()
+        #     .reset_index()
+        #     .pivot(
+        #         index="feature_index",
+        #         columns="bin_str",
+        #         values="value"
+        #     )
+        # )
         self.bins_selected_str = self.model.get_all_n_bins_as_str()
 
     def kwargs_as_json(self):
@@ -362,6 +376,9 @@ class StratifiedSamplingBinSelector(object):
         }
 
     def plot_records_based_equiv_average(self, plot=True):
+
+        # we need: 
+        # feature, mean value 
 
         equiv_df = pd.concat(
             [self.equiv_treatment_avg, self.equiv_pool_avg, self.equiv_samples_avg],
