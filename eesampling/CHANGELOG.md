@@ -4,6 +4,12 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+0.8.0
+-----
+
+
 * Add synthetic data generation for testing and tutorials
 * Add tutorial Jupyter notebook
 * Rename Diagnostics --> StratifiedSamplingDiagnostics
@@ -13,7 +19,7 @@ Development
 0.7.0
 -----
 
-* Rename train --> tretment, test --> pool 
+* Rename train --> treatment, test --> pool 
 
 0.6.1
 -----
