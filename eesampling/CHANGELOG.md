@@ -4,6 +4,12 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+0.9.0
+-----
+
+
 * Refactor equivalence calculation for bin selection (much faster)
 * Change input format for equivalence in bin selection
 
