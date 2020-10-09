@@ -317,18 +317,14 @@ class StratifiedSamplingBinSelector(object):
 
     def kwargs_as_json(self):
         return {
-            "how": self.how,
+            "equivalence_method": self.equivalence_method,
             "n_samples_approx": self.n_samples_approx,
             "min_n_treatment_per_bin": self.min_n_treatment_per_bin,
             "random_seed": self.random_seed,
             "min_n_sampled_to_n_treatment_ratio": self.min_n_sampled_to_n_treatment_ratio,
             "min_n_bins": self.min_n_bins,
             "max_n_bins": self.max_n_bins,
-            "chisquare_n_values_per_bin": self.chisquare_n_values_per_bin,
-            "chisquare_is_fixed_width": self.chisquare_is_fixed_width,
-            "equivalence_groupby_col": self.equivalence_groupby_col,
-            "equivalence_id_col": self.equivalence_id_col,
-            "equivalence_value_col": self.equivalence_value_col,
+            "equivalence_quantile_size": self.equivalence_quantile_size,
         }
 
     def results_as_json(self):
