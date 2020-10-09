@@ -40,7 +40,7 @@ def test_reshape_outputs():
                  [21, 22, 23]]
 
     df = pd.DataFrame({'_bin_label': ['[11, 12]', '[12, 13]', '[21, 22]', '[22, 23]'],
-                  'value': [11, 12, 21, 22], 'feature': [0,0,1,1]})
+                  'value': [11, 12, 21, 22], 'feature_index': [0,0,1,1]})
     assert df.equals(reshape_outputs(means, quantiles))
 
 
@@ -106,12 +106,12 @@ def test_equivalence_inputs(feature_matrix):
 
 def test_index_to_ids():
     t = np.array([11,17,15])
-    a = np.array([11,12,13,15,16,17,15])
-    assert (ids_to_index(t,a) == np.array([0,5,3])).all()
+    a = np.array([11,12,13,15,16,17])
+    assert (np.array(ids_to_index(t,a) == np.array([0,5,3]))).all()
 
     t1 = np.array(["11","17","15"])
-    a1 = np.array(["11","12","13","15","16","17","15"])
-    assert (ids_to_index(t1,a1) == np.array([0,5,3])).all()
+    a1 = np.array(["11","12","13","15","16","17"])
+    assert (np.array(ids_to_index(t1,a1) == np.array([0,5,3]))).all()
 
     with pytest.raises(ValueError):
         t2 = np.array([98123])

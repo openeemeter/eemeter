@@ -59,7 +59,7 @@ def test_stratified_sampling_fit_and_sample_records_equivalence_too_many_bins(
         model_w_selected_bins = StratifiedSamplingBinSelector(stratified_sampling_obj,
             df_treatment,
             df_pool,
-            
+
             min_n_bins=1000,
             max_n_bins=1002,
             random_seed=1,
