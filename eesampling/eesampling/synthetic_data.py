@@ -45,16 +45,16 @@ class SyntheticMeter:
     Methods
     =======
 
-    monthly(): 
-        Compute a data frame of total monthly usage for each month.
+    features_monthly(): 
+        Compute a wide data frame of total monthly usage for each month, indexed by meter_id.
 
-    seasonal_168():
-        Compute a data frame of weekly load shape (24*7 data points) for
-        each of summer, winter, and shoulder season.  The same load shape
+    features_seasonal_168():
+        Compute a wide data frame of weekly load shape (24*7 data points) for
+        each of summer, winter, and shoulder season, indexed by meter_id.  The same load shape
         is applied to each day; there is no weekend/weekday variation.
 
     features():
-        Compute a data frame of features that summarize the meter.
+        Compute a wide data frame of features that summarize the meter, indexed by meter_id.
         Currently available:
         - annual_usage: Total usage in one year
         - summer_usage: Total usage in the three summer months
@@ -105,11 +105,12 @@ class SyntheticMeter:
         self.winter_daily = self.load_shape_winter.value.sum()
         self.shoulder_daily = self.load_shape_shoulder.value.sum()
         self.summer_daily = self.load_shape_summer.value.sum()
-        
+
+
     def monthly(self):
         def rand():
             return np.sum(np.random.lognormal(mean=0,sigma=0.5, size=30))
-        return pd.DataFrame({'meter_id': self.meter_id, 
+        df = pd.DataFrame({'meter_id': self.meter_id, 
                             'month': np.arange(1,13), 
                             'value': [self.winter_daily*rand(), 
                                       self.winter_daily*rand(), 
@@ -122,20 +123,29 @@ class SyntheticMeter:
                                       self.shoulder_daily*rand(), 
                                       self.shoulder_daily*rand(), 
                                       self.shoulder_daily*rand(), 
-                                      self.winter_daily*rand()                                          
+                                      self.winter_daily*rand()
                                      ]})
+        return df
 
-    def seasonal_168(self):
+    def features_monthly(self):
 
-        winter_week = weekly_load_shape(self.load_shape_winter, noise_sigma=noise_sigma).assign(season='winter')
-        shoulder_week = weekly_load_shape(self.load_shape_shoulder, noise_sigma=noise_sigma).assign(season='shoulder')
-        summer_week = weekly_load_shape(self.load_shape_summer, noise_sigma=noise_sigma).assign(season='summer')
+        df = self.monthly()
+        df = df.pivot("meter_id", "month", "value")
+        return df
+
+    def features_seasonal_168(self):
+
+        winter_week = weekly_load_shape(self.load_shape_winter, noise_sigma=self.noise_sigma).assign(season='winter')
+        shoulder_week = weekly_load_shape(self.load_shape_shoulder, noise_sigma=self.noise_sigma).assign(season='shoulder')
+        summer_week = weekly_load_shape(self.load_shape_summer, noise_sigma=self.noise_sigma).assign(season='summer')
 
         df = pd.concat([winter_week, shoulder_week, summer_week])
         df['t']  = df['season'] + '.' + df['t'] 
         df = df[['t', 'value']]
         df['meter_id'] = self.meter_id
-        return df.reset_index(drop=True)
+        df = df.reset_index(drop=True) 
+        df = df.pivot("meter_id", "t", "value")
+        return df
 
     def features(self):
         df = self.monthly()
@@ -143,7 +153,7 @@ class SyntheticMeter:
         summer_usage = df[(df['month'] >= 6) & (df['month'] <= 8)].value.sum()
         annual_usage = df.value.sum()
         shoulder_usage =  - winter_usage - summer_usage
-        return pd.DataFrame({'meter_id': self.meter_id, 'winter_usage': winter_usage, 
+        return pd.DataFrame({'winter_usage': winter_usage, 
                'summer_usage': summer_usage, 'annual_usage': annual_usage}, index=[self.meter_id])
 
 class SyntheticPopulation:
@@ -250,19 +260,19 @@ class SyntheticPopulation:
                 shoulder_peak = row['shoulder_peak'])
             for ix, row in self.df_params.iterrows()]
 
-    def monthly(self):
+    def features_monthly(self):
         def generate():
             if self.meters is None:
                 self.generate_meters()
-            return pd.concat([m.monthly() for m in self.meters])
-        return cache(generate, self.key + 'monthly')
+            return pd.concat([m.features_monthly() for m in self.meters])
+        return cache(generate, self.key + 'features_monthly')
 
-    def seasonal_168(self):
+    def features_seasonal_168(self):
         def generate():
             if self.meters is None:
                 self.generate_meters()
-            return pd.concat([m.seasonal_168() for m in self.meters])
-        return cache(generate, self.key + 'seasonal_168')
+            return pd.concat([m.features_seasonal_168() for m in self.meters])
+        return cache(generate, self.key + 'features_seasonal_168')
 
     def features(self):
         def generate():
@@ -414,7 +424,7 @@ class SyntheticTreatmentPoolPopulation:
                 shoulder_peak_sigma=shoulder_peak_sigma,
                 cache_folder = cache_folder)
 
-        df_features = self.population.features()
+        df_features = self.population.features().reset_index().rename(columns={'index':'meter_id'})
         self.treatment_meters = treatment_filter_function(df_features)['meter_id'].sample(n_treatment)
         self.pool_meters = df_features.meter_id[~df_features.meter_id.isin(self.treatment_meters)]
         meters_str = "_".join([f"{m}" for m in self.treatment_meters])
@@ -426,13 +436,13 @@ class SyntheticTreatmentPoolPopulation:
         return df
 
     def features(self):
-        return self.add_set(self.population.features())
+        return self.add_set(self.population.features().reset_index().rename(columns={'index':'meter_id'}))
 
-    def monthly(self):
-        return self.add_set(self.population.monthly())
+    def features_monthly(self):
+        return self.population.features_monthly()
 
 
-    def seasonal_168(self):
-        return self.add_set(self.population.seasonal_168())
+    def features_seasonal_168(self):
+        return self.population.features_seasonal_168()
 
 
