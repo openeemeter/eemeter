@@ -3,8 +3,6 @@ FROM python:3.7.4
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY .pypirc /root
-
 COPY . /app
 WORKDIR /app
 

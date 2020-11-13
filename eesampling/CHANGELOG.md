@@ -4,18 +4,16 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Add comparison pool equivalence to results_as_json().
 
 0.9.0
 -----
-
 
 * Refactor equivalence calculation for bin selection (much faster)
 * Change input format for equivalence in bin selection
 
 0.8.0
 -----
-
 
 * Add synthetic data generation for testing and tutorials
 * Add tutorial Jupyter notebook

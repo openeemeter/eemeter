@@ -247,7 +247,6 @@ class StratifiedSamplingBinSelector(object):
                     },
                 )
             )
-            #import pdb; pdb.set_trace()
 
             # build a dataframe with the equivalence vectors so we can plot them
             equiv_sample["bin_str"] = bins_selected_str
@@ -315,6 +314,16 @@ class StratifiedSamplingBinSelector(object):
         )
         self.bins_selected_str = self.model.get_all_n_bins_as_str()
 
+        # get distances for comparison pool 
+        treatment_ids = self.model.data_treatment.df[df_id_col].unique()
+        comparison_pool_ids = self.model.data_pool.df[df_id_col].unique()
+        ix_x = equivalence.ids_to_index(treatment_ids, equivalence_feature_ids)
+        ix_y = equivalence.ids_to_index(comparison_pool_ids, equivalence_feature_ids)
+        equiv_treatment, equiv_pool, equivalence_distance = equivalence.Equivalence(
+            ix_x, ix_y, equivalence_feature_matrix, n_quantiles=equivalence_quantile_size,
+             how=equivalence_method).compute()
+        self.equiv_pool = equiv_pool
+
     def kwargs_as_json(self):
         return {
             "equivalence_method": self.equivalence_method,
@@ -340,6 +349,7 @@ class StratifiedSamplingBinSelector(object):
             "chisquare_averages": {
                 "selected_sample": selected_sample_df.to_dict("records"),
                 self.model.treatment_label: self.equiv_treatment.to_dict("records"),
+                "comparison_pool": self.equiv_pool.to_dict("records"),
             },
             "averages": {
                 "samples": self.equiv_samples_avg.reset_index().to_dict("records"),
