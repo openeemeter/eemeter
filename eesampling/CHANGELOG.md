@@ -4,6 +4,12 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+0.9.1
+-----
+
+
 * Add comparison pool equivalence to results_as_json().
 
 0.9.0
