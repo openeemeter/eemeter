@@ -3,6 +3,12 @@ Changelog
 
 Development
 -----------
+
+* Placeholder
+
+1.0.0
+-----
+
 * Official release as GRIDmeter 
 * Complete renaming
 
