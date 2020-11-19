@@ -3,7 +3,8 @@ Changelog
 
 Development
 -----------
-* Rename to 'gridmeter' 
+* Official release as GRIDmeter 
+* Complete renaming
 
 
 0.10.1
