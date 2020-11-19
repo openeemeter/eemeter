@@ -4,6 +4,12 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+0.10.2
+------
+
+
 * Update description
 
 0.10.0
