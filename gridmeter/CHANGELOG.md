@@ -3,6 +3,7 @@ Changelog
 
 Development
 -----------
+* Rename to 'gridmeter' 
 
 
 0.10.1
