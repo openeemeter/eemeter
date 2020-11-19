@@ -7,14 +7,14 @@ INSTALL_REQUIRES = ["pandas>=1.1.0", "plotnine"]
 EXTRAS_REQUIRE = {"off-dataflow": OFF_DATAFLOW_REQUIRES}
 
 here = os.path.abspath(os.path.dirname(__file__))
-NAME = "eesampling"
+NAME = "gridmeter"
 about = {}
 
 with open(os.path.join(here, NAME, "__version__.py")) as f:
     exec(f.read(), about)
 
 setup(
-    name="eesampling",
+    name="gridmeter",
     version=about["__version__"],
     description=about["__description__"],
     url=about["__url__"],

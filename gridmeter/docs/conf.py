@@ -18,7 +18,7 @@ import sys
 
 # -- Project information -----------------------------------------------------
 
-project = "eesampling"
+project = "gridmeter"
 copyright = "2020, Recurve"
 author = "Recurve"
 
@@ -67,7 +67,7 @@ intersphinx_mapping = {
     "bigquery": ("https://googleapis.dev/python/bigquery/latest", None)
 }
 
-autoapi_modules = {"eesampling": None}
+autoapi_modules = {"gridmeter": None}
 
 
 def setup(app):

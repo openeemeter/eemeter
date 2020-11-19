@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2020 EESampling contributors
+   Copyright 2020 GRIDmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -18,9 +18,9 @@
 
 """
 
-from eesampling.model import StratifiedSampling, BinnedData
-from eesampling.bin_selection import StratifiedSamplingBinSelector
-from eesampling.bins import ModelSamplingException
+from gridmeter.model import StratifiedSampling, BinnedData
+from gridmeter.bin_selection import StratifiedSamplingBinSelector
+from gridmeter.bins import ModelSamplingException
 import pytest
 
 

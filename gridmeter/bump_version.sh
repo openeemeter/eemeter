@@ -10,7 +10,7 @@ DASHES=$(printf "%${NEW_VERSION_LENGTH}s" | sed 's/ /-/g')
 echo "git checkout master"
 echo "git pull"
 echo ""
-echo "sed -i -e 's/${OLD_VERSION}/${NEW_VERSION}/g' eesampling/__version__.py"
+echo "sed -i -e 's/${OLD_VERSION}/${NEW_VERSION}/g' gridmeter/__version__.py"
 echo "sed -i -e '/Development/,/-----------/ c\\
 Development\\
 -----------\\

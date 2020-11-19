@@ -1,6 +1,6 @@
 import pandas as pd
 
-from eesampling.equivalence import *
+from gridmeter.equivalence import *
 
 import pytest
 import numpy as np

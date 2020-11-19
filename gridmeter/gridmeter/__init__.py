@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2020 EESampling contributors
+   Copyright 2020 GRIDmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -24,11 +24,5 @@ from .bins import ModelSamplingException
 from .diagnostics import StratifiedSamplingDiagnostics
 from .bin_selection import StratifiedSamplingBinSelector
 from .synthetic_data import SyntheticMeter, SyntheticPopulation, SyntheticTreatmentPoolPopulation
-
-import warnings
-
-deprec = "The `eesampling` package has been renamed `gridmeter`, please install `gridmeter` instead (2020-11-19)."
-warnings.warn(deprec, DeprecationWarning)
-print(deprec)
 
 

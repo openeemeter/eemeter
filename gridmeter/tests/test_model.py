@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2020 EESampling contributors
+   Copyright 2020 GRIDmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from eesampling.model import StratifiedSampling, BinnedData
-from eesampling.bins import ModelSamplingException
+from gridmeter.model import StratifiedSampling, BinnedData
+from gridmeter.bins import ModelSamplingException
 
 
 def test_stratified_sampling_fit_and_sample():

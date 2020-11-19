@@ -1,9 +1,9 @@
 version: '3'
 services:
-  eesampling:
+  gridmeter:
     build: .
-    image: eesampling
-    entrypoint: eesampling
+    image: gridmeter
+    entrypoint: gridmeter
     volumes:
       - .:/app
       - /tmp:/tmp
@@ -11,19 +11,19 @@ services:
       - dev-env.env
 
   test:
-    image: eesampling
+    image: gridmeter
     entrypoint: py.test
     volumes:
       - .:/app
 
   blacken:
-    image: eesampling
+    image: gridmeter
     entrypoint: black .
     volumes:
       - .:/app
 
   docs:
-    image: eesampling
+    image: gridmeter
     ports:
       - "${HOST_PORT_DOCS:-8000}:8000"
     entrypoint: make -C docs livehtml
@@ -31,13 +31,13 @@ services:
       - .:/app
 
   fury:
-    image: eesampling
+    image: gridmeter
     entrypoint: python setup.py sdist upload -r fury
     volumes:
       - .:/app
 
   jupyter:
-    image: eesampling
+    image: gridmeter
     entrypoint: jupyter lab scripts/ --port=${HOST_PORT_JUPYTER:-8888} --no-browser --ip=0.0.0.0 --allow-root
     env_file:
       - dev-env.env
