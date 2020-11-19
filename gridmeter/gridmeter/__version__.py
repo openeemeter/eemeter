@@ -17,9 +17,8 @@
    limitations under the License.
 
 """
-
-__title__ = "gridmeter"
-__description__ = "!! No longer maintained -- please use `gridmeter` instead !!.   Tools for stratified sampling for comparison groups"
+__title__ = "GRIDmeter"
+__description__ = "Tools for stratified sampling for comparison groups"
 __url__ = "http://github.com/recurve-methods/comparison_groups"
 __version__ = "1.0.0"
 __author__ = "Recurve Analytics, Inc"
