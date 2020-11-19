@@ -19,7 +19,7 @@
 """
 
 __title__ = "eesampling"
-__description__ = "Tools for stratified sampling for comparison groups"
+__description__ = "!! No longer maintained -- please use `gridmeter` instead !!.   Tools for stratified sampling for comparison groups"
 __url__ = "http://github.com/recurve-methods/comparison_groups"
 __version__ = "0.10.0"
 __author__ = "Recurve Analytics, Inc"
