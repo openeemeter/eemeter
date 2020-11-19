@@ -4,6 +4,12 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+0.10.0
+------
+
+
 * Rename to 'gridmeter' -- final release as eesampling
 
 0.9.1
