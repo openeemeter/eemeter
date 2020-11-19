@@ -6,6 +6,12 @@ Development
 
 * Placeholder
 
+0.10.1
+------
+
+
+* Placeholder
+
 0.10.2
 ------
 
