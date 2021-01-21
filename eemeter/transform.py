@@ -47,7 +47,7 @@ def overwrite_partial_rows_with_nan(df):
 
 
 def remove_duplicates(df_or_series):
-    """ Remove duplicate rows or values by keeping the first of each duplicate.
+    """Remove duplicate rows or values by keeping the first of each duplicate.
 
     Parameters
     ----------
@@ -230,7 +230,7 @@ def get_baseline_data(
     n_days_billing_period_overshoot=None,
     ignore_billing_period_gap_for_day_count=False,
 ):
-    """ Filter down to baseline period data.
+    """Filter down to baseline period data.
 
     .. note::
 
@@ -393,7 +393,7 @@ def get_reporting_data(
     allow_billing_period_overshoot=False,
     ignore_billing_period_gap_for_day_count=False,
 ):
-    """ Filter down to reporting period data.
+    """Filter down to reporting period data.
 
     Parameters
     ----------
@@ -567,7 +567,7 @@ class Term(object):
 
 
 def get_terms(index, term_lengths, term_labels=None, start=None, method="strict"):
-    """ Breaks a :any:`pandas.DatetimeIndex` into consecutive terms of specified
+    """Breaks a :any:`pandas.DatetimeIndex` into consecutive terms of specified
     lengths.
 
     Parameters

@@ -39,7 +39,7 @@ def meter_data_from_csv(
     freq=None,
     **kwargs
 ):
-    """ Load meter data from a CSV file.
+    """Load meter data from a CSV file.
 
     Default format::
 
@@ -85,7 +85,7 @@ def meter_data_from_csv(
 
     # for pandas<0.24, which doesn't localize even with utc=True
     if df.index.tz is None:
-        df.index = df.index.tz_localize("UTC") # pragma: no cover
+        df.index = df.index.tz_localize("UTC")  # pragma: no cover
 
     if tz is not None:
         df = df.tz_convert(tz)
@@ -107,7 +107,7 @@ def temperature_data_from_csv(
     freq=None,
     **kwargs
 ):
-    """ Load temperature data from a CSV file.
+    """Load temperature data from a CSV file.
 
     Default format::
 
@@ -152,7 +152,7 @@ def temperature_data_from_csv(
 
     # for pandas<0.24, which doesn't localize even with utc=True
     if df.index.tz is None:
-        df.index = df.index.tz_localize("UTC") # pragma: no cover
+        df.index = df.index.tz_localize("UTC")  # pragma: no cover
 
     if tz is not None:
         df = df.tz_convert(tz)
@@ -164,7 +164,7 @@ def temperature_data_from_csv(
 
 
 def meter_data_from_json(data, orient="list"):
-    """ Load meter data from json.
+    """Load meter data from json.
 
     Default format::
 
@@ -242,7 +242,7 @@ def meter_data_from_json(data, orient="list"):
 
 
 def temperature_data_from_json(data, orient="list"):
-    """ Load temperature data from json. (Must be given in degrees
+    """Load temperature data from json. (Must be given in degrees
     Fahrenheit).
 
     Default format::
@@ -274,7 +274,7 @@ def temperature_data_from_json(data, orient="list"):
 
 
 def meter_data_to_csv(meter_data, path_or_buf):
-    """ Write meter data to CSV. See also :any:`pandas.DataFrame.to_csv`.
+    """Write meter data to CSV. See also :any:`pandas.DataFrame.to_csv`.
 
     Parameters
     ----------
@@ -290,7 +290,7 @@ def meter_data_to_csv(meter_data, path_or_buf):
 
 
 def temperature_data_to_csv(temperature_data, path_or_buf):
-    """ Write temperature data to CSV. See also :any:`pandas.DataFrame.to_csv`.
+    """Write temperature data to CSV. See also :any:`pandas.DataFrame.to_csv`.
 
     Parameters
     ----------

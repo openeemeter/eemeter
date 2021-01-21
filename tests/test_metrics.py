@@ -77,6 +77,7 @@ def test_sample_model_metrics(model_metrics):
     assert round(model_metrics.cvrmse_auto_corr_correction, 3) == 0.356
     assert round(model_metrics.approx_factor_auto_corr_correction, 3) == 1.038
 
+
 def test_ModelMetrics(sample_data):
     series_one, series_two = sample_data
     model_metrics = ModelMetrics(series_one, series_two, num_parameters=2)
@@ -84,10 +85,6 @@ def test_ModelMetrics(sample_data):
     assert repr(model_metrics) is not None
     assert json.dumps(model_metrics.json()) is not None
 
-
-
-
- 
 
 @pytest.fixture
 def sample_data_zeros():
@@ -114,13 +111,18 @@ def test_ModelMetrics_autocorr_lags_error(sample_data):
     with pytest.raises(ValueError):
         model_metrics = ModelMetrics(series_one, series_two, autocorr_lags=0)
 
+
 def test_ModelMetrics_invalid_confidence_level(sample_data):
     series_one, series_two = sample_data
-    with pytest.raises  (Exception) as e:
-        model_metrics = ModelMetrics(series_one, series_two, num_parameters=2,  confidence_level=1.1)
+    with pytest.raises(Exception) as e:
+        model_metrics = ModelMetrics(
+            series_one, series_two, num_parameters=2, confidence_level=1.1
+        )
 
-    with pytest.raises  (Exception) as e:
-        model_metrics = ModelMetrics(series_one, series_two, num_parameters=2,  confidence_level=-1)
+    with pytest.raises(Exception) as e:
+        model_metrics = ModelMetrics(
+            series_one, series_two, num_parameters=2, confidence_level=-1
+        )
 
 
 @pytest.fixture
@@ -228,13 +230,12 @@ def test_model_metrics_json_valid(model_metrics):
         "t_stat",
     ]
 
+
 def test_model_metrics_json_covert(sample_data):
     series_one, series_two = sample_data
     model_metrics = ModelMetrics(series_one, series_two, num_parameters=2)
     json_rep = model_metrics.json()
     test_sample_model_metrics(ModelMetrics.from_json(json_rep))
-
-
 
 
 @pytest.fixture
@@ -310,98 +311,93 @@ def test_json_safe_float():
         _json_safe_float("not a number")
 
 
-
 def test_total_average_metrics():
     data = pd.DataFrame(
-    {
-        "meter_value": [6, 1, 1, 6],
-        "cdd_65": [5, 0, 0.1, 0],
-        "hdd_65": [0, 0.1, 0.1, 5],
-        "start": pd.date_range(start="2016-01-02", periods=4, freq="D", tz="UTC"),
-    }
+        {
+            "meter_value": [6, 1, 1, 6],
+            "cdd_65": [5, 0, 0.1, 0],
+            "hdd_65": [0, 0.1, 0.1, 5],
+            "start": pd.date_range(start="2016-01-02", periods=4, freq="D", tz="UTC"),
+        }
     ).set_index("start")
 
     model_results = fit_caltrack_usage_per_day_model(data, fit_intercept_only=True)
     json_result = model_results.json()
-    totals_metrics = json_result['totals_metrics']
-    assert round(totals_metrics['observed_length'],3) == 3.000
-    assert round(totals_metrics['predicted_length'],3) == 3.000
-    assert round(totals_metrics['merged_length'],3) == 3.000
-    assert round(totals_metrics['num_parameters'],3) == 0
-    assert round(totals_metrics['observed_mean'],3) == 2.667
-    assert round(totals_metrics['predicted_mean'],3) == 3.5
-    assert round(totals_metrics['observed_variance'],3) == 5.556
-    assert round(totals_metrics['predicted_variance'],3) == 0
-    assert round(totals_metrics['observed_skew'],3) == 1.732
-    assert round(totals_metrics['predicted_skew'],3) == 0
-    assert round(totals_metrics['observed_cvstd'],3) == 1.083
-    assert round(totals_metrics['predicted_cvstd'],3) == 0
-    assert round(totals_metrics['rmse'],3) == 2.5
-    assert round(totals_metrics['rmse_adj'],3) == 2.5
-    assert round(totals_metrics['cvrmse'],3) == 0.938
-    assert round(totals_metrics['cvrmse_adj'],3) == 0.938
-    assert round(totals_metrics['mape'],3) == 1.806
-    assert round(totals_metrics['mape_no_zeros'],3) == 1.806
-    assert round(totals_metrics['num_meter_zeros'],3) == 0
-    assert round(totals_metrics['nmae'],3) == 0.938
-    assert round(totals_metrics['nmbe'],3) == 0.312
-    assert round(totals_metrics['confidence_level'],3) == 0.9
-    assert round(totals_metrics['single_tailed_confidence_level'],3) == 0.95
+    totals_metrics = json_result["totals_metrics"]
+    assert round(totals_metrics["observed_length"], 3) == 3.000
+    assert round(totals_metrics["predicted_length"], 3) == 3.000
+    assert round(totals_metrics["merged_length"], 3) == 3.000
+    assert round(totals_metrics["num_parameters"], 3) == 0
+    assert round(totals_metrics["observed_mean"], 3) == 2.667
+    assert round(totals_metrics["predicted_mean"], 3) == 3.5
+    assert round(totals_metrics["observed_variance"], 3) == 5.556
+    assert round(totals_metrics["predicted_variance"], 3) == 0
+    assert round(totals_metrics["observed_skew"], 3) == 1.732
+    assert round(totals_metrics["predicted_skew"], 3) == 0
+    assert round(totals_metrics["observed_cvstd"], 3) == 1.083
+    assert round(totals_metrics["predicted_cvstd"], 3) == 0
+    assert round(totals_metrics["rmse"], 3) == 2.5
+    assert round(totals_metrics["rmse_adj"], 3) == 2.5
+    assert round(totals_metrics["cvrmse"], 3) == 0.938
+    assert round(totals_metrics["cvrmse_adj"], 3) == 0.938
+    assert round(totals_metrics["mape"], 3) == 1.806
+    assert round(totals_metrics["mape_no_zeros"], 3) == 1.806
+    assert round(totals_metrics["num_meter_zeros"], 3) == 0
+    assert round(totals_metrics["nmae"], 3) == 0.938
+    assert round(totals_metrics["nmbe"], 3) == 0.312
+    assert round(totals_metrics["confidence_level"], 3) == 0.9
+    assert round(totals_metrics["single_tailed_confidence_level"], 3) == 0.95
 
-
-    assert totals_metrics['observed_kurtosis'] is None
-    assert totals_metrics['predicted_kurtosis'] is None
-    assert totals_metrics['r_squared'] is None
-    assert totals_metrics['r_squared_adj'] is None
-    assert totals_metrics['autocorr_resid'] is None
-    assert totals_metrics['n_prime'] is None
-    assert totals_metrics['degrees_of_freedom'] is None
-    assert totals_metrics['t_stat'] is None
-    assert totals_metrics['cvrmse_auto_corr_correction'] is None
-    assert totals_metrics['approx_factor_auto_corr_correction'] is None
-    assert totals_metrics['fsu_base_term'] is None
-
+    assert totals_metrics["observed_kurtosis"] is None
+    assert totals_metrics["predicted_kurtosis"] is None
+    assert totals_metrics["r_squared"] is None
+    assert totals_metrics["r_squared_adj"] is None
+    assert totals_metrics["autocorr_resid"] is None
+    assert totals_metrics["n_prime"] is None
+    assert totals_metrics["degrees_of_freedom"] is None
+    assert totals_metrics["t_stat"] is None
+    assert totals_metrics["cvrmse_auto_corr_correction"] is None
+    assert totals_metrics["approx_factor_auto_corr_correction"] is None
+    assert totals_metrics["fsu_base_term"] is None
 
     json_result = model_results.json()
-    avgs_metrics = json_result['avgs_metrics']
-    assert round(avgs_metrics['observed_length'],3) == 4.000
-    assert round(avgs_metrics['predicted_length'],3) == 4.000
-    assert round(avgs_metrics['merged_length'],3) == 4.000
-    assert round(avgs_metrics['num_parameters'],3) == 0
-    assert round(avgs_metrics['observed_mean'],3) == 3.5
-    assert round(avgs_metrics['predicted_mean'],3) == 3.5
-    assert round(avgs_metrics['observed_variance'],3) == 6.25
-    assert round(avgs_metrics['predicted_variance'],3) == 0
-    assert round(avgs_metrics['observed_skew'],3) == 0
-    assert round(avgs_metrics['predicted_skew'],3) == 0
-    assert round(avgs_metrics['observed_cvstd'],3) == 0.825
-    assert round(avgs_metrics['predicted_cvstd'],3) == 0
-    assert round(avgs_metrics['observed_kurtosis'],3) == -6.0
-    assert round(avgs_metrics['predicted_kurtosis'],3) == 0
+    avgs_metrics = json_result["avgs_metrics"]
+    assert round(avgs_metrics["observed_length"], 3) == 4.000
+    assert round(avgs_metrics["predicted_length"], 3) == 4.000
+    assert round(avgs_metrics["merged_length"], 3) == 4.000
+    assert round(avgs_metrics["num_parameters"], 3) == 0
+    assert round(avgs_metrics["observed_mean"], 3) == 3.5
+    assert round(avgs_metrics["predicted_mean"], 3) == 3.5
+    assert round(avgs_metrics["observed_variance"], 3) == 6.25
+    assert round(avgs_metrics["predicted_variance"], 3) == 0
+    assert round(avgs_metrics["observed_skew"], 3) == 0
+    assert round(avgs_metrics["predicted_skew"], 3) == 0
+    assert round(avgs_metrics["observed_cvstd"], 3) == 0.825
+    assert round(avgs_metrics["predicted_cvstd"], 3) == 0
+    assert round(avgs_metrics["observed_kurtosis"], 3) == -6.0
+    assert round(avgs_metrics["predicted_kurtosis"], 3) == 0
 
-    assert round(avgs_metrics['rmse'],3) == 2.5
-    assert round(avgs_metrics['rmse_adj'],3) == 2.5
-    assert round(avgs_metrics['cvrmse'],3) == 0.714
-    assert round(avgs_metrics['cvrmse_adj'],3) == 0.714
-    assert round(avgs_metrics['mape'],3) == 1.458
-    assert round(avgs_metrics['mape_no_zeros'],3) == 1.458
-    assert round(avgs_metrics['num_meter_zeros'],3) == 0
-    assert round(avgs_metrics['nmae'],3) == 0.714
-    assert round(avgs_metrics['nmbe'],3) == 0
-    assert round(avgs_metrics['confidence_level'],3) == 0.9
-    assert round(avgs_metrics['n_prime'],3) == 12.0
-    assert round(avgs_metrics['single_tailed_confidence_level'],3) == 0.95
-    assert round(avgs_metrics['autocorr_resid'], 3) == -0.5
-    assert round(avgs_metrics['degrees_of_freedom'], 3) == 12.0
-    assert round(avgs_metrics['t_stat'], 3) == 1.782
-    assert round(avgs_metrics['cvrmse_auto_corr_correction'], 3) == 0.577
-    assert round(avgs_metrics['approx_factor_auto_corr_correction'], 3) == 1.08
-    assert round(avgs_metrics['fsu_base_term'], 3) == 0.794
+    assert round(avgs_metrics["rmse"], 3) == 2.5
+    assert round(avgs_metrics["rmse_adj"], 3) == 2.5
+    assert round(avgs_metrics["cvrmse"], 3) == 0.714
+    assert round(avgs_metrics["cvrmse_adj"], 3) == 0.714
+    assert round(avgs_metrics["mape"], 3) == 1.458
+    assert round(avgs_metrics["mape_no_zeros"], 3) == 1.458
+    assert round(avgs_metrics["num_meter_zeros"], 3) == 0
+    assert round(avgs_metrics["nmae"], 3) == 0.714
+    assert round(avgs_metrics["nmbe"], 3) == 0
+    assert round(avgs_metrics["confidence_level"], 3) == 0.9
+    assert round(avgs_metrics["n_prime"], 3) == 12.0
+    assert round(avgs_metrics["single_tailed_confidence_level"], 3) == 0.95
+    assert round(avgs_metrics["autocorr_resid"], 3) == -0.5
+    assert round(avgs_metrics["degrees_of_freedom"], 3) == 12.0
+    assert round(avgs_metrics["t_stat"], 3) == 1.782
+    assert round(avgs_metrics["cvrmse_auto_corr_correction"], 3) == 0.577
+    assert round(avgs_metrics["approx_factor_auto_corr_correction"], 3) == 1.08
+    assert round(avgs_metrics["fsu_base_term"], 3) == 0.794
 
-    
-    assert avgs_metrics['r_squared'] is None
-    assert avgs_metrics['r_squared_adj'] is None
- 
+    assert avgs_metrics["r_squared"] is None
+    assert avgs_metrics["r_squared_adj"] is None
 
 
 #  'avgs_metrics': {'observed_length': 4.0,

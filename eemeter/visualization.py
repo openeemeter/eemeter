@@ -31,7 +31,7 @@ __all__ = ("plot_energy_signature", "plot_time_series")
 
 
 def plot_time_series(meter_data, temperature_data, **kwargs):
-    """ Plot meter and temperature data in dual-axes time series.
+    """Plot meter and temperature data in dual-axes time series.
 
     Parameters
     ----------
@@ -91,7 +91,7 @@ def plot_energy_signature(
     figsize=None,
     **kwargs
 ):
-    """ Plot meter and temperature data in energy signature.
+    """Plot meter and temperature data in energy signature.
 
     Parameters
     ----------

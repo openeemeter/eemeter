@@ -43,7 +43,7 @@ __all__ = (
 
 
 class CalTRACKHourlyModelResults(object):
-    """ Contains information about the chosen model.
+    """Contains information about the chosen model.
 
     Attributes
     ----------
@@ -110,7 +110,7 @@ class CalTRACKHourlyModelResults(object):
         )
 
     def json(self, with_candidates=False):
-        """ Return a JSON-serializable representation of this result.
+        """Return a JSON-serializable representation of this result.
 
         The output of this function can be converted to a serialized string
         with :any:`json.dumps`.
@@ -140,7 +140,7 @@ class CalTRACKHourlyModelResults(object):
 
     @classmethod
     def from_json(cls, data):
-        """ Loads a JSON-serializable representation into the model state.
+        """Loads a JSON-serializable representation into the model state.
 
         The input of this function is a dict which can be the result
         of :any:`json.loads`.
@@ -148,30 +148,31 @@ class CalTRACKHourlyModelResults(object):
 
         # "model" is a CalTRACKHourlyModel that was serialized
         model = None
-        d = data.get('model')
+        d = data.get("model")
         if d:
             model = CalTRACKHourlyModel.from_json(d)
 
         c = cls(
-            data.get('status'),
-            data.get('method_name'),
+            data.get("status"),
+            data.get("method_name"),
             model=model,
-            warnings=data.get('warnings'),
-            metadata=data.get('metadata'),
-            settings=data.get('settings'))
+            warnings=data.get("warnings"),
+            metadata=data.get("metadata"),
+            settings=data.get("settings"),
+        )
 
         # Note the metrics do not contain all the data needed
         # for reconstruction (like the input pandas) ...
-        d = data.get('avgs_metrics')
+        d = data.get("avgs_metrics")
         if d:
-            c.avgs_metrics = ModelMetrics.from_json(d) # pragma: no cover
-        d = data.get('totals_metrics')
+            c.avgs_metrics = ModelMetrics.from_json(d)  # pragma: no cover
+        d = data.get("totals_metrics")
         if d:
             c.totals_metrics = ModelMetrics.from_json(d)
         return c
 
     def predict(self, prediction_index, temperature_data, **kwargs):
-        """ Predict over a particular index using temperature data.
+        """Predict over a particular index using temperature data.
 
         Parameters
         ----------
@@ -192,7 +193,7 @@ class CalTRACKHourlyModelResults(object):
 
 
 class CalTRACKHourlyModel(SegmentedModel):
-    """ An object which holds CalTRACK Hourly model data and metadata, and
+    """An object which holds CalTRACK Hourly model data and metadata, and
     which can be used for prediction.
 
     Attributes
@@ -235,7 +236,7 @@ class CalTRACKHourlyModel(SegmentedModel):
         )
 
     def json(self):
-        """ Return a JSON-serializable representation of this result.
+        """Return a JSON-serializable representation of this result.
 
         The output of this function can be converted to a serialized string
         with :any:`json.dumps`.
@@ -251,24 +252,24 @@ class CalTRACKHourlyModel(SegmentedModel):
 
     @classmethod
     def from_json(cls, data):
-        """ Loads a JSON-serializable representation into the model state.
+        """Loads a JSON-serializable representation into the model state.
 
         The input of this function is a dict which can be the result
         of :any:`json.loads`.
         """
 
         segment_models = [
-            CalTRACKSegmentModel.from_json(s)
-            for s in data.get('segment_models')
+            CalTRACKSegmentModel.from_json(s) for s in data.get("segment_models")
         ]
 
-        occupancy_lookup = pd.read_json(data.get('occupancy_lookup'), orient='split')
-        occupancy_lookup.index = occupancy_lookup.index.astype('category')
+        occupancy_lookup = pd.read_json(data.get("occupancy_lookup"), orient="split")
+        occupancy_lookup.index = occupancy_lookup.index.astype("category")
 
-        c = cls(segment_models,
-                occupancy_lookup,
-                pd.read_json(data.get('temperature_bins'), orient="split")
-                )
+        c = cls(
+            segment_models,
+            occupancy_lookup,
+            pd.read_json(data.get("temperature_bins"), orient="split"),
+        )
 
         return c
 
@@ -276,7 +277,7 @@ class CalTRACKHourlyModel(SegmentedModel):
 def caltrack_hourly_fit_feature_processor(
     segment_name, segmented_data, occupancy_lookup, temperature_bins
 ):
-    """ A function that takes in temperature data and returns a dataframe of
+    """A function that takes in temperature data and returns a dataframe of
     features suitable for use with :any:`eemeter.fit_caltrack_hourly_model_segment`.
     Designed for use with :any:`eemeter.iterate_segmented_dataset`.
 
@@ -330,7 +331,7 @@ def caltrack_hourly_fit_feature_processor(
 def caltrack_hourly_prediction_feature_processor(
     segment_name, segmented_data, occupancy_lookup, temperature_bins
 ):
-    """ A function that takes in temperature data and returns a dataframe of
+    """A function that takes in temperature data and returns a dataframe of
     features suitable for use inside :any:`eemeter.CalTRACKHourlyModel`.
     Designed for use with :any:`eemeter.iterate_segmented_dataset`.
 
@@ -387,7 +388,7 @@ def caltrack_hourly_prediction_feature_processor(
 
 
 def fit_caltrack_hourly_model_segment(segment_name, segment_data):
-    """ Fit a model for a single segment.
+    """Fit a model for a single segment.
 
     Parameters
     ----------
@@ -465,7 +466,7 @@ def fit_caltrack_hourly_model_segment(segment_name, segment_data):
 def fit_caltrack_hourly_model(
     segmented_design_matrices, occupancy_lookup, temperature_bins
 ):
-    """ Fit a CalTRACK hourly model
+    """Fit a CalTRACK hourly model
 
     Parameters
     ----------
