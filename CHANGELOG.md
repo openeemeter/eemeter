@@ -5,6 +5,7 @@ Development
 -----------
 
 * Fix tests and make changes to ensure tests pass on pandas version 1.2.1.
+* Fix bug in segmentation.py causing a section of tutorial to fail.
 
 2.10.0
 ------
