@@ -38,7 +38,7 @@ __all__ = (
 
 
 def create_caltrack_hourly_preliminary_design_matrix(meter_data, temperature_data):
-    """ A helper function which calls basic feature creation methods to create an
+    """A helper function which calls basic feature creation methods to create an
     input suitable for use in the first step of creating a CalTRACK hourly model.
 
     Parameters
@@ -70,7 +70,7 @@ def create_caltrack_hourly_preliminary_design_matrix(meter_data, temperature_dat
 
 
 def create_caltrack_billing_design_matrix(meter_data, temperature_data):
-    """ A helper function which calls basic feature creation methods to create a
+    """A helper function which calls basic feature creation methods to create a
     design matrix suitable for use with CalTRACK Billing methods.
 
     Parameters
@@ -102,7 +102,7 @@ def create_caltrack_billing_design_matrix(meter_data, temperature_data):
 
 
 def create_caltrack_daily_design_matrix(meter_data, temperature_data):
-    """ A helper function which calls basic feature creation methods to create a
+    """A helper function which calls basic feature creation methods to create a
     design matrix suitable for use with CalTRACK daily methods.
 
     Parameters
@@ -133,7 +133,7 @@ def create_caltrack_daily_design_matrix(meter_data, temperature_data):
 def create_caltrack_hourly_segmented_design_matrices(
     preliminary_design_matrix, segmentation, occupancy_lookup, temperature_bins
 ):
-    """ A helper function which calls basic feature creation methods to create a
+    """A helper function which calls basic feature creation methods to create a
     design matrix suitable for use with segmented CalTRACK hourly models.
 
     Parameters

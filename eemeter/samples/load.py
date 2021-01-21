@@ -35,7 +35,7 @@ def _load_sample_metadata():
 
 
 def samples():
-    """ Load a list of sample data identifiers.
+    """Load a list of sample data identifiers.
 
     Returns
     -------
@@ -47,7 +47,7 @@ def samples():
 
 
 def load_sample(sample):
-    """ Load meter data, temperature data, and metadata for associated with a
+    """Load meter data, temperature data, and metadata for associated with a
     particular sample identifier. Note: samples are simulated, not real, data.
 
     Parameters

@@ -161,7 +161,7 @@ def metered_savings(
     confidence_level=0.90,
     predict_kwargs=None,
 ):
-    """ Compute metered savings, i.e., savings in which the baseline model
+    """Compute metered savings, i.e., savings in which the baseline model
     is used to calculate the modeled usage in the reporting period. This
     modeled usage is then compared to the actual usage from the reporting period.
     Also compute two measures of the uncertainty of the aggregate savings estimate,
@@ -387,7 +387,7 @@ def modeled_savings(
     confidence_level=0.90,
     predict_kwargs=None,
 ):
-    """ Compute modeled savings, i.e., savings in which baseline and reporting
+    """Compute modeled savings, i.e., savings in which baseline and reporting
     usage values are based on models. This is appropriate for annualizing or
     weather normalizing models.
 

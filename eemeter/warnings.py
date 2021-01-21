@@ -21,7 +21,7 @@ __all__ = ("EEMeterWarning",)
 
 
 class EEMeterWarning(object):
-    """ An object representing a warning and data associated with it.
+    """An object representing a warning and data associated with it.
 
     Attributes
     ----------
@@ -43,7 +43,7 @@ class EEMeterWarning(object):
         return "EEMeterWarning(qualified_name={})".format(self.qualified_name)
 
     def json(self):
-        """ Return a JSON-serializable representation of this result.
+        """Return a JSON-serializable representation of this result.
 
         The output of this function can be converted to a serialized string
         with :any:`json.dumps`.

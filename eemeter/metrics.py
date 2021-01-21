@@ -164,7 +164,7 @@ class ModelMetricsFromJson(object):
 
 
 class ModelMetrics(object):
-    """ Contains measures of model fit and summary statistics on the input series.
+    """Contains measures of model fit and summary statistics on the input series.
 
     Parameters
     ----------
@@ -242,7 +242,7 @@ class ModelMetrics(object):
         predicted_input series minus the observed_input series), measured
         using a number of lags equal to autocorr_lags.
     n_prime: :any:`float`
-        The number of baseline inputs corrected for autocorrelation -- used 
+        The number of baseline inputs corrected for autocorrelation -- used
         in fractional savings uncertainty computation.
     single_tailed_confidence_level: :any:`float`
         The adjusted confidence level for use in single-sided tests.
@@ -408,22 +408,19 @@ class ModelMetrics(object):
             )
 
     def __repr__(self):
-        return (
-            "ModelMetrics(merged_length={}, r_squared_adj={}, cvrmse_adj={}, "
-            "mape_no_zeros={}, nmae={}, nmbe={}, autocorr_resid={}, confidence_level={})".format(
-                self.merged_length,
-                round(self.r_squared_adj, 3),
-                round(self.cvrmse_adj, 3),
-                round(self.mape_no_zeros, 3),
-                round(self.nmae, 3),
-                round(self.nmbe, 3),
-                round(self.autocorr_resid, 3),
-                round(self.confidence_level, 3),
-            )
+        return "ModelMetrics(merged_length={}, r_squared_adj={}, cvrmse_adj={}, " "mape_no_zeros={}, nmae={}, nmbe={}, autocorr_resid={}, confidence_level={})".format(
+            self.merged_length,
+            round(self.r_squared_adj, 3),
+            round(self.cvrmse_adj, 3),
+            round(self.mape_no_zeros, 3),
+            round(self.nmae, 3),
+            round(self.nmbe, 3),
+            round(self.autocorr_resid, 3),
+            round(self.confidence_level, 3),
         )
 
     def json(self):
-        """ Return a JSON-serializable representation of this result.
+        """Return a JSON-serializable representation of this result.
 
         The output of this function can be converted to a serialized string
         with :any:`json.dumps`.
@@ -473,7 +470,7 @@ class ModelMetrics(object):
 
     @classmethod
     def from_json(cls, data):
-        """ Loads a JSON-serializable representation into the model state.
+        """Loads a JSON-serializable representation into the model state.
 
         The input of this function is a dict which can be the result
         of :any:`json.loads`.

@@ -71,7 +71,7 @@ def merge_features(features, keep_partial_nan_rows=False):
 
 
 def compute_usage_per_day_feature(meter_data, series_name="usage_per_day"):
-    """ Compute average usage per day for billing/daily data.
+    """Compute average usage per day for billing/daily data.
 
     Parameters
     ----------
@@ -92,7 +92,7 @@ def compute_usage_per_day_feature(meter_data, series_name="usage_per_day"):
 
 
 def get_missing_hours_of_week_warning(hours_of_week):
-    """ Warn if any hours of week (0-167) are missing.
+    """Warn if any hours of week (0-167) are missing.
 
     Parameters
     ----------
@@ -118,7 +118,7 @@ def get_missing_hours_of_week_warning(hours_of_week):
 
 
 def compute_time_features(index, hour_of_week=True, day_of_week=True, hour_of_day=True):
-    """ Compute hour of week, day of week, or hour of day features.
+    """Compute hour of week, day of week, or hour of day features.
 
     Parameters
     ----------
@@ -312,7 +312,7 @@ def compute_temperature_features(
     tolerance=None,
     keep_partial_nan_rows=False,
 ):
-    """ Compute temperature features from hourly temperature data using the
+    """Compute temperature features from hourly temperature data using the
     :any:`pandas.DatetimeIndex` meter data..
 
     Creates a :any:`pandas.DataFrame` with the same index as the meter data.
@@ -582,7 +582,7 @@ def _estimate_hour_of_week_occupancy(model_data, threshold):
 
 
 def estimate_hour_of_week_occupancy(data, segmentation=None, threshold=0.65):
-    """ Estimate occupancy features for each segment.
+    """Estimate occupancy features for each segment.
 
     Parameters
     ----------
@@ -685,7 +685,7 @@ def fit_temperature_bins(
     default_bins=[30, 45, 55, 65, 75, 90],
     min_temperature_count=20,
 ):
-    """ Determine appropriate temperature bins for a particular set of temperature
+    """Determine appropriate temperature bins for a particular set of temperature
     data given segmentation and occupancy.
 
     Parameters
@@ -734,7 +734,7 @@ def fit_temperature_bins(
 
 # TODO(philngo): combine with compute_temperature_features?
 def compute_temperature_bin_features(temperatures, bin_endpoints):
-    """ Compute temperature bin features.
+    """Compute temperature bin features.
 
     Parameters
     ----------
@@ -787,7 +787,7 @@ def compute_temperature_bin_features(temperatures, bin_endpoints):
 
 
 def compute_occupancy_feature(hour_of_week, occupancy):
-    """ Given an hour of week feature, determine the occupancy for that hour of week.
+    """Given an hour of week feature, determine the occupancy for that hour of week.
 
     Parameters
     ----------
