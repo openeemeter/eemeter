@@ -379,6 +379,7 @@ class ModelMetrics(object):
             or not np.isfinite(self.n_prime)
             or self.n_prime - self.num_parameters == 0
             or self.degrees_of_freedom < 1
+            or self.observed_length < self.num_parameters
         ):
 
             self.cvrmse_auto_corr_correction = None
@@ -479,40 +480,42 @@ class ModelMetrics(object):
         """
 
         c = ModelMetricsFromJson(
-            observed_length = data.get("observed_length"),
-            predicted_length = data.get("predicted_length"),
-            merged_length = data.get("merged_length"),
-            num_parameters = data.get("num_parameters"),
-            observed_mean = data.get("observed_mean"),
-            predicted_mean = data.get("predicted_mean"),
-            observed_variance = data.get("observed_variance"),
-            predicted_variance = data.get("predicted_variance"),
-            observed_skew = data.get("observed_skew"),
-            predicted_skew = data.get("predicted_skew"),
-            observed_kurtosis = data.get("observed_kurtosis"),
-            predicted_kurtosis = data.get("predicted_kurtosis"),
-            observed_cvstd = data.get("observed_cvstd"),
-            predicted_cvstd = data.get("predicted_cvstd"),
-            r_squared = data.get("r_squared"),
-            r_squared_adj = data.get("r_squared_adj"),
-            rmse = data.get("rmse"),
-            rmse_adj = data.get("rmse_adj"),
-            cvrmse = data.get("cvrmse"),
-            cvrmse_adj = data.get("cvrmse_adj"),
-            mape = data.get("mape"),
-            mape_no_zeros = data.get("mape_no_zeros"),
-            num_meter_zeros = data.get("num_meter_zeros"),
-            nmae = data.get("nmae"),
-            nmbe = data.get("nmbe"),
-            autocorr_resid = data.get("autocorr_resid"),
-            confidence_level = data.get("confidence_level"),
-            n_prime = data.get("n_prime"),
-            single_tailed_confidence_level = data.get("single_tailed_confidence_level"),
-            degrees_of_freedom = data.get("degrees_of_freedom"),
-            t_stat= data.get("t_stat"),
-            cvrmse_auto_corr_correction = data.get("cvrmse_auto_corr_correction"),
-            approx_factor_auto_corr_correction = data.get("approx_factor_auto_corr_correction"),
-            fsu_base_term= data.get("fsu_base_term"),
+            observed_length=data.get("observed_length"),
+            predicted_length=data.get("predicted_length"),
+            merged_length=data.get("merged_length"),
+            num_parameters=data.get("num_parameters"),
+            observed_mean=data.get("observed_mean"),
+            predicted_mean=data.get("predicted_mean"),
+            observed_variance=data.get("observed_variance"),
+            predicted_variance=data.get("predicted_variance"),
+            observed_skew=data.get("observed_skew"),
+            predicted_skew=data.get("predicted_skew"),
+            observed_kurtosis=data.get("observed_kurtosis"),
+            predicted_kurtosis=data.get("predicted_kurtosis"),
+            observed_cvstd=data.get("observed_cvstd"),
+            predicted_cvstd=data.get("predicted_cvstd"),
+            r_squared=data.get("r_squared"),
+            r_squared_adj=data.get("r_squared_adj"),
+            rmse=data.get("rmse"),
+            rmse_adj=data.get("rmse_adj"),
+            cvrmse=data.get("cvrmse"),
+            cvrmse_adj=data.get("cvrmse_adj"),
+            mape=data.get("mape"),
+            mape_no_zeros=data.get("mape_no_zeros"),
+            num_meter_zeros=data.get("num_meter_zeros"),
+            nmae=data.get("nmae"),
+            nmbe=data.get("nmbe"),
+            autocorr_resid=data.get("autocorr_resid"),
+            confidence_level=data.get("confidence_level"),
+            n_prime=data.get("n_prime"),
+            single_tailed_confidence_level=data.get("single_tailed_confidence_level"),
+            degrees_of_freedom=data.get("degrees_of_freedom"),
+            t_stat=data.get("t_stat"),
+            cvrmse_auto_corr_correction=data.get("cvrmse_auto_corr_correction"),
+            approx_factor_auto_corr_correction=data.get(
+                "approx_factor_auto_corr_correction"
+            ),
+            fsu_base_term=data.get("fsu_base_term"),
         )
 
         return c

@@ -94,9 +94,7 @@ class CalTRACKSegmentModel(object):
         parameters = parameters[cols_to_predict]
 
         # Step 3, predict
-        prediction = design_matrix_granular.dot(parameters).rename(
-            columns={0: "predicted_usage"}
-        )
+        prediction = design_matrix_granular.dot(parameters)
         # Step 4, put nans back in
         prediction = prediction.reindex(data.index)
 
@@ -126,12 +124,12 @@ class CalTRACKSegmentModel(object):
         """
 
         c = cls(
-            data.get('segment_name'),
+            data.get("segment_name"),
             None,
-            data.get('formula'),
-            data.get('model_params'),
-            warnings=data.get('warnings')
-            )
+            data.get("formula"),
+            data.get("model_params"),
+            warnings=data.get("warnings"),
+        )
 
         return c
 

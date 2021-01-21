@@ -148,24 +148,25 @@ class CalTRACKHourlyModelResults(object):
 
         # "model" is a CalTRACKHourlyModel that was serialized
         model = None
-        d = data.get('model')
+        d = data.get("model")
         if d:
             model = CalTRACKHourlyModel.from_json(d)
 
         c = cls(
-            data.get('status'),
-            data.get('method_name'),
+            data.get("status"),
+            data.get("method_name"),
             model=model,
-            warnings=data.get('warnings'),
-            metadata=data.get('metadata'),
-            settings=data.get('settings'))
+            warnings=data.get("warnings"),
+            metadata=data.get("metadata"),
+            settings=data.get("settings"),
+        )
 
         # Note the metrics do not contain all the data needed
         # for reconstruction (like the input pandas) ...
-        d = data.get('avgs_metrics')
+        d = data.get("avgs_metrics")
         if d:
-            c.avgs_metrics = ModelMetrics.from_json(d) # pragma: no cover
-        d = data.get('totals_metrics')
+            c.avgs_metrics = ModelMetrics.from_json(d)  # pragma: no cover
+        d = data.get("totals_metrics")
         if d:
             c.totals_metrics = ModelMetrics.from_json(d)
         return c
@@ -258,17 +259,17 @@ class CalTRACKHourlyModel(SegmentedModel):
         """
 
         segment_models = [
-            CalTRACKSegmentModel.from_json(s)
-            for s in data.get('segment_models')
+            CalTRACKSegmentModel.from_json(s) for s in data.get("segment_models")
         ]
 
-        occupancy_lookup = pd.read_json(data.get('occupancy_lookup'), orient='split')
-        occupancy_lookup.index = occupancy_lookup.index.astype('category')
+        occupancy_lookup = pd.read_json(data.get("occupancy_lookup"), orient="split")
+        occupancy_lookup.index = occupancy_lookup.index.astype("category")
 
-        c = cls(segment_models,
-                occupancy_lookup,
-                pd.read_json(data.get('temperature_bins'), orient="split")
-                )
+        c = cls(
+            segment_models,
+            occupancy_lookup,
+            pd.read_json(data.get("temperature_bins"), orient="split"),
+        )
 
         return c
 

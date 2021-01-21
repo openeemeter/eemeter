@@ -4,11 +4,10 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Fix tests and make changes to ensure tests pass on pandas version 1.2.1.
 
 2.10.0
 ------
-
 
 * Add additional terms into ModelMetrics() class which can be used in fractional savings uncertainy computations.
 
