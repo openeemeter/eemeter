@@ -66,7 +66,7 @@ def _noneify(value):
 
 
 class CalTRACKUsagePerDayModelResults(object):
-    """ Contains information about the chosen model.
+    """Contains information about the chosen model.
 
     Attributes
     ----------
@@ -159,7 +159,7 @@ class CalTRACKUsagePerDayModelResults(object):
         )
 
     def json(self, with_candidates=False):
-        """ Return a JSON-serializable representation of this result.
+        """Return a JSON-serializable representation of this result.
 
         The output of this function can be converted to a serialized string
         with :any:`json.dumps`.
@@ -184,6 +184,42 @@ class CalTRACKUsagePerDayModelResults(object):
         if with_candidates:
             data["candidates"] = [candidate.json() for candidate in self.candidates]
         return data
+
+    @classmethod
+    def from_json(cls, data):
+        """Loads a JSON-serializable representation into the model state.
+
+        The input of this function is a dict which can be the result
+        of :any:`json.loads`.
+        """
+
+        # "model" is a CalTRACKUsagePerDayCandidateModel that was serialized
+        model = None
+        d = data.get("model")
+        if d:
+            model = CalTRACKUsagePerDayCandidateModel.from_json(d)
+
+        c = cls(
+            data.get("status"),
+            data.get("method_name"),
+            interval=data.get("interval"),
+            model=model,
+            r_squared_adj=data.get("r_squared_adj"),
+            candidates=data.get("candidates"),
+            warnings=data.get("warnings"),
+            metadata=data.get("metadata"),
+            settings=data.get("settings"),
+        )
+
+        # Note the metrics do not contain all the data needed
+        # for reconstruction (like the input pandas) ...
+        d = data.get("avgs_metrics")
+        if d:
+            c.avgs_metrics = ModelMetrics.from_json(d)
+        d = data.get("totals_metrics")
+        if d:
+            c.totals_metrics = ModelMetrics.from_json(d)
+        return c
 
     def predict(
         self,
@@ -210,7 +246,7 @@ class CalTRACKUsagePerDayModelResults(object):
         candidate_alpha=None,
         temp_range=None,
     ):
-        """ Plot a model fit.
+        """Plot a model fit.
 
         Parameters
         ----------
@@ -257,7 +293,7 @@ class CalTRACKUsagePerDayModelResults(object):
 
 
 class CalTRACKUsagePerDayCandidateModel(object):
-    """ Contains information about a candidate model.
+    """Contains information about a candidate model.
 
     Attributes
     ----------
@@ -317,20 +353,15 @@ class CalTRACKUsagePerDayCandidateModel(object):
         self.warnings = warnings
 
     def __repr__(self):
-        return (
-            "CalTRACKUsagePerDayCandidateModel(model_type='{}', formula='{}', status='{}',"
-            " r_squared_adj={})".format(
-                self.model_type,
-                self.formula,
-                self.status,
-                round(self.r_squared_adj, 3)
-                if self.r_squared_adj is not None
-                else None,
-            )
+        return "CalTRACKUsagePerDayCandidateModel(model_type='{}', formula='{}', status='{}'," " r_squared_adj={})".format(
+            self.model_type,
+            self.formula,
+            self.status,
+            round(self.r_squared_adj, 3) if self.r_squared_adj is not None else None,
         )
 
     def json(self):
-        """ Return a JSON-serializable representation of this result.
+        """Return a JSON-serializable representation of this result.
 
         The output of this function can be converted to a serialized string
         with :any:`json.dumps`.
@@ -344,6 +375,25 @@ class CalTRACKUsagePerDayCandidateModel(object):
             "warnings": [w.json() for w in self.warnings],
         }
 
+    @classmethod
+    def from_json(cls, data):
+        """Loads a JSON-serializable representation into the model state.
+
+        The input of this function is a dict which can be the result
+        of :any:`json.loads`.
+        """
+
+        c = cls(
+            data.get("model_type"),
+            data.get("formula"),
+            data.get("status"),
+            model_params=data.get("model_params"),
+            r_squared_adj=data.get("r_squared_adj"),
+            warnings=data.get("warnings"),
+        )
+
+        return c
+
     def predict(
         self,
         prediction_index,
@@ -352,8 +402,7 @@ class CalTRACKUsagePerDayCandidateModel(object):
         with_design_matrix=False,
         **kwargs
     ):
-        """ Predict
-        """
+        """Predict"""
         return caltrack_usage_per_day_predict(
             self.model_type,
             self.model_params,
@@ -374,8 +423,7 @@ class CalTRACKUsagePerDayCandidateModel(object):
         alpha=None,
         **kwargs
     ):
-        """ Plot
-        """
+        """Plot"""
         return plot_caltrack_candidate(
             self,
             best=best,
@@ -389,7 +437,7 @@ class CalTRACKUsagePerDayCandidateModel(object):
 
 
 class DataSufficiency(object):
-    """ Contains the result of a data sufficiency check.
+    """Contains the result of a data sufficiency check.
 
     Attributes
     ----------
@@ -434,7 +482,7 @@ class DataSufficiency(object):
         )
 
     def json(self):
-        """ Return a JSON-serializable representation of this result.
+        """Return a JSON-serializable representation of this result.
 
         The output of this function can be converted to a serialized string
         with :any:`json.dumps`.
@@ -465,7 +513,7 @@ def _caltrack_predict_design_matrix(
     input_averages=False,
     output_averages=False,
 ):
-    """ An internal CalTRACK predict method for use with a design matrix of the form
+    """An internal CalTRACK predict method for use with a design matrix of the form
     used in model fitting.
 
     Given a set model type, parameters, and daily temperatures, return model
@@ -593,7 +641,7 @@ def caltrack_usage_per_day_predict(
     with_disaggregated=False,
     with_design_matrix=False,
 ):
-    """ CalTRACK predict method.
+    """CalTRACK predict method.
 
     Given a model type, parameters, hourly temperatures, a
     :any:`pandas.DatetimeIndex` index over which to predict meter usage,
@@ -728,7 +776,7 @@ def caltrack_usage_per_day_predict(
 def get_too_few_non_zero_degree_day_warning(
     model_type, balance_point, degree_day_type, degree_days, minimum_non_zero
 ):
-    """ Return an empty list or a single warning wrapped in a list regarding
+    """Return an empty list or a single warning wrapped in a list regarding
     non-zero degree days for a set of degree days.
 
     Parameters
@@ -789,7 +837,7 @@ def get_total_degree_day_too_low_warning(
     period_days,
     minimum_total,
 ):
-    """ Return an empty list or a single warning wrapped in a list regarding
+    """Return an empty list or a single warning wrapped in a list regarding
     the total summed degree day values.
 
     Parameters
@@ -846,7 +894,7 @@ def get_total_degree_day_too_low_warning(
 
 
 def get_parameter_negative_warning(model_type, model_params, parameter):
-    """ Return an empty list or a single warning wrapped in a list indicating
+    """Return an empty list or a single warning wrapped in a list indicating
     whether model parameter is negative.
 
     Parameters
@@ -886,7 +934,7 @@ def get_parameter_negative_warning(model_type, model_params, parameter):
 def get_parameter_p_value_too_high_warning(
     model_type, model_params, parameter, p_value, maximum_p_value
 ):
-    """ Return an empty list or a single warning wrapped in a list indicating
+    """Return an empty list or a single warning wrapped in a list indicating
     whether model parameter p-value is too high.
 
     Parameters
@@ -933,7 +981,7 @@ def get_parameter_p_value_too_high_warning(
 
 
 def get_fit_failed_candidate_model(model_type, formula):
-    """ Return a Candidate model that indicates the fitting routine failed.
+    """Return a Candidate model that indicates the fitting routine failed.
 
     Parameters
     ----------
@@ -963,7 +1011,7 @@ def get_fit_failed_candidate_model(model_type, formula):
 
 
 def get_intercept_only_candidate_models(data, weights_col):
-    """ Return a list of a single candidate intercept-only model.
+    """Return a list of a single candidate intercept-only model.
 
     Parameters
     ----------
@@ -1033,7 +1081,7 @@ def get_single_cdd_only_candidate_model(
     weights_col,
     balance_point,
 ):
-    """ Return a single candidate cdd-only model for a particular balance
+    """Return a single candidate cdd-only model for a particular balance
     point.
 
     Parameters
@@ -1149,7 +1197,7 @@ def get_single_cdd_only_candidate_model(
 def get_cdd_only_candidate_models(
     data, minimum_non_zero_cdd, minimum_total_cdd, beta_cdd_maximum_p_value, weights_col
 ):
-    """ Return a list of all possible candidate cdd-only models.
+    """Return a list of all possible candidate cdd-only models.
 
     Parameters
     ----------
@@ -1197,7 +1245,7 @@ def get_single_hdd_only_candidate_model(
     weights_col,
     balance_point,
 ):
-    """ Return a single candidate hdd-only model for a particular balance
+    """Return a single candidate hdd-only model for a particular balance
     point.
 
     Parameters
@@ -1366,7 +1414,7 @@ def get_single_cdd_hdd_candidate_model(
     cooling_balance_point,
     heating_balance_point,
 ):
-    """ Return and fit a single candidate cdd_hdd model for a particular selection
+    """Return and fit a single candidate cdd_hdd model for a particular selection
     of cooling balance point and heating balance point
 
     Parameters
@@ -1531,7 +1579,7 @@ def get_cdd_hdd_candidate_models(
     beta_hdd_maximum_p_value,
     weights_col,
 ):
-    """ Return a list of candidate cdd_hdd models for a particular selection
+    """Return a list of candidate cdd_hdd models for a particular selection
     of cooling balance point and heating balance point
 
     Parameters
@@ -1593,7 +1641,7 @@ def get_cdd_hdd_candidate_models(
 
 
 def select_best_candidate(candidate_models):
-    """ Select and return the best candidate model based on r-squared and
+    """Select and return the best candidate model based on r-squared and
     qualification.
 
     Parameters
@@ -1654,7 +1702,7 @@ def fit_caltrack_usage_per_day_model(
     fit_hdd_only=True,
     fit_cdd_hdd=True,
 ):
-    """ CalTRACK daily and billing methods using a usage-per-day modeling
+    """CalTRACK daily and billing methods using a usage-per-day modeling
     strategy.
 
     Parameters
@@ -2180,7 +2228,7 @@ def plot_caltrack_candidate(
     alpha=None,
     **kwargs
 ):
-    """ Plot a CalTRACK candidate model.
+    """Plot a CalTRACK candidate model.
 
     Parameters
     ----------

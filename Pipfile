@@ -7,13 +7,13 @@ name = "pypi"
 
 [packages]
 
-click = "*"
-pandas = "<=0.23.4"  # 0.24.0 treats DatetimeIndex differently
+click = "==7.0"
 eeweather = ">=0.3.12"
 matplotlib = "<3.0.0"  # until we drop python 2 support
-statsmodels = "*"
+statsmodels = "==0.11.1"
+scipy == "==1.4.1"
 sqlalchemy = "*"
-scipy = "*"
+pandas == "==0.25.2"
 
 
 [dev-packages]

@@ -36,28 +36,28 @@ def cli():
     """Example usage
 
 
-Save output::
+    Save output::
 
 
-    Use CalTRACK methods on sample data:
+        Use CalTRACK methods on sample data:
 
-    \b
-        $ eemeter caltrack --sample=il-electricity-cdd-hdd-daily
+        \b
+            $ eemeter caltrack --sample=il-electricity-cdd-hdd-daily
 
-    Save output:
+        Save output:
 
-    \b
-        $ eemeter caltrack --sample=il-electricity-cdd-only-billing_monthly --output-file=/path/to/output.json
+        \b
+            $ eemeter caltrack --sample=il-electricity-cdd-only-billing_monthly --output-file=/path/to/output.json
 
-    Load custom data (see sample files for example format):
+        Load custom data (see sample files for example format):
 
-    \b
-        $ eemeter caltrack --meter-file=/path/to/meter/data.csv --temperature-file=/path/to/temperature/data.csv
+        \b
+            $ eemeter caltrack --meter-file=/path/to/meter/data.csv --temperature-file=/path/to/temperature/data.csv
 
-    Do not fit CDD models (intended for gas data):
+        Do not fit CDD models (intended for gas data):
 
-    \b
-        $ eemeter caltrack --sample=il-gas-hdd-only-billing_monthly --no-fit-cdd
+        \b
+            $ eemeter caltrack --sample=il-gas-hdd-only-billing_monthly --no-fit-cdd
     """
     pass  # pragma: no cover
 

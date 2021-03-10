@@ -39,7 +39,7 @@ def meter_data_from_csv(
     freq=None,
     **kwargs
 ):
-    """ Load meter data from a CSV file.
+    """Load meter data from a CSV file.
 
     Default format::
 
@@ -85,7 +85,7 @@ def meter_data_from_csv(
 
     # for pandas<0.24, which doesn't localize even with utc=True
     if df.index.tz is None:
-        df.index = df.index.tz_localize("UTC")
+        df.index = df.index.tz_localize("UTC")  # pragma: no cover
 
     if tz is not None:
         df = df.tz_convert(tz)
@@ -107,7 +107,7 @@ def temperature_data_from_csv(
     freq=None,
     **kwargs
 ):
-    """ Load temperature data from a CSV file.
+    """Load temperature data from a CSV file.
 
     Default format::
 
@@ -152,7 +152,7 @@ def temperature_data_from_csv(
 
     # for pandas<0.24, which doesn't localize even with utc=True
     if df.index.tz is None:
-        df.index = df.index.tz_localize("UTC")
+        df.index = df.index.tz_localize("UTC")  # pragma: no cover
 
     if tz is not None:
         df = df.tz_convert(tz)
@@ -164,7 +164,7 @@ def temperature_data_from_csv(
 
 
 def meter_data_from_json(data, orient="list"):
-    """ Load meter data from json.
+    """Load meter data from json.
 
     Default format::
 
@@ -174,28 +174,75 @@ def meter_data_from_json(data, orient="list"):
             ['2017-03-01T00:00:00+00:00', 0.46],
         ]
 
+    records format::
+
+        [
+            {'start': '2017-01-01T00:00:00+00:00', 'value': 3.5},
+            {'start': '2017-02-01T00:00:00+00:00', 'value': 0.4},
+            {'start': '2017-03-01T00:00:00+00:00', 'value': 0.46},
+        ]
+
     Parameters
     ----------
     data : :any:`list`
-        List elements are each a rows of data.
+        A list of meter data, with each row representing a single record.
+    orient: :any: `str`
+        Format of `data` parameter:
+            - `list` (a list of lists, with the first element as start date)
+            - `records` (a list of dicts)
 
     Returns
     -------
     df : :any:`pandas.DataFrame`
         DataFrame with a single column (``'value'``) and a
-        :any:`pandas.DatetimeIndex`.
+        :any:`pandas.DatetimeIndex`. A second column (``'estimated'``)
+        may also be included if the input data contained an estimated boolean flag.
     """
+
+    def _empty_meter_data_dataframe():
+        return pd.DataFrame(
+            {"value": []}, index=pd.DatetimeIndex([], tz="UTC", name="start")
+        )
+
+    if data is None:
+        return _empty_meter_data_dataframe()
+
     if orient == "list":
         df = pd.DataFrame(data, columns=["start", "value"])
         df["start"] = pd.to_datetime(df.start, utc=True)
         df = df.set_index("start")
+        return df
+    elif orient == "records":
+
+        def _noneify_meter_data_row(row):
+            value = row["value"]
+            if value is not None:
+                try:
+                    value = float(value)
+                except ValueError:
+                    value = None
+            out_row = {"start": row["start"], "value": value}
+            if "estimated" in row:
+                estimated = row.get("estimated")
+                out_row["estimated"] = estimated in [True, "true", "True", 1, "1"]
+            return out_row
+
+        noneified_data = [_noneify_meter_data_row(row) for row in data]
+        df = pd.DataFrame(noneified_data)
+        if df.empty:
+            return _empty_meter_data_dataframe()
+        df["start"] = pd.to_datetime(df.start, utc=True)
+        df = df.set_index("start")
+        df["value"] = df["value"].astype(float)
+        if "estimated" in df.columns:
+            df["estimated"] = df["estimated"].fillna(False).astype(bool)
         return df
     else:
         raise ValueError("orientation not recognized.")
 
 
 def temperature_data_from_json(data, orient="list"):
-    """ Load temperature data from json. (Must be given in degrees
+    """Load temperature data from json. (Must be given in degrees
     Fahrenheit).
 
     Default format::
@@ -227,7 +274,7 @@ def temperature_data_from_json(data, orient="list"):
 
 
 def meter_data_to_csv(meter_data, path_or_buf):
-    """ Write meter data to CSV. See also :any:`pandas.DataFrame.to_csv`.
+    """Write meter data to CSV. See also :any:`pandas.DataFrame.to_csv`.
 
     Parameters
     ----------
@@ -243,7 +290,7 @@ def meter_data_to_csv(meter_data, path_or_buf):
 
 
 def temperature_data_to_csv(temperature_data, path_or_buf):
-    """ Write temperature data to CSV. See also :any:`pandas.DataFrame.to_csv`.
+    """Write temperature data to CSV. See also :any:`pandas.DataFrame.to_csv`.
 
     Parameters
     ----------

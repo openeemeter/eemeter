@@ -9,6 +9,72 @@ Development
 * Update CalTRACK hourly model formula to use different bins for occupied and
   unoccupied mode.
 
+2.10.11
+-------
+
+* Fix tests and make changes to ensure tests pass on pandas version 1.2.1.
+* Fix bug in segmentation.py causing a section of tutorial to fail.
+
+2.10.0
+------
+
+* Add additional terms into ModelMetrics() class which can be used in fractional savings uncertainy computations.
+
+2.9.2
+-----
+
+* Remove fixing of versions of libraries in setup.py to avoid unforeseen issues with library updates.
+
+2.9.1
+-----
+
+* Fix versions of libraries in setup.py to avoid unforeseen issues with library updates.
+
+2.9.0
+-----
+
+* Clarify blackout period.
+
+2.8.6
+-----
+
+* Fix issue with `get_reporting_data` and `get_baseline_data` when passing data with non-UTC timezones.
+
+2.8.5
+-----
+
+* Add functions to clean billing/daily data according to caltrack rules.
+
+2.8.4
+-----
+
+* Further limit segments used in hourly `totals_metrics` to only calculate when weight=1.
+
+2.8.3
+-----
+
+* Update hourly `totals_metrics` calculation to properly use only the segment of the model.
+
+2.8.2
+-----
+
+* Add `totals_metrics` to hourly models.
+
+2.8.1
+-----
+
+* Fix bug with `get_baseline_data` in regards to recent addition of `n_days_billing_period_overshoot` kwarg.
+
+2.8.0
+-----
+
+* Update `get_baseline_data` to allow for limit to billing overshoot using `n_days_billing_period_overshoot` kwarg.
+
+2.7.7
+-----
+
+* Add function to clean billing data to fit caltrack specifications (`clean_caltrack_billing_data`).
+
 2.7.6
 -----
 

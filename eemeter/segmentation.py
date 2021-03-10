@@ -37,7 +37,7 @@ HourlyModelPrediction = namedtuple("HourlyModelPrediction", ["result"])
 
 
 class CalTRACKSegmentModel(object):
-    """ An object that captures the model fit for one segment.
+    """An object that captures the model fit for one segment.
 
     Attributes
     ----------
@@ -64,8 +64,7 @@ class CalTRACKSegmentModel(object):
         self.warnings = warnings
 
     def predict(self, data):
-        """ A function which takes input data and predicts for this segment model.
-        """
+        """A function which takes input data and predicts for this segment model."""
         if self.formula is None:
             var_str = ""
         else:
@@ -94,16 +93,15 @@ class CalTRACKSegmentModel(object):
         parameters = parameters[cols_to_predict]
 
         # Step 3, predict
-        prediction = design_matrix_granular.dot(parameters).rename(
-            columns={0: "predicted_usage"}
-        )
+        prediction = design_matrix_granular.dot(parameters).rename("predicted_usage")
+
         # Step 4, put nans back in
         prediction = prediction.reindex(data.index)
 
         return prediction
 
     def json(self):
-        """ Return a JSON-serializable representation of this result.
+        """Return a JSON-serializable representation of this result.
 
         The output of this function can be converted to a serialized string
         with :any:`json.dumps`.
@@ -117,9 +115,27 @@ class CalTRACKSegmentModel(object):
         }
         return data
 
+    @classmethod
+    def from_json(cls, data):
+        """Loads a JSON-serializable representation into the model state.
+
+        The input of this function is a dict which can be the result
+        of :any:`json.loads`.
+        """
+
+        c = cls(
+            data.get("segment_name"),
+            None,
+            data.get("formula"),
+            data.get("model_params"),
+            warnings=data.get("warnings"),
+        )
+
+        return c
+
 
 class SegmentedModel(object):
-    """ Represent a model which has been broken into multiple model segments (for
+    """Represent a model which has been broken into multiple model segments (for
     CalTRACK Hourly, these are month-by-month segments, each of which is associated
     with a different model.
 
@@ -171,7 +187,7 @@ class SegmentedModel(object):
     def predict(
         self, prediction_index, temperature, **kwargs
     ):  # ignore extra args with kwargs
-        """ Predict over a prediction index by combining results from all models.
+        """Predict over a prediction index by combining results from all models.
 
         Parameters
         ----------
@@ -211,7 +227,7 @@ class SegmentedModel(object):
         return HourlyModelPrediction(result=result)
 
     def json(self):
-        """ Return a JSON-serializable representation of this result.
+        """Return a JSON-serializable representation of this result.
 
         The output of this function can be converted to a serialized string
         with :any:`json.dumps`.
@@ -233,8 +249,7 @@ class SegmentedModel(object):
 
 
 def filter_zero_weights_feature_processor(segment_name, segment_data):
-    """ A default segment processor to use if none is provided.
-    """
+    """A default segment processor to use if none is provided."""
     return segment_data[segment_data.weight > 0]
 
 
@@ -245,7 +260,7 @@ def iterate_segmented_dataset(
     feature_processor_kwargs=None,
     feature_processor_segment_name_mapping=None,
 ):
-    """ A utility for iterating over segments which allows providing a function for
+    """A utility for iterating over segments which allows providing a function for
     processing outputs into features.
 
     Parameters
@@ -432,7 +447,7 @@ def _segment_weights_three_month_weighted(index):
 
 
 def segment_time_series(index, segment_type="single", drop_zero_weight_segments=False):
-    """ Split a time series index into segments by applying weights.
+    """Split a time series index into segments by applying weights.
 
     Parameters
     ----------
@@ -484,7 +499,7 @@ def segment_time_series(index, segment_type="single", drop_zero_weight_segments=
 
 
 def fit_model_segments(segmented_dataset_dict, fit_segment):
-    """ A function which fits a model to each item in a dataset.
+    """A function which fits a model to each item in a dataset.
 
     Parameters
     ----------

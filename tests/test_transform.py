@@ -27,6 +27,9 @@ import pytz
 
 from eemeter.transform import (
     as_freq,
+    clean_caltrack_billing_data,
+    downsample_and_clean_caltrack_daily_data,
+    clean_caltrack_billing_daily_data,
     day_counts,
     get_baseline_data,
     get_reporting_data,
@@ -34,6 +37,7 @@ from eemeter.transform import (
     remove_duplicates,
     NoBaselineDataError,
     NoReportingDataError,
+    overwrite_partial_rows_with_nan,
 )
 
 
@@ -161,6 +165,18 @@ def test_get_baseline_data(il_electricity_cdd_hdd_hourly):
     meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
     baseline_data, warnings = get_baseline_data(meter_data)
     assert meter_data.shape == baseline_data.shape == (19417, 1)
+    assert len(warnings) == 0
+
+
+def test_get_baseline_data_with_timezones(il_electricity_cdd_hdd_hourly):
+    meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
+    baseline_data, warnings = get_baseline_data(
+        meter_data.tz_convert("America/New_York")
+    )
+    assert len(warnings) == 0
+    baseline_data, warnings = get_baseline_data(
+        meter_data.tz_convert("Australia/Sydney")
+    )
     assert len(warnings) == 0
 
 
@@ -318,10 +334,87 @@ def test_get_baseline_data_with_overshoot_and_ignored_gap(
     assert len(warnings) == 0
 
 
+def test_get_baseline_data_n_days_billing_period_overshoot(
+    il_electricity_cdd_hdd_billing_monthly
+):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    baseline_data, warnings = get_baseline_data(
+        meter_data,
+        end=datetime(2017, 11, 9, tzinfo=pytz.UTC),
+        max_days=45,
+        allow_billing_period_overshoot=True,
+        n_days_billing_period_overshoot=45,
+        ignore_billing_period_gap_for_day_count=True,
+    )
+    assert baseline_data.shape == (2, 1)
+    assert round(baseline_data.value.sum(), 2) == 526.25
+    assert len(warnings) == 0
+
+
+def test_get_baseline_data_too_far_from_date(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    end_date = datetime(2020, 11, 9, tzinfo=pytz.UTC)
+    max_days = 45
+    baseline_data, warnings = get_baseline_data(
+        meter_data,
+        end=end_date,
+        max_days=max_days,
+        ignore_billing_period_gap_for_day_count=True,
+    )
+    assert baseline_data.shape == (2, 1)
+    assert round(baseline_data.value.sum(), 2) == 1393.4
+    assert len(warnings) == 0
+    with pytest.raises(NoBaselineDataError):
+        get_baseline_data(
+            meter_data,
+            end=end_date,
+            max_days=max_days,
+            n_days_billing_period_overshoot=45,
+            ignore_billing_period_gap_for_day_count=True,
+        )
+    baseline_data, warnings = get_baseline_data(
+        meter_data,
+        end=end_date,
+        max_days=max_days,
+        allow_billing_period_overshoot=True,
+        ignore_billing_period_gap_for_day_count=True,
+    )
+    assert baseline_data.shape == (3, 1)
+    assert round(baseline_data.value.sum(), 2) == 2043.92
+    assert len(warnings) == 0
+    # Includes 3 data points because data at index -3 is closer to start target
+    # then data at index -2
+    start_target = baseline_data.index[-1] - timedelta(days=max_days)
+    assert abs((baseline_data.index[0] - start_target).days) < abs(
+        (baseline_data.index[1] - start_target).days
+    )
+    with pytest.raises(NoBaselineDataError):
+        get_baseline_data(
+            meter_data,
+            end=end_date,
+            max_days=max_days,
+            allow_billing_period_overshoot=True,
+            n_days_billing_period_overshoot=45,
+            ignore_billing_period_gap_for_day_count=True,
+        )
+
+
 def test_get_reporting_data(il_electricity_cdd_hdd_hourly):
     meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
     reporting_data, warnings = get_reporting_data(meter_data)
     assert meter_data.shape == reporting_data.shape == (19417, 1)
+    assert len(warnings) == 0
+
+
+def test_get_reporting_data_with_timezones(il_electricity_cdd_hdd_hourly):
+    meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
+    reporting_data, warnings = get_reporting_data(
+        meter_data.tz_convert("America/New_York")
+    )
+    assert len(warnings) == 0
+    reporting_data, warnings = get_reporting_data(
+        meter_data.tz_convert("Australia/Sydney")
+    )
     assert len(warnings) == 0
 
 
@@ -696,3 +789,113 @@ def test_as_freq_hourly_to_daily_include_coverage(il_electricity_cdd_hdd_hourly)
     as_daily = as_freq(meter_data.value, freq="D", include_coverage=True)
     assert as_daily.shape == (811, 2)
     assert round(meter_data.value.sum(), 1) == round(as_daily.value.sum(), 1) == 21926.0
+
+
+def test_clean_caltrack_billing_daily_data_billing(
+    il_electricity_cdd_hdd_billing_monthly
+):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    cleaned_data = clean_caltrack_billing_daily_data(meter_data, "billing_monthly")
+    assert cleaned_data.shape == (27, 1)
+    pd.testing.assert_frame_equal(meter_data, cleaned_data)
+
+
+def test_clean_caltrack_billing_daily_data_daily(il_electricity_cdd_hdd_daily):
+    meter_data = il_electricity_cdd_hdd_daily["meter_data"]
+    cleaned_data = clean_caltrack_billing_daily_data(meter_data, "daily")
+    assert cleaned_data.shape == (810, 1)
+    pd.testing.assert_frame_equal(meter_data, cleaned_data)
+
+
+def test_clean_caltrack_billing_daily_data_daily_local_tz(il_electricity_cdd_hdd_daily):
+    meter_data = il_electricity_cdd_hdd_daily["meter_data"]
+    meter_data.index += timedelta(hours=6)
+    meter_data = meter_data.tz_convert("America/Chicago")
+    cleaned_data = clean_caltrack_billing_daily_data(meter_data, "daily")
+    assert cleaned_data.shape == (810, 1)
+    pd.testing.assert_frame_equal(meter_data, cleaned_data)
+
+
+def test_clean_caltrack_billing_daily_data_hourly(il_electricity_cdd_hdd_hourly):
+    meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
+    cleaned_data = clean_caltrack_billing_daily_data(meter_data, "hourly")
+    assert cleaned_data.shape == (811, 1)
+
+
+def test_clean_caltrack_daily_data_hourly(il_electricity_cdd_hdd_hourly):
+    meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
+    cleaned_data = downsample_and_clean_caltrack_daily_data(meter_data)
+    assert cleaned_data.shape == (811, 1)
+
+
+def test_clean_caltrack_daily_data_hourly_local_tz(il_electricity_cdd_hdd_hourly):
+    meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
+    meter_data = meter_data.tz_convert("America/Chicago")
+    cleaned_data = downsample_and_clean_caltrack_daily_data(meter_data)
+    assert cleaned_data.shape == (810, 1)
+
+
+def test_clean_caltrack_billing_data_estimated(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    meter_data["estimated"] = False
+    meter_data.estimated.iloc[2] = True
+    meter_data.estimated.iloc[5] = True
+    meter_data.estimated.iloc[6] = True
+    meter_data.estimated.iloc[10] = True
+
+    cleaned_data = clean_caltrack_billing_data(meter_data, "billing_monthly")
+    assert cleaned_data.dropna().shape[0] == cleaned_data.shape[0] - 2
+
+
+def test_clean_caltrack_billing_data_uneven_datetimes(
+    il_electricity_cdd_hdd_billing_monthly
+):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    too_short_meter_data = pd.concat(
+        [
+            meter_data,
+            pd.DataFrame(
+                data=[{"value": 100}],
+                index=[datetime(2017, 1, 1, 6).replace(tzinfo=pytz.UTC)],
+            ),
+        ]
+    ).sort_index()
+    cleaned_data = clean_caltrack_billing_data(too_short_meter_data, "billing_monthly")
+    assert cleaned_data.dropna().shape[0] == cleaned_data.shape[0] - 3
+
+    too_long_meter_data = meter_data.drop(
+        [datetime(2016, 12, 19, 6).replace(tzinfo=pytz.UTC)]
+    )
+    cleaned_data = clean_caltrack_billing_data(too_long_meter_data, "billing_monthly")
+
+    too_long_meter_data = meter_data.drop(
+        [
+            datetime(2016, 12, 19, 6).replace(tzinfo=pytz.UTC),
+            datetime(2017, 1, 21, 6).replace(tzinfo=pytz.UTC),
+        ]
+    )
+    cleaned_data = clean_caltrack_billing_data(too_long_meter_data, "billing_bimonthly")
+    assert cleaned_data.dropna().shape[0] == cleaned_data.shape[0] - 2
+    assert cleaned_data.dropna().shape[0] == cleaned_data.shape[0] - 2
+
+    pre_empty_meter_data = meter_data[:0]
+    cleaned_data = clean_caltrack_billing_data(pre_empty_meter_data, "billing_monthly")
+    assert cleaned_data.empty
+
+    post_empty_meter_data = meter_data[:4].drop(
+        [
+            datetime(2015, 12, 21, 6).replace(tzinfo=pytz.UTC),
+            datetime(2016, 1, 22, 6).replace(tzinfo=pytz.UTC),
+        ]
+    )
+    assert not post_empty_meter_data["value"].dropna().empty
+    cleaned_data = clean_caltrack_billing_data(post_empty_meter_data, "billing_monthly")
+    assert cleaned_data.empty
+
+
+def test_overwrite_partial_rows_with_nan(il_electricity_cdd_hdd_billing_monthly):
+    meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
+    meter_data["other_column"] = meter_data["value"]
+    meter_data["other_column"][:3] = np.nan
+    meter_data_nanned = overwrite_partial_rows_with_nan(meter_data)
+    assert pd.isnull(meter_data_nanned["value"][:3]).all()

@@ -47,7 +47,8 @@ Here's how to run the CalTRACK billing/daily model.  See also
         eemeter.load_sample("il-electricity-cdd-hdd-daily")
     )
 
-    # the dates if an analysis "blackout" period during which a project was performed.
+    # The dates of an analysis "blackout" period during which a project was performed.
+    # This is synonymous with the CalTRACK "Intervention period" (See CalTRACK 1.4.4)
     blackout_start_date = sample_metadata["blackout_start_date"]
     blackout_end_date = sample_metadata["blackout_end_date"]
 

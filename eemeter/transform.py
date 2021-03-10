@@ -37,6 +37,8 @@ __all__ = (
     "get_terms",
     "remove_duplicates",
     "overwrite_partial_rows_with_nan",
+    "clean_caltrack_billing_data",
+    "clean_caltrack_billing_daily_data",
 )
 
 
@@ -45,7 +47,7 @@ def overwrite_partial_rows_with_nan(df):
 
 
 def remove_duplicates(df_or_series):
-    """ Remove duplicate rows or values by keeping the first of each duplicate.
+    """Remove duplicate rows or values by keeping the first of each duplicate.
 
     Parameters
     ----------
@@ -225,9 +227,10 @@ def get_baseline_data(
     end=None,
     max_days=365,
     allow_billing_period_overshoot=False,
+    n_days_billing_period_overshoot=None,
     ignore_billing_period_gap_for_day_count=False,
 ):
-    """ Filter down to baseline period data.
+    """Filter down to baseline period data.
 
     .. note::
 
@@ -255,6 +258,10 @@ def get_baseline_data(
         If True, count `max_days` from the end of the last billing data period
         that ends before the `end` date, rather than from the exact `end` date.
         Otherwise use the exact `end` date as the cutoff.
+    n_days_billing_period_overshoot: :any:`int`, default None
+        If `allow_billing_period_overshoot` is set to True, this determines
+        the number of days of overshoot that will be tolerated. A value of
+        None implies that any number of days is allowed.
     ignore_billing_period_gap_for_day_count : :any:`bool`, default False
         If True, instead of going back `max_days` from either the
         `end` date or end of the last billing period before that date (depending
@@ -286,22 +293,26 @@ def get_baseline_data(
     start_inf = False
     if start is None:
         # py datetime min/max are out of range of pd.Timestamp min/max
-        start_target = pytz.UTC.localize(pd.Timestamp.min)
+        start_target = pytz.UTC.localize(pd.Timestamp.min) + timedelta(days=1)
         start_inf = True
     else:
         start_target = start
 
     end_inf = False
     if end is None:
-        end_limit = pytz.UTC.localize(pd.Timestamp.max)
+        end_limit = pytz.UTC.localize(pd.Timestamp.max) - timedelta(days=1)
         end_inf = True
     else:
         end_limit = end
 
     # copying prevents setting on slice warnings
     data_before_end_limit = data[:end_limit].copy()
+    data_end = data_before_end_limit.index.max()
 
-    if ignore_billing_period_gap_for_day_count:
+    if ignore_billing_period_gap_for_day_count and (
+        n_days_billing_period_overshoot is None
+        or end_limit - timedelta(days=n_days_billing_period_overshoot) < data_end
+    ):
         end_limit = data_before_end_limit.index.max()
 
     if not end_inf and max_days is not None:
@@ -382,7 +393,7 @@ def get_reporting_data(
     allow_billing_period_overshoot=False,
     ignore_billing_period_gap_for_day_count=False,
 ):
-    """ Filter down to reporting period data.
+    """Filter down to reporting period data.
 
     Parameters
     ----------
@@ -438,14 +449,14 @@ def get_reporting_data(
     start_inf = False
     if start is None:
         # py datetime min/max are out of range of pd.Timestamp min/max
-        start_limit = pytz.UTC.localize(pd.Timestamp.min)
+        start_limit = pytz.UTC.localize(pd.Timestamp.min) + timedelta(days=1)
         start_inf = True
     else:
         start_limit = start
 
     end_inf = False
     if end is None:
-        end_target = pytz.UTC.localize(pd.Timestamp.max)
+        end_target = pytz.UTC.localize(pd.Timestamp.max) - timedelta(days=1)
         end_inf = True
     else:
         end_target = end
@@ -556,7 +567,7 @@ class Term(object):
 
 
 def get_terms(index, term_lengths, term_labels=None, start=None, method="strict"):
-    """ Breaks a :any:`pandas.DatetimeIndex` into consecutive terms of specified
+    """Breaks a :any:`pandas.DatetimeIndex` into consecutive terms of specified
     lengths.
 
     Parameters
@@ -665,3 +676,111 @@ def get_terms(index, term_lengths, term_labels=None, start=None, method="strict"
         prev_start = next_start
 
     return terms
+
+
+def clean_caltrack_billing_data(data, source_interval):
+    # check for empty data
+    if data["value"].dropna().empty:
+        return data[:0]
+
+    if source_interval.startswith("billing"):
+        diff = list((data.index[1:] - data.index[:-1]).days)
+        filter_ = pd.Series(diff + [np.nan], index=data.index)
+
+        # CalTRACK 2.2.3.4, 2.2.3.5
+        if source_interval == "billing_monthly":
+            data = data[
+                (filter_ <= 35) & (filter_ >= 25)  # keep these, inclusive
+            ].reindex(data.index)
+
+        # CalTRACK 2.2.3.4, 2.2.3.5
+        if source_interval == "billing_bimonthly":
+            data = data[
+                (filter_ <= 70) & (filter_ >= 25)  # keep these, inclusive
+            ].reindex(data.index)
+
+        # CalTRACK 2.2.3.1
+        """
+        Adds estimate to subsequent read if there aren't more than one estimate in a row
+        and then removes the estimated row.
+
+        Input:
+        index   value   estimated
+        1       2       False
+        2       3       False
+        3       5       True
+        4       4       False
+        5       6       True
+        6       3       True
+        7       4       False
+        8       NaN     NaN
+
+        Output:
+        index   value
+        1       2
+        2       3
+        4       9
+        5       NaN
+        7       7
+        8       NaN
+        """
+        add_estimated = []
+        remove_estimated_fixed_rows = []
+        orig_data = data.copy()
+        if "estimated" in data.columns:
+            data["unestimated_value"] = (
+                data[:-1].value[(data[:-1].estimated == False)].reindex(data.index)
+            )
+            data["estimated_value"] = (
+                data[:-1].value[(data[:-1].estimated)].reindex(data.index)
+            )
+            for i, (index, row) in enumerate(data[:-1].iterrows()):
+                # ensures there is a prev_row and previous row value is null
+                if i > 0 and pd.isnull(prev_row["unestimated_value"]):
+                    # current row value is not null
+                    add_estimated.append(prev_row["estimated_value"])
+                    if not pd.isnull(row["unestimated_value"]):
+                        # get all rows that had only estimated reads that will be
+                        # added to the subsequent row meaning this row
+                        # needs to be removed
+                        remove_estimated_fixed_rows.append(prev_index)
+                else:
+                    add_estimated.append(0)
+                prev_row = row
+                prev_index = index
+            add_estimated.append(np.nan)
+            data["value"] = data["unestimated_value"] + add_estimated
+            data = data[~data.index.isin(remove_estimated_fixed_rows)]
+            data = data[["value"]]  # remove the estimated column
+
+    # check again for empty data
+    if data.dropna().empty:
+        return data[:0]
+
+    return data
+
+
+def downsample_and_clean_caltrack_daily_data(data):
+    data = as_freq(data.value, "D", include_coverage=True)
+
+    # CalTRACK 2.2.2.1 - interpolate with average of non-null values
+    data.value[data.coverage > 0.5] = (
+        data[data.coverage > 0.5].value / data[data.coverage > 0.5].coverage
+    )
+
+    # CalTRACK 2.2.2.1 - discard days with less than 50% coverage
+    return data[data.coverage > 0.5].reindex(data.index)[["value"]]
+
+
+def clean_caltrack_billing_daily_data(data, source_interval):
+    # billing data is cleaned but not resampled
+    if source_interval.startswith("billing"):
+        # CalTRACK 2.2.3.4, 2.2.3.5
+        return clean_caltrack_billing_data(data, source_interval)
+
+    # higher intervals like daily, hourly, 30min, 15min are
+    # resampled (daily) or downsampled (hourly, 30min, 15min)
+    elif source_interval == "daily":
+        return data
+    else:
+        return downsample_and_clean_caltrack_daily_data(data)

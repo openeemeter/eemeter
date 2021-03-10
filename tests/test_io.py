@@ -100,12 +100,79 @@ def test_meter_data_from_csv_custom_columns(sample_metadata):
     assert meter_data.index.freq is None
 
 
+def test_meter_data_from_json_none(sample_metadata):
+    data = None
+    meter_data = meter_data_from_json(data)
+    assert meter_data.shape == (0, 1)
+    assert meter_data.index.tz.zone == "UTC"
+    assert meter_data.index.freq is None
+
+
 def test_meter_data_from_json_orient_list(sample_metadata):
     data = [["2017-01-01T00:00:00Z", 11], ["2017-01-02T00:00:00Z", 10]]
     meter_data = meter_data_from_json(data, orient="list")
     assert meter_data.shape == (2, 1)
     assert meter_data.index.tz.zone == "UTC"
     assert meter_data.index.freq is None
+
+
+def test_meter_data_from_json_orient_list_empty(sample_metadata):
+    data = []
+    meter_data = meter_data_from_json(data)
+    assert meter_data.shape == (0, 1)
+    assert meter_data.index.tz.zone == "UTC"
+    assert meter_data.index.freq is None
+
+
+def test_meter_data_from_json_orient_records(sample_metadata):
+    data = [
+        {"start": "2017-01-01T00:00:00Z", "value": 11},
+        {"start": "2017-01-02T00:00:00Z", "value": ""},
+        {"start": "2017-01-03T00:00:00Z", "value": 10},
+    ]
+    meter_data = meter_data_from_json(data, orient="records")
+    assert meter_data.shape == (3, 1)
+    assert meter_data.index.tz.zone == "UTC"
+    assert meter_data.index.freq is None
+
+
+def test_meter_data_from_json_orient_records_empty(sample_metadata):
+    data = []
+    meter_data = meter_data_from_json(data, orient="records")
+    assert meter_data.shape == (0, 1)
+    assert meter_data.index.tz.zone == "UTC"
+    assert meter_data.index.freq is None
+
+
+def test_meter_data_from_json_orient_records_with_estimated_true(sample_metadata):
+    data = [
+        {"start": "2017-01-01T00:00:00Z", "value": 11, "estimated": True},
+        {"start": "2017-01-02T00:00:00Z", "value": 10, "estimated": "true"},
+        {"start": "2017-01-03T00:00:00Z", "value": 10, "estimated": "True"},
+        {"start": "2017-01-04T00:00:00Z", "value": 10, "estimated": "1"},
+        {"start": "2017-01-05T00:00:00Z", "value": 10, "estimated": 1},
+    ]
+    meter_data = meter_data_from_json(data, orient="records")
+    assert meter_data.shape == (5, 2)
+    assert meter_data.index.tz.zone == "UTC"
+    assert meter_data.index.freq is None
+    assert meter_data.estimated.sum() == 5
+
+
+def test_meter_data_from_json_orient_records_with_estimated_false(sample_metadata):
+    data = [
+        {"start": "2017-01-01T00:00:00Z", "value": 10, "estimated": False},
+        {"start": "2017-01-02T00:00:00Z", "value": 10, "estimated": "false"},
+        {"start": "2017-01-03T00:00:00Z", "value": 10, "estimated": "False"},
+        {"start": "2017-01-04T00:00:00Z", "value": 10, "estimated": ""},
+        {"start": "2017-01-05T00:00:00Z", "value": 10, "estimated": None},
+        {"start": "2017-01-05T00:00:00Z", "value": 10},
+    ]
+    meter_data = meter_data_from_json(data, orient="records")
+    assert meter_data.shape == (6, 2)
+    assert meter_data.index.tz.zone == "UTC"
+    assert meter_data.index.freq is None
+    assert meter_data.estimated.sum() == 0
 
 
 def test_meter_data_from_json_bad_orient(sample_metadata):
