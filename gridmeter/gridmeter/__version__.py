@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2020 GRIDmeter contributors
+   Copyright 2020 GRIDmeter™ contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
    limitations under the License.
 
 """
-__title__ = "GRIDmeter"
+__title__ = "GRIDmeter™"
 __description__ = "Tools for stratified sampling for comparison groups"
 __url__ = "http://github.com/recurve-methods/comparison_groups"
 __version__ = "1.0.1"

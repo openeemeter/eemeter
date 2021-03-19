@@ -10,12 +10,12 @@ Development
 -----
 
 
-* Placeholder
+* Add registered trademark
 
 1.0.0
 -----
 
-* Official release as GRIDmeter 
+* Official release as GRIDmeter
 * Complete renaming
 
 
