@@ -282,7 +282,8 @@ class CalTRACKHourlyModel(SegmentedModel):
         c = cls(
             segment_models,
             occupancy_lookup,
-            pd.read_json(data.get("temperature_bins"), orient="split"),
+            pd.read_json(data.get("occupied_temperature_bins"), orient="split"),
+            pd.read_json(data.get("unoccupied_temperature_bins"), orient="split"),
         )
 
         return c
@@ -483,26 +484,6 @@ def fit_caltrack_hourly_model_segment(segment_name, segment_data):
     segment_model : :any:`CalTRACKSegmentModel`
         A model that represents the fitted model.
     """
-
-
-    def _get_hourly_model_formula(data):
-        if (np.sum(data.loc[data.weight > 0].occupancy) == 0) or (
-            np.sum(data.loc[data.weight > 0].occupancy)
-            == len(data.loc[data.weight > 0].occupancy)
-        ):
-            bin_occupancy_interactions = "".join(
-                [" + {}".format(c) for c in data.columns if "bin" in c]
-            )
-            return "meter_value ~ C(hour_of_week) - 1{}".format(
-                bin_occupancy_interactions
-            )
-        else:
-            bin_occupancy_interactions = "".join(
-                [" + {}:C(occupancy)".format(c) for c in data.columns if "bin" in c]
-            )
-            return "meter_value ~ C(hour_of_week) - 1{}".format(
-                bin_occupancy_interactions
-            )
 
     warnings = []
     if segment_data.dropna().empty:
