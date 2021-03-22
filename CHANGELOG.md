@@ -4,6 +4,8 @@ Changelog
 Development
 -----------
 
+* Remove python27 support.
+* Update Pipfile lock.
 * Update `fit_temperature_bins` to potentially take an `occupancy_lookup` in order to
   fit different temperature bins for occupied/unoccupied modes.
 * Update CalTRACK hourly model formula to use different bins for occupied and

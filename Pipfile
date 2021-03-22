@@ -20,7 +20,7 @@ pandas == "==0.25.2"
 
 black = {version = "==18.6b4", markers="python_version >= '3.6'"}
 coverage = "*"
-jupyterlab = {version = "*", markers="python_version >= '3.5'"}
+jupyterlab = {version = "*", markers="python_version >= '3.6'"}
 nbsphinx = "*"
 pytest = "*"
 pytest-cov = "*"
