@@ -9,26 +9,26 @@ name = "pypi"
 
 click = "==7.0"
 eeweather = ">=0.3.12"
-matplotlib = "<3.0.0"  # until we drop python 2 support
+matplotlib = "*"
 statsmodels = "==0.11.1"
-scipy == "==1.4.1"
+scipy = "==1.4.1"
 sqlalchemy = "*"
-pandas == "==0.25.2"
+pandas = "==0.25.2"
 
 
 [dev-packages]
 
-black = {version = "==18.6b4", markers="python_version >= '3.6'"}
+black = "==18.6b4"
 coverage = "*"
-jupyterlab = {version = "*", markers="python_version >= '3.6'"}
+jupyterlab = "*"
 nbsphinx = "*"
 pytest = "*"
 pytest-cov = "*"
 pytest-profiling = "*"
 pytest-xdist = "*"
-snapshottest = {git = "git://github.com/syrusakbary/snapshottest.git", editable = true, ref = "54117098bd756c0fa6936f3bafab4bf85c58e943"}
+snapshottest = "==0.6.0"
 sphinx = "*"
-sphinx-autobuild = {version = "*", markers="python_version >= '3.6'"}
+sphinx-autobuild = "*"
 sphinxcontrib-spelling = "*"
 tox = "*"
 twine = "*"
