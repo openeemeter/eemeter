@@ -131,7 +131,11 @@ def create_caltrack_daily_design_matrix(meter_data, temperature_data):
 
 
 def create_caltrack_hourly_segmented_design_matrices(
-    preliminary_design_matrix, segmentation, occupancy_lookup, temperature_bins
+    preliminary_design_matrix,
+    segmentation,
+    occupancy_lookup,
+    occupied_temperature_bins,
+    unoccupied_temperature_bins,
 ):
     """A helper function which calls basic feature creation methods to create a
     design matrix suitable for use with segmented CalTRACK hourly models.
@@ -147,9 +151,11 @@ def create_caltrack_hourly_segmented_design_matrices(
     occupancy_lookup : any:`pandas.DataFrame`
         Occupancy for each segment. This is a dataframe of the form returned by
         :any:`eemeter.estimate_hour_of_week_occupancy`.
-    temperature_bins : :any:``
-        Temperature bin settings for each segment. This is a dataframe of the
+    occupied_temperature_bins : :any:``
+        Occupied temperature bin settings for each segment. This is a dataframe of the
         form returned by :any:`eemeter.fit_temperature_bins`.
+    unoccupied_temperature_bins : :any:``
+        Ditto, for unoccupied.
 
     Returns
     -------
@@ -165,7 +171,8 @@ def create_caltrack_hourly_segmented_design_matrices(
             feature_processor=caltrack_hourly_fit_feature_processor,
             feature_processor_kwargs={
                 "occupancy_lookup": occupancy_lookup,
-                "temperature_bins": temperature_bins,
+                "occupied_temperature_bins": occupied_temperature_bins,
+                "unoccupied_temperature_bins": unoccupied_temperature_bins,
             },
         )
     }

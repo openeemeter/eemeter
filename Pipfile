@@ -9,38 +9,27 @@ name = "pypi"
 
 click = "==7.0"
 eeweather = ">=0.3.12"
-matplotlib = "<3.0.0"  # until we drop python 2 support
+matplotlib = "*"
 statsmodels = "==0.11.1"
-scipy == "==1.4.1"
+scipy = "==1.4.1"
 sqlalchemy = "*"
-pandas == "==0.25.2"
+pandas = "==0.25.2"
 
 
 [dev-packages]
 
-black = {version = "==18.6b4", markers="python_version >= '3.6'"}
+black = "==18.6b4"
 coverage = "*"
-jupyterlab = {version = "*", markers="python_version >= '3.5'"}
+jupyterlab = "*"
 nbsphinx = "*"
 pytest = "*"
 pytest-cov = "*"
 pytest-profiling = "*"
 pytest-xdist = "*"
-snapshottest = {git = "git://github.com/syrusakbary/snapshottest.git", editable = true, ref = "54117098bd756c0fa6936f3bafab4bf85c58e943"}
+snapshottest = "==0.6.0"
 sphinx = "*"
 sphinx-autobuild = "*"
 sphinxcontrib-spelling = "*"
 tox = "*"
 twine = "*"
 typing = "*"
-
-# py2.7 travis build fails without these explicitly defined, but they are
-# dependencies of jupyterlab. It is possible someday specifying the marker on
-# jupyterlab will cascade to dependencies but currently not supported.
-# See https://github.com/pypa/pipenv/issues/1705
-jupyterlab-launcher = {version = "*", markers="python_version >= '3.5'"}
-jupyterlab-server = {version = "*", markers="python_version >= '3.5'"}
-ipython = {version = "*", markers="python_version >= '3.5'"}
-ipykernel = {version = "*", markers="python_version >= '3.5'"}
-tornado = {version="*", markers="python_version >= '3.5'"}
-more-itertools = {version = "<6.0.0"}

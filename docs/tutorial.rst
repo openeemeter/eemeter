@@ -30,7 +30,8 @@ Quickstart
 ----------
 
 Some folks may just want to see the code all in one place. This code is explained
-in more detail in the course of the tutorial below.
+in more detail in the course of the tutorial below.  See also
+:ref:`caltrack-billing-daily-api`.
 
 .. _caltrack-billing-daily-quickstart:
 
@@ -123,9 +124,10 @@ detail below. See also :ref:`caltrack-hourly-api`::
     )
 
     # assign temperatures to bins
-    temperature_bins = eemeter.fit_temperature_bins(
+    occupied_temperature_bins, unoccupied_temperature_bins = eemeter.fit_temperature_bins(
         preliminary_design_matrix,
         segmentation=segmentation,
+        occupancy_lookup=occupancy_lookup,
     )
 
     # build a design matrix for each monthly segment
@@ -134,7 +136,8 @@ detail below. See also :ref:`caltrack-hourly-api`::
             preliminary_design_matrix,
             segmentation,
             occupancy_lookup,
-            temperature_bins,
+            occupied_temperature_bins,
+            unoccupied_temperature_bins,
         )
     )
 
@@ -142,7 +145,8 @@ detail below. See also :ref:`caltrack-hourly-api`::
     baseline_model = eemeter.fit_caltrack_hourly_model(
         segmented_design_matrices,
         occupancy_lookup,
-        temperature_bins,
+        occupied_temperature_bins,
+        unoccupied_temperature_bins,
     )
 
     # get a year of reporting period data
@@ -556,9 +560,10 @@ To run the CalTRACK Hourly methods::
     )
 
     # assign temperatures to bins
-    temperature_bins = eemeter.fit_temperature_bins(
+    occupied_temperature_bins, unoccupied_temperature_bins = eemeter.fit_temperature_bins(
         preliminary_design_matrix,
         segmentation=segmentation,
+        occupancy_lookup=occupancy_lookup,
     )
 
     # build a design matrix for each monthly segment
@@ -567,7 +572,8 @@ To run the CalTRACK Hourly methods::
             preliminary_design_matrix,
             segmentation,
             occupancy_lookup,
-            temperature_bins,
+            occupied_temperature_bins,
+            unoccupied_temperature_bins,
         )
     )
 
@@ -575,7 +581,8 @@ To run the CalTRACK Hourly methods::
     baseline_model = eemeter.fit_caltrack_hourly_model(
         segmented_design_matrices,
         occupancy_lookup,
-        temperature_bins,
+        occupied_temperature_bins,
+        unoccupied_temperature_bins,
     )
 
 Computing CalTRACK metered savings

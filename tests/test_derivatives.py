@@ -479,17 +479,23 @@ def baseline_model_hourly(il_electricity_cdd_hdd_hourly):
     occupancy_lookup = estimate_hour_of_week_occupancy(
         preliminary_hourly_design_matrix, segmentation=segmentation
     )
-    temperature_bins = fit_temperature_bins(
-        preliminary_hourly_design_matrix, segmentation=segmentation
+    occupied_temperature_bins, unoccupied_temperature_bins = fit_temperature_bins(
+        preliminary_hourly_design_matrix,
+        segmentation=segmentation,
+        occupancy_lookup=occupancy_lookup,
     )
     design_matrices = create_caltrack_hourly_segmented_design_matrices(
         preliminary_hourly_design_matrix,
         segmentation,
         occupancy_lookup,
-        temperature_bins,
+        occupied_temperature_bins,
+        unoccupied_temperature_bins,
     )
     segmented_model = fit_caltrack_hourly_model(
-        design_matrices, occupancy_lookup, temperature_bins
+        design_matrices,
+        occupancy_lookup,
+        occupied_temperature_bins,
+        unoccupied_temperature_bins,
     )
     return segmented_model
 
@@ -511,17 +517,23 @@ def reporting_model_hourly(il_electricity_cdd_hdd_hourly):
     occupancy_lookup = estimate_hour_of_week_occupancy(
         preliminary_hourly_design_matrix, segmentation=segmentation
     )
-    temperature_bins = fit_temperature_bins(
-        preliminary_hourly_design_matrix, segmentation=segmentation
+    occupied_temperature_bins, unoccupied_temperature_bins = fit_temperature_bins(
+        preliminary_hourly_design_matrix,
+        segmentation=segmentation,
+        occupancy_lookup=occupancy_lookup,
     )
     design_matrices = create_caltrack_hourly_segmented_design_matrices(
         preliminary_hourly_design_matrix,
         segmentation,
         occupancy_lookup,
-        temperature_bins,
+        occupied_temperature_bins,
+        unoccupied_temperature_bins,
     )
     segmented_model = fit_caltrack_hourly_model(
-        design_matrices, occupancy_lookup, temperature_bins
+        design_matrices,
+        occupancy_lookup,
+        occupied_temperature_bins,
+        unoccupied_temperature_bins,
     )
     return segmented_model
 
@@ -544,7 +556,7 @@ def test_metered_savings_cdd_hdd_hourly(
         "counterfactual_usage",
         "metered_savings",
     ]
-    assert round(results.metered_savings.sum(), 2) == -428.63
+    assert round(results.metered_savings.sum(), 2) == -403.7
     assert error_bands is None
 
 
@@ -566,7 +578,7 @@ def test_modeled_savings_cdd_hdd_hourly(
         "modeled_reporting_usage",
         "modeled_savings",
     ]
-    assert round(results.modeled_savings.sum(), 2) == 20.76
+    assert round(results.modeled_savings.sum(), 2) == 55.3
     assert error_bands is None
 
 

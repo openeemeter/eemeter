@@ -211,6 +211,7 @@ class SegmentedModel(object):
             feature_processor_kwargs=self.prediction_feature_processor_kwargs,
             feature_processor_segment_name_mapping=self.prediction_segment_name_mapping,
         )
+
         predictions = {}
         for segment_name, segmented_data in iterator:
             segment_model = self.model_lookup.get(segment_name)
@@ -220,6 +221,7 @@ class SegmentedModel(object):
             # NaN the zero weights and reindex
             prediction = prediction[segmented_data.weight > 0].reindex(prediction_index)
             predictions[segment_name] = prediction
+
         predictions = pd.DataFrame(predictions)
         result = pd.DataFrame({"predicted_usage": predictions.sum(axis=1, min_count=1)})
         return HourlyModelPrediction(result=result)
@@ -453,6 +455,7 @@ def segment_time_series(index, segment_type="single", drop_zero_weight_segments=
         A time series index which gets split into segments.
     segment_type : :any:`str`
         The method to use when creating segments.
+
          - "single": creates one big segment with the name "all".
          - "one_month": creates up to twelve segments, each of which contains a single
            month. Segment names are "jan", "feb", ... "dec".

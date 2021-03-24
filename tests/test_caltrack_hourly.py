@@ -62,55 +62,88 @@ def occupancy_lookup():
 
 
 @pytest.fixture
-def temperature_bins():
+def occupied_temperature_bins():
     bins = pd.Series([True, True, True], index=[30, 60, 90])
     return pd.DataFrame({"dec-jan-feb-weighted": bins, "jan-feb-mar-weighted": bins})
 
 
+@pytest.fixture
+def unoccupied_temperature_bins():
+    bins = pd.Series([False, True, True], index=[30, 60, 90])
+    return pd.DataFrame({"dec-jan-feb-weighted": bins, "jan-feb-mar-weighted": bins})
+
+
 def test_caltrack_hourly_fit_feature_processor(
-    segmented_data, occupancy_lookup, temperature_bins
+    segmented_data,
+    occupancy_lookup,
+    occupied_temperature_bins,
+    unoccupied_temperature_bins,
 ):
     result = caltrack_hourly_fit_feature_processor(
-        "dec-jan-feb-weighted", segmented_data, occupancy_lookup, temperature_bins
+        "dec-jan-feb-weighted",
+        segmented_data,
+        occupancy_lookup,
+        occupied_temperature_bins,
+        unoccupied_temperature_bins,
     )
     assert list(result.columns) == [
         "meter_value",
         "hour_of_week",
-        "occupancy",
-        "bin_0",
-        "bin_1",
-        "bin_2",
-        "bin_3",
+        "bin_0_occupied",
+        "bin_1_occupied",
+        "bin_2_occupied",
+        "bin_3_occupied",
+        "bin_0_unoccupied",
+        "bin_1_unoccupied",
+        "bin_2_unoccupied",
         "weight",
     ]
-    assert result.shape == (24, 8)
-    assert round(result.sum().sum(), 2) == 5928.0
+    assert result.shape == (24, 10)
+    assert round(result.sum().sum(), 2) == 5916.0
 
 
 def test_caltrack_hourly_prediction_feature_processor(
-    segmented_data, occupancy_lookup, temperature_bins
+    segmented_data,
+    occupancy_lookup,
+    occupied_temperature_bins,
+    unoccupied_temperature_bins,
 ):
     result = caltrack_hourly_prediction_feature_processor(
-        "dec-jan-feb-weighted", segmented_data, occupancy_lookup, temperature_bins
+        "dec-jan-feb-weighted",
+        segmented_data,
+        occupancy_lookup,
+        occupied_temperature_bins,
+        unoccupied_temperature_bins,
     )
     assert list(result.columns) == [
         "hour_of_week",
-        "occupancy",
-        "bin_0",
-        "bin_1",
-        "bin_2",
-        "bin_3",
+        "bin_0_occupied",
+        "bin_1_occupied",
+        "bin_2_occupied",
+        "bin_3_occupied",
+        "bin_0_unoccupied",
+        "bin_1_unoccupied",
+        "bin_2_unoccupied",
         "weight",
     ]
-    assert result.shape == (24, 7)
-    assert round(result.sum().sum(), 2) == 4968.0
+    assert result.shape == (24, 9)
+    assert round(result.sum().sum(), 2) == 4956.0
 
 
 @pytest.fixture
-def segmented_design_matrices(segmented_data, occupancy_lookup, temperature_bins):
+def segmented_design_matrices(
+    segmented_data,
+    occupancy_lookup,
+    occupied_temperature_bins,
+    unoccupied_temperature_bins,
+):
     return {
         "dec-jan-feb-weighted": caltrack_hourly_fit_feature_processor(
-            "dec-jan-feb-weighted", segmented_data, occupancy_lookup, temperature_bins
+            "dec-jan-feb-weighted",
+            segmented_data,
+            occupancy_lookup,
+            occupied_temperature_bins,
+            unoccupied_temperature_bins,
         )
     }
 
@@ -120,11 +153,12 @@ def test_fit_caltrack_hourly_model_segment(segmented_design_matrices):
     segment_data = segmented_design_matrices[segment_name]
     segment_model = fit_caltrack_hourly_model_segment(segment_name, segment_data)
     assert segment_model.formula == (
-        "meter_value ~ C(hour_of_week) - 1 + bin_0:C(occupancy)"
-        " + bin_1:C(occupancy) + bin_2:C(occupancy) + bin_3:C(occupancy)"
+        "meter_value ~ C(hour_of_week) - 1 + bin_0_occupied"
+        " + bin_1_occupied + bin_2_occupied + bin_3_occupied"
+        " + bin_0_unoccupied + bin_1_unoccupied + bin_2_unoccupied"
     )
     assert segment_model.segment_name == "dec-jan-feb-weighted"
-    assert len(segment_model.model_params.keys()) == 32
+    assert len(segment_model.model_params.keys()) == 31
     assert segment_model.model is not None
     assert segment_model.warnings is not None
     prediction = segment_model.predict(segment_data)
@@ -139,10 +173,17 @@ def temps():
 
 
 def test_fit_caltrack_hourly_model(
-    segmented_design_matrices, occupancy_lookup, temperature_bins, temps
+    segmented_design_matrices,
+    occupancy_lookup,
+    occupied_temperature_bins,
+    unoccupied_temperature_bins,
+    temps,
 ):
     segmented_model_results = fit_caltrack_hourly_model(
-        segmented_design_matrices, occupancy_lookup, temperature_bins
+        segmented_design_matrices,
+        occupancy_lookup,
+        occupied_temperature_bins,
+        unoccupied_temperature_bins,
     )
 
     assert segmented_model_results.model.segment_models is not None
@@ -151,10 +192,17 @@ def test_fit_caltrack_hourly_model(
 
 
 def test_serialize_caltrack_hourly_model(
-    segmented_design_matrices, occupancy_lookup, temperature_bins, temps
+    segmented_design_matrices,
+    occupancy_lookup,
+    occupied_temperature_bins,
+    unoccupied_temperature_bins,
+    temps,
 ):
     segmented_model = fit_caltrack_hourly_model(
-        segmented_design_matrices, occupancy_lookup, temperature_bins
+        segmented_design_matrices,
+        occupancy_lookup,
+        occupied_temperature_bins,
+        unoccupied_temperature_bins,
     )
     assert json.dumps(segmented_model.json())
 
@@ -213,11 +261,13 @@ def segmented_design_matrices_nans(
             segmented_data_nans,
             occupancy_lookup_nans,
             temperature_bins_nans,
+            temperature_bins_nans,
         ),
         "apr-may-jun-weighted": caltrack_hourly_fit_feature_processor(
             "apr-may-jun-weighted",
             segmented_data_nans,
             occupancy_lookup_nans,
+            temperature_bins_nans,
             temperature_bins_nans,
         ),
     }
@@ -231,16 +281,16 @@ def test_fit_caltrack_hourly_model_nans_less_than_week_predict(
     temps,
 ):
     segmented_model_results = fit_caltrack_hourly_model(
-        segmented_design_matrices_nans, occupancy_lookup_nans, temperature_bins_nans
+        segmented_design_matrices_nans,
+        occupancy_lookup_nans,
+        temperature_bins_nans,
+        temperature_bins_nans,
     )
 
     assert segmented_model_results.model.segment_models is not None
     assert segmented_model_results.model.model_lookup["jan"].model is not None
-    assert segmented_model_results.model.model_lookup["may"].model is None
-    assert (
-        segmented_model_results.model.model_lookup["may"].warnings[0].qualified_name
-        == "eemeter.fit_caltrack_hourly_model_segment.no_nonnull_data"
-    )
+    assert segmented_model_results.model.model_lookup["may"].model is not None
+    assert segmented_model_results.model.model_lookup["may"].warnings == []
     prediction = segmented_model_results.predict(temps.index, temps).result
     assert prediction.shape[0] == 24
     assert prediction["predicted_usage"].sum().round() == 955.0
@@ -302,11 +352,13 @@ def segmented_design_matrices_nans_less_than_week(
             segmented_data_nans_less_than_week,
             occupancy_lookup_nans_less_than_week,
             temperature_bins_nans_less_than_week,
+            temperature_bins_nans_less_than_week,
         ),
         "apr-may-jun-weighted": caltrack_hourly_fit_feature_processor(
             "apr-may-jun-weighted",
             segmented_data_nans_less_than_week,
             occupancy_lookup_nans_less_than_week,
+            temperature_bins_nans_less_than_week,
             temperature_bins_nans_less_than_week,
         ),
     }
@@ -329,6 +381,7 @@ def test_fit_caltrack_hourly_model_nans_less_than_week_fit(
         segmented_design_matrices_nans_less_than_week,
         occupancy_lookup_nans_less_than_week,
         temperature_bins_nans_less_than_week,
+        temperature_bins_nans_less_than_week,
     )
 
     assert segmented_model_results.model.segment_models is not None
@@ -341,23 +394,34 @@ def test_fit_caltrack_hourly_model_nans_less_than_week_fit(
 
 @pytest.fixture
 def segmented_design_matrices_empty_models(
-    segmented_data, occupancy_lookup, temperature_bins
+    segmented_data,
+    occupancy_lookup,
+    occupied_temperature_bins,
+    unoccupied_temperature_bins,
 ):
     return {
         "dec-jan-feb-weighted": caltrack_hourly_fit_feature_processor(
             "dec-jan-feb-weighted",
             segmented_data[:0],
             occupancy_lookup,
-            temperature_bins,
+            occupied_temperature_bins,
+            unoccupied_temperature_bins,
         )
     }
 
 
 def test_predict_caltrack_hourly_model_empty_models(
-    temps, segmented_design_matrices_empty_models, occupancy_lookup, temperature_bins
+    temps,
+    segmented_design_matrices_empty_models,
+    occupancy_lookup,
+    occupied_temperature_bins,
+    unoccupied_temperature_bins,
 ):
     segmented_model_results = fit_caltrack_hourly_model(
-        segmented_design_matrices_empty_models, occupancy_lookup, temperature_bins
+        segmented_design_matrices_empty_models,
+        occupancy_lookup,
+        occupied_temperature_bins,
+        unoccupied_temperature_bins,
     )
 
     assert segmented_model_results.model.segment_models is not None
@@ -377,14 +441,18 @@ def occupancy_lookup_zeroes():
 
 @pytest.fixture
 def segmented_design_matrices_single_mode(
-    segmented_data, occupancy_lookup_zeroes, temperature_bins
+    segmented_data,
+    occupancy_lookup_zeroes,
+    occupied_temperature_bins,
+    unoccupied_temperature_bins,
 ):
     return {
         "dec-jan-feb-weighted": caltrack_hourly_fit_feature_processor(
             "dec-jan-feb-weighted",
             segmented_data,
             occupancy_lookup_zeroes,
-            temperature_bins,
+            occupied_temperature_bins,
+            unoccupied_temperature_bins,
         )
     }
 
@@ -396,10 +464,12 @@ def test_fit_caltrack_hourly_model_segment_single_mode(
     segment_data = segmented_design_matrices_single_mode[segment_name]
     segment_model = fit_caltrack_hourly_model_segment(segment_name, segment_data)
     assert segment_model.formula == (
-        "meter_value ~ C(hour_of_week) - 1 + bin_0" " + bin_1 + bin_2 + bin_3"
+        "meter_value ~ C(hour_of_week) - 1 + bin_0_occupied + bin_1_occupied"
+        " + bin_2_occupied + bin_3_occupied + bin_0_unoccupied + bin_1_unoccupied"
+        " + bin_2_unoccupied"
     )
     assert segment_model.segment_name == "dec-jan-feb-weighted"
-    assert len(segment_model.model_params.keys()) == 28
+    assert len(segment_model.model_params.keys()) == 31
     assert segment_model.model is not None
     assert segment_model.warnings is not None
     prediction = segment_model.predict(segment_data)
