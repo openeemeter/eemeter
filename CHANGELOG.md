@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+3.0.0
+-----
+
 * Remove python27 support.
 * Update Pipfile lock.
 * Update `fit_temperature_bins` to potentially take an `occupancy_lookup` in order to
