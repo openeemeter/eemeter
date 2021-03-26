@@ -7,7 +7,7 @@ Development
 * Remove python27 support.
 * Update Pipfile lock.
 * Update `fit_temperature_bins` to potentially take an `occupancy_lookup` in order to
-  fit different temperature bins for occupied/unoccupied modes.
+  fit different temperature bins for occupied/unoccupied modes. *This changes the args passed to eemeter.create_caltrack_hourly_segmented_design_matrices, where it now requires a set of bins for occupied and unoccupied temperatures separately.*
 * Update CalTRACK hourly model formula to use different bins for occupied and
   unoccupied mode.
 
