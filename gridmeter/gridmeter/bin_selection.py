@@ -24,7 +24,7 @@ import logging
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-from . import equivalence 
+from . import equivalence
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class StratifiedSamplingBinSelector(object):
         df_pool,
         equivalence_feature_ids,
         equivalence_feature_matrix,
-        equivalence_method='chisquare',
+        equivalence_method="chisquare",
         df_id_col="id",
         n_samples_approx=5000,
         min_n_treatment_per_bin=0,
@@ -51,22 +51,22 @@ class StratifiedSamplingBinSelector(object):
         """
         Finds an optimal stratified sampling bin configuration which minimizes
         distance between treatmnt and comparison groups.  A bin configuration
-        is a number of bins, `n_c`, for each stratification column `c`, where 
-        c is an integer between `min_n_bins` and `max_n_bin` inclusive.  
+        is a number of bins, `n_c`, for each stratification column `c`, where
+        c is an integer between `min_n_bins` and `max_n_bin` inclusive.
         Using a grid search, all possible bin configurations will be constructed and
         tested, and the confiuration which minimizes treatment-comparison distance
-        will be returned.  Distance is measured on a set of features 
+        will be returned.  Distance is measured on a set of features
         provided in `df_for_equivalence` in 'long' format, i.e. multiple rows
         per meter, one column holds feature name, one column holds feature value.
 
         Distance is computed as follows. First cut treatment and comparison groups
-        into quantiles, with the number of quantiles chosen such that the 
-        treatment group has quantiles of size `equivalence_quantile_size`.   
+        into quantiles, with the number of quantiles chosen such that the
+        treatment group has quantiles of size `equivalence_quantile_size`.
         Then compute the distance between each treatment-comparison quantile pair
-        according to the method in `equivalence_method`, either `euclidean` or 
-        `chisquare` distance; then sum the distances across all quantiles.  For 
+        according to the method in `equivalence_method`, either `euclidean` or
+        `chisquare` distance; then sum the distances across all quantiles.  For
         example, if the treatment group is size 1000 and `equivalence_quantile_size`
-        is 100, then treatment and comparison groups will each be cut into ten quantiles, 
+        is 100, then treatment and comparison groups will each be cut into ten quantiles,
         and ten distances will be computed and summed.
 
         Example usage:
@@ -107,8 +107,8 @@ class StratifiedSamplingBinSelector(object):
             that each bin has the correct percentage of the total.
             A None value means that it will take as many samples as it has available.
         min_n_treatment_per_bin: int
-            Minimum number of treatment samples that must exist in a given bin for 
-            it to be considered a non-outlier bin (only applicable if there are 
+            Minimum number of treatment samples that must exist in a given bin for
+            it to be considered a non-outlier bin (only applicable if there are
             cols with fixed_width=True)
         min_n_sampled_to_n_treatment_ratio: int
             Minimum number samples that must exist in each bin per treatment datapoint in that bin.
@@ -131,7 +131,7 @@ class StratifiedSamplingBinSelector(object):
         self.min_n_bins = min_n_bins
         self.max_n_bins = max_n_bins
         self.df_id_col = df_id_col
-        self.equivalence_feature_ids = equivalence_feature_ids 
+        self.equivalence_feature_ids = equivalence_feature_ids
         self.equivalence_feature_matrix = equivalence_feature_matrix
         self.equivalence_method = equivalence_method
         self.equivalence_quantile_size = equivalence_quantile_size
@@ -142,7 +142,6 @@ class StratifiedSamplingBinSelector(object):
         self.n_bin_options_df = None
         self.equiv_treatment = None
         self.equiv_samples = []
-
 
         if len(self.model.columns) == 0:
             raise ValueError("You must add at least one column before fitting.")
@@ -174,13 +173,12 @@ class StratifiedSamplingBinSelector(object):
             if n_bin_option in disqualified_n_bin_options:
                 logger.debug(f"Skipping {bins_selected_str} (disqualified)")
                 continue
-                          
+
             self.model.fit(
                 self.df_treatment,
                 min_n_treatment_per_bin=min_n_treatment_per_bin,
                 random_seed=random_seed,
             )
-
 
             self.model.sample(
                 self.df_pool,
@@ -219,9 +217,8 @@ class StratifiedSamplingBinSelector(object):
                 )
                 continue
 
-
             # todo set up equivalence_feature_matrix and equivalence_feature_ids
-            
+
             treatment_ids = self.model.data_treatment.df[df_id_col].unique()
             comparison_ids = self.model.data_sample.df[df_id_col].unique()
             if len(treatment_ids) != len(pd.Series(treatment_ids).unique()):
@@ -229,13 +226,20 @@ class StratifiedSamplingBinSelector(object):
             if len(comparison_ids) != len(pd.Series(comparison_ids).unique()):
                 raise ValueError("Duplicate IDs found in comparison group.")
 
-            
             ix_x = equivalence.ids_to_index(treatment_ids, equivalence_feature_ids)
             ix_y = equivalence.ids_to_index(comparison_ids, equivalence_feature_ids)
 
-            equiv_treatment, equiv_sample, equivalence_distance = equivalence.Equivalence(
-                ix_x, ix_y, equivalence_feature_matrix, n_quantiles=equivalence_quantile_size,
-                 how=equivalence_method).compute()
+            (
+                equiv_treatment,
+                equiv_sample,
+                equivalence_distance,
+            ) = equivalence.Equivalence(
+                ix_x,
+                ix_y,
+                equivalence_feature_matrix,
+                n_quantiles=equivalence_quantile_size,
+                how=equivalence_method,
+            ).compute()
 
             n_bin_results.append(
                 dict(
@@ -255,12 +259,11 @@ class StratifiedSamplingBinSelector(object):
             logging.info(
                 f"Computing bins: {bins_selected_str} distance: "
                 f"{equivalence_distance:.2f}, "
-              #  f"pct: {100*equivalence_distance/sum(equiv_treatment[equivalence_value_col]):.2f}"
+                #  f"pct: {100*equivalence_distance/sum(equiv_treatment[equivalence_value_col]):.2f}"
             )
             if equivalence_distance < min_distance:
                 min_distance = equivalence_distance
                 min_columns = copy.deepcopy(self.model.columns)
-            
 
         self.n_bin_results = pd.DataFrame(n_bin_results)
         if not min_columns:
@@ -276,7 +279,7 @@ class StratifiedSamplingBinSelector(object):
         logging.info(
             f"Selected bin: {bins_selected_str} distance: "
             f"{min_distance:.2f}, "
-           # f"pct: {100*min_distance/sum(equiv_treatment[equivalence_value_col]):.2f}, "
+            # f"pct: {100*min_distance/sum(equiv_treatment[equivalence_value_col]):.2f}, "
             f"random_seed: {random_seed}"
         )
         self.model.fit(
@@ -293,35 +296,37 @@ class StratifiedSamplingBinSelector(object):
         )
         self.n_samples_approx = n_samples_approx
 
-
         # get averages that can be accessed later
-        self.equiv_treatment_avg = self.equiv_treatment.groupby(
-             'feature_index'
-        ).mean()
+        self.equiv_treatment_avg = self.equiv_treatment.groupby("feature_index").mean()
         self.equiv_treatment_avg.columns = ["treatment"]
-        self.equiv_pool_avg = pd.DataFrame(equivalence_feature_matrix.mean()).rename(columns={0:'comparison pool'}).reset_index(drop=True)
+        self.equiv_pool_avg = (
+            pd.DataFrame(equivalence_feature_matrix)
+            .mean().to_frame()
+            .rename(columns={0: "comparison pool"})
+            .reset_index(drop=True)
+        )
 
         self.equiv_samples_avg = (
             pd.concat(self.equiv_samples)
-            .groupby(["bin_str", 'feature_index'])
+            .groupby(["bin_str", "feature_index"])
             .mean()
             .reset_index()
-            .pivot(
-                index="feature_index",
-                columns="bin_str",
-                values="value"
-            )
+            .pivot(index="feature_index", columns="bin_str", values="value")
         )
         self.bins_selected_str = self.model.get_all_n_bins_as_str()
 
-        # get distances for comparison pool 
+        # get distances for comparison pool
         treatment_ids = self.model.data_treatment.df[df_id_col].unique()
         comparison_pool_ids = self.model.data_pool.df[df_id_col].unique()
         ix_x = equivalence.ids_to_index(treatment_ids, equivalence_feature_ids)
         ix_y = equivalence.ids_to_index(comparison_pool_ids, equivalence_feature_ids)
         equiv_treatment, equiv_pool, equivalence_distance = equivalence.Equivalence(
-            ix_x, ix_y, equivalence_feature_matrix, n_quantiles=equivalence_quantile_size,
-             how=equivalence_method).compute()
+            ix_x,
+            ix_y,
+            equivalence_feature_matrix,
+            n_quantiles=equivalence_quantile_size,
+            how=equivalence_method,
+        ).compute()
         self.equiv_pool = equiv_pool
 
     def kwargs_as_json(self):
