@@ -4,11 +4,10 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Add usage-pattern distance calculation as option for comparison group methods selection.
 
 1.0.1
 -----
-
 
 * Add registered trademark
 
@@ -22,18 +21,15 @@ Development
 0.10.1
 ------
 
-
 * Update description
 
 0.10.0
 ------
 
-
 * Rename to 'gridmeter' -- final release as eesampling
 
 0.9.1
 -----
-
 
 * Add comparison pool equivalence to results_as_json().
 
