@@ -28,6 +28,8 @@ from . import equivalence
 
 logger = logging.getLogger(__name__)
 
+__all__ = ("StratifiedSamplingBinSelector",)
+
 
 class StratifiedSamplingBinSelector(object):
     def __init__(
@@ -301,7 +303,8 @@ class StratifiedSamplingBinSelector(object):
         self.equiv_treatment_avg.columns = ["treatment"]
         self.equiv_pool_avg = (
             pd.DataFrame(equivalence_feature_matrix)
-            .mean().to_frame()
+            .mean()
+            .to_frame()
             .rename(columns={0: "comparison pool"})
             .reset_index(drop=True)
         )

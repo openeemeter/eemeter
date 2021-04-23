@@ -1,9 +1,43 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+
+   Copyright 2020 GRIDmeter™ contributors
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+"""
+
 import numpy as np
 import pandas as pd
 import scipy
 
+__all__ = ('DistanceMatching',)
 
 class DistanceMatching:
+    """
+    Parameters
+    ----------
+    treatment_group: pd.DataFrame
+        A dataframe representing treatment group meters, indexed by id, with each column being a data point in a usage pattern.
+    comparison_pool: pd.DataFrame
+        A dataframe representing comparison pool meters, indexed by id, with each column being a data point in a usage pattern.
+    weights: list
+        A list of floats (must be of length of the treatment group columns) to scale the usage patterns in order to ensure that certain components of usage have higher weights towards matching than others.
+    n_treatments_per_chunk: int
+        Due to local memory limitations, treatment meters can be chunked so that the cdist calculation can happen in memory. 10,000 meters appear to be sufficient for most memory constraints.
+
+    """
     def __init__(
         self,
         treatment_group,
@@ -11,15 +45,6 @@ class DistanceMatching:
         weights=None,
         n_treatments_per_chunk=10000,
     ):
-        """
-        Attributes
-        ----------
-        treatment_group: pd.DataFrame
-            A
-        n_matches_per_treatment: int
-            number of comparison matches desired per treatment
-
-        """
         self.n_treatments_per_chunk = n_treatments_per_chunk
 
         self.weights = weights
@@ -80,12 +105,14 @@ class DistanceMatching:
 
     def _get_best_match(self, treatment_distances_df, n_max_duplicate_check_rounds):
         """
-        Attributes
+        Parameters
         ----------
         treatment_distances_df: pd.DataFrame
             A matrix where the row indices (i) are treatment meters, the columns (j) are
             comparison pool meters, and the values are the calculated distance between
             treatment[i] and comparison_pool[j]
+        n_max_duplicate_check_rounds: int
+            The number of rounds of checking for 'next best matches' if multiple treatment meters matched to the same comparison group meters. This number dictates how many iterations of 'next best matching' will take place.
         """
 
         treatment_matches = self._get_min_distance_from_matrix_df(
@@ -120,7 +147,18 @@ class DistanceMatching:
         n_max_duplicate_check_rounds=10,
     ):
         """
+        Parameters
+        ----------
+
         n_matches_per_treatment: int
+            number of comparison matches desired per treatment
+        metric: str or callable
+            A string or callable that goes into numpy's cdist function
+        max_distance_threshold: int
+            The maximum distance that a comparison group match can have with a given
+            treatment meter. These meters are filtered out after all matching has completed.
+        n_max_duplicate_check_rounds: int
+            The number of rounds of checking for 'next best matches' if multiple treatment meters matched to the same comparison group meters. This number dictates how many iterations of 'next best matching' will take place.
         """
         # chunk the treatment group due to memory constraints
 

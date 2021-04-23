@@ -37,7 +37,9 @@ extensions = [
     # "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.napoleon",
-    "autoapi.sphinx"
+    "autoapi.sphinx",
+    "sphinx.ext.inheritance_diagram",
+    "sphinx.ext.graphviz",
     # "sphinxcontrib.spelling",
 ]
 
