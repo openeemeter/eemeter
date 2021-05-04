@@ -28,20 +28,6 @@ from scipy.stats import ttest_ind, ks_2samp
 from scipy.spatial.distance import pdist
 from scipy.stats import chisquare
 
-from .bins import Binning, BinnedData, sample_bins
-
-
-def concat_dfs(dfs_to_concat, concat_col, concat_values):
-    if len(dfs_to_concat) != len(concat_values):
-        raise ValueError("dfs_to_concat should be the same length as concat_values")
-    return pd.concat(
-        [
-            df.assign(**{concat_col: value})
-            for df, value in zip(dfs_to_concat, concat_values)
-        ],
-        sort=False,
-    )
-
 
 def t_and_ks_test(x, y, thresh=0.05):
     t_p = "{:,.3f}".format(ttest_ind(x, y).pvalue)
@@ -210,21 +196,21 @@ class DiagnosticPlotter:
 class StratifiedSamplingDiagnostics(DiagnosticPlotter):
     """
     Construct plots and tables summarizing results of stratified sampling.
-    Operates on a StratifiedSamplingModel.  Plots will show treatment, 
+    Operates on a StratifiedSamplingModel.  Plots will show treatment,
     pool, and comparison group meters on the same axes to allow for easy comparisons.
     If fitting failed, plots will be available with treatment and pool meters only.
-    
+
     Methods
     =======
 
-    scatter(): 
+    scatter():
         Construct 2-D scatter plots of all stratification columns with bins superimposed.
 
     histogram():
         Construct 1-D histogram plots of all stratification columns with bins superimposed.
 
     quantile_equivalence():
-        Construct quantile plots to compare distributions; include t-test and ks-test 
+        Construct quantile plots to compare distributions; include t-test and ks-test
         p-values.
 
     count_bins():
@@ -238,6 +224,7 @@ class StratifiedSamplingDiagnostics(DiagnosticPlotter):
         A StratifiedSamplingModel, after fit() or fit_and_sample() have been run.
 
     """
+
     def __init__(self, model):
         self.model = model
         self.binning = self.model.binning
@@ -260,13 +247,24 @@ class StratifiedSamplingDiagnostics(DiagnosticPlotter):
             "sample",
         ]
         df_sample = (
-            self.data_sample.df
-            if self.data_sample is not None
-            else pd.DataFrame()
+            self.data_sample.df if self.data_sample is not None else pd.DataFrame()
         )
         self.labeled_dfs = [df_treatment, df_pool, df_sample]
 
-        self.df_all = concat_dfs(
+        def _concat_dfs(dfs_to_concat, concat_col, concat_values):
+            if len(dfs_to_concat) != len(concat_values):
+                raise ValueError(
+                    "dfs_to_concat should be the same length as concat_values"
+                )
+            return pd.concat(
+                [
+                    df.assign(**{concat_col: value})
+                    for df, value in zip(dfs_to_concat, concat_values)
+                ],
+                sort=False,
+            )
+
+        self.df_all = _concat_dfs(
             self.labeled_dfs, "population", self.available_equiv_labels
         )
 
@@ -303,15 +301,14 @@ class StratifiedSamplingDiagnostics(DiagnosticPlotter):
         )
         return equiv_label_x, equiv_label_y
 
-
     def equivalence(self, cols=None, equiv_label_x=None, equiv_label_y=None):
         """
         Attributes
         ----------
         cols: str
-            Columns to plot and calculate equivalence for. Defaults to all available cols. 
+            Columns to plot and calculate equivalence for. Defaults to all available cols.
         equiv_label_x: str
-            First label to measure equivalence against (defaults to treatment label) 
+            First label to measure equivalence against (defaults to treatment label)
         equiv_label_y: str
             Second label to measure equivalence against (defaults to sample if available,
              otherwise defaults to full pool set)

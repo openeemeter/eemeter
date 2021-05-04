@@ -24,6 +24,7 @@ import itertools
 from operator import and_
 from functools import reduce
 
+__all__ = ('BinnedData','Binning', 'Bin', 'MultiBin')
 
 class ModelSamplingException(Exception):
     pass
