@@ -156,3 +156,28 @@ def test_distance_duplicate_best_match():
     )
     assert comparison_group.loc["match_1", "treatment"] == "close"
     assert comparison_group.loc["match_2", "treatment"] == "far"
+
+
+def test_multiple_meter_matches():
+    random.seed(1)
+
+    n_treatment = 8
+    n_pool = 2000
+    n_max_duplicate_check_rounds = 10
+    n_matches_per_treatment = 5
+
+    # this will run through the 'duplicates' loop several times before finding unique values
+    # however since here are more 'max runs allowed' than treatment meters, it will be
+    # able to iterate enough times to find unique matches
+
+    treatment_group = generate_group(n_treatment, make_random=True)
+    comparison_pool = generate_group(n_pool, make_random=True)
+    comparison_group = DistanceMatching(
+        treatment_group=treatment_group,
+        comparison_pool=comparison_pool,
+    ).get_comparison_group(
+        n_matches_per_treatment=n_matches_per_treatment,
+        n_max_duplicate_check_rounds=n_max_duplicate_check_rounds,
+    )
+    assert not comparison_group["duplicated"].any()
+    assert len(comparison_group) == 40
