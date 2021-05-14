@@ -181,3 +181,5 @@ def test_multiple_meter_matches():
     )
     assert not comparison_group["duplicated"].any()
     assert len(comparison_group) == 40
+    assert comparison_group.index.nunique() == 40
+    assert comparison_group.treatment.value_counts().nunique() == 1
