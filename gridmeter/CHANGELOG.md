@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+1.1.0
+-----
+
 * Add usage-pattern distance calculation as option for comparison group methods selection.
 
 1.0.1
