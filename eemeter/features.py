@@ -87,7 +87,7 @@ def compute_usage_per_day_feature(meter_data, series_name="usage_per_day"):
     """
     # CalTrack 3.3.1.1
     # convert to average daily meter values.
-    usage_per_day = meter_data.value / day_counts(meter_data.index)
+    usage_per_day = meter_data.values / day_counts(meter_data.index)
     return pd.Series(usage_per_day, name=series_name)
 
 
