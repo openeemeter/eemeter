@@ -353,11 +353,16 @@ class CalTRACKUsagePerDayCandidateModel(object):
         self.warnings = warnings
 
     def __repr__(self):
-        return "CalTRACKUsagePerDayCandidateModel(model_type='{}', formula='{}', status='{}'," " r_squared_adj={})".format(
-            self.model_type,
-            self.formula,
-            self.status,
-            round(self.r_squared_adj, 3) if self.r_squared_adj is not None else None,
+        return (
+            "CalTRACKUsagePerDayCandidateModel(model_type='{}', formula='{}', status='{}',"
+            " r_squared_adj={})".format(
+                self.model_type,
+                self.formula,
+                self.status,
+                round(self.r_squared_adj, 3)
+                if self.r_squared_adj is not None
+                else None,
+            )
         )
 
     def json(self):

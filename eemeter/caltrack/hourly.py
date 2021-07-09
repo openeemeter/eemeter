@@ -511,6 +511,14 @@ def fit_caltrack_hourly_model_segment(segment_name, segment_data):
             )
 
         formula = _get_hourly_model_formula(segment_data)
+
+        # remove categories that only have null or missing entries
+        # this ensures that predictions will predict null
+        segment_data["hour_of_week"] = pd.Categorical(
+            segment_data["hour_of_week"],
+            categories=segment_data["hour_of_week"].dropna().unique(),
+            ordered=False,
+        )
         model = smf.wls(formula=formula, data=segment_data, weights=segment_data.weight)
         model_params = {coeff: value for coeff, value in model.fit().params.items()}
 
