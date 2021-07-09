@@ -6,6 +6,11 @@ Development
 
 * Placeholder
 
+3.1.0
+-----
+
+* Remove missing hour_of_week categories in the CalTrack hourly methods so they predict null for those hours. 
+
 3.0.0
 -----
 
