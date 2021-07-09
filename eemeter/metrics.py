@@ -408,15 +408,18 @@ class ModelMetrics(object):
             )
 
     def __repr__(self):
-        return "ModelMetrics(merged_length={}, r_squared_adj={}, cvrmse_adj={}, " "mape_no_zeros={}, nmae={}, nmbe={}, autocorr_resid={}, confidence_level={})".format(
-            self.merged_length,
-            round(self.r_squared_adj, 3),
-            round(self.cvrmse_adj, 3),
-            round(self.mape_no_zeros, 3),
-            round(self.nmae, 3),
-            round(self.nmbe, 3),
-            round(self.autocorr_resid, 3),
-            round(self.confidence_level, 3),
+        return (
+            "ModelMetrics(merged_length={}, r_squared_adj={}, cvrmse_adj={}, "
+            "mape_no_zeros={}, nmae={}, nmbe={}, autocorr_resid={}, confidence_level={})".format(
+                self.merged_length,
+                round(self.r_squared_adj, 3),
+                round(self.cvrmse_adj, 3),
+                round(self.mape_no_zeros, 3),
+                round(self.nmae, 3),
+                round(self.nmbe, 3),
+                round(self.autocorr_resid, 3),
+                round(self.confidence_level, 3),
+            )
         )
 
     def json(self):
