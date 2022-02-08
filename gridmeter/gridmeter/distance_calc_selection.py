@@ -48,7 +48,7 @@ class DistanceMatching:
         n_treatments_per_chunk=10000,
     ):
         self.n_treatments_per_chunk = n_treatments_per_chunk
-
+        #if you're using weights make sure to normalize the data first
         self.weights = weights
         self.treatment_group = treatment_group
         self.comparison_pool = comparison_pool
