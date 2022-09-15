@@ -310,8 +310,11 @@ class ModelMetrics(object):
         self.num_parameters = num_parameters
         self.autocorr_lags = autocorr_lags
 
-        self.observed_mean = combined["observed"].mean()
-        self.predicted_mean = combined["predicted"].mean()
+        # to account for solar usage the cvrmse should be calculated as the
+        # mean of the absolute value of observed.
+
+        self.observed_mean = abs(combined["observed"]).mean()
+        self.predicted_mean = abs(combined["predicted"]).mean()
 
         self.observed_variance = combined["observed"].var(ddof=0)
         self.predicted_variance = combined["predicted"].var(ddof=0)
@@ -408,18 +411,15 @@ class ModelMetrics(object):
             )
 
     def __repr__(self):
-        return (
-            "ModelMetrics(merged_length={}, r_squared_adj={}, cvrmse_adj={}, "
-            "mape_no_zeros={}, nmae={}, nmbe={}, autocorr_resid={}, confidence_level={})".format(
-                self.merged_length,
-                round(self.r_squared_adj, 3),
-                round(self.cvrmse_adj, 3),
-                round(self.mape_no_zeros, 3),
-                round(self.nmae, 3),
-                round(self.nmbe, 3),
-                round(self.autocorr_resid, 3),
-                round(self.confidence_level, 3),
-            )
+        return "ModelMetrics(merged_length={}, r_squared_adj={}, cvrmse_adj={}, " "mape_no_zeros={}, nmae={}, nmbe={}, autocorr_resid={}, confidence_level={})".format(
+            self.merged_length,
+            round(self.r_squared_adj, 3),
+            round(self.cvrmse_adj, 3),
+            round(self.mape_no_zeros, 3),
+            round(self.nmae, 3),
+            round(self.nmbe, 3),
+            round(self.autocorr_resid, 3),
+            round(self.confidence_level, 3),
         )
 
     def json(self):
