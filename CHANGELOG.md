@@ -4,7 +4,8 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Update observed_mean calculation to account for solar (negative usage) to provide
+sensible cvrmse calculations.
 
 3.1.0
 -----
