@@ -1,11 +1,11 @@
 # Technical Charter (the "Charter") for OpenEEMeter, a Series of LF Projects, LLC
 
-Adopted `<date>`
+Adopted Apr 5, 2019
 
 
 This charter (the "Charter") sets forth the responsibilities and procedures for
-technical contribution to, and oversight of, the [OpenEEMeter], which has been
-established as [OpenEEMeter] a Series of LF Projects, LLC (the "Project").
+technical contribution to, and oversight of, the OpenEEMeter, which has been
+established as OpenEEMeter a Series of LF Projects, LLC (the "Project").
 LF Projects, LLC ("LF Projects") is a Delaware series limited liability
 company. All Contributors to the Project must comply with the terms of this
 Charter.
@@ -16,9 +16,9 @@ Charter.
 a) The mission of the Project is to develop an open source project with the
 following goals:
 
-- i) Build and maintain an open source engine for quantifying the change in energy
-  consumption attributable to specific interventions at the utility meter in
-  order to enable the rapid diffusion of distributed energy resources;
+- i) Build and maintain methods and an open source engine for quantifying the change in
+  energy consumption attributable to specific interventions at the utility meter to
+  enable the rapid diffusion of distributed energy resources;
 - ii) Maintain a production-ready project to define consistent transactional units
   for distributed energy resources in markets and expand capabilities over
   time;
@@ -30,10 +30,10 @@ following goals:
   and customers all using this common platform as the basis to define common
   transactional units for distributed energy resources in the market.
 
-b) The scope of the Project includes software development under OSI-approved
-open source licenses supporting the mission, documentation, testing,
-integration and the creation of other artifacts that aid the development,
-deployment, operation or adoption of the open source software project.
+b) The scope of the Project includes methods and software development under OSI-approved
+open source licenses supporting the mission, documentation, testing, integration, and
+the creation of other artifacts that aid the development, deployment, operation, or
+adoption of the open source software project.
 
 2) Techincal Steering Committee
 -------------------------------
