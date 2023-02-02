@@ -209,7 +209,7 @@ def test_metered_savings_cdd_hdd_billing_single_record_reporting_data(
 
 @pytest.fixture
 def baseline_model_billing_single_record_baseline_data(
-    il_electricity_cdd_hdd_billing_monthly
+    il_electricity_cdd_hdd_billing_monthly,
 ):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]
@@ -670,3 +670,41 @@ def test_metered_savings_model_single_record(
         reporting_temperature_data,
     )
     assert error_bands is None
+
+
+@pytest.fixture
+def baseline_model_hourly_single_segment(il_electricity_cdd_hdd_hourly):
+    meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
+    temperature_data = il_electricity_cdd_hdd_hourly["temperature_data"]
+    blackout_start_date = il_electricity_cdd_hdd_hourly["blackout_start_date"]
+    baseline_meter_data, warnings = get_baseline_data(
+        meter_data, end=blackout_start_date
+    )
+    preliminary_hourly_design_matrix = create_caltrack_hourly_preliminary_design_matrix(
+        baseline_meter_data, temperature_data
+    )
+    segmentation = segment_time_series(
+        preliminary_hourly_design_matrix.index, "three_month_weighted"
+    )
+    occupancy_lookup = estimate_hour_of_week_occupancy(
+        preliminary_hourly_design_matrix, segmentation=segmentation
+    )
+    occupied_temperature_bins, unoccupied_temperature_bins = fit_temperature_bins(
+        preliminary_hourly_design_matrix,
+        segmentation=segmentation,
+        occupancy_lookup=occupancy_lookup,
+    )
+    design_matrices = create_caltrack_hourly_segmented_design_matrices(
+        preliminary_hourly_design_matrix,
+        segmentation,
+        occupancy_lookup,
+        occupied_temperature_bins,
+        unoccupied_temperature_bins,
+    )
+    segmented_model = fit_caltrack_hourly_model(
+        design_matrices,
+        occupancy_lookup,
+        occupied_temperature_bins,
+        unoccupied_temperature_bins,
+    )
+    return segmented_model
