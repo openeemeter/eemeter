@@ -384,12 +384,10 @@ class ModelMetrics(object):
             or self.degrees_of_freedom < 1
             or self.observed_length < self.num_parameters
         ):
-
             self.cvrmse_auto_corr_correction = None
             self.approx_factor_auto_corr_correction = None
             self.fsu_base_term = None
         else:
-
             # factor to correct cvrmse_adj for autocorrelation of inputs
             # i.e., divide by (n' - n_param) instead of by (n - n_param)
             self.cvrmse_auto_corr_correction = (
@@ -411,15 +409,18 @@ class ModelMetrics(object):
             )
 
     def __repr__(self):
-        return "ModelMetrics(merged_length={}, r_squared_adj={}, cvrmse_adj={}, " "mape_no_zeros={}, nmae={}, nmbe={}, autocorr_resid={}, confidence_level={})".format(
-            self.merged_length,
-            round(self.r_squared_adj, 3),
-            round(self.cvrmse_adj, 3),
-            round(self.mape_no_zeros, 3),
-            round(self.nmae, 3),
-            round(self.nmbe, 3),
-            round(self.autocorr_resid, 3),
-            round(self.confidence_level, 3),
+        return (
+            "ModelMetrics(merged_length={}, r_squared_adj={}, cvrmse_adj={}, "
+            "mape_no_zeros={}, nmae={}, nmbe={}, autocorr_resid={}, confidence_level={})".format(
+                self.merged_length,
+                round(self.r_squared_adj, 3),
+                round(self.cvrmse_adj, 3),
+                round(self.mape_no_zeros, 3),
+                round(self.nmae, 3),
+                round(self.nmbe, 3),
+                round(self.autocorr_resid, 3),
+                round(self.confidence_level, 3),
+            )
         )
 
     def json(self):

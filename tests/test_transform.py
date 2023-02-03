@@ -308,7 +308,7 @@ def test_get_baseline_data_with_ignored_gap(il_electricity_cdd_hdd_billing_month
 
 
 def test_get_baseline_data_with_overshoot_and_ignored_gap(
-    il_electricity_cdd_hdd_billing_monthly
+    il_electricity_cdd_hdd_billing_monthly,
 ):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     baseline_data, warnings = get_baseline_data(
@@ -335,7 +335,7 @@ def test_get_baseline_data_with_overshoot_and_ignored_gap(
 
 
 def test_get_baseline_data_n_days_billing_period_overshoot(
-    il_electricity_cdd_hdd_billing_monthly
+    il_electricity_cdd_hdd_billing_monthly,
 ):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     baseline_data, warnings = get_baseline_data(
@@ -548,7 +548,7 @@ def test_get_reporting_data_with_ignored_gap(il_electricity_cdd_hdd_billing_mont
 
 
 def test_get_reporting_data_with_overshoot_and_ignored_gap(
-    il_electricity_cdd_hdd_billing_monthly
+    il_electricity_cdd_hdd_billing_monthly,
 ):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     reporting_data, warnings = get_reporting_data(
@@ -792,7 +792,7 @@ def test_as_freq_hourly_to_daily_include_coverage(il_electricity_cdd_hdd_hourly)
 
 
 def test_clean_caltrack_billing_daily_data_billing(
-    il_electricity_cdd_hdd_billing_monthly
+    il_electricity_cdd_hdd_billing_monthly,
 ):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     cleaned_data = clean_caltrack_billing_daily_data(meter_data, "billing_monthly")
@@ -848,7 +848,7 @@ def test_clean_caltrack_billing_data_estimated(il_electricity_cdd_hdd_billing_mo
 
 
 def test_clean_caltrack_billing_data_uneven_datetimes(
-    il_electricity_cdd_hdd_billing_monthly
+    il_electricity_cdd_hdd_billing_monthly,
 ):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     too_short_meter_data = pd.concat(

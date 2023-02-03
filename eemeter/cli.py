@@ -65,7 +65,6 @@ def cli():
 def _get_data(
     sample, meter_file, temperature_file, heating_balance_points, cooling_balance_points
 ):
-
     if sample is not None:
         with resource_stream("eemeter.samples", "metadata.json") as f:
             metadata = json.loads(f.read().decode("utf-8"))
