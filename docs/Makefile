@@ -16,7 +16,7 @@ help:
 
 # Custom target for autobuild (philngo)
 livehtml:
-	sphinx-autobuild "$(SOURCEDIR)" "$(BUILDDIR)"/html -H 0.0.0.0 -p 8000 --poll -z ../eemeter
+	sphinx-autobuild "$(SOURCEDIR)" "$(BUILDDIR)"/html --host 0.0.0.0 --port 8000 --watch ../eemeter
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
