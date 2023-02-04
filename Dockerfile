@@ -6,6 +6,10 @@ RUN set -ex && pip install pip pipenv --upgrade
 RUN apt-get update \
   && apt-get install -yqq libenchant-2-dev
 
+# Get Rust
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
 COPY Pipfile Pipfile
 COPY Pipfile.lock Pipfile.lock
 RUN set -ex && pipenv install --system --deploy --dev
