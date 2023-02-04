@@ -4,7 +4,13 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Update python version in Dockerfile.
+* Update other dependencies (including adding rust) in Dockerfile.
+* Remove pinned dependencies in Pipfile.
+* Relock Pipfile (and do so inside of the docker image).
+* Update pytests to account for changes in newer pandas where categorical variables are no longer included in `df.sum().sum()`.
+
+
 
 3.1.1
 -----
