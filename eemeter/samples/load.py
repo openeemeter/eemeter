@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2019 OpenEEmeter contributors
+   Copyright 2014-2023 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ def samples():
     return list(sorted(sample_metadata.keys()))
 
 
-def load_sample(sample):
+def load_sample(sample, tempF=True):
     """Load meter data, temperature data, and metadata for associated with a
     particular sample identifier. Note: samples are simulated, not real, data.
 
@@ -55,12 +55,19 @@ def load_sample(sample):
     sample : :any:`str`
         Identifier of sample. Complete list can be obtained with
         :any:`eemeter.samples`.
+    tempF : :any 'bool'
+        Flag regarding whether the sample temperature dataset is associated with Fahrenheit or Celsius.
 
     Returns
     -------
     meter_data, temperature_data, metadata : :any:`tuple` of :any:`pandas.DataFrame`, :any:`pandas.Series`, and :any:`dict`
         Meter data, temperature data, and metadata for this sample identifier.
     """
+    if tempF == True:
+        temp_units = 'tempF'
+    else:
+        temp_units = 'tempC'
+
     sample_metadata = _load_sample_metadata()
     metadata = sample_metadata.get(sample)
     if metadata is None:
@@ -83,7 +90,7 @@ def load_sample(sample):
 
     temperature_filename = metadata["temperature_filename"]
     with resource_stream("eemeter.samples", temperature_filename) as f:
-        temperature_data = temperature_data_from_csv(f, gzipped=True, freq="hourly")
+        temperature_data = temperature_data_from_csv(f, gzipped=True, freq="hourly", temp_col=temp_units)
 
     metadata["blackout_start_date"] = pytz.UTC.localize(
         parse_date(metadata["blackout_start_date"])
