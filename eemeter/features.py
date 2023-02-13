@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2019 OpenEEmeter contributors
+   Copyright 2014-2023 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ from .segmentation import iterate_segmented_dataset
 import numpy as np
 import pandas as pd
 import statsmodels.formula.api as smf
+from pkg_resources import resource_filename
 
 
 __all__ = (
@@ -439,8 +440,8 @@ def compute_temperature_features(
         elif degree_day_method == "daily":
             if meter_data_index.freq == "H":
                 raise ValueError(
-                    "degree_day_method='hourly' must be used with"
-                    " hourly meter data. Found: 'daily'".format(degree_day_method)
+                    "degree_day_method='daily' must be used with"
+                    " daily meter data. Found: 'hourly'".format(degree_day_method)
                 )
         else:
             raise ValueError("method not supported: {}".format(degree_day_method))
@@ -548,13 +549,19 @@ def compute_temperature_features(
     return df
 
 
-def _estimate_hour_of_week_occupancy(model_data, threshold):
+def _estimate_hour_of_week_occupancy(model_data, threshold, region:str = 'USA'):
+    temperature_filename = resource_filename("eemeter.samples", "region_info.csv")
+    region_info = pd.read_csv(temperature_filename, index_col=0)
+    cbp_default = int(region_info.loc["cbp", region])
+    hbp_default = int(region_info.loc["hbp", region])
+
     index = pd.CategoricalIndex(range(168))
     if model_data.dropna().empty:
         return pd.Series(np.nan, index=index, name="occupancy")
 
     usage_model = smf.wls(
-        formula="meter_value ~ cdd_65 + hdd_50",
+        formula="meter_value ~ cdd_" + str(cbp_default) +
+                "+ hdd_" + str(hbp_default),
         data=model_data,
         weights=model_data.weight,
     )
@@ -582,7 +589,7 @@ def _estimate_hour_of_week_occupancy(model_data, threshold):
     )  # guarantee an index value for all hours
 
 
-def estimate_hour_of_week_occupancy(data, segmentation=None, threshold=0.65):
+def estimate_hour_of_week_occupancy(data, segmentation=None, threshold=0.65, region:str = 'USA'):
     """Estimate occupancy features for each segment.
 
     Parameters
@@ -601,6 +608,10 @@ def estimate_hour_of_week_occupancy(data, segmentation=None, threshold=0.65):
         Said another way, in the default case, if more than 35% of values are greater
         than the basic degree day model for any particular hour of the week, that hour
         of week is marked as being occupied.
+    region : :any 'str'
+        The relevant region of the world. See eemeter/region_info.csv for options.
+        Defaults to 'USA' unless otherwise specified for alignment with eeweather
+        conventions.
 
     Returns
     -------
@@ -610,11 +621,12 @@ def estimate_hour_of_week_occupancy(data, segmentation=None, threshold=0.65):
         or unoccupied (0, False) for each of the segments. Each segment has a column
         labeled by its segment name.
     """
+
     occupancy_lookups = {}
     segmented_datasets = iterate_segmented_dataset(data, segmentation)
     for segment_name, segmented_data in segmented_datasets:
         hour_of_week_occupancy = _estimate_hour_of_week_occupancy(
-            segmented_data, threshold
+            segmented_data, threshold, region
         )
         column = "occupancy" if segment_name is None else segment_name
         occupancy_lookups[column] = hour_of_week_occupancy
@@ -715,6 +727,7 @@ def fit_temperature_bins(
         A dataframe with boolean values indicating whether or not a bin was kept, with a
         categorical index for each candidate bin endpoint and a column for each segment.
     """
+
     if occupancy_lookup is None:
         segmented_bins = {}
         segmented_datasets = iterate_segmented_dataset(data, segmentation)
