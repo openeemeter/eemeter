@@ -33,8 +33,7 @@ def test_add_freq(il_electricity_cdd_hdd_hourly):
 
 
 def test_trim_two_dataframes(
-    uk_electricity_hdd_only_hourly_sample_1,
-    uk_electricity_hdd_only_hourly_sample_2,
+    uk_electricity_hdd_only_hourly_sample_1, uk_electricity_hdd_only_hourly_sample_2
 ):
 
     df1 = uk_electricity_hdd_only_hourly_sample_1["meter_data"]
@@ -60,10 +59,7 @@ def test_trim_two_dataframes(
     assert df1_trimmed.index.max() == df2_trimmed.index.max()
 
 
-def test_sum_gas_and_elec(
-    il_gas_hdd_only_hourly,
-    il_electricity_cdd_hdd_hourly,
-):
+def test_sum_gas_and_elec(il_gas_hdd_only_hourly, il_electricity_cdd_hdd_hourly):
     gas = il_gas_hdd_only_hourly["meter_data"]
     elec = il_electricity_cdd_hdd_hourly["meter_data"]
 

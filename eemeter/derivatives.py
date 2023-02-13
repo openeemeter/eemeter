@@ -37,7 +37,7 @@ def _compute_ols_error(
 ):
     ols_model_agg_error = (
         (t_stat * rmse_base_residuals * post_obs)
-        / (base_obs**0.5)
+        / (base_obs ** 0.5)
         * (1.0 + ((base_avg - post_avg) ** 2.0 / base_var)) ** 0.5
     )
 
@@ -46,7 +46,7 @@ def _compute_ols_error(
     )
 
     ols_total_agg_error = (
-        ols_model_agg_error**2.0 + ols_noise_agg_error**2.0
+        ols_model_agg_error ** 2.0 + ols_noise_agg_error ** 2.0
     ) ** 0.5
 
     return ols_total_agg_error, ols_model_agg_error, ols_noise_agg_error
@@ -75,7 +75,7 @@ def _compute_fsu_error(
 
     fsu_error_band = total_base_energy * (
         t_stat
-        * (a_coeff * months_reporting**2.0 + b_coeff * months_reporting + c_coeff)
+        * (a_coeff * months_reporting ** 2.0 + b_coeff * months_reporting + c_coeff)
         * (rmse_base_residuals / base_avg)
         * ((base_obs / nprime) * (1.0 + (2.0 / nprime)) * (1.0 / post_obs)) ** 0.5
     )
@@ -379,7 +379,7 @@ def _compute_error_bands_modeled_savings(
         "FSU Error Band: Baseline": fsu_error_band_baseline,
         "FSU Error Band: Reporting": fsu_error_band_reporting,
         "FSU Error Band": (
-            fsu_error_band_baseline**2.0 + fsu_error_band_reporting**2.0
+            fsu_error_band_baseline ** 2.0 + fsu_error_band_reporting ** 2.0
         )
         ** 0.5,
     }

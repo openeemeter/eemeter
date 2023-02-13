@@ -187,7 +187,8 @@ def _check_input_formatting(input, tz="UTC"):
         else:
             raise ValueError(
                 "Data is not in correct format - index should be of class 'pd.core.indexes.datetimes.DatetimeIndex',"
-                + " or datetime column should be labelled one of: 'Start', 'start', 'Datetime', 'timestamp', 'Timestamp', or 'Datetime'."
+                + " or datetime column should be labelled one of: 'Start', 'start', 'Datetime', 'timestamp', "
+                  "'Timestamp', or 'Datetime'."
             )
     if input.index[0].tzinfo is None:
         input.index = input.index.tz_localize(tz=tz)
@@ -335,12 +336,8 @@ def eemeter_hourly(
     )
 
     # create a design matrix for occupancy and segmentation
-    preliminary_design_matrix = (
-        eemeter.create_caltrack_hourly_preliminary_design_matrix(
-            baseline_meter_data,
-            temperature_data,
-            region,
-        )
+    preliminary_design_matrix = eemeter.create_caltrack_hourly_preliminary_design_matrix(
+        baseline_meter_data, temperature_data, region
     )
 
     # build 12 monthly models - each step from now on operates on each segment
@@ -364,14 +361,12 @@ def eemeter_hourly(
     )
 
     # build a design matrix for each monthly segment
-    segmented_design_matrices = (
-        eemeter.create_caltrack_hourly_segmented_design_matrices(
-            preliminary_design_matrix,
-            segmentation,
-            occupancy_lookup,
-            occupied_temperature_bins,
-            unoccupied_temperature_bins,
-        )
+    segmented_design_matrices = eemeter.create_caltrack_hourly_segmented_design_matrices(
+        preliminary_design_matrix,
+        segmentation,
+        occupancy_lookup,
+        occupied_temperature_bins,
+        unoccupied_temperature_bins,
     )
 
     # build a CalTRACK hourly model
