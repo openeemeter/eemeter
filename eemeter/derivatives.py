@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2019 OpenEEmeter contributors
+   Copyright 2014-2023 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -160,6 +160,7 @@ def metered_savings(
     with_disaggregated=False,
     confidence_level=0.90,
     predict_kwargs=None,
+    region='USA'
 ):
     """Compute metered savings, i.e., savings in which the baseline model
     is used to calculate the modeled usage in the reporting period. This
@@ -189,6 +190,9 @@ def metered_savings(
         Ignored if not computing error bands.
     predict_kwargs : :any:`dict`, optional
         Extra kwargs to pass to the baseline_model.predict method.
+    region : :any 'str'
+        The relevant region of the world. See eemeter/region_info.csv for options. Defaults to 'USA' unless otherwise
+        specified for alignment with eeweather conventions.
 
     Returns
     -------
@@ -212,6 +216,9 @@ def metered_savings(
         will also return a dictionary of FSU and OLS error bands for the
         aggregated energy savings over the post period.
     """
+    if region != 'USA':
+        temperature_data = 32 + (temperature_data * 1.8)
+
     if predict_kwargs is None:
         predict_kwargs = {}
 
@@ -386,6 +393,7 @@ def modeled_savings(
     with_disaggregated=False,
     confidence_level=0.90,
     predict_kwargs=None,
+    region: str = 'USA'
 ):
     """Compute modeled savings, i.e., savings in which baseline and reporting
     usage values are based on models. This is appropriate for annualizing or
@@ -412,6 +420,11 @@ def modeled_savings(
     predict_kwargs : :any:`dict`, optional
         Extra kwargs to pass to the baseline_model.predict and
         reporting_model.predict methods.
+    region : :any 'str'
+        The relevant region of the world. See eemeter/region_info.csv for options.
+        Defaults to 'USA' unless otherwise specified for alignment with eeweather
+        conventions.
+
 
     Returns
     -------
@@ -441,6 +454,9 @@ def modeled_savings(
         FSU and error bands for the aggregated energy savings over the
         normal year period.
     """
+    if region != 'USA':
+        temperature_data = 32 + (temperature_data * 1.8)
+
     prediction_index = result_index
 
     if predict_kwargs is None:
