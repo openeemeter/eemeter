@@ -458,7 +458,7 @@ def segmented_design_matrices_single_mode(
 
 
 def test_fit_caltrack_hourly_model_segment_single_mode(
-    segmented_design_matrices_single_mode
+    segmented_design_matrices_single_mode,
 ):
     segment_name = "dec-jan-feb-weighted"
     segment_data = segmented_design_matrices_single_mode[segment_name]

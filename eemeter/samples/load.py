@@ -64,9 +64,9 @@ def load_sample(sample, tempF=True):
         Meter data, temperature data, and metadata for this sample identifier.
     """
     if tempF == True:
-        temp_units = 'tempF'
+        temp_units = "tempF"
     else:
-        temp_units = 'tempC'
+        temp_units = "tempC"
 
     sample_metadata = _load_sample_metadata()
     metadata = sample_metadata.get(sample)
@@ -90,7 +90,9 @@ def load_sample(sample, tempF=True):
 
     temperature_filename = metadata["temperature_filename"]
     with resource_stream("eemeter.samples", temperature_filename) as f:
-        temperature_data = temperature_data_from_csv(f, gzipped=True, freq="hourly", temp_col=temp_units)
+        temperature_data = temperature_data_from_csv(
+            f, gzipped=True, freq="hourly", temp_col=temp_units
+        )
 
     metadata["blackout_start_date"] = pytz.UTC.localize(
         parse_date(metadata["blackout_start_date"])

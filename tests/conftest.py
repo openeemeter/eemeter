@@ -62,13 +62,16 @@ def il_electricity_cdd_hdd_billing_monthly():
 def il_electricity_cdd_hdd_billing_bimonthly():
     return _from_sample("il-electricity-cdd-hdd-billing_bimonthly")
 
+
 @pytest.fixture
 def il_gas_hdd_only_hourly():
     return _from_sample("il-gas-hdd-only-hourly")
 
+
 @pytest.fixture
 def uk_electricity_hdd_only_hourly_sample_1():
     return _from_sample("uk-electricity-hdd-only-hourly-sample-1", tempF=False)
+
 
 @pytest.fixture
 def uk_electricity_hdd_only_hourly_sample_2():

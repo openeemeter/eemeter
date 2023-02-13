@@ -38,7 +38,9 @@ __all__ = (
 )
 
 
-def create_caltrack_hourly_preliminary_design_matrix(meter_data, temperature_data, region:str='USA'):
+def create_caltrack_hourly_preliminary_design_matrix(
+    meter_data, temperature_data, region: str = "USA"
+):
     """A helper function which calls basic feature creation methods to create an
     input suitable for use in the first step of creating a CalTRACK hourly model.
 
@@ -62,7 +64,7 @@ def create_caltrack_hourly_preliminary_design_matrix(meter_data, temperature_dat
     cbp_default = int(region_info.loc["cbp", region])
     hbp_default = int(region_info.loc["hbp", region])
 
-    if region != 'USA':
+    if region != "USA":
         temperature_data = 32 + (temperature_data * 1.8)
 
     time_features = compute_time_features(
@@ -82,7 +84,10 @@ def create_caltrack_hourly_preliminary_design_matrix(meter_data, temperature_dat
     )
     return design_matrix
 
-def create_caltrack_billing_design_matrix(meter_data, temperature_data, region:str='USA'):
+
+def create_caltrack_billing_design_matrix(
+    meter_data, temperature_data, region: str = "USA"
+):
     """A helper function which calls basic feature creation methods to create a
     design matrix suitable for use with CalTRACK Billing methods.
 
@@ -103,7 +108,7 @@ def create_caltrack_billing_design_matrix(meter_data, temperature_data, region:s
         features.
     """
     usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
-    if region != 'USA':
+    if region != "USA":
         temperature_data = 32 + (temperature_data * 1.8)
 
     temperature_features = compute_temperature_features(
@@ -120,7 +125,9 @@ def create_caltrack_billing_design_matrix(meter_data, temperature_data, region:s
     return design_matrix
 
 
-def create_caltrack_daily_design_matrix(meter_data, temperature_data, region:str = 'USA'):
+def create_caltrack_daily_design_matrix(
+    meter_data, temperature_data, region: str = "USA"
+):
     """A helper function which calls basic feature creation methods to create a
     design matrix suitable for use with CalTRACK daily methods.
 
@@ -141,7 +148,7 @@ def create_caltrack_daily_design_matrix(meter_data, temperature_data, region:str
         features.
     """
     usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
-    if region != 'USA':
+    if region != "USA":
         temperature_data = 32 + (temperature_data * 1.8)
 
     temperature_features = compute_temperature_features(

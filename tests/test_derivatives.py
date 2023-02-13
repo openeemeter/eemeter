@@ -209,7 +209,7 @@ def test_metered_savings_cdd_hdd_billing_single_record_reporting_data(
 
 @pytest.fixture
 def baseline_model_billing_single_record_baseline_data(
-    il_electricity_cdd_hdd_billing_monthly
+    il_electricity_cdd_hdd_billing_monthly,
 ):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]

@@ -22,6 +22,7 @@
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 import eemeter
+
 __all__ = (
     "add_freq",
     "trim",
@@ -29,7 +30,7 @@ __all__ = (
     "format_energy_data_for_eemeter",
     "format_temperature_data_for_eemeter",
     "eemeter_hourly",
-    'eemeter_daily'
+    "eemeter_daily",
 )
 
 
@@ -71,7 +72,7 @@ def add_freq(idx, freq=None):
     return idx
 
 
-def trim(*args, freq='H', tz="UTC"):
+def trim(*args, freq="H", tz="UTC"):
     """A helper function which trims a given number of time series dataframes so that they all correspond to the same
     time periods. Typically used to ensure that both gas, electricity, and temperature datasets cover the same time
     period. Trim undertakes the following steps:
@@ -105,7 +106,7 @@ def trim(*args, freq='H', tz="UTC"):
          indices).
     """
     new_tuple = ()
-    if len(list(args))==1:
+    if len(list(args)) == 1:
         args = args[0]
     for i in args:
         df = i
@@ -114,7 +115,7 @@ def trim(*args, freq='H', tz="UTC"):
         if df.index.tz is None:
             df.index = df.index.tz_localize(tz=tz)  # defaults to UTC
         df = df.sort_index()
-        df = df[~df.index.duplicated(keep='first')]
+        df = df[~df.index.duplicated(keep="first")]
         df = df.resample(freq).asfreq()
         new_tuple = new_tuple + (df,)
     max_start = max([min(df.index) for df in new_tuple])
@@ -127,6 +128,7 @@ def trim(*args, freq='H', tz="UTC"):
         raise IndexError("Trim requires for all dfs to have some overlap.")
 
     return out_dfs
+
 
 def sum_gas_and_elec(gas, elec):
     """A helper function which sums kWh gas and electricity data to account for whole-building analysis using eemeter.
@@ -164,7 +166,8 @@ def sum_gas_and_elec(gas, elec):
         total = total.iloc[:, -1:]
         return total
 
-def _check_input_formatting(input, tz='UTC'):
+
+def _check_input_formatting(input, tz="UTC"):
     if not isinstance(input.index, pd.DatetimeIndex):
         if isinstance(input.index, pd.RangeIndex):
             for i in [
@@ -183,14 +186,15 @@ def _check_input_formatting(input, tz='UTC'):
                 input.index = input.index.tz_localize(tz=tz)
         else:
             raise ValueError(
-                "Data is not in correct format - index should be of class 'pd.core.indexes.datetimes.DatetimeIndex'," +
-                " or datetime column should be labelled one of: 'Start', 'start', 'Datetime', 'timestamp', 'Timestamp', or 'Datetime'."
+                "Data is not in correct format - index should be of class 'pd.core.indexes.datetimes.DatetimeIndex',"
+                + " or datetime column should be labelled one of: 'Start', 'start', 'Datetime', 'timestamp', 'Timestamp', or 'Datetime'."
             )
     if input.index[0].tzinfo is None:
         input.index = input.index.tz_localize(tz=tz)
     return input
 
-def _format_data_for_eemeter_hourly(df, tz='UTC'):
+
+def _format_data_for_eemeter_hourly(df, tz="UTC"):
     if df is not None:
         df = df.copy()
         df = _check_input_formatting(df, tz)
@@ -199,9 +203,8 @@ def _format_data_for_eemeter_hourly(df, tz='UTC'):
     else:
         return None
 
-def format_energy_data_for_eemeter(
-    *args, method = 'hourly', tz = 'UTC'
-):
+
+def format_energy_data_for_eemeter(*args, method="hourly", tz="UTC"):
     """A helper function which ensures energy consumption data is formatted for eemeter processing.
 
     Parameters
@@ -221,12 +224,12 @@ def format_energy_data_for_eemeter(
         A list of dataframes comprising energy consumption data in eemeter format.
     """
 
-    if method == 'hourly':
-        freq = 'H'
-    elif method == 'daily':
-        freq = 'D'
-    elif method == 'billing':
-        freq = 'M'
+    if method == "hourly":
+        freq = "H"
+    elif method == "daily":
+        freq = "D"
+    elif method == "billing":
+        freq = "M"
     else:
         raise ValueError("'method' must be either 'hourly', 'daily' or 'billing'.")
 
@@ -236,11 +239,11 @@ def format_energy_data_for_eemeter(
         if not isinstance(df, pd.DataFrame):
             df = pd.DataFrame(df)
         df = df.resample(freq).sum()
-        df.index = df.index.rename('start')
+        df.index = df.index.rename("start")
         args_tuple = args_tuple + (df,)
-        if df.columns[0] != 'value':
+        if df.columns[0] != "value":
             current_col_name = df.columns[0]
-            df.rename(columns={current_col_name:'value'}, inplace=True)
+            df.rename(columns={current_col_name: "value"}, inplace=True)
 
     if len(args_tuple) == 1:
         return args_tuple[0]
@@ -250,9 +253,8 @@ def format_energy_data_for_eemeter(
         args_tuple = tuple(args_list)
         return args_tuple
 
-def format_temperature_data_for_eemeter(
-    temperature_data, tz = 'UTC'
-):
+
+def format_temperature_data_for_eemeter(temperature_data, tz="UTC"):
     """A helper function which ensures external temperature data is formatted for eemeter processing.
 
     Parameters
@@ -269,7 +271,7 @@ def format_temperature_data_for_eemeter(
     """
 
     temperature_data = _format_data_for_eemeter_hourly(temperature_data, tz)
-    mask = (temperature_data.index.minute == 00)
+    mask = temperature_data.index.minute == 00
     temperature_data = temperature_data[mask]
     if temperature_data.index.freq == None:
         temperature_data.index = add_freq(temperature_data.index)
@@ -277,13 +279,14 @@ def format_temperature_data_for_eemeter(
         temperature_data = temperature_data.squeeze()
     return temperature_data
 
+
 def eemeter_hourly(
-        gas,
-        elec,
-        temperature_data,
-        blackout_start_date,
-        blackout_end_date,
-        region: str = "USA",
+    gas,
+    elec,
+    temperature_data,
+    blackout_start_date,
+    blackout_end_date,
+    region: str = "USA",
 ):
     """An output function which takes gas, electricity, external temperature data, blackout start and end dates, and
     returns a metered savings dataframe for the period between the blackout end date and today.
@@ -332,10 +335,12 @@ def eemeter_hourly(
     )
 
     # create a design matrix for occupancy and segmentation
-    preliminary_design_matrix = eemeter.create_caltrack_hourly_preliminary_design_matrix(
-        baseline_meter_data,
-        temperature_data,
-        region,
+    preliminary_design_matrix = (
+        eemeter.create_caltrack_hourly_preliminary_design_matrix(
+            baseline_meter_data,
+            temperature_data,
+            region,
+        )
     )
 
     # build 12 monthly models - each step from now on operates on each segment
@@ -387,18 +392,19 @@ def eemeter_hourly(
         reporting_meter_data,
         temperature_data,
         with_disaggregated=True,
-        region=region
+        region=region,
     )
 
     return metered_savings_dataframe
 
+
 def eemeter_daily(
-        gas,
-        elec,
-        temperature_data,
-        blackout_start_date,
-        blackout_end_date,
-        region:str = 'USA'
+    gas,
+    elec,
+    temperature_data,
+    blackout_start_date,
+    blackout_end_date,
+    region: str = "USA",
 ):
 
     meter_data = sum_gas_and_elec(gas, elec)
@@ -406,9 +412,9 @@ def eemeter_daily(
     # get meter data suitable for fitting a baseline model
     baseline_meter_data, warnings = eemeter.get_baseline_data(
         meter_data,
-        start = blackout_start_date - relativedelta(years=1),
-        end= blackout_end_date,
-        max_days=None
+        start=blackout_start_date - relativedelta(years=1),
+        end=blackout_end_date,
+        max_days=None,
     )
 
     # create a design matrix (the input to the model fitting step)
@@ -417,9 +423,7 @@ def eemeter_daily(
     )
 
     # build a CalTRACK model
-    baseline_model = eemeter.fit_caltrack_usage_per_day_model(
-        baseline_design_matrix
-    )
+    baseline_model = eemeter.fit_caltrack_usage_per_day_model(baseline_design_matrix)
 
     # get a year of reporting period data
     reporting_meter_data, warnings = eemeter.get_reporting_data(
@@ -428,8 +432,11 @@ def eemeter_daily(
 
     # compute metered savings for the year of the reporting period we've selected
     metered_savings_dataframe, error_bands = eemeter.metered_savings(
-        baseline_model, reporting_meter_data,
-        temperature_data, with_disaggregated=True, region=region
+        baseline_model,
+        reporting_meter_data,
+        temperature_data,
+        with_disaggregated=True,
+        region=region,
     )
 
     return metered_savings_dataframe

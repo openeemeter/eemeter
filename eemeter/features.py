@@ -549,7 +549,7 @@ def compute_temperature_features(
     return df
 
 
-def _estimate_hour_of_week_occupancy(model_data, threshold, region:str = 'USA'):
+def _estimate_hour_of_week_occupancy(model_data, threshold, region: str = "USA"):
     temperature_filename = resource_filename("eemeter.samples", "region_info.csv")
     region_info = pd.read_csv(temperature_filename, index_col=0)
     cbp_default = int(region_info.loc["cbp", region])
@@ -560,8 +560,7 @@ def _estimate_hour_of_week_occupancy(model_data, threshold, region:str = 'USA'):
         return pd.Series(np.nan, index=index, name="occupancy")
 
     usage_model = smf.wls(
-        formula="meter_value ~ cdd_" + str(cbp_default) +
-                "+ hdd_" + str(hbp_default),
+        formula="meter_value ~ cdd_" + str(cbp_default) + "+ hdd_" + str(hbp_default),
         data=model_data,
         weights=model_data.weight,
     )
@@ -589,7 +588,9 @@ def _estimate_hour_of_week_occupancy(model_data, threshold, region:str = 'USA'):
     )  # guarantee an index value for all hours
 
 
-def estimate_hour_of_week_occupancy(data, segmentation=None, threshold=0.65, region:str = 'USA'):
+def estimate_hour_of_week_occupancy(
+    data, segmentation=None, threshold=0.65, region: str = "USA"
+):
     """Estimate occupancy features for each segment.
 
     Parameters

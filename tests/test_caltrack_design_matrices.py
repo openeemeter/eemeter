@@ -30,7 +30,7 @@ from eemeter.segmentation import segment_time_series
 
 
 def test_create_caltrack_hourly_preliminary_design_matrix(
-    il_electricity_cdd_hdd_hourly
+    il_electricity_cdd_hdd_hourly,
 ):
     meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
     temperature_data = il_electricity_cdd_hdd_hourly["temperature_data"]
@@ -401,7 +401,7 @@ def test_create_caltrack_hourly_segmented_design_matrices(
 
 
 def test_create_caltrack_billing_design_matrix_empty_temp(
-    il_electricity_cdd_hdd_billing_monthly
+    il_electricity_cdd_hdd_billing_monthly,
 ):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"][:0]
@@ -412,7 +412,7 @@ def test_create_caltrack_billing_design_matrix_empty_temp(
 
 
 def test_create_caltrack_billing_design_matrix_partial_empty_temp(
-    il_electricity_cdd_hdd_billing_monthly
+    il_electricity_cdd_hdd_billing_monthly,
 ):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"][:200]

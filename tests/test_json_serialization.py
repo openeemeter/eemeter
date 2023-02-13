@@ -85,8 +85,10 @@ def test_json_hourly():
     )
 
     # create a design matrix for occupancy and segmentation
-    preliminary_design_matrix = eemeter.create_caltrack_hourly_preliminary_design_matrix(
-        baseline_meter_data, temperature_data
+    preliminary_design_matrix = (
+        eemeter.create_caltrack_hourly_preliminary_design_matrix(
+            baseline_meter_data, temperature_data
+        )
     )
 
     # build 12 monthly models - each step from now on operates on each segment
@@ -110,12 +112,14 @@ def test_json_hourly():
     )
 
     # build a design matrix for each monthly segment
-    segmented_design_matrices = eemeter.create_caltrack_hourly_segmented_design_matrices(
-        preliminary_design_matrix,
-        segmentation,
-        occupancy_lookup,
-        occupied_temperature_bins,
-        unoccupied_temperature_bins,
+    segmented_design_matrices = (
+        eemeter.create_caltrack_hourly_segmented_design_matrices(
+            preliminary_design_matrix,
+            segmentation,
+            occupancy_lookup,
+            occupied_temperature_bins,
+            unoccupied_temperature_bins,
+        )
     )
 
     # build a CalTRACK hourly model

@@ -37,7 +37,7 @@ def _compute_ols_error(
 ):
     ols_model_agg_error = (
         (t_stat * rmse_base_residuals * post_obs)
-        / (base_obs ** 0.5)
+        / (base_obs**0.5)
         * (1.0 + ((base_avg - post_avg) ** 2.0 / base_var)) ** 0.5
     )
 
@@ -46,7 +46,7 @@ def _compute_ols_error(
     )
 
     ols_total_agg_error = (
-        ols_model_agg_error ** 2.0 + ols_noise_agg_error ** 2.0
+        ols_model_agg_error**2.0 + ols_noise_agg_error**2.0
     ) ** 0.5
 
     return ols_total_agg_error, ols_model_agg_error, ols_noise_agg_error
@@ -75,7 +75,7 @@ def _compute_fsu_error(
 
     fsu_error_band = total_base_energy * (
         t_stat
-        * (a_coeff * months_reporting ** 2.0 + b_coeff * months_reporting + c_coeff)
+        * (a_coeff * months_reporting**2.0 + b_coeff * months_reporting + c_coeff)
         * (rmse_base_residuals / base_avg)
         * ((base_obs / nprime) * (1.0 + (2.0 / nprime)) * (1.0 / post_obs)) ** 0.5
     )
@@ -160,7 +160,7 @@ def metered_savings(
     with_disaggregated=False,
     confidence_level=0.90,
     predict_kwargs=None,
-    region='USA'
+    region="USA",
 ):
     """Compute metered savings, i.e., savings in which the baseline model
     is used to calculate the modeled usage in the reporting period. This
@@ -216,7 +216,7 @@ def metered_savings(
         will also return a dictionary of FSU and OLS error bands for the
         aggregated energy savings over the post period.
     """
-    if region != 'USA':
+    if region != "USA":
         temperature_data = 32 + (temperature_data * 1.8)
 
     if predict_kwargs is None:
@@ -379,7 +379,7 @@ def _compute_error_bands_modeled_savings(
         "FSU Error Band: Baseline": fsu_error_band_baseline,
         "FSU Error Band: Reporting": fsu_error_band_reporting,
         "FSU Error Band": (
-            fsu_error_band_baseline ** 2.0 + fsu_error_band_reporting ** 2.0
+            fsu_error_band_baseline**2.0 + fsu_error_band_reporting**2.0
         )
         ** 0.5,
     }
@@ -393,7 +393,7 @@ def modeled_savings(
     with_disaggregated=False,
     confidence_level=0.90,
     predict_kwargs=None,
-    region: str = 'USA'
+    region: str = "USA",
 ):
     """Compute modeled savings, i.e., savings in which baseline and reporting
     usage values are based on models. This is appropriate for annualizing or
@@ -454,7 +454,7 @@ def modeled_savings(
         FSU and error bands for the aggregated energy savings over the
         normal year period.
     """
-    if region != 'USA':
+    if region != "USA":
         temperature_data = 32 + (temperature_data * 1.8)
 
     prediction_index = result_index
