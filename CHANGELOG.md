@@ -6,6 +6,17 @@ Development
 
 * Placeholder
 
+* 3.1.2
+-----
+
+* Addition of modules and amendments in support of international facility for EEMeter, including principally:
+* Addition of processing.py; updating setup.py and __init__/py accordingly.
+* Amendments to design_matrices; features; and derivatives.
+* Addition of new tests and samples.
+* Amendments to tutorial.ipynb.
+* Addition of eemeter international.ipynb.
+
+
 3.1.1
 -----
 
