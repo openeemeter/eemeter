@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2019 OpenEEmeter contributors
+   Copyright 2014-2023 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -43,6 +43,10 @@ def test_samples():
         "il-gas-intercept-only-billing_monthly",
         "il-gas-intercept-only-daily",
         "il-gas-intercept-only-hourly",
+        "uk-electricity-hdd-only-hourly-sample-0",
+        "uk-electricity-hdd-only-hourly-sample-1",
+        "uk-electricity-hdd-only-hourly-sample-2",
+        "uk-gas-hdd-only-hourly-sample-0",
     ]
 
 
