@@ -99,6 +99,7 @@ def test_caltrack_hourly_fit_feature_processor(
         "weight",
     ]
     assert result.shape == (24, 10)
+    result.hour_of_week = result.hour_of_week.astype(float)
     assert round(result.sum().sum(), 2) == 5916.0
 
 
@@ -127,6 +128,7 @@ def test_caltrack_hourly_prediction_feature_processor(
         "weight",
     ]
     assert result.shape == (24, 9)
+    result.hour_of_week = result.hour_of_week.astype(float)
     assert round(result.sum().sum(), 2) == 4956.0
 
 
@@ -458,7 +460,7 @@ def segmented_design_matrices_single_mode(
 
 
 def test_fit_caltrack_hourly_model_segment_single_mode(
-    segmented_design_matrices_single_mode
+    segmented_design_matrices_single_mode,
 ):
     segment_name = "dec-jan-feb-weighted"
     segment_data = segmented_design_matrices_single_mode[segment_name]
