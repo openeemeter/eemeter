@@ -2323,6 +2323,42 @@ def caltrack_daily(
     region: str = "USA",
 ):
 
+    """An output function which takes meter data, external temperature data, blackout start and end dates, and
+       returns a metered savings dataframe for the period between the blackout end date and today.
+
+       Parameters
+       ----------
+       meter_data : :any:`pandas.DataFrame`
+           Daily series meter data, unit kWh.
+       temperature_data : :any:``
+           Hourly external temperature data. If DataFrame, not pd.Series (as required by CalTRACK) function will convert.
+       blackout_start_date : :any: 'datetime.datetime'
+           The date at which improvement works commenced.
+       blackout_end_date : :any: 'datetime.datetime'
+           The date by which improvement works completed and metering resumed.
+       region : :any 'str'
+           The relevant region of the world. See eemeter/region_info.csv for options.
+           Defaults to 'USA' unless otherwise specified for alignment with eeweather
+           conventions.
+
+       Returns
+       -------
+       metered_savings_dataframe: :any:`pandas.DataFrame`
+       DataFrame with metered savings, indexed with
+       ``reporting_meter_data.index``. Will include the following columns:
+
+        - ``counterfactual_usage`` (baseline model projected into reporting period)
+        - ``reporting_observed`` (given by reporting_meter_data)
+        - ``metered_savings``
+
+        If `with_disaggregated` is set to True, the following columns will also
+        be in the results DataFrame:
+
+        - ``counterfactual_base_load``
+        - ``counterfactual_heating_load``
+        - ``counterfactual_cooling_load``
+       """
+
     # get meter data suitable for fitting a baseline model
     baseline_meter_data, warnings = get_baseline_data(
         meter_data,

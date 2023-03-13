@@ -616,15 +616,13 @@ def caltrack_hourly(
     blackout_end_date,
     region: str = "USA",
 ):
-    """An output function which takes gas, electricity, external temperature data, blackout start and end dates, and
+    """An output function which takes meter data, external temperature data, blackout start and end dates, and
     returns a metered savings dataframe for the period between the blackout end date and today.
 
     Parameters
     ----------
-    gas : :any:`pandas.DataFrame`
-        Gas time series data, unit kWh.
-    elec : :any:`pandas.DataFrame`
-        Electricity time series data, unit kWh.
+    meter_data : :any:`pandas.DataFrame`
+        Hourly series meter data, unit kWh.
     temperature_data : :any:``
         Hourly external temperature data. If DataFrame, not pd.Series (as required by CalTRACK) function will convert.
     blackout_start_date : :any: 'datetime.datetime'
