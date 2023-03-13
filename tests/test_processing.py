@@ -95,7 +95,7 @@ def test_format_temperature_data_for_eemeter(il_electricity_cdd_hdd_hourly):
     assert temperature_data_reformatted.index.tzinfo is not None
 
 
-def test_format_energy_data_for_eemeter_hourly(il_electricity_cdd_hdd_hourly):
+def test_format_energy_data_for_caltrack_hourly(il_electricity_cdd_hdd_hourly):
     df = il_electricity_cdd_hdd_hourly["meter_data"]
     # flipping df
     df = df.reindex(index=df.index[::-1])
@@ -120,7 +120,7 @@ def test_format_energy_data_for_eemeter_hourly(il_electricity_cdd_hdd_hourly):
     assert len(df_reformatted.columns) == 1
 
 
-def test_format_energy_data_for_eemeter_daily(il_electricity_cdd_hdd_daily):
+def test_format_energy_data_for_caltrack_daily(il_electricity_cdd_hdd_daily):
     df = il_electricity_cdd_hdd_daily["meter_data"]
     # flipping df
     df = df.reindex(index=df.index[::-1])
@@ -170,4 +170,4 @@ def test_format_energy_data_for_eemeter_billing(il_electricity_cdd_hdd_daily):
     assert len(df_reformatted.columns) == 1
 
 
-# tests for eemeter_hourly and eemeter_daily NOT required as simply functionalising other eemeter functions (subejct to test).
+# tests for caltrack_hourly and caltrack_daily NOT required as simply functionalising other eemeter functions (subejct to test).

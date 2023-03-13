@@ -29,8 +29,7 @@ __all__ = (
     "sum_gas_and_elec",
     "format_energy_data_for_eemeter",
     "format_temperature_data_for_eemeter",
-    "eemeter_hourly",
-    "eemeter_daily",
+    "caltrack_hourly",
 )
 
 
@@ -195,7 +194,7 @@ def _check_input_formatting(input, tz="UTC"):
     return input
 
 
-def _format_data_for_eemeter_hourly(df, tz="UTC"):
+def _format_data_for_caltrack_hourly(df, tz="UTC"):
     if df is not None:
         df = df.copy()
         df = _check_input_formatting(df, tz)
@@ -236,7 +235,7 @@ def format_energy_data_for_eemeter(*args, method="hourly", tz="UTC"):
 
     args_tuple = ()
     for df in args:
-        df = _format_data_for_eemeter_hourly(df, tz)
+        df = _format_data_for_caltrack_hourly(df, tz)
         if not isinstance(df, pd.DataFrame):
             df = pd.DataFrame(df)
         df = df.resample(freq).sum()
@@ -271,7 +270,7 @@ def format_temperature_data_for_eemeter(temperature_data, tz="UTC"):
         Hourly external temperature data in eemeter format.
     """
 
-    temperature_data = _format_data_for_eemeter_hourly(temperature_data, tz)
+    temperature_data = _format_data_for_caltrack_hourly(temperature_data, tz)
     mask = temperature_data.index.minute == 00
     temperature_data = temperature_data[mask]
     if temperature_data.index.freq == None:
@@ -279,159 +278,3 @@ def format_temperature_data_for_eemeter(temperature_data, tz="UTC"):
     if isinstance(temperature_data, pd.DataFrame):
         temperature_data = temperature_data.squeeze()
     return temperature_data
-
-
-def eemeter_hourly(
-    gas,
-    elec,
-    temperature_data,
-    blackout_start_date,
-    blackout_end_date,
-    region: str = "USA",
-):
-    """An output function which takes gas, electricity, external temperature data, blackout start and end dates, and
-    returns a metered savings dataframe for the period between the blackout end date and today.
-
-    Parameters
-    ----------
-    gas : :any:`pandas.DataFrame`
-        Gas time series data, unit kWh.
-    elec : :any:`pandas.DataFrame`
-        Electricity time series data, unit kWh.
-    temperature_data : :any:``
-        Hourly external temperature data. If DataFrame, not pd.Series (as required by CalTRACK) function will convert.
-    blackout_start_date : :any: 'datetime.datetime'
-        The date at which improvement works commenced.
-    blackout_end_date : :any: 'datetime.datetime'
-        The date by which improvement works completed and metering resumed.
-    region : :any 'str'
-        The relevant region of the world. See eemeter/region_info.csv for options.
-        Defaults to 'USA' unless otherwise specified for alignment with eeweather
-        conventions.
-
-    Returns
-    -------
-    metered_savings_dataframe: :any:`pandas.DataFrame`
-    DataFrame with metered savings, indexed with
-    ``reporting_meter_data.index``. Will include the following columns:
-
-     - ``counterfactual_usage`` (baseline model projected into reporting period)
-     - ``reporting_observed`` (given by reporting_meter_data)
-     - ``metered_savings``
-
-     If `with_disaggregated` is set to True, the following columns will also
-     be in the results DataFrame:
-
-     - ``counterfactual_base_load``
-     - ``counterfactual_heating_load``
-     - ``counterfactual_cooling_load``
-    """
-    meter_data = sum_gas_and_elec(gas, elec)
-
-    baseline_meter_data, baseline_warnings = eemeter.get_baseline_data(
-        meter_data,
-        start=blackout_start_date - relativedelta(years=1),
-        end=blackout_end_date,
-        max_days=None,
-    )
-
-    # create a design matrix for occupancy and segmentation
-    preliminary_design_matrix = eemeter.create_caltrack_hourly_preliminary_design_matrix(
-        baseline_meter_data, temperature_data, region
-    )
-
-    # build 12 monthly models - each step from now on operates on each segment
-    segmentation = eemeter.segment_time_series(
-        preliminary_design_matrix.index, "three_month_weighted"
-    )
-
-    # assign an occupancy status to each hour of the week (0-167)
-    occupancy_lookup = eemeter.estimate_hour_of_week_occupancy(
-        preliminary_design_matrix, segmentation=segmentation, region=region
-    )
-
-    # assign temperatures to bins
-    (
-        occupied_temperature_bins,
-        unoccupied_temperature_bins,
-    ) = eemeter.fit_temperature_bins(
-        preliminary_design_matrix,
-        segmentation=segmentation,
-        occupancy_lookup=occupancy_lookup,
-    )
-
-    # build a design matrix for each monthly segment
-    segmented_design_matrices = eemeter.create_caltrack_hourly_segmented_design_matrices(
-        preliminary_design_matrix,
-        segmentation,
-        occupancy_lookup,
-        occupied_temperature_bins,
-        unoccupied_temperature_bins,
-    )
-
-    # build a CalTRACK hourly model
-    baseline_model = eemeter.fit_caltrack_hourly_model(
-        segmented_design_matrices,
-        occupancy_lookup,
-        occupied_temperature_bins,
-        unoccupied_temperature_bins,
-    )
-    # get a year of reporting period data
-    reporting_meter_data, warnings = eemeter.get_reporting_data(
-        meter_data, start=blackout_end_date, max_days=365
-    )
-
-    # compute metered savings for the year of the reporting period we've selected
-    metered_savings_dataframe, error_bands = eemeter.metered_savings(
-        baseline_model,
-        reporting_meter_data,
-        temperature_data,
-        with_disaggregated=True,
-        region=region,
-    )
-
-    return metered_savings_dataframe
-
-
-def eemeter_daily(
-    gas,
-    elec,
-    temperature_data,
-    blackout_start_date,
-    blackout_end_date,
-    region: str = "USA",
-):
-
-    meter_data = sum_gas_and_elec(gas, elec)
-
-    # get meter data suitable for fitting a baseline model
-    baseline_meter_data, warnings = eemeter.get_baseline_data(
-        meter_data,
-        start=blackout_start_date - relativedelta(years=1),
-        end=blackout_end_date,
-        max_days=None,
-    )
-
-    # create a design matrix (the input to the model fitting step)
-    baseline_design_matrix = eemeter.create_caltrack_daily_design_matrix(
-        baseline_meter_data, temperature_data, region=region
-    )
-
-    # build a CalTRACK model
-    baseline_model = eemeter.fit_caltrack_usage_per_day_model(baseline_design_matrix)
-
-    # get a year of reporting period data
-    reporting_meter_data, warnings = eemeter.get_reporting_data(
-        meter_data, start=blackout_end_date, max_days=365
-    )
-
-    # compute metered savings for the year of the reporting period we've selected
-    metered_savings_dataframe, error_bands = eemeter.metered_savings(
-        baseline_model,
-        reporting_meter_data,
-        temperature_data,
-        with_disaggregated=True,
-        region=region,
-    )
-
-    return metered_savings_dataframe

@@ -43,7 +43,7 @@ methods. See also :ref:`caltrack-hourly-quickstart`.
 
 .. autofunction:: eemeter.fit_caltrack_hourly_model
 
-.. autofunction:: eemeter.eemeter_hourly
+.. autofunction:: eemeter.caltrack_hourly
 
 .. _caltrack-billing-daily-api:
 
@@ -97,7 +97,7 @@ and Billing methods. See also :ref:`caltrack-billing-daily-quickstart`.
 
 .. autofunction:: eemeter.select_best_candidate
 
-.. autofunction:: eemeter.eemeter_daily
+.. autofunction:: eemeter.caltrack_daily
 
 Savings
 -------

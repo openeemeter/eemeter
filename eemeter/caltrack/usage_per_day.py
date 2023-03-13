@@ -24,13 +24,20 @@ import numpy as np
 import pandas as pd
 import pytz
 import statsmodels.formula.api as smf
+from dateutil.relativedelta import relativedelta
 
+from .design_matrices import create_caltrack_daily_design_matrix
 from ..exceptions import MissingModelParameterError, UnrecognizedModelTypeError
 from ..features import compute_temperature_features
 from ..metrics import ModelMetrics
-from ..transform import day_counts, overwrite_partial_rows_with_nan
+from ..transform import (
+    day_counts,
+    overwrite_partial_rows_with_nan,
+    get_baseline_data,
+    get_reporting_data,
+)
 from ..warnings import EEMeterWarning
-
+from ..derivatives import metered_savings
 
 __all__ = (
     "CalTRACKUsagePerDayCandidateModel",
@@ -53,6 +60,7 @@ __all__ = (
     "get_hdd_only_candidate_models",
     "get_cdd_hdd_candidate_models",
     "select_best_candidate",
+    "caltrack_daily",
 )
 
 
@@ -2306,3 +2314,43 @@ def plot_caltrack_candidate(
         ax.set_title(title)
 
     return ax
+
+def caltrack_daily(
+    meter_data,
+    temperature_data,
+    blackout_start_date,
+    blackout_end_date,
+    region: str = "USA",
+):
+
+    # get meter data suitable for fitting a baseline model
+    baseline_meter_data, warnings = get_baseline_data(
+        meter_data,
+        start=blackout_start_date - relativedelta(years=1),
+        end=blackout_end_date,
+        max_days=None,
+    )
+
+    # create a design matrix (the input to the model fitting step)
+    baseline_design_matrix = create_caltrack_daily_design_matrix(
+        baseline_meter_data, temperature_data, region=region
+    )
+
+    # build a CalTRACK model
+    baseline_model = fit_caltrack_usage_per_day_model(baseline_design_matrix)
+
+    # get a year of reporting period data
+    reporting_meter_data, warnings = get_reporting_data(
+        meter_data, start=blackout_end_date, max_days=365
+    )
+
+    # compute metered savings for the year of the reporting period we've selected
+    metered_savings_dataframe, error_bands = metered_savings(
+        baseline_model,
+        reporting_meter_data,
+        temperature_data,
+        with_disaggregated=True,
+        region=region,
+    )
+
+    return metered_savings_dataframe
