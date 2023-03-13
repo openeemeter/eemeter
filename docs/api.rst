@@ -228,9 +228,9 @@ These functions are used to various common data transformations based on pandas 
 
 .. autofunction:: eemeter.overwrite_partial_rows_with_nan
 
-.. autofunction:: eemeter.format_temperature_data_for_eemeter
+.. autofunction:: eemeter.format_temperature_data_for_caltrack
 
-.. autofunction:: eemeter.format_energy_data_for_eemeter
+.. autofunction:: eemeter.format_energy_data_for_caltrack
 
 .. autofunction:: eemeter.sum_gas_and_elec
 

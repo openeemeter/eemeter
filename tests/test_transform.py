@@ -38,6 +38,10 @@ from eemeter.transform import (
     NoBaselineDataError,
     NoReportingDataError,
     overwrite_partial_rows_with_nan,
+    add_freq,
+    trim,
+    format_energy_data_for_caltrack,
+    format_temperature_data_for_caltrack,
 )
 
 
@@ -899,3 +903,144 @@ def test_overwrite_partial_rows_with_nan(il_electricity_cdd_hdd_billing_monthly)
     meter_data["other_column"][:3] = np.nan
     meter_data_nanned = overwrite_partial_rows_with_nan(meter_data)
     assert pd.isnull(meter_data_nanned["value"][:3]).all()
+
+import pandas as pd
+
+
+def test_add_freq(il_electricity_cdd_hdd_hourly):
+    meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
+
+    # make DateTimeIndex timezone-naive
+    meter_data.index = meter_data.index.tz_localize(None)
+
+    # infer frequency
+    meter_data.index = add_freq(meter_data.index)
+    assert meter_data.index.freq == "H"
+
+
+def test_trim_two_dataframes(
+    uk_electricity_hdd_only_hourly_sample_1, uk_electricity_hdd_only_hourly_sample_2
+):
+
+    df1 = uk_electricity_hdd_only_hourly_sample_1["meter_data"]
+    df2 = uk_electricity_hdd_only_hourly_sample_2["meter_data"]
+
+    df1_trimmed, df2_trimmed = trim(df1, df2)
+
+    assert (
+        df1.index[0] == df1.index.min()
+        and df2.index[0] == df2.index.min()
+        and df1.index[0] != df2.index[0]
+    )
+
+    assert (
+        df1.index[-1] == df1.index.max()
+        and df2.index[-1] == df2.index.max()
+        and df1.index[-1] != df2.index[-1]
+    )
+
+    assert df1_trimmed.index[0] == df2_trimmed.index[0]
+    assert df1_trimmed.index.min() == df2_trimmed.index.min()
+    assert df1_trimmed.index[-1] == df2_trimmed.index[-1]
+    assert df1_trimmed.index.max() == df2_trimmed.index.max()
+
+def test_format_temperature_data_for_caltrack(il_electricity_cdd_hdd_hourly):
+    temperature_data = il_electricity_cdd_hdd_hourly["temperature_data"]
+
+    # temperature_data to pd.DateFrame
+    temperature_data = pd.DataFrame(temperature_data)
+
+    # flipping df
+    temperature_data = temperature_data.reindex(index=temperature_data.index[::-1])
+
+    # inserting new value of 0.04 at 09.34 22/11/2015
+    new_start = pd.to_datetime("22/11/2015 09:34").tz_localize("UTC")
+    temperature_data.loc[new_start] = [0.04]
+
+    # rename column name to 'consumption'
+    temperature_data.rename(columns={"value": "consumption"}, inplace=True)
+
+    temperature_data_reformatted = format_temperature_data_for_caltrack(temperature_data)
+
+    assert isinstance(temperature_data_reformatted, pd.Series)
+    assert (
+        temperature_data_reformatted.index[0] < temperature_data_reformatted.index[-1]
+    )
+    assert temperature_data_reformatted.index.freq == "H"
+    assert temperature_data_reformatted.index.tzinfo is not None
+
+
+def test_format_energy_data_for_caltrack_hourly(il_electricity_cdd_hdd_hourly):
+    df = il_electricity_cdd_hdd_hourly["meter_data"]
+    # flipping df
+    df = df.reindex(index=df.index[::-1])
+
+    # inserting new value of 0.04 at 09.34 22/11/2015
+    new_start = pd.to_datetime("22/11/2015 09:34").tz_localize("UTC")
+    df.loc[new_start] = [0.04]
+
+    # rename column name to 'consumption'
+    df.rename(columns={"value": "consumption"}, inplace=True)
+
+    # df_flipped to pd.Series
+    df = df.squeeze()
+
+    df_reformatted = format_energy_data_for_caltrack(df, method="hourly")
+
+    assert isinstance(df_reformatted, pd.DataFrame)
+    assert df_reformatted.index[0] < df_reformatted.index[-1]
+    assert df_reformatted.index.freq == "H"
+    assert df_reformatted.columns[0] == "value"
+    assert df_reformatted.index.tzinfo is not None
+    assert len(df_reformatted.columns) == 1
+
+
+def test_format_energy_data_for_caltrack_daily(il_electricity_cdd_hdd_daily):
+    df = il_electricity_cdd_hdd_daily["meter_data"]
+    # flipping df
+    df = df.reindex(index=df.index[::-1])
+
+    # inserting new value of 0.04 at 09.34 22/11/2015
+    new_start = pd.to_datetime("22/11/2015 09:34").tz_localize("UTC")
+    df.loc[new_start] = [0.04]
+
+    # rename column name to 'consumption'
+    df.rename(columns={"value": "consumption"}, inplace=True)
+
+    # df_flipped to pd.Series
+    df = df.squeeze()
+
+    df_reformatted = format_energy_data_for_caltrack(df, method="daily")
+
+    assert isinstance(df_reformatted, pd.DataFrame)
+    assert df_reformatted.index[0] < df_reformatted.index[-1]
+    assert df_reformatted.index.freq == "D"
+    assert df_reformatted.columns[0] == "value"
+    assert df_reformatted.index.tzinfo is not None
+    assert len(df_reformatted.columns) == 1
+
+
+def test_format_energy_data_for_caltrack_billing(il_electricity_cdd_hdd_daily):
+    df = il_electricity_cdd_hdd_daily["meter_data"]
+    # flipping df
+    df = df.reindex(index=df.index[::-1])
+
+    # inserting new value of 0.04 at 09.34 22/11/2015
+    new_start = pd.to_datetime("22/11/2015 09:34").tz_localize("UTC")
+    df.loc[new_start] = [0.04]
+
+    # rename column name to 'consumption'
+    df.rename(columns={"value": "consumption"}, inplace=True)
+
+    # df_flipped to pd.Series
+    df = df.squeeze()
+
+    df_reformatted = format_energy_data_for_caltrack(df, method="billing")
+
+    assert isinstance(df_reformatted, pd.DataFrame)
+    assert df_reformatted.index[0] < df_reformatted.index[-1]
+    assert df_reformatted.index.freq == "M"
+    assert df_reformatted.columns[0] == "value"
+    assert df_reformatted.index.tzinfo is not None
+    assert len(df_reformatted.columns) == 1
+
