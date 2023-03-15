@@ -24,20 +24,16 @@ import numpy as np
 import pandas as pd
 import pytz
 import statsmodels.formula.api as smf
-from dateutil.relativedelta import relativedelta
 
-from .design_matrices import create_caltrack_daily_design_matrix
 from ..exceptions import MissingModelParameterError, UnrecognizedModelTypeError
 from ..features import compute_temperature_features
 from ..metrics import ModelMetrics
 from ..transform import (
     day_counts,
     overwrite_partial_rows_with_nan,
-    get_baseline_data,
-    get_reporting_data,
 )
 from ..warnings import EEMeterWarning
-from ..derivatives import metered_savings
+
 
 __all__ = (
     "CalTRACKUsagePerDayCandidateModel",
@@ -60,7 +56,6 @@ __all__ = (
     "get_hdd_only_candidate_models",
     "get_cdd_hdd_candidate_models",
     "select_best_candidate",
-    "caltrack_daily",
 )
 
 
@@ -2315,78 +2310,3 @@ def plot_caltrack_candidate(
 
     return ax
 
-def caltrack_daily(
-    meter_data,
-    temperature_data,
-    blackout_start_date,
-    blackout_end_date,
-    region: str = "USA",
-):
-
-    """An output function which takes meter data, external temperature data, blackout start and end dates, and
-       returns a metered savings dataframe for the period between the blackout end date and today.
-
-       Parameters
-       ----------
-       meter_data : :any:`pandas.DataFrame`
-           Daily series meter data, unit kWh.
-       temperature_data : :any:``
-           Hourly external temperature data. If DataFrame, not pd.Series (as required by CalTRACK) function will convert.
-       blackout_start_date : :any: 'datetime.datetime'
-           The date at which improvement works commenced.
-       blackout_end_date : :any: 'datetime.datetime'
-           The date by which improvement works completed and metering resumed.
-       region : :any 'str'
-           The relevant region of the world. See eemeter/region_info.csv for options.
-           Defaults to 'USA' unless otherwise specified for alignment with eeweather
-           conventions.
-
-       Returns
-       -------
-       metered_savings_dataframe: :any:`pandas.DataFrame`
-       DataFrame with metered savings, indexed with
-       ``reporting_meter_data.index``. Will include the following columns:
-
-        - ``counterfactual_usage`` (baseline model projected into reporting period)
-        - ``reporting_observed`` (given by reporting_meter_data)
-        - ``metered_savings``
-
-        If `with_disaggregated` is set to True, the following columns will also
-        be in the results DataFrame:
-
-        - ``counterfactual_base_load``
-        - ``counterfactual_heating_load``
-        - ``counterfactual_cooling_load``
-       """
-
-    # get meter data suitable for fitting a baseline model
-    baseline_meter_data, warnings = get_baseline_data(
-        meter_data,
-        start=blackout_start_date - relativedelta(years=1),
-        end=blackout_end_date,
-        max_days=None,
-    )
-
-    # create a design matrix (the input to the model fitting step)
-    baseline_design_matrix = create_caltrack_daily_design_matrix(
-        baseline_meter_data, temperature_data, region=region
-    )
-
-    # build a CalTRACK model
-    baseline_model = fit_caltrack_usage_per_day_model(baseline_design_matrix)
-
-    # get a year of reporting period data
-    reporting_meter_data, warnings = get_reporting_data(
-        meter_data, start=blackout_end_date, max_days=365
-    )
-
-    # compute metered savings for the year of the reporting period we've selected
-    metered_savings_dataframe, error_bands = metered_savings(
-        baseline_model,
-        reporting_meter_data,
-        temperature_data,
-        with_disaggregated=True,
-        region=region,
-    )
-
-    return metered_savings_dataframe

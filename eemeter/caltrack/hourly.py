@@ -19,30 +19,21 @@
 """
 import pandas as pd
 import statsmodels.formula.api as smf
-from dateutil.relativedelta import relativedelta
 
-from .design_matrices import (
-    create_caltrack_hourly_preliminary_design_matrix,
-    create_caltrack_hourly_segmented_design_matrices,
-)
 from ..features import (
     compute_time_features,
     compute_temperature_bin_features,
     compute_occupancy_feature,
     merge_features,
-    estimate_hour_of_week_occupancy,
-    fit_temperature_bins,
+
 )
 from ..metrics import ModelMetrics
 from ..segmentation import (
     CalTRACKSegmentModel,
     SegmentedModel,
     fit_model_segments,
-    segment_time_series,
 )
 from ..warnings import EEMeterWarning
-from ..transform import get_baseline_data, get_reporting_data
-from ..derivatives import metered_savings
 
 
 __all__ = (
@@ -52,7 +43,6 @@ __all__ = (
     "caltrack_hourly_prediction_feature_processor",
     "fit_caltrack_hourly_model_segment",
     "fit_caltrack_hourly_model",
-    "caltrack_hourly",
 )
 
 
@@ -609,109 +599,4 @@ def fit_caltrack_hourly_model(
     }
     return model_results
 
-def caltrack_hourly(
-    meter_data,
-    temperature_data,
-    blackout_start_date,
-    blackout_end_date,
-    region: str = "USA",
-):
-    """An output function which takes meter data, external temperature data, blackout start and end dates, and
-    returns a metered savings dataframe for the period between the blackout end date and today.
 
-    Parameters
-    ----------
-    meter_data : :any:`pandas.DataFrame`
-        Hourly series meter data, unit kWh.
-    temperature_data : :any:``
-        Hourly external temperature data. If DataFrame, not pd.Series (as required by CalTRACK) function will convert.
-    blackout_start_date : :any: 'datetime.datetime'
-        The date at which improvement works commenced.
-    blackout_end_date : :any: 'datetime.datetime'
-        The date by which improvement works completed and metering resumed.
-    region : :any 'str'
-        The relevant region of the world. See eemeter/region_info.csv for options.
-        Defaults to 'USA' unless otherwise specified for alignment with eeweather
-        conventions.
-
-    Returns
-    -------
-    metered_savings_dataframe: :any:`pandas.DataFrame`
-    DataFrame with metered savings, indexed with
-    ``reporting_meter_data.index``. Will include the following columns:
-
-     - ``counterfactual_usage`` (baseline model projected into reporting period)
-     - ``reporting_observed`` (given by reporting_meter_data)
-     - ``metered_savings``
-
-     If `with_disaggregated` is set to True, the following columns will also
-     be in the results DataFrame:
-
-     - ``counterfactual_base_load``
-     - ``counterfactual_heating_load``
-     - ``counterfactual_cooling_load``
-    """
-
-    baseline_meter_data, baseline_warnings = get_baseline_data(
-        meter_data,
-        start=blackout_start_date - relativedelta(years=1),
-        end=blackout_end_date,
-        max_days=None,
-    )
-
-    # create a design matrix for occupancy and segmentation
-    preliminary_design_matrix = create_caltrack_hourly_preliminary_design_matrix(
-        baseline_meter_data, temperature_data, region
-    )
-
-    # build 12 monthly models - each step from now on operates on each segment
-    segmentation = segment_time_series(
-        preliminary_design_matrix.index, "three_month_weighted"
-    )
-
-    # assign an occupancy status to each hour of the week (0-167)
-    occupancy_lookup = estimate_hour_of_week_occupancy(
-        preliminary_design_matrix, segmentation=segmentation, region=region
-    )
-
-    # assign temperatures to bins
-    (
-        occupied_temperature_bins,
-        unoccupied_temperature_bins,
-    ) = fit_temperature_bins(
-        preliminary_design_matrix,
-        segmentation=segmentation,
-        occupancy_lookup=occupancy_lookup,
-    )
-
-    # build a design matrix for each monthly segment
-    segmented_design_matrices = create_caltrack_hourly_segmented_design_matrices(
-        preliminary_design_matrix,
-        segmentation,
-        occupancy_lookup,
-        occupied_temperature_bins,
-        unoccupied_temperature_bins,
-    )
-
-    # build a CalTRACK hourly model
-    baseline_model = fit_caltrack_hourly_model(
-        segmented_design_matrices,
-        occupancy_lookup,
-        occupied_temperature_bins,
-        unoccupied_temperature_bins,
-    )
-    # get a year of reporting period data
-    reporting_meter_data, warnings = get_reporting_data(
-        meter_data, start=blackout_end_date, max_days=365
-    )
-
-    # compute metered savings for the year of the reporting period we've selected
-    metered_savings_dataframe, error_bands = metered_savings(
-        baseline_model,
-        reporting_meter_data,
-        temperature_data,
-        with_disaggregated=True,
-        region=region,
-    )
-
-    return metered_savings_dataframe
