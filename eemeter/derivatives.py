@@ -160,7 +160,7 @@ def metered_savings(
     with_disaggregated=False,
     confidence_level=0.90,
     predict_kwargs=None,
-    region="USA",
+    region: str = "USA",
 ):
     """Compute metered savings, i.e., savings in which the baseline model
     is used to calculate the modeled usage in the reporting period. This
