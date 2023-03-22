@@ -39,7 +39,7 @@ __all__ = (
 
 
 def create_caltrack_hourly_preliminary_design_matrix(
-    meter_data, temperature_data, region: str = "USA"
+    meter_data, temperature_data, degC: bool = False
 ):
     """A helper function which calls basic feature creation methods to create an
     input suitable for use in the first step of creating a CalTRACK hourly model.
@@ -50,35 +50,28 @@ def create_caltrack_hourly_preliminary_design_matrix(
         Hourly meter data in eemeter format.
     temperature_data : :any:`pandas.Series`
         Hourly temperature data in eemeter format.
-    region : :any 'str'
-        The relevant region of the world. See eemeter/region_info.csv for options. Defaults to 'USA' unless otherwise
-        specified for alignment with eeweather conventions.
+    degC : :any 'bool'
+        Relevant temperature units; defaults to False (i.e. Fahrenheit).
 
     Returns
     -------
     design_matrix : :any:`pandas.DataFrame`
         A design matrix with meter_value, hour_of_week, hdd_(hbp_default), and cdd_(cbp_default) features.
     """
-    temperature_filename = resource_filename("eemeter.samples", "region_info.csv")
-    region_info = pd.read_csv(temperature_filename, index_col=0)
-    cbp_default = int(region_info.loc["cbp", region])
-    hbp_default = int(region_info.loc["hbp", region])
 
-    if region != "USA":
+    if degC == True:
         temperature_data = 32 + (temperature_data * 1.8)
 
     time_features = compute_time_features(
         meter_data.index, hour_of_week=True, hour_of_day=False, day_of_week=False
     )
-
     temperature_features = compute_temperature_features(
         meter_data.index,
         temperature_data,
-        heating_balance_points=[hbp_default],
-        cooling_balance_points=[cbp_default],
+        heating_balance_points=[50],
+        cooling_balance_points=[65], #note both HBP this will require further work in future iterations of eemeter - CBP in particular assumes all buildings have cooling, which is a strong assumption.
         degree_day_method="hourly",
     )
-
     design_matrix = merge_features(
         [meter_data.value.to_frame("meter_value"), temperature_features, time_features]
     )
@@ -86,7 +79,7 @@ def create_caltrack_hourly_preliminary_design_matrix(
 
 
 def create_caltrack_billing_design_matrix(
-    meter_data, temperature_data, region: str = "USA"
+    meter_data, temperature_data, degC: bool = False
 ):
     """A helper function which calls basic feature creation methods to create a
     design matrix suitable for use with CalTRACK Billing methods.
@@ -94,12 +87,11 @@ def create_caltrack_billing_design_matrix(
     Parameters
     ----------
     meter_data : :any:`pandas.DataFrame`
-        Hourly meter data in eemeter format.
+        Monthly meter data in eemeter format.
     temperature_data : :any:`pandas.Series`
         Hourly temperature data in eemeter format.
-    region : :any 'str'
-        The relevant region of the world. See eemeter/region_info.csv for options. Defaults to 'USA' unless otherwise
-        specified for alignment with eeweather conventions.
+    degC : :any 'bool'
+        Relevant temperature units; defaults to Fahrenheit.
 
     Returns
     -------
@@ -108,7 +100,7 @@ def create_caltrack_billing_design_matrix(
         features.
     """
     usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
-    if region != "USA":
+    if degC == True:
         temperature_data = 32 + (temperature_data * 1.8)
 
     temperature_features = compute_temperature_features(
@@ -126,7 +118,7 @@ def create_caltrack_billing_design_matrix(
 
 
 def create_caltrack_daily_design_matrix(
-    meter_data, temperature_data, region: str = "USA"
+    meter_data, temperature_data, degC: bool = False
 ):
     """A helper function which calls basic feature creation methods to create a
     design matrix suitable for use with CalTRACK daily methods.
@@ -134,12 +126,11 @@ def create_caltrack_daily_design_matrix(
     Parameters
     ----------
     meter_data : :any:`pandas.DataFrame`
-        Hourly meter data in eemeter format.
+        Daily meter data in eemeter format.
     temperature_data : :any:`pandas.Series`
         Hourly temperature data in eemeter format.
-    region : :any 'str'
-        The relevant region of the world. See eemeter/region_info.csv for options. Defaults to 'USA' unless otherwise
-        specified for alignment with eeweather conventions.
+     degC : :any 'bool'
+        Relevant temperature units; defaults to Fahrenheit.
 
     Returns
     -------
@@ -148,7 +139,7 @@ def create_caltrack_daily_design_matrix(
         features.
     """
     usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
-    if region != "USA":
+    if degC == True:
         temperature_data = 32 + (temperature_data * 1.8)
 
     temperature_features = compute_temperature_features(

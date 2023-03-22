@@ -549,18 +549,13 @@ def compute_temperature_features(
     return df
 
 
-def _estimate_hour_of_week_occupancy(model_data, threshold, region: str = "USA"):
-    temperature_filename = resource_filename("eemeter.samples", "region_info.csv")
-    region_info = pd.read_csv(temperature_filename, index_col=0)
-    cbp_default = int(region_info.loc["cbp", region])
-    hbp_default = int(region_info.loc["hbp", region])
-
+def _estimate_hour_of_week_occupancy(model_data, threshold):
     index = pd.CategoricalIndex(range(168))
     if model_data.dropna().empty:
         return pd.Series(np.nan, index=index, name="occupancy")
 
     usage_model = smf.wls(
-        formula="meter_value ~ cdd_" + str(cbp_default) + "+ hdd_" + str(hbp_default),
+        formula="meter_value ~ cdd_65 + hdd_50",
         data=model_data,
         weights=model_data.weight,
     )
@@ -587,9 +582,8 @@ def _estimate_hour_of_week_occupancy(model_data, threshold, region: str = "USA")
         .astype(bool)
     )  # guarantee an index value for all hours
 
-
 def estimate_hour_of_week_occupancy(
-    data, segmentation=None, threshold=0.65, region: str = "USA"
+    data, segmentation=None, threshold=0.65
 ):
     """Estimate occupancy features for each segment.
 
@@ -609,10 +603,6 @@ def estimate_hour_of_week_occupancy(
         Said another way, in the default case, if more than 35% of values are greater
         than the basic degree day model for any particular hour of the week, that hour
         of week is marked as being occupied.
-    region : :any 'str'
-        The relevant region of the world. See eemeter/region_info.csv for options.
-        Defaults to 'USA' unless otherwise specified for alignment with eeweather
-        conventions.
 
     Returns
     -------
@@ -627,7 +617,7 @@ def estimate_hour_of_week_occupancy(
     segmented_datasets = iterate_segmented_dataset(data, segmentation)
     for segment_name, segmented_data in segmented_datasets:
         hour_of_week_occupancy = _estimate_hour_of_week_occupancy(
-            segmented_data, threshold, region
+            segmented_data, threshold
         )
         column = "occupancy" if segment_name is None else segment_name
         occupancy_lookups[column] = hour_of_week_occupancy
