@@ -1,11 +1,10 @@
-FROM python:3.6.6
+FROM python:3.10
 
-RUN set -ex && pip install 'pipenv==2021.5.29' --upgrade pip #NOTE pipenv specifier is just what worked for me.
+RUN set -ex && pip install pip pipenv --upgrade
 
 # sphinxcontrib-spelling dependency
-#RUN apt-get update \
-#  && apt-get install -yqq libenchant-dev
-#^^NOTE removing lines 6-7 required for functionality Feb 23.
+RUN apt-get update \
+  && apt-get install -yqq libenchant-2-dev
 
 COPY Pipfile Pipfile
 COPY Pipfile.lock Pipfile.lock
