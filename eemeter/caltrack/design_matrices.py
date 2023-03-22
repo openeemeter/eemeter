@@ -39,7 +39,7 @@ __all__ = (
 
 
 def create_caltrack_hourly_preliminary_design_matrix(
-    meter_data, temperature_data, degC: bool = False
+    meter_data, temperature_data, degc: bool = False
 ):
     """A helper function which calls basic feature creation methods to create an
     input suitable for use in the first step of creating a CalTRACK hourly model.
@@ -50,7 +50,7 @@ def create_caltrack_hourly_preliminary_design_matrix(
         Hourly meter data in eemeter format.
     temperature_data : :any:`pandas.Series`
         Hourly temperature data in eemeter format.
-    degC : :any 'bool'
+    degc : :any 'bool'
         Relevant temperature units; defaults to False (i.e. Fahrenheit).
 
     Returns
@@ -59,7 +59,7 @@ def create_caltrack_hourly_preliminary_design_matrix(
         A design matrix with meter_value, hour_of_week, hdd_(hbp_default), and cdd_(cbp_default) features.
     """
 
-    if degC == True:
+    if degc == True:
         temperature_data = 32 + (temperature_data * 1.8)
 
     time_features = compute_time_features(
@@ -79,7 +79,7 @@ def create_caltrack_hourly_preliminary_design_matrix(
 
 
 def create_caltrack_billing_design_matrix(
-    meter_data, temperature_data, degC: bool = False
+    meter_data, temperature_data, degc: bool = False
 ):
     """A helper function which calls basic feature creation methods to create a
     design matrix suitable for use with CalTRACK Billing methods.
@@ -90,7 +90,7 @@ def create_caltrack_billing_design_matrix(
         Monthly meter data in eemeter format.
     temperature_data : :any:`pandas.Series`
         Hourly temperature data in eemeter format.
-    degC : :any 'bool'
+    degc : :any 'bool'
         Relevant temperature units; defaults to Fahrenheit.
 
     Returns
@@ -100,7 +100,7 @@ def create_caltrack_billing_design_matrix(
         features.
     """
     usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
-    if degC == True:
+    if degc == True:
         temperature_data = 32 + (temperature_data * 1.8)
 
     temperature_features = compute_temperature_features(
@@ -118,7 +118,7 @@ def create_caltrack_billing_design_matrix(
 
 
 def create_caltrack_daily_design_matrix(
-    meter_data, temperature_data, degC: bool = False
+    meter_data, temperature_data, degc: bool = False
 ):
     """A helper function which calls basic feature creation methods to create a
     design matrix suitable for use with CalTRACK daily methods.
@@ -129,7 +129,7 @@ def create_caltrack_daily_design_matrix(
         Daily meter data in eemeter format.
     temperature_data : :any:`pandas.Series`
         Hourly temperature data in eemeter format.
-     degC : :any 'bool'
+     degc : :any 'bool'
         Relevant temperature units; defaults to Fahrenheit.
 
     Returns
@@ -139,7 +139,7 @@ def create_caltrack_daily_design_matrix(
         features.
     """
     usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
-    if degC == True:
+    if degc == True:
         temperature_data = 32 + (temperature_data * 1.8)
 
     temperature_features = compute_temperature_features(

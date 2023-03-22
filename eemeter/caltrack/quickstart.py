@@ -42,7 +42,7 @@ def caltrack_hourly(
     temperature_data,
     blackout_start_date,
     blackout_end_date,
-    region: str = "USA",
+    degc: bool = False,
 ):
     """An output function which takes meter data, external temperature data, blackout start and end dates, and
     returns a metered savings dataframe for the period between the blackout end date and today.
@@ -57,10 +57,8 @@ def caltrack_hourly(
         The date at which improvement works commenced.
     blackout_end_date : :any: 'datetime.datetime'
         The date by which improvement works completed and metering resumed.
-    region : :any 'str'
-        The relevant region of the world. See eemeter/region_info.csv for options.
-        Defaults to 'USA' unless otherwise specified for alignment with eeweather
-        conventions.
+    degc : :any 'bool'
+        Relevant temperature units; defaults to False (i.e. Fahrenheit).
 
     Returns
     -------
@@ -89,7 +87,7 @@ def caltrack_hourly(
 
     # create a design matrix for occupancy and segmentation
     preliminary_design_matrix = create_caltrack_hourly_preliminary_design_matrix(
-        baseline_meter_data, temperature_data, region
+        baseline_meter_data, temperature_data, degc
     )
 
     # build 12 monthly models - each step from now on operates on each segment
@@ -99,7 +97,7 @@ def caltrack_hourly(
 
     # assign an occupancy status to each hour of the week (0-167)
     occupancy_lookup = estimate_hour_of_week_occupancy(
-        preliminary_design_matrix, segmentation=segmentation, region=region
+        preliminary_design_matrix, segmentation=segmentation
     )
 
     # assign temperatures to bins
@@ -139,7 +137,7 @@ def caltrack_hourly(
         reporting_meter_data,
         temperature_data,
         with_disaggregated=True,
-        region=region,
+        degc=degc,
     )
 
     return metered_savings_dataframe
@@ -149,7 +147,7 @@ def caltrack_daily(
     temperature_data,
     blackout_start_date,
     blackout_end_date,
-    region: str = "USA",
+    degc: bool = False,
 ):
 
     """An output function which takes meter data, external temperature data, blackout start and end dates, and
@@ -165,10 +163,8 @@ def caltrack_daily(
            The date at which improvement works commenced.
        blackout_end_date : :any: 'datetime.datetime'
            The date by which improvement works completed and metering resumed.
-       region : :any 'str'
-           The relevant region of the world. See eemeter/region_info.csv for options.
-           Defaults to 'USA' unless otherwise specified for alignment with eeweather
-           conventions.
+       degc : :any 'bool'
+           Relevant temperature units; defaults to False (i.e. Fahrenheit).
 
        Returns
        -------
@@ -198,7 +194,7 @@ def caltrack_daily(
 
     # create a design matrix (the input to the model fitting step)
     baseline_design_matrix = create_caltrack_daily_design_matrix(
-        baseline_meter_data, temperature_data, region=region
+        baseline_meter_data, temperature_data, degc
     )
 
     # build a CalTRACK model
@@ -215,7 +211,7 @@ def caltrack_daily(
         reporting_meter_data,
         temperature_data,
         with_disaggregated=True,
-        region=region,
+        degc=degc,
     )
 
     return metered_savings_dataframe
