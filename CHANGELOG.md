@@ -10,8 +10,8 @@ Development
 -----
 
 * Addition of modules and amendments in support of international facility for EEMeter, including principally:
-* Addition of processing.py; updating setup.py and __init__/py accordingly.
-* Amendments to design_matrices; features; and derivatives.
+* Addition of quickstart.py; updating setup.py and __init__/py accordingly.
+* Inclusion of temperature conversion amendments to design_matrices; features; and derivatives.
 * Addition of new tests and samples.
 * Amendments to tutorial.ipynb.
 * Addition of eemeter international.ipynb.
