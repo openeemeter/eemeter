@@ -81,7 +81,7 @@ def caltrack_hourly(
     baseline_meter_data, baseline_warnings = get_baseline_data(
         meter_data,
         start=blackout_start_date - relativedelta(years=1),
-        end=blackout_end_date,
+        end=blackout_start_date,
         max_days=None,
     )
 
@@ -188,7 +188,7 @@ def caltrack_daily(
     baseline_meter_data, warnings = get_baseline_data(
         meter_data,
         start=blackout_start_date - relativedelta(years=1),
-        end=blackout_end_date,
+        end=blackout_start_date,
         max_days=None,
     )
 
