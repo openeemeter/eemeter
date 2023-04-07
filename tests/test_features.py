@@ -787,7 +787,7 @@ def test_compute_temperature_features_with_duplicated_index(
 
     # these are specifically formed to give a less readable error if
     # duplicates are not caught
-    meter_data = meter_data.append(meter_data).sort_index()
+    meter_data = pd.concat([meter_data, meter_data]).sort_index()
     temperature_data = temperature_data.iloc[8000:]
 
     with pytest.raises(ValueError) as excinfo:
@@ -1186,7 +1186,7 @@ def test_compute_occupancy_feature_with_nans(even_occupancy):
 @pytest.fixture
 def occupancy_precursor_only_nan(il_electricity_cdd_hdd_hourly):
     meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
-    meter_data = meter_data[datetime(2017, 1, 4) : datetime(2017, 6, 1)]
+    meter_data = meter_data["2017-01-04":"2017-06-01"]
     meter_data.iloc[-1] = np.nan
     # Simulates a segment where there is only a single nan value
     temperature_data = il_electricity_cdd_hdd_hourly["temperature_data"]
