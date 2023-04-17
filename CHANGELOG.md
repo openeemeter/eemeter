@@ -9,7 +9,7 @@ Development
 * Remove pinned dependencies in Pipfile.
 * Relock Pipfile (and do so inside of the docker image).
 * Update pytests to account for changes in newer pandas where categorical variables are no longer included in `df.sum().sum()`.
-
+* Clarify the functioning of start, end and max_days parameters to `get_reporting_data()` and `get_baseline_data()`.
 
 
 3.1.1
