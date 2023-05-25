@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Change items() to iteritems() in accordance with pandas>=2.0.0
+* Change .iteritems() to .items() in accordance with pandas>=2.0.0
 * .get_loc(x, method=...) to .get_indexer([x],method=...)[0] in accordance with pandas>=2.0.0
 * Updated mean() to mean(numeric_only=True) in accordance to pandas>=2.0.0
 * Updated tests to work with pandas>=2.0.0
