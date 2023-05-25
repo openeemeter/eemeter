@@ -314,7 +314,7 @@ def iterate_segmented_dataset(
         segment_data = _apply_feature_processor(segment_name, segment_data)
         yield segment_name, segment_data
     else:
-        for segment_name, segment_weights in segmentation.iteritems():
+        for segment_name, segment_weights in segmentation.items():
             weights = segment_weights.to_frame("weight")
             segment_data = _add_weights(data, weights)
             segment_data = _apply_feature_processor(segment_name, segment_data)

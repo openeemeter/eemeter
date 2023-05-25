@@ -741,7 +741,7 @@ def fit_temperature_bins(
         unoccupied_segmented_bins = {}
         segmented_datasets = iterate_segmented_dataset(data, segmentation)
         for segment_name, segmented_data in segmented_datasets:
-            hourly_segmented_data = segmented_data.resample("H").mean()
+            hourly_segmented_data = segmented_data.resample("H").mean(numeric_only=True)
             time_features = compute_time_features(
                 hourly_segmented_data.index,
                 hour_of_week=True,

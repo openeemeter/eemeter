@@ -322,7 +322,9 @@ def get_baseline_data(
         # adjust start limit to get a selection closest to max_days
         # also consider ffill for get_loc method - always picks previous
         try:
-            loc = data_before_end_limit.index.get_loc(start_target, method="nearest")
+            loc = data_before_end_limit.index.get_indexer(
+                [start_target], method="nearest"
+            )[0]
         except (KeyError, IndexError):  # pragma: no cover
             baseline_data = data_before_end_limit
             start_limit = start_target
@@ -474,7 +476,9 @@ def get_reporting_data(
         # adjust start limit to get a selection closest to max_days
         # also consider bfill for get_loc method - always picks next
         try:
-            loc = data_after_start_limit.index.get_loc(end_target, method="nearest")
+            loc = data_after_start_limit.index.get_indexer(
+                [end_target], method="nearest"
+            )[0]
         except (KeyError, IndexError):  # pragma: no cover
             reporting_data = data_after_start_limit
             end_limit = end_target
@@ -640,7 +644,7 @@ def get_terms(index, term_lengths, term_labels=None, start=None, method="strict"
         if len(remaining_index) <= 1:
             break
 
-        next_index = remaining_index.get_loc(end_target, method=get_loc_method)
+        next_index = remaining_index.get_indexer([end_target], method=get_loc_method)[0]
 
         # keep one extra index point for the end NaN - this could be confusing, but
         # helps identify the full range of the last data point

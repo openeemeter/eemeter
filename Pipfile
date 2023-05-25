@@ -1,21 +1,16 @@
 [[source]]
-
 url = "https://pypi.python.org/simple"
 verify_ssl = true
 name = "pypi"
 
-
 [packages]
-
 click = "*"
 matplotlib = "*"
 statsmodels = "*"
 scipy = "*"
-pandas = "*"
-
+pandas = ">=1.0.0"
 
 [dev-packages]
-
 sqlalchemy = "*"
 eeweather = ">=0.3.12"
 black = "*"
