@@ -1443,7 +1443,9 @@ def test_select_best_candidate_ok(
     assert best_candidate.r_squared_adj == 1
 
 
-def test_select_best_candidate_none(candidate_model_disqualified,):
+def test_select_best_candidate_none(
+    candidate_model_disqualified,
+):
     candidates = [candidate_model_disqualified]
 
     best_candidate, warnings = select_best_candidate(candidates)

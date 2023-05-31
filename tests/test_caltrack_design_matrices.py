@@ -47,6 +47,8 @@ def test_create_caltrack_hourly_preliminary_design_matrix(
         "n_hours_kept",
         "temperature_mean",
     ]
+    # In newer pandas, categorical columns (like hour_of_week) arent included in sum
+    design_matrix.hour_of_week = design_matrix.hour_of_week.astype(float)
     assert round(design_matrix.sum().sum(), 2) == 136352.61
 
 
@@ -386,6 +388,7 @@ def test_create_caltrack_hourly_segmented_design_matrices(
         "meter_value",
         "weight",
     ]
+    design_matrix.hour_of_week = design_matrix.hour_of_week.astype(float)
     assert round(design_matrix.sum().sum(), 2) == 126210.07
 
     design_matrix = design_matrices["mar-apr-may-weighted"]
@@ -397,6 +400,7 @@ def test_create_caltrack_hourly_segmented_design_matrices(
         "meter_value",
         "weight",
     ]
+    design_matrix.hour_of_week = design_matrix.hour_of_week.astype(float)
     assert round(design_matrix.sum().sum(), 2) == 167659.28
 
 

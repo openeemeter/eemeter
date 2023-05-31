@@ -384,12 +384,10 @@ class ModelMetrics(object):
             or self.degrees_of_freedom < 1
             or self.observed_length < self.num_parameters
         ):
-
             self.cvrmse_auto_corr_correction = None
             self.approx_factor_auto_corr_correction = None
             self.fsu_base_term = None
         else:
-
             # factor to correct cvrmse_adj for autocorrelation of inputs
             # i.e., divide by (n' - n_param) instead of by (n - n_param)
             self.cvrmse_auto_corr_correction = (

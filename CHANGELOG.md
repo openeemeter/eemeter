@@ -4,7 +4,17 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Change .iteritems() to .items() in accordance with pandas>=2.0.0
+* .get_loc(x, method=...) to .get_indexer([x],method=...)[0] in accordance with pandas>=2.0.0
+* Updated mean() to mean(numeric_only=True) in accordance to pandas>=2.0.0
+* Updated tests to work with pandas>=2.0.0
+* Update python version in Dockerfile.
+* Update other dependencies (including adding rust) in Dockerfile.
+* Remove pinned dependencies in Pipfile.
+* Relock Pipfile (and do so inside of the docker image).
+* Update pytests to account for changes in newer pandas where categorical variables are no longer included in `df.sum().sum()`.
+* Clarify the functioning of start, end and max_days parameters to `get_reporting_data()` and `get_baseline_data()`.
+
 
 * 3.1.2
 -----
