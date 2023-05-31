@@ -234,7 +234,6 @@ def _degree_day_columns(
         def _compute_columns(temps):
             count = temps.shape[0]
             if count > 24:
-
                 day_groups = np.floor(np.arange(count) / 24)
                 daily_temps = temps.groupby(day_groups).agg(["mean", "count"])
                 n_limit_period = percent_hourly_coverage_per_billing_period * count
@@ -268,7 +267,6 @@ def _degree_day_columns(
                     for bp in heating_balance_points
                 }
             else:  # faster route for daily case, should have same effect.
-
                 if count > n_limit_daily:
                     count_cols = {"n_days_kept": 1, "n_days_dropped": 0}
                     # CalTRACK 2.2.2.3
@@ -747,7 +745,7 @@ def fit_temperature_bins(
         unoccupied_segmented_bins = {}
         segmented_datasets = iterate_segmented_dataset(data, segmentation)
         for segment_name, segmented_data in segmented_datasets:
-            hourly_segmented_data = segmented_data.resample("H").mean()
+            hourly_segmented_data = segmented_data.resample("H").mean(numeric_only=True)
             time_features = compute_time_features(
                 hourly_segmented_data.index,
                 hour_of_week=True,
@@ -837,7 +835,6 @@ def compute_temperature_bin_features(temperatures, bin_endpoints):
     bins = {}
 
     for i, (left_bin, right_bin) in enumerate(zip(bin_endpoints, bin_endpoints[1:])):
-
         bin_name = "bin_{}".format(i)
 
         in_bin = (temperatures > left_bin) & (temperatures <= right_bin)

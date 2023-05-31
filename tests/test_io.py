@@ -42,7 +42,7 @@ def test_meter_data_from_csv(sample_metadata):
     with gzip.open(fname) as f:
         meter_data = meter_data_from_csv(f)
     assert meter_data.shape == (810, 1)
-    assert meter_data.index.tz.zone == "UTC"
+    assert str(meter_data.index.tz) == "UTC"
     assert meter_data.index.freq is None
 
 
@@ -53,7 +53,7 @@ def test_meter_data_from_csv_gzipped(sample_metadata):
     with resource_stream("eemeter.samples", meter_data_filename) as f:
         meter_data = meter_data_from_csv(f, gzipped=True)
     assert meter_data.shape == (810, 1)
-    assert meter_data.index.tz.zone == "UTC"
+    assert str(meter_data.index.tz) == "UTC"
     assert meter_data.index.freq is None
 
 
@@ -64,7 +64,7 @@ def test_meter_data_from_csv_with_tz(sample_metadata):
     with resource_stream("eemeter.samples", meter_data_filename) as f:
         meter_data = meter_data_from_csv(f, gzipped=True, tz="US/Eastern")
     assert meter_data.shape == (810, 1)
-    assert meter_data.index.tz.zone == "US/Eastern"
+    assert str(meter_data.index.tz) == "US/Eastern"
     assert meter_data.index.freq is None
 
 
@@ -75,7 +75,7 @@ def test_meter_data_from_csv_hourly_freq(sample_metadata):
     with resource_stream("eemeter.samples", meter_data_filename) as f:
         meter_data = meter_data_from_csv(f, gzipped=True, freq="hourly")
     assert meter_data.shape == (19417, 1)
-    assert meter_data.index.tz.zone == "UTC"
+    assert str(meter_data.index.tz) == "UTC"
     assert meter_data.index.freq == "H"
 
 
@@ -86,7 +86,7 @@ def test_meter_data_from_csv_daily_freq(sample_metadata):
     with resource_stream("eemeter.samples", meter_data_filename) as f:
         meter_data = meter_data_from_csv(f, gzipped=True, freq="daily")
     assert meter_data.shape == (810, 1)
-    assert meter_data.index.tz.zone == "UTC"
+    assert str(meter_data.index.tz) == "UTC"
     assert meter_data.index.freq == "D"
 
 
@@ -96,7 +96,7 @@ def test_meter_data_from_csv_custom_columns(sample_metadata):
         f.seek(0)
         meter_data = meter_data_from_csv(f, start_col="start_custom", value_col="kWh")
     assert meter_data.shape == (1, 1)
-    assert meter_data.index.tz.zone == "UTC"
+    assert str(meter_data.index.tz) == "UTC"
     assert meter_data.index.freq is None
 
 
@@ -104,7 +104,7 @@ def test_meter_data_from_json_none(sample_metadata):
     data = None
     meter_data = meter_data_from_json(data)
     assert meter_data.shape == (0, 1)
-    assert meter_data.index.tz.zone == "UTC"
+    assert str(meter_data.index.tz) == "UTC"
     assert meter_data.index.freq is None
 
 
@@ -112,7 +112,7 @@ def test_meter_data_from_json_orient_list(sample_metadata):
     data = [["2017-01-01T00:00:00Z", 11], ["2017-01-02T00:00:00Z", 10]]
     meter_data = meter_data_from_json(data, orient="list")
     assert meter_data.shape == (2, 1)
-    assert meter_data.index.tz.zone == "UTC"
+    assert str(meter_data.index.tz) == "UTC"
     assert meter_data.index.freq is None
 
 
@@ -120,7 +120,7 @@ def test_meter_data_from_json_orient_list_empty(sample_metadata):
     data = []
     meter_data = meter_data_from_json(data)
     assert meter_data.shape == (0, 1)
-    assert meter_data.index.tz.zone == "UTC"
+    assert str(meter_data.index.tz) == "UTC"
     assert meter_data.index.freq is None
 
 
@@ -132,7 +132,7 @@ def test_meter_data_from_json_orient_records(sample_metadata):
     ]
     meter_data = meter_data_from_json(data, orient="records")
     assert meter_data.shape == (3, 1)
-    assert meter_data.index.tz.zone == "UTC"
+    assert str(meter_data.index.tz) == "UTC"
     assert meter_data.index.freq is None
 
 
@@ -140,7 +140,7 @@ def test_meter_data_from_json_orient_records_empty(sample_metadata):
     data = []
     meter_data = meter_data_from_json(data, orient="records")
     assert meter_data.shape == (0, 1)
-    assert meter_data.index.tz.zone == "UTC"
+    assert str(meter_data.index.tz) == "UTC"
     assert meter_data.index.freq is None
 
 
@@ -154,7 +154,7 @@ def test_meter_data_from_json_orient_records_with_estimated_true(sample_metadata
     ]
     meter_data = meter_data_from_json(data, orient="records")
     assert meter_data.shape == (5, 2)
-    assert meter_data.index.tz.zone == "UTC"
+    assert str(meter_data.index.tz) == "UTC"
     assert meter_data.index.freq is None
     assert meter_data.estimated.sum() == 5
 
@@ -170,7 +170,7 @@ def test_meter_data_from_json_orient_records_with_estimated_false(sample_metadat
     ]
     meter_data = meter_data_from_json(data, orient="records")
     assert meter_data.shape == (6, 2)
-    assert meter_data.index.tz.zone == "UTC"
+    assert str(meter_data.index.tz) == "UTC"
     assert meter_data.index.freq is None
     assert meter_data.estimated.sum() == 0
 
@@ -199,7 +199,7 @@ def test_temperature_data_from_csv(sample_metadata):
     with gzip.open(fname) as f:
         temperature_data = temperature_data_from_csv(f)
     assert temperature_data.shape == (19417,)
-    assert temperature_data.index.tz.zone == "UTC"
+    assert str(temperature_data.index.tz) == "UTC"
     assert temperature_data.index.freq is None
 
 
@@ -210,7 +210,7 @@ def test_temperature_data_from_csv_gzipped(sample_metadata):
     with resource_stream("eemeter.samples", temperature_filename) as f:
         temperature_data = temperature_data_from_csv(f, gzipped=True)
     assert temperature_data.shape == (19417,)
-    assert temperature_data.index.tz.zone == "UTC"
+    assert str(temperature_data.index.tz) == "UTC"
     assert temperature_data.index.freq is None
 
 
@@ -221,7 +221,7 @@ def test_temperature_data_from_csv_with_tz(sample_metadata):
     with resource_stream("eemeter.samples", temperature_filename) as f:
         temperature_data = temperature_data_from_csv(f, gzipped=True, tz="US/Eastern")
     assert temperature_data.shape == (19417,)
-    assert temperature_data.index.tz.zone == "US/Eastern"
+    assert str(temperature_data.index.tz) == "US/Eastern"
     assert temperature_data.index.freq is None
 
 
@@ -232,7 +232,7 @@ def test_temperature_data_from_csv_hourly_freq(sample_metadata):
     with resource_stream("eemeter.samples", temperature_filename) as f:
         temperature_data = temperature_data_from_csv(f, gzipped=True, freq="hourly")
     assert temperature_data.shape == (19417,)
-    assert temperature_data.index.tz.zone == "UTC"
+    assert str(temperature_data.index.tz) == "UTC"
     assert temperature_data.index.freq == "H"
 
 
@@ -244,7 +244,7 @@ def test_temperature_data_from_csv_custom_columns(sample_metadata):
             f, date_col="dt_custom", temp_col="tempC"
         )
     assert temperature_data.shape == (1,)
-    assert temperature_data.index.tz.zone == "UTC"
+    assert str(temperature_data.index.tz) == "UTC"
     assert temperature_data.index.freq is None
 
 
@@ -252,7 +252,7 @@ def test_temperature_data_from_json_orient_list(sample_metadata):
     data = [["2017-01-01T00:00:00Z", 11], ["2017-01-02T00:00:00Z", 10]]
     temperature_data = temperature_data_from_json(data, orient="list")
     assert temperature_data.shape == (2,)
-    assert temperature_data.index.tz.zone == "UTC"
+    assert str(temperature_data.index.tz) == "UTC"
     assert temperature_data.index.freq is None
 
 

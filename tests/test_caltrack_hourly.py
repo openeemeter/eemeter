@@ -99,6 +99,7 @@ def test_caltrack_hourly_fit_feature_processor(
         "weight",
     ]
     assert result.shape == (24, 10)
+    result.hour_of_week = result.hour_of_week.astype(float)
     assert round(result.sum().sum(), 2) == 5916.0
 
 
@@ -127,6 +128,7 @@ def test_caltrack_hourly_prediction_feature_processor(
         "weight",
     ]
     assert result.shape == (24, 9)
+    result.hour_of_week = result.hour_of_week.astype(float)
     assert round(result.sum().sum(), 2) == 4956.0
 
 

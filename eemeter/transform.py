@@ -247,17 +247,17 @@ def get_baseline_data(
         to an acceptable baseline period according to the dates passed as
         `start` and `end`, or the maximum period specified with `max_days`.
     start : :any:`datetime.datetime`
-        A timezone-aware datetime that represents the earliest allowable start
-        date for the baseline data. The stricter of this or `max_days` is used
-        to determine the earliest allowable baseline period date.
+        A timezone-aware datetime that represents the earliest allowable moment
+        for the baseline data. The stricter of this or `max_days` is used
+        to determine the earliest allowable baseline period timestamp.
     end : :any:`datetime.datetime`
         A timezone-aware datetime that represents the latest allowable end
-        date for the baseline data, i.e., the latest date for which data is
+        moment for the baseline data, i.e., the latest moment for which data is
         available before the intervention begins.
     max_days : :any:`int`, default 365
         The maximum length of the period. Ignored if `end` is not set.
         The stricter of this or `start` is used to determine the earliest
-        allowable baseline period date.
+        allowable moment for the baseline period.
     allow_billing_period_overshoot : :any:`bool`, default False
         If True, count `max_days` from the end of the last billing data period
         that ends before the `end` date, rather than from the exact `end` date.
@@ -326,7 +326,9 @@ def get_baseline_data(
         # adjust start limit to get a selection closest to max_days
         # also consider ffill for get_loc method - always picks previous
         try:
-            loc = data_before_end_limit.index.get_loc(start_target, method="nearest")
+            loc = data_before_end_limit.index.get_indexer(
+                [start_target], method="nearest"
+            )[0]
         except (KeyError, IndexError):  # pragma: no cover
             baseline_data = data_before_end_limit
             start_limit = start_target
@@ -406,17 +408,17 @@ def get_reporting_data(
         to an acceptable reporting period according to the dates passed as
         `start` and `end`, or the maximum period specified with `max_days`.
     start : :any:`datetime.datetime`
-        A timezone-aware datetime that represents the earliest allowable start
-        date for the reporting data, i.e., the earliest date for which data is
+        A timezone-aware datetime that represents the earliest allowable moment
+        for the reporting data, i.e., the earliest moment for which data is
         available after the intervention begins.
     end : :any:`datetime.datetime`
         A timezone-aware datetime that represents the latest allowable end
-        date for the reporting data. The stricter of this or `max_days` is used
-        to determine the latest allowable reporting period date.
+        moment for the reporting data. The stricter of this or `max_days` is used
+        to determine the latest allowable reporting period timestamp.
     max_days : :any:`int`, default 365
         The maximum length of the period. Ignored if `start` is not set.
         The stricter of this or `end` is used to determine the latest
-        allowable reporting period date.
+        allowable reporting period timestamp.
     allow_billing_period_overshoot : :any:`bool`, default False
         If True, count `max_days` from the start of the first billing data period
         that starts after the `start` date, rather than from the exact `start` date.
@@ -478,7 +480,9 @@ def get_reporting_data(
         # adjust start limit to get a selection closest to max_days
         # also consider bfill for get_loc method - always picks next
         try:
-            loc = data_after_start_limit.index.get_loc(end_target, method="nearest")
+            loc = data_after_start_limit.index.get_indexer(
+                [end_target], method="nearest"
+            )[0]
         except (KeyError, IndexError):  # pragma: no cover
             reporting_data = data_after_start_limit
             end_limit = end_target
@@ -644,7 +648,7 @@ def get_terms(index, term_lengths, term_labels=None, start=None, method="strict"
         if len(remaining_index) <= 1:
             break
 
-        next_index = remaining_index.get_loc(end_target, method=get_loc_method)
+        next_index = remaining_index.get_indexer([end_target], method=get_loc_method)[0]
 
         # keep one extra index point for the end NaN - this could be confusing, but
         # helps identify the full range of the last data point
