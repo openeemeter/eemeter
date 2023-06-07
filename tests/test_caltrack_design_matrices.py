@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2019 OpenEEmeter contributors
+   Copyright 2014-2023 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ from eemeter.segmentation import segment_time_series
 
 
 def test_create_caltrack_hourly_preliminary_design_matrix(
-    il_electricity_cdd_hdd_hourly
+    il_electricity_cdd_hdd_hourly,
 ):
     meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
     temperature_data = il_electricity_cdd_hdd_hourly["temperature_data"]
@@ -47,6 +47,8 @@ def test_create_caltrack_hourly_preliminary_design_matrix(
         "n_hours_kept",
         "temperature_mean",
     ]
+    # In newer pandas, categorical columns (like hour_of_week) arent included in sum
+    design_matrix.hour_of_week = design_matrix.hour_of_week.astype(float)
     assert round(design_matrix.sum().sum(), 2) == 136352.61
 
 
@@ -354,50 +356,56 @@ def occupancy_lookup(preliminary_hourly_design_matrix, segmentation):
 
 
 @pytest.fixture
-def temperature_bins(preliminary_hourly_design_matrix, segmentation):
+def temperature_bins(preliminary_hourly_design_matrix, segmentation, occupancy_lookup):
     return fit_temperature_bins(
-        preliminary_hourly_design_matrix, segmentation=segmentation
+        preliminary_hourly_design_matrix,
+        segmentation=segmentation,
+        occupancy_lookup=occupancy_lookup,
     )
 
 
 def test_create_caltrack_hourly_segmented_design_matrices(
     preliminary_hourly_design_matrix, segmentation, occupancy_lookup, temperature_bins
 ):
+    occupied_temperature_bins, unoccupied_temperature_bins = temperature_bins
     design_matrices = create_caltrack_hourly_segmented_design_matrices(
         preliminary_hourly_design_matrix,
         segmentation,
         occupancy_lookup,
-        temperature_bins,
+        occupied_temperature_bins,
+        unoccupied_temperature_bins,
     )
 
     design_matrix = design_matrices["dec-jan-feb-weighted"]
     assert design_matrix.shape == (1000, 8)
     assert sorted(design_matrix.columns) == [
-        "bin_0",
-        "bin_1",
-        "bin_2",
-        "bin_3",
+        "bin_0_occupied",
+        "bin_0_unoccupied",
+        "bin_1_unoccupied",
+        "bin_2_unoccupied",
+        "bin_3_unoccupied",
         "hour_of_week",
         "meter_value",
-        "occupancy",
         "weight",
     ]
-    assert round(design_matrix.sum().sum(), 2) == 126252.07
+    design_matrix.hour_of_week = design_matrix.hour_of_week.astype(float)
+    assert round(design_matrix.sum().sum(), 2) == 126210.07
 
     design_matrix = design_matrices["mar-apr-may-weighted"]
     assert design_matrix.shape == (1000, 5)
     assert sorted(design_matrix.columns) == [
-        "bin_0",
+        "bin_0_occupied",
+        "bin_0_unoccupied",
         "hour_of_week",
         "meter_value",
-        "occupancy",
         "weight",
     ]
-    assert round(design_matrix.sum().sum(), 2) == 0.0
+    design_matrix.hour_of_week = design_matrix.hour_of_week.astype(float)
+    assert round(design_matrix.sum().sum(), 2) == 167659.28
 
 
 def test_create_caltrack_billing_design_matrix_empty_temp(
-    il_electricity_cdd_hdd_billing_monthly
+    il_electricity_cdd_hdd_billing_monthly,
 ):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"][:0]
@@ -408,7 +416,7 @@ def test_create_caltrack_billing_design_matrix_empty_temp(
 
 
 def test_create_caltrack_billing_design_matrix_partial_empty_temp(
-    il_electricity_cdd_hdd_billing_monthly
+    il_electricity_cdd_hdd_billing_monthly,
 ):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"][:200]

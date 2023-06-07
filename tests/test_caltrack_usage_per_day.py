@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2019 OpenEEmeter contributors
+   Copyright 2014-2023 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -674,7 +674,7 @@ def cdd_hdd_h54_c67_billing_monthly_totals(il_electricity_cdd_hdd_billing_monthl
 
 
 def test_caltrack_predict_design_matrix_input_avg_false_output_avg_true(
-    cdd_hdd_h54_c67_billing_monthly_totals
+    cdd_hdd_h54_c67_billing_monthly_totals,
 ):
     data = cdd_hdd_h54_c67_billing_monthly_totals
     prediction = _caltrack_predict_design_matrix(
@@ -694,7 +694,7 @@ def test_caltrack_predict_design_matrix_input_avg_false_output_avg_true(
 
 
 def test_caltrack_predict_design_matrix_input_avg_false_output_avg_false(
-    cdd_hdd_h54_c67_billing_monthly_totals
+    cdd_hdd_h54_c67_billing_monthly_totals,
 ):
     data = cdd_hdd_h54_c67_billing_monthly_totals
     prediction = _caltrack_predict_design_matrix(
@@ -730,7 +730,7 @@ def cdd_hdd_h54_c67_billing_monthly_avgs(il_electricity_cdd_hdd_billing_monthly)
 
 
 def test_caltrack_predict_design_matrix_input_avg_true_output_avg_false(
-    cdd_hdd_h54_c67_billing_monthly_avgs
+    cdd_hdd_h54_c67_billing_monthly_avgs,
 ):
     data = cdd_hdd_h54_c67_billing_monthly_avgs
     prediction = _caltrack_predict_design_matrix(
@@ -750,7 +750,7 @@ def test_caltrack_predict_design_matrix_input_avg_true_output_avg_false(
 
 
 def test_caltrack_predict_design_matrix_input_avg_true_output_avg_true(
-    cdd_hdd_h54_c67_billing_monthly_avgs
+    cdd_hdd_h54_c67_billing_monthly_avgs,
 ):
     data = cdd_hdd_h54_c67_billing_monthly_avgs
     prediction = _caltrack_predict_design_matrix(
@@ -792,7 +792,7 @@ def test_caltrack_predict_design_matrix_n_days(cdd_hdd_h54_c67_billing_monthly_t
 
 
 def test_caltrack_predict_design_matrix_no_days_fails(
-    cdd_hdd_h54_c67_billing_monthly_totals
+    cdd_hdd_h54_c67_billing_monthly_totals,
 ):
     # This makes sure that the method fails if neither n_days nor
     # a DatetimeIndex is available.
@@ -1443,7 +1443,9 @@ def test_select_best_candidate_ok(
     assert best_candidate.r_squared_adj == 1
 
 
-def test_select_best_candidate_none(candidate_model_disqualified,):
+def test_select_best_candidate_none(
+    candidate_model_disqualified,
+):
     candidates = [candidate_model_disqualified]
 
     best_candidate, warnings = select_best_candidate(candidates)

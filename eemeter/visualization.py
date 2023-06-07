@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2019 OpenEEmeter contributors
+   Copyright 2014-2023 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ __all__ = ("plot_energy_signature", "plot_time_series")
 
 
 def plot_time_series(meter_data, temperature_data, **kwargs):
-    """ Plot meter and temperature data in dual-axes time series.
+    """Plot meter and temperature data in dual-axes time series.
 
     Parameters
     ----------
@@ -91,7 +91,7 @@ def plot_energy_signature(
     figsize=None,
     **kwargs
 ):
-    """ Plot meter and temperature data in energy signature.
+    """Plot meter and temperature data in energy signature.
 
     Parameters
     ----------

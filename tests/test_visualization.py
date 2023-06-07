@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2019 OpenEEmeter contributors
+   Copyright 2014-2023 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -45,7 +45,7 @@ def test_plot_energy_signature(il_electricity_cdd_hdd_daily):
     temperature_data = il_electricity_cdd_hdd_daily["temperature_data"]
     ax = plot_energy_signature(meter_data, temperature_data, title="title")
     data = ax.collections[0].get_offsets()
-    assert data.shape == (809, 2)
+    assert data.shape == (810, 2)
     assert ax.get_title() == "title"
 
 

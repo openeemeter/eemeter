@@ -4,7 +4,57 @@ Changelog
 Development
 -----------
 
+
 * Bugfix for FSU post period.
+* Change .iteritems() to .items() in accordance with pandas>=2.0.0
+* .get_loc(x, method=...) to .get_indexer([x],method=...)[0] in accordance with pandas>=2.0.0
+* Updated mean() to mean(numeric_only=True) in accordance to pandas>=2.0.0
+* Updated tests to work with pandas>=2.0.0
+* Update python version in Dockerfile.
+* Update other dependencies (including adding rust) in Dockerfile.
+* Remove pinned dependencies in Pipfile.
+* Relock Pipfile (and do so inside of the docker image).
+* Update pytests to account for changes in newer pandas where categorical variables are no longer included in `df.sum().sum()`.
+* Clarify the functioning of start, end and max_days parameters to `get_reporting_data()` and `get_baseline_data()`.
+
+
+3.1.1
+-----
+
+
+* Update observed_mean calculation to account for solar (negative usage) to provide
+sensible cvrmse calculations.
+
+3.1.0
+-----
+
+* Remove missing hour_of_week categories in the CalTrack hourly methods so they predict null for those hours. 
+
+3.0.0
+-----
+
+* Remove python27 support.
+* Update Pipfile lock.
+* Update `fit_temperature_bins` to potentially take an `occupancy_lookup` in order to
+  fit different temperature bins for occupied/unoccupied modes. *This changes the args passed to eemeter.create_caltrack_hourly_segmented_design_matrices, where it now requires a set of bins for occupied and unoccupied temperatures separately.*
+* Update CalTRACK hourly model formula to use different bins for occupied and
+  unoccupied mode.
+
+2.10.11
+-------
+
+* Fix tests and make changes to ensure tests pass on pandas version 1.2.1.
+* Fix bug in segmentation.py causing a section of tutorial to fail.
+
+2.10.0
+------
+
+* Add additional terms into ModelMetrics() class which can be used in fractional savings uncertainy computations.
+
+2.9.2
+-----
+
+* Remove fixing of versions of libraries in setup.py to avoid unforeseen issues with library updates.
 
 2.9.1
 -----

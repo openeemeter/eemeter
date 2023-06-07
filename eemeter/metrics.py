@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2019 OpenEEmeter contributors
+   Copyright 2014-2023 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@
 """
 import numpy as np
 import pandas as pd
+from scipy.stats import t
+
 
 from .warnings import EEMeterWarning
 
@@ -88,7 +90,6 @@ def _json_safe_float(number):
 
 
 class ModelMetricsFromJson(object):
-
     def __init__(
         self,
         observed_length,
@@ -116,7 +117,15 @@ class ModelMetricsFromJson(object):
         num_meter_zeros,
         nmae,
         nmbe,
-        autocorr_resid
+        autocorr_resid,
+        confidence_level,
+        n_prime,
+        single_tailed_confidence_level,
+        degrees_of_freedom,
+        t_stat,
+        cvrmse_auto_corr_correction,
+        approx_factor_auto_corr_correction,
+        fsu_base_term,
     ):
         self.observed_length = observed_length
         self.predicted_length = predicted_length
@@ -144,10 +153,18 @@ class ModelMetricsFromJson(object):
         self.nmae = nmae
         self.nmbe = nmbe
         self.autocorr_resid = autocorr_resid
+        self.confidence_level = confidence_level
+        self.n_prime = n_prime
+        self.single_tailed_confidence_level = single_tailed_confidence_level
+        self.degrees_of_freedom = degrees_of_freedom
+        self.t_stat = t_stat
+        self.cvrmse_auto_corr_correction = cvrmse_auto_corr_correction
+        self.approx_factor_auto_corr_correction = approx_factor_auto_corr_correction
+        self.fsu_base_term = fsu_base_term
 
 
 class ModelMetrics(object):
-    """ Contains measures of model fit and summary statistics on the input series.
+    """Contains measures of model fit and summary statistics on the input series.
 
     Parameters
     ----------
@@ -162,7 +179,9 @@ class ModelMetrics(object):
         regression from which the predictions were derived.
     autocorr_lags : :any:`int`, optional
         The number of lags to use when calculating the autocorrelation of the
-        residuals
+        residuals.
+    confidence_level : :any:`int`, optional
+        Confidence level used in fractional savings uncertainty computations.
 
     Attributes
     ----------
@@ -222,15 +241,38 @@ class ModelMetrics(object):
         The autocorrelation of the residuals (where the residuals equal the
         predicted_input series minus the observed_input series), measured
         using a number of lags equal to autocorr_lags.
+    n_prime: :any:`float`
+        The number of baseline inputs corrected for autocorrelation -- used
+        in fractional savings uncertainty computation.
+    single_tailed_confidence_level: :any:`float`
+        The adjusted confidence level for use in single-sided tests.
+    degrees_of_freedom: :any:`float
+        Maxmimum number of independent variables which have the freedom to vary
+    t_stat: :any:`float
+        t-statistic, used for hypothesis testing
+    cvrmse_auto_corr_correction: :any:`float
+        Correctoin factor the apply to cvrmse to account for autocorrelation of inputs.
+    approx_factor_auto_corr_correction: :any:`float
+        Approximation factor used in ashrae 14 guideline for uncertainty computation.
+    fsu_base_term: :any:`float
+        Base term used in fractional savings uncertainty computation.
+
     """
 
     def __init__(
-        self, observed_input, predicted_input, num_parameters=1, autocorr_lags=1
+        self,
+        observed_input,
+        predicted_input,
+        num_parameters=1,
+        autocorr_lags=1,
+        confidence_level=0.90,
     ):
         if num_parameters < 0:
             raise ValueError("num_parameters must be greater than or equal to zero")
         if autocorr_lags <= 0:
             raise ValueError("autocorr_lags must be greater than zero")
+        if (confidence_level <= 0) or (confidence_level >= 1):
+            raise ValueError("confidence_level must be between zero and one.")
 
         self.warnings = []
 
@@ -268,8 +310,11 @@ class ModelMetrics(object):
         self.num_parameters = num_parameters
         self.autocorr_lags = autocorr_lags
 
-        self.observed_mean = combined["observed"].mean()
-        self.predicted_mean = combined["predicted"].mean()
+        # to account for solar usage the cvrmse should be calculated as the
+        # mean of the absolute value of observed.
+
+        self.observed_mean = abs(combined["observed"]).mean()
+        self.predicted_mean = abs(combined["predicted"]).mean()
 
         self.observed_variance = combined["observed"].var(ddof=0)
         self.predicted_variance = combined["predicted"].var(ddof=0)
@@ -313,10 +358,60 @@ class ModelMetrics(object):
 
         self.autocorr_resid = _compute_autocorr_resid(combined, autocorr_lags)
 
+        # ** Compute terms needed for fractional savings uncertainty computation.
+
+        self.confidence_level = confidence_level
+        self.n_prime = float(
+            self.observed_length * (1 - self.autocorr_resid) / (1 + self.autocorr_resid)
+        )
+        self.single_tailed_confidence_level = 1 - ((1 - self.confidence_level) / 2)
+
+        # convert to integer degrees of freedom, because n_prime could be non-integer
+        if pd.isnull(self.n_prime) or not np.isfinite(self.n_prime):
+            self.degrees_of_freedom = None
+            self.t_stat = None
+        else:
+            self.degrees_of_freedom = round(self.n_prime - self.num_parameters)
+            self.t_stat = t.ppf(
+                self.single_tailed_confidence_level, self.degrees_of_freedom
+            )
+
+        if (
+            self.n_prime == 0
+            or pd.isnull(self.n_prime)
+            or not np.isfinite(self.n_prime)
+            or self.n_prime - self.num_parameters == 0
+            or self.degrees_of_freedom < 1
+            or self.observed_length < self.num_parameters
+        ):
+            self.cvrmse_auto_corr_correction = None
+            self.approx_factor_auto_corr_correction = None
+            self.fsu_base_term = None
+        else:
+            # factor to correct cvrmse_adj for autocorrelation of inputs
+            # i.e., divide by (n' - n_param) instead of by (n - n_param)
+            self.cvrmse_auto_corr_correction = (
+                (self.observed_length - self.num_parameters)
+                / (self.n_prime - self.num_parameters)
+            ) ** 0.5
+
+            # part of approximation factor used in ashrae 14 guideline
+            self.approx_factor_auto_corr_correction = (
+                1.0 + (2.0 / self.n_prime)
+            ) ** 0.5
+
+            # all the following values are unitless
+            self.fsu_base_term = (
+                self.t_stat
+                * self.cvrmse_adj
+                * self.cvrmse_auto_corr_correction
+                * self.approx_factor_auto_corr_correction
+            )
+
     def __repr__(self):
         return (
             "ModelMetrics(merged_length={}, r_squared_adj={}, cvrmse_adj={}, "
-            "mape_no_zeros={}, nmae={}, nmbe={}, autocorr_resid={})".format(
+            "mape_no_zeros={}, nmae={}, nmbe={}, autocorr_resid={}, confidence_level={})".format(
                 self.merged_length,
                 round(self.r_squared_adj, 3),
                 round(self.cvrmse_adj, 3),
@@ -324,11 +419,12 @@ class ModelMetrics(object):
                 round(self.nmae, 3),
                 round(self.nmbe, 3),
                 round(self.autocorr_resid, 3),
+                round(self.confidence_level, 3),
             )
         )
 
     def json(self):
-        """ Return a JSON-serializable representation of this result.
+        """Return a JSON-serializable representation of this result.
 
         The output of this function can be converted to a serialized string
         with :any:`json.dumps`.
@@ -360,42 +456,67 @@ class ModelMetrics(object):
             "nmae": _json_safe_float(self.nmae),
             "nmbe": _json_safe_float(self.nmbe),
             "autocorr_resid": _json_safe_float(self.autocorr_resid),
+            "confidence_level": _json_safe_float(self.confidence_level),
+            "n_prime": _json_safe_float(self.n_prime),
+            "single_tailed_confidence_level": _json_safe_float(
+                self.single_tailed_confidence_level
+            ),
+            "degrees_of_freedom": _json_safe_float(self.degrees_of_freedom),
+            "t_stat": _json_safe_float(self.t_stat),
+            "cvrmse_auto_corr_correction": _json_safe_float(
+                self.cvrmse_auto_corr_correction
+            ),
+            "approx_factor_auto_corr_correction": _json_safe_float(
+                self.approx_factor_auto_corr_correction
+            ),
+            "fsu_base_term": _json_safe_float(self.fsu_base_term),
         }
 
     @classmethod
     def from_json(cls, data):
-        """ Loads a JSON-serializable representation into the model state.
+        """Loads a JSON-serializable representation into the model state.
 
         The input of this function is a dict which can be the result
         of :any:`json.loads`.
         """
 
         c = ModelMetricsFromJson(
-            data.get("observed_length"),
-            data.get("predicted_length"),
-            data.get("merged_length"),
-            data.get("num_parameters"),
-            data.get("observed_mean"),
-            data.get("predicted_mean"),
-            data.get("observed_variance"),
-            data.get("predicted_variance"),
-            data.get("observed_skew"),
-            data.get("predicted_skew"),
-            data.get("observed_kurtosis"),
-            data.get("predicted_kurtosis"),
-            data.get("observed_cvstd"),
-            data.get("predicted_cvstd"),
-            data.get("r_squared"),
-            data.get("r_squared_adj"),
-            data.get("rmse"),
-            data.get("rmse_adj"),
-            data.get("cvrmse"),
-            data.get("cvrmse_adj"),
-            data.get("mape"),
-            data.get("mape_no_zeros"),
-            data.get("num_meter_zeros"),
-            data.get("nmae"),
-            data.get("nmbe"),
-            data.get("autocorr_resid"))
+            observed_length=data.get("observed_length"),
+            predicted_length=data.get("predicted_length"),
+            merged_length=data.get("merged_length"),
+            num_parameters=data.get("num_parameters"),
+            observed_mean=data.get("observed_mean"),
+            predicted_mean=data.get("predicted_mean"),
+            observed_variance=data.get("observed_variance"),
+            predicted_variance=data.get("predicted_variance"),
+            observed_skew=data.get("observed_skew"),
+            predicted_skew=data.get("predicted_skew"),
+            observed_kurtosis=data.get("observed_kurtosis"),
+            predicted_kurtosis=data.get("predicted_kurtosis"),
+            observed_cvstd=data.get("observed_cvstd"),
+            predicted_cvstd=data.get("predicted_cvstd"),
+            r_squared=data.get("r_squared"),
+            r_squared_adj=data.get("r_squared_adj"),
+            rmse=data.get("rmse"),
+            rmse_adj=data.get("rmse_adj"),
+            cvrmse=data.get("cvrmse"),
+            cvrmse_adj=data.get("cvrmse_adj"),
+            mape=data.get("mape"),
+            mape_no_zeros=data.get("mape_no_zeros"),
+            num_meter_zeros=data.get("num_meter_zeros"),
+            nmae=data.get("nmae"),
+            nmbe=data.get("nmbe"),
+            autocorr_resid=data.get("autocorr_resid"),
+            confidence_level=data.get("confidence_level"),
+            n_prime=data.get("n_prime"),
+            single_tailed_confidence_level=data.get("single_tailed_confidence_level"),
+            degrees_of_freedom=data.get("degrees_of_freedom"),
+            t_stat=data.get("t_stat"),
+            cvrmse_auto_corr_correction=data.get("cvrmse_auto_corr_correction"),
+            approx_factor_auto_corr_correction=data.get(
+                "approx_factor_auto_corr_correction"
+            ),
+            fsu_base_term=data.get("fsu_base_term"),
+        )
 
         return c

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2019 OpenEEmeter contributors
+   Copyright 2014-2023 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -36,28 +36,28 @@ def cli():
     """Example usage
 
 
-Save output::
+    Save output::
 
 
-    Use CalTRACK methods on sample data:
+        Use CalTRACK methods on sample data:
 
-    \b
-        $ eemeter caltrack --sample=il-electricity-cdd-hdd-daily
+        \b
+            $ eemeter caltrack --sample=il-electricity-cdd-hdd-daily
 
-    Save output:
+        Save output:
 
-    \b
-        $ eemeter caltrack --sample=il-electricity-cdd-only-billing_monthly --output-file=/path/to/output.json
+        \b
+            $ eemeter caltrack --sample=il-electricity-cdd-only-billing_monthly --output-file=/path/to/output.json
 
-    Load custom data (see sample files for example format):
+        Load custom data (see sample files for example format):
 
-    \b
-        $ eemeter caltrack --meter-file=/path/to/meter/data.csv --temperature-file=/path/to/temperature/data.csv
+        \b
+            $ eemeter caltrack --meter-file=/path/to/meter/data.csv --temperature-file=/path/to/temperature/data.csv
 
-    Do not fit CDD models (intended for gas data):
+        Do not fit CDD models (intended for gas data):
 
-    \b
-        $ eemeter caltrack --sample=il-gas-hdd-only-billing_monthly --no-fit-cdd
+        \b
+            $ eemeter caltrack --sample=il-gas-hdd-only-billing_monthly --no-fit-cdd
     """
     pass  # pragma: no cover
 
@@ -65,13 +65,11 @@ Save output::
 def _get_data(
     sample, meter_file, temperature_file, heating_balance_points, cooling_balance_points
 ):
-
     if sample is not None:
         with resource_stream("eemeter.samples", "metadata.json") as f:
             metadata = json.loads(f.read().decode("utf-8"))
         if sample in metadata:
             click.echo("Loading sample: {}".format(sample))
-
             meter_file = resource_stream(
                 "eemeter.samples", metadata[sample]["meter_data_filename"]
             )
@@ -106,7 +104,10 @@ def _get_data(
         heating_balance_points=heating_balance_points,
         cooling_balance_points=cooling_balance_points,
     )
-    return merge_features([usage_per_day, temperature_features])
+    merged_features = merge_features([usage_per_day, temperature_features])
+    # usage column must be `meter_value` for model fitting to work
+    merged_features.rename(columns={"usage_per_day": "meter_value"}, inplace=True)
+    return merged_features
 
 
 @cli.command()

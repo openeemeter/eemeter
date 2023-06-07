@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2019 OpenEEmeter contributors
+   Copyright 2014-2023 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -71,7 +71,7 @@ def merge_features(features, keep_partial_nan_rows=False):
 
 
 def compute_usage_per_day_feature(meter_data, series_name="usage_per_day"):
-    """ Compute average usage per day for billing/daily data.
+    """Compute average usage per day for billing/daily data.
 
     Parameters
     ----------
@@ -92,7 +92,7 @@ def compute_usage_per_day_feature(meter_data, series_name="usage_per_day"):
 
 
 def get_missing_hours_of_week_warning(hours_of_week):
-    """ Warn if any hours of week (0-167) are missing.
+    """Warn if any hours of week (0-167) are missing.
 
     Parameters
     ----------
@@ -118,7 +118,7 @@ def get_missing_hours_of_week_warning(hours_of_week):
 
 
 def compute_time_features(index, hour_of_week=True, day_of_week=True, hour_of_day=True):
-    """ Compute hour of week, day of week, or hour of day features.
+    """Compute hour of week, day of week, or hour of day features.
 
     Parameters
     ----------
@@ -135,6 +135,7 @@ def compute_time_features(index, hour_of_week=True, day_of_week=True, hour_of_da
     -------
     time_features : :any:`pandas.DataFrame`
         A dataframe with the input datetime index and up to three columns
+
         - hour_of_week : Label for hour of week, 0-167, 0 is 12-1am Monday
         - day_of_week : Label for day of week, 0-6, 0 is Monday.
         - hour_of_day : Label for hour of day, 0-23, 0 is 12-1am.
@@ -232,7 +233,6 @@ def _degree_day_columns(
         def _compute_columns(temps):
             count = temps.shape[0]
             if count > 24:
-
                 day_groups = np.floor(np.arange(count) / 24)
                 daily_temps = temps.groupby(day_groups).agg(["mean", "count"])
                 n_limit_period = percent_hourly_coverage_per_billing_period * count
@@ -266,7 +266,6 @@ def _degree_day_columns(
                     for bp in heating_balance_points
                 }
             else:  # faster route for daily case, should have same effect.
-
                 if count > n_limit_daily:
                     count_cols = {"n_days_kept": 1, "n_days_dropped": 0}
                     # CalTRACK 2.2.2.3
@@ -312,7 +311,7 @@ def compute_temperature_features(
     tolerance=None,
     keep_partial_nan_rows=False,
 ):
-    """ Compute temperature features from hourly temperature data using the
+    """Compute temperature features from hourly temperature data using the
     :any:`pandas.DatetimeIndex` meter data..
 
     Creates a :any:`pandas.DataFrame` with the same index as the meter data.
@@ -582,7 +581,7 @@ def _estimate_hour_of_week_occupancy(model_data, threshold):
 
 
 def estimate_hour_of_week_occupancy(data, segmentation=None, threshold=0.65):
-    """ Estimate occupancy features for each segment.
+    """Estimate occupancy features for each segment.
 
     Parameters
     ----------
@@ -682,10 +681,11 @@ def _fit_temperature_bins(temperature_data, default_bins, min_temperature_count)
 def fit_temperature_bins(
     data,
     segmentation=None,
+    occupancy_lookup=None,
     default_bins=[30, 45, 55, 65, 75, 90],
     min_temperature_count=20,
 ):
-    """ Determine appropriate temperature bins for a particular set of temperature
+    """Determine appropriate temperature bins for a particular set of temperature
     data given segmentation and occupancy.
 
     Parameters
@@ -695,6 +695,10 @@ def fit_temperature_bins(
     segmentation : :any:`pandas.DataFrame`, default None
         A dataframe containing segment weights with one column per segment. If
         left off, segmentation will not be considered.
+    occupancy_lookup : :any:`pandas.DataFrame`, default None
+        A dataframe of the form returned by :any:`eemeter.estimate_hour_of_week_occupancy`
+        containing occupancy for each segment. If None, occupancy will not be
+        considered.
     default_bins : :any:`list` of :any:`float` or :any:`int`
         A list of candidate bin endpoints to begin the search with.
     min_temperature_count : :any:`int`
@@ -704,37 +708,109 @@ def fit_temperature_bins(
 
     Returns
     -------
-    temperature_bins : :any:`pandas.DataFrame`
+    temperature_bins : :any:`pandas.DataFrame` or, if occupancy_lookup is provided a
+    two :any:`tuple` of :any:`pandas.DataFrame`
         A dataframe with boolean values indicating whether or not a bin was kept, with a
         categorical index for each candidate bin endpoint and a column for each segment.
     """
-    segmented_bins = {}
-    segmented_datasets = iterate_segmented_dataset(data, segmentation)
-    for segment_name, segmented_data in segmented_datasets:
-        segmented_bins[segment_name] = _fit_temperature_bins(
-            segmented_data.temperature_mean, default_bins, min_temperature_count
-        )
+    if occupancy_lookup is None:
+        segmented_bins = {}
+        segmented_datasets = iterate_segmented_dataset(data, segmentation)
+        for segment_name, segmented_data in segmented_datasets:
+            segmented_bins[segment_name] = _fit_temperature_bins(
+                segmented_data.temperature_mean, default_bins, min_temperature_count
+            )
 
-    if segmentation is None:
-        bins = segmented_bins[None]
+        if segmentation is None:
+            bins = segmented_bins[None]
+            return pd.DataFrame(
+                {"keep_bin_endpoint": [endpoint in bins for endpoint in default_bins]},
+                index=pd.Series(default_bins, name="bin_endpoints"),
+            )
+
         return pd.DataFrame(
-            {"keep_bin_endpoint": [endpoint in bins for endpoint in default_bins]},
+            {
+                segment_name: [endpoint in bins for endpoint in default_bins]
+                for segment_name, bins in segmented_bins.items()
+            },
+            columns=segmentation.columns,
             index=pd.Series(default_bins, name="bin_endpoints"),
         )
+    else:
+        occupied_segmented_bins = {}
+        unoccupied_segmented_bins = {}
+        segmented_datasets = iterate_segmented_dataset(data, segmentation)
+        for segment_name, segmented_data in segmented_datasets:
+            hourly_segmented_data = segmented_data.resample("H").mean(numeric_only=True)
+            time_features = compute_time_features(
+                hourly_segmented_data.index,
+                hour_of_week=True,
+                day_of_week=False,
+                hour_of_day=False,
+            )
+            if segment_name is None:
+                occupancy = occupancy_lookup["occupancy"]
+            else:
+                occupancy = occupancy_lookup[segment_name]
+            occupancy_features = compute_occupancy_feature(
+                time_features.hour_of_week, occupancy
+            )
+            occupied_temperatures = segmented_data.temperature_mean[occupancy_features]
+            unoccupied_temperatures = segmented_data.temperature_mean[
+                ~occupancy_features
+            ]
+            occupied_segmented_bins[segment_name] = _fit_temperature_bins(
+                occupied_temperatures, default_bins, min_temperature_count
+            )
+            unoccupied_segmented_bins[segment_name] = _fit_temperature_bins(
+                unoccupied_temperatures, default_bins, min_temperature_count
+            )
 
-    return pd.DataFrame(
-        {
-            segment_name: [endpoint in bins for endpoint in default_bins]
-            for segment_name, bins in segmented_bins.items()
-        },
-        columns=segmentation.columns,
-        index=pd.Series(default_bins, name="bin_endpoints"),
-    )
+        if segmentation is None:
+            occupied_bins = occupied_segmented_bins[None]
+            unoccupied_bins = unoccupied_segmented_bins[None]
+            return (
+                pd.DataFrame(
+                    {
+                        "keep_bin_endpoint": [
+                            endpoint in occupied_bins for endpoint in default_bins
+                        ]
+                    },
+                    index=pd.Series(default_bins, name="bin_endpoints"),
+                ),
+                pd.DataFrame(
+                    {
+                        "keep_bin_endpoint": [
+                            endpoint in unoccupied_bins for endpoint in default_bins
+                        ]
+                    },
+                    index=pd.Series(default_bins, name="bin_endpoints"),
+                ),
+            )
+
+        return (
+            pd.DataFrame(
+                {
+                    segment_name: [endpoint in bins for endpoint in default_bins]
+                    for segment_name, bins in occupied_segmented_bins.items()
+                },
+                columns=segmentation.columns,
+                index=pd.Series(default_bins, name="bin_endpoints"),
+            ),
+            pd.DataFrame(
+                {
+                    segment_name: [endpoint in bins for endpoint in default_bins]
+                    for segment_name, bins in unoccupied_segmented_bins.items()
+                },
+                columns=segmentation.columns,
+                index=pd.Series(default_bins, name="bin_endpoints"),
+            ),
+        )
 
 
 # TODO(philngo): combine with compute_temperature_features?
 def compute_temperature_bin_features(temperatures, bin_endpoints):
-    """ Compute temperature bin features.
+    """Compute temperature bin features.
 
     Parameters
     ----------
@@ -755,7 +831,6 @@ def compute_temperature_bin_features(temperatures, bin_endpoints):
     bins = {}
 
     for i, (left_bin, right_bin) in enumerate(zip(bin_endpoints, bin_endpoints[1:])):
-
         bin_name = "bin_{}".format(i)
 
         in_bin = (temperatures > left_bin) & (temperatures <= right_bin)
@@ -787,7 +862,7 @@ def compute_temperature_bin_features(temperatures, bin_endpoints):
 
 
 def compute_occupancy_feature(hour_of_week, occupancy):
-    """ Given an hour of week feature, determine the occupancy for that hour of week.
+    """Given an hour of week feature, determine the occupancy for that hour of week.
 
     Parameters
     ----------

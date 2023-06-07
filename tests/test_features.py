@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2019 OpenEEmeter contributors
+   Copyright 2014-2023 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ from eemeter.segmentation import segment_time_series
 
 
 def test_compute_temperature_features_no_freq_index(
-    il_electricity_cdd_hdd_billing_monthly
+    il_electricity_cdd_hdd_billing_monthly,
 ):
     # pick a slice with both hdd and cdd
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
@@ -48,7 +48,7 @@ def test_compute_temperature_features_no_freq_index(
 
 
 def test_compute_temperature_features_no_meter_data_tz(
-    il_electricity_cdd_hdd_billing_monthly
+    il_electricity_cdd_hdd_billing_monthly,
 ):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]
@@ -58,7 +58,7 @@ def test_compute_temperature_features_no_meter_data_tz(
 
 
 def test_compute_temperature_features_no_temp_data_tz(
-    il_electricity_cdd_hdd_billing_monthly
+    il_electricity_cdd_hdd_billing_monthly,
 ):
     # pick a slice with both hdd and cdd
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
@@ -163,7 +163,7 @@ def test_compute_temperature_features_hourly_hourly_degree_days_use_mean_false(
 
 
 def test_compute_temperature_features_hourly_daily_degree_days_fail(
-    il_electricity_cdd_hdd_hourly
+    il_electricity_cdd_hdd_hourly,
 ):
     # pick a slice with both hdd and cdd
     meter_data = il_electricity_cdd_hdd_hourly["meter_data"]["2016-03-01":"2016-07-01"]
@@ -182,7 +182,7 @@ def test_compute_temperature_features_hourly_daily_degree_days_fail(
 
 
 def test_compute_temperature_features_hourly_daily_missing_explicit_freq(
-    il_electricity_cdd_hdd_hourly
+    il_electricity_cdd_hdd_hourly,
 ):
     # pick a slice with both hdd and cdd
     meter_data = il_electricity_cdd_hdd_hourly["meter_data"]["2016-03-01":"2016-07-01"]
@@ -202,7 +202,7 @@ def test_compute_temperature_features_hourly_daily_missing_explicit_freq(
 
 
 def test_compute_temperature_features_hourly_bad_degree_days(
-    il_electricity_cdd_hdd_hourly
+    il_electricity_cdd_hdd_hourly,
 ):
     # pick a slice with both hdd and cdd
     meter_data = il_electricity_cdd_hdd_hourly["meter_data"]["2016-03-01":"2016-07-01"]
@@ -221,7 +221,7 @@ def test_compute_temperature_features_hourly_bad_degree_days(
 
 
 def test_compute_temperature_features_hourly_data_quality(
-    il_electricity_cdd_hdd_hourly
+    il_electricity_cdd_hdd_hourly,
 ):
     # pick a slice with both hdd and cdd
     meter_data = il_electricity_cdd_hdd_hourly["meter_data"]["2016-03-01":"2016-07-01"]
@@ -400,7 +400,7 @@ def test_compute_temperature_features_daily_hourly_degree_days_use_mean_false(
 
 
 def test_compute_temperature_features_daily_bad_degree_days(
-    il_electricity_cdd_hdd_daily
+    il_electricity_cdd_hdd_daily,
 ):
     meter_data = il_electricity_cdd_hdd_daily["meter_data"]
     temperature_data = il_electricity_cdd_hdd_daily["temperature_data"]
@@ -432,7 +432,7 @@ def test_compute_temperature_features_daily_data_quality(il_electricity_cdd_hdd_
 
 
 def test_compute_temperature_features_billing_monthly_temp_mean(
-    il_electricity_cdd_hdd_billing_monthly
+    il_electricity_cdd_hdd_billing_monthly,
 ):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]
@@ -589,7 +589,7 @@ def test_compute_temperature_features_billing_monthly_hourly_degree_days_use_mea
 
 
 def test_compute_temperature_features_billing_monthly_bad_degree_day_method(
-    il_electricity_cdd_hdd_billing_monthly
+    il_electricity_cdd_hdd_billing_monthly,
 ):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]
@@ -604,7 +604,7 @@ def test_compute_temperature_features_billing_monthly_bad_degree_day_method(
 
 
 def test_compute_temperature_features_billing_monthly_data_quality(
-    il_electricity_cdd_hdd_billing_monthly
+    il_electricity_cdd_hdd_billing_monthly,
 ):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]
@@ -623,7 +623,7 @@ def test_compute_temperature_features_billing_monthly_data_quality(
 
 
 def test_compute_temperature_features_billing_bimonthly_temp_mean(
-    il_electricity_cdd_hdd_billing_bimonthly
+    il_electricity_cdd_hdd_billing_bimonthly,
 ):
     meter_data = il_electricity_cdd_hdd_billing_bimonthly["meter_data"]
     temperature_data = il_electricity_cdd_hdd_billing_bimonthly["temperature_data"]
@@ -708,7 +708,7 @@ def test_compute_temperature_features_billing_bimonthly_hourly_degree_days(
 
 
 def test_compute_temperature_features_billing_bimonthly_bad_degree_days(
-    il_electricity_cdd_hdd_billing_bimonthly
+    il_electricity_cdd_hdd_billing_bimonthly,
 ):
     meter_data = il_electricity_cdd_hdd_billing_bimonthly["meter_data"]
     temperature_data = il_electricity_cdd_hdd_billing_bimonthly["temperature_data"]
@@ -723,7 +723,7 @@ def test_compute_temperature_features_billing_bimonthly_bad_degree_days(
 
 
 def test_compute_temperature_features_billing_bimonthly_data_quality(
-    il_electricity_cdd_hdd_billing_bimonthly
+    il_electricity_cdd_hdd_billing_bimonthly,
 ):
     meter_data = il_electricity_cdd_hdd_billing_bimonthly["meter_data"]
     temperature_data = il_electricity_cdd_hdd_billing_bimonthly["temperature_data"]
@@ -742,7 +742,7 @@ def test_compute_temperature_features_billing_bimonthly_data_quality(
 
 
 def test_compute_temperature_features_shorter_temperature_data(
-    il_electricity_cdd_hdd_daily
+    il_electricity_cdd_hdd_daily,
 ):
     meter_data = il_electricity_cdd_hdd_daily["meter_data"]
     temperature_data = il_electricity_cdd_hdd_daily["temperature_data"]
@@ -780,14 +780,14 @@ def test_compute_temperature_features_shorter_meter_data(il_electricity_cdd_hdd_
 
 
 def test_compute_temperature_features_with_duplicated_index(
-    il_electricity_cdd_hdd_billing_monthly
+    il_electricity_cdd_hdd_billing_monthly,
 ):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]
 
     # these are specifically formed to give a less readable error if
     # duplicates are not caught
-    meter_data = meter_data.append(meter_data).sort_index()
+    meter_data = pd.concat([meter_data, meter_data]).sort_index()
     temperature_data = temperature_data.iloc[8000:]
 
     with pytest.raises(ValueError) as excinfo:
@@ -950,7 +950,7 @@ def test_compute_time_features_all():
     features = compute_time_features(index)
     assert list(features.columns) == ["day_of_week", "hour_of_day", "hour_of_week"]
     assert features.shape == (168, 3)
-    assert features.sum().sum() == 16464.0
+    assert features.astype(float).sum().sum() == 16464.0
     with pytest.raises(TypeError):  # categoricals
         features.day_of_week.sum()
     with pytest.raises(TypeError):
@@ -1032,10 +1032,35 @@ def temperature_means():
 
 
 def test_fit_temperature_bins_no_segmentation(temperature_means):
-    bins = fit_temperature_bins(temperature_means, segmentation=None)
+    bins = fit_temperature_bins(
+        temperature_means, segmentation=None, occupancy_lookup=None
+    )
     assert list(bins.columns) == ["keep_bin_endpoint"]
     assert bins.shape == (6, 1)
     assert bins.sum().sum() == 4
+
+
+@pytest.fixture
+def occupancy_lookup_no_segmentation(occupancy_precursor):
+    occupancy = estimate_hour_of_week_occupancy(occupancy_precursor)
+    return occupancy
+
+
+def test_fit_temperature_bins_no_segmentation_with_occupancy(
+    temperature_means, occupancy_lookup_no_segmentation
+):
+    occupied_bins, unoccupied_bins = fit_temperature_bins(
+        temperature_means,
+        segmentation=None,
+        occupancy_lookup=occupancy_lookup_no_segmentation,
+    )
+    assert list(occupied_bins.columns) == ["keep_bin_endpoint"]
+    assert occupied_bins.shape == (6, 1)
+    assert occupied_bins.sum().sum() == 0
+
+    assert list(unoccupied_bins.columns) == ["keep_bin_endpoint"]
+    assert unoccupied_bins.shape == (6, 1)
+    assert unoccupied_bins.sum().sum() == 4
 
 
 def test_fit_temperature_bins_one_month_segmentation(
@@ -1058,6 +1083,59 @@ def test_fit_temperature_bins_one_month_segmentation(
     ]
     assert bins.shape == (6, 12)
     assert bins.sum().sum() == 12
+
+
+@pytest.fixture
+def occupancy_lookup_one_month_segmentation(
+    occupancy_precursor, one_month_segmentation
+):
+    occupancy_lookup = estimate_hour_of_week_occupancy(
+        occupancy_precursor, segmentation=one_month_segmentation
+    )
+    return occupancy_lookup
+
+
+def test_fit_temperature_bins_with_occupancy_lookup(
+    temperature_means, one_month_segmentation, occupancy_lookup_one_month_segmentation
+):
+    occupied_bins, unoccupied_bins = fit_temperature_bins(
+        temperature_means,
+        segmentation=one_month_segmentation,
+        occupancy_lookup=occupancy_lookup_one_month_segmentation,
+    )
+    assert list(occupied_bins.columns) == [
+        "jan",
+        "feb",
+        "mar",
+        "apr",
+        "may",
+        "jun",
+        "jul",
+        "aug",
+        "sep",
+        "oct",
+        "nov",
+        "dec",
+    ]
+    assert occupied_bins.shape == (6, 12)
+    assert occupied_bins.sum().sum() == 0
+
+    assert list(unoccupied_bins.columns) == [
+        "jan",
+        "feb",
+        "mar",
+        "apr",
+        "may",
+        "jun",
+        "jul",
+        "aug",
+        "sep",
+        "oct",
+        "nov",
+        "dec",
+    ]
+    assert unoccupied_bins.shape == (6, 12)
+    assert unoccupied_bins.sum().sum() == 12
 
 
 def test_fit_temperature_bins_empty(temperature_means):
@@ -1108,7 +1186,7 @@ def test_compute_occupancy_feature_with_nans(even_occupancy):
 @pytest.fixture
 def occupancy_precursor_only_nan(il_electricity_cdd_hdd_hourly):
     meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
-    meter_data = meter_data[datetime(2017, 1, 4) : datetime(2017, 6, 1)]
+    meter_data = meter_data["2017-01-04":"2017-06-01"]
     meter_data.iloc[-1] = np.nan
     # Simulates a segment where there is only a single nan value
     temperature_data = il_electricity_cdd_hdd_hourly["temperature_data"]

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2019 OpenEEmeter contributors
+   Copyright 2014-2023 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ def _load_sample_metadata():
 
 
 def samples():
-    """ Load a list of sample data identifiers.
+    """Load a list of sample data identifiers.
 
     Returns
     -------
@@ -47,7 +47,7 @@ def samples():
 
 
 def load_sample(sample):
-    """ Load meter data, temperature data, and metadata for associated with a
+    """Load meter data, temperature data, and metadata for associated with a
     particular sample identifier. Note: samples are simulated, not real, data.
 
     Parameters

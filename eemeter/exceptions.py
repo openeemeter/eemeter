@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2019 OpenEEmeter contributors
+   Copyright 2014-2023 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -27,35 +27,30 @@ __all__ = (
 
 
 class EEMeterError(Exception):
-    """ Base class for EEmeter library errors.
-    """
+    """Base class for EEmeter library errors."""
 
     pass
 
 
 class NoBaselineDataError(EEMeterError):
-    """ Error indicating lack of baseline data.
-    """
+    """Error indicating lack of baseline data."""
 
     pass
 
 
 class NoReportingDataError(EEMeterError):
-    """ Error indicating lack of reporting data.
-    """
+    """Error indicating lack of reporting data."""
 
     pass
 
 
 class MissingModelParameterError(EEMeterError):
-    """ Error indicating missing model parameter.
-    """
+    """Error indicating missing model parameter."""
 
     pass
 
 
 class UnrecognizedModelTypeError(EEMeterError):
-    """ Error indicating unrecognized model type.
-    """
+    """Error indicating unrecognized model type."""
 
     pass

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2019 OpenEEmeter contributors
+   Copyright 2014-2023 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@
 from eemeter import get_version
 
 project = "eemeter"
-copyright = "Copyright 2014-2019 OpenEEmeter contributors"
+copyright = "Copyright 2014-2023 OpenEEmeter contributors"
 author = "Phil Ngo"
 
 # The short X.Y version
@@ -201,4 +201,4 @@ html_favicon = "_static/oee.ico"
 
 
 def setup(app):
-    app.add_stylesheet("css/custom.css")  # may also be an URL
+    app.add_css_file("css/custom.css")  # may also be an URL

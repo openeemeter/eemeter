@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2019 OpenEEmeter contributors
+   Copyright 2014-2023 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ from shutil import rmtree
 from setuptools import find_packages, setup, Command
 
 NAME = "eemeter"
-REQUIRED = ["click==7.0", "pandas==0.24.2", "statsmodels==0.10.2", "scipy==1.2.2"]
+REQUIRED = ["click", "pandas>=1.0.0", "statsmodels", "scipy"]
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -94,11 +94,10 @@ setup(
     classifiers=[
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.4",
-        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
     ],
     # $ setup.py publish support.
     cmdclass={"upload": UploadCommand},
