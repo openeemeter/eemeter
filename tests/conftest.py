@@ -33,8 +33,8 @@ def sample_metadata():
     return metadata
 
 
-def _from_sample(sample):
-    meter_data, temperature_data, metadata = load_sample(sample)
+def _from_sample(sample, tempF=True):
+    meter_data, temperature_data, metadata = load_sample(sample, tempF=tempF)
     return {
         "meter_data": meter_data,
         "temperature_data": temperature_data,
@@ -61,3 +61,18 @@ def il_electricity_cdd_hdd_billing_monthly():
 @pytest.fixture
 def il_electricity_cdd_hdd_billing_bimonthly():
     return _from_sample("il-electricity-cdd-hdd-billing_bimonthly")
+
+
+@pytest.fixture
+def il_gas_hdd_only_hourly():
+    return _from_sample("il-gas-hdd-only-hourly")
+
+
+@pytest.fixture
+def uk_electricity_hdd_only_hourly_sample_1():
+    return _from_sample("uk-electricity-hdd-only-hourly-sample-1", tempF=False)
+
+
+@pytest.fixture
+def uk_electricity_hdd_only_hourly_sample_2():
+    return _from_sample("uk-electricity-hdd-only-hourly-sample-2", tempF=False)

@@ -43,6 +43,8 @@ methods. See also :ref:`caltrack-hourly-quickstart`.
 
 .. autofunction:: eemeter.fit_caltrack_hourly_model
 
+.. autofunction:: eemeter.caltrack_hourly
+
 .. _caltrack-billing-daily-api:
 
 CalTRACK Daily and Billing (Usage per Day)
@@ -95,6 +97,7 @@ and Billing methods. See also :ref:`caltrack-billing-daily-quickstart`.
 
 .. autofunction:: eemeter.select_best_candidate
 
+.. autofunction:: eemeter.caltrack_daily
 
 Savings
 -------
@@ -225,6 +228,15 @@ These functions are used to various common data transformations based on pandas 
 
 .. autofunction:: eemeter.overwrite_partial_rows_with_nan
 
+.. autofunction:: eemeter.format_temperature_data_for_caltrack
+
+.. autofunction:: eemeter.format_energy_data_for_caltrack
+
+.. autofunction:: eemeter.sum_gas_and_elec
+
+.. autofunction:: eemeter.trim
+
+.. autofunction:: eemeter.add_freq
 
 Version
 -------

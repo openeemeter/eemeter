@@ -28,7 +28,10 @@ import statsmodels.formula.api as smf
 from ..exceptions import MissingModelParameterError, UnrecognizedModelTypeError
 from ..features import compute_temperature_features
 from ..metrics import ModelMetrics
-from ..transform import day_counts, overwrite_partial_rows_with_nan
+from ..transform import (
+    day_counts,
+    overwrite_partial_rows_with_nan,
+)
 from ..warnings import EEMeterWarning
 
 
@@ -2306,3 +2309,4 @@ def plot_caltrack_candidate(
         ax.set_title(title)
 
     return ax
+

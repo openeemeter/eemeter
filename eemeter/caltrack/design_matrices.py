@@ -27,6 +27,7 @@ from eemeter.features import (
 )
 from eemeter.segmentation import iterate_segmented_dataset
 from eemeter.caltrack.hourly import caltrack_hourly_fit_feature_processor
+from pkg_resources import resource_filename
 
 
 __all__ = (
@@ -37,7 +38,9 @@ __all__ = (
 )
 
 
-def create_caltrack_hourly_preliminary_design_matrix(meter_data, temperature_data):
+def create_caltrack_hourly_preliminary_design_matrix(
+    meter_data, temperature_data, degc: bool = False
+):
     """A helper function which calls basic feature creation methods to create an
     input suitable for use in the first step of creating a CalTRACK hourly model.
 
@@ -47,12 +50,18 @@ def create_caltrack_hourly_preliminary_design_matrix(meter_data, temperature_dat
         Hourly meter data in eemeter format.
     temperature_data : :any:`pandas.Series`
         Hourly temperature data in eemeter format.
+    degc : :any 'bool'
+        Relevant temperature units; defaults to False (i.e. Fahrenheit).
 
     Returns
     -------
     design_matrix : :any:`pandas.DataFrame`
-        A design matrix with meter_value, hour_of_week, hdd_50, and cdd_65 features.
+        A design matrix with meter_value, hour_of_week, hdd_(hbp_default), and cdd_(cbp_default) features.
     """
+
+    if degc == True:
+        temperature_data = 32 + (temperature_data * 1.8)
+
     time_features = compute_time_features(
         meter_data.index, hour_of_week=True, hour_of_day=False, day_of_week=False
     )
@@ -60,7 +69,7 @@ def create_caltrack_hourly_preliminary_design_matrix(meter_data, temperature_dat
         meter_data.index,
         temperature_data,
         heating_balance_points=[50],
-        cooling_balance_points=[65],
+        cooling_balance_points=[65], #note both HBP this will require further work in future iterations of eemeter - CBP in particular assumes all buildings have cooling, which is a strong assumption.
         degree_day_method="hourly",
     )
     design_matrix = merge_features(
@@ -69,24 +78,31 @@ def create_caltrack_hourly_preliminary_design_matrix(meter_data, temperature_dat
     return design_matrix
 
 
-def create_caltrack_billing_design_matrix(meter_data, temperature_data):
+def create_caltrack_billing_design_matrix(
+    meter_data, temperature_data, degc: bool = False
+):
     """A helper function which calls basic feature creation methods to create a
     design matrix suitable for use with CalTRACK Billing methods.
 
     Parameters
     ----------
     meter_data : :any:`pandas.DataFrame`
-        Hourly meter data in eemeter format.
+        Monthly meter data in eemeter format.
     temperature_data : :any:`pandas.Series`
         Hourly temperature data in eemeter format.
+    degc : :any 'bool'
+        Relevant temperature units; defaults to Fahrenheit.
 
     Returns
     -------
     design_matrix : :any:`pandas.DataFrame`
-        A design matrics with mean usage_per_day, hdd_30-hdd_90, and cdd_30-cdd_90
+        A design matrix with mean usage_per_day, hdd_min-hdd_max, and cdd_min-cdd_max
         features.
     """
     usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
+    if degc == True:
+        temperature_data = 32 + (temperature_data * 1.8)
+
     temperature_features = compute_temperature_features(
         meter_data.index,
         temperature_data,
@@ -101,24 +117,31 @@ def create_caltrack_billing_design_matrix(meter_data, temperature_data):
     return design_matrix
 
 
-def create_caltrack_daily_design_matrix(meter_data, temperature_data):
+def create_caltrack_daily_design_matrix(
+    meter_data, temperature_data, degc: bool = False
+):
     """A helper function which calls basic feature creation methods to create a
     design matrix suitable for use with CalTRACK daily methods.
 
     Parameters
     ----------
     meter_data : :any:`pandas.DataFrame`
-        Hourly meter data in eemeter format.
+        Daily meter data in eemeter format.
     temperature_data : :any:`pandas.Series`
         Hourly temperature data in eemeter format.
+     degc : :any 'bool'
+        Relevant temperature units; defaults to Fahrenheit.
 
     Returns
     -------
     design_matrix : :any:`pandas.DataFrame`
-        A design matrics with mean usage_per_day, hdd_30-hdd_90, and cdd_30-cdd_90
+        A design matrix with mean usage_per_day, hdd_30-hdd_90, and cdd_30-cdd_90
         features.
     """
     usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
+    if degc == True:
+        temperature_data = 32 + (temperature_data * 1.8)
+
     temperature_features = compute_temperature_features(
         meter_data.index,
         temperature_data,
@@ -139,7 +162,6 @@ def create_caltrack_hourly_segmented_design_matrices(
 ):
     """A helper function which calls basic feature creation methods to create a
     design matrix suitable for use with segmented CalTRACK hourly models.
-
     Parameters
     ----------
     preliminary_design_matrix : :any:`pandas.DataFrame`
@@ -156,7 +178,6 @@ def create_caltrack_hourly_segmented_design_matrices(
         form returned by :any:`eemeter.fit_temperature_bins`.
     unoccupied_temperature_bins : :any:``
         Ditto, for unoccupied.
-
     Returns
     -------
     design_matrix : :any:`dict` of :any:`pandas.DataFrame`

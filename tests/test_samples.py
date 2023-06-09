@@ -43,6 +43,10 @@ def test_samples():
         "il-gas-intercept-only-billing_monthly",
         "il-gas-intercept-only-daily",
         "il-gas-intercept-only-hourly",
+        "uk-electricity-hdd-only-hourly-sample-0",
+        "uk-electricity-hdd-only-hourly-sample-1",
+        "uk-electricity-hdd-only-hourly-sample-2",
+        "uk-gas-hdd-only-hourly-sample-0",
     ]
 
 

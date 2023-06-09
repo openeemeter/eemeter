@@ -16,6 +16,17 @@ Development
 * Clarify the functioning of start, end and max_days parameters to `get_reporting_data()` and `get_baseline_data()`.
 
 
+* 3.1.2
+-----
+
+* Addition of modules and amendments in support of international facility for EEMeter, including principally:
+* Addition of quickstart.py; updating setup.py and __init__/py accordingly.
+* Inclusion of temperature conversion amendments to design_matrices; features; and derivatives.
+* Addition of new tests and samples.
+* Amendments to tutorial.ipynb.
+* Addition of eemeter international.ipynb.
+
+
 3.1.1
 -----
 

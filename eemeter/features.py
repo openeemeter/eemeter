@@ -24,6 +24,7 @@ from .segmentation import iterate_segmented_dataset
 import numpy as np
 import pandas as pd
 import statsmodels.formula.api as smf
+from pkg_resources import resource_filename
 
 
 __all__ = (
@@ -437,8 +438,8 @@ def compute_temperature_features(
         elif degree_day_method == "daily":
             if meter_data_index.freq == "H":
                 raise ValueError(
-                    "degree_day_method='hourly' must be used with"
-                    " hourly meter data. Found: 'daily'".format(degree_day_method)
+                    "degree_day_method='daily' must be used with"
+                    " daily meter data. Found: 'hourly'".format(degree_day_method)
                 )
         else:
             raise ValueError("method not supported: {}".format(degree_day_method))
@@ -579,8 +580,9 @@ def _estimate_hour_of_week_occupancy(model_data, threshold):
         .astype(bool)
     )  # guarantee an index value for all hours
 
-
-def estimate_hour_of_week_occupancy(data, segmentation=None, threshold=0.65):
+def estimate_hour_of_week_occupancy(
+    data, segmentation=None, threshold=0.65
+):
     """Estimate occupancy features for each segment.
 
     Parameters
@@ -608,6 +610,7 @@ def estimate_hour_of_week_occupancy(data, segmentation=None, threshold=0.65):
         or unoccupied (0, False) for each of the segments. Each segment has a column
         labeled by its segment name.
     """
+
     occupancy_lookups = {}
     segmented_datasets = iterate_segmented_dataset(data, segmentation)
     for segment_name, segmented_data in segmented_datasets:
@@ -713,6 +716,7 @@ def fit_temperature_bins(
         A dataframe with boolean values indicating whether or not a bin was kept, with a
         categorical index for each candidate bin endpoint and a column for each segment.
     """
+
     if occupancy_lookup is None:
         segmented_bins = {}
         segmented_datasets = iterate_segmented_dataset(data, segmentation)
