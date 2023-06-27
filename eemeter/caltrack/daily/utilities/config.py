@@ -69,11 +69,13 @@ Args:
 
 _KEY_DESCR = "descr"
 
+
 # region option definitions
 class AlgorithmChoice:
     """
     choice of optimization algorithms to use for optimization of daily models
     """
+
     # SciPy-based algorithms
     SCIPY_NELDERMEAD = "scipy_Nelder-Mead"
     SCIPY_L_BFGS_B = "scipy_L-BFGS-B"
@@ -85,7 +87,7 @@ class AlgorithmChoice:
     # nlopt-based algorithms
     NLOPT_DIRECT = "nlopt_DIRECT"
     NLOPT_DIRECT_NOSCAL = "nlopt_DIRECT_NOSCAL"
-    NLOPT_DIRECT_L = "nlopt_DIRECT_L" 
+    NLOPT_DIRECT_L = "nlopt_DIRECT_L"
     NLOPT_DIRECT_L_RAND = "nlopt_DIRECT_L_RAND"
     NLOPT_DIRECT_L_NOSCAL = "nlopt_DIRECT_L_NOSCAL"
     NLOPT_DIRECT_L_RAND_NOSCAL = "nlopt_DIRECT_L_RAND_NOSCAL"
@@ -150,6 +152,7 @@ class FullModelSelection:
 
 # endregion
 
+
 # region private
 def _get_pub_class_attrib_dict(cls: type):
     return {k: v for k, v in cls.__dict__.items() if not k.startswith("_")}
@@ -169,10 +172,20 @@ def get_pub_class_attrib_values(cls: type):
     get_pub_class_attrib_values(MatchType) -> ("distance_match", "stratified_sample")
     """
     return tuple(_get_pub_class_attrib_dict(cls).values())
-#endregion
 
-full_algo_list = [getattr(AlgorithmChoice, key).lower() for key in dir(AlgorithmChoice) if '__' != key[0:2]]
-def _algorithm_white_list(white_list: list[str] | None = None, black_list: list[str] | None = None):
+
+# endregion
+
+full_algo_list = [
+    getattr(AlgorithmChoice, key).lower()
+    for key in dir(AlgorithmChoice)
+    if "__" != key[0:2]
+]
+
+
+def _algorithm_white_list(
+    white_list: list[str] | None = None, black_list: list[str] | None = None
+):
     if white_list is not None and len(white_list) == 0:
         white_list = None
 
@@ -181,28 +194,35 @@ def _algorithm_white_list(white_list: list[str] | None = None, black_list: list[
 
     if white_list is None and black_list is None:
         return full_algo_list
-    
+
     if white_list is not None:
         return white_list
 
     elif black_list is not None:
         return [algo for algo in full_algo_list if algo not in black_list]
 
+
 # region validation
 def developer_mode_validation(callable: Callable[[Any], bool]):
     def inner(instance, attribute, v):
         if (v != attribute.default) and not instance.developer_mode:
-            text = [f"'{attribute.name}' can only be changed if 'developer_mode' == True.",
-                     "Warning: This is nonstandard and should be explicitly stated in any derived work"]
+            text = [
+                f"'{attribute.name}' can only be changed if 'developer_mode' == True.",
+                "Warning: This is nonstandard and should be explicitly stated in any derived work",
+            ]
             raise ValueError("\n".join(text))
-        
+
         callable(instance, attribute, v)
 
     return inner
 
 
-def simple_validation(callable: Callable[[Any], bool], err_msg: str = "", 
-                      algorithm_white_list: list[str] = full_algo_list, dev_setting: bool = False):
+def simple_validation(
+    callable: Callable[[Any], bool],
+    err_msg: str = "",
+    algorithm_white_list: list[str] = full_algo_list,
+    dev_setting: bool = False,
+):
     """
     provides a simple way to provide inline validation using a lambda predicate.
     PREDICATE RETURN TRUE FOR SUCCESS
@@ -212,112 +232,166 @@ def simple_validation(callable: Callable[[Any], bool], err_msg: str = "",
 
     def inner(instance, attribute, v):
         if dev_setting and (v != attribute.default) and not instance.developer_mode:
-            text = [f"'{attribute.name}' can only be changed if 'developer_mode' == True.",
-                     "Warning: This is nonstandard and should be explicitly stated in any derived work"]
+            text = [
+                f"'{attribute.name}' can only be changed if 'developer_mode' == True.",
+                "Warning: This is nonstandard and should be explicitly stated in any derived work",
+            ]
             raise ValueError("\n".join(text))
-        
+
         if v is None and instance.algorithm_choice in algorithm_white_list:
-            raise ValueError(f"{attribute.name} must be defined for the '{instance.algorithm_choice}' algorithm")
+            raise ValueError(
+                f"{attribute.name} must be defined for the '{instance.algorithm_choice}' algorithm"
+            )
 
         elif v is not None and instance.algorithm_choice not in algorithm_white_list:
-            raise ValueError(f"{attribute.name} must be None for the '{instance.algorithm_choice}' algorithm")            
+            raise ValueError(
+                f"{attribute.name} must be None for the '{instance.algorithm_choice}' algorithm"
+            )
 
         elif not callable(v):
-             raise ValueError(f"{err_msg} (Input value: {v})")      
+            raise ValueError(f"{err_msg} (Input value: {v})")
 
     return inner
 
+
 def algorithm_choice_validator(instance: DailySettings, attribute: str, value: str):
-    if value not in [s.lower() for s in _get_pub_class_attrib_dict(AlgorithmChoice).values()]:
+    if value not in [
+        s.lower() for s in _get_pub_class_attrib_dict(AlgorithmChoice).values()
+    ]:
         raise ValueError(f"invalid selection for {attribute.name}")
+
 
 def full_model_validator(instance: DailySettings, attribute: str, value: str):
-    if value not in [s.lower() for s in _get_pub_class_attrib_dict(FullModelSelection).values()]:
+    if value not in [
+        s.lower() for s in _get_pub_class_attrib_dict(FullModelSelection).values()
+    ]:
         raise ValueError(f"invalid selection for {attribute.name}")
 
-def alpha_final_validator(instance: DailySettings, attribute: str, value: float | str | None):
-    if value is None :
+
+def alpha_final_validator(
+    instance: DailySettings, attribute: str, value: float | str | None
+):
+    if value is None:
         if instance.alpha_final_type != None:
-            raise ValueError(f"{attribute.name} must be 'adaptive' or 'alpha_minimum' <= float <= 2 if 'alpha_final_type' is {instance.alpha_final_type}")
+            raise ValueError(
+                f"{attribute.name} must be 'adaptive' or 'alpha_minimum' <= float <= 2 if 'alpha_final_type' is {instance.alpha_final_type}"
+            )
 
     elif isinstance(value, float):
         if (instance.alpha_minimum > value) or (value > 2.0):
-            raise ValueError(f"{attribute.name} must be 'adaptive' or 'alpha_minimum' <= float <= 2")
+            raise ValueError(
+                f"{attribute.name} must be 'adaptive' or 'alpha_minimum' <= float <= 2"
+            )
 
     elif isinstance(value, str):
         if value != "adaptive":
-            raise ValueError(f"{attribute.name} must be 'adaptive' or 'alpha_minimum' <= float <= 2")
+            raise ValueError(
+                f"{attribute.name} must be 'adaptive' or 'alpha_minimum' <= float <= 2"
+            )
 
-def final_bounds_scalar_validator(instance: DailySettings, attribute: str, value: float | None):
+
+def final_bounds_scalar_validator(
+    instance: DailySettings, attribute: str, value: float | None
+):
     if value is not None:
         if value < 0.0:
             raise ValueError(f"{attribute.name} must be None or 0 < float")
 
         if instance.alpha_final_type is None:
-            raise ValueError(f"{attribute.name} must be None if 'alpha_final_type' is None")
+            raise ValueError(
+                f"{attribute.name} must be None if 'alpha_final_type' is None"
+            )
 
     else:
         if instance.alpha_final_type is not None:
-            raise ValueError(f"{attribute.name} must be 0 < float if 'alpha_final_type' is None")
+            raise ValueError(
+                f"{attribute.name} must be 0 < float if 'alpha_final_type' is None"
+            )
 
-def initial_smoothing_parameter_validator(instance: DailySettings, attribute: str, value: float | None):
+
+def initial_smoothing_parameter_validator(
+    instance: DailySettings, attribute: str, value: float | None
+):
     if value is not None:
         if value < 0.0:
             raise ValueError(f"{attribute.name} must be None or 0 < float")
 
     else:
         if instance.include_new_base_models:
-            raise ValueError(f"{attribute.name} must be specified if 'include_new_base_models' is True")
+            raise ValueError(
+                f"{attribute.name} must be specified if 'include_new_base_models' is True"
+            )
 
-def initial_step_percentage_validator(instance: DailySettings, attribute: str, value: float | None):
+
+def initial_step_percentage_validator(
+    instance: DailySettings, attribute: str, value: float | None
+):
     if value is not None:
         if value <= 0.0 or value > 0.5:
             raise ValueError(f"{attribute.name} must be None or 0 < float <= 0.5")
 
     else:
-        if instance.AlgorithmChoice[:5] in ['nlopt']:
-            raise ValueError(f"{attribute.name} must be specified if 'algorithm_choice' is from Nlopt")
+        if instance.AlgorithmChoice[:5] in ["nlopt"]:
+            raise ValueError(
+                f"{attribute.name} must be specified if 'algorithm_choice' is from Nlopt"
+            )
 
-def season_choice_validator(instance: DailySettings, attribute: str, season_dict: Dict[int, str]):
+
+def season_choice_validator(
+    instance: DailySettings, attribute: str, season_dict: Dict[int, str]
+):
     min_cnt = 1
 
     cnt = {"summer": 0, "shoulder": 0, "winter": 0}
     for key, value in season_dict.items():
         if (key < 1) or (key > 12):
-            raise ValueError(f"all month values must be 1 <= x <= 12 selection for {attribute.name}")
+            raise ValueError(
+                f"all month values must be 1 <= x <= 12 selection for {attribute.name}"
+            )
 
         if value not in ["summer", "shoulder", "winter"]:
-            raise ValueError(f"season value must be ['summer', 'shoulder', 'winter'] for {attribute.name}")
-    
+            raise ValueError(
+                f"season value must be ['summer', 'shoulder', 'winter'] for {attribute.name}"
+            )
+
         cnt[value] += 1
 
     for key, value in cnt.items():
         if value < min_cnt:
-            raise ValueError(f"{key} must be assigned to at least {min_cnt} month for {attribute.name}")
+            raise ValueError(
+                f"{key} must be assigned to at least {min_cnt} month for {attribute.name}"
+            )
 
 
-def is_weekday_validator(instance: DailySettings, attribute: str, is_weekday_dict: Dict[int, bool]):
+def is_weekday_validator(
+    instance: DailySettings, attribute: str, is_weekday_dict: Dict[int, bool]
+):
     weekend_cnt = 0
     for key, value in is_weekday_dict.items():
         if (key < 1) or (key > 7):
-            raise ValueError(f"all day values must be 1 <= x <= 7 (1 is Monday) for {attribute.name}")
+            raise ValueError(
+                f"all day values must be 1 <= x <= 7 (1 is Monday) for {attribute.name}"
+            )
 
         if not isinstance(value, bool):
             raise ValueError(f"is_weekday value must be boolean for {attribute.name}")
-    
+
         if not value:
             weekend_cnt += 1
 
     if weekend_cnt != 2:
         raise ValueError(f"There must be 2 weekend days specified for {attribute.name}")
-    
-#endregion
+
+
+# endregion
+
 
 @attrs.define(kw_only=True)
 class DailySettings:
     """
     Create settings for calculating the daily model
     """
+
     developer_mode: bool = attrs.field(
         validator=simple_validation(
             lambda x: isinstance(x, bool),
@@ -331,7 +405,7 @@ class DailySettings:
         validator=developer_mode_validation(algorithm_choice_validator),
         metadata={_KEY_DESCR: "optimization algorithm choice"},
         on_setattr=attrs.setters.frozen,
-        default=AlgorithmChoice.NLOPT_SBPLX.lower()
+        default=AlgorithmChoice.NLOPT_SBPLX.lower(),
     )
 
     initial_guess_algorithm_choice: str = attrs.field(
@@ -339,7 +413,7 @@ class DailySettings:
         validator=developer_mode_validation(algorithm_choice_validator),
         metadata={_KEY_DESCR: "initial guess optimization algorithm choice"},
         on_setattr=attrs.setters.frozen,
-        default=AlgorithmChoice.NLOPT_DIRECT.lower() #AlgorithmChoice.NLOPT_STOGO
+        default=AlgorithmChoice.NLOPT_DIRECT.lower(),  # AlgorithmChoice.NLOPT_STOGO
     )
 
     full_model: str = attrs.field(
@@ -347,13 +421,13 @@ class DailySettings:
         validator=developer_mode_validation(full_model_validator),
         metadata={_KEY_DESCR: "the largest model allowed"},
         on_setattr=attrs.setters.frozen,
-        default=FullModelSelection.HDD_TIDD_CDD
+        default=FullModelSelection.HDD_TIDD_CDD,
     )
 
     smoothed_model: bool = attrs.field(
         validator=simple_validation(
             lambda x: isinstance(x, bool),
-            dev_setting = True,
+            dev_setting=True,
         ),
         metadata={_KEY_DESCR: "allow smoothed models"},
         on_setattr=attrs.setters.frozen,
@@ -363,7 +437,7 @@ class DailySettings:
     allow_separate_summer: bool = attrs.field(
         validator=simple_validation(
             lambda x: isinstance(x, bool),
-            dev_setting = True,
+            dev_setting=True,
         ),
         metadata={_KEY_DESCR: "allow summer to be modeled separately"},
         on_setattr=attrs.setters.frozen,
@@ -373,7 +447,7 @@ class DailySettings:
     allow_separate_shoulder: bool = attrs.field(
         validator=simple_validation(
             lambda x: isinstance(x, bool),
-            dev_setting = True,
+            dev_setting=True,
         ),
         metadata={_KEY_DESCR: "allow shoulder to be modeled separately"},
         on_setattr=attrs.setters.frozen,
@@ -383,7 +457,7 @@ class DailySettings:
     allow_separate_winter: bool = attrs.field(
         validator=simple_validation(
             lambda x: isinstance(x, bool),
-            dev_setting = True,
+            dev_setting=True,
         ),
         metadata={_KEY_DESCR: "allow winter to be modeled separately"},
         on_setattr=attrs.setters.frozen,
@@ -393,7 +467,7 @@ class DailySettings:
     allow_separate_weekday_weekend: bool = attrs.field(
         validator=simple_validation(
             lambda x: isinstance(x, bool),
-            dev_setting = True,
+            dev_setting=True,
         ),
         metadata={_KEY_DESCR: "allow weekdays and weekends to be modeled separately"},
         on_setattr=attrs.setters.frozen,
@@ -403,9 +477,11 @@ class DailySettings:
     reduce_splits_by_gaussian: bool = attrs.field(
         validator=simple_validation(
             lambda x: isinstance(x, bool),
-            dev_setting = True,
+            dev_setting=True,
         ),
-        metadata={_KEY_DESCR: "reduces splits by fitting with multivariate Gaussians and testing for overlap"},
+        metadata={
+            _KEY_DESCR: "reduces splits by fitting with multivariate Gaussians and testing for overlap"
+        },
         on_setattr=attrs.setters.frozen,
         default=True,
     )
@@ -425,11 +501,13 @@ class DailySettings:
     alpha_minimum: float = attrs.field(
         converter=lambda x: float(x) if isinstance(x, int) else x,
         validator=simple_validation(
-            lambda x: isinstance(x, float) and (x <= -10), 
+            lambda x: isinstance(x, float) and (x <= -10),
             "'alpha_minimum', must be float < -10",
-            dev_setting = True,
+            dev_setting=True,
         ),
-        metadata={_KEY_DESCR: "alpha where adaptive robust loss function is Welsch loss"},
+        metadata={
+            _KEY_DESCR: "alpha where adaptive robust loss function is Welsch loss"
+        },
         on_setattr=attrs.setters.frozen,
         default=-100,
     )
@@ -437,19 +515,25 @@ class DailySettings:
     alpha_selection: float = attrs.field(
         converter=lambda x: float(x) if isinstance(x, int) else x,
         validator=simple_validation(
-            lambda x: isinstance(x, float) and (-10 <= x) and (x <= 2), 
+            lambda x: isinstance(x, float) and (-10 <= x) and (x <= 2),
             "'alpha_selection' must be -10 <= float <= 2",
-            dev_setting = True,
+            dev_setting=True,
         ),
-        metadata={_KEY_DESCR: "specified alpha to evaluate which is the best model type"},
+        metadata={
+            _KEY_DESCR: "specified alpha to evaluate which is the best model type"
+        },
         on_setattr=attrs.setters.frozen,
         default=2,
     )
 
     alpha_final_type: str = attrs.field(
         converter=lambda x: x.lower() if isinstance(x, str) else x,
-        validator=developer_mode_validation(attrs.validators.in_(get_pub_class_attrib_values(AlphaFinalType))),
-        metadata={_KEY_DESCR: "when to use 'alpha_final: 'all': on every model, 'last': on final model, None: don't use"},
+        validator=developer_mode_validation(
+            attrs.validators.in_(get_pub_class_attrib_values(AlphaFinalType))
+        ),
+        metadata={
+            _KEY_DESCR: "when to use 'alpha_final: 'all': on every model, 'last': on final model, None: don't use"
+        },
         on_setattr=attrs.setters.frozen,
         default="last",
     )
@@ -457,10 +541,12 @@ class DailySettings:
     alpha_final: float | str | None = attrs.field(
         converter=lambda x: float(x) if isinstance(x, int) else x,
         validator=developer_mode_validation(alpha_final_validator),
-        metadata={_KEY_DESCR: "specified alpha or 'adaptive' for adaptive loss in model evaluation"},
+        metadata={
+            _KEY_DESCR: "specified alpha or 'adaptive' for adaptive loss in model evaluation"
+        },
         on_setattr=attrs.setters.frozen,
         default="adaptive",
-    )    
+    )
 
     final_bounds_scalar: float | None = attrs.field(
         converter=lambda x: float(x) if isinstance(x, int) else x,
@@ -475,7 +561,7 @@ class DailySettings:
         validator=simple_validation(
             lambda x: 0 <= x,
             "'regularization_alpha' must be 0 <= float",
-            dev_setting = True,
+            dev_setting=True,
         ),
         metadata={_KEY_DESCR: "alpha for elastic net regularization"},
         on_setattr=attrs.setters.frozen,
@@ -487,7 +573,7 @@ class DailySettings:
         validator=simple_validation(
             lambda x: (0 <= x) and (x <= 1),
             "'regularization_percent_lasso' must be 0 <= float <= 1",
-            dev_setting = True,
+            dev_setting=True,
         ),
         metadata={_KEY_DESCR: "percent lasso vs (1 - perc) ridge regularization"},
         on_setattr=attrs.setters.frozen,
@@ -497,9 +583,9 @@ class DailySettings:
     segment_minimum_count: int = attrs.field(
         converter=lambda x: int(x) if isinstance(x, float) else x,
         validator=simple_validation(
-            lambda x: isinstance(x, int) and (3 <= x), 
+            lambda x: isinstance(x, int) and (3 <= x),
             "'segment_minimum_count' must be 3 <= int",
-            dev_setting = True,
+            dev_setting=True,
         ),
         metadata={_KEY_DESCR: "minimum number of data points for HDD/CDD"},
         on_setattr=attrs.setters.frozen,
@@ -509,11 +595,13 @@ class DailySettings:
     maximum_slope_OoM_scaler: float = attrs.field(
         converter=lambda x: float(x) if isinstance(x, int) else x,
         validator=simple_validation(
-            lambda x: isinstance(x, float) and (0 < x), 
+            lambda x: isinstance(x, float) and (0 < x),
             "'maximum_slope_OoM_scaler' must be 0 < float",
-            dev_setting = True,
+            dev_setting=True,
         ),
-        metadata={_KEY_DESCR: "scaler for initial slope to calculate bounds based on order of magnitude"},
+        metadata={
+            _KEY_DESCR: "scaler for initial slope to calculate bounds based on order of magnitude"
+        },
         on_setattr=attrs.setters.frozen,
         default=2,
     )
@@ -536,8 +624,12 @@ class DailySettings:
 
     split_selection_criteria: str = attrs.field(
         converter=lambda x: x.lower() if isinstance(x, str) else x,
-        validator=attrs.validators.in_(get_pub_class_attrib_values(ModelSelectionCriteria)),
-        metadata={_KEY_DESCR: "what selection criteria is used to select data splits of models"},
+        validator=attrs.validators.in_(
+            get_pub_class_attrib_values(ModelSelectionCriteria)
+        ),
+        metadata={
+            _KEY_DESCR: "what selection criteria is used to select data splits of models"
+        },
         on_setattr=attrs.setters.frozen,
         default="bic",
     )
@@ -546,10 +638,13 @@ class DailySettings:
     split_selection_penalty_multiplier: float = attrs.field(
         converter=lambda x: float(x) if isinstance(x, int) else x,
         validator=simple_validation(
-            lambda x: isinstance(x, float) and (0 <= x), "must be 0 <= float",
-            dev_setting = True,
+            lambda x: isinstance(x, float) and (0 <= x),
+            "must be 0 <= float",
+            dev_setting=True,
         ),
-        metadata={_KEY_DESCR: "what multiplier should be applied to the penalty of the selection criteria"},
+        metadata={
+            _KEY_DESCR: "what multiplier should be applied to the penalty of the selection criteria"
+        },
         on_setattr=attrs.setters.frozen,
         default=0.240,
     )
@@ -558,10 +653,13 @@ class DailySettings:
     split_selection_penalty_power: float = attrs.field(
         converter=lambda x: float(x) if isinstance(x, int) else x,
         validator=simple_validation(
-            lambda x: isinstance(x, float) and (0 <= x), "must be 0 <= float",
-            dev_setting = True,
+            lambda x: isinstance(x, float) and (0 <= x),
+            "must be 0 <= float",
+            dev_setting=True,
         ),
-        metadata={_KEY_DESCR: "what power should the penalty of the selection criteria be raised to"},
+        metadata={
+            _KEY_DESCR: "what power should the penalty of the selection criteria be raised to"
+        },
         on_setattr=attrs.setters.frozen,
         default=2.061,
     )
@@ -569,51 +667,56 @@ class DailySettings:
     season: Dict[int, str] = attrs.field(
         converter=lambda x: {k: str(v).lower().strip() for k, v in x.items()},
         validator=season_choice_validator,
-        metadata={_KEY_DESCR: "dictionary of months and their associated season (January is 1)"},
+        metadata={
+            _KEY_DESCR: "dictionary of months and their associated season (January is 1)"
+        },
         on_setattr=attrs.setters.frozen,
-        default= {
-                1: "winter",
-                2: "winter",
-                3: "shoulder",
-                4: "shoulder",
-                5: "shoulder",
-                6: "summer",
-                7: "summer",
-                8: "summer",
-                9: "summer",
-                10: "shoulder",
-                11: "winter",
-                12: "winter",
-            }
+        default={
+            1: "winter",
+            2: "winter",
+            3: "shoulder",
+            4: "shoulder",
+            5: "shoulder",
+            6: "summer",
+            7: "summer",
+            8: "summer",
+            9: "summer",
+            10: "shoulder",
+            11: "winter",
+            12: "winter",
+        },
     )
 
     is_weekday: Dict[int, bool] = attrs.field(
         validator=is_weekday_validator,
-        metadata={_KEY_DESCR: "dictionary of days (1 = Monday) and if that day is a weekday (True/False)"},
+        metadata={
+            _KEY_DESCR: "dictionary of days (1 = Monday) and if that day is a weekday (True/False)"
+        },
         on_setattr=attrs.setters.frozen,
-        default= {
-                1: True,
-                2: True,
-                3: True,
-                4: True,
-                5: True,
-                6: False,
-                7: False,
-            }
+        default={
+            1: True,
+            2: True,
+            3: True,
+            4: True,
+            5: True,
+            6: False,
+            7: False,
+        },
     )
 
     uncertainty_alpha: float = attrs.field(
         converter=lambda x: float(x) if isinstance(x, int) else x,
         validator=simple_validation(
-            lambda x: isinstance(x, float) and ((0 < x) and (x < 1)), 
+            lambda x: isinstance(x, float) and ((0 < x) and (x < 1)),
             "'uncertainty_alpha' must be 0 < float < 1",
-            dev_setting = False,
+            dev_setting=False,
         ),
-        metadata={_KEY_DESCR: "significance level used for uncertainty calculations (0 < float < 1)"},
+        metadata={
+            _KEY_DESCR: "significance level used for uncertainty calculations (0 < float < 1)"
+        },
         on_setattr=attrs.setters.frozen,
         default=0.1,
     )
-
 
     def __repr__(self):
         text_all = []
@@ -622,7 +725,7 @@ class DailySettings:
         # get all keys
         keys = []
         for key in dir(self):
-            if '__' != key[0:2]:
+            if "__" != key[0:2]:
                 keys.append(key)
 
         # print away
@@ -644,7 +747,9 @@ class DailySettings:
                         text_all.append(f"{'':>{key_max}s}   {str(k):>{k_max}s}: {v}")
 
                     else:
-                        text_all.append(f"{'':>{key_max}s}   {str(k):>{k_max}s}: {str(v):{v_max}s} }}")
+                        text_all.append(
+                            f"{'':>{key_max}s}   {str(k):>{k_max}s}: {str(v):{v_max}s} }}"
+                        )
 
             else:
                 if isinstance(val, str):
@@ -676,21 +781,22 @@ def caltrack_2_1_settings(**kwargs) -> DailySettings:
 
 
 def caltrack_legacy_settings(**kwargs) -> DailySettings:
-    settings = {"developer_mode": True,
-                "algorithm_choice": "nlopt_SBPLX", #"scipy_SLSQP",
-                "initial_guess_algorithm_choice": "nlopt_DIRECT",
-                "alpha_selection": 2.0,
-                "alpha_final": 2.0,
-                "alpha_final_type": "last",
-                "regularization_alpha": 0.001,
-                "regularization_percent_lasso": 1.0,
-                "smoothed_model": False,
-                "allow_separate_summer": False,
-                "allow_separate_shoulder": False,
-                "allow_separate_winter": False,
-                "allow_separate_weekday_weekend": False,
-                "reduce_splits_by_gaussian": False,
-                "segment_minimum_count": 10,
+    settings = {
+        "developer_mode": True,
+        "algorithm_choice": "nlopt_SBPLX",  # "scipy_SLSQP",
+        "initial_guess_algorithm_choice": "nlopt_DIRECT",
+        "alpha_selection": 2.0,
+        "alpha_final": 2.0,
+        "alpha_final_type": "last",
+        "regularization_alpha": 0.001,
+        "regularization_percent_lasso": 1.0,
+        "smoothed_model": False,
+        "allow_separate_summer": False,
+        "allow_separate_shoulder": False,
+        "allow_separate_winter": False,
+        "allow_separate_weekday_weekend": False,
+        "reduce_splits_by_gaussian": False,
+        "segment_minimum_count": 10,
     }
 
     # Check development attributes vs kwargs
@@ -703,10 +809,12 @@ def caltrack_legacy_settings(**kwargs) -> DailySettings:
             default = settings[key]
         else:
             default = getattr(default_settings, key)
-        
+
         if (val != default) and (key not in non_dev_settings) and (not dev_mode):
-            text = [f"'{key}' can only be changed if 'developer_mode' == True.",
-                     "Warning: This is nonstandard and should be explicitly stated in any derived work"]
+            text = [
+                f"'{key}' can only be changed if 'developer_mode' == True.",
+                "Warning: This is nonstandard and should be explicitly stated in any derived work",
+            ]
             raise ValueError("\n".join(text))
 
     # Set daily settings
@@ -719,7 +827,7 @@ def caltrack_legacy_settings(**kwargs) -> DailySettings:
 
 
 if __name__ == "__main__":
-    print('Default Settings')
+    print("Default Settings")
     # print(caltrack_2_1_settings())
     # print(caltrack_legacy_settings())
     test = caltrack_legacy_settings()

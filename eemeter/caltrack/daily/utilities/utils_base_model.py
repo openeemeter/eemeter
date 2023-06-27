@@ -19,27 +19,28 @@ def get_intercept(y, alpha=2):
         intercept = np.median(y)
 
     return intercept
-    
+
 
 def get_slope(x, y, x_bp, intercept, alpha=2):
     def slope_fcn_dec(x, y, x_bp, intercept, alpha):
-        def slope_fcn(slope): # TODO: This function could be numba'd
-            model = slope*(x - x_bp) + intercept 
+        def slope_fcn(slope):  # TODO: This function could be numba'd
+            model = slope * (x - x_bp) + intercept
             resid = y - model
 
             if alpha == 2:
                 obj = np.sqrt(np.sum(resid**2))
             else:
                 # obj = np.sum(np.abs(resid)) # MAE
-                obj = np.sum(np.logaddexp(resid, -resid) - np.log(2)) # log cosh
+                obj = np.sum(np.logaddexp(resid, -resid) - np.log(2))  # log cosh
 
             return obj
+
         return slope_fcn
-    
+
     opt_fcn = slope_fcn_dec(x, y, x_bp, intercept, alpha)
 
     slope = minimize_scalar(opt_fcn).x
-    
+
     return slope
 
 
@@ -65,7 +66,7 @@ def get_smooth_coeffs(hdd_bp, pct_hdd_k, cdd_bp, pct_cdd_k, min_pct_k=0.01):
     pct_match = 1
     hdd_w = cdd_w = 0
     if pct_match < 1:
-        hdd_w = lambertw((1 - pct_match)/np.exp(1)).real
+        hdd_w = lambertw((1 - pct_match) / np.exp(1)).real
         # cdd_w = lambertw(-(1 - pct_match)/np.exp(1)).real
         cdd_w = -hdd_w
 
@@ -75,20 +76,22 @@ def get_smooth_coeffs(hdd_bp, pct_hdd_k, cdd_bp, pct_cdd_k, min_pct_k=0.01):
         pct_cdd_k /= pct_k_sum
 
     # calculate the smoothing parameter as a percentage of the maximum allowed k
-    hdd_k = pct_hdd_k*(cdd_bp - hdd_bp)/(1 - hdd_w)
-    cdd_k = pct_cdd_k*(cdd_bp - hdd_bp)/(1 + cdd_w)
+    hdd_k = pct_hdd_k * (cdd_bp - hdd_bp) / (1 - hdd_w)
+    cdd_k = pct_cdd_k * (cdd_bp - hdd_bp) / (1 + cdd_w)
 
     # move breakpoints based on k
-    hdd_bp = hdd_bp + hdd_k*(1 - hdd_w)
-    cdd_bp = cdd_bp - cdd_k*(1 + cdd_w)
+    hdd_bp = hdd_bp + hdd_k * (1 - hdd_w)
+    cdd_bp = cdd_bp - cdd_k * (1 + cdd_w)
 
     return np.array([hdd_bp, hdd_k, cdd_bp, cdd_k])
 
 
-@numba.jit(nopython=True, error_model='numpy', cache=numba_cache)
+@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
 def fix_identical_bnds(bnds):
-    for i in np.argwhere(bnds[:,0] == bnds[:,1]):
-        bnds[i, :] = bnds[i, :] + np.array([-1.0, 1.0])*10**OoM_numba(bnds[i, 0], method="floor")
+    for i in np.argwhere(bnds[:, 0] == bnds[:, 1]):
+        bnds[i, :] = bnds[i, :] + np.array([-1.0, 1.0]) * 10 ** OoM_numba(
+            bnds[i, 0], method="floor"
+        )
 
     return bnds
 

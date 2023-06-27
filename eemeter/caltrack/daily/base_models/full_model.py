@@ -1,18 +1,31 @@
 import numpy as np
 import numba
 
-from eemeter.caltrack.daily.utilities.utils import ln_min_pos_system_value, ln_max_pos_system_value
+from eemeter.caltrack.daily.utilities.utils import (
+    ln_min_pos_system_value,
+    ln_max_pos_system_value,
+)
 
 # To compile ahead of time: https://numba.readthedocs.io/en/stable/user/pycc.html
 numba_cache = True
 
 
-@numba.jit(nopython=True, error_model='numpy', cache=numba_cache)
-def full_model(hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept, T_fit_bnds=np.array([]), T=np.array([])):
+@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
+def full_model(
+    hdd_bp,
+    hdd_beta,
+    hdd_k,
+    cdd_bp,
+    cdd_beta,
+    cdd_k,
+    intercept,
+    T_fit_bnds=np.array([]),
+    T=np.array([]),
+):
     # if all variables are zero, return tidd model
     if (hdd_beta == 0) and (cdd_beta == 0):
-        return np.ones_like(T)*intercept
-    
+        return np.ones_like(T) * intercept
+
     [T_min, T_max] = T_fit_bnds
 
     if cdd_bp < hdd_bp:
@@ -22,37 +35,43 @@ def full_model(hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept, T_fi
 
     E_tot = np.empty_like(T)
     for n, Ti in enumerate(T):
-        if (Ti < hdd_bp) or ((hdd_bp == cdd_bp) and (cdd_bp >= T_max)):   # Temperature is within the heating model
+        if (Ti < hdd_bp) or (
+            (hdd_bp == cdd_bp) and (cdd_bp >= T_max)
+        ):  # Temperature is within the heating model
             T_bp = hdd_bp
             beta = -hdd_beta
             k = hdd_k
 
-        elif (Ti > cdd_bp) or ((hdd_bp == cdd_bp) and (hdd_bp <= T_min)): # Temperature is within the cooling model
+        elif (Ti > cdd_bp) or (
+            (hdd_bp == cdd_bp) and (hdd_bp <= T_min)
+        ):  # Temperature is within the cooling model
             T_bp = cdd_bp
             beta = cdd_beta
             k = -cdd_k
-            
-        else: # Temperature independent
+
+        else:  # Temperature independent
             beta = 0
 
         # Evaluate
-        if beta == 0: # tidd
+        if beta == 0:  # tidd
             E_tot[n] = intercept
 
-        elif k == 0: # c_hdd
-            E_tot[n] = beta*(Ti - T_bp) + intercept
+        elif k == 0:  # c_hdd
+            E_tot[n] = beta * (Ti - T_bp) + intercept
 
-        else: # smoothed c_hdd
-            c_hdd = beta*(Ti - T_bp) + intercept
+        else:  # smoothed c_hdd
+            c_hdd = beta * (Ti - T_bp) + intercept
 
-            exp_interior = 1/k*(Ti - T_bp)
-            exp_interior = np.clip(exp_interior, ln_min_pos_system_value, ln_max_pos_system_value)
-            E_tot[n] = abs(beta*k)*(np.exp(exp_interior) - 1) + c_hdd
+            exp_interior = 1 / k * (Ti - T_bp)
+            exp_interior = np.clip(
+                exp_interior, ln_min_pos_system_value, ln_max_pos_system_value
+            )
+            E_tot[n] = abs(beta * k) * (np.exp(exp_interior) - 1) + c_hdd
 
     return E_tot
 
 
-@numba.jit(nopython=True, error_model='numpy', cache=numba_cache)
+@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
 def get_full_model_x(model_key, x, T_min, T_max, T_min_seg, T_max_seg):
     if model_key == "hdd_tidd_cdd_smooth":
         [hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept] = x
@@ -102,7 +121,7 @@ def get_full_model_x(model_key, x, T_min, T_max, T_min_seg, T_max_seg):
     return fix_full_model_x(x, T_min, T_max)
 
 
-@numba.jit(nopython=True, error_model='numpy', cache=numba_cache)
+@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
 def fix_full_model_x(x, T_min_seg, T_max_seg):
     hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept = x
 

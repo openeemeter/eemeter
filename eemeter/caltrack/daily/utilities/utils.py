@@ -13,8 +13,8 @@ from numba.extending import overload
 numba_cache = True
 
 
-min_pos_system_value = (np.finfo(float).tiny*(1E20))**(1/2)
-max_pos_system_value = (np.finfo(float).max*(1E-20))**(1/2)
+min_pos_system_value = (np.finfo(float).tiny * (1e20)) ** (1 / 2)
+max_pos_system_value = (np.finfo(float).max * (1e-20)) ** (1 / 2)
 ln_min_pos_system_value = np.log(min_pos_system_value)
 ln_max_pos_system_value = np.log(max_pos_system_value)
 
@@ -23,7 +23,7 @@ ln_max_pos_system_value = np.log(max_pos_system_value)
 def np_clip(a, a_min, a_max):
     @numba.vectorize
     def _clip(a, a_min, a_max):
-        """ vectorized implementation of the clip function """
+        """vectorized implementation of the clip function"""
         if np.isnan(a):
             return np.nan
         elif a < a_min:
@@ -34,7 +34,7 @@ def np_clip(a, a_min, a_max):
             return a
 
     def clip_impl(a, a_min, a_max):
-        """ numba implementation of the clip function """
+        """numba implementation of the clip function"""
         return _clip(a, a_min, a_max)
 
     return clip_impl
@@ -57,13 +57,13 @@ def OoM_numba(x, method="round"):
         elif method.lower() == "floor":
             x_OoM[i] = np.floor(np.log10(np.abs(xi)))
 
-        elif method.lower() == 'ceil':
+        elif method.lower() == "ceil":
             x_OoM[i] = np.ceil(np.log10(np.abs(xi)))
 
         elif method.lower() == "round":
             x_OoM[i] = np.round(np.log10(np.abs(xi)))
 
-        else: # "exact"
+        else:  # "exact"
             x_OoM[i] = np.log10(np.abs(xi))
 
     return x_OoM
@@ -71,12 +71,12 @@ def OoM_numba(x, method="round"):
 
 def RoundToSigFigs(x, p):
     x = np.asarray(x)
-    x_positive = np.where(np.isfinite(x) & (x != 0), np.abs(x), 10**(p-1))
+    x_positive = np.where(np.isfinite(x) & (x != 0), np.abs(x), 10 ** (p - 1))
     mags = 10 ** (p - 1 - OoM(x_positive))
     return np.round(x * mags) / mags
 
 
-def t_stat(alpha, n, tail = 2):
+def t_stat(alpha, n, tail=2):
     degrees_of_freedom = n - 1
     if tail == "one" or tail == 1:
         perc = 1 - alpha
@@ -94,10 +94,14 @@ def unc_factor(n, interval="PI", alpha=0.05):
         return t_stat(alpha, n) * (1 + 1 / np.sqrt(n))
 
 
-MAD_k = 1/norm_dist.ppf(0.75) # Conversion factor from MAD to std for normal distribution
+MAD_k = 1 / norm_dist.ppf(
+    0.75
+)  # Conversion factor from MAD to std for normal distribution
+
+
 def median_absolute_deviation(x):
     mu = np.median(x)
-    sigma = np.median(np.abs(x - mu))*MAD_k
+    sigma = np.median(np.abs(x - mu)) * MAD_k
 
     return sigma
 

@@ -2,7 +2,9 @@ import numpy as np
 import numba
 
 from eemeter.caltrack.daily.base_models.full_model import full_model
-from eemeter.caltrack.daily.base_models.hdd_tidd_cdd_smooth import _hdd_tidd_cdd_smooth_weight
+from eemeter.caltrack.daily.base_models.hdd_tidd_cdd_smooth import (
+    _hdd_tidd_cdd_smooth_weight,
+)
 
 from eemeter.caltrack.daily.utilities.utils_base_model import fix_identical_bnds
 
@@ -18,7 +20,7 @@ numba_cache = True
 def fit_tidd(T, obs, settings, opt_options, x0=None, bnds=None, initial_fit=False):
     if x0 is None:
         x0 = _tidd_x0(T, obs)
-    
+
     if initial_fit:
         alpha = settings.alpha_selection
     else:
@@ -29,17 +31,19 @@ def fit_tidd(T, obs, settings, opt_options, x0=None, bnds=None, initial_fit=Fals
 
     if bnds is None:
         bnds = bnds_0
-    
+
     bnds = _tidd_update_bnds(bnds, bnds_0)
 
     coef_id = ["intercept"]
     model_fcn = _tidd
     weight_fcn = _tidd_weight
     TSS_fcn = _tidd_total_sum_of_squares
-    obj_fcn = lambda alpha, C: obj_fcn_decorator(model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, C, coef_id, initial_fit)
+    obj_fcn = lambda alpha, C: obj_fcn_decorator(
+        model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, C, coef_id, initial_fit
+    )
 
     res = Optimizer(obj_fcn, x0, bnds, coef_id, alpha, settings, opt_options).run()
-    
+
     return res
 
 
@@ -50,7 +54,7 @@ def _tidd_x0(T, obs):
     return np.array([intercept])
 
 
-@numba.jit(nopython=True, error_model='numpy', cache=numba_cache)
+@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
 def set_full_model_coeffs(intercept):
     hdd_bp = hdd_beta = hdd_k = cdd_bp = cdd_beta = cdd_k = 0
 
@@ -64,7 +68,7 @@ def _tidd(intercept, T_fit_bnds=np.array([]), T=np.array([])):
 
 
 def _tidd_total_sum_of_squares(intercept, T, obs):
-    TSS = np.sum((obs - np.mean(obs))**2)
+    TSS = np.sum((obs - np.mean(obs)) ** 2)
 
     return TSS
 
@@ -78,7 +82,11 @@ def _tidd_update_bnds(new_bnds, bnds):
     return new_bnds
 
 
-def _tidd_weight(intercept, T, residual, sigma=3.0, quantile=0.25, alpha=2.0, min_weight=0.0):
+def _tidd_weight(
+    intercept, T, residual, sigma=3.0, quantile=0.25, alpha=2.0, min_weight=0.0
+):
     model_vars = set_full_model_coeffs(intercept)
-    
-    return _hdd_tidd_cdd_smooth_weight(*model_vars, T, residual, sigma, quantile, alpha, min_weight)
+
+    return _hdd_tidd_cdd_smooth_weight(
+        *model_vars, T, residual, sigma, quantile, alpha, min_weight
+    )
