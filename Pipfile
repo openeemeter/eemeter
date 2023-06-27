@@ -9,6 +9,10 @@ matplotlib = "*"
 statsmodels = "*"
 scipy = "*"
 pandas = ">=1.0.0"
+attrs = "*"
+numpy = "*"
+numba = "*"
+nlopt = "*"
 
 [dev-packages]
 sqlalchemy = "*"
