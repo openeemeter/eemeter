@@ -31,6 +31,9 @@ from ..derivatives import metered_savings
 from ..features import estimate_hour_of_week_occupancy, fit_temperature_bins
 from ..segmentation import segment_time_series
 
+from eemeter.caltrack.daily.fit_model import FitModel
+import pandas as pd
+
 __all__ = (
     "caltrack_daily",
     "caltrack_hourly",
@@ -215,3 +218,31 @@ def caltrack_daily(
     )
 
     return metered_savings_dataframe
+
+def caltrack_2_1_daily(
+    meter_data,
+    temperature_data,
+    blackout_start_date,
+    blackout_end_date,
+):
+    baseline_meter_data, warnings = get_baseline_data(
+        meter_data,
+        start=blackout_start_date - relativedelta(years=1),
+        end=blackout_start_date,
+        max_days=None,
+    ) 
+    reporting_meter_data, warnings = get_reporting_data(
+        meter_data, start=blackout_end_date, max_days=365
+    )
+    baseline_meter_dataframe = pd.DataFrame({
+        'temperature': temperature_data[baseline_meter_data.index],
+        'observed': baseline_meter_data.squeeze(),
+    }, index=baseline_meter_data.index)
+    reporting_meter_dataframe = pd.DataFrame({
+        'temperature': temperature_data[reporting_meter_data.index],
+        'observed': reporting_meter_data.squeeze(),
+    }, index=reporting_meter_data.index)
+
+    daily_model = FitModel(baseline_meter_dataframe)
+    results = daily_model.evaluate(reporting_meter_dataframe)
+    return results
