@@ -8,9 +8,9 @@ from eemeter.caltrack.daily.base_models.full_model import full_model, get_full_m
 from eemeter.caltrack.daily.utilities.adaptive_loss import adaptive_weights, get_C
 from eemeter.caltrack.daily.utilities.adaptive_loss import remove_outliers
 
-from eemeter.caltrack.daily.utilities.utils_base_model import get_slope, get_intercept
-from eemeter.caltrack.daily.utilities.utils_base_model import fix_identical_bnds
-from eemeter.caltrack.daily.utilities.utils_base_model import (
+from eemeter.caltrack.daily.utilities.base_model import get_slope, get_intercept
+from eemeter.caltrack.daily.utilities.base_model import fix_identical_bnds
+from eemeter.caltrack.daily.utilities.base_model import (
     get_smooth_coeffs,
     get_T_bnds,
 )

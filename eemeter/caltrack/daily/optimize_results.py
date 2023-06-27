@@ -5,7 +5,7 @@ import numpy as np
 from eemeter.caltrack.daily.base_models.full_model import full_model, get_full_model_x
 
 from eemeter.caltrack.daily.utilities.selection_criteria import selection_criteria
-from eemeter.caltrack.daily.utilities.utils_base_model import (
+from eemeter.caltrack.daily.utilities.base_model import (
     get_smooth_coeffs,
     get_T_bnds,
 )

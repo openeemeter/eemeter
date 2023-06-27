@@ -10,13 +10,13 @@ from eemeter.caltrack.daily.base_models.hdd_tidd_cdd_smooth import (
 
 from eemeter.caltrack.daily.utilities.adaptive_loss import adaptive_weights
 
-from eemeter.caltrack.daily.utilities.utils_base_model import (
+from eemeter.caltrack.daily.utilities.base_model import (
     linear_fit,
     get_slope,
     get_intercept,
     get_T_bnds,
 )
-from eemeter.caltrack.daily.utilities.utils_base_model import fix_identical_bnds
+from eemeter.caltrack.daily.utilities.base_model import fix_identical_bnds
 
 from eemeter.caltrack.daily.objective_function import obj_fcn_decorator
 from eemeter.caltrack.daily.optimize import Optimizer, nlopt_algorithms

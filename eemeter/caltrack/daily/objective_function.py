@@ -9,7 +9,7 @@ from eemeter.caltrack.daily.utilities.adaptive_loss import adaptive_weights
 from eemeter.caltrack.daily.utilities.utils import OoM
 from eemeter.caltrack.daily.utilities.utils import fast_std as stdev
 
-# from eemeter.caltrack.daily.utilities.utils_derivative import numerical_jacobian
+# from eemeter.caltrack.daily.utilities.derivative import numerical_jacobian
 
 
 def get_idx(A, B):
