@@ -80,7 +80,7 @@ def fit_model(model_key, fit_input, x0:ModelCoefficients, bnds):
         res = fit_hdd_tidd_cdd(*fit_input, x0, bnds, initial_fit=False)
 
     elif model_key == "c_hdd_tidd_smooth":
-        res = fit_c_hdd_tidd_smooth(*fit_input, x0.to_np_array(), bnds, initial_fit=False)
+        res = fit_c_hdd_tidd_smooth(*fit_input, x0, bnds, initial_fit=False)
 
     elif model_key == "c_hdd_tidd":
         res = fit_c_hdd_tidd(*fit_input, x0.to_np_array(), bnds, initial_fit=False)

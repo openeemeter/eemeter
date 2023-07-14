@@ -15,13 +15,15 @@ from eemeter.caltrack.daily.utilities.base_model import fix_identical_bnds
 from eemeter.caltrack.daily.objective_function import obj_fcn_decorator
 from eemeter.caltrack.daily.optimize import Optimizer
 
+from eemeter.caltrack.daily.utilities.utils import ModelCoefficients, ModelType
+from typing import Optional
 
 # To compile ahead of time: https://numba.readthedocs.io/en/stable/user/pycc.html
 numba_cache = True
 
 
 def fit_c_hdd_tidd_smooth(
-    T, obs, settings, opt_options, x0=None, bnds=None, initial_fit=False
+    T, obs, settings, opt_options, x0:Optional[ModelCoefficients]=None, bnds=None, initial_fit=False
 ):
     if initial_fit:
         alpha = settings.alpha_selection
@@ -33,8 +35,16 @@ def fit_c_hdd_tidd_smooth(
     else:
         x0 = _c_hdd_tidd_smooth_x0_final(T, obs, x0, alpha, settings)
 
-    max_slope = np.abs(x0[1]) + 10 ** (
-        np.log10(np.abs(x0[1])) + np.log10(settings.maximum_slope_OoM_scaler)
+    match x0.model_type:
+        case ModelType.HDD_TIDD_SMOOTH:
+            tdd_beta = x0.hdd_beta
+        case ModelType.TIDD_CDD_SMOOTH:
+            tdd_beta = x0.cdd_beta
+        case _:
+            raise ValueError
+
+    max_slope = np.abs(tdd_beta) + 10 ** (
+        np.log10(np.abs(tdd_beta)) + np.log10(settings.maximum_slope_OoM_scaler)
     )
 
     if initial_fit:
@@ -50,7 +60,7 @@ def fit_c_hdd_tidd_smooth(
 
     if initial_fit:
         c_hdd_beta_bnds = [-max_slope, max_slope]
-    elif x0[1] < 0:
+    elif tdd_beta < 0:
         c_hdd_beta_bnds = [-max_slope, 0]
     else:
         c_hdd_beta_bnds = [0, max_slope]
@@ -72,7 +82,7 @@ def fit_c_hdd_tidd_smooth(
         model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, C, coef_id, initial_fit
     )
 
-    res = Optimizer(obj_fcn, x0, bnds, coef_id, alpha, settings, opt_options).run()
+    res = Optimizer(obj_fcn, x0.to_np_array(), bnds, coef_id, alpha, settings, opt_options).run()
 
     return res
 
@@ -81,8 +91,7 @@ def fit_c_hdd_tidd_smooth(
 def _c_hdd_tidd_smooth_x0(T, obs, alpha, settings):
     [c_hdd_bp, c_hdd_beta, intercept] = _c_hdd_tidd_x0(T, obs, alpha, settings)
     c_hdd_k = 0.0
-
-    return np.array([c_hdd_bp, c_hdd_beta, c_hdd_k, intercept])
+    return _tdd_coefficients(c_hdd_bp=c_hdd_bp, c_hdd_beta=c_hdd_beta, c_hdd_k=c_hdd_k, intercept=intercept)
 
 
 def _c_hdd_tidd_smooth_x0_final(T, obs, x0, alpha, settings):
@@ -91,8 +100,41 @@ def _c_hdd_tidd_smooth_x0_final(T, obs, x0, alpha, settings):
     [c_hdd_bp, c_hdd_beta, intercept] = _c_hdd_tidd_x0_final(
         T, obs, x0_fit, alpha, settings
     )
+    return _tdd_coefficients(c_hdd_bp=c_hdd_bp, c_hdd_beta=c_hdd_beta, c_hdd_k=c_hdd_k, intercept=intercept)
 
-    return np.array([c_hdd_bp, c_hdd_beta, c_hdd_k, intercept])
+
+def _tdd_coefficients(c_hdd_bp, c_hdd_beta, c_hdd_k, intercept) -> ModelCoefficients:
+    """
+    infer cdd vs hdd given positive or negative slope. 
+    if slope is 0, model will be reduced later
+    """
+    if c_hdd_beta < 0:
+        hdd_beta = c_hdd_beta
+        hdd_bp = c_hdd_bp
+        hdd_k = c_hdd_k
+        cdd_beta = None
+        cdd_bp = None
+        cdd_k = None
+        model_type = ModelType.HDD_TIDD_SMOOTH
+    else:
+        cdd_beta = c_hdd_beta
+        cdd_bp = c_hdd_bp
+        cdd_k = c_hdd_k
+        hdd_beta = None
+        hdd_bp = None
+        hdd_k = None
+        model_type = ModelType.TIDD_CDD_SMOOTH
+
+    return ModelCoefficients(
+        model_type=model_type,
+        intercept=intercept,
+        hdd_bp=hdd_bp,
+        hdd_beta=hdd_beta,
+        hdd_k=hdd_k,
+        cdd_bp=cdd_bp,
+        cdd_beta=cdd_beta,
+        cdd_k=cdd_k,
+    )
 
 
 @numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
