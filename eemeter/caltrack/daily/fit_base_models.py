@@ -86,7 +86,7 @@ def fit_model(model_key, fit_input, x0:ModelCoefficients, bnds):
         res = fit_c_hdd_tidd(*fit_input, x0.to_np_array(), bnds, initial_fit=False)
 
     elif model_key == "tidd":
-        res = fit_tidd(*fit_input, x0.to_np_array(), bnds, initial_fit=False)
+        res = fit_tidd(*fit_input, x0, bnds, initial_fit=False)
 
     return res
 

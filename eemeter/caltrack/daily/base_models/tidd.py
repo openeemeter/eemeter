@@ -12,12 +12,14 @@ from eemeter.caltrack.daily.objective_function import obj_fcn_decorator
 
 from eemeter.caltrack.daily.optimize import Optimizer
 
+from eemeter.caltrack.daily.utilities.utils import ModelCoefficients, ModelType
+from typing import Optional
 
 # To compile ahead of time: https://numba.readthedocs.io/en/stable/user/pycc.html
 numba_cache = True
 
 
-def fit_tidd(T, obs, settings, opt_options, x0=None, bnds=None, initial_fit=False):
+def fit_tidd(T, obs, settings, opt_options, x0:Optional[ModelCoefficients]=None, bnds=None, initial_fit=False):
     if x0 is None:
         x0 = _tidd_x0(T, obs)
 
@@ -42,7 +44,7 @@ def fit_tidd(T, obs, settings, opt_options, x0=None, bnds=None, initial_fit=Fals
         model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, C, coef_id, initial_fit
     )
 
-    res = Optimizer(obj_fcn, x0, bnds, coef_id, alpha, settings, opt_options).run()
+    res = Optimizer(obj_fcn, x0.to_np_array(), bnds, coef_id, alpha, settings, opt_options).run()
 
     return res
 
@@ -50,8 +52,7 @@ def fit_tidd(T, obs, settings, opt_options, x0=None, bnds=None, initial_fit=Fals
 # Model Functions
 def _tidd_x0(T, obs):
     intercept = np.median(obs)
-
-    return np.array([intercept])
+    return ModelCoefficients(model_type=ModelType.TIDD, intercept=intercept)
 
 
 @numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
