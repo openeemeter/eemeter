@@ -23,7 +23,13 @@ numba_cache = True
 
 
 def fit_hdd_tidd_cdd(
-    T, obs, settings, opt_options, x0:Optional[ModelCoefficients]=None, bnds=None, initial_fit=False
+    T,
+    obs,
+    settings,
+    opt_options,
+    x0: Optional[ModelCoefficients] = None,
+    bnds=None,
+    initial_fit=False,
 ):
     if initial_fit:
         alpha = settings.alpha_selection
@@ -65,7 +71,9 @@ def fit_hdd_tidd_cdd(
         model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, C, coef_id, initial_fit
     )
 
-    res = Optimizer(obj_fcn, x0.to_np_array(), bnds, coef_id, alpha, settings, opt_options).run()
+    res = Optimizer(
+        obj_fcn, x0.to_np_array(), bnds, coef_id, alpha, settings, opt_options
+    ).run()
 
     return res
 
@@ -97,8 +105,9 @@ def _hdd_tidd_cdd_x0(T, obs, alpha, settings):
         cdd_bp=x0_smooth.cdd_bp,
         cdd_beta=x0_smooth.cdd_beta,
         intercept=x0_smooth.intercept,
-    ) 
+    )
     return x0
+
 
 def _hdd_tidd_cdd_total_sum_of_squares(
     hdd_bp, hdd_beta, cdd_bp, cdd_beta, intercept, T, obs

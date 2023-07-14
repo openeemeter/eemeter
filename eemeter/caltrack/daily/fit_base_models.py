@@ -70,7 +70,7 @@ def fit_initial_models_from_full_model(df_meter, settings, print_res=False):
     return model_res
 
 
-def fit_model(model_key, fit_input, x0:ModelCoefficients, bnds):
+def fit_model(model_key, fit_input, x0: ModelCoefficients, bnds):
     if model_key == "hdd_tidd_cdd_smooth":
         res = fit_hdd_tidd_cdd_smooth(*fit_input, x0, bnds, initial_fit=False)
 
@@ -91,7 +91,7 @@ def fit_model(model_key, fit_input, x0:ModelCoefficients, bnds):
     return res
 
 
-def fit_final_model(df_meter, HoF:OptimizedResult, settings, print_res=False):
+def fit_final_model(df_meter, HoF: OptimizedResult, settings, print_res=False):
     def get_bnds(x0, bnds_scalar):
         x_oom = 10 ** (OoM(x0, method="exact") + np.log10(bnds_scalar))
         bnds = (x0 + (np.array([-1, 1]) * x_oom[:, None]).T).T

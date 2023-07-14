@@ -22,15 +22,16 @@ ln_max_pos_system_value = np.log(max_pos_system_value)
 from attrs import define
 from enum import Enum
 
+
 class ModelType(Enum):
     # Full model \_/
     HDD_TIDD_CDD_SMOOTH = 1
     HDD_TIDD_CDD = 2
-    
+
     # Heating, temp independent \__
     HDD_TIDD_SMOOTH = 3
     HDD_TIDD = 4
-    
+
     # Temp independent, cooling __/
     TIDD_CDD_SMOOTH = 5
     TIDD_CDD = 5
@@ -96,13 +97,13 @@ class ModelCoefficients:
                 "c_hdd_k",
                 "intercept",
             ]:
-                if coefficients[1] < 0: #model is heating dependent
+                if coefficients[1] < 0:  # model is heating dependent
                     hdd_bp = coefficients[0]
                     hdd_beta = -coefficients[1]
                     hdd_k = coefficients[2]
                     cdd_bp = cdd_beta = cdd_k = None
                     model_type = ModelType.HDD_TIDD_SMOOTH
-                else: #model is cooling dependent
+                else:  # model is cooling dependent
                     cdd_bp = coefficients[0]
                     cdd_beta = coefficients[1]
                     cdd_k = coefficients[2]
@@ -123,12 +124,12 @@ class ModelCoefficients:
                 "c_hdd_beta",
                 "intercept",
             ]:
-                if coefficients[1] < 0: #model is heating dependent
+                if coefficients[1] < 0:  # model is heating dependent
                     hdd_bp = coefficients[0]
                     hdd_beta = -coefficients[1]
                     cdd_bp = cdd_beta = None
                     model_type = ModelType.HDD_TIDD
-                else: #model is cooling dependent
+                else:  # model is cooling dependent
                     cdd_bp = coefficients[0]
                     cdd_beta = coefficients[1]
                     hdd_bp = hdd_beta = None
@@ -154,13 +155,36 @@ class ModelCoefficients:
     def to_np_array(self):
         match self.model_type:
             case ModelType.HDD_TIDD_CDD_SMOOTH:
-                return np.array([self.hdd_bp, self.hdd_beta, self.hdd_k, self.cdd_bp, self.cdd_beta, self.cdd_k, self.intercept])
+                return np.array(
+                    [
+                        self.hdd_bp,
+                        self.hdd_beta,
+                        self.hdd_k,
+                        self.cdd_bp,
+                        self.cdd_beta,
+                        self.cdd_k,
+                        self.intercept,
+                    ]
+                )
             case ModelType.HDD_TIDD_CDD:
-                return np.array([self.hdd_bp, self.hdd_beta, self.hdd_k, self.cdd_bp, self.cdd_beta, self.intercept])
+                return np.array(
+                    [
+                        self.hdd_bp,
+                        self.hdd_beta,
+                        self.hdd_k,
+                        self.cdd_bp,
+                        self.cdd_beta,
+                        self.intercept,
+                    ]
+                )
             case ModelType.HDD_TIDD_SMOOTH:
-                return np.array([self.hdd_bp, self.hdd_beta, self.hdd_k, self.intercept])
+                return np.array(
+                    [self.hdd_bp, self.hdd_beta, self.hdd_k, self.intercept]
+                )
             case ModelType.TIDD_CDD_SMOOTH:
-                return np.array([self.cdd_bp, self.cdd_beta, self.cdd_k, self.intercept])
+                return np.array(
+                    [self.cdd_bp, self.cdd_beta, self.cdd_k, self.intercept]
+                )
             case ModelType.HDD_TIDD_SMOOTH:
                 return np.array([self.hdd_bp, self.hdd_beta, self.intercept])
             case ModelType.TIDD_CDD_SMOOTH:
@@ -170,6 +194,8 @@ class ModelCoefficients:
 
 
 from typing import Annotated
+
+
 @define
 class CoefficientBounds:
     model_type: ModelType

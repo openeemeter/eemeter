@@ -19,7 +19,15 @@ from typing import Optional
 numba_cache = True
 
 
-def fit_tidd(T, obs, settings, opt_options, x0:Optional[ModelCoefficients]=None, bnds=None, initial_fit=False):
+def fit_tidd(
+    T,
+    obs,
+    settings,
+    opt_options,
+    x0: Optional[ModelCoefficients] = None,
+    bnds=None,
+    initial_fit=False,
+):
     if x0 is None:
         x0 = _tidd_x0(T, obs)
 
@@ -44,7 +52,9 @@ def fit_tidd(T, obs, settings, opt_options, x0:Optional[ModelCoefficients]=None,
         model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, C, coef_id, initial_fit
     )
 
-    res = Optimizer(obj_fcn, x0.to_np_array(), bnds, coef_id, alpha, settings, opt_options).run()
+    res = Optimizer(
+        obj_fcn, x0.to_np_array(), bnds, coef_id, alpha, settings, opt_options
+    ).run()
 
     return res
 

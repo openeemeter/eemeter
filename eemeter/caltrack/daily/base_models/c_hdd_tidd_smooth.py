@@ -23,7 +23,13 @@ numba_cache = True
 
 
 def fit_c_hdd_tidd_smooth(
-    T, obs, settings, opt_options, x0:Optional[ModelCoefficients]=None, bnds=None, initial_fit=False
+    T,
+    obs,
+    settings,
+    opt_options,
+    x0: Optional[ModelCoefficients] = None,
+    bnds=None,
+    initial_fit=False,
 ):
     if initial_fit:
         alpha = settings.alpha_selection
@@ -82,7 +88,9 @@ def fit_c_hdd_tidd_smooth(
         model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, C, coef_id, initial_fit
     )
 
-    res = Optimizer(obj_fcn, x0.to_np_array(), bnds, coef_id, alpha, settings, opt_options).run()
+    res = Optimizer(
+        obj_fcn, x0.to_np_array(), bnds, coef_id, alpha, settings, opt_options
+    ).run()
 
     return res
 
@@ -91,7 +99,9 @@ def fit_c_hdd_tidd_smooth(
 def _c_hdd_tidd_smooth_x0(T, obs, alpha, settings):
     [c_hdd_bp, c_hdd_beta, intercept] = _c_hdd_tidd_x0(T, obs, alpha, settings)
     c_hdd_k = 0.0
-    return _tdd_coefficients(c_hdd_bp=c_hdd_bp, c_hdd_beta=c_hdd_beta, c_hdd_k=c_hdd_k, intercept=intercept)
+    return _tdd_coefficients(
+        c_hdd_bp=c_hdd_bp, c_hdd_beta=c_hdd_beta, c_hdd_k=c_hdd_k, intercept=intercept
+    )
 
 
 def _c_hdd_tidd_smooth_x0_final(T, obs, x0, alpha, settings):
@@ -100,12 +110,14 @@ def _c_hdd_tidd_smooth_x0_final(T, obs, x0, alpha, settings):
     [c_hdd_bp, c_hdd_beta, intercept] = _c_hdd_tidd_x0_final(
         T, obs, x0_fit, alpha, settings
     )
-    return _tdd_coefficients(c_hdd_bp=c_hdd_bp, c_hdd_beta=c_hdd_beta, c_hdd_k=c_hdd_k, intercept=intercept)
+    return _tdd_coefficients(
+        c_hdd_bp=c_hdd_bp, c_hdd_beta=c_hdd_beta, c_hdd_k=c_hdd_k, intercept=intercept
+    )
 
 
 def _tdd_coefficients(c_hdd_bp, c_hdd_beta, c_hdd_k, intercept) -> ModelCoefficients:
     """
-    infer cdd vs hdd given positive or negative slope. 
+    infer cdd vs hdd given positive or negative slope.
     if slope is 0, model will be reduced later
     """
     if c_hdd_beta < 0:

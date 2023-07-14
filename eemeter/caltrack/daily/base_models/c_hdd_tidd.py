@@ -33,6 +33,8 @@ rtol = 1e-5
 check for differences in beta bounds between this and smoothed model. merge both first rather than
 adding the ModelCoefficients here, as the current implementation updates x0 and is a bit cumbersome to convert
 """
+
+
 def fit_c_hdd_tidd(
     T, obs, settings, opt_options, x0=None, bnds=None, initial_fit=False
 ):

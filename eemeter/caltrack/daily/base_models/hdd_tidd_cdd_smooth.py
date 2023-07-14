@@ -28,7 +28,13 @@ numba_cache = True
 
 # TODO: Might be able to make fitting faster by optimizing bp's and intercept and beta/pct_k inside
 def fit_hdd_tidd_cdd_smooth(
-    T, obs, settings, opt_options, x0:Optional[ModelCoefficients]=None, bnds=None, initial_fit=False
+    T,
+    obs,
+    settings,
+    opt_options,
+    x0: Optional[ModelCoefficients] = None,
+    bnds=None,
+    initial_fit=False,
 ):
     assert x0 is None or x0.model_type is ModelType.HDD_TIDD_CDD_SMOOTH
 
@@ -89,7 +95,9 @@ def fit_hdd_tidd_cdd_smooth(
         model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, C, coef_id, initial_fit
     )
 
-    res = Optimizer(obj_fcn, x0.to_np_array(), bnds, coef_id, alpha, settings, opt_options).run()
+    res = Optimizer(
+        obj_fcn, x0.to_np_array(), bnds, coef_id, alpha, settings, opt_options
+    ).run()
 
     return res
 
