@@ -11,6 +11,7 @@ from eemeter.caltrack.daily.utilities.base_model import (
 )
 
 from eemeter.caltrack.daily.utilities.utils import unc_factor
+from eemeter.caltrack.daily.utilities.utils import ModelCoefficients
 
 
 from timeit import default_timer as timer
@@ -150,6 +151,7 @@ def acf(x, lag_n=None, moving_mean_std=False):
     return corr
 
 
+#consider rename
 class OptimizedResult:
     def __init__(
         self,
@@ -175,6 +177,8 @@ class OptimizedResult:
         self.x = x
         self.num_coeffs = len(x)
         self.bnds = bnds
+        #XXX maybe use model_key after it's defined below..
+        self.named_coeffs = ModelCoefficients.from_np_arrays(x, coef_id)
 
         self.loss_alpha = loss_alpha
         self.C = C

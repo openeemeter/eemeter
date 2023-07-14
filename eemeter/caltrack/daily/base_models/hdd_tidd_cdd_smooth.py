@@ -18,6 +18,9 @@ from eemeter.caltrack.daily.utilities.base_model import (
 from eemeter.caltrack.daily.objective_function import obj_fcn_decorator
 from eemeter.caltrack.daily.optimize import Optimizer, nlopt_algorithms
 
+from eemeter.caltrack.daily.utilities.utils import ModelCoefficients, ModelType
+from typing import Optional
+
 
 # To compile ahead of time: https://numba.readthedocs.io/en/stable/user/pycc.html
 numba_cache = True
@@ -25,7 +28,7 @@ numba_cache = True
 
 # TODO: Might be able to make fitting faster by optimizing bp's and intercept and beta/pct_k inside
 def fit_hdd_tidd_cdd_smooth(
-    T, obs, settings, opt_options, x0=None, bnds=None, initial_fit=False
+    T, obs, settings, opt_options, x0:Optional[ModelCoefficients]=None, bnds=None, initial_fit=False
 ):
     if initial_fit:
         alpha = settings.alpha_selection
@@ -35,8 +38,7 @@ def fit_hdd_tidd_cdd_smooth(
     if x0 is None:
         x0 = _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings)
 
-    # max_slope = np.max([x0[1], x0[4]])*settings.maximum_slope_multiplier # TODO: Need better estimation
-    max_slope = np.max([x0[1], x0[4]])
+    max_slope = np.max([x0.hdd_beta, x0.cdd_beta])
     max_slope += 10 ** (
         np.log10(np.abs(max_slope)) + np.log10(settings.maximum_slope_OoM_scaler)
     )
@@ -85,7 +87,7 @@ def fit_hdd_tidd_cdd_smooth(
         model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, C, coef_id, initial_fit
     )
 
-    res = Optimizer(obj_fcn, x0, bnds, coef_id, alpha, settings, opt_options).run()
+    res = Optimizer(obj_fcn, x0.to_np_array(), bnds, coef_id, alpha, settings, opt_options).run()
 
     return res
 
@@ -173,7 +175,16 @@ def _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings, test_c_hdd=False):
     else:
         x0 = x0_hdd_tidd_cdd
 
-    return np.array(x0)
+    return ModelCoefficients(
+        model_type=ModelType.HDD_TIDD_CDD_SMOOTH,
+        hdd_bp=x0[0],
+        hdd_beta=x0[1],
+        hdd_k=x0[2],
+        cdd_bp=x0[3],
+        cdd_beta=x0[4],
+        cdd_k=x0[5],
+        intercept=x0[6],
+    )
 
 
 def _hdd_tidd_cdd_bp0(T, obs, alpha, settings, min_weight=0.0, test_num_bp=[1, 2]):
