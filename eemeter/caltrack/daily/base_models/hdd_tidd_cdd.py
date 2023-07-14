@@ -10,9 +10,12 @@ from eemeter.caltrack.daily.base_models.hdd_tidd_cdd_smooth import (
 )
 
 from eemeter.caltrack.daily.utilities.base_model import fix_identical_bnds
+from eemeter.caltrack.daily.utilities.utils import ModelCoefficients, ModelType
 
 from eemeter.caltrack.daily.objective_function import obj_fcn_decorator
 from eemeter.caltrack.daily.optimize import Optimizer
+
+from typing import Optional
 
 
 # To compile ahead of time: https://numba.readthedocs.io/en/stable/user/pycc.html
@@ -20,7 +23,7 @@ numba_cache = True
 
 
 def fit_hdd_tidd_cdd(
-    T, obs, settings, opt_options, x0=None, bnds=None, initial_fit=False
+    T, obs, settings, opt_options, x0:Optional[ModelCoefficients]=None, bnds=None, initial_fit=False
 ):
     if initial_fit:
         alpha = settings.alpha_selection
@@ -30,7 +33,7 @@ def fit_hdd_tidd_cdd(
     if x0 is None:
         x0 = _hdd_tidd_cdd_x0(T, obs, alpha, settings)
 
-    max_slope = np.max([x0[1], x0[3]])
+    max_slope = np.max([x0.hdd_beta, x0.cdd_beta])
     max_slope += 10 ** (
         np.log10(np.abs(max_slope)) + np.log10(settings.maximum_slope_OoM_scaler)
     )
@@ -62,7 +65,7 @@ def fit_hdd_tidd_cdd(
         model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, C, coef_id, initial_fit
     )
 
-    res = Optimizer(obj_fcn, x0, bnds, coef_id, alpha, settings, opt_options).run()
+    res = Optimizer(obj_fcn, x0.to_np_array(), bnds, coef_id, alpha, settings, opt_options).run()
 
     return res
 
@@ -86,13 +89,16 @@ def _hdd_tidd_cdd(
 
 
 def _hdd_tidd_cdd_x0(T, obs, alpha, settings):
-    x0 = _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings)
-
-    [hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept] = x0
-    x0 = [hdd_bp, hdd_beta, cdd_bp, cdd_beta, intercept]
-
-    return np.array(x0)
-
+    x0_smooth = _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings)
+    x0 = ModelCoefficients(
+        model_type=ModelType.HDD_TIDD_CDD,
+        hdd_bp=x0_smooth.hdd_bp,
+        hdd_beta=x0_smooth.hdd_beta,
+        cdd_bp=x0_smooth.cdd_bp,
+        cdd_beta=x0_smooth.cdd_beta,
+        intercept=x0_smooth.intercept,
+    ) 
+    return x0
 
 def _hdd_tidd_cdd_total_sum_of_squares(
     hdd_bp, hdd_beta, cdd_bp, cdd_beta, intercept, T, obs

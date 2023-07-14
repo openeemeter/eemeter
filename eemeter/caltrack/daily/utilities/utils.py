@@ -51,6 +51,7 @@ class ModelCoefficients:
     cdd_k: float | None = None
 
     # add validator for model type and coeffs included
+    # use pydantic so we can get better full model validation to ensure coeffs align with model_type
 
     @classmethod
     def from_np_arrays(cls, coefficients, coefficient_ids):

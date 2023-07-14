@@ -30,6 +30,8 @@ numba_cache = True
 def fit_hdd_tidd_cdd_smooth(
     T, obs, settings, opt_options, x0:Optional[ModelCoefficients]=None, bnds=None, initial_fit=False
 ):
+    assert x0 is None or x0.model_type is ModelType.HDD_TIDD_CDD_SMOOTH
+
     if initial_fit:
         alpha = settings.alpha_selection
     else:
