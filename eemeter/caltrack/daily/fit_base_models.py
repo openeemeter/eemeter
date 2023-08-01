@@ -75,8 +75,6 @@ def fit_model(model_key, fit_input, x0: ModelCoefficients, bnds):
         res = fit_hdd_tidd_cdd_smooth(*fit_input, x0, bnds, initial_fit=False)
 
     elif model_key == "hdd_tidd_cdd":
-        assert type(fit_input) is list
-        assert len(fit_input) == 3
         res = fit_hdd_tidd_cdd(*fit_input, x0, bnds, initial_fit=False)
 
     elif model_key == "c_hdd_tidd_smooth":
