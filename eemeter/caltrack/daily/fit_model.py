@@ -88,14 +88,14 @@ class FitModel:
         self.components = self._components()
         self.fit_components = self._fit_components()
 
-        self.wRMSE_base = self.get_error_metrics("fw-su_sh_wi")[
+        self.wRMSE_base = self._get_error_metrics("fw-su_sh_wi")[
             0
         ]  # calculate mean bias error for no splits
         self.best_combination = self._best_combination(print_out=False)
-        self.model = self.final_fit(self.best_combination)
+        self.model = self._final_fit(self.best_combination)
 
         self.id = meter_data.index.unique()[0]
-        wRMSE, RMSE, MAE = self.get_error_metrics(self.best_combination)
+        wRMSE, RMSE, MAE = self._get_error_metrics(self.best_combination)
         self.error["wRMSE_train"] = wRMSE
         self.error["RMSE_train"] = RMSE
         self.error["MAE_train"] = MAE
@@ -342,7 +342,7 @@ class FitModel:
 
         return fit_components
 
-    def combination_selection_criteria(self, combination):
+    def _combination_selection_criteria(self, combination):
         components = combination.split("__")
 
         N = np.sum([self.fit_components[X].N for X in components])
@@ -354,7 +354,7 @@ class FitModel:
         if combination == "fw-su_sh_wi":
             wRMSE = self.wRMSE_base
         else:
-            wRMSE = self.get_error_metrics(combination)[0]
+            wRMSE = self._get_error_metrics(combination)[0]
 
         loss = wRMSE / self.wRMSE_base
 
@@ -371,7 +371,7 @@ class FitModel:
     def _best_combination(self, print_out=False):
         HoF = {"combination_str": None, "selection_criteria": np.inf}
         for combo in self.combinations:
-            selection_criteria = self.combination_selection_criteria(combo)
+            selection_criteria = self._combination_selection_criteria(combo)
 
             if selection_criteria < HoF["selection_criteria"]:
                 HoF["combination_str"] = combo
@@ -385,7 +385,7 @@ class FitModel:
 
         return HoF["combination_str"]
 
-    def final_fit(self, combination):
+    def _final_fit(self, combination):
         model = {}
         for component in combination.split("__"):
             settings = self.settings
@@ -416,7 +416,7 @@ class FitModel:
 
         return model
 
-    def get_error_metrics(self, combination):
+    def _get_error_metrics(self, combination):
         if combination is None:
             combination = self.best_combination
 
