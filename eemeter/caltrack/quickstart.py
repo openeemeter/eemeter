@@ -225,6 +225,7 @@ def caltrack_2_1_daily(
     blackout_start_date,
     blackout_end_date,
 ):
+    temperature_data_daily = temperature_data.resample('D').mean()
     baseline_meter_data, warnings = get_baseline_data(
         meter_data,
         start=blackout_start_date - relativedelta(years=1),
@@ -235,11 +236,11 @@ def caltrack_2_1_daily(
         meter_data, start=blackout_end_date, max_days=365
     )
     baseline_meter_dataframe = pd.DataFrame({
-        'temperature': temperature_data[baseline_meter_data.index],
+        'temperature': temperature_data_daily[baseline_meter_data.index],
         'observed': baseline_meter_data.squeeze(),
     }, index=baseline_meter_data.index)
     reporting_meter_dataframe = pd.DataFrame({
-        'temperature': temperature_data[reporting_meter_data.index],
+        'temperature': temperature_data_daily[reporting_meter_data.index],
         'observed': reporting_meter_data.squeeze(),
     }, index=reporting_meter_data.index)
 
