@@ -171,7 +171,6 @@ class ModelCoefficients:
                     [
                         self.hdd_bp,
                         self.hdd_beta,
-                        self.hdd_k,
                         self.cdd_bp,
                         self.cdd_beta,
                         self.intercept,
