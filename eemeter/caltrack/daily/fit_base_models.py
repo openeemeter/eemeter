@@ -9,7 +9,7 @@ from eemeter.caltrack.daily.base_models.hdd_tidd_cdd_smooth import (
     fit_hdd_tidd_cdd_smooth,
 )
 
-from eemeter.caltrack.daily.utilities.utils import OoM, ModelCoefficients
+from eemeter.caltrack.daily.utilities.utils import OoM, ModelCoefficients, ModelType
 from eemeter.caltrack.daily.utilities.config import FullModelSelection
 
 from eemeter.caltrack.daily.optimize_results import OptimizedResult
@@ -81,6 +81,11 @@ def fit_model(model_key, fit_input, x0: ModelCoefficients, bnds):
         res = fit_c_hdd_tidd_smooth(*fit_input, x0, bnds, initial_fit=False)
 
     elif model_key == "c_hdd_tidd":
+        # temporary fix prior to implementing named coefficients for unsmoothed model
+        if x0.model_type == ModelType.HDD_TIDD_SMOOTH:
+            x0.model_type = ModelType.HDD_TIDD
+        if x0.model_type == ModelType.TIDD_CDD_SMOOTH:
+            x0.model_type = ModelType.TIDD_CDD
         res = fit_c_hdd_tidd(*fit_input, x0.to_np_array(), bnds, initial_fit=False)
 
     elif model_key == "tidd":

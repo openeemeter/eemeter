@@ -34,10 +34,10 @@ class ModelType(Enum):
 
     # Temp independent, cooling __/
     TIDD_CDD_SMOOTH = 5
-    TIDD_CDD = 5
+    TIDD_CDD = 6
 
     # Temp independent, ___
-    TIDD = 6
+    TIDD = 7
 
 
 @define
@@ -184,9 +184,9 @@ class ModelCoefficients:
                 return np.array(
                     [self.cdd_bp, self.cdd_beta, self.cdd_k, self.intercept]
                 )
-            case ModelType.HDD_TIDD_SMOOTH:
+            case ModelType.HDD_TIDD:
                 return np.array([self.hdd_bp, self.hdd_beta, self.intercept])
-            case ModelType.TIDD_CDD_SMOOTH:
+            case ModelType.TIDD_CDD:
                 return np.array([self.cdd_bp, self.cdd_beta, self.intercept])
             case ModelType.TIDD:
                 return np.array([self.intercept])

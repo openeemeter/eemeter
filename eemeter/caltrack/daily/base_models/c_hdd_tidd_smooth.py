@@ -105,7 +105,7 @@ def _c_hdd_tidd_smooth_x0(T, obs, alpha, settings):
 
 
 def _c_hdd_tidd_smooth_x0_final(T, obs, x0, alpha, settings):
-    c_hdd_bp, c_hdd_beta, c_hdd_k, intercept = x0
+    c_hdd_bp, c_hdd_beta, c_hdd_k, intercept = x0.to_np_array()
     x0_fit = [c_hdd_bp, c_hdd_beta, intercept]
     [c_hdd_bp, c_hdd_beta, intercept] = _c_hdd_tidd_x0_final(
         T, obs, x0_fit, alpha, settings

@@ -157,6 +157,8 @@ def _c_hdd_tidd_bp0(T, obs, alpha, settings, min_weight=0.0):
     T = T[idx_sorted]
     obs = obs[idx_sorted]
 
+    T_fit_bnds = np.array([T[0], T[-1]])
+
     def bp_obj_fcn_dec(T, obs):
         def bp_obj_fcn(x, grad=[]):
             [c_hdd_bp] = x
@@ -180,7 +182,7 @@ def _c_hdd_tidd_bp0(T, obs, alpha, settings, min_weight=0.0):
                 c_hdd_beta = cdd_beta
                 intercept = get_intercept(obs[idx_hdd], alpha)
 
-            model = _c_hdd_tidd(c_hdd_bp, c_hdd_beta, intercept, T=T)
+            model = _c_hdd_tidd(c_hdd_bp, c_hdd_beta, intercept, T_fit_bnds=T_fit_bnds, T=T)
 
             resid = model - obs
             weight, _ = adaptive_weights(resid, alpha=alpha, min_weight=min_weight)
