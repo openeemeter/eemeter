@@ -3,7 +3,8 @@ import nlopt
 
 from scipy.stats import linregress
 
-from eemeter.caltrack.daily.base_models.full_model import full_model, get_full_model_x
+from eemeter.caltrack.daily.base_models.full_model_import_finder import full_model
+from eemeter.caltrack.daily.base_models.full_model import get_full_model_x
 
 from eemeter.caltrack.daily.utilities.adaptive_loss import adaptive_weights, get_C
 from eemeter.caltrack.daily.utilities.adaptive_loss import remove_outliers
