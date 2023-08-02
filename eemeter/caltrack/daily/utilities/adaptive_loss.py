@@ -357,16 +357,22 @@ def adaptive_loss_fcn(x, mu=0, c=1, alpha="adaptive", replace_nonfinite=True):
     return loss_fcn_val, loss_alpha
 
 
+# Assumes that x has not been standardized
 def adaptive_weights(
-    x, mu=0, c=1, alpha="adaptive", min_weight=0.00, replace_nonfinite=True
+    x, alpha="adaptive", sigma=3, quantile=0.25, min_weight=0.00, replace_nonfinite=True
 ):
-    if np.all(mu != 0) or np.all(c != 1):
-        x = (x - mu) / c  # standardized residuals
+    x_no_outlier, _ = remove_outliers(x, sigma_threshold=sigma, quantile=0.25)
+
+    # TODO: Should x be abs or not?
+    # mu = np.median(np.abs(x_no_outlier))
+    mu = np.median(x_no_outlier)
+
+    C = get_C(x, mu, sigma, quantile)
+    x = (x - mu) / C
 
     if alpha == "adaptive":
         _, alpha = adaptive_loss_fcn(
             x, alpha=alpha, replace_nonfinite=replace_nonfinite
         )
 
-    # TODO: Should x be abs or not?
-    return generalized_loss_weights(x, a=alpha, min_weight=min_weight), alpha
+    return generalized_loss_weights(x, a=alpha, min_weight=min_weight), C, alpha

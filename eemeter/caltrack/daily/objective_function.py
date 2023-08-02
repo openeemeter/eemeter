@@ -55,7 +55,6 @@ def obj_fcn_decorator(
     obs,
     settings,
     alpha=2.0,
-    C=None,
     coef_id=[],
     initial_fit=True,
 ):
@@ -64,14 +63,9 @@ def obj_fcn_decorator(
     sigma = 2.698  # 1.5 IQR
     quantile = 0.25
     min_weight = 0.00
-    # window = 0.25
-    # step = 0.0
-    window = 0.15
-    step = 1.0
-    # window = 0.1
-    # step = 0.4
 
     T_fit_bnds = np.array([np.min(T), np.max(T)])
+    T_range = T_fit_bnds[1] - T_fit_bnds[0]
 
     model_fcn = model_fcn_dec(model_fcn_full, T_fit_bnds, T)
 
@@ -88,25 +82,20 @@ def obj_fcn_decorator(
         ["dd_beta", "dd_k", "dd_bp"], coef_id
     )  # drop intercept from regularization
 
-    # sometimes rolling C fails, when it fails, fall back to weight function version
-    if C is None:
-        C_list = [C]
-    else:
-        C_list = [C, None]
-
-    def elastic_net_penalty(X, T_sorted, obs_sorted, weight_sorted):
+    def elastic_net_penalty(X, T_sorted, obs_sorted, weight_sorted, wRMSE):
         # Elastic net
         X_enet = np.array(X).copy()
 
         ## Scale break points ##
         if len(idx_bp) > 0:
-            T_bnds = np.array([T_sorted[0], T_sorted[-1]])
-
-            X_enet[idx_bp] = [np.min(np.abs(X_enet[idx] - T_bnds)) for idx in idx_bp]
+            X_enet[idx_bp] = [
+                np.min(np.abs(X_enet[idx] - T_fit_bnds)) for idx in idx_bp
+            ]
 
             if len(idx_bp) == 2:
-                X_enet[idx_bp] += (T_bnds[1] - T_bnds[0]) / 2
-                # X_enet[idx_bp] /= 2
+                X_enet[idx_bp] += (X[idx_bp][1] - X[idx_bp][0]) / 2
+
+            X_enet[idx_bp] *= wRMSE / T_range
 
         # Find idx for regions
         if len(idx_bp) == 2:
@@ -222,42 +211,18 @@ def obj_fcn_decorator(
         # model_sorted = model[idx_sorted]
         obs_sorted = obs[idx_sorted]
         resid_sorted = resid[idx_sorted]
-
-        for C in C_list:
-            if C is None:
-                weight_sorted, c, a = weight_fcn(
-                    *X, T_sorted, resid_sorted, sigma, quantile, alpha, min_weight
-                )
-
-            else:
-                try:  # I know it's ugly, but it won't break?
-                    resid_no_outlier, _ = remove_outliers(
-                        resid, sigma_threshold=sigma, quantile=0.25
-                    )
-
-                    # mu = np.median(np.abs(resid_no_outlier))
-                    mu = np.median(resid_no_outlier)
-
-                    if isinstance(C, float):
-                        c = C
-                    else:
-                        c = rolling_C(
-                            T_sorted, resid_sorted, mu, sigma, 0.25, window, step
-                        )
-
-                    weight_sorted, a = adaptive_weights(
-                        resid_sorted, mu=mu, c=c, alpha=alpha, min_weight=min_weight
-                    )
-
-                except:
-                    pass
+        weight_sorted, c, a = weight_fcn(
+            *X, T_sorted, resid_sorted, sigma, quantile, alpha, min_weight
+        )
 
         weight = weight_sorted[idx_initial]
         wSSE = np.sum(weight * resid**2)
         loss = wSSE / N
 
         if settings.regularization_alpha != 0:
-            loss += elastic_net_penalty(X, T_sorted, obs_sorted, weight_sorted)
+            loss += elastic_net_penalty(
+                X, T_sorted, obs_sorted, weight_sorted, np.sqrt(loss)
+            )
 
         if optimize_flag:
             return loss

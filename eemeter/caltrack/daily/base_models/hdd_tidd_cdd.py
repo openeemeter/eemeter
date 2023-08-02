@@ -1,13 +1,8 @@
 import numpy as np
 import numba
 
-from eemeter.caltrack.daily.base_models.full_model import full_model
-from eemeter.caltrack.daily.base_models.hdd_tidd_cdd_smooth import (
-    _hdd_tidd_cdd_smooth_x0,
-)
-from eemeter.caltrack.daily.base_models.hdd_tidd_cdd_smooth import (
-    _hdd_tidd_cdd_smooth_weight,
-)
+from eemeter.caltrack.daily.base_models.full_model import full_model, full_model_weight
+from eemeter.caltrack.daily.base_models.hdd_tidd_cdd_smooth import _hdd_tidd_cdd_smooth_x0
 
 from eemeter.caltrack.daily.utilities.base_model import fix_identical_bnds
 from eemeter.caltrack.daily.utilities.utils import ModelCoefficients, ModelType
@@ -67,12 +62,12 @@ def fit_hdd_tidd_cdd(
     model_fcn = _hdd_tidd_cdd
     weight_fcn = _hdd_tidd_cdd_weight
     TSS_fcn = _hdd_tidd_cdd_total_sum_of_squares
-    obj_fcn = lambda alpha, C: obj_fcn_decorator(
-        model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, C, coef_id, initial_fit
+    obj_fcn = obj_fcn_decorator(
+        model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, coef_id, initial_fit
     )
 
     res = Optimizer(
-        obj_fcn, x0.to_np_array(), bnds, coef_id, alpha, settings, opt_options
+        obj_fcn, x0.to_np_array(), bnds, coef_id, settings, opt_options
     ).run()
 
     return res
@@ -161,6 +156,6 @@ def _hdd_tidd_cdd_weight(
     hdd_k = cdd_k = 0
     model_vars = [hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept]
 
-    return _hdd_tidd_cdd_smooth_weight(
+    return full_model_weight(
         *model_vars, T, residual, sigma, quantile, alpha, min_weight
     )

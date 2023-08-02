@@ -3,10 +3,7 @@ from math import isclose
 import numba
 import nlopt
 
-from eemeter.caltrack.daily.base_models.full_model import full_model
-from eemeter.caltrack.daily.base_models.hdd_tidd_cdd_smooth import (
-    _hdd_tidd_cdd_smooth_weight,
-)
+from eemeter.caltrack.daily.base_models.full_model import full_model, full_model_weight
 
 from eemeter.caltrack.daily.utilities.adaptive_loss import adaptive_weights
 
@@ -95,11 +92,11 @@ def fit_c_hdd_tidd(
     model_fcn = _c_hdd_tidd
     weight_fcn = _c_hdd_tidd_weight
     TSS_fcn = _c_hdd_tidd_total_sum_of_squares
-    obj_fcn = lambda alpha, C: obj_fcn_decorator(
-        model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, C, coef_id, initial_fit
+    obj_fcn = obj_fcn_decorator(
+        model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, coef_id, initial_fit
     )
 
-    res = Optimizer(obj_fcn, x0, bnds, coef_id, alpha, settings, opt_options).run()
+    res = Optimizer(obj_fcn, x0, bnds, coef_id, settings, opt_options).run()
 
     return res
 
@@ -185,7 +182,9 @@ def _c_hdd_tidd_bp0(T, obs, alpha, settings, min_weight=0.0):
             model = _c_hdd_tidd(c_hdd_bp, c_hdd_beta, intercept, T_fit_bnds=T_fit_bnds, T=T)
 
             resid = model - obs
-            weight, _ = adaptive_weights(resid, alpha=alpha, min_weight=min_weight)
+            weight, _, _ = adaptive_weights(
+                resid, alpha=alpha, sigma=2.698, quantile=0.25, min_weight=min_weight
+            )
 
             loss = np.sum(weight * (resid) ** 2)
 
@@ -281,6 +280,6 @@ def _c_hdd_tidd_weight(
 ):
     model_vars = set_full_model_coeffs(c_hdd_bp, c_hdd_beta, intercept)
 
-    return _hdd_tidd_cdd_smooth_weight(
+    return full_model_weight(
         *model_vars, T, residual, sigma, quantile, alpha, min_weight
     )

@@ -309,6 +309,7 @@ class FitModel:
 
         return meter_segment
 
+    # TODO: rename components to submodel or submodel to component? Likely the first
     def _components(self):
         components = list(
             set([i for item in self.combinations for i in item.split("__")])

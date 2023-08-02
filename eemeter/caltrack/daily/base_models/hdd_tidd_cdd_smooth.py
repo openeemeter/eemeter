@@ -1,23 +1,18 @@
 import numpy as np
 import nlopt
 
-from scipy.stats import linregress
+from eemeter.caltrack.daily.base_models.full_model import full_model, full_model_weight, get_full_model_x
 
-from eemeter.caltrack.daily.base_models.full_model import full_model, get_full_model_x
-
-from eemeter.caltrack.daily.utilities.adaptive_loss import adaptive_weights, get_C
-from eemeter.caltrack.daily.utilities.adaptive_loss import remove_outliers
+from eemeter.caltrack.daily.utilities.adaptive_loss import adaptive_weights
 
 from eemeter.caltrack.daily.utilities.base_model import get_slope, get_intercept
 from eemeter.caltrack.daily.utilities.base_model import fix_identical_bnds
-from eemeter.caltrack.daily.utilities.base_model import (
-    get_smooth_coeffs,
-    get_T_bnds,
-)
+from eemeter.caltrack.daily.utilities.base_model import get_smooth_coeffs, get_T_bnds
 
 from eemeter.caltrack.daily.objective_function import obj_fcn_decorator
 from eemeter.caltrack.daily.optimize import Optimizer, nlopt_algorithms
 
+from timeit import default_timer as timer
 from eemeter.caltrack.daily.utilities.utils import ModelCoefficients, ModelType
 from typing import Optional
 
@@ -91,12 +86,12 @@ def fit_hdd_tidd_cdd_smooth(
     model_fcn = evaluate_hdd_tidd_cdd_smooth
     weight_fcn = _hdd_tidd_cdd_smooth_weight
     TSS_fcn = None
-    obj_fcn = lambda alpha, C: obj_fcn_decorator(
-        model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, C, coef_id, initial_fit
+    obj_fcn = obj_fcn_decorator(
+        model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, coef_id, initial_fit
     )
 
     res = Optimizer(
-        obj_fcn, x0.to_np_array(), bnds, coef_id, alpha, settings, opt_options
+        obj_fcn, x0.to_np_array(), bnds, coef_id, settings, opt_options
     ).run()
 
     return res
@@ -127,87 +122,33 @@ def evaluate_hdd_tidd_cdd_smooth(
     )
 
 
-def _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings, test_c_hdd=False):
+def _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings, min_weight=0.0):
     min_T_idx = settings.segment_minimum_count
-
-    # calculate x0 for hdd_tidd_cdd_smooth
-    [hdd_bp, cdd_bp] = _hdd_tidd_cdd_bp0(T, obs, alpha, settings)
-    hdd_beta, cdd_beta, intercept = estimate_betas_and_intercept(
-        T, obs, hdd_bp, cdd_bp, min_T_idx, alpha
-    )
-    hdd_k = 0.0
-    cdd_k = 0.0
-
-    x0_hdd_tidd_cdd = np.array(
-        [hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept]
-    )
-
-    if test_c_hdd:  # Much slower including this. Maybe remove entirely
-        # calculate x0 for c_hdd
-        [T_min, T_max], [T_min_seg, T_max_seg] = get_T_bnds(T, settings)
-
-        slope, intercept, _, _, _ = linregress(T, obs)
-
-        # convert coefficients from standard linear to offset
-        if slope < 0:
-            x0_c_hdd = [T_max, slope, intercept + slope * T_max]
-        else:
-            x0_c_hdd = [T_min, slope, intercept + slope * T_min]
-
-        x0_c_hdd = get_full_model_x(
-            "c_hdd_tidd", x0_c_hdd, T_min, T_max, T_min_seg, T_max_seg
-        )
-
-        # get loss value
-        coef_id = [
-            "hdd_bp",
-            "hdd_beta",
-            "hdd_k",
-            "cdd_bp",
-            "cdd_beta",
-            "cdd_k",
-            "intercept",
-        ]
-        model_fcn = evaluate_hdd_tidd_cdd_smooth
-        weight_fcn = _hdd_tidd_cdd_smooth_weight
-        TSS_fcn = None
-        # alpha = settings.alpha_final
-        C = None
-        obj_fcn = obj_fcn_decorator(
-            model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, C, coef_id
-        )
-
-        if obj_fcn(x0_c_hdd) < obj_fcn(x0_hdd_tidd_cdd):
-            x0 = x0_c_hdd
-        else:
-            x0 = x0_hdd_tidd_cdd
-
-    else:
-        x0 = x0_hdd_tidd_cdd
-
-    return ModelCoefficients(
-        model_type=ModelType.HDD_TIDD_CDD_SMOOTH,
-        hdd_bp=x0[0],
-        hdd_beta=x0[1],
-        hdd_k=x0[2],
-        cdd_bp=x0[3],
-        cdd_beta=x0[4],
-        cdd_k=x0[5],
-        intercept=x0[6],
-    )
-
-
-def _hdd_tidd_cdd_bp0(T, obs, alpha, settings, min_weight=0.0, test_num_bp=[1, 2]):
-    min_T_idx = settings.segment_minimum_count
+    lasso_a = settings.regularization_alpha
 
     idx_sorted = np.argsort(T).flatten()
     T = T[idx_sorted]
     obs = obs[idx_sorted]
 
+    N = len(obs)
+
     T_fit_bnds = np.array([T[0], T[-1]])
 
     def bp_obj_fcn_dec(T, obs, min_T_idx):
-        def bp_obj_fcn(x, grad=[]):
+        def lasso_penalty(X, wRMSE):
+            X_lasso = np.array(X).copy()
+
+            T_range = T_fit_bnds[1] - T_fit_bnds[0]
+
+            X_lasso = np.array(
+                [np.min(np.abs(X[idx] - T_fit_bnds)) for idx in range(len(X))]
+            )
+            X_lasso += (X[1] - X[0]) / 2
+            X_lasso *= wRMSE / T_range
+
+            return lasso_a * np.linalg.norm(X_lasso, 1)
+
+        def bp_obj_fcn(x, grad=[], optimize_flag=True):
             if len(x) == 1:
                 hdd_bp = cdd_bp = x[0]
             else:
@@ -229,13 +170,30 @@ def _hdd_tidd_cdd_bp0(T, obs, alpha, settings, min_weight=0.0, test_num_bp=[1, 2
                 T_fit_bnds,
                 T,
             )
-
             resid = model - obs
-            weight, _ = adaptive_weights(resid, alpha=alpha, min_weight=min_weight)
+
+            if alpha == 2:
+                resid_mean = np.mean(resid)
+                resid -= resid_mean
+                intercept += resid_mean
+            else:
+                resid_median = np.median(resid)
+                resid -= resid_median
+                intercept += resid_median
+
+            weight, _, _ = adaptive_weights(
+                resid, alpha=alpha, sigma=2.698, quantile=0.25, min_weight=min_weight
+            )
 
             loss = np.sum(weight * (resid) ** 2)
+            loss += lasso_penalty(x, np.sqrt(loss / N))
 
-            return loss
+            if optimize_flag:
+                return loss
+
+            return np.array(
+                [hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept]
+            )
 
         return bp_obj_fcn
 
@@ -246,62 +204,33 @@ def _hdd_tidd_cdd_bp0(T, obs, alpha, settings, min_weight=0.0, test_num_bp=[1, 2
     T_max = T[-min_T_idx]
     T_range = T_max - T_min
 
-    # 1 breakpoint guess
-    if 1 in test_num_bp:
-        # algorithm = nlopt.GN_DIRECT
-        x0 = np.array([T_range * 0.5]) + T_min
-        bnds = np.array([[T_min, T_max]]).T
+    x0 = np.array([T_range * 0.10, T_range * 0.90]) + T_min
+    bnds = np.array([[T_min, T_max], [T_min, T_max]]).T
 
-        opt = nlopt.opt(algorithm, int(len(x0)))
-        opt.set_min_objective(obj_fcn)
+    opt = nlopt.opt(algorithm, int(len(x0)))
+    opt.set_min_objective(obj_fcn)
 
-        opt.set_initial_step([T_range * 0.15])
-        opt.set_maxeval(100)
-        opt.set_xtol_rel(1e-3)
-        opt.set_xtol_abs(0.5)
-        opt.set_lower_bounds(bnds[0])
-        opt.set_upper_bounds(bnds[1])
+    opt.set_initial_step([T_range * 0.10, -T_range * 0.10])
+    opt.set_maxeval(200)
+    opt.set_xtol_rel(1e-3)
+    opt.set_xtol_abs(0.5)
+    opt.set_lower_bounds(bnds[0])
+    opt.set_upper_bounds(bnds[1])
 
-        x_opt_1 = opt.optimize(x0)  # optimize!
-        x_opt_1 = np.array([x_opt_1[0], x_opt_1[0]])
-        f_opt_1 = opt.last_optimum_value()
+    x_opt = opt.optimize(x0)  # optimize!
 
-    else:
-        x_opt_1 = np.array([np.nan, np.nan])
-        f_opt_1 = np.inf
+    x0 = obj_fcn(x_opt, optimize_flag=False)
 
-    # 2 breakpoints guess
-    if 2 in test_num_bp:
-        x0 = np.array([T_range * 0.10, T_range * 0.90]) + T_min
-        bnds = np.array([[T_min, T_max], [T_min, T_max]]).T
-
-        opt = nlopt.opt(algorithm, int(len(x0)))
-        opt.set_min_objective(obj_fcn)
-
-        opt.set_initial_step([T_range * 0.10, -T_range * 0.10])
-        opt.set_maxeval(200)
-        opt.set_xtol_rel(1e-3)
-        opt.set_xtol_abs(0.5)
-        opt.set_lower_bounds(bnds[0])
-        opt.set_upper_bounds(bnds[1])
-
-        x_opt_2 = opt.optimize(x0)  # optimize!
-        x_opt_2 = np.sort(x_opt_2)
-        f_opt_2 = opt.last_optimum_value()
-
-    else:
-        x_opt_2 = np.array([np.nan, np.nan])
-        f_opt_2 = np.inf
-
-    if f_opt_1 <= f_opt_2:
-        x_opt = x_opt_1
-    else:
-        x_opt = x_opt_2
-
-    x_opt[0] = np.clip([x_opt[0]], T[min_T_idx - 1], T[-min_T_idx])[0]
-    x_opt[1] = np.clip([x_opt[1]], T[min_T_idx - 1], T[-min_T_idx])[0]
-
-    return x_opt
+    return ModelCoefficients(
+        model_type=ModelType.HDD_TIDD_CDD_SMOOTH,
+        hdd_bp=x0[0],
+        hdd_beta=x0[1],
+        hdd_k=x0[2],
+        cdd_bp=x0[3],
+        cdd_beta=x0[4],
+        cdd_k=x0[5],
+        intercept=x0[6],
+    )
 
 
 def estimate_betas_and_intercept(T, obs, hdd_bp, cdd_bp, min_T_idx, alpha):
@@ -361,70 +290,8 @@ def _hdd_tidd_cdd_smooth_weight(
     alpha=2.0,
     min_weight=0.0,
 ):
-    if hdd_bp > cdd_bp:
-        hdd_bp, cdd_bp = cdd_bp, hdd_bp
+    model_vars = [hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept]
 
-    if (hdd_beta == 0) and (cdd_beta == 0):  # intercept only
-        resid_all = [residual]
-
-    elif (cdd_bp >= T[-1]) or (hdd_bp <= T[0]):  # hdd or cdd only
-        resid_all = [residual]
-
-    elif hdd_beta == 0:
-        idx_cdd_bp = np.argmin(np.abs(T - cdd_bp))
-
-        resid_all = [residual[:idx_cdd_bp], residual[idx_cdd_bp:]]
-
-    elif cdd_beta == 0:
-        idx_hdd_bp = np.argmin(np.abs(T - hdd_bp))
-
-        resid_all = [residual[:idx_hdd_bp], residual[idx_hdd_bp:]]
-
-    else:
-        idx_hdd_bp = np.argmin(np.abs(T - hdd_bp))
-        idx_cdd_bp = np.argmin(np.abs(T - cdd_bp))
-
-        if hdd_bp == cdd_bp:
-            resid_all = [residual[:idx_hdd_bp], residual[idx_cdd_bp:]]
-
-        else:
-            resid_all = [
-                residual[:idx_hdd_bp],
-                residual[idx_hdd_bp:idx_cdd_bp],
-                residual[idx_cdd_bp:],
-            ]
-
-    weight = []
-    C = []
-    a = []
-    for resid in resid_all:
-        if len(resid) == 0:
-            continue
-
-        elif len(resid) < 3:
-            weight.append(np.ones_like(resid))
-            C.append(np.ones_like(resid))
-            a.append(np.ones_like(resid) * 2.0)
-
-            continue
-
-        resid_no_outlier, _ = remove_outliers(
-            resid, sigma_threshold=sigma, quantile=0.25
-        )
-
-        # mu = np.median(np.abs(resid_no_outlier))
-        mu = np.median(resid_no_outlier)
-
-        _C = get_C(resid, mu, sigma, quantile)
-        resid_norm = (resid - mu) / _C
-        _weight, _a = adaptive_weights(resid_norm, alpha=alpha, min_weight=min_weight)
-
-        weight.append(_weight)
-        C.append(np.ones_like(resid) * _C)
-        a.append(np.ones_like(resid) * _a)
-
-    weight_out = np.hstack(weight)
-    C_out = np.hstack(weight)
-    a_out = np.hstack(a)
-
-    return weight_out, C_out, a_out
+    return full_model_weight(
+        *model_vars, T, residual, sigma, quantile, alpha, min_weight
+    )

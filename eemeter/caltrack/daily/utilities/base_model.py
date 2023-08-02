@@ -39,7 +39,7 @@ def get_slope(x, y, x_bp, intercept, alpha=2):
 
     opt_fcn = slope_fcn_dec(x, y, x_bp, intercept, alpha)
 
-    slope = minimize_scalar(opt_fcn).x
+    slope = minimize_scalar(opt_fcn, method="brent", tol=0.1).x
 
     return slope
 

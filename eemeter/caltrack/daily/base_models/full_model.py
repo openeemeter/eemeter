@@ -1,6 +1,8 @@
 import numpy as np
 import numba
 
+from eemeter.caltrack.daily.utilities.adaptive_loss import adaptive_weights
+
 from eemeter.caltrack.daily.utilities.utils import (
     ln_min_pos_system_value,
     ln_max_pos_system_value,
@@ -146,3 +148,80 @@ def fix_full_model_x(x, T_min_seg, T_max_seg):
         cdd_k = 0
 
     return [hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept]
+
+
+def full_model_weight(
+    hdd_bp,
+    hdd_beta,
+    hdd_k,
+    cdd_bp,
+    cdd_beta,
+    cdd_k,
+    intercept,
+    T,
+    residual,
+    sigma=3.0,
+    quantile=0.25,
+    alpha=2.0,
+    min_weight=0.0,
+):
+    if hdd_bp > cdd_bp:
+        hdd_bp, cdd_bp = cdd_bp, hdd_bp
+
+    if (hdd_beta == 0) and (cdd_beta == 0):  # intercept only
+        resid_all = [residual]
+
+    elif (cdd_bp >= T[-1]) or (hdd_bp <= T[0]):  # hdd or cdd only
+        resid_all = [residual]
+
+    elif hdd_beta == 0:
+        idx_cdd_bp = np.argmin(np.abs(T - cdd_bp))
+
+        resid_all = [residual[:idx_cdd_bp], residual[idx_cdd_bp:]]
+
+    elif cdd_beta == 0:
+        idx_hdd_bp = np.argmin(np.abs(T - hdd_bp))
+
+        resid_all = [residual[:idx_hdd_bp], residual[idx_hdd_bp:]]
+
+    else:
+        idx_hdd_bp = np.argmin(np.abs(T - hdd_bp))
+        idx_cdd_bp = np.argmin(np.abs(T - cdd_bp))
+
+        if hdd_bp == cdd_bp:
+            resid_all = [residual[:idx_hdd_bp], residual[idx_cdd_bp:]]
+
+        else:
+            resid_all = [
+                residual[:idx_hdd_bp],
+                residual[idx_hdd_bp:idx_cdd_bp],
+                residual[idx_cdd_bp:],
+            ]
+
+    weight = []
+    C = []
+    a = []
+    for resid in resid_all:
+        if len(resid) == 0:
+            continue
+
+        elif len(resid) < 3:
+            weight.append(np.ones_like(resid))
+            C.append(np.ones_like(resid))
+            a.append(np.ones_like(resid) * 2.0)
+
+            continue
+
+        _weight, _C, _a = adaptive_weights(
+            resid, alpha=alpha, sigma=sigma, quantile=quantile, min_weight=min_weight
+        )
+
+        weight.append(_weight)
+        C.append(np.ones_like(resid) * _C)
+        a.append(np.ones_like(resid) * _a)
+
+    weight_out = np.hstack(weight)
+    C_out = np.hstack(weight)
+    a_out = np.hstack(a)
+
+    return weight_out, C_out, a_out

@@ -68,9 +68,7 @@ neg_msg = [
 ]
 
 
-def obj_fcn_dec(obj_fcn, A, c, x0, bnds):
-    obj_fcn = obj_fcn(A, c)
-
+def obj_fcn_dec(obj_fcn, x0, bnds):
     idx_opt = [n for n in range(np.shape(bnds)[0]) if (bnds[n, 0] < bnds[n, 1])]
 
     def obj_fcn_eval(
@@ -93,17 +91,13 @@ class Optimizer:
     #                           "initial_pop_multiplier": 2
     #                "local": {} # same}
 
-    def __init__(self, obj_fcn, x0, bnds, coef_id, alpha, settings, opt_options):
-        self.alpha = alpha
-        self.C = None  # [None, "rolling", float]
-        # self.C = "rolling"
-
+    def __init__(self, obj_fcn, x0, bnds, coef_id, settings, opt_options):
         self.bnds = np.array(bnds)
         self.x0 = np.clip(
             x0, bnds[:, 0], bnds[:, 1]
         )  # clip x0 to the bnds, just in case
 
-        self.obj_fcn, self.idx_opt = obj_fcn_dec(obj_fcn, alpha, self.C, x0, bnds)
+        self.obj_fcn, self.idx_opt = obj_fcn_dec(obj_fcn, x0, bnds)
 
         self.coef_id = coef_id
 
@@ -111,8 +105,6 @@ class Optimizer:
         self.opt_options = opt_options
 
     def run(self):
-        alpha = self.alpha
-        C = self.C
         bnds = self.bnds
 
         res = {}
@@ -128,9 +120,9 @@ class Optimizer:
                 x0 = res[list(res.keys())[-1]].x
 
             if options["algorithm"][:5] == "scipy":
-                res[opt_type] = self.scipy(x0, bnds, alpha, C, options)
+                res[opt_type] = self.scipy(x0, bnds, options)
             elif options["algorithm"][:5] == "nlopt":
-                res[opt_type] = self.nlopt(x0, bnds, alpha, C, options)
+                res[opt_type] = self.nlopt(x0, bnds, options)
 
             if (
                 options["algorithm"] == "nlopt_MLSL_LDS"
@@ -139,7 +131,7 @@ class Optimizer:
 
         return res[list(res.keys())[-1]]
 
-    def scipy(self, x0, bnds, a, C, options):
+    def scipy(self, x0, bnds, options):
         timer_start = timer()
 
         algorithm = options["algorithm"][6:]
@@ -201,7 +193,7 @@ class Optimizer:
 
         return res_out
 
-    def nlopt(self, x0, bnds, a, C, options):
+    def nlopt(self, x0, bnds, options):
         timer_start = timer()
 
         obj_fcn = self.obj_fcn

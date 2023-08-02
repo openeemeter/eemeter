@@ -7,7 +7,7 @@ from eemeter.caltrack.daily.base_models.c_hdd_tidd import (
 )
 from eemeter.caltrack.daily.base_models.full_model import full_model
 from eemeter.caltrack.daily.base_models.hdd_tidd_cdd_smooth import (
-    _hdd_tidd_cdd_smooth_weight,
+    full_model, full_model_weight
 )
 
 from eemeter.caltrack.daily.utilities.base_model import fix_identical_bnds
@@ -84,12 +84,12 @@ def fit_c_hdd_tidd_smooth(
     model_fcn = _c_hdd_tidd_smooth
     weight_fcn = _c_hdd_tidd_smooth_weight
     TSS_fcn = None
-    obj_fcn = lambda alpha, C: obj_fcn_decorator(
-        model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, C, coef_id, initial_fit
+    obj_fcn = obj_fcn_decorator(
+        model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, coef_id, initial_fit
     )
 
     res = Optimizer(
-        obj_fcn, x0.to_np_array(), bnds, coef_id, alpha, settings, opt_options
+        obj_fcn, x0.to_np_array(), bnds, coef_id, settings, opt_options
     ).run()
 
     return res
@@ -201,6 +201,6 @@ def _c_hdd_tidd_smooth_weight(
 ):
     model_vars = set_full_model_coeffs(c_hdd_bp, c_hdd_beta, c_hdd_k, intercept)
 
-    return _hdd_tidd_cdd_smooth_weight(
+    return full_model_weight(
         *model_vars, T, residual, sigma, quantile, alpha, min_weight
     )
