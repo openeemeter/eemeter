@@ -1,13 +1,17 @@
 import numpy as np
 import nlopt
 
-from eemeter.caltrack.daily.base_models.full_model import full_model, full_model_weight, get_full_model_x
+from eemeter.caltrack.daily.base_models.full_model import full_model_weight
 
-from eemeter.caltrack.daily.utilities.adaptive_loss import adaptive_weights
+from eemeter.caltrack.daily.base_models.full_model_import_finder import full_model
+from eemeter.caltrack.daily.base_models.full_model import get_full_model_x
+
+from eemeter.caltrack.daily.utilities.adaptive_loss import adaptive_weights, get_C
+from eemeter.caltrack.daily.utilities.adaptive_loss import remove_outliers
 
 from eemeter.caltrack.daily.utilities.base_model import get_slope, get_intercept
 from eemeter.caltrack.daily.utilities.base_model import fix_identical_bnds
-from eemeter.caltrack.daily.utilities.base_model import get_smooth_coeffs, get_T_bnds
+from eemeter.caltrack.daily.utilities.base_model import get_smooth_coeffs
 
 from eemeter.caltrack.daily.objective_function import obj_fcn_decorator
 from eemeter.caltrack.daily.optimize import Optimizer, nlopt_algorithms

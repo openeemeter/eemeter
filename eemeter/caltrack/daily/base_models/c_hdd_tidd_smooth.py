@@ -5,7 +5,7 @@ from eemeter.caltrack.daily.base_models.c_hdd_tidd import (
     _c_hdd_tidd_x0,
     _c_hdd_tidd_x0_final,
 )
-from eemeter.caltrack.daily.base_models.full_model import full_model
+from eemeter.caltrack.daily.base_models.full_model_import_finder import full_model
 from eemeter.caltrack.daily.base_models.hdd_tidd_cdd_smooth import (
     full_model, full_model_weight
 )
