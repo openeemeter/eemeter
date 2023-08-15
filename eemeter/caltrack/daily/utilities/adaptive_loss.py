@@ -1,8 +1,11 @@
 import numpy as np
 from scipy.optimize import minimize_scalar
+from scipy.interpolate import BSpline
 import numba
 
+from eemeter.caltrack.daily.utilities.adaptive_loss_tck import tck
 from eemeter.caltrack.daily.utilities.utils import OoM_numba
+
 
 
 numba_cache = True
@@ -249,47 +252,15 @@ def generalized_loss_weights(x: np.ndarray, a: float = 2, min_weight: float = 0.
     return w * (1 - min_weight) + min_weight
 
 
-# partition function - sse partition function for tau = 10 from -1E6 to 2, error < 1.5E-4
-@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
-def ln_Z(alpha, alpha_min=-1e6):
-    coeffs = [
-        -2.18171535e02,
-        2.92584382e03,
-        -1.75958812e04,
-        5.18116174e04,
-        -7.49433384e04,
-        4.23210979e04,
-        -2.17816374e03,
-        1.33744603e04,
-        -3.31904875e04,
-        4.12525754e04,
-        -2.56510856e04,
-        6.37729727e03,
-        5.23734482e-01,
-        6.65483361e01,
-        1.34128971e00,
-    ]
-
-    a1, b1, c1, d1, e1, f1, a2, b2, c2, d2, e2, f2, s_bp, kk, p = coeffs
-    ln_Z_inf = 1.246420579126252
-
-    if alpha == 2.0:
-        res = 0.0
-
-    elif alpha <= alpha_min:
-        res = ln_Z_inf
-
-    else:
-        s = -1 / 25 * np.log((alpha - 2) / (-1e6 - 2))
-
-        k1 = f1 * s**5 + e1 * s**4 + d1 * s**3 + c1 * s**2 + b1 * s + a1
-        k2 = f2 * s**5 + e2 * s**4 + d2 * s**3 + c2 * s**2 + b2 * s + a2
-
-        k = k1 + (k2 - k1) / (1 + np.exp(-kk * (s - s_bp)))
-
-        res = ln_Z_inf * 1 / (1 + np.exp(-k * (s - s_bp))) ** p
-
-    return res
+# approximate partition function for C=1, tau(alpha < 0)=1E5, tau(alpha >= 0)=inf 
+# error < 4E-7
+ln_Z_fit = BSpline.construct_fast(*tck)
+ln_Z_inf = 11.206072645530174
+def ln_Z(alpha, alpha_min=-1E6):
+    if alpha <= alpha_min:
+        return ln_Z_inf
+    
+    return ln_Z_fit(alpha)
 
 
 # penalize the loss function using approximate partition function
@@ -299,10 +270,7 @@ def penalized_loss_fcn(x, a=2, use_penalty=True):
     loss = generalized_loss_fcn(x, a)
 
     if use_penalty:
-        penalty = ln_Z(
-            a, loss_alpha_min
-        )  # approximate partition function for C=1, tau=10
-        loss += penalty
+        loss += ln_Z(a)
 
         if not np.isfinite(loss).all():
             # print("a: ", a)
@@ -313,18 +281,38 @@ def penalized_loss_fcn(x, a=2, use_penalty=True):
     return loss
 
 
-@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
-def alpha_scaled(s, a=3, b=0.25):
-    if s < 0:
-        s = 0
+@numba.jit(nopython=True, error_model='numpy', cache=numba_cache) 
+def alpha_scaled(s, a_max=2):
+    if a_max == 2:
+        a = 3
+        b = 0.25
 
-    if s > 1:
-        s = 1
+        if s < 0:
+            s = 0
 
-    s_max = 1 - 2 / (1 + 10**a)
-    s = (1 - 2 / (1 + 10 ** (a * s**b))) / s_max
+        if s > 1:
+            s = 1
 
-    return loss_alpha_min + (2 - loss_alpha_min) * s
+        s_max = (1 - 2/(1 + 10**a))
+        s = (1 - 2/(1 + 10**(a*s**b)))/s_max
+
+        alpha = loss_alpha_min + (2 - loss_alpha_min)*s
+    
+    else:
+        x0 = 1
+        k = 1.5 # 1 or 1.5, testing required
+
+        if s >= 1:
+            return 100
+        elif s <= 0:
+            return -100
+
+        A = (np.exp((100 - x0)/k) + 1)/(1 - np.exp(200/k))
+        K = (1 - A)*np.exp((x0 - 100)/k) + 1
+
+        alpha = x0 - k*np.log((K - A)/(s - A) - 1)
+
+    return alpha
 
 
 def adaptive_loss_fcn(x, mu=0, c=1, alpha="adaptive", replace_nonfinite=True):
