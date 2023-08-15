@@ -66,8 +66,6 @@ def initialize_full_model():
         cpp_mean = np.mean(cpp_times)
         py_mean = np.mean(py_times)
 
-        print(cpp_mean, py_mean)
-
         if cpp_mean < py_mean:
             full_model = full_model_cpp
         else:
