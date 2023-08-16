@@ -265,12 +265,12 @@ def ln_Z(alpha, alpha_min=-1E6):
 
 # penalize the loss function using approximate partition function
 # default to L2 loss
-@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
 def penalized_loss_fcn(x, a=2, use_penalty=True):
     loss = generalized_loss_fcn(x, a)
 
     if use_penalty:
-        loss += ln_Z(a)
+        penalty = ln_Z(a, loss_alpha_min)      # approximate partition function for C=1, tau=10
+        loss += penalty
 
         if not np.isfinite(loss).all():
             # print("a: ", a)
