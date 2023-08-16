@@ -106,11 +106,20 @@ class FitModel:
 
         cols = list(meter_data.columns)
 
+        if "datetime" in cols:
+            meter_data.set_index("datetime", inplace=True)
+            cols.remove("datetime")
+
         if not isinstance(meter_data.index, pd.DatetimeIndex):
             try:
                 meter_data.index = pd.to_datetime(meter_data.index)
             except:
                 raise TypeError("Could not convert 'meter_data.index' to datetime")
+
+        for col in ["season", "day_of_week"]:
+            if col in cols:
+                meter_data.drop([col], axis = 1, inplace = True)
+                cols.remove(col)
 
         meter_data["season"] = meter_data.index.month.map(self.settings.season)
         meter_data["day_of_week"] = meter_data.index.dayofweek + 1
