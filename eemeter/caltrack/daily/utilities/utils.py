@@ -54,6 +54,14 @@ class ModelCoefficients:
     # add validator for model type and coeffs included
     # use pydantic so we can get better full model validation to ensure coeffs align with model_type
 
+    @property
+    def is_smooth(self):
+        return self.model_type in [
+            ModelType.HDD_TIDD_CDD_SMOOTH,
+            ModelType.HDD_TIDD_SMOOTH,
+            ModelType.TIDD_CDD_SMOOTH,
+        ]
+
     @classmethod
     def from_np_arrays(cls, coefficients, coefficient_ids):
         match coefficient_ids:

@@ -116,6 +116,11 @@ def create_caltrack_billing_design_matrix(
     design_matrix = merge_features([usage_per_day, temperature_features])
     return design_matrix
 
+def create_caltrack_daily_2_1_design_matrix(meter_data, temperature_data):
+    usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
+    temperature_data_daily = temperature_data.resample('D').mean()
+    design_matrix = merge_features([usage_per_day, temperature_data_daily])
+    return design_matrix
 
 def create_caltrack_daily_design_matrix(
     meter_data, temperature_data, degc: bool = False

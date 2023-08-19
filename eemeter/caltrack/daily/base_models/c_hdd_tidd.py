@@ -1,43 +1,43 @@
 import numpy as np
-from math import isclose
 import numba
-import nlopt
 
 from eemeter.caltrack.daily.base_models.full_model_import_finder import full_model
-from eemeter.caltrack.daily.base_models.full_model import full_model_weight
 from eemeter.caltrack.daily.base_models.hdd_tidd_cdd_smooth import (
-    _hdd_tidd_cdd_smooth_weight,
+    full_model, full_model_weight
 )
-
-from eemeter.caltrack.daily.utilities.adaptive_loss import adaptive_weights
-
 from eemeter.caltrack.daily.utilities.base_model import (
     linear_fit,
     get_slope,
     get_intercept,
     get_T_bnds,
 )
+
 from eemeter.caltrack.daily.utilities.base_model import fix_identical_bnds
 
 from eemeter.caltrack.daily.objective_function import obj_fcn_decorator
-from eemeter.caltrack.daily.optimize import Optimizer, nlopt_algorithms
 
+from eemeter.caltrack.daily.utilities.utils import ModelCoefficients, ModelType
+from typing import Optional
+
+from math import isclose
+import nlopt
+
+from eemeter.caltrack.daily.utilities.adaptive_loss import adaptive_weights
+
+from eemeter.caltrack.daily.optimize import Optimizer, nlopt_algorithms
 
 # To compile ahead of time: https://numba.readthedocs.io/en/stable/user/pycc.html
 numba_cache = True
 
-# how close can the temperature be to the segment_minimum_temp and still be considered a slope only?
-rtol = 1e-5
-
-
-"""TODO
-check for differences in beta bounds between this and smoothed model. merge both first rather than
-adding the ModelCoefficients here, as the current implementation updates x0 and is a bit cumbersome to convert
-"""
-
-
 def fit_c_hdd_tidd(
-    T, obs, settings, opt_options, x0=None, bnds=None, initial_fit=False
+    T,
+    obs,
+    settings,
+    opt_options,
+    smooth,
+    x0: Optional[ModelCoefficients] = None,
+    bnds=None,
+    initial_fit=False,
 ):
     if initial_fit:
         alpha = settings.alpha_selection
@@ -45,68 +45,151 @@ def fit_c_hdd_tidd(
         alpha = settings.alpha_final
 
     if x0 is None:
-        x0 = _c_hdd_tidd_x0(T, obs, alpha, settings)
+        x0 = _c_hdd_tidd_x0(T, obs, alpha, settings, smooth)
     else:
         x0 = _c_hdd_tidd_x0_final(T, obs, x0, alpha, settings)
 
-    max_slope = np.abs(x0[1]) + 10 ** (
-        np.log10(np.abs(x0[1])) + np.log10(settings.maximum_slope_OoM_scaler)
+    # can replace with:
+    # tdd_beta = x0.hdd_beta if x0.hdd_beta else x0.cdd_beta
+    match x0.model_type:
+        case ModelType.HDD_TIDD_SMOOTH | ModelType.HDD_TIDD:
+            tdd_beta = x0.hdd_beta
+        case ModelType.TIDD_CDD_SMOOTH | ModelType.TIDD_CDD:
+            tdd_beta = x0.cdd_beta
+        case _:
+            raise ValueError
+
+    # limit slope based on initial regression & configurable order of magnitude
+    max_slope = np.abs(tdd_beta) + 10 ** (
+        np.log10(np.abs(tdd_beta)) + np.log10(settings.maximum_slope_OoM_scaler)
     )
 
-    # standard T_min and T_max for initial guess
-    [T_min, T_max], [T_min_seg, T_max_seg] = get_T_bnds(T, settings)
+    # initial fit bounded by Tmin:Tmax, final fit has minimum T segment buffer
+    T_initial, T_segment = get_T_bnds(T, settings)
+    c_hdd_bnds = T_initial if initial_fit else T_segment
 
-    # set bounds and initial guesses for complex cases
-    if not initial_fit:
-        if x0[0] <= T_min_seg or isclose(x0[0], T_min_seg, rel_tol=rtol):
-            x0[2] -= x0[1] * T_min
-            x0[0] = T_min
-            T_max = T_min
-
-        elif x0[0] >= T_max_seg or isclose(x0[0], T_max_seg, rel_tol=rtol):
-            x0[2] -= x0[1] * T_max
-            x0[0] = T_max
-            T_min = T_max
-
-        else:
-            T_min = T_min_seg
-            T_max = T_max_seg
-
-    c_hdd_bnds = [T_min, T_max]
+    # not known whether heating or cooling model on initial fit
     if initial_fit:
         c_hdd_beta_bnds = [-max_slope, max_slope]
-    elif x0[1] < 0:
+    # stick with heating/cooling if using existing x0
+    elif tdd_beta < 0:
         c_hdd_beta_bnds = [-max_slope, 0]
     else:
         c_hdd_beta_bnds = [0, max_slope]
 
     intercept_bnds = np.quantile(obs, [0.01, 0.99])
-    bnds_0 = [c_hdd_bnds, c_hdd_beta_bnds, intercept_bnds]
-
-    if bnds is None:
-        bnds = bnds_0
-
-    bnds = _c_hdd_tidd_update_bnds(bnds, bnds_0)
-
-    # override bnds correction. Normally great, but not here
-    if c_hdd_bnds[0] == c_hdd_bnds[1]:
+    if smooth:
+        c_hdd_k_bnds = [0, 1e3]
+        bnds_0 = [c_hdd_bnds, c_hdd_beta_bnds, c_hdd_k_bnds, intercept_bnds]
+    else:
+        bnds_0 = [c_hdd_bnds, c_hdd_beta_bnds, intercept_bnds]
+    
+    bnds = _c_hdd_tidd_update_bnds(bnds, bnds_0, smooth)
+    if c_hdd_bnds[0] == c_hdd_bnds[1]:  # if breakpoint bounds are identical, don't expand
         bnds[0, :] = c_hdd_bnds
 
-    coef_id = ["c_hdd_bp", "c_hdd_beta", "intercept"]
-    model_fcn = _c_hdd_tidd
-    weight_fcn = _c_hdd_tidd_weight
-    TSS_fcn = _c_hdd_tidd_total_sum_of_squares
+    if smooth:
+        coef_id = ["c_hdd_bp", "c_hdd_beta", "c_hdd_k", "intercept"]
+        model_fcn = _c_hdd_tidd_smooth
+        weight_fcn = _c_hdd_tidd_smooth_weight
+        TSS_fcn = None
+    else:
+        coef_id = ["c_hdd_bp", "c_hdd_beta", "intercept"]
+        model_fcn = _c_hdd_tidd
+        weight_fcn = _c_hdd_tidd_weight
+        TSS_fcn = _c_hdd_tidd_total_sum_of_squares
     obj_fcn = obj_fcn_decorator(
         model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, coef_id, initial_fit
     )
-
-    res = Optimizer(obj_fcn, x0, bnds, coef_id, settings, opt_options).run()
-
+    res = Optimizer(obj_fcn, x0.to_np_array(), bnds, coef_id, settings, opt_options).run()
     return res
 
 
-# Model Functions
-def _c_hdd_tidd_x0(T, obs, alpha, settings):
+@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
+def set_full_model_coeffs_smooth(c_hdd_bp, c_hdd_beta, c_hdd_k, intercept):
+    hdd_bp = cdd_bp = c_hdd_bp
+
+    if c_hdd_beta < 0:
+        hdd_beta = -c_hdd_beta
+        hdd_k = c_hdd_k
+        cdd_beta = cdd_k = 0
+
+    else:
+        cdd_beta = c_hdd_beta
+        cdd_k = c_hdd_k
+        hdd_beta = hdd_k = 0
+
+    return np.array([hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept])
+
+
+@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
+def set_full_model_coeffs(c_hdd_bp, c_hdd_beta, intercept):
+    return set_full_model_coeffs_smooth(c_hdd_bp, c_hdd_beta, 0, intercept)
+
+
+def _c_hdd_tidd_update_bnds(new_bnds, bnds, smooth):
+    if new_bnds is None:
+        new_bnds = bnds
+
+    # beta bounds
+    new_bnds[0] = bnds[0]
+
+    # intercept bnds at index 3 for smooth, 2 for unsmooth
+    if smooth:
+        new_bnds[3] = bnds[3]
+    else:
+        new_bnds[2] = bnds[2]
+
+    new_bnds = np.sort(new_bnds, axis=1)
+    new_bnds = fix_identical_bnds(new_bnds)
+
+    # check for negative k bound if using smoothed model
+    if smooth and new_bnds[2, 0] < 0:
+        new_bnds[2, 0] = 0
+
+    return new_bnds
+    
+
+def _tdd_coefficients(intercept, c_hdd_bp, c_hdd_beta, c_hdd_k=None) -> ModelCoefficients:
+    """
+    infer cdd vs hdd given positive or negative slope.
+    if slope is 0, model will be reduced later
+    """
+    if c_hdd_beta < 0:
+        hdd_beta = c_hdd_beta
+        hdd_bp = c_hdd_bp
+        hdd_k = c_hdd_k
+        cdd_beta = None
+        cdd_bp = None
+        cdd_k = None
+        if c_hdd_k is not None:
+            model_type = ModelType.HDD_TIDD_SMOOTH
+        else:
+            model_type = ModelType.HDD_TIDD
+    else:
+        cdd_beta = c_hdd_beta
+        cdd_bp = c_hdd_bp
+        cdd_k = c_hdd_k
+        hdd_beta = None
+        hdd_bp = None
+        hdd_k = None
+        if c_hdd_k is not None:
+            model_type = ModelType.TIDD_CDD_SMOOTH
+        else:
+            model_type = ModelType.TIDD_CDD
+
+    return ModelCoefficients(
+        model_type=model_type,
+        intercept=intercept,
+        hdd_bp=hdd_bp,
+        hdd_beta=hdd_beta,
+        hdd_k=hdd_k,
+        cdd_bp=cdd_bp,
+        cdd_beta=cdd_beta,
+        cdd_k=cdd_k,
+    )
+
+def _c_hdd_tidd_x0(T, obs, alpha, settings, smooth):
     min_T_idx = settings.segment_minimum_count
 
     # c_hdd_bp = initial_guess_bp_1(T, obs, s=2, int_method="trapezoid")
@@ -124,6 +207,8 @@ def _c_hdd_tidd_x0(T, obs, alpha, settings):
     if cdd_beta < 0:
         cdd_beta = 0
 
+    # choose heating vs cooling based on larger slope
+    # treat opposite degree days as flat tidd
     if -hdd_beta >= cdd_beta:
         c_hdd_beta = hdd_beta
         intercept = np.median(obs[idx_cdd])
@@ -131,24 +216,40 @@ def _c_hdd_tidd_x0(T, obs, alpha, settings):
     else:
         c_hdd_beta = cdd_beta
         intercept = np.median(obs[idx_hdd])
+    
+    c_hdd_k = None
+    if smooth:
+        c_hdd_k = 0.0
 
-    return np.array([c_hdd_bp, c_hdd_beta, intercept])
-
+    return _tdd_coefficients(
+        intercept=intercept,
+        c_hdd_bp=c_hdd_bp,
+        c_hdd_beta=c_hdd_beta,
+        c_hdd_k=c_hdd_k,
+    )
 
 def _c_hdd_tidd_x0_final(T, obs, x0, alpha, settings):
-    min_T_idx = settings.segment_minimum_count
-    c_hdd_bp, c_hdd_beta, intercept = x0
+    c_hdd_k = None
+    if x0.is_smooth:
+        c_hdd_bp, c_hdd_beta, c_hdd_k, intercept = x0.to_np_array()
+    else:
+        c_hdd_bp, c_hdd_beta, intercept = x0.to_np_array()
 
+    min_T_idx = settings.segment_minimum_count
     idx_hdd = np.argwhere(T <= c_hdd_bp).flatten()
     idx_cdd = np.argwhere(T >= c_hdd_bp).flatten()
 
+    # can use model type to do this
+    # if x0.model_type in [ModelType.HDD_TIDD_SMOOTH, ModelType.HDD_TIDD]:  etc
     if (c_hdd_beta < 0) and (len(idx_hdd) >= min_T_idx):  # hdd
         c_hdd_beta = get_slope(T[idx_hdd], obs[idx_hdd], c_hdd_bp, intercept, alpha)
 
     elif (c_hdd_beta >= 0) and (len(idx_cdd) >= min_T_idx):  # cdd
         c_hdd_beta = get_slope(T[idx_cdd], obs[idx_cdd], c_hdd_bp, intercept, alpha)
 
-    return np.array([c_hdd_bp, c_hdd_beta, intercept])
+    return _tdd_coefficients(
+        c_hdd_bp=c_hdd_bp, c_hdd_beta=c_hdd_beta, c_hdd_k=c_hdd_k, intercept=intercept
+    )
 
 
 def _c_hdd_tidd_bp0(T, obs, alpha, settings, min_weight=0.0):
@@ -223,27 +324,53 @@ def _c_hdd_tidd_bp0(T, obs, alpha, settings, min_weight=0.0):
     return x_opt[0]
 
 
-@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
-def set_full_model_coeffs(c_hdd_bp, c_hdd_beta, intercept):
-    hdd_bp = cdd_bp = c_hdd_bp
-
-    if c_hdd_beta < 0:
-        hdd_beta = -c_hdd_beta
-        cdd_beta = cdd_k = hdd_k = 0
-
-    else:
-        cdd_beta = c_hdd_beta
-        hdd_beta = hdd_k = cdd_k = 0
-
-    return np.array([hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept])
-
-
 def _c_hdd_tidd(
     c_hdd_bp, c_hdd_beta, intercept, T_fit_bnds=np.array([]), T=np.array([])
 ):
     model_vars = set_full_model_coeffs(c_hdd_bp, c_hdd_beta, intercept)
-
     return full_model(*model_vars, T_fit_bnds, T)
+
+
+def _c_hdd_tidd_smooth(
+    c_hdd_bp, c_hdd_beta, c_hdd_k, intercept, T_fit_bnds=np.array([]), T=np.array([])
+):
+    x = set_full_model_coeffs_smooth(c_hdd_bp, c_hdd_beta, c_hdd_k, intercept)
+    return full_model(*x, T_fit_bnds, T)   
+
+
+def _c_hdd_tidd_weight(
+    c_hdd_bp,
+    c_hdd_beta,
+    intercept,
+    T,
+    residual,
+    sigma=3.0,
+    quantile=0.25,
+    alpha=2.0,
+    min_weight=0.0,
+):
+    model_vars = set_full_model_coeffs(c_hdd_bp, c_hdd_beta, intercept)
+    return full_model_weight(
+        *model_vars, T, residual, sigma, quantile, alpha, min_weight
+    )
+
+
+def _c_hdd_tidd_smooth_weight(
+    c_hdd_bp,
+    c_hdd_beta,
+    c_hdd_k,
+    intercept,
+    T,
+    residual,
+    sigma=3.0,
+    quantile=0.25,
+    alpha=2.0,
+    min_weight=0.0,
+):
+    model_vars = set_full_model_coeffs_smooth(c_hdd_bp, c_hdd_beta, c_hdd_k, intercept)
+    return full_model_weight(
+        *model_vars, T, residual, sigma, quantile, alpha, min_weight
+    )
 
 
 def _c_hdd_tidd_total_sum_of_squares(c_hdd_bp, c_hdd_beta, intercept, T, obs):
@@ -259,31 +386,3 @@ def _c_hdd_tidd_total_sum_of_squares(c_hdd_bp, c_hdd_beta, intercept, T, obs):
     TSS = np.sum(TSS)
 
     return TSS
-
-
-def _c_hdd_tidd_update_bnds(new_bnds, bnds):
-    new_bnds[0] = bnds[0]
-    new_bnds[2] = bnds[2]
-
-    new_bnds = np.sort(new_bnds, axis=1)
-    new_bnds = fix_identical_bnds(new_bnds)
-
-    return new_bnds
-
-
-def _c_hdd_tidd_weight(
-    c_hdd_bp,
-    c_hdd_beta,
-    intercept,
-    T,
-    residual,
-    sigma=3.0,
-    quantile=0.25,
-    alpha=2.0,
-    min_weight=0.0,
-):
-    model_vars = set_full_model_coeffs(c_hdd_bp, c_hdd_beta, intercept)
-
-    return full_model_weight(
-        *model_vars, T, residual, sigma, quantile, alpha, min_weight
-    )

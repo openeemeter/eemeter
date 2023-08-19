@@ -3,7 +3,6 @@ from copy import deepcopy as copy
 
 from eemeter.caltrack.daily.base_models.tidd import fit_tidd
 from eemeter.caltrack.daily.base_models.c_hdd_tidd import fit_c_hdd_tidd
-from eemeter.caltrack.daily.base_models.c_hdd_tidd_smooth import fit_c_hdd_tidd_smooth
 from eemeter.caltrack.daily.base_models.hdd_tidd_cdd import fit_hdd_tidd_cdd
 from eemeter.caltrack.daily.base_models.hdd_tidd_cdd_smooth import (
     fit_hdd_tidd_cdd_smooth,
@@ -51,11 +50,8 @@ def fit_initial_models_from_full_model(df_meter, settings, print_res=False):
 
     elif (
         settings.full_model == FullModelSelection.C_HDD_TIDD
-    ) and settings.smoothed_model:
-        model_res = fit_c_hdd_tidd_smooth(*fit_input, initial_fit=True)
-
-    elif settings.full_model == FullModelSelection.C_HDD_TIDD:
-        model_res = fit_c_hdd_tidd(*fit_input, initial_fit=True)
+    ):
+        model_res = fit_c_hdd_tidd(*fit_input, smooth=settings.smoothed_model, initial_fit=True)
 
     elif settings.full_model == FullModelSelection.TIDD:
         model_res = fit_tidd(*fit_input, initial_fit=True)
@@ -78,15 +74,10 @@ def fit_model(model_key, fit_input, x0: ModelCoefficients, bnds):
         res = fit_hdd_tidd_cdd(*fit_input, x0, bnds, initial_fit=False)
 
     elif model_key == "c_hdd_tidd_smooth":
-        res = fit_c_hdd_tidd_smooth(*fit_input, x0, bnds, initial_fit=False)
+        res = fit_c_hdd_tidd(*fit_input, smooth=True, x0=x0, bnds=bnds, initial_fit=False)
 
     elif model_key == "c_hdd_tidd":
-        # temporary fix prior to implementing named coefficients for unsmoothed model
-        if x0.model_type == ModelType.HDD_TIDD_SMOOTH:
-            x0.model_type = ModelType.HDD_TIDD
-        if x0.model_type == ModelType.TIDD_CDD_SMOOTH:
-            x0.model_type = ModelType.TIDD_CDD
-        res = fit_c_hdd_tidd(*fit_input, x0.to_np_array(), bnds, initial_fit=False)
+        res = fit_c_hdd_tidd(*fit_input, smooth=False, x0=x0, bnds=bnds, initial_fit=False)
 
     elif model_key == "tidd":
         res = fit_tidd(*fit_input, x0, bnds, initial_fit=False)

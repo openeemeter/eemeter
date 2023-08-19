@@ -177,8 +177,6 @@ class OptimizedResult:
         self.x = x
         self.num_coeffs = len(x)
         self.bnds = bnds
-        # XXX maybe use model_key after it's defined below..
-        self.named_coeffs = ModelCoefficients.from_np_arrays(x, coef_id)
 
         self.loss_alpha = loss_alpha
         self.C = C
@@ -243,6 +241,8 @@ class OptimizedResult:
 
         self._set_model_key()
         self._refine_model()
+
+        self.named_coeffs = ModelCoefficients.from_np_arrays(self.x, self.coef_id)
 
         self.x = np.array(self.x)
 
