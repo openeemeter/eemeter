@@ -9,10 +9,8 @@ def get_arch_type():
     Get the machine's processor architecture and return the appropriate architecture type.
     """
     arch = platform.machine()
-    if arch == "x86_64":
-        return "x86"
-    elif arch == "aarch64":
-        return "arm"
+    if arch in ["x86_64","aarch64"]:
+        return arch
     else:
         return "other"
 
@@ -23,15 +21,17 @@ def initialize_full_model():
     # Get the machine's processor architecture to use in identifying the binary to import
     arch_type = get_arch_type()
 
+    current_directory = "eemeter.caltrack.daily.base_models"
+
     # Import the Python version of full_model
     full_model_python = importlib.import_module(
-        "eemeter.caltrack.daily.base_models.full_model"
+        current_directory + ".full_model"
     ).full_model
 
     # Import the Cython version of full_model if present and performs faster, else default to the Python version
     try:
         full_model_cpp = importlib.import_module(
-            "bin." + arch_type + ".full_model_ext"
+            current_directory + ".cython.bin." + arch_type + ".full_model_ext"
         ).full_model_wrapper
 
         loop_count = 0
