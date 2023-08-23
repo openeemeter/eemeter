@@ -2,8 +2,13 @@ import numpy as np
 import numba
 
 from eemeter.caltrack.daily.utilities.utils import (
-    np_clip, OoM, RoundToSigFigs, t_stat, unc_factor, 
-    median_absolute_deviation, fast_std
+    np_clip,
+    OoM,
+    RoundToSigFigs,
+    t_stat,
+    unc_factor,
+    median_absolute_deviation,
+    fast_std,
 )
 
 
@@ -47,6 +52,7 @@ def test_np_clip():
         np_clip(a, a_min, a_max)(a, a_min, a_max)
     except ValueError as e:
         assert str(e) == "a_min must be less than or equal to a_max"
+
 
 def test_OoM():
     # Test case 1: Test with a scalar input - should give an error as the declaration must have an array input
@@ -99,7 +105,7 @@ def test_RoundToSigFigs():
     x = np.array([1234.5678, 5678.1234, 0.0123456])
     p = 4
     result = RoundToSigFigs(x, p)
-    expected = np.array([1.235e+03, 5.680e+03, 1.235e-02])
+    expected = np.array([1.235e03, 5.680e03, 1.235e-02])
     assert np.allclose(result, expected)
 
     # Test case 3: Test with a zero input
@@ -115,6 +121,7 @@ def test_RoundToSigFigs():
     result = RoundToSigFigs(x, p)
     expected = -1230
     assert result == expected
+
 
 def test_t_stat():
     # Test case 1: Test with a two-tailed test
@@ -149,6 +156,7 @@ def test_t_stat():
     expected = 1.833
     assert np.isclose(result, expected, rtol=1e-3)
 
+
 def test_unc_factor():
     # Test case 1: Test with a confidence interval
     n = 10
@@ -181,6 +189,7 @@ def test_unc_factor():
     result = unc_factor(n, interval, alpha)
     expected = 2.412
     assert np.isclose(result, expected, rtol=1e-3)
+
 
 def test_median_absolute_deviation():
     # Test case 1: Test with a small array

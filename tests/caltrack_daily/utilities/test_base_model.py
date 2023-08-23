@@ -4,7 +4,12 @@ from scipy.stats import linregress, theilslopes
 
 from eemeter.caltrack.daily.utilities.config import DailySettings
 from eemeter.caltrack.daily.utilities.base_model import (
-    get_slope, linear_fit, get_smooth_coeffs, fix_identical_bnds, get_T_bnds, get_intercept
+    get_slope,
+    linear_fit,
+    get_smooth_coeffs,
+    fix_identical_bnds,
+    get_T_bnds,
+    get_intercept,
 )
 
 
@@ -12,6 +17,7 @@ from eemeter.caltrack.daily.utilities.base_model import (
 def get_settings():
     settings = DailySettings()
     return settings
+
 
 def test_get_intercept():
     # Test case 1: alpha = 2, y has positive values
@@ -74,7 +80,9 @@ def test_get_slope():
     intercept = 1
     alpha = 2
     expected_slope = 2
-    assert np.isclose(get_slope(x, y, x_bp, intercept, alpha), expected_slope, rtol=1e-1)
+    assert np.isclose(
+        get_slope(x, y, x_bp, intercept, alpha), expected_slope, rtol=1e-1
+    )
 
 
 def test_linear_fit():
@@ -116,11 +124,13 @@ def test_get_smooth_coeffs():
 
     # Test case 5: pct_hdd_k and pct_cdd_k are both greater than min_pct_k and sum to greater than 1
     coeffs = get_smooth_coeffs(10, 0.5, 20, 0.6, min_pct_k=0.01)
-    assert np.allclose(coeffs, np.array([14.54545455,  4.54545455, 14.54545455,  5.45454545]))
+    assert np.allclose(
+        coeffs, np.array([14.54545455, 4.54545455, 14.54545455, 5.45454545])
+    )
 
     # Test case 6: pct_match is 1.0, so the smoothed curve should converge at - or + inf
     coeffs = get_smooth_coeffs(10, 0.1, 20, 0.2, min_pct_k=0.01)
-    assert np.allclose(coeffs, np.array([11,  1, 18,  2]))
+    assert np.allclose(coeffs, np.array([11, 1, 18, 2]))
 
 
 def test_fix_identical_bnds():
