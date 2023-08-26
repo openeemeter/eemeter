@@ -6,6 +6,21 @@ from scipy.optimize import minimize_scalar
 
 
 def ellipsoid_intersection_test(mu_A, mu_B, cov_A, cov_B):
+    """
+    Tests whether two ellipsoids intersect or not. The ellipsoids are defined by their mean vectors and covariance matrices.
+    The function uses the K-function to calculate the intersection of the ellipsoids. If the K-function is greater than or equal to 0, 
+    then the ellipsoids intersect, otherwise they do not.
+    
+    Parameters:
+    mu_A (numpy.ndarray): Mean vector of the first ellipsoid.
+    mu_B (numpy.ndarray): Mean vector of the second ellipsoid.
+    cov_A (numpy.ndarray): Covariance matrix of the first ellipsoid.
+    cov_B (numpy.ndarray): Covariance matrix of the second ellipsoid.
+    
+    Returns:
+    bool: True if the ellipsoids intersect, False otherwise.
+    """
+
     # Fix if all values are the same in 1 direction, "brent" doesn't work well with this
     if cov_A[1, 1] == 0:
         cov_A[1, 1] = 1e-14
@@ -30,6 +45,19 @@ def ellipsoid_intersection_test(mu_A, mu_B, cov_A, cov_B):
 
 
 def ellipsoid_K_function(ss, lambdas, v_squared):
+    """
+    The K-function is a measure of spatial point pattern, often used in spatial statistics 
+    to analyze the clustering or dispersion of points in a dataset. The formula used in this 
+    code is a specific calculation for an ellipsoid.
+
+    Parameters:
+    ss (float): A scalar value between 0 and 1.
+    lambdas (numpy.ndarray): A 1D numpy array of eigenvalues of the covariance matrix.
+    v_squared (numpy.ndarray): A 1D numpy array of squared differences between the means of two ellipsoids.
+
+    Returns:
+    float: The value of the K-function for the given input values.
+    """
     ss = np.array(ss).reshape((-1, 1))
     lambdas = np.array(lambdas).reshape((1, -1))
     v_squared = np.array(v_squared).reshape((1, -1))
@@ -38,6 +66,19 @@ def ellipsoid_K_function(ss, lambdas, v_squared):
 
 
 def confidence_ellipse(x, y, var=np.ones([2, 2]) * 1.96):
+    """
+    Compute the confidence ellipse for a 2D dataset.
+
+    Parameters:
+    x (numpy.ndarray): The x-coordinates of the data points.
+    y (numpy.ndarray): The y-coordinates of the data points.
+    var (numpy.ndarray): The variance of the data points. Default is 1.96.
+
+    Returns:
+    list: A list containing the mean, covariance, major and minor axis lengths, and rotation angle of the ellipse.
+
+    """
+    
     # Applying a median filter to help with outliers
     idx_sorted = np.argsort(x).flatten()
     idx_original = np.argsort(idx_sorted).flatten()
@@ -57,6 +98,20 @@ def confidence_ellipse(x, y, var=np.ones([2, 2]) * 1.96):
 
 
 def robust_confidence_ellipse(x, y, var=np.ones([2, 2]) * 1.96, outlier_std=3, N=2):
+    """
+    Computes a robust confidence ellipse for a set of points.
+
+    Parameters:
+    x (numpy.ndarray): Array of x-coordinates of the points.
+    y (numpy.ndarray): Array of y-coordinates of the points.
+    var (numpy.ndarray): Variance-covariance matrix. Default is a 2x2 matrix with 1.96 in the diagonal.
+    outlier_std (float): Standard deviation for outlier detection. Default is 3.
+    N (int): Number of iterations for outlier removal. Default is 2.
+
+    Returns:
+    list: A list containing the mean, covariance matrix, major and minor axis lengths, and rotation angle of the ellipse.
+    """
+
     var_outlier = np.ones([2, 2]) * outlier_std**2
 
     # remove outliers in N iterations
@@ -91,6 +146,18 @@ def robust_confidence_ellipse(x, y, var=np.ones([2, 2]) * 1.96, outlier_std=3, N
 
 
 def ellipsoid_split_filter(meter, n_std=[1.4, 1.4]):
+    """
+    Filters a set of points based on a robust confidence ellipse. The points are split into groups using robust ellipses computed
+    and then tested for intersection. This determines whether separate keys are needed for different seasons and day types.
+
+    Parameters:
+    meter (pandas.DataFrame): Dataframe containing the points to be filtered.
+    n_std (float or list): Standard deviation for outlier detection. Default is [1.4, 1.4].
+
+    Returns:
+    dict: A dictionary containing the filtered points for each season and day type.
+    """
+
     if isinstance(n_std, float):
         var = np.ones([2, 2]) * n_std**2
     else:

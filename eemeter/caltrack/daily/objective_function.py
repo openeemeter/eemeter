@@ -13,6 +13,17 @@ from eemeter.caltrack.daily.utilities.utils import fast_std as stdev
 
 
 def get_idx(A, B):
+    """
+    Returns a sorted list of indices of items in A that are found in any string in B.
+
+    Parameters:
+    A (list): List of items to search for in B.
+    B (list): List of strings to search for items in A.
+
+    Returns:
+    list: Sorted list of indices of items in A that are found in any string in B.
+    """
+
     idx = []
     for item in A:
         try:
@@ -26,6 +37,17 @@ def get_idx(A, B):
 
 
 def no_weights_obj_fcn(X, aux_inputs):
+    """
+    Calculates the sum of squared errors (SSE) between the model output and the observed data.
+
+    Parameters:
+        X (array-like): Input values for the model.
+        aux_inputs (tuple): A tuple containing the model function, observed data, and breakpoint indices.
+
+    Returns:
+        float: The SSE between the model output and the observed data.
+    """
+
     model_fcn, obs, idx_bp = aux_inputs
 
     # flip breakpoints if they are not in the correct order
@@ -41,6 +63,22 @@ def no_weights_obj_fcn(X, aux_inputs):
 
 
 def model_fcn_dec(model_fcn_full, T_fit_bnds, T):
+    """
+    Returns a function that takes only X as input and returns the output of model_fcn_full with X, T_fit_bnds, and T as inputs.
+
+    Parameters:
+    - model_fcn_full: function
+        The full model function that takes X, T_fit_bnds, and T as inputs.
+    - T_fit_bnds: tuple
+        The bounds of the temperature range.
+    - T: float
+        The temperature value.
+
+    Returns:
+    - function
+        A function that takes only X as input and returns the output of model_fcn_full with X, T_fit_bnds, and T as inputs.
+    """
+
     def model_fcn_X_only(X):
         return model_fcn_full(*X, T_fit_bnds, T)
 
@@ -58,6 +96,25 @@ def obj_fcn_decorator(
     coef_id=[],
     initial_fit=True,
 ):
+    """
+    A decorator function that calculates the elastic net penalty for a given set of inputs and the objective function
+    for input to optimization algorithms.
+
+    Parameters:
+    model_fcn_full (function): The full model function.
+    weight_fcn (function): The weight function.
+    TSS_fcn (function): The TSS (Total Sum of Squares) function.
+    T (array-like): The temperature array.
+    obs (array-like): The observation array.
+    settings (object): The DailySettings object.
+    alpha (float): The alpha value for the elastic net penalty. Default is 2.0.
+    coef_id (list): The list of coefficient IDs. Default is an empty list.
+    initial_fit (bool): Whether or not this is the initial fit. Default is True.
+
+    Returns:
+    obj_fcn (function): an objective function having the required inputs for optimization via SciPy and NLopt.
+    """
+
     N = np.shape(obs)[0]
     N_min = settings.segment_minimum_count  # N minimum for a sloped segment
     sigma = 2.698  # 1.5 IQR
@@ -83,6 +140,21 @@ def obj_fcn_decorator(
     )  # drop intercept from regularization
 
     def elastic_net_penalty(X, T_sorted, obs_sorted, weight_sorted, wRMSE):
+        """
+        Calculates the elastic net penalty for a given set of inputs. The elastic net is a regularized 
+        regression method that linearly combines the L1 and L2 penalties of the lasso and ridge methods.
+
+        Parameters:
+        X (array-like): The input array.
+        T_sorted (array-like): The sorted temperature array.
+        obs_sorted (array-like): The sorted observation array.
+        weight_sorted (array-like): The sorted weight array.
+        wRMSE (float): The weighted root mean squared error.
+
+        Returns:
+        penalty (float): The elastic net penalty.
+        """
+
         # Elastic net
         X_enet = np.array(X).copy()
 
@@ -200,6 +272,22 @@ def obj_fcn_decorator(
         return penalty
 
     def obj_fcn(X, grad=[], optimize_flag=True):
+        """
+        Creates an objective function having the required inputs for optimization via SciPy and NLopt. If the optimize_flag is true,
+        only return the loss. If the optimize_flag is false, return the loss and the model output parameters.
+
+        Parameters:
+        - X: array-like
+            Array of coefficients.
+        - grad: array-like, optional
+            Gradient array. Default is an empty list.
+        - optimize_flag: bool, optional
+            Whether to optimize. Default is True.
+
+        Returns:
+        - obj: float
+            Objective function value.
+        """
         X = np.array(X)
 
         model = model_fcn(X)

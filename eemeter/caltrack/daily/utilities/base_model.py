@@ -13,6 +13,22 @@ numba_cache = True
 
 
 def get_intercept(y, alpha=2):
+    """
+    Calculates the intercept of a linear regression model.
+
+    Parameters:
+    -----------
+    y : array-like
+        Dependent variable.
+    alpha : float, optional
+        Significance level for the Theil-Sen estimator. Default is 2.
+
+    Returns:
+    --------
+    intercept : float
+        Intercept of the linear regression model.
+    """
+    
     if alpha == 2:
         intercept = np.mean(y)
     else:

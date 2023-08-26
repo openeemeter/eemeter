@@ -18,6 +18,26 @@ from timeit import default_timer as timer
 
 
 def get_k(X, T_min_seg, T_max_seg):
+    """
+    Calculates the heating and cooling degree day breakpoints and slopes based on the given input parameters.
+
+    Parameters:
+    X (tuple): A tuple containing the following parameters:
+        - float: The maximum temperature for the segment.
+        - float: The heating degree day value for the segment.
+        - float: The minimum temperature for the segment.
+        - float: The cooling degree day value for the segment.
+    T_min_seg (float): The minimum temperature for the segment.
+    T_max_seg (float): The maximum temperature for the segment.
+
+    Returns:
+    list: A list containing the following values:
+        - float: The heating degree day breakpoint.
+        - float: The heating degree day slope.
+        - float: The cooling degree day breakpoint.
+        - float: The cooling degree day slope.
+    """
+
     [hdd_bp, hdd_k, cdd_bp, cdd_k] = get_smooth_coeffs(*X)
 
     if X[0] >= T_max_seg:
@@ -51,6 +71,30 @@ def reduce_model(
     T_max_seg,
     model_key,
 ):
+    """
+    This function takes in various parameters related to heating degree days (hdd) and cooling degree days (cdd) and
+    returns a reduced model based on the values of these parameters. The reduced model is returned as a list of
+    coefficients and a list of corresponding values.
+
+    Parameters:
+    hdd_bp (float): The heating degree day base point.
+    hdd_beta (float): The heating degree day beta value.
+    pct_hdd_k (float): The percentage of heating degree days.
+    cdd_bp (float): The cooling degree day base point.
+    cdd_beta (float): The cooling degree day beta value.
+    pct_cdd_k (float): The percentage of cooling degree days.
+    intercept (float): The intercept value.
+    T_min (float): The minimum temperature value.
+    T_max (float): The maximum temperature value.
+    T_min_seg (float): The minimum temperature segment value.
+    T_max_seg (float): The maximum temperature segment value.
+    model_key (str): The key for the model.
+
+    Returns:
+    coef_id (list): A list of coefficients for the reduced model.
+    x (list): A list of corresponding values for the reduced model.
+    """
+
     if (cdd_beta != 0) and (hdd_beta != 0) and ((pct_cdd_k != 0) or (pct_hdd_k != 0)):
         coef_id = [
             "hdd_bp",
@@ -130,6 +174,19 @@ def reduce_model(
 
 
 def acf(x, lag_n=None, moving_mean_std=False):
+    """
+    Computes the autocorrelation function (ACF) of a given time series. It is the correlation of a signal with a delayed copy of itself as a function of delay.
+    It allows finding repeating patterns, such as the presence of a periodic signal obscured by noise, or identifying the missing fundamental frequency in a signal implied by its harmonic frequencies.
+
+    Parameters:
+        x (array-like): The time series data.
+        lag_n (int, optional): The number of lags to compute the ACF for. If None, computes the ACF for all possible lags.
+        moving_mean_std (bool, optional): Whether to use a moving mean and standard deviation to compute the ACF. If False, uses the regular formula.
+
+    Returns:
+        array-like: The autocorrelation function values for the given time series and lags.
+    """
+
     if lag_n is None:
         lags = range(len(x) - 1)
     else:
@@ -173,6 +230,29 @@ class OptimizedResult:
         time_elapsed,
         settings,
     ):
+        """
+        Class representing the results of the optimization procedure, which can either be via Scipy or NLopt.
+
+        Parameters:
+            x (numpy.ndarray): Array of optimized coefficients.
+            bnds (List[Tuple[float, float]]): List of bounds for each coefficient.
+            coef_id (List[str]): List of coefficient names.
+            loss_alpha (float): Alpha value for the loss function.
+            C (numpy.ndarray): Array of C values.
+            T (numpy.ndarray): Array of temperatures.
+            model (numpy.ndarray): Array of model values.
+            weight (numpy.ndarray): Array of weights.
+            resid (numpy.ndarray): Array of residuals.
+            jac (numpy.ndarray): Array of jacobian values.
+            mean_loss (float): Mean loss value.
+            TSS (float): Total sum of squares.
+            success (bool): Whether the optimization was successful.
+            message (str): Optimization message.
+            nfev (int): Number of function evaluations.
+            time_elapsed (float): Time elapsed during optimization.
+            settings (OptimizationSettings): Optimization settings.
+        """
+
         self.coef_id = coef_id
         self.x = x
         self.num_coeffs = len(x)
@@ -247,6 +327,10 @@ class OptimizedResult:
         self.x = np.array(self.x)
 
     def _prediction_uncertainty(self):  # based on std
+        """
+        Calculate the prediction uncertainty based on the standard deviation of residuals.
+        """
+
         # residuals autocorrelation correction
         acorr = acf(
             self.resid, lag_n=1, moving_mean_std=False
@@ -266,6 +350,10 @@ class OptimizedResult:
         self.f_unc = f_unc
 
     def _set_model_key(self):
+        """
+        Set the model key based on the coefficient names.
+        """
+        
         if self.coef_id == [
             "hdd_bp",
             "hdd_beta",
@@ -295,6 +383,9 @@ class OptimizedResult:
                 self.model_name = self.model_name.replace("c_hdd", "cdd")
 
     def _refine_model(self):
+        """
+        Refine the model based on the model key and coefficients.
+        """
         # update coeffs based on model
         x = get_full_model_x(
             self.model_key,
@@ -314,6 +405,21 @@ class OptimizedResult:
         self._set_model_key()
 
     def eval(self, T):
+        """
+        Evaluate the full model at given temperature inputs.
+
+        Parameters:
+            T (numpy.ndarray): Array of temperatures.
+
+        Returns:
+            Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
+                Tuple containing the following arrays:
+                - model: Array of model values.
+                - f_unc: Array of uncertainties.
+                - hdd_load: Array of heating degree day loads.
+                - cdd_load: Array of cooling degree day loads.
+        """
+
         x = get_full_model_x(
             self.model_key,
             self.x,

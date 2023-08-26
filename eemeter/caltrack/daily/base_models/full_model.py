@@ -24,6 +24,24 @@ def full_model(
     T_fit_bnds=np.array([]),
     T=np.array([]),
 ):
+    """
+    This function predicts the total energy consumption based on the given parameters.
+
+    Parameters:
+    hdd_bp (float): The base point for the heating model.
+    hdd_beta (float): The beta value for the heating model.
+    hdd_k (float): The k value for the heating model.
+    cdd_bp (float): The base point for the cooling model.
+    cdd_beta (float): The beta value for the cooling model.
+    cdd_k (float): The k value for the cooling model.
+    intercept (float): The intercept value for the model.
+    T_fit_bnds (numpy array): The temperature bounds for the model fitting. Default is an empty numpy array.
+    T (numpy array): The temperature values. Default is an empty numpy array.
+
+    Returns:
+    numpy array: The total energy consumption for each temperature value in T.
+    """
+
     # if all variables are zero, return tidd model
     if (hdd_beta == 0) and (cdd_beta == 0):
         return np.ones_like(T) * intercept
@@ -75,6 +93,19 @@ def full_model(
 
 @numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
 def get_full_model_x(model_key, x, T_min, T_max, T_min_seg, T_max_seg):
+    """
+    This function adjusts the parameters of a full model based on certain conditions.
+
+    Parameters:
+    x (list): A list containing the parameters of the model.
+    T_min_seg (float): The minimum temperature segment.
+    T_max_seg (float): The maximum temperature segment.
+
+    Returns:
+    list: A list of adjusted parameters.
+
+    """
+    
     if model_key == "hdd_tidd_cdd_smooth":
         [hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept] = x
 
@@ -125,6 +156,19 @@ def get_full_model_x(model_key, x, T_min, T_max, T_min_seg, T_max_seg):
 
 @numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
 def fix_full_model_x(x, T_min_seg, T_max_seg):
+    """
+    This function adjusts the parameters of a full model based on certain conditions.
+
+    Parameters:
+    x (list): A list containing the parameters of the model [hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept].
+    T_min_seg (float): The minimum temperature segment.
+    T_max_seg (float): The maximum temperature segment.
+
+    Returns:
+    list: A list of adjusted parameters [hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept].
+
+    """
+
     hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept = x
 
     # swap breakpoint order if they are reversed [hdd, cdd]
@@ -165,6 +209,28 @@ def full_model_weight(
     alpha=2.0,
     min_weight=0.0,
 ):
+    """
+    This function calculates the weights, C and alpha for a full model using adaptive weights
+
+    Parameters:
+    hdd_bp (float): The base point for heating degree days.
+    hdd_beta (float): The beta value for heating degree days.
+    hdd_k (float): The k value for heating degree days.
+    cdd_bp (float): The base point for cooling degree days.
+    cdd_beta (float): The beta value for cooling degree days.
+    cdd_k (float): The k value for cooling degree days.
+    intercept (float): The intercept of the model.
+    T (array-like): The temperature array.
+    residual (array-like): The residual array.
+    sigma (float, optional): The standard deviation. Default is 3.0.
+    quantile (float, optional): The quantile to be used. Default is 0.25.
+    alpha (float, optional): The alpha value. Default is 2.0.
+    min_weight (float, optional): The minimum weight. Default is 0.0.
+
+    Returns:
+    tuple: Returns a tuple containing the weights, C and alpha for the full model.
+    """
+
     if hdd_bp > cdd_bp:
         hdd_bp, cdd_bp = cdd_bp, hdd_bp
 

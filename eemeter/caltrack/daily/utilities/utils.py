@@ -42,6 +42,65 @@ class ModelType(Enum):
 
 @define
 class ModelCoefficients:
+    """
+    A class used to represent the coefficients of a model.
+
+    Attributes
+    ----------
+    model_type : ModelType
+        The type of the model.
+    intercept : float
+        The intercept of the model.
+    hdd_bp : float | None
+        The heating degree days breakpoint of the model, if applicable.
+    hdd_beta : float | None
+        The heating degree days beta of the model, if applicable.
+    hdd_k : float | None
+        The heating degree days k of the model, if applicable.
+    cdd_bp : float | None
+        The cooling degree days breakpoint of the model, if applicable.
+    cdd_beta : float | None
+        The cooling degree days beta of the model, if applicable.
+    cdd_k : float | None
+        The cooling degree days k of the model, if applicable.
+
+    Methods
+    -------
+    from_np_arrays(coefficients, coefficient_ids)
+        Constructs a ModelCoefficients object from numpy arrays of coefficients and their corresponding ids.
+    to_np_array()
+        Converts the ModelCoefficients object to a numpy array.
+    """
+    """
+    A class used to represent the coefficients of a model.
+
+    Attributes
+    ----------
+    model_type : ModelType
+        The type of the model.
+    intercept : float
+        The intercept of the model.
+    hdd_bp : float | None
+        The heating degree days breakpoint of the model, if applicable.
+    hdd_beta : float | None
+        The heating degree days beta of the model, if applicable.
+    hdd_k : float | None
+        The heating degree days k of the model, if applicable.
+    cdd_bp : float | None
+        The cooling degree days breakpoint of the model, if applicable.
+    cdd_beta : float | None
+        The cooling degree days beta of the model, if applicable.
+    cdd_k : float | None
+        The cooling degree days k of the model, if applicable.
+
+    Methods
+    -------
+    from_np_arrays(coefficients, coefficient_ids)
+        Constructs a ModelCoefficients object from numpy arrays of coefficients and their corresponding ids.
+    to_np_array()
+        Converts the ModelCoefficients object to a numpy array.
+    """
+    
     model_type: ModelType
     intercept: float
     hdd_bp: float | None = None
@@ -64,6 +123,25 @@ class ModelCoefficients:
 
     @classmethod
     def from_np_arrays(cls, coefficients, coefficient_ids):
+        """
+        This class method creates a ModelCoefficients instance from numpy arrays of coefficients and their corresponding ids.
+
+        Args:
+            cls (class): The class to which this class method belongs.
+            coefficients (np.array): A numpy array of coefficients.
+            coefficient_ids (list): A list of coefficient ids.
+
+        Returns:
+            ModelCoefficients: An instance of ModelCoefficients class.
+
+        Raises:
+            ValueError: If the coefficient_ids do not match any of the expected patterns.
+
+        The method matches the coefficient_ids to predefined patterns and based on the match, 
+        it initializes a ModelCoefficients instance with the corresponding model_type and coefficients. 
+        If the coefficient_ids do not match any of the predefined patterns, it raises a ValueError.
+        """
+
         match coefficient_ids:
             case [
                 "hdd_bp",
@@ -178,6 +256,22 @@ class ModelCoefficients:
                 raise ValueError
 
     def to_np_array(self):
+        """
+        This method converts the model parameters into a numpy array based on the model type.
+
+        The model type determines which parameters are included in the array. The parameters are:
+        - hdd_bp: The base point for heating degree days (HDD)
+        - hdd_beta: The beta coefficient for HDD
+        - hdd_k: The smoothing parameter for HDD
+        - cdd_bp: The base point for cooling degree days (CDD)
+        - cdd_beta: The beta coefficient for CDD
+        - cdd_k: The smoothing parameter for CDD
+        - intercept: The model's intercept
+
+        Returns:
+            np.array: A numpy array containing the relevant parameters for the model type.
+        """
+
         match self.model_type:
             case ModelType.HDD_TIDD_CDD_SMOOTH:
                 return np.array(
@@ -234,9 +328,37 @@ class CoefficientBounds:
 
 @overload(np.clip)
 def np_clip(a, a_min, a_max):
+    """
+    This function applies a clip operation on the input array 'a' using the provided minimum and maximum values.
+    The clip operation ensures that all elements in 'a' are within the range [a_min, a_max].
+    If an element in 'a' is less than 'a_min', it is replaced with 'a_min'.
+    If an element in 'a' is greater than 'a_max', it is replaced with 'a_max'.
+    NaN values in 'a' are preserved as NaN.
+
+    Parameters:
+    a (numpy array): The input array to be clipped.
+    a_min (float): The minimum value for the clip operation.
+    a_max (float): The maximum value for the clip operation.
+
+    Returns:
+    numpy array: The clipped array.
+    """
+
     @numba.vectorize
     def _clip(a, a_min, a_max):
-        """vectorized implementation of the clip function"""
+        """
+        This is a vectorized implementation of the clip function.
+        It applies the clip operation on each element of the input array 'a'.
+
+        Parameters:
+        a (float): The input value to be clipped.
+        a_min (float): The minimum value for the clip operation.
+        a_max (float): The maximum value for the clip operation.
+
+        Returns:
+        float: The clipped value.
+        """
+
         if np.isnan(a):
             return np.nan
         elif a < a_min:
@@ -247,7 +369,19 @@ def np_clip(a, a_min, a_max):
             return a
 
     def clip_impl(a, a_min, a_max):
-        """numba implementation of the clip function"""
+        """
+        This is a numba implementation of the clip function.
+        It applies the clip operation on the input array 'a' using the provided minimum and maximum values.
+
+        Parameters:
+        a (numpy array): The input array to be clipped.
+        a_min (float): The minimum value for the clip operation.
+        a_max (float): The maximum value for the clip operation.
+
+        Returns:
+        numpy array: The clipped array.
+        """
+
         return _clip(a, a_min, a_max)
 
     return clip_impl
@@ -262,6 +396,21 @@ def OoM(x, method="round"):
 
 @numba.jit(nopython=True, cache=numba_cache)
 def OoM_numba(x, method="round"):
+    """
+    This function calculates the order of magnitude (OoM) of each element in the input array 'x' using the specified method.
+    
+    Parameters:
+    x (numpy array): The input array for which the OoM is to be calculated.
+    method (str): The method to be used for calculating the OoM. It can be one of the following:
+                  "round" - round to the nearest integer (default)
+                  "floor" - round down to the nearest integer
+                  "ceil" - round up to the nearest integer
+                  "exact" - return the exact OoM without rounding
+
+    Returns:
+    x_OoM (numpy array): The array of the same shape as 'x' containing the OoM of each element in 'x'.
+    """
+
     x_OoM = np.empty_like(x)
     for i, xi in enumerate(x):
         if xi == 0.0:
@@ -283,6 +432,17 @@ def OoM_numba(x, method="round"):
 
 
 def RoundToSigFigs(x, p):
+    """
+    This function rounds the input array 'x' to 'p' significant figures.
+
+    Parameters:
+    x (numpy.ndarray): The input array to be rounded.
+    p (int): The number of significant figures to round to.
+
+    Returns:
+    numpy.ndarray: The rounded array.
+    """
+
     x = np.asarray(x)
     x_positive = np.where(np.isfinite(x) & (x != 0), np.abs(x), 10 ** (p - 1))
     mags = 10 ** (p - 1 - OoM(x_positive))
@@ -290,6 +450,19 @@ def RoundToSigFigs(x, p):
 
 
 def t_stat(alpha, n, tail=2):
+    """
+    Calculate the t-statistic for a given alpha level, sample size, and tail type.
+
+    Parameters:
+    alpha (float): The significance level.
+    n (int): The sample size.
+    tail (int or str): The type of tail test. Can be 1 or "one" for one-tailed test, 
+                       and 2 or "two" for two-tailed test. Default is 2.
+
+    Returns:
+    float: The calculated t-statistic.
+    """
+
     degrees_of_freedom = n - 1
     if tail == "one" or tail == 1:
         perc = 1 - alpha
@@ -300,6 +473,18 @@ def t_stat(alpha, n, tail=2):
 
 
 def unc_factor(n, interval="PI", alpha=0.05):
+    """
+    Calculates the uncertainty factor for a given sample size, confidence interval type, and significance level.
+
+    Parameters:
+    n (int): The sample size.
+    interval (str, optional): The type of confidence interval. Defaults to "PI" (Prediction Interval).
+    alpha (float, optional): The significance level. Defaults to 0.05.
+
+    Returns:
+    float: The uncertainty factor.
+    """
+
     if interval == "CI":
         return t_stat(alpha, n) / np.sqrt(n)
 
@@ -313,6 +498,16 @@ MAD_k = 1 / norm_dist.ppf(
 
 
 def median_absolute_deviation(x):
+    """
+    This function calculates the Median Absolute Deviation (MAD) of a given array.
+    
+    Parameters:
+    x (numpy array): The input array for which the MAD is to be calculated.
+
+    Returns:
+    float: The calculated MAD of the input array.
+    """
+
     mu = np.median(x)
     sigma = np.median(np.abs(x - mu)) * MAD_k
 
@@ -321,6 +516,19 @@ def median_absolute_deviation(x):
 
 @numba.jit(nopython=True, cache=numba_cache)
 def weighted_std(x, w, mean=None, w_sum_err=1e-6):
+    """
+    Calculate the weighted standard deviation of a given array.
+
+    Parameters:
+    x (numpy.ndarray): The input array.
+    w (numpy.ndarray): The weights for the input array.
+    mean (float, optional): The mean value. If None, the mean is calculated from the input array. Defaults to None.
+    w_sum_err (float, optional): The error tolerance for the sum of weights. Defaults to 1e-6.
+
+    Returns:
+    float: The calculated weighted standard deviation.
+    """
+
     n = float(len(x))
 
     w_sum = np.sum(w)
@@ -336,6 +544,19 @@ def weighted_std(x, w, mean=None, w_sum_err=1e-6):
 
 
 def fast_std(x, weights=None, mean=None):
+    """
+    Function to calculate the approximate standard deviation quickly of a given array. 
+    This function can handle both weighted and unweighted calculations.
+
+    Parameters:
+    x (numpy.ndarray): The input array for which the standard deviation is to be calculated.
+    weights (numpy.ndarray, optional): An array of weights for the input array. Defaults to None.
+    mean (float, optional): The mean of the input array. If not provided, it will be calculated. Defaults to None.
+
+    Returns:
+    float: The calculated standard deviation.
+    """
+
     if isinstance(weights, int) or isinstance(weights, float):
         weights = np.array([weights])
 

@@ -2,6 +2,17 @@ import numpy as np
 
 
 def neg_log_likelihood(loss, N):
+    """
+    This function calculates the negative log likelihood for least squares fitting.
+
+    Parameters:
+    loss (float): The sum of squared residuals.
+    N (int): The number of data points.
+
+    Returns:
+    float: The negative log likelihood of the least squares fit.
+    """
+
     # log likelihood for n independent identical normal distributions:
     # log_likelihood = -n/2*np.log(2*np.pi) - n/2*np.log(sigma**2) - 1/(2*sigma**2)*np.sum((x - mu)**2)
 
@@ -21,6 +32,26 @@ def selection_criteria(
     penalty_multiplier=1.0,
     penalty_power=1.0,
 ):
+    """
+    This function calculates the selection criteria for a given model. There are different criteria that can be used, 
+    and the default is the Bayesian information criterion (BIC).
+
+    Parameters:
+    loss (float): The loss of the model.
+    TSS (float): Total sum of squares.
+    N (int): The number of observations.
+    num_coeffs (int): The number of coefficients in the model.
+    model_selection_criteria (str): The model selection criteria to use. Default is "bic".
+    penalty_multiplier (float): The penalty multiplier. Default is 1.0.
+    penalty_power (float): The penalty power. Default is 1.0.
+
+    Returns:
+    float: The calculated selection criteria.
+
+    Raises:
+    NotImplementedError: If the model selection criteria is "dic", "waic", or "wbic", as these are not implemented.
+    """
+
     K = num_coeffs  # total number of coefficients
     c0 = penalty_multiplier
     d0 = penalty_power

@@ -33,6 +33,52 @@ class FitModel:
         check_caltrack_compliant=True,
         verbose=False,
     ):
+        """
+        A class to fit a model to the input meter data.
+
+        Parameters:
+        -----------
+        meter_data : pandas.DataFrame
+            A dataframe containing meter data.
+        model : str, optional
+            The model to use. Default is '2.1'.
+        settings : dict, optional
+            DailySettings to be changed. Default is None.
+        check_caltrack_compliant : bool, optional
+            Whether to check if the data is CalTRACK compliant. Default is True.
+        verbose : bool, optional
+            Whether to print verbose output. Default is False.
+
+        Attributes:
+        -----------
+        settings : dict
+            A dictionary of settings.
+        seasonal_options : list
+            A list of seasonal options.
+        day_options : list
+            A list of day options.
+        combo_dictionary : dict
+            A dictionary of combinations.
+        df_meter : pandas.DataFrame
+            A dataframe of meter data.
+        error : dict
+            A dictionary of error metrics.
+        combinations : list
+            A list of combinations.
+        components : list
+            A list of components.
+        fit_components : list
+            A list of fit components.
+        wRMSE_base : float
+            The mean bias error for no splits.
+        best_combination : list
+            The best combination of splits.
+        model : sklearn.pipeline.Pipeline
+            The final fitted model.
+        id : str
+            The index of the meter data.
+        """
+
         # Initialize settings
         # Note: Model designates the base settings, it can be '2.1' or '2.0'
         #       Settings is to be a dictionary of settings to be changed
@@ -101,6 +147,23 @@ class FitModel:
         self.error["MAE_train"] = MAE
 
     def _initialize_data(self, meter_data):
+        """
+        Initializes the meter data by performing the following operations:
+        - Renames the 'model' column to 'model_old' if it exists
+        - Converts the index to a DatetimeIndex if it is not already
+        - Adds a 'season' column based on the month of the index using the settings.season dictionary
+        - Adds a 'day_of_week' column based on the day of the week of the index
+        - Removes any rows with NaN values in the 'temperature' or 'observed' columns
+        - Sorts the data by the index
+        - Reorders the columns to have 'season' and 'day_of_week' first, followed by the remaining columns
+
+        Parameters:
+        - meter_data: A pandas DataFrame containing the meter data
+
+        Returns:
+        - A pandas DataFrame containing the initialized meter data
+        """
+
         if "model" in meter_data.columns:
             meter_data = meter_data.rename(columns={"model": "model_old"})
 
@@ -132,6 +195,12 @@ class FitModel:
         return meter_data
 
     def _combinations(self):
+        """
+        This method generates all possible combinations of seasonal and day options for the given data.
+        It then trims the combinations based on certain conditions such as minimum number of days per season,
+        and whether to allow separate splits for summer, shoulder and winter seasons.
+        """
+
         settings = self.settings
 
         def _get_combinations():
@@ -139,6 +208,19 @@ class FitModel:
                 return [f"{prefix}-{s}" for s in list_str]
 
             def expand_combinations(combos_in):
+                """
+                Given a list of combinations, expands each combination by adding a new item to it.
+                The new item is chosen from the intersection of the items in two specific combinations.
+                The new item is then added to a third combination, which is created by combining the remaining items from the two specific combinations.
+                The resulting expanded combinations are returned as a list.
+
+                Parameters:
+                combos_in (list): A list of combinations, where each combination is a list of items.
+
+                Returns:
+                list: A list of expanded combinations, where each expanded combination is a list of items.
+                """
+
                 combo_expanded = []
                 for combo in combos_in:
                     combo_expanded.append(list(combo))
@@ -183,6 +265,18 @@ class FitModel:
                 return combo_expanded
 
             def stringify(combos):
+                """
+                Converts a list of tuples into a list of strings, where each string is a combination of the tuple values
+                separated by '__'. The tuples are expected to have a prefix and a value, and the prefix is used to add context
+                to the value.
+
+                Parameters:
+                    combos (list): A list of tuples, where each tuple contains a prefix and a value.
+
+                Returns:
+                    list: A list of strings, where each string is a combination of the tuple values separated by '__'.
+                """
+
                 combos_str = []
                 for combo in combos:
                     combo = [add_prefix(item[1], item[0]) for item in combo]
@@ -211,6 +305,19 @@ class FitModel:
             return combos_str
 
         def _trim_combinations(combo_list, split_min_days=30):
+            """
+            Trims the list of combinations to be tested based on various conditions.
+            - Checks if the ellipsoids created are separated enough to warrant separate seasons and weekday/weekend splits.
+            - Checks if there are enough days in each season and weekday/weekend to warrant separate splits.
+
+            Args:
+                combo_list (list): List of combinations to be tested.
+                split_min_days (int, optional): Minimum number of days required for a split. Defaults to 30.
+
+            Returns:
+                list: Trimmed list of combinations to be tested.
+            """
+
             meter = self.df_meter
             allow_sep_summer = settings.allow_separate_summer
             allow_sep_shoulder = settings.allow_separate_shoulder
@@ -285,6 +392,16 @@ class FitModel:
             return combo_list_trimmed
 
         def _remove_duplicate_permutations(combo_list):
+            """
+            Removes duplicate permutations from a list of strings.
+
+            Args:
+                combo_list (list): A list of strings representing permutations.
+
+            Returns:
+                list: A list of unique permutations.
+            """
+
             unique_sorted_combos = []
             unique_combos = []
             for combo in combo_list:
@@ -303,6 +420,17 @@ class FitModel:
         return combo_list
 
     def _meter_segment(self, component, meter=None):
+        """
+        Returns a meter segment based on the given component and meter data.
+
+        Parameters:
+            component (str): A string representing the component to filter the meter data by.
+            meter (pandas.DataFrame, optional): A pandas DataFrame containing the meter data. Defaults to None.
+
+        Returns:
+            pandas.DataFrame: A pandas DataFrame containing the meter data filtered by the given component.
+        """
+
         if meter is None:
             meter = self.df_meter
 
@@ -320,6 +448,10 @@ class FitModel:
 
     # TODO: rename components to submodel or submodel to component? Likely the first
     def _components(self):
+        """
+        Returns a sorted list of unique components from the combinations attribute.
+        """
+
         components = list(
             set([i for item in self.combinations for i in item.split("__")])
         )
@@ -328,6 +460,15 @@ class FitModel:
         return components
 
     def _fit_components(self):
+        """
+        Fits initial models for each component using the meter segment data and component settings.
+
+        If the alpha_final_type is "last", the settings are updated to disable the final bounds scalar and set alpha_final_type to None.
+
+        Returns:
+            dict: A dictionary containing the fitted components.
+        """
+
         if self.settings.alpha_final_type == "last":
             settings_update = {
                 "developer_mode": True,
@@ -353,6 +494,16 @@ class FitModel:
         return fit_components
 
     def _combination_selection_criteria(self, combination):
+        """
+        Calculates the selection criteria for a given combination of components.
+
+        Parameters:
+            combination (str): A string representing the combination of components.
+
+        Returns:
+            float: The selection criteria for the given combination.
+        """
+         
         components = combination.split("__")
 
         N = np.sum([self.fit_components[X].N for X in components])
@@ -379,6 +530,16 @@ class FitModel:
         return criteria
 
     def _best_combination(self, print_out=False):
+        """
+        Finds the best combination of parameters based on the selection criteria.
+
+        Parameters:
+            print_out (bool): Whether to print the combination and selection criteria for each iteration.
+
+        Returns:
+            str: The best combination of parameters as a string.
+        """
+
         HoF = {"combination_str": None, "selection_criteria": np.inf}
         for combo in self.combinations:
             selection_criteria = self._combination_selection_criteria(combo)
@@ -396,6 +557,16 @@ class FitModel:
         return HoF["combination_str"]
 
     def _final_fit(self, combination):
+        """
+        Fits the final model for a given combination of components.
+
+        Parameters:
+            combination (str): A string representing the combination of components.
+
+        Returns:
+            dict: A dictionary containing the fitted models for each component in the combination.
+        """
+
         model = {}
         for component in combination.split("__"):
             settings = self.settings
@@ -427,6 +598,18 @@ class FitModel:
         return model
 
     def _get_error_metrics(self, combination):
+        """
+        Calculates the error metrics for a given combination of components.
+        RMSE and MAE are calculated as the mean of the residuals, wRMSE is calculated as the weighted mean of the residuals.
+
+        Parameters:
+            combination (str): A string representing the combination of components to calculate error metrics for.
+                If None, the best combination will be used.
+
+        Returns:
+            tuple: A tuple containing the calculated error metrics (wRMSE, RMSE, MAE).
+        """
+
         if combination is None:
             combination = self.best_combination
 
@@ -449,6 +632,16 @@ class FitModel:
         return wRMSE, RMSE, MAE
 
     def evaluate(self, df_eval):
+        """
+        Evaluates the model on the given evaluation dataframe.
+
+        Parameters:
+            df_eval (pandas.DataFrame): The evaluation dataframe.
+
+        Returns:
+            pandas.DataFrame: The evaluation dataframe with model predictions added.
+        """
+
         # initialize data to input dataframe
         df_eval = self._initialize_data(df_eval)
 

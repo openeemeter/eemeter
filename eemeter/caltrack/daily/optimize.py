@@ -69,6 +69,19 @@ neg_msg = [
 
 
 def obj_fcn_dec(obj_fcn, x0, bnds):
+    """
+    Returns a function that evaluates the objective function with the given bounds.
+
+    Args:
+    - obj_fcn: the objective function to be evaluated
+    - x0: the initial guess for the optimization
+    - bnds: the bounds for the optimization
+
+    Returns:
+    - obj_fcn_eval: a function that evaluates the objective function with the given bounds
+    - idx_opt: the indices of the variables with non-equal bounds
+    """
+    
     idx_opt = [n for n in range(np.shape(bnds)[0]) if (bnds[n, 0] < bnds[n, 1])]
 
     def obj_fcn_eval(
@@ -90,8 +103,32 @@ class Optimizer:
     #                           "ftol_rel": 1E-5
     #                           "initial_pop_multiplier": 2
     #                "local": {} # same}
+    """
+    This class is used to perform optimization on a given objective function using either the SciPy or NLopt library.
+    The optimization can be performed globally or locally based on the options provided.
+
+    Attributes:
+        bnds (np.array): The bounds for the optimization.
+        x0 (np.array): The initial guess for the optimization.
+        obj_fcn (function): The objective function to be optimized.
+        idx_opt (int): The index of the optimal solution.
+        coef_id (str): The identifier for the coefficient.
+        settings (dict): The settings for the optimization.
+        opt_options (dict): The options for the optimization.
+    """
 
     def __init__(self, obj_fcn, x0, bnds, coef_id, settings, opt_options):
+        """
+        The constructor for the Optimizer class.
+
+        Parameters:
+            obj_fcn (function): The objective function to be optimized.
+            x0 (np.array): The initial guess for the optimization.
+            bnds (list): The bounds for the optimization.
+            coef_id (str): The identifier for the coefficient.
+            settings (dict): The settings for the optimization.
+            opt_options (dict): The options for the optimization.
+        """
         self.bnds = np.array(bnds)
         self.x0 = np.clip(
             x0, bnds[:, 0], bnds[:, 1]
@@ -105,6 +142,12 @@ class Optimizer:
         self.opt_options = opt_options
 
     def run(self):
+        """
+        This method runs the optimization process.
+
+        Returns:
+            OptimizedResult: An object containing the results of the optimization.
+        """
         bnds = self.bnds
 
         res = {}
@@ -132,20 +175,34 @@ class Optimizer:
         return res[list(res.keys())[-1]]
 
     def scipy(self, x0, bnds, options):
+        """
+        Optimize the objective function using the SciPy library. Different optimization options are available,
+        such as scipy_COBYLA, scipy_SLSQP, scipy_L_BFGS_B, scipy_TNC, scipy_BFGS, scipy_Powell, scipy_Nelder-Mead.
+        options argument needs to have the algorithm specified.
+
+        Args:
+            x0 (list): Initial guess for the optimization.
+            bnds (tuple): Bounds for the optimization.
+            options (dict): Options for the optimization.
+
+        Returns:
+            res_out (OptimizedResult): An object containing the results of the optimization.
+        """
+
         timer_start = timer()
 
         algorithm = options["algorithm"][6:]
 
         if algorithm.lower() in ["brent", "golden", "bounded"]:
-            obj_fcn = lambda x: self.obj_fcn([x])
+            scipy_obj_fcn = lambda x: self.obj_fcn([x])
 
             if algorithm.lower() in ["brent", "golden"]:
                 res = scipy_minimize_scalar(
-                    obj_fcn, bracket=bnds, method=algorithm.lower()
+                    scipy_obj_fcn, bracket=bnds, method=algorithm.lower()
                 )
 
             elif algorithm.lower() == "bounded":
-                res = scipy_minimize_scalar(obj_fcn, bounds=bnds[0], method="bounded")
+                res = scipy_minimize_scalar(scipy_obj_fcn, bounds=bnds[0], method="bounded")
 
             res.x = [res.x]
 
@@ -153,12 +210,12 @@ class Optimizer:
             x0_opt = x0[self.idx_opt]
             bnds_opt = bnds[self.idx_opt, :]
 
-            obj_fcn = lambda x: self.obj_fcn(x)
+            scipy_obj_fcn = lambda x: self.obj_fcn(x)
 
-            res = scipy_minimize(obj_fcn, x0_opt, method=algorithm, bounds=bnds_opt)
+            res = scipy_minimize(scipy_obj_fcn, x0_opt, method=algorithm, bounds=bnds_opt)
 
         x = res.x
-        x, mean_loss, TSS, T, model, weight, resid, jac, alpha, C = obj_fcn(
+        x, mean_loss, TSS, T, model, weight, resid, jac, alpha, C = self.obj_fcn(
             x, optimize_flag=False
         )
         success = res.success
@@ -194,6 +251,17 @@ class Optimizer:
         return res_out
 
     def nlopt(self, x0, bnds, options):
+        """
+        Optimize the objective function using the NLopt library.
+
+        Args:
+            x0 (ndarray): Initial guess for the optimization.
+            bnds (ndarray): Bounds on the variables.
+            options (dict): Dictionary of options for the optimization.
+
+        Returns:
+            res_out (OptimizedResult): Object containing the results of the optimization.
+        """
         timer_start = timer()
 
         obj_fcn = self.obj_fcn
