@@ -74,14 +74,24 @@ class ModelCoefficients:
                 "cdd_k",
                 "intercept",
             ]:
+                hdd_bp=coefficients[0]
+                hdd_beta=coefficients[1]
+                hdd_k=coefficients[2]
+                cdd_bp=coefficients[3]
+                cdd_beta=coefficients[4]
+                cdd_k=coefficients[5]
+                if cdd_bp < hdd_bp:
+                    hdd_bp, cdd_bp = cdd_bp, hdd_bp
+                    hdd_beta, cdd_beta = cdd_beta, hdd_beta
+                    hdd_k, cdd_k = cdd_k, hdd_k
                 return ModelCoefficients(
                     model_type=ModelType.HDD_TIDD_CDD_SMOOTH,
-                    hdd_bp=coefficients[0],
-                    hdd_beta=coefficients[1],
-                    hdd_k=coefficients[2],
-                    cdd_bp=coefficients[3],
-                    cdd_beta=coefficients[4],
-                    cdd_k=coefficients[5],
+                    hdd_bp=hdd_bp,
+                    hdd_beta=hdd_beta,
+                    hdd_k=hdd_k,
+                    cdd_bp=cdd_bp,
+                    cdd_beta=cdd_bp,
+                    cdd_k=cdd_bp,
                     intercept=coefficients[6],
                 )
             case [
@@ -91,12 +101,19 @@ class ModelCoefficients:
                 "cdd_beta",
                 "intercept",
             ]:
+                hdd_bp=coefficients[0]
+                hdd_beta=coefficients[1]
+                cdd_bp=coefficients[2]
+                cdd_beta=coefficients[3]
+                if cdd_bp < hdd_bp:
+                    hdd_bp, cdd_bp = cdd_bp, hdd_bp
+                    hdd_beta, cdd_beta = cdd_beta, hdd_beta
                 return ModelCoefficients(
                     model_type=ModelType.HDD_TIDD_CDD,
-                    hdd_bp=coefficients[0],
-                    hdd_beta=coefficients[1],
-                    cdd_bp=coefficients[2],
-                    cdd_beta=coefficients[3],
+                    hdd_bp=hdd_bp,
+                    hdd_beta=hdd_beta,
+                    cdd_bp=cdd_bp,
+                    cdd_beta=cdd_beta,
                     intercept=coefficients[4],
                 )
             case [
@@ -107,7 +124,7 @@ class ModelCoefficients:
             ]:
                 if coefficients[1] < 0:  # model is heating dependent
                     hdd_bp = coefficients[0]
-                    hdd_beta = -coefficients[1]
+                    hdd_beta = coefficients[1]
                     hdd_k = coefficients[2]
                     cdd_bp = cdd_beta = cdd_k = None
                     model_type = ModelType.HDD_TIDD_SMOOTH
@@ -134,7 +151,7 @@ class ModelCoefficients:
             ]:
                 if coefficients[1] < 0:  # model is heating dependent
                     hdd_bp = coefficients[0]
-                    hdd_beta = -coefficients[1]
+                    hdd_beta = coefficients[1]
                     cdd_bp = cdd_beta = None
                     model_type = ModelType.HDD_TIDD
                 else:  # model is cooling dependent
