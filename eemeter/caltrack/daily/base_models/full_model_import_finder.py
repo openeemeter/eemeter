@@ -34,7 +34,7 @@ def initialize_full_model():
             current_directory + ".cython.bin." + arch_type + ".full_model_ext"
         ).full_model_wrapper
 
-        loop_count = 0
+        loop_count = 100
         hdd_bp = 50
         hdd_beta = 0.01
         hdd_k = 0.001

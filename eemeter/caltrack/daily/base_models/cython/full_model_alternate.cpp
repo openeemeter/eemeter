@@ -29,14 +29,13 @@ static PyObject* full_model(
     E_tot.reserve(T_size);
     // if all variables are zero, return tidd model
     if ((hdd_beta == 0) && (cdd_beta == 0)) {
-        std::fill_n(std::back_inserter(E_tot), T_size, intercept);
+        std::fill_n(E_tot.begin(), T_size, intercept);
         return PyArray_SimpleNewFromData(
             1, dims, NPY_DOUBLE, &E_tot[0]);
     }
 
-    auto [T_min_it, T_max_it] = std::minmax_element(T_fit_bnds, T_fit_bnds + 2);
-    double T_min = *T_min_it;
-    double T_max = *T_max_it;
+    double T_min = T_fit_bnds[0];
+    double T_max = T_fit_bnds[1];
 
     if (cdd_bp < hdd_bp) {
         std::swap(hdd_bp, cdd_bp);
@@ -44,7 +43,7 @@ static PyObject* full_model(
         std::swap(hdd_k, cdd_k);
     }
     
-    std::transform(T, T + T_size, std::back_inserter(E_tot), [&](double Ti) {
+    std::transform(T, T + T_size, E_tot.begin(), [&](double Ti) {
         double T_bp, beta, k;
 
         if ((Ti < hdd_bp) || ((hdd_bp == cdd_bp) && (cdd_bp >= T_max))) {
