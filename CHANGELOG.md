@@ -4,6 +4,17 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+3.2.0
+-----
+
+* Addition of modules and amendments in support of international facility for EEMeter, including principally:
+* Addition of quickstart.py; updating setup.py and __init__/py accordingly.
+* Inclusion of temperature conversion amendments to design_matrices; features; and derivatives.
+* Addition of new tests and samples.
+* Amendments to tutorial.ipynb.
+* Addition of eemeter international.ipynb.
 * Change .iteritems() to .items() in accordance with pandas>=2.0.0
 * .get_loc(x, method=...) to .get_indexer([x],method=...)[0] in accordance with pandas>=2.0.0
 * Updated mean() to mean(numeric_only=True) in accordance to pandas>=2.0.0
@@ -15,21 +26,8 @@ Development
 * Update pytests to account for changes in newer pandas where categorical variables are no longer included in `df.sum().sum()`.
 * Clarify the functioning of start, end and max_days parameters to `get_reporting_data()` and `get_baseline_data()`.
 
-
-* 3.1.2
------
-
-* Addition of modules and amendments in support of international facility for EEMeter, including principally:
-* Addition of quickstart.py; updating setup.py and __init__/py accordingly.
-* Inclusion of temperature conversion amendments to design_matrices; features; and derivatives.
-* Addition of new tests and samples.
-* Amendments to tutorial.ipynb.
-* Addition of eemeter international.ipynb.
-
-
 3.1.1
 -----
-
 
 * Update observed_mean calculation to account for solar (negative usage) to provide
 sensible cvrmse calculations.
