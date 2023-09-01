@@ -23,12 +23,13 @@ from .design_matrices import (
     create_caltrack_hourly_preliminary_design_matrix,
     create_caltrack_hourly_segmented_design_matrices,
     create_caltrack_daily_design_matrix,
+    create_caltrack_daily_2_1_design_matrix,
 )
 from .hourly import fit_caltrack_hourly_model
 from .usage_per_day import fit_caltrack_usage_per_day_model
 from ..transform import get_baseline_data, get_reporting_data
 from ..derivatives import metered_savings
-from ..features import estimate_hour_of_week_occupancy, fit_temperature_bins
+from ..features import estimate_hour_of_week_occupancy, fit_temperature_bins, compute_temperature_features
 from ..segmentation import segment_time_series
 
 from eemeter.caltrack.daily.fit_model import FitModel
@@ -225,25 +226,25 @@ def caltrack_2_1_daily(
     blackout_start_date,
     blackout_end_date,
 ):
-    temperature_data_daily = temperature_data.resample('D').mean()
     baseline_meter_data, warnings = get_baseline_data(
         meter_data,
         start=blackout_start_date - relativedelta(years=1),
         end=blackout_start_date,
         max_days=None,
     ) 
+    baseline_meter_dataframe = create_caltrack_daily_2_1_design_matrix(baseline_meter_data, temperature_data)
+    daily_model = FitModel(baseline_meter_dataframe)
     reporting_meter_data, warnings = get_reporting_data(
         meter_data, start=blackout_end_date, max_days=365
     )
-    baseline_meter_dataframe = pd.DataFrame({
-        'temperature': temperature_data_daily[baseline_meter_data.index],
-        'observed': baseline_meter_data.squeeze(),
-    }, index=baseline_meter_data.index)
+    temperature_data_daily = compute_temperature_features(
+        reporting_meter_data.index,
+        temperature_data,
+        data_quality=True,
+    )
     reporting_meter_dataframe = pd.DataFrame({
-        'temperature': temperature_data_daily[reporting_meter_data.index],
+        'temperature': temperature_data_daily['temperature_mean'],
         'observed': reporting_meter_data.squeeze(),
     }, index=reporting_meter_data.index)
-
-    daily_model = FitModel(baseline_meter_dataframe)
     results = daily_model.evaluate(reporting_meter_dataframe)
     return results
