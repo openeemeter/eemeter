@@ -123,9 +123,9 @@ class FitModel:
 
         meter_data["season"] = meter_data.index.month.map(self.settings.season)
         meter_data["day_of_week"] = meter_data.index.dayofweek + 1
-        meter_data = meter_data[
-            np.isfinite(meter_data[["temperature", "observed"]]).all(axis=1)
-        ]
+        meter_data = meter_data[np.isfinite(meter_data["temperature"])]
+        if "observed" in cols:
+            meter_data = meter_data[np.isfinite(meter_data["temperature"])]
         meter_data = meter_data.sort_index()
         meter_data = meter_data[["season", "day_of_week", *cols]]
 
