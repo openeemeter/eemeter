@@ -68,6 +68,24 @@ def fit_c_hdd_tidd(
     T_initial, T_segment = get_T_bnds(T, settings)
     c_hdd_bnds = T_initial if initial_fit else T_segment
 
+    # set bounds and alter coefficient guess for single slope models w/o an intercept segment
+    if not smooth and not initial_fit:
+        T_min, T_max = T_initial
+        T_min_seg, T_max_seg = T_segment
+        rtol = 1e-5
+        if (x0.model_type is ModelType.HDD_TIDD and
+                x0.hdd_bp >= T_max_seg or isclose(x0.hdd_bp, T_max_seg, rel_tol=rtol)):
+            # model is heating only, and breakpoint is approximately within max temp buffer 
+            x0.intercept -= x0.hdd_bp * T_max
+            x0.hdd_bp = T_max
+            c_hdd_bnds = [T_max, T_max]
+        if (x0.model_type is ModelType.TIDD_CDD and 
+                x0.cdd_bp <= T_min_seg or isclose(x0.cdd_bp, T_min_seg, rel_tol=rtol)):
+            # model is cooling only, and breakpoint is approximately within min temp buffer
+            x0.intercept -= x0.cdd_bp * T_min
+            x0.cdd_bp = T_min
+            c_hdd_bnds = [T_min, T_min]
+
     # not known whether heating or cooling model on initial fit
     if initial_fit:
         c_hdd_beta_bnds = [-max_slope, max_slope]
