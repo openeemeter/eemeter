@@ -4,9 +4,6 @@ from copy import deepcopy as copy
 from eemeter.caltrack.daily.base_models.tidd import fit_tidd
 from eemeter.caltrack.daily.base_models.c_hdd_tidd import fit_c_hdd_tidd
 from eemeter.caltrack.daily.base_models.hdd_tidd_cdd import fit_hdd_tidd_cdd
-from eemeter.caltrack.daily.base_models.hdd_tidd_cdd_smooth import (
-    fit_hdd_tidd_cdd_smooth,
-)
 
 from eemeter.caltrack.daily.utilities.utils import OoM, ModelCoefficients, ModelType
 from eemeter.caltrack.daily.utilities.config import FullModelSelection
@@ -40,19 +37,10 @@ def fit_initial_models_from_full_model(df_meter, settings, print_res=False):
     fit_input = [T, obs, settings, opt_options]
 
     # initial fitting of the most complicated model allowed
-    if (
-        settings.full_model == FullModelSelection.HDD_TIDD_CDD
-    ) and settings.smoothed_model:
-        model_res = fit_hdd_tidd_cdd_smooth(*fit_input, initial_fit=True)
-
-    elif settings.full_model == FullModelSelection.HDD_TIDD_CDD:
-        model_res = fit_hdd_tidd_cdd(*fit_input, initial_fit=True)
-
-    elif (
-        settings.full_model == FullModelSelection.C_HDD_TIDD
-    ):
+    if settings.full_model == FullModelSelection.HDD_TIDD_CDD:
+        model_res = fit_hdd_tidd_cdd(*fit_input, smooth=settings.smoothed_model, initial_fit=True)
+    elif settings.full_model == FullModelSelection.C_HDD_TIDD:
         model_res = fit_c_hdd_tidd(*fit_input, smooth=settings.smoothed_model, initial_fit=True)
-
     elif settings.full_model == FullModelSelection.TIDD:
         model_res = fit_tidd(*fit_input, initial_fit=True)
 
@@ -68,10 +56,10 @@ def fit_initial_models_from_full_model(df_meter, settings, print_res=False):
 
 def fit_model(model_key, fit_input, x0: ModelCoefficients, bnds):
     if model_key == "hdd_tidd_cdd_smooth":
-        res = fit_hdd_tidd_cdd_smooth(*fit_input, x0, bnds, initial_fit=False)
+        res = fit_hdd_tidd_cdd(*fit_input, smooth=True, x0=x0, bnds=bnds, initial_fit=False)
 
     elif model_key == "hdd_tidd_cdd":
-        res = fit_hdd_tidd_cdd(*fit_input, x0, bnds, initial_fit=False)
+        res = fit_hdd_tidd_cdd(*fit_input, smooth=False, x0=x0, bnds=bnds, initial_fit=False)
 
     elif model_key == "c_hdd_tidd_smooth":
         res = fit_c_hdd_tidd(*fit_input, smooth=True, x0=x0, bnds=bnds, initial_fit=False)

@@ -2,9 +2,7 @@ import numpy as np
 import numba
 
 from eemeter.caltrack.daily.base_models.full_model_import_finder import full_model
-from eemeter.caltrack.daily.base_models.hdd_tidd_cdd_smooth import (
-    full_model, full_model_weight
-)
+from eemeter.caltrack.daily.base_models.hdd_tidd_cdd import full_model_weight
 from eemeter.caltrack.daily.utilities.base_model import (
     linear_fit,
     get_slope,
@@ -149,7 +147,7 @@ def _c_hdd_tidd_update_bnds(new_bnds, bnds, smooth):
     if new_bnds is None:
         new_bnds = bnds
 
-    # beta bounds
+    # breakpoint bounds
     new_bnds[0] = bnds[0]
 
     # intercept bnds at index 3 for smooth, 2 for unsmooth
