@@ -37,6 +37,22 @@ def fit_c_hdd_tidd(
     bnds=None,
     initial_fit=False,
 ):
+    
+    """
+    This function fits the HDD TIDD smooth model to the given data.
+    Parameters:
+    T (array-like): The independent variable data - temperature.
+    obs (array-like): The dependent variable data - observed.
+    settings (object): An object containing various settings for the model fitting.
+    opt_options (dict): A dictionary containing options for the optimization process.
+    x0 (ModelCoefficients, optional): Initial model coefficients. If None, they will be estimated.
+    bnds (list of tuples, optional): Bounds for the optimization process. If None, they will be estimated.
+    initial_fit (bool, optional): If True, the function performs an initial fit. Default is False.
+    Returns:
+    res (OptimizeResult): The result of the optimization process.
+    """
+
+
     if initial_fit:
         alpha = settings.alpha_selection
     else:
@@ -123,6 +139,16 @@ def fit_c_hdd_tidd(
 
 @numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
 def set_full_model_coeffs_smooth(c_hdd_bp, c_hdd_beta, c_hdd_k, intercept):
+    """
+    This function sets the smoothed full model coefficients based on the given parameters.
+    Parameters:
+    c_hdd_bp (float): The base point coefficient for heating and cooling degree days.
+    c_hdd_beta (float): The beta coefficient for heating and cooling degree days.
+    c_hdd_k (float): The k coefficient for heating and cooling degree days.
+    intercept (float): The intercept of the model.
+    Returns:
+    np.array: An array containing the coefficients for the full model.
+    """
     hdd_bp = cdd_bp = c_hdd_bp
 
     if c_hdd_beta < 0:
@@ -140,10 +166,30 @@ def set_full_model_coeffs_smooth(c_hdd_bp, c_hdd_beta, c_hdd_k, intercept):
 
 @numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
 def set_full_model_coeffs(c_hdd_bp, c_hdd_beta, intercept):
+    """
+    This function sets the full model coefficients based on the given parameters.
+    Parameters:
+    c_hdd_bp (float): The base point coefficient for heating and cooling degree days.
+    c_hdd_beta (float): The beta coefficient for heating and cooling degree days.
+    intercept (float): The intercept of the model.
+    Returns:
+    np.array: An array containing the coefficients for the full model.
+    """
+
     return set_full_model_coeffs_smooth(c_hdd_bp, c_hdd_beta, 0, intercept)
 
 
 def _c_hdd_tidd_update_bnds(new_bnds, bnds, smooth):
+    """
+    This function updates the boundaries of the new_bnds array based on the given bnds array.
+    It sorts the new_bnds array along the axis=1, fixes any identical boundaries, and ensures that the lower boundary is non-negative.
+    Parameters:
+    new_bnds (numpy.ndarray): The array of new boundaries to be updated.
+    bnds (numpy.ndarray): The array of existing boundaries used for updating.
+    Returns:
+    new_bnds (numpy.ndarray): The updated array of new boundaries.
+    """
+
     if new_bnds is None:
         new_bnds = bnds
 
@@ -383,6 +429,23 @@ def _c_hdd_tidd_smooth_weight(
     alpha=2.0,
     min_weight=0.0,
 ):
+    """
+    This function calculates the weight for the full model using the given parameters.
+    Parameters:
+    c_hdd_bp (float): The base point for the HDD.
+    c_hdd_beta (float): The beta value for the HDD.
+    c_hdd_k (float): The k value for the HDD.
+    intercept (float): The intercept for the model.
+    T (float): The temperature.
+    residual (float): The residual value.
+    sigma (float, optional): The sigma value. Default is 3.0.
+    quantile (float, optional): The quantile value. Default is 0.25.
+    alpha (float, optional): The alpha value. Default is 2.0.
+    min_weight (float, optional): The minimum weight. Default is 0.0.
+    Returns:
+    float: The calculated weight for the full model.
+    """
+    
     model_vars = set_full_model_coeffs_smooth(c_hdd_bp, c_hdd_beta, c_hdd_k, intercept)
     return full_model_weight(
         *model_vars, T, residual, sigma, quantile, alpha, min_weight
