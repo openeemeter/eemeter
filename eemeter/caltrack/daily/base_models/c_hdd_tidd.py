@@ -88,13 +88,13 @@ def fit_c_hdd_tidd(
         T_min_seg, T_max_seg = T_segment
         rtol = 1e-5
         if (x0.model_type is ModelType.HDD_TIDD and
-                x0.hdd_bp >= T_max_seg or isclose(x0.hdd_bp, T_max_seg, rel_tol=rtol)):
+                (x0.hdd_bp >= T_max_seg or isclose(x0.hdd_bp, T_max_seg, rel_tol=rtol))):
             # model is heating only, and breakpoint is approximately within max temp buffer 
             x0.intercept -= x0.hdd_bp * T_max
             x0.hdd_bp = T_max
             c_hdd_bnds = [T_max, T_max]
         if (x0.model_type is ModelType.TIDD_CDD and 
-                x0.cdd_bp <= T_min_seg or isclose(x0.cdd_bp, T_min_seg, rel_tol=rtol)):
+                (x0.cdd_bp <= T_min_seg or isclose(x0.cdd_bp, T_min_seg, rel_tol=rtol))):
             # model is cooling only, and breakpoint is approximately within min temp buffer
             x0.intercept -= x0.cdd_bp * T_min
             x0.cdd_bp = T_min

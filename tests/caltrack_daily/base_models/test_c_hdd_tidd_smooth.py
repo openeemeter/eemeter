@@ -1,7 +1,7 @@
 import numpy as np
 from eemeter.caltrack.daily.utilities.utils import ModelCoefficients, ModelType
 from eemeter.caltrack.daily.utilities.config import DailySettings as Settings
-from eemeter.caltrack.daily.base_models.c_hdd_tidd_smooth import fit_c_hdd_tidd_smooth
+from eemeter.caltrack.daily.base_models.c_hdd_tidd import fit_c_hdd_tidd
 from eemeter.caltrack.daily.fit_base_models import _get_opt_options
 
 
@@ -29,7 +29,8 @@ def test_fit_c_hdd_tidd_smooth():
     )
     bnds = None
     initial_fit = True
-    res = fit_c_hdd_tidd_smooth(T, obs, settings, opt_options, x0, bnds, initial_fit)
+    smooth = True
+    res = fit_c_hdd_tidd(T, obs, settings, opt_options, smooth, x0, bnds, initial_fit)
     assert res.success == True
 
     # Test case 2: Test with initial_fit=False
@@ -55,7 +56,8 @@ def test_fit_c_hdd_tidd_smooth():
     )
     bnds = None
     initial_fit = False
-    res = fit_c_hdd_tidd_smooth(T, obs, settings, opt_options, x0, bnds, initial_fit)
+    smooth = True
+    res = fit_c_hdd_tidd(T, obs, settings, opt_options, smooth, x0, bnds, initial_fit)
     assert res.success == True
 
     # Test case 3: Test with x0=None
@@ -72,5 +74,6 @@ def test_fit_c_hdd_tidd_smooth():
     x0 = None
     bnds = None
     initial_fit = True
-    res = fit_c_hdd_tidd_smooth(T, obs, settings, opt_options, x0, bnds, initial_fit)
+    smooth = True
+    res = fit_c_hdd_tidd(T, obs, settings, opt_options, smooth, x0, bnds, initial_fit)
     assert res.success == True

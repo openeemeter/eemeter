@@ -26,7 +26,6 @@ from typing import Optional
 numba_cache = True
 
 
-# TODO: Might be able to make fitting faster by optimizing bp's and intercept and beta/pct_k inside
 def fit_hdd_tidd_cdd(
     T,
     obs,
@@ -126,6 +125,7 @@ def _hdd_tidd_cdd(
     )
 
 
+@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
 def _hdd_tidd_cdd_smooth(*args):
     return full_model(*args)
 

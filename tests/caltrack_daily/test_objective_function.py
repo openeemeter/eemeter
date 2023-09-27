@@ -7,7 +7,7 @@ from eemeter.caltrack.daily.objective_function import (
     obj_fcn_decorator,
 )
 
-from eemeter.caltrack.daily.base_models.hdd_tidd_cdd_smooth import (
+from eemeter.caltrack.daily.base_models.hdd_tidd_cdd import (
     evaluate_hdd_tidd_cdd_smooth,
     _hdd_tidd_cdd_smooth_weight,
 )
