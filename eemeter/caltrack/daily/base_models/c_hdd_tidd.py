@@ -1,7 +1,7 @@
 import numpy as np
 import numba
 
-from eemeter.caltrack.daily.base_models.full_model_import_finder import full_model
+from eemeter.caltrack.daily.base_models.full_model import full_model
 from eemeter.caltrack.daily.base_models.hdd_tidd_cdd import full_model_weight
 from eemeter.caltrack.daily.parameters import ModelCoefficients
 from eemeter.caltrack.daily.utilities.base_model import (

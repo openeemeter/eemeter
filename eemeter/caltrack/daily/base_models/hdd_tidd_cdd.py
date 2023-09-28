@@ -2,14 +2,11 @@ import numpy as np
 import numba
 import nlopt
 
-from eemeter.caltrack.daily.base_models.full_model import full_model_weight
+from eemeter.caltrack.daily.base_models.full_model import full_model, full_model_weight
 
-from eemeter.caltrack.daily.base_models.full_model_import_finder import full_model
-from eemeter.caltrack.daily.base_models.full_model import get_full_model_x
 from eemeter.caltrack.daily.parameters import ModelCoefficients
 
-from eemeter.caltrack.daily.utilities.adaptive_loss import adaptive_weights, get_C
-from eemeter.caltrack.daily.utilities.adaptive_loss import remove_outliers
+from eemeter.caltrack.daily.utilities.adaptive_loss import adaptive_weights
 
 from eemeter.caltrack.daily.utilities.base_model import get_slope, get_intercept
 from eemeter.caltrack.daily.utilities.base_model import fix_identical_bnds

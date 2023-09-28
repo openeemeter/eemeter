@@ -1,5 +1,5 @@
 import numpy as np
-from eemeter.caltrack.daily.base_models.full_model_import_finder import full_model
+from eemeter.caltrack.daily.base_models.full_model import full_model
 
 
 def test_full_model_import():
