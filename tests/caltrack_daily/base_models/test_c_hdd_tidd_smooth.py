@@ -1,5 +1,6 @@
 import numpy as np
-from eemeter.caltrack.daily.utilities.utils import ModelCoefficients, ModelType
+from eemeter.caltrack.daily.parameters import ModelCoefficients
+from eemeter.caltrack.daily.parameters import ModelType
 from eemeter.caltrack.daily.utilities.config import DailySettings as Settings
 from eemeter.caltrack.daily.base_models.c_hdd_tidd import fit_c_hdd_tidd
 from eemeter.caltrack.daily.fit_base_models import _get_opt_options

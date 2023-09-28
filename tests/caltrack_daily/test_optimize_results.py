@@ -9,7 +9,7 @@ from eemeter.caltrack.daily.optimize_results import (
 )
 
 
-from eemeter.caltrack.daily.utilities.utils import ModelCoefficients
+from eemeter.caltrack.daily.parameters import ModelCoefficients
 from eemeter.caltrack.daily.utilities.config import DailySettings as Settings
 
 

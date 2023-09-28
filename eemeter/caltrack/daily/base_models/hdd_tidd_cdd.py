@@ -6,6 +6,7 @@ from eemeter.caltrack.daily.base_models.full_model import full_model_weight
 
 from eemeter.caltrack.daily.base_models.full_model_import_finder import full_model
 from eemeter.caltrack.daily.base_models.full_model import get_full_model_x
+from eemeter.caltrack.daily.parameters import ModelCoefficients
 
 from eemeter.caltrack.daily.utilities.adaptive_loss import adaptive_weights, get_C
 from eemeter.caltrack.daily.utilities.adaptive_loss import remove_outliers
@@ -18,7 +19,7 @@ from eemeter.caltrack.daily.objective_function import obj_fcn_decorator
 from eemeter.caltrack.daily.optimize import Optimizer, nlopt_algorithms
 
 from timeit import default_timer as timer
-from eemeter.caltrack.daily.utilities.utils import ModelCoefficients, ModelType
+from eemeter.caltrack.daily.parameters import ModelType
 from typing import Optional
 
 

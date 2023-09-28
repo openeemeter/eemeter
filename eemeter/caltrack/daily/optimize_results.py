@@ -11,7 +11,7 @@ from eemeter.caltrack.daily.utilities.base_model import (
 )
 
 from eemeter.caltrack.daily.utilities.utils import unc_factor
-from eemeter.caltrack.daily.utilities.utils import ModelCoefficients
+from eemeter.caltrack.daily.parameters import ModelCoefficients
 
 
 from timeit import default_timer as timer

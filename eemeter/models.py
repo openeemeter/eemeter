@@ -18,22 +18,18 @@
 
 """
 
-import pydantic
 import pandas as pd
 import numpy as np
-from typing import Dict, Any
 
-from eemeter.caltrack.daily.utilities.utils import ModelCoefficients
+from eemeter.caltrack.daily.parameters import DailyModelParameters, DailySubmodelParameters
 
 import itertools
-from timeit import default_timer as timer
 
 from eemeter.caltrack.daily.utilities.config import (
     caltrack_2_1_settings,
     caltrack_legacy_settings,
     update_daily_settings,
 )
-from eemeter.caltrack.daily.utilities.selection_criteria import selection_criteria
 from eemeter.caltrack.daily.utilities.ellipsoid_test import ellipsoid_split_filter
 
 from eemeter.caltrack.daily.fit_base_models import (
@@ -41,22 +37,9 @@ from eemeter.caltrack.daily.fit_base_models import (
     fit_final_model,
 )
 
-
-class DailySubmodelParameters(pydantic.BaseModel):
-    coefficients: ModelCoefficients
-    temperature_constraints: Dict[str, float]
-    f_unc: float
-    CVRMSE: float
-
-    @property
-    def model_type(self):
-        return self.coefficients.model_type
-
-
-class DailyModelParameters(pydantic.BaseModel):
-    settings: Dict[str, Any]
-    metrics: Dict[str, Any]
-    submodels: Dict[str, DailySubmodelParameters]
+from eemeter.caltrack.daily.base_models.full_model import full_model, get_full_model_x
+from eemeter.caltrack.daily.utilities.selection_criteria import selection_criteria
+from eemeter.caltrack.daily.utilities.base_model import get_smooth_coeffs
 
 
 class DailyModel:
@@ -182,6 +165,51 @@ class DailyModel:
 
         self.params = self._create_params_from_fit_model()
         return self
+
+    def predict(self, df_eval):
+        """
+        Makes model prediction on given temperature data.
+
+        Parameters:
+            df_eval (pandas.DataFrame): The evaluation dataframe.
+
+        Returns:
+            pandas.DataFrame: The evaluation dataframe with model predictions added.
+        """
+
+        # initialize data to input dataframe
+        df_eval = self._initialize_data(df_eval)
+
+        df_all_models = []
+        for component_key in self.model:
+            eval_segment = self._meter_segment(component_key, df_eval)
+            T = eval_segment["temperature"].values
+
+            #model, unc, hdd_load, cdd_load = self.model[component_key].eval(T)
+            model, unc, hdd_load, cdd_load = self._predict_submodel(self.params.submodels[component_key], T)
+
+            df_model = pd.DataFrame(
+                data={
+                    "model": model,
+                    "model_unc": unc,
+                    "heating_load": hdd_load,
+                    "cooling_load": cdd_load,
+                },
+                index=eval_segment.index,
+            )
+            df_model["model_split"] = component_key
+            df_model["model_type"] = self.model[component_key].model_name
+            df_model["model_alpha"] = self.model[
+                component_key
+            ].loss_alpha  # TODO: remove?
+
+            df_all_models.append(df_model)
+
+        df_model_prediction = pd.concat(df_all_models, axis=0)
+
+        df_eval = df_eval.join(df_model_prediction)
+
+        return df_eval
 
     def _create_params_from_fit_model(self):
         submodels = {}
@@ -692,46 +720,55 @@ class DailyModel:
 
         return wRMSE, RMSE, MAE
 
-    def evaluate(self, df_eval):
+    def _predict_submodel(self, submodel, T):
         """
-        Evaluates the model on the given evaluation dataframe.
+        Predicts submodel output for a given set of temperatures.
 
         Parameters:
-            df_eval (pandas.DataFrame): The evaluation dataframe.
+            T (numpy.ndarray): Array of temperatures.
 
         Returns:
-            pandas.DataFrame: The evaluation dataframe with model predictions added.
+            Tuple[numpy.ndarray, numpy.ndarray, numpy.ndarray, numpy.ndarray]:
+                Tuple containing the following arrays:
+                - model: Array of model values.
+                - f_unc: Array of uncertainties.
+                - hdd_load: Array of heating degree day loads.
+                - cdd_load: Array of cooling degree day loads.
         """
 
-        # initialize data to input dataframe
-        df_eval = self._initialize_data(df_eval)
+        T_min = submodel.temperature_constraints['T_min']
+        T_max = submodel.temperature_constraints['T_max']
+        x = get_full_model_x(
+            submodel.coefficients.model_key,
+            submodel.coefficients.to_np_array(),
+            T_min,
+            T_max,
+            submodel.temperature_constraints['T_min_seg'],
+            submodel.temperature_constraints['T_max_seg'],
+        )
 
-        df_all_models = []
-        for component_key in self.model:
-            eval_segment = self._meter_segment(component_key, df_eval)
-            T = eval_segment["temperature"].values
-
-            model, unc, hdd_load, cdd_load = self.model[component_key].eval(T)
-
-            df_model = pd.DataFrame(
-                data={
-                    "model": model,
-                    "model_unc": unc,
-                    "heating_load": hdd_load,
-                    "cooling_load": cdd_load,
-                },
-                index=eval_segment.index,
+        if submodel.coefficients.model_key == "hdd_tidd_cdd_smooth":
+            [hdd_bp, hdd_beta, pct_hdd_k, cdd_bp, cdd_beta, pct_cdd_k, intercept] = x
+            [hdd_bp, hdd_k, cdd_bp, cdd_k] = get_smooth_coeffs(
+                hdd_bp, pct_hdd_k, cdd_bp, pct_cdd_k
             )
-            df_model["model_split"] = component_key
-            df_model["model_type"] = self.model[component_key].model_name
-            df_model["model_alpha"] = self.model[
-                component_key
-            ].loss_alpha  # TODO: remove?
+            x = [hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept]
 
-            df_all_models.append(df_model)
+        hdd_bp, cdd_bp, intercept = x[0], x[3], x[6]
+        T_fit_bnds = np.array([T_min, T_max])
 
-        df_model_prediction = pd.concat(df_all_models, axis=0)
+        model = full_model(*x, T_fit_bnds, T)
+        f_unc = np.ones_like(model) * submodel.f_unc
 
-        df_eval = df_eval.join(df_model_prediction)
+        load_only = model - intercept
 
-        return df_eval
+        hdd_load = np.zeros_like(model)
+        cdd_load = np.zeros_like(model)
+
+        hdd_idx = np.argwhere(T <= hdd_bp).flatten()
+        cdd_idx = np.argwhere(T >= cdd_bp).flatten()
+
+        hdd_load[hdd_idx] = load_only[hdd_idx]
+        cdd_load[cdd_idx] = load_only[cdd_idx]
+
+        return model, f_unc, hdd_load, cdd_load

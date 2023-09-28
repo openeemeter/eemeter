@@ -246,5 +246,5 @@ def caltrack_2_1_daily(
         'temperature': temperature_data_daily['temperature_mean'],
         'observed': reporting_meter_data.squeeze(),
     }, index=reporting_meter_data.index)
-    results = daily_model.evaluate(reporting_meter_dataframe)
+    results = daily_model.predict(reporting_meter_dataframe)
     return daily_model, results

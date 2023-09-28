@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from eemeter.caltrack.daily.fit_model import FitModel
+from eemeter.models import DailyModel
 from eemeter.caltrack.daily.optimize_results import OptimizedResult
 
 
@@ -11,8 +11,8 @@ class TestFitModel:
         cls.meter_data = pd.read_csv("tests/caltrack_daily/test_data.csv")
 
     def test_fit_model(self):
-        # Create a FitModel instance
-        fm = FitModel(self.meter_data)
+        # Create a DailyModel instance
+        fm = DailyModel().fit(self.meter_data)
 
         # Test that the combinations attribute is a list
         assert isinstance(fm.combinations, list)
