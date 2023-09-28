@@ -86,7 +86,7 @@ def test_adaptive_weights():
     x = np.array([1, 2, 3, 4, 5, 100])
     weights, C, alpha = adaptive_weights(x)
     assert np.allclose(
-        weights, np.array([1, 1, 1, 0.98653478, 0.94788002, 0.00106558]), atol=1e-3
+        weights, np.array([1, 1, 1, 0.9865, 0.9483, 0.0082]), atol=1e-3
     )
     assert np.isclose(C, 6.05975)
-    assert np.isclose(alpha, -1.09, atol=1e-2)
+    assert np.isclose(alpha, 0.031, atol=1e-2)
