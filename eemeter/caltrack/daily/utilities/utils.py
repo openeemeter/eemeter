@@ -1,4 +1,6 @@
 import numpy as np
+from pydantic import BaseModel, field_serializer
+from enum import Enum
 
 from scipy.stats import t as t_dist
 from scipy.stats import norm as norm_dist
@@ -19,29 +21,24 @@ ln_min_pos_system_value = np.log(min_pos_system_value)
 ln_max_pos_system_value = np.log(max_pos_system_value)
 
 
-from attrs import define
-from enum import Enum
-
-
-class ModelType(Enum):
+class ModelType(str, Enum):
     # Full model \_/
-    HDD_TIDD_CDD_SMOOTH = 1
-    HDD_TIDD_CDD = 2
+    HDD_TIDD_CDD_SMOOTH = "hdd_tidd_cdd_smooth"
+    HDD_TIDD_CDD = "hdd_tidd_cdd"
 
     # Heating, temp independent \__
-    HDD_TIDD_SMOOTH = 3
-    HDD_TIDD = 4
+    HDD_TIDD_SMOOTH = "hdd_tidd_smooth"
+    HDD_TIDD = "hdd_tidd"
 
     # Temp independent, cooling __/
-    TIDD_CDD_SMOOTH = 5
-    TIDD_CDD = 6
+    TIDD_CDD_SMOOTH = "tidd_cdd_smooth"
+    TIDD_CDD = "tidd_cdd"
 
     # Temp independent, ___
-    TIDD = 7
+    TIDD = "tidd"
 
 
-@define
-class ModelCoefficients:
+class ModelCoefficients(BaseModel):
     """
     A class used to represent the coefficients of a model.
 
@@ -110,9 +107,6 @@ class ModelCoefficients:
     cdd_beta: float | None = None
     cdd_k: float | None = None
 
-    # add validator for model type and coeffs included
-    # use pydantic so we can get better full model validation to ensure coeffs align with model_type
-
     @property
     def is_smooth(self):
         return self.model_type in [
@@ -120,6 +114,21 @@ class ModelCoefficients:
             ModelType.HDD_TIDD_SMOOTH,
             ModelType.TIDD_CDD_SMOOTH,
         ]
+
+    @property
+    def model_key(self):
+        """Used inside OptimizedResult when reducing model"""
+        match self.model_type:
+            case ModelType.HDD_TIDD_CDD_SMOOTH:
+                return "hdd_tidd_cdd_smooth"
+            case ModelType.HDD_TIDD_CDD:
+                return "hdd_tidd_cdd"
+            case ModelType.HDD_TIDD_SMOOTH | ModelType.TIDD_CDD_SMOOTH:
+                return "c_hdd_tidd_smooth"
+            case ModelType.HDD_TIDD | ModelType.TIDD_CDD:
+                return "c_hdd_tidd"
+            case ModelType.TIDD:
+                return "tidd"
 
     @classmethod
     def from_np_arrays(cls, coefficients, coefficient_ids):
@@ -310,20 +319,24 @@ class ModelCoefficients:
             case ModelType.TIDD:
                 return np.array([self.intercept])
 
-
-from typing import Annotated
-
-
-@define
-class CoefficientBounds:
-    model_type: ModelType
-    intercept_bnds: Annotated[list[float], 2]
-    hdd_bp_bnds: Annotated[list[float], 2] | None = None
-    hdd_beta_bnds: Annotated[list[float], 2] | None = None
-    hdd_k_bnds: Annotated[list[float], 2] | None = None
-    cdd_bp_bnds: Annotated[list[float], 2] | None = None
-    cdd_beta_bnds: Annotated[list[float], 2] | None = None
-    cdd_k_bnds: Annotated[list[float], 2] | None = None
+    # @field_serializer('model_type')
+    # def serialize_model_type(self, model_type, _info):
+    #     # StrEnum would help avoid this
+    #     match model_type:
+    #         case ModelType.HDD_TIDD_CDD_SMOOTH:
+    #             return "hdd_tidd_cdd_smooth"
+    #         case ModelType.HDD_TIDD_CDD:
+    #             return "hdd_tidd_cdd"
+    #         case ModelType.HDD_TIDD_SMOOTH:
+    #             return "hdd_tidd_smooth"
+    #         case ModelType.HDD_TIDD:
+    #             return "hdd_tidd"
+    #         case ModelType.TIDD_CDD_SMOOTH:
+    #             return "tidd_cdd_smooth"
+    #         case ModelType.TIDD_CDD:
+    #             return "tidd_cdd"
+    #         case ModelType.TIDD:
+    #             return "tidd"
 
 
 @overload(np.clip)

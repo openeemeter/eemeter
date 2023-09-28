@@ -1,13 +1,34 @@
-import numpy as np
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+
+   Copyright 2014-2023 OpenEEmeter contributors
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+"""
+
+import pydantic
 import pandas as pd
-from scipy.stats import linregress
+import numpy as np
+from typing import Dict, Any
+
+from eemeter.caltrack.daily.utilities.utils import ModelCoefficients
 
 import itertools
-from copy import deepcopy as copy
 from timeit import default_timer as timer
 
 from eemeter.caltrack.daily.utilities.config import (
-    DailySettings,
     caltrack_2_1_settings,
     caltrack_legacy_settings,
     update_daily_settings,
@@ -21,13 +42,26 @@ from eemeter.caltrack.daily.fit_base_models import (
 )
 
 
-# TODO: 'check_caltrack_compliant' and check constraints where possible
+class DailySubmodelParameters(pydantic.BaseModel):
+    coefficients: ModelCoefficients
+    temperature_constraints: Dict[str, float]
+    f_unc: float
+    CVRMSE: float
+
+    @property
+    def model_type(self):
+        return self.coefficients.model_type
 
 
-class FitModel:
+class DailyModelParameters(pydantic.BaseModel):
+    settings: Dict[str, Any]
+    metrics: Dict[str, Any]
+    submodels: Dict[str, DailySubmodelParameters]
+
+
+class DailyModel:
     def __init__(
         self,
-        meter_data,
         model="2.1",
         settings=None,
         check_caltrack_compliant=True,
@@ -114,10 +148,6 @@ class FitModel:
             "wd": [n + 1 for n in n_week if self.settings.is_weekday[n + 1]],
             "we": [n + 1 for n in n_week if not self.settings.is_weekday[n + 1]],
         }
-
-        # Initialize dataframe
-        self.df_meter = self._initialize_data(meter_data)
-
         self.verbose = verbose
 
         self.error = {
@@ -128,6 +158,10 @@ class FitModel:
             "MAE_train": np.nan,
             "MAE_test": np.nan,
         }
+
+    def fit(self, meter_data):
+        # Initialize dataframe
+        self.df_meter = self._initialize_data(meter_data)
 
         # Begin fitting
         self.combinations = self._combinations()
@@ -145,6 +179,34 @@ class FitModel:
         self.error["wRMSE_train"] = wRMSE
         self.error["RMSE_train"] = RMSE
         self.error["MAE_train"] = MAE
+
+        self.params = self._create_params_from_fit_model()
+        return self
+
+    def _create_params_from_fit_model(self):
+        submodels = {}
+        for key, submodel in self.model.items():
+            temperature_constraints = {
+                "T_min": submodel.T_min,     
+                "T_max": submodel.T_max,
+                "T_min_seg": submodel.T_min_seg,
+                "T_max_seg": submodel.T_max_seg,
+            }
+            submodels[key] = DailySubmodelParameters(
+                coefficients=submodel.named_coeffs,
+                temperature_constraints=temperature_constraints,
+                f_unc=submodel.f_unc,
+                CVRMSE=submodel.CVRMSE,
+            )
+        params = DailyModelParameters(
+            settings=self.settings.to_dict(),
+            metrics={
+                "error": self.error,
+            },
+            submodels=submodels,
+        )
+
+        return params
 
     def _initialize_data(self, meter_data):
         """
@@ -446,7 +508,6 @@ class FitModel:
 
         return meter_segment
 
-    # TODO: rename components to submodel or submodel to component? Likely the first
     def _components(self):
         """
         Returns a sorted list of unique components from the combinations attribute.

@@ -717,6 +717,16 @@ class DailySettings:
         on_setattr=attrs.setters.frozen,
         default=0.1,
     )
+    
+    def to_dict(self):
+        keys = []
+        config = {}
+        for key in dir(self):
+            if not key.startswith("_") and key != "to_dict":
+                keys.append(key)
+        for key in keys:
+            config[key] = getattr(self, key)
+        return config
 
     def __repr__(self):
         text_all = []
@@ -725,7 +735,7 @@ class DailySettings:
         # get all keys
         keys = []
         for key in dir(self):
-            if "__" != key[0:2]:
+            if "__" != key[0:2] and key != "to_dict":
                 keys.append(key)
 
         # print away
