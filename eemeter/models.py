@@ -181,7 +181,7 @@ class DailyModel:
         df_eval = self._initialize_data(df_eval)
 
         df_all_models = []
-        for component_key in self.model:
+        for component_key in self.params.submodels.keys():
             eval_segment = self._meter_segment(component_key, df_eval)
             T = eval_segment["temperature"].values
 
@@ -198,10 +198,7 @@ class DailyModel:
                 index=eval_segment.index,
             )
             df_model["model_split"] = component_key
-            df_model["model_type"] = self.model[component_key].model_name
-            df_model["model_alpha"] = self.model[
-                component_key
-            ].loss_alpha  # TODO: remove?
+            df_model["model_type"] = self.params.submodels[component_key].model_type.value
 
             df_all_models.append(df_model)
 
