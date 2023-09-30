@@ -665,7 +665,7 @@ class DailySettings:
     )
 
     season: Dict[int, str] = attrs.field(
-        converter=lambda x: {k: str(v).lower().strip() for k, v in x.items()},
+        converter=lambda x: {int(k): str(v).lower().strip() for k, v in x.items()},
         validator=season_choice_validator,
         metadata={
             _KEY_DESCR: "dictionary of months and their associated season (January is 1)"
@@ -689,6 +689,7 @@ class DailySettings:
 
     is_weekday: Dict[int, bool] = attrs.field(
         validator=is_weekday_validator,
+        converter=lambda x: {int(k): v for k, v in x.items()},
         metadata={
             _KEY_DESCR: "dictionary of days (1 = Monday) and if that day is a weekday (True/False)"
         },

@@ -20,6 +20,7 @@
 
 import pandas as pd
 import numpy as np
+import json
 
 from eemeter.caltrack.daily.parameters import DailyModelParameters, DailySubmodelParameters
 
@@ -183,7 +184,7 @@ class DailyModel:
         df_all_models = []
         for component_key in self.params.submodels.keys():
             eval_segment = self._meter_segment(component_key, df_eval)
-            T = eval_segment["temperature"].values
+            T = eval_segment["temperature_mean"].values
 
             #model, unc, hdd_load, cdd_load = self.model[component_key].eval(T)
             model, unc, hdd_load, cdd_load = self._predict_submodel(self.params.submodels[component_key], T)
@@ -207,6 +208,23 @@ class DailyModel:
         df_eval = df_eval.join(df_model_prediction)
 
         return df_eval
+
+    def to_dict(self):
+        return self.params.model_dump()
+        
+    def to_json(self):
+        return json.dumps(self.to_dict())
+
+    @classmethod
+    def from_dict(cls, data):
+        settings = data.get('settings')
+        daily_model = cls(settings=settings)
+        daily_model.params = DailyModelParameters(**data)
+        return daily_model
+        
+    @classmethod
+    def from_json(cls, str_data):
+        cls.from_dict(json.loads(str_data))
 
     def _create_params_from_fit_model(self):
         submodels = {}
@@ -240,7 +258,7 @@ class DailyModel:
         - Converts the index to a DatetimeIndex if it is not already
         - Adds a 'season' column based on the month of the index using the settings.season dictionary
         - Adds a 'day_of_week' column based on the day of the week of the index
-        - Removes any rows with NaN values in the 'temperature' or 'observed' columns
+        - Removes any rows with NaN values in the 'temperature_mean' or 'meter_value' columns
         - Sorts the data by the index
         - Reorders the columns to have 'season' and 'day_of_week' first, followed by the remaining columns
 
@@ -273,9 +291,9 @@ class DailyModel:
 
         meter_data["season"] = meter_data.index.month.map(self.settings.season)
         meter_data["day_of_week"] = meter_data.index.dayofweek + 1
-        meter_data = meter_data[np.isfinite(meter_data["temperature"])]
-        if "observed" in cols:
-            meter_data = meter_data[np.isfinite(meter_data["temperature"])]
+        meter_data = meter_data[np.isfinite(meter_data["temperature_mean"])]
+        if "meter_value" in cols:
+            meter_data = meter_data[np.isfinite(meter_data["temperature_mean"])]
         meter_data = meter_data.sort_index()
         meter_data = meter_data[["season", "day_of_week", *cols]]
 

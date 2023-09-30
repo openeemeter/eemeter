@@ -173,13 +173,13 @@ def ellipsoid_split_filter(meter, n_std=[1.4, 1.4]):
                 key = f"we-{season[:2]}"
 
             meter_season = meter[
-                (meter["season"] == season) & (meter["observed"].notna())
+                (meter["season"] == season) & (meter["meter_value"].notna())
             ]
             meter_season = meter_season[meter_season["day_of_week"].isin(day_num)]
-            meter_season = meter_season.sort_values(by=["temperature"])
+            meter_season = meter_season.sort_values(by=["temperature_mean"])
 
-            T = meter_season["temperature"].values
-            obs = meter_season["observed"].values
+            T = meter_season["temperature_mean"].values
+            obs = meter_season["meter_value"].values
 
             if (len(T) < 3) or (len(obs) < 3):
                 mu = cov = a = b = phi = None
