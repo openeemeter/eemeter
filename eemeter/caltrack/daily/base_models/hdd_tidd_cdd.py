@@ -299,7 +299,10 @@ def _hdd_tidd_cdd_smooth_update_bnds(new_bnds, bnds, smooth):
 
     # breakpoint bounds
     new_bnds[0] = bnds[0]
-    new_bnds[3] = bnds[3]
+    if smooth:
+        new_bnds[3] = bnds[3]
+    else:
+        new_bnds[2] = bnds[2]
 
     # intercept bounds at index 6 for smooth, 4 for unsmooth
     if smooth:
