@@ -100,11 +100,12 @@ def create_caltrack_billing_design_matrix(
         features.
     """
     usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
+    usage_per_day = usage_per_day.resample('D').ffill()  #TODO review
     if degc == True:
         temperature_data = 32 + (temperature_data * 1.8)
 
     temperature_features = compute_temperature_features(
-        meter_data.index,
+        usage_per_day.index,
         temperature_data,
         data_quality=True,
         tolerance=pd.Timedelta(

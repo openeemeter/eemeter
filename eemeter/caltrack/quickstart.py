@@ -23,15 +23,14 @@ from .design_matrices import (
     create_caltrack_hourly_preliminary_design_matrix,
     create_caltrack_hourly_segmented_design_matrices,
     create_caltrack_daily_design_matrix,
+    create_caltrack_billing_design_matrix,
 )
 from .hourly import fit_caltrack_hourly_model
-from .usage_per_day import fit_caltrack_usage_per_day_model
-from ..transform import get_baseline_data, get_reporting_data
+from .usage_per_day import fit_caltrack_usage_per_day_model, caltrack_sufficiency_criteria
+from ..transform import get_baseline_data, get_reporting_data, clean_caltrack_billing_daily_data
 from ..derivatives import metered_savings
 from ..features import estimate_hour_of_week_occupancy, fit_temperature_bins, compute_temperature_features
 from ..segmentation import segment_time_series
-
-from . import caltrack_sufficiency_criteria
 
 from eemeter.models import DailyModel
 import pandas as pd
@@ -250,8 +249,36 @@ def caltrack_2_1_daily(
     reporting_meter_data, warnings = get_reporting_data(
         meter_data, start=blackout_end_date, max_days=None
     )
+
     # calculate mean_temperature
     reporting_meter_dataframe = create_caltrack_daily_design_matrix(reporting_meter_data, temperature_data)
 
     results = daily_model.predict(reporting_meter_dataframe)
     return daily_model, results
+
+def caltrack_2_1_billing(
+    meter_data,
+    temperature_data,
+    blackout_start_date,
+    blackout_end_date,
+):
+    # get 365 days of baseline data, ending at blackout_start_date
+    baseline_meter_data, warnings = get_baseline_data(
+        meter_data,
+        end=blackout_start_date,
+        allow_billing_period_overshoot=True,
+    )
+
+    baseline_meter_dataframe = create_caltrack_billing_design_matrix(baseline_meter_data, temperature_data)
+    daily_model = DailyModel().fit(baseline_meter_dataframe)
+
+    # get one year of reporting data after blackout_end_date
+    reporting_meter_data, warnings = get_reporting_data(
+        meter_data, start=blackout_end_date, allow_billing_period_overshoot=True
+    )
+
+    # calculate mean_temperature
+    reporting_meter_dataframe = create_caltrack_billing_design_matrix(reporting_meter_data, temperature_data)
+
+    results = daily_model.predict(reporting_meter_dataframe)
+    return daily_model, results, baseline_meter_dataframe
