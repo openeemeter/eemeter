@@ -179,8 +179,8 @@ class ModelCoefficients(BaseModel):
                     hdd_beta=hdd_beta,
                     hdd_k=hdd_k,
                     cdd_bp=cdd_bp,
-                    cdd_beta=cdd_bp,
-                    cdd_k=cdd_bp,
+                    cdd_beta=cdd_beta,
+                    cdd_k=cdd_k,
                     intercept=coefficients[6],
                 )
             case [
