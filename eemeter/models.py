@@ -159,10 +159,11 @@ class DailyModel:
         self.model = self._final_fit(self.best_combination)
 
         self.id = meter_data.index.unique()[0]
-        wRMSE, RMSE, MAE = self._get_error_metrics(self.best_combination)
+        wRMSE, RMSE, MAE, CVRMSE = self._get_error_metrics(self.best_combination)
         self.error["wRMSE_train"] = wRMSE
         self.error["RMSE_train"] = RMSE
         self.error["MAE_train"] = MAE
+        self.error["CVRMSE_train"] = CVRMSE
 
         self.params = self._create_params_from_fit_model()
         return self
@@ -177,6 +178,9 @@ class DailyModel:
         Returns:
             pandas.DataFrame: The evaluation dataframe with model predictions added.
         """
+        #TODO decide whether to allow temperature series vs requiring "design matrix"
+        # if isinstance(df_eval, pd.Series):
+        #     df_eval = pd.DataFrame({"temperature_mean": df_eval})
 
         # initialize data to input dataframe
         df_eval = self._initialize_data(df_eval)
@@ -207,6 +211,9 @@ class DailyModel:
 
         df_eval = df_eval.join(df_model_prediction)
 
+        if "meter_value" in df_eval.columns:
+            df_eval["metered_savings"] = df_eval["model"] - df_eval["meter_value"]
+
         return df_eval
 
     def to_dict(self):
@@ -226,6 +233,16 @@ class DailyModel:
     def from_json(cls, str_data):
         cls.from_dict(json.loads(str_data))
 
+    @classmethod
+    def from_2_0_dict(cls, data):
+        daily_model = cls(model="2.0")
+        daily_model.params = DailyModelParameters.from_2_0_params(data)
+        return daily_model
+
+    @classmethod
+    def from_2_0_json(cls, str_data):
+        cls.from_2_0_dict(json.loads(str_data))
+
     def _create_params_from_fit_model(self):
         submodels = {}
         for key, submodel in self.model.items():
@@ -239,7 +256,6 @@ class DailyModel:
                 coefficients=submodel.named_coeffs,
                 temperature_constraints=temperature_constraints,
                 f_unc=submodel.f_unc,
-                CVRMSE=submodel.CVRMSE,
             )
         params = DailyModelParameters(
             settings=self.settings.to_dict(),
@@ -720,20 +736,24 @@ class DailyModel:
         N = 0
         wSSE = 0
         resid = []
+        obs = []
         for component in combination.split("__"):
             fit_component = self.fit_components[component]
 
             wSSE += fit_component.wSSE
             N += fit_component.N
             resid.append(fit_component.resid)
+            obs.append(fit_component.obs)
 
         resid = np.hstack(resid)
+        obs = np.hstack(obs)
 
         wRMSE = np.sqrt(wSSE / N)
         RMSE = np.mean(resid**2) ** 0.5
         MAE = np.mean(np.abs(resid))
+        CVRMSE = RMSE / np.mean(obs)
 
-        return wRMSE, RMSE, MAE
+        return wRMSE, RMSE, MAE, CVRMSE
 
     def _predict_submodel(self, submodel, T):
         """

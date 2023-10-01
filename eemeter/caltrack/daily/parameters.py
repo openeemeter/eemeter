@@ -326,7 +326,6 @@ class DailySubmodelParameters(BaseModel):
     coefficients: ModelCoefficients
     temperature_constraints: Dict[str, float]
     f_unc: float
-    CVRMSE: float
 
     @property
     def model_type(self):
@@ -337,3 +336,47 @@ class DailyModelParameters(BaseModel):
     settings: Dict[str, Any]
     metrics: Dict[str, Any]
     submodels: Dict[str, DailySubmodelParameters]
+
+    @classmethod
+    def from_2_0_params(cls, data):
+        match model_2_0 := data.get('model_type'):
+            case 'intercept_only':
+                model_type = ModelType.TIDD
+            case 'hdd_only':
+                model_type = ModelType.HDD_TIDD
+            case 'cdd_only':
+                model_type = ModelType.TIDD_CDD
+            case 'cdd_hdd':
+                model_type = ModelType.HDD_TIDD_CDD
+            case None:
+                raise ValueError(f"Missing model type")
+            case _:
+                raise ValueError(f"Unknown model type: {model_2_0}")
+        params = data['model_params']
+        daily_coeffs = ModelCoefficients(
+            model_type=model_type,
+            intercept=params.get('intercept'),
+            hdd_bp=params.get('heating_balance_point'),
+            hdd_beta=params.get('beta_hdd'),
+            cdd_bp=params.get('cooling_balance_point'),
+            cdd_beta=params.get('beta_cdd'),
+        )
+        submodel_params = DailySubmodelParameters(
+            coefficients=daily_coeffs,
+            temperature_constraints={
+                "T_min": -100,
+                "T_min_seg": -100,
+                "T_max": 200,
+                "T_max_seg": 200,
+            },
+            f_unc=np.inf,
+        )
+        return cls(
+            #TODO handle settings correctly with something in config.py
+            settings = {"from 2.0 - will fail if attempting from_dict()": True},
+            metrics = {},
+            submodels={
+                # no splits, full calendar
+                'fw-su_sh_wi': submodel_params,
+            }
+        )

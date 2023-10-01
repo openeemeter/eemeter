@@ -272,7 +272,6 @@ class OptimizedResult:
         self.weight = weight
         self.resid = resid
         self.wSSE = np.sum(weight * resid**2)
-        self.CVRMSE = np.sqrt(np.sum(resid**2)) / np.mean(self.obs)
 
         self.mean_loss = mean_loss
         self.loss = mean_loss * self.N
