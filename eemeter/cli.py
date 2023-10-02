@@ -22,7 +22,7 @@ import json
 
 import click
 
-from .caltrack import fit_caltrack_usage_per_day_model
+from eemeter.models import DailyModel
 from .features import (
     compute_usage_per_day_feature,
     compute_temperature_features,
@@ -133,8 +133,8 @@ def caltrack(
         heating_balance_points,
         cooling_balance_points,
     )
-    model_results = fit_caltrack_usage_per_day_model(data, fit_cdd=fit_cdd)
-    json_str = json.dumps(model_results.json(with_candidates=show_candidates), indent=2)
+    model_results = DailyModel().fit(data)
+    json_str = json.dumps(model_results.to_dict(), indent=2)
 
     if output_file is None:
         click.echo(json_str)

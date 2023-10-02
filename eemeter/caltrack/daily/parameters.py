@@ -333,9 +333,9 @@ class DailySubmodelParameters(BaseModel):
 
 
 class DailyModelParameters(BaseModel):
-    settings: Dict[str, Any]
-    metrics: Dict[str, Any]
     submodels: Dict[str, DailySubmodelParameters]
+    metrics: Dict[str, Any] | None
+    settings: Dict[str, Any] | None
 
     @classmethod
     def from_2_0_params(cls, data):

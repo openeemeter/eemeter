@@ -245,7 +245,8 @@ def metered_savings(
                 counterfactual_base_load=lambda row: row.counterfactual_usage - row.counterfactual_heating_load - row.counterfactual_cooling_load,
             )
         prediction_df = prediction_df.dropna().reindex(prediction_df.index)  # carry NaNs
-        return prediction_df, {}
+        error_bands = None
+        return prediction_df, error_bands
 
     prediction_index = reporting_meter_data.index
     model_prediction = baseline_model.predict(
