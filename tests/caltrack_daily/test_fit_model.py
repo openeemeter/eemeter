@@ -73,6 +73,7 @@ class TestFitModel:
                 "RMSE_test",
                 "MAE_train",
                 "MAE_test",
+                "CVRMSE_train",
             ]
         )
 
@@ -84,5 +85,6 @@ class TestFitModel:
             "RMSE_test": np.nan,
             "MAE_train": 13.38096518529209,
             "MAE_test": np.nan,
+            "CVRMSE_train": 0.32064123575928577,
         }
         assert fm.error == expected_model_error

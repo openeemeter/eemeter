@@ -26,7 +26,7 @@ from .design_matrices import (
     create_caltrack_billing_design_matrix,
 )
 from .hourly import fit_caltrack_hourly_model
-from .usage_per_day import fit_caltrack_usage_per_day_model, caltrack_sufficiency_criteria
+from .usage_per_day import caltrack_sufficiency_criteria
 from ..transform import get_baseline_data, get_reporting_data, clean_caltrack_billing_daily_data
 from ..derivatives import metered_savings
 from ..features import estimate_hour_of_week_occupancy, fit_temperature_bins, compute_temperature_features
@@ -202,7 +202,7 @@ def caltrack_daily(
     )
 
     # build a CalTRACK model
-    baseline_model = fit_caltrack_usage_per_day_model(baseline_design_matrix)
+    baseline_model = DailyModel().fit(baseline_design_matrix)
 
     # get a year of reporting period data
     reporting_meter_data, warnings = get_reporting_data(

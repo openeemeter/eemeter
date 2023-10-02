@@ -19,7 +19,8 @@
 """
 from scipy.stats import t
 
-from .caltrack.usage_per_day import CalTRACKUsagePerDayModelResults
+from eemeter.models import DailyModel
+from eemeter.caltrack.design_matrices import create_caltrack_daily_design_matrix
 
 
 __all__ = ("metered_savings", "modeled_savings")
@@ -222,11 +223,29 @@ def metered_savings(
         predict_kwargs = {}
 
     model_type = None  # generic
-    if isinstance(baseline_model, CalTRACKUsagePerDayModelResults):
-        model_type = "usage_per_day"
-
-    if model_type == "usage_per_day" and with_disaggregated:
-        predict_kwargs["with_disaggregated"] = True
+    if isinstance(baseline_model, DailyModel):
+        dm = create_caltrack_daily_design_matrix(reporting_meter_data, temperature_data)
+        columns = ["meter_value", "model"]
+        rename_columns = {
+            "meter_value": "reporting_observed",
+            "model": "counterfactual_usage",
+        }
+        if with_disaggregated:
+            columns.extend([
+                "heating_load",
+                "cooling_load",
+            ])
+            rename_columns["heating_load"] = "counterfactual_heating_load"
+            rename_columns["cooling_load"] = "counterfactual_cooling_load"
+        prediction_df = baseline_model.predict(dm)[columns].rename(
+            columns=rename_columns
+        ).assign(metered_savings=lambda row: row.counterfactual_usage - row.reporting_observed)
+        if with_disaggregated:
+            prediction_df = prediction_df.assign(
+                counterfactual_base_load=lambda row: row.counterfactual_usage - row.counterfactual_heating_load - row.counterfactual_cooling_load,
+            )
+        prediction_df = prediction_df.dropna().reindex(prediction_df.index)  # carry NaNs
+        return prediction_df, {}
 
     prediction_index = reporting_meter_data.index
     model_prediction = baseline_model.predict(
@@ -248,18 +267,6 @@ def metered_savings(
     results = reporting_observed.join(counterfactual_usage).assign(
         metered_savings=metered_savings_func
     )
-
-    if model_type == "usage_per_day" and with_disaggregated:
-        counterfactual_usage_disaggregated = predicted_baseline_usage[
-            ["base_load", "heating_load", "cooling_load"]
-        ].rename(
-            columns={
-                "base_load": "counterfactual_base_load",
-                "heating_load": "counterfactual_heating_load",
-                "cooling_load": "counterfactual_cooling_load",
-            }
-        )
-        results = results.join(counterfactual_usage_disaggregated)
 
     results = results.dropna().reindex(results.index)  # carry NaNs
 
@@ -460,13 +467,14 @@ def modeled_savings(
         predict_kwargs = {}
 
     model_type = None  # generic
-    if isinstance(baseline_model, CalTRACKUsagePerDayModelResults):
+    if isinstance(baseline_model, DailyModel) and isinstance(reporting_model, DailyModel):
         model_type = "usage_per_day"
-
-    if model_type == "usage_per_day" and with_disaggregated:
-        predict_kwargs["with_disaggregated"] = True
-
+    
     def _predicted_usage(model):
+        if model_type == "usage_per_day":
+            return model.predict(temperature_data[prediction_index]).rename(
+                columns={"model": "predicted_usage"}
+            ).assign(base_load=lambda row: row.predicted_usage - row.heating_load - row.cooling_load)
         model_prediction = model.predict(
             prediction_index, temperature_data, **predict_kwargs
         )
@@ -536,13 +544,13 @@ def modeled_savings(
     results = results.dropna().reindex(results.index)  # carry NaNs
 
     error_bands = None
-    if model_type == "usage_per_day":  # has totals_metrics
-        error_bands = _compute_error_bands_modeled_savings(
-            baseline_model.totals_metrics,
-            reporting_model.totals_metrics,
-            results,
-            baseline_model.interval,
-            reporting_model.interval,
-            confidence_level,
-        )
+    # if model_type == "usage_per_day":  # has totals_metrics
+    #     error_bands = _compute_error_bands_modeled_savings(
+    #         baseline_model.totals_metrics,
+    #         reporting_model.totals_metrics,
+    #         results,
+    #         baseline_model.interval,
+    #         reporting_model.interval,
+    #         confidence_level,
+    #     )
     return results, error_bands

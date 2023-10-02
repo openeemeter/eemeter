@@ -18,6 +18,7 @@
 
 """
 import eemeter
+from eemeter.models import DailyModel
 import json
 
 
@@ -40,7 +41,7 @@ def test_json_daily():
     )
 
     # build a CalTRACK model
-    baseline_model = eemeter.fit_caltrack_usage_per_day_model(baseline_design_matrix)
+    baseline_model = DailyModel().fit(baseline_design_matrix)
 
     # get a year of reporting period data
     reporting_meter_data, warnings = eemeter.get_reporting_data(
@@ -48,7 +49,7 @@ def test_json_daily():
     )
 
     # compute metered savings
-    metered_savings_dataframe, error_bands = eemeter.metered_savings(
+    metered_savings_dataframe, error_bounds = eemeter.metered_savings(
         baseline_model, reporting_meter_data, temperature_data, with_disaggregated=True
     )
 
@@ -56,12 +57,12 @@ def test_json_daily():
     total_metered_savings = metered_savings_dataframe.metered_savings.sum()
 
     # test JSON
-    json_str = json.dumps(baseline_model.json())
+    json_str = baseline_model.to_json()
 
-    m = eemeter.CalTRACKUsagePerDayModelResults.from_json(json.loads(json_str))
+    m = DailyModel.from_json(json_str)
 
     # compute metered savings from the loaded model
-    metered_savings_dataframe, error_bands = eemeter.metered_savings(
+    metered_savings_dataframe, error_bounds = eemeter.metered_savings(
         m, reporting_meter_data, temperature_data, with_disaggregated=True
     )
 

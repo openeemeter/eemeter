@@ -179,8 +179,8 @@ class DailyModel:
             pandas.DataFrame: The evaluation dataframe with model predictions added.
         """
         #TODO decide whether to allow temperature series vs requiring "design matrix"
-        # if isinstance(df_eval, pd.Series):
-        #     df_eval = pd.DataFrame({"temperature_mean": df_eval})
+        if isinstance(df_eval, pd.Series):
+            df_eval = df_eval.to_frame("temperature_mean")
 
         # initialize data to input dataframe
         df_eval = self._initialize_data(df_eval)
@@ -211,9 +211,6 @@ class DailyModel:
 
         df_eval = df_eval.join(df_model_prediction)
 
-        if "meter_value" in df_eval.columns:
-            df_eval["metered_savings"] = df_eval["model"] - df_eval["meter_value"]
-
         return df_eval
 
     def to_dict(self):
@@ -231,7 +228,7 @@ class DailyModel:
         
     @classmethod
     def from_json(cls, str_data):
-        cls.from_dict(json.loads(str_data))
+        return cls.from_dict(json.loads(str_data))
 
     @classmethod
     def from_2_0_dict(cls, data):

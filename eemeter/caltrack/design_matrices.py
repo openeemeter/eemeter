@@ -96,8 +96,7 @@ def create_caltrack_billing_design_matrix(
     Returns
     -------
     design_matrix : :any:`pandas.DataFrame`
-        A design matrix with mean usage_per_day, hdd_min-hdd_max, and cdd_min-cdd_max
-        features.
+        A design matrix with mean usage_per_day and temperature features.
     """
     usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
     usage_per_day = usage_per_day.resample('D').ffill()  #TODO review
@@ -134,8 +133,7 @@ def create_caltrack_daily_design_matrix(
     Returns
     -------
     design_matrix : :any:`pandas.DataFrame`
-        A design matrix with mean usage_per_day, hdd_30-hdd_90, and cdd_30-cdd_90
-        features.
+        A design matrix with mean usage_per_day and temperature features
     """
     usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
     if degc == True:
