@@ -368,12 +368,16 @@ class DailyModel:
 
         meter_data["season"] = meter_data.index.month.map(self.settings.season)
         meter_data["day_of_week"] = meter_data.index.dayofweek + 1
-        meter_data = meter_data[np.isfinite(meter_data["temperature_mean"])]
-        if "meter_value" in cols:
-            meter_data = meter_data[np.isfinite(meter_data["temperature_mean"])]
         meter_data = meter_data.sort_index()
         meter_data = meter_data[["season", "day_of_week", *cols]]
 
+        meter_data = meter_data.dropna()
+        if meter_data.empty:
+            # return early to avoid np.isfinite exception
+            return meter_data
+        meter_data = meter_data[np.isfinite(meter_data["temperature_mean"])]
+        if "meter_value" in cols:
+            meter_data = meter_data[np.isfinite(meter_data["meter_value"])]
         return meter_data
 
     def _combinations(self):
@@ -853,7 +857,7 @@ class DailyModel:
         hdd_bp, cdd_bp, intercept = x[0], x[3], x[6]
         T_fit_bnds = np.array([T_min, T_max])
 
-        model = full_model(*x, T_fit_bnds, T)
+        model = full_model(*x, T_fit_bnds, T.astype(np.float64))
         f_unc = np.ones_like(model) * submodel.f_unc
 
         load_only = model - intercept

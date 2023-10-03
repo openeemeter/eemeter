@@ -20,7 +20,7 @@
 from scipy.stats import t
 
 from eemeter.models import DailyModel
-from eemeter.caltrack.design_matrices import create_caltrack_daily_design_matrix
+from eemeter.caltrack.design_matrices import create_caltrack_daily_design_matrix, create_caltrack_billing_design_matrix
 
 
 __all__ = ("metered_savings", "modeled_savings")
@@ -162,6 +162,7 @@ def metered_savings(
     confidence_level=0.90,
     predict_kwargs=None,
     degc: bool = False,
+    billing_data: bool = False,
 ):
     """Compute metered savings, i.e., savings in which the baseline model
     is used to calculate the modeled usage in the reporting period. This
@@ -222,9 +223,13 @@ def metered_savings(
     if predict_kwargs is None:
         predict_kwargs = {}
 
-    model_type = None  # generic
+    model_type = None
     if isinstance(baseline_model, DailyModel):
-        dm = create_caltrack_daily_design_matrix(reporting_meter_data, temperature_data)
+        #TODO handle billing/daily distinction with new dataclass
+        if billing_data:
+            dm = create_caltrack_billing_design_matrix(reporting_meter_data, temperature_data)
+        else:
+            dm = create_caltrack_daily_design_matrix(reporting_meter_data, temperature_data)
         columns = ["meter_value", "model"]
         rename_columns = {
             "meter_value": "reporting_observed",

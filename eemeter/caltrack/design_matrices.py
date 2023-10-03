@@ -99,7 +99,7 @@ def create_caltrack_billing_design_matrix(
         A design matrix with mean usage_per_day and temperature features.
     """
     usage_per_day = compute_usage_per_day_feature(meter_data, series_name="meter_value")
-    usage_per_day = usage_per_day.resample('D').ffill()  #TODO review
+    usage_per_day = usage_per_day.resample('D').ffill()
     if degc == True:
         temperature_data = 32 + (temperature_data * 1.8)
 

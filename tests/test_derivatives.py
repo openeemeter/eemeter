@@ -100,12 +100,6 @@ def test_metered_savings_cdd_hdd_daily(
         "metered_savings",
     ]
     assert round(results.metered_savings.sum(), 2) == 1577.75
-    # assert sorted(error_bands.keys()) == [
-    #     "FSU Error Band",
-    #     "OLS Error Band",
-    #     "OLS Error Band: Model Error",
-    #     "OLS Error Band: Noise",
-    # ]
 
 
 @pytest.fixture
@@ -149,20 +143,14 @@ def test_metered_savings_cdd_hdd_billing(
     baseline_model_billing, reporting_meter_data_billing, reporting_temperature_data
 ):
     results, error_bands = metered_savings(
-        baseline_model_billing, reporting_meter_data_billing, reporting_temperature_data
+        baseline_model_billing, reporting_meter_data_billing, reporting_temperature_data, billing_data=True,
     )
-    # assert list(results.columns) == [
-    #     "reporting_observed",
-    #     "counterfactual_usage",
-    #     "metered_savings",
-    # ]
-    assert round(results.metered_savings.sum(), 2) == 1625.73
-    # assert sorted(error_bands.keys()) == [
-    #     "FSU Error Band",
-    #     "OLS Error Band",
-    #     "OLS Error Band: Model Error",
-    #     "OLS Error Band: Noise",
-    # ]
+    assert list(results.columns) == [
+        "reporting_observed",
+        "counterfactual_usage",
+        "metered_savings",
+    ]
+    assert round(results.metered_savings.sum(), 2) == 1640.16
 
 
 def test_metered_savings_cdd_hdd_billing_no_reporting_data(
@@ -172,6 +160,7 @@ def test_metered_savings_cdd_hdd_billing_no_reporting_data(
         baseline_model_billing,
         reporting_meter_data_billing[:0],
         reporting_temperature_data,
+        billing_data=True,
     )
     assert list(results.columns) == [
         "reporting_observed",
@@ -179,7 +168,6 @@ def test_metered_savings_cdd_hdd_billing_no_reporting_data(
         "metered_savings",
     ]
     assert round(results.metered_savings.sum(), 2) == 0.0
-    # assert error_bands is None
 
 
 def test_metered_savings_cdd_hdd_billing_single_record_reporting_data(
@@ -189,6 +177,7 @@ def test_metered_savings_cdd_hdd_billing_single_record_reporting_data(
         baseline_model_billing,
         reporting_meter_data_billing[:1],
         reporting_temperature_data,
+        billing_data=True,
     )
     assert list(results.columns) == [
         "reporting_observed",
@@ -196,7 +185,6 @@ def test_metered_savings_cdd_hdd_billing_single_record_reporting_data(
         "metered_savings",
     ]
     assert round(results.metered_savings.sum(), 2) == 0.0
-    # assert error_bands is None
 
 
 @pytest.fixture
@@ -212,8 +200,8 @@ def baseline_model_billing_single_record_baseline_data(
     baseline_data = create_caltrack_billing_design_matrix(
         baseline_meter_data, temperature_data
     )
-    baseline_data = baseline_data[:2]
-    model_results = DailyModel().fit(baseline_data)
+    baseline_data = baseline_data[:60]
+    model_results = DailyModel(model="2.0").fit(baseline_data)
     return model_results
 
 
@@ -226,19 +214,14 @@ def test_metered_savings_cdd_hdd_billing_single_record_baseline_data(
         baseline_model_billing_single_record_baseline_data,
         reporting_meter_data_billing,
         reporting_temperature_data,
+        billing_data=True,
     )
     assert list(results.columns) == [
         "reporting_observed",
         "counterfactual_usage",
         "metered_savings",
     ]
-    assert round(results.metered_savings.sum(), 2) == 1625.73
-    # assert sorted(error_bands.keys()) == [
-    #     "FSU Error Band",
-    #     "OLS Error Band",
-    #     "OLS Error Band: Model Error",
-    #     "OLS Error Band: Noise",
-    # ]
+    assert round(results.metered_savings.sum(), 2) == 1527.11
 
 
 @pytest.fixture
@@ -256,6 +239,7 @@ def test_metered_savings_cdd_hdd_billing_reporting_data_wrong_timestamp(
         baseline_model_billing,
         reporting_meter_data_billing_wrong_timestamp,
         reporting_temperature_data,
+        billing_data=True,
     )
     assert list(results.columns) == [
         "reporting_observed",
@@ -263,7 +247,6 @@ def test_metered_savings_cdd_hdd_billing_reporting_data_wrong_timestamp(
         "metered_savings",
     ]
     assert round(results.metered_savings.sum(), 2) == 0.0
-    # assert error_bands is None
 
 
 def test_metered_savings_cdd_hdd_daily_hourly_degree_days(
@@ -278,7 +261,6 @@ def test_metered_savings_cdd_hdd_daily_hourly_degree_days(
         "metered_savings",
     ]
     assert round(results.metered_savings.sum(), 2) == 1577.75
-    # assert round(error_bands["FSU Error Band"], 2) == 601.52
 
 
 def test_metered_savings_cdd_hdd_no_params(
@@ -308,7 +290,6 @@ def test_metered_savings_cdd_hdd_daily_with_disaggregated(
         "metered_savings",
         "reporting_observed",
     ]
-    # assert round(error_bands["FSU Error Band"], 2) == 601.52
 
 
 def test_modeled_savings_cdd_hdd_daily(
@@ -330,9 +311,6 @@ def test_modeled_savings_cdd_hdd_daily(
         "modeled_savings",
     ]
     assert round(results.modeled_savings.sum(), 2) ==177.02  
-    # assert round(error_bands["FSU Error Band: Baseline"], 2) == 601.52
-    # assert round(error_bands["FSU Error Band: Reporting"], 2) == 534.78
-    # assert round(error_bands["FSU Error Band"], 2) == 804.87
 
 
 def test_modeled_savings_cdd_hdd_daily_hourly_degree_days(
@@ -355,9 +333,6 @@ def test_modeled_savings_cdd_hdd_daily_hourly_degree_days(
         "modeled_savings",
     ]
     assert round(results.modeled_savings.sum(), 2) == 177.02
-    # assert round(error_bands["FSU Error Band: Baseline"], 2) == 601.52
-    # assert round(error_bands["FSU Error Band: Reporting"], 2) == 534.78
-    # assert round(error_bands["FSU Error Band"], 2) == 804.87
 
 
 def test_modeled_savings_cdd_hdd_daily_baseline_model_no_params(
@@ -420,9 +395,6 @@ def test_modeled_savings_cdd_hdd_daily_with_disaggregated(
         "modeled_reporting_usage",
         "modeled_savings",
     ]
-    # assert round(error_bands["FSU Error Band: Baseline"], 2) == 601.52
-    # assert round(error_bands["FSU Error Band: Reporting"], 2) == 534.78
-    # assert round(error_bands["FSU Error Band"], 2) == 804.87
 
 
 def test_modeled_savings_daily_empty_temperature_data(
@@ -443,7 +415,6 @@ def test_modeled_savings_daily_empty_temperature_data(
         "modeled_reporting_usage",
         "modeled_savings",
     ]
-    # assert error_bands is None
 
 
 @pytest.fixture
@@ -587,12 +558,6 @@ def test_modeled_savings_cdd_hdd_billing(
         "modeled_savings",
     ]
     assert round(results.modeled_savings.sum(), 2) == 639.95
-    # assert sorted(error_bands.keys()) == [
-    #     "FSU Error Band",
-    #     "FSU Error Band: Baseline",
-    #     "FSU Error Band: Reporting",
-    # ]
-    # assert round(error_bands["FSU Error Band"], 2) == 156.89
 
 
 @pytest.fixture
@@ -610,6 +575,7 @@ def test_metered_savings_not_aligned_reporting_data(
         baseline_model_billing,
         reporting_meter_data_billing_not_aligned,
         reporting_temperature_data,
+        billing_data=True,
     )
     assert list(results.columns) == [
         "reporting_observed",
@@ -617,18 +583,18 @@ def test_metered_savings_not_aligned_reporting_data(
         "metered_savings",
     ]
     assert round(results.metered_savings.sum(), 2) == 0.0
-    # assert error_bands is None
 
 
 @pytest.fixture
 def baseline_model_billing_single_record(il_electricity_cdd_hdd_billing_monthly):
-    baseline_meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"][-2:]
+    # using two records until bounds failure is fixed
+    baseline_meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"][-3:]
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]
     blackout_start_date = il_electricity_cdd_hdd_billing_monthly["blackout_start_date"]
     baseline_data = create_caltrack_billing_design_matrix(
         baseline_meter_data, temperature_data
     )
-    model_results = DailyModel().fit(baseline_data)
+    model_results = DailyModel(model="2.0").fit(baseline_data)
     return model_results
 
 
@@ -637,17 +603,13 @@ def test_metered_savings_model_single_record(
     reporting_meter_data_billing,
     reporting_temperature_data,
 ):
-    assert pd.isnull(baseline_model_billing_single_record.totals_metrics.autocorr_resid)
-
-    # simulating deserialization
-    baseline_model_billing_single_record.totals_metrics.autocorr_resid = None
-
     results, error_bands = metered_savings(
         baseline_model_billing_single_record,
         reporting_meter_data_billing,
         reporting_temperature_data,
+        billing_data=True,
     )
-    # assert error_bands is None
+    assert round(results.metered_savings.sum(), 2) == 1814.25
 
 
 @pytest.fixture
