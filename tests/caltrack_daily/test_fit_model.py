@@ -82,28 +82,11 @@ class TestFitModel:
         for combination in combinations:
             assert isinstance(fm.model[combination], OptimizedResult)
 
-        # Test that the error attribute is a dictionary with the expected keys
-        assert isinstance(fm.error, dict)
-        assert set(fm.error.keys()) == set(
-            [
-                "wRMSE_train",
-                "wRMSE_test",
-                "RMSE_train",
-                "RMSE_test",
-                "MAE_train",
-                "MAE_test",
-                "CVRMSE_train",
-            ]
-        )
-
         # Test that the error attribute values are as expected
         expected_model_error = {
-            "wRMSE_train": 16.95324536039207,
-            "wRMSE_test": np.nan,
-            "RMSE_train": 16.95324536039207,
-            "RMSE_test": np.nan,
-            "MAE_train": 13.38096518529209,
-            "MAE_test": np.nan,
-            "CVRMSE_train": 0.32064123575928577,
+            "wRMSE": 16.95324536039207,
+            "RMSE": 16.95324536039207,
+            "MAE": 13.38096518529209,
+            "CVRMSE": 0.32064123575928577,
         }
         assert fm.error == expected_model_error

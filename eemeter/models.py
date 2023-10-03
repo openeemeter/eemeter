@@ -135,12 +135,10 @@ class DailyModel:
         self.verbose = verbose
 
         self.error = {
-            "wRMSE_train": np.nan,
-            "wRMSE_test": np.nan,
-            "RMSE_train": np.nan,
-            "RMSE_test": np.nan,
-            "MAE_train": np.nan,
-            "MAE_test": np.nan,
+            "wRMSE": np.nan,
+            "RMSE": np.nan,
+            "MAE": np.nan,
+            "CVRMSE": np.nan,
         }
 
     def fit(self, meter_data):
@@ -160,10 +158,10 @@ class DailyModel:
 
         self.id = meter_data.index.unique()[0]
         wRMSE, RMSE, MAE, CVRMSE = self._get_error_metrics(self.best_combination)
-        self.error["wRMSE_train"] = wRMSE
-        self.error["RMSE_train"] = RMSE
-        self.error["MAE_train"] = MAE
-        self.error["CVRMSE_train"] = CVRMSE
+        self.error["wRMSE"] = wRMSE
+        self.error["RMSE"] = RMSE
+        self.error["MAE"] = MAE
+        self.error["CVRMSE"] = CVRMSE
 
         self.params = self._create_params_from_fit_model()
         return self
