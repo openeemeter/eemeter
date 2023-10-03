@@ -30,7 +30,16 @@ from shutil import rmtree
 from setuptools import find_packages, setup, Command
 
 NAME = "eemeter"
-REQUIRED = ["click", "pandas>=1.0.0", "statsmodels", "scipy"]
+REQUIRED = [
+    "click",
+    "pandas>=1.0.0",
+    "statsmodels",
+    "scipy",
+    "numba",
+    "nlopt",
+    "pydantic>=2.0",
+    "attrs",
+]
 
 here = os.path.abspath(os.path.dirname(__file__))
 
