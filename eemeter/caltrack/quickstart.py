@@ -151,11 +151,10 @@ def caltrack_daily(
     temperature_data,
     blackout_start_date,
     blackout_end_date,
-    degc: bool = False,
 ):
-
     """An output function which takes meter data, external temperature data, blackout start and end dates, and
-       returns a metered savings dataframe for the period between the blackout end date and today.
+       returns a metered savings dataframe for the period between the blackout end date and today. Note that
+       the daily model is indifferent to temperature units, as long as they are kept consistent during fit and prediction.
 
        Parameters
        ----------
@@ -167,8 +166,6 @@ def caltrack_daily(
            The date at which improvement works commenced.
        blackout_end_date : :any: 'datetime.datetime'
            The date by which improvement works completed and metering resumed.
-       degc : :any 'bool'
-           Relevant temperature units; defaults to False (i.e. Fahrenheit).
 
        Returns
        -------
@@ -187,45 +184,6 @@ def caltrack_daily(
         - ``counterfactual_heating_load``
         - ``counterfactual_cooling_load``
        """
-
-    # get meter data suitable for fitting a baseline model
-    baseline_meter_data, warnings = get_baseline_data(
-        meter_data,
-        start=blackout_start_date - relativedelta(years=1),
-        end=blackout_start_date,
-        max_days=None,
-    )
-
-    # create a design matrix (the input to the model fitting step)
-    baseline_design_matrix = create_caltrack_daily_design_matrix(
-        baseline_meter_data, temperature_data, degc
-    )
-
-    # build a CalTRACK model
-    baseline_model = DailyModel().fit(baseline_design_matrix)
-
-    # get a year of reporting period data
-    reporting_meter_data, warnings = get_reporting_data(
-        meter_data, start=blackout_end_date, max_days=365
-    )
-
-    # compute metered savings for the year of the reporting period we've selected
-    metered_savings_dataframe, error_bands = metered_savings(
-        baseline_model,
-        reporting_meter_data,
-        temperature_data,
-        with_disaggregated=True,
-        degc=degc,
-    )
-
-    return metered_savings_dataframe
-
-def caltrack_2_1_daily(
-    meter_data,
-    temperature_data,
-    blackout_start_date,
-    blackout_end_date,
-):
     # get 365 days of baseline data, ending at blackout_start_date
     baseline_meter_data, warnings = get_baseline_data(
         meter_data,
@@ -243,25 +201,61 @@ def caltrack_2_1_daily(
     if sc.status != 'PASS':
         # raise exception, etc
         print(sc.data)
-    daily_model = DailyModel().fit(baseline_meter_dataframe)
+    baseline_model = DailyModel().fit(baseline_meter_dataframe)
 
     # get all reporting data after blackout_end_date
     reporting_meter_data, warnings = get_reporting_data(
         meter_data, start=blackout_end_date, max_days=None
     )
 
-    # calculate mean_temperature
-    reporting_meter_dataframe = create_caltrack_daily_design_matrix(reporting_meter_data, temperature_data)
+    # compute metered savings for the year of the reporting period we've selected
+    metered_savings_dataframe, error_bands = metered_savings(
+        baseline_model,
+        reporting_meter_data,
+        temperature_data,
+        with_disaggregated=True,
+    )
 
-    results = daily_model.predict(reporting_meter_dataframe)
-    return daily_model, results
+    return metered_savings_dataframe
 
-def caltrack_2_1_billing(
+def caltrack_billing(
     meter_data,
     temperature_data,
     blackout_start_date,
     blackout_end_date,
 ):
+    """An output function which takes meter data, external temperature data, blackout start and end dates, and
+       returns a metered savings dataframe for the period between the blackout end date and today. Note that
+       the daily model is indifferent to temperature units, as long as they are kept consistent during fit and prediction.
+
+       Parameters
+       ----------
+       meter_data : :any:`pandas.DataFrame`
+           Billing meter data, unit kWh.
+       temperature_data : :any:``
+           Hourly external temperature data. If DataFrame, not pd.Series (as required by CalTRACK) function will convert.
+       blackout_start_date : :any: 'datetime.datetime'
+           The date at which improvement works commenced.
+       blackout_end_date : :any: 'datetime.datetime'
+           The date by which improvement works completed and metering resumed.
+
+       Returns
+       -------
+       metered_savings_dataframe: :any:`pandas.DataFrame`
+       DataFrame with metered savings, indexed with
+       ``reporting_meter_data.index``. Will include the following columns:
+
+        - ``counterfactual_usage`` (baseline model projected into reporting period)
+        - ``reporting_observed`` (given by reporting_meter_data)
+        - ``metered_savings``
+
+        If `with_disaggregated` is set to True, the following columns will also
+        be in the results DataFrame:
+
+        - ``counterfactual_base_load``
+        - ``counterfactual_heating_load``
+        - ``counterfactual_cooling_load``
+       """
     # get 365 days of baseline data, ending at blackout_start_date
     baseline_meter_data, warnings = get_baseline_data(
         meter_data,
@@ -269,16 +263,23 @@ def caltrack_2_1_billing(
         allow_billing_period_overshoot=True,
     )
 
+    # create design matrix in order to handle usage-per-day calculations and temperature avgs
     baseline_meter_dataframe = create_caltrack_billing_design_matrix(baseline_meter_data, temperature_data)
-    daily_model = DailyModel().fit(baseline_meter_dataframe)
+
+    # fit daily model on baseline data
+    baseline_model = DailyModel().fit(baseline_meter_dataframe)
 
     # get one year of reporting data after blackout_end_date
     reporting_meter_data, warnings = get_reporting_data(
         meter_data, start=blackout_end_date, allow_billing_period_overshoot=True
     )
 
-    # calculate mean_temperature
-    reporting_meter_dataframe = create_caltrack_billing_design_matrix(reporting_meter_data, temperature_data)
-
-    results = daily_model.predict(reporting_meter_dataframe)
-    return daily_model, results, baseline_meter_dataframe
+    # compute metered savings for the year of the reporting period we've selected
+    metered_savings_dataframe, error_bands = metered_savings(
+        baseline_model,
+        reporting_meter_data,
+        temperature_data,
+        with_disaggregated=True,
+        billing_data=True,
+    )
+    return metered_savings_dataframe
