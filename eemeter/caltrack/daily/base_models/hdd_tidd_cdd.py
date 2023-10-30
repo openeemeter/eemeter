@@ -245,17 +245,17 @@ def _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings, smooth, min_weight=0.0):
     algorithm = nlopt_algorithms[settings.initial_guess_algorithm_choice]
     obj_fcn = bp_obj_fcn_dec(T, obs, min_T_idx)
 
-    T_min = T[min_T_idx - 1]
-    T_max = T[-min_T_idx]
-    T_range = T_max - T_min
+    T_bnds = np.sort([T[min_T_idx - 1], T[-min_T_idx]])
+    T_range = np.diff(T_bnds)[0]
 
-    x0 = np.array([T_range * 0.10, T_range * 0.90]) + T_min
-    bnds = np.array([[T_min, T_max], [T_min, T_max]]).T
+    x0 = np.array([T_range * 0.10, T_range * 0.90]) + T_bnds[0]
+    bnds = np.array([T_bnds, T_bnds]).T
+    initial_step = np.array([T_range * 0.10, -T_range * 0.10])
 
     opt = nlopt.opt(algorithm, int(len(x0)))
     opt.set_min_objective(obj_fcn)
 
-    opt.set_initial_step([T_range * 0.10, -T_range * 0.10])
+    opt.set_initial_step(initial_step)
     opt.set_maxeval(200)
     opt.set_xtol_rel(1e-3)
     opt.set_xtol_abs(0.5)
@@ -292,7 +292,7 @@ def estimate_betas_and_intercept(T, obs, hdd_bp, cdd_bp, min_T_idx, alpha):
 
     if len(idx_tidd) > 0:
         intercept = get_intercept(obs[idx_tidd], alpha)
-    elif (idx_cdd[min_T_idx - 1] - idx_hdd[-min_T_idx]) > 0:
+    elif (len(idx_cdd) >= min_T_idx) and (len(idx_hdd) >= min_T_idx) and ((idx_cdd[min_T_idx - 1] - idx_hdd[-min_T_idx]) > 0):
         intercept = get_intercept(
             obs[idx_hdd[-min_T_idx] : idx_cdd[min_T_idx - 1]], alpha
         )

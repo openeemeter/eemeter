@@ -139,6 +139,7 @@ class DailyModel:
             "RMSE": np.nan,
             "MAE": np.nan,
             "CVRMSE": np.nan,
+            "PNRMSE": np.nan,
         }
 
     def fit(self, meter_data):
@@ -150,18 +151,21 @@ class DailyModel:
         self.components = self._components()
         self.fit_components = self._fit_components()
 
-        self.wRMSE_base = self._get_error_metrics("fw-su_sh_wi")[
-            0
-        ]  # calculate mean bias error for no splits
+        # calculate mean bias error for no splits
+        self.wRMSE_base = self._get_error_metrics("fw-su_sh_wi")[0]
+
+        # find best combination
         self.best_combination = self._best_combination(print_out=False)
         self.model = self._final_fit(self.best_combination)
 
         self.id = meter_data.index.unique()[0]
-        wRMSE, RMSE, MAE, CVRMSE = self._get_error_metrics(self.best_combination)
+        
+        wRMSE, RMSE, MAE, CVRMSE, PNRMSE = self._get_error_metrics(self.best_combination)
         self.error["wRMSE"] = wRMSE
         self.error["RMSE"] = RMSE
         self.error["MAE"] = MAE
         self.error["CVRMSE"] = CVRMSE
+        self.error["PNRMSE"] = PNRMSE
 
         self.params = self._create_params_from_fit_model()
         return self
@@ -815,8 +819,9 @@ class DailyModel:
         RMSE = np.mean(resid**2) ** 0.5
         MAE = np.mean(np.abs(resid))
         CVRMSE = RMSE / np.mean(obs)
+        PNRMSE = RMSE / np.diff(np.quantile(obs, [0.05, 0.95]))[0]
 
-        return wRMSE, RMSE, MAE, CVRMSE
+        return wRMSE, RMSE, MAE, CVRMSE, PNRMSE
 
     def _predict_submodel(self, submodel, T):
         """
