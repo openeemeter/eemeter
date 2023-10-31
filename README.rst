@@ -25,6 +25,10 @@ EEmeter: tools for calculating metered energy savings
   :target: https://github.com/ambv/black
   :alt: Code Style
 
+.. image:: https://www.bestpractices.dev/projects/7969/badge
+  :target: https://www.bestpractices.dev/projects/7969
+  :alt: Best Practices
+
 ---------------
 
 **EEmeter** — an open source toolkit for implementing and developing standard
