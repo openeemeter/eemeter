@@ -1,5 +1,4 @@
 # Enable Continuous Integration (CI) for this repository.
-# Scheduled to run at 02:38 UTC every day.
 # This workflow is triggered by events such as pushes to the master branch, 
 # pull requests to the master branch, and scheduled runs.
 
@@ -10,8 +9,6 @@
 name: Docker
 
 on:
-  schedule:
-    - cron: '38 2 * * *'
   push:
     branches: [ "master" ]
     # Publish semver tags as releases.
