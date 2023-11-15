@@ -23,8 +23,14 @@ import pandas as pd
 import scipy.spatial
 import scipy
 
+from gridmeter.individual_meter_matching.settings import Settings
+from gridmeter.utils.calculate_distances import calculate_distances
+
+
 __all__ = ("DistanceMatching",)
 
+
+# TODO: switch distance matching to calculate_distances 
 
 class DistanceMatching:
     """
@@ -42,32 +48,22 @@ class DistanceMatching:
 
     def __init__(
         self,
-        treatment_group,
-        comparison_pool,
-        weights=None,
-        n_treatments_per_chunk=10000,
+        settings=None,
     ):
-        self.n_treatments_per_chunk = n_treatments_per_chunk
-        #if you're using weights make sure to normalize the data first
-        self.weights = weights
-        self.treatment_group = treatment_group
-        self.comparison_pool = comparison_pool
-        if weights:
-            self.treatment_group = self.treatment_group * self.weights
-            self.comparison_pool = self.comparison_pool * self.weights
+        if settings is None:
+            self.settings = Settings()
+        elif isinstance(settings, Settings):
+            self.settings = settings
+        else:
+            raise Exception("invalid settings provided to 'individual_metering_matching'")
 
-        self.treatment_group_chunks = [
-            self.treatment_group[
-                chunk * n_treatments_per_chunk : (chunk + 1) * n_treatments_per_chunk
-            ]
-            for chunk in range(int(len(treatment_group) / n_treatments_per_chunk) + 1)
-        ]
 
     def _get_min_distance_from_matrix_df(self, dist_df):
         match_cols = dist_df.columns[(np.argmin(dist_df.values, axis=1))]
         dist = np.diag(dist_df[match_cols])
         return pd.DataFrame({"closest": match_cols, "dist": dist})
 
+    
     def _get_next_best_matches(self, treatment_distances_df, best_match):
         # The purpose of this for loop is to attempt to find the 'next best match'
         # for treatment meters matched to a comparison pool meter that has already
@@ -113,6 +109,7 @@ class DistanceMatching:
             return best_match, False
         return best_match, True
 
+    
     def _get_best_match(self, treatment_distances_df, n_max_duplicate_check_rounds):
         """
         Parameters
@@ -150,12 +147,12 @@ class DistanceMatching:
         treatment_matches_df = bm.append(tm).sort_index()
         return treatment_matches_df
 
+    
     def get_comparison_group(
         self,
-        n_matches_per_treatment,
-        metric="euclidean",
-        max_distance_threshold=None,
-        n_max_duplicate_check_rounds=10,
+        treatment_group,
+        comparison_pool,
+        weights=None,
     ):
         """
         Parameters
@@ -170,42 +167,106 @@ class DistanceMatching:
         n_max_duplicate_check_rounds: int
             The number of rounds of checking for 'next best matches' if multiple treatment meters matched to the same comparison group meters. This number dictates how many iterations of 'next best matching' will take place.
         """
+        settings = self.settings
+
         # chunk the treatment group due to memory constraints
+        n_treatments_per_chunk = settings.n_treatments_per_chunk
+
+        #if you're using weights make sure to normalize the data first
+        if weights:
+            treatment_group = treatment_group * weights
+            comparison_pool = comparison_pool * weights
+
+        # get chunks
+        treatment_group_chunks = [
+            treatment_group[
+                chunk * n_treatments_per_chunk : (chunk + 1) * n_treatments_per_chunk
+            ]
+            for chunk in range(int(len(treatment_group) / n_treatments_per_chunk) + 1)
+        ]
 
         # for each chunk, for each of n_matches, compose a comparison group
         comparison_group = pd.DataFrame(columns=["match", "distance", "duplicated"])
-        for treatment_group_chunk in self.treatment_group_chunks:
+        for treatment_group_chunk in treatment_group_chunks:
             mat = scipy.spatial.distance.cdist(
                 treatment_group_chunk.values,
-                self.comparison_pool.values,
-                metric=metric,
+                comparison_pool.values,
+                metric=settings.distance_metric,
             )
             dist_df = pd.DataFrame(mat)
             # get the best n matches
-            for n in range(n_matches_per_treatment):
+            for _ in range(settings.n_matches_per_treatment):
                 dist_df = dist_df[
                     dist_df.columns[~dist_df.columns.isin(comparison_group["match"])]
                 ]
                 if dist_df.empty:
                     continue
-                new_df = self._get_best_match(dist_df, n_max_duplicate_check_rounds)
-                comparison_group = comparison_group.append(new_df)
+                new_df = self._get_best_match(dist_df, settings.n_duplicate_check)
+                comparison_group = pd.concat([comparison_group, new_df])
 
         # rename columns and reindex to get original ids back
         comparison_group = comparison_group.reset_index().rename(
             {"index": "treatment"}, axis=1
         )
-        comparison_group.index = self.comparison_pool.iloc[
+        comparison_group.index = comparison_pool.iloc[
             comparison_group["match"]
         ].index
-        comparison_group["treatment"] = self.treatment_group.iloc[
+        comparison_group["treatment"] = treatment_group.iloc[
             comparison_group["treatment"]
         ].index
         comparison_group.drop("match", axis=1, inplace=True)
         comparison_group.index.name = "id"
 
-        return (
-            comparison_group[comparison_group["distance"] < max_distance_threshold]
-            if max_distance_threshold
-            else comparison_group
-        )
+        if isinstance(settings.max_distance_threshold, (int, float)):
+            comparison_group = comparison_group[comparison_group["distance"] < settings.max_distance_threshold]
+
+        return comparison_group
+
+
+def TestDistanceMatching(
+    t_df, 
+    cp_df, 
+    n_matches_per_treatment, 
+    dist_metric = 'euclidean',
+    match_duplicate_meters = True,
+    replace_duplicate_meters = False, # currently unused
+    max_distance_threshold = None,
+    n_meters_per_chunk = 10000): 
+
+    t_df_unstacked = t_df.unstack()
+    cp_df_unstacked = cp_df.unstack()
+
+    ls_t = t_df_unstacked.to_numpy()
+    ls_cp = cp_df_unstacked.to_numpy()
+
+    # Calculate closest distances
+    n_matches = n_matches_per_treatment
+    if (not match_duplicate_meters and replace_duplicate_meters) or max_distance_threshold is not None:
+        n_matches *= 2
+        
+    cp_id_idx, dist = calculate_distances(ls_t, ls_cp, dist_metric, n_matches, n_meters_per_chunk)
+
+    # create dataframes
+    id_t = t_df_unstacked.index.values
+    id_cp = cp_df_unstacked.index.values
+
+    series_t = pd.Series(np.repeat(id_t, dist.shape[1]), name='treatment')
+    series_cp = pd.Series(id_cp[cp_id_idx.flatten()], name='id')
+    clusters = pd.DataFrame(dist.flatten(), index=[series_t, series_cp], columns=['distance'])
+    clusters = clusters.reset_index()
+    clusters["duplicated"] = clusters.duplicated(subset=["id"])
+    clusters["cluster"] = 1
+    clusters = clusters.set_index(['treatment', 'id'])
+
+    if not match_duplicate_meters:
+        clusters = clusters.reset_index().drop_duplicates(['id']).set_index(['treatment', 'id'])
+
+        if replace_duplicate_meters:
+            raise NotImplementedError("'replace_duplicate_meters': True not implemented")       
+
+    return clusters
+
+
+if __name__ == "__main__":
+    d = DistanceMatching()
+    print(d.settings)
