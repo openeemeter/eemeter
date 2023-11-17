@@ -106,9 +106,7 @@ class _TransformInput:
     def from_multi_index_dataframe(
         cls, df: pd.DataFrame, is_for_fpca: bool, drop_nonfinite: bool
     ):
-        """
-        
-        """
+        """ """
         if drop_nonfinite:
             df = _drop_nonfinite_from_df(df=df)
 
@@ -302,7 +300,6 @@ def _get_fpca_from_concatenate_normalized_ls(
     )
 
 
-
 @attrs.define
 class InitialPoolLoadshapeTransform:
 
@@ -325,7 +322,7 @@ class InitialPoolLoadshapeTransform:
 
     err_msg: str | None
     """error message that if present, means something went wrong and the transform should be discarded"""
-    
+
     @classmethod
     def from_concat_df_and_min_var_ratio(
         cls,
@@ -346,7 +343,7 @@ class InitialPoolLoadshapeTransform:
             concatenated_loadshapes=concat_loadshape_df,
             err_msg=err_msg,
         )
-    
+
     @classmethod
     def from_full_cp_ls_df(cls, df: pd.DataFrame, min_var_ratio: float):
         """
@@ -372,4 +369,3 @@ class InitialPoolLoadshapeTransform:
             concatenated_loadshapes=df,
             err_msg=err_msg,
         )
-

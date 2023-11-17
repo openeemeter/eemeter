@@ -30,7 +30,8 @@ from gridmeter.utils.calculate_distances import calculate_distances
 __all__ = ("DistanceMatching",)
 
 
-# TODO: switch distance matching to calculate_distances 
+# TODO: switch distance matching to calculate_distances
+
 
 class DistanceMatching:
     """
@@ -55,15 +56,15 @@ class DistanceMatching:
         elif isinstance(settings, Settings):
             self.settings = settings
         else:
-            raise Exception("invalid settings provided to 'individual_metering_matching'")
-
+            raise Exception(
+                "invalid settings provided to 'individual_metering_matching'"
+            )
 
     def _get_min_distance_from_matrix_df(self, dist_df):
         match_cols = dist_df.columns[(np.argmin(dist_df.values, axis=1))]
         dist = np.diag(dist_df[match_cols])
         return pd.DataFrame({"closest": match_cols, "dist": dist})
 
-    
     def _get_next_best_matches(self, treatment_distances_df, best_match):
         # The purpose of this for loop is to attempt to find the 'next best match'
         # for treatment meters matched to a comparison pool meter that has already
@@ -102,14 +103,14 @@ class DistanceMatching:
         # grab the indexes of the best matches
         next_best_match = tm.groupby("closest").apply(lambda x: x.loc[x.dist.idxmin()])
         # append the next best matches
-        best_match = best_match.append(next_best_match)
+        best_match = pd.concat([best_match, next_best_match])
 
         # Check if there are any unmatched treatment meters and stop if there are none
         if len(treatment_distances_df) == len(best_match):
             return best_match, False
+
         return best_match, True
 
-    
     def _get_best_match(self, treatment_distances_df, n_max_duplicate_check_rounds):
         """
         Parameters
@@ -144,10 +145,10 @@ class DistanceMatching:
         bm["duplicated"] = False
         tm = tm.rename({"closest": "match", "dist": "distance"}, axis=1)
         tm["duplicated"] = True
-        treatment_matches_df = bm.append(tm).sort_index()
+        treatment_matches_df = pd.concat([bm, tm]).sort_index()
+
         return treatment_matches_df
 
-    
     def get_comparison_group(
         self,
         treatment_group,
@@ -172,7 +173,7 @@ class DistanceMatching:
         # chunk the treatment group due to memory constraints
         n_treatments_per_chunk = settings.n_treatments_per_chunk
 
-        #if you're using weights make sure to normalize the data first
+        # if you're using weights make sure to normalize the data first
         if weights:
             treatment_group = treatment_group * weights
             comparison_pool = comparison_pool * weights
@@ -208,9 +209,7 @@ class DistanceMatching:
         comparison_group = comparison_group.reset_index().rename(
             {"index": "treatment"}, axis=1
         )
-        comparison_group.index = comparison_pool.iloc[
-            comparison_group["match"]
-        ].index
+        comparison_group.index = comparison_pool.iloc[comparison_group["match"]].index
         comparison_group["treatment"] = treatment_group.iloc[
             comparison_group["treatment"]
         ].index
@@ -218,21 +217,23 @@ class DistanceMatching:
         comparison_group.index.name = "id"
 
         if isinstance(settings.max_distance_threshold, (int, float)):
-            comparison_group = comparison_group[comparison_group["distance"] < settings.max_distance_threshold]
+            comparison_group = comparison_group[
+                comparison_group["distance"] < settings.max_distance_threshold
+            ]
 
         return comparison_group
 
 
 def TestDistanceMatching(
-    t_df, 
-    cp_df, 
-    n_matches_per_treatment, 
-    dist_metric = 'euclidean',
-    match_duplicate_meters = True,
-    replace_duplicate_meters = False, # currently unused
-    max_distance_threshold = None,
-    n_meters_per_chunk = 10000): 
-
+    t_df,
+    cp_df,
+    n_matches_per_treatment,
+    distance_metric="euclidean",
+    allow_duplicate_match=True,
+    replace_duplicate_method=None,  # currently unused [None, "closest_to_meter", "closest_global"]
+    max_distance_threshold=None,
+    n_meters_per_chunk=10000,
+):
     t_df_unstacked = t_df.unstack()
     cp_df_unstacked = cp_df.unstack()
 
@@ -241,28 +242,40 @@ def TestDistanceMatching(
 
     # Calculate closest distances
     n_matches = n_matches_per_treatment
-    if (not match_duplicate_meters and replace_duplicate_meters) or max_distance_threshold is not None:
+    if (
+        not allow_duplicate_match and replace_duplicate_method is not None
+    ) or max_distance_threshold is not None:
         n_matches *= 2
-        
-    cp_id_idx, dist = calculate_distances(ls_t, ls_cp, dist_metric, n_matches, n_meters_per_chunk)
+
+    cp_id_idx, dist = calculate_distances(
+        ls_t, ls_cp, distance_metric, n_matches, n_meters_per_chunk
+    )
 
     # create dataframes
     id_t = t_df_unstacked.index.values
     id_cp = cp_df_unstacked.index.values
 
-    series_t = pd.Series(np.repeat(id_t, dist.shape[1]), name='treatment')
-    series_cp = pd.Series(id_cp[cp_id_idx.flatten()], name='id')
-    clusters = pd.DataFrame(dist.flatten(), index=[series_t, series_cp], columns=['distance'])
+    series_t = pd.Series(np.repeat(id_t, dist.shape[1]), name="treatment")
+    series_cp = pd.Series(id_cp[cp_id_idx.flatten()], name="id")
+    clusters = pd.DataFrame(
+        dist.flatten(), index=[series_t, series_cp], columns=["distance"]
+    )
     clusters = clusters.reset_index()
     clusters["duplicated"] = clusters.duplicated(subset=["id"])
     clusters["cluster"] = 1
-    clusters = clusters.set_index(['treatment', 'id'])
+    clusters = clusters.set_index(["treatment", "id"])
 
-    if not match_duplicate_meters:
-        clusters = clusters.reset_index().drop_duplicates(['id']).set_index(['treatment', 'id'])
+    if not allow_duplicate_match:
+        clusters = (
+            clusters.reset_index()
+            .drop_duplicates(["id"])
+            .set_index(["treatment", "id"])
+        )
 
-        if replace_duplicate_meters:
-            raise NotImplementedError("'replace_duplicate_meters': True not implemented")       
+        if replace_duplicate_method is not None:
+            raise NotImplementedError(
+                "'replace_duplicate_meters': True not implemented"
+            )
 
     return clusters
 

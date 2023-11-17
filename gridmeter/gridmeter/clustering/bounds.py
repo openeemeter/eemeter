@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
+
 def _get_num_cluster_max_from_n_data(
     n_data: int, min_cluster_size: int, num_cluster_bound_upper: int
 ):

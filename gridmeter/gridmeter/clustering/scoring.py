@@ -13,6 +13,7 @@ import numpy as np
 
 from gridmeter.clustering import const as _const
 
+
 def get_max_score_from_system_size() -> float:
     """
     recreates the call to sys.float_info.max in order to
@@ -24,6 +25,7 @@ def get_max_score_from_system_size() -> float:
     """
 
     return sys.float_info.max**0.5
+
 
 def renumber_clusters(clusters: np.ndarray, reorder: bool):
     """Takes in cluster identifiers and renumbers them.
@@ -55,6 +57,7 @@ def renumber_clusters(clusters: np.ndarray, reorder: bool):
     clusters = np.array([conv[idx] for idx in clusters])
 
     return clusters
+
 
 def merge_small_clusters(clusters: np.ndarray, min_cluster_size: int):
     """

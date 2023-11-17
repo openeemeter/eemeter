@@ -25,9 +25,9 @@ def fit_to_clusters(t_ls, cp_ls, x0, agg_type: str):
         def obj_fcn(x):
             resid = (t_ls - (cp_ls * x[:, None]).sum(axis=0)).flatten()
 
-            weight, _, _ = adaptive_weights(x=resid, 
-                                            sigma=sigma,#type: ignore
-                                              agg_type=agg_type)
+            weight, _, _ = adaptive_weights(
+                x=resid, sigma=sigma, agg_type=agg_type  # type: ignore
+            )
 
             wSSE = np.sum(weight * resid**2)
 
@@ -71,7 +71,6 @@ def fit_to_clusters(t_ls, cp_ls, x0, agg_type: str):
 def t_meter_match(
     df_ls_t: pd.DataFrame, df_ls_clusters: pd.Series, agg_type: str, dist_metric: str
 ):
-
     if dist_metric == "manhattan":
         dist_metric = "cityblock"
 
