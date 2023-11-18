@@ -16,7 +16,7 @@ class DistanceMetric(str, Enum):
     MANHATTAN = "manhattan"
     COSINE = "cosine"
 
-class AggType(str, Enum):
 
+class AggType(str, Enum):
     MEAN = "mean"
     MEDIAN = "median"

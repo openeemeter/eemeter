@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pydantic
 
-import gridmeter.clustering.const as _const
+import gridmeter._clustering.const as _const
 
 
 class Settings(pydantic.BaseModel):

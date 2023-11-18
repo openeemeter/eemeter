@@ -6,8 +6,8 @@ from __future__ import annotations
 from enum import Enum
 
 # used in clustering settings
-from gridmeter.utils.const import DistanceMetric
-from gridmeter.utils.const import AggType
+from gridmeter._utils.const import DistanceMetric
+from gridmeter._utils.const import AggType
 
 
 class ScoreChoice(str, Enum):

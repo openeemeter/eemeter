@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pydantic
 
-import gridmeter.utils.const as _const
+import gridmeter._utils.const as _const
 
 from typing import Optional
 

@@ -6,8 +6,8 @@ from scipy.optimize import minimize_scalar
 from scipy.interpolate import BSpline
 import numba
 
-from gridmeter.utils.adaptive_loss_tck import tck
-from gridmeter.utils.misc import OoM_numba
+from gridmeter._utils.adaptive_loss_tck import tck
+from gridmeter._utils.misc import OoM_numba
 
 
 numba_cache = True
@@ -379,11 +379,11 @@ def adaptive_loss_fcn(x, mu=0, c=1, alpha="adaptive", replace_nonfinite=True):
 
 # Assumes that x has not been standardized
 def adaptive_weights(
-    x, 
-    alpha="adaptive", 
-    sigma=3, 
-    quantile=0.25, 
-    min_weight=0.00, 
+    x,
+    alpha="adaptive",
+    sigma=3,
+    quantile=0.25,
+    min_weight=0.00,
     replace_nonfinite=True,
     agg_type="mean",
 ):

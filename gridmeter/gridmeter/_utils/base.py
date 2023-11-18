@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2020 GRIDmeter™ contributors
+   Copyright 2014-2023 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -18,23 +18,8 @@
 
 """
 
-from gridmeter.__version__ import *
 
-from gridmeter._clustering import Clustering
-from gridmeter._clustering import Clustering_Settings
-
-from gridmeter._individual_meter_matching import IMM
-from gridmeter._individual_meter_matching import IMM_Settings
-
-from gridmeter._stratified_sampling import (
-    StratifiedSampling,
-    ModelSamplingException,
-    StratifiedSamplingDiagnostics,
-    StratifiedSamplingBinSelector,
-)
-
-from gridmeter._utils import (
-    DummyMeter,
-    DummyPopulation,
-    DummyTreatmentPoolPopulation,
-)
+class Comparison_Group_Algorithm:
+    settings = None
+    clusters = None
+    treatment_weights = None

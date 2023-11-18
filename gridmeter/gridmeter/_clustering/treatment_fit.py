@@ -11,7 +11,7 @@ import scipy.spatial.distance
 import numpy as np
 import pandas as pd
 
-from gridmeter.utils.adaptive_loss import adaptive_weights
+from gridmeter._utils.adaptive_loss import adaptive_weights
 
 
 def fit_to_clusters(t_ls, cp_ls, x0, agg_type: str):
@@ -91,7 +91,7 @@ def t_meter_match(
     )
 
     t_ids = df_ls_t.index.get_level_values("id").unique()
-    columns = [f"pct_cluster_{int(n+1)}" for n in np.arange(coeffs.shape[0])]
+    columns = [f"pct_cluster_{int(n)}" for n in np.arange(coeffs.shape[0])]
     df_t_coeffs = pd.DataFrame(coeffs[:, None].T, index=t_ids, columns=columns)
 
     return df_t_coeffs

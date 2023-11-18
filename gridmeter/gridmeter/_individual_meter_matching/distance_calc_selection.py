@@ -23,8 +23,8 @@ import pandas as pd
 import scipy.spatial
 import scipy
 
-from gridmeter.individual_meter_matching.settings import Settings
-from gridmeter.utils.calculate_distances import calculate_distances
+from gridmeter._individual_meter_matching.settings import Settings
+from gridmeter._utils.calculate_distances import calculate_distances
 
 
 __all__ = ("DistanceMatching",)

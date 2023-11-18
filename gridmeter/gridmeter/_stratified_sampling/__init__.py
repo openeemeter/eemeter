@@ -18,23 +18,7 @@
 
 """
 
-from gridmeter.__version__ import *
-
-from gridmeter._clustering import Clustering
-from gridmeter._clustering import Clustering_Settings
-
-from gridmeter._individual_meter_matching import IMM
-from gridmeter._individual_meter_matching import IMM_Settings
-
-from gridmeter._stratified_sampling import (
-    StratifiedSampling,
-    ModelSamplingException,
-    StratifiedSamplingDiagnostics,
-    StratifiedSamplingBinSelector,
-)
-
-from gridmeter._utils import (
-    DummyMeter,
-    DummyPopulation,
-    DummyTreatmentPoolPopulation,
-)
+from gridmeter._stratified_sampling.model import StratifiedSampling
+from gridmeter._stratified_sampling.bins import ModelSamplingException
+from gridmeter._stratified_sampling.diagnostics import StratifiedSamplingDiagnostics
+from gridmeter._stratified_sampling.bin_selection import StratifiedSamplingBinSelector

@@ -17,3 +17,9 @@
    limitations under the License.
 
 """
+
+from gridmeter._utils.dummy_data import (
+    DummyMeter,
+    DummyPopulation,
+    DummyTreatmentPoolPopulation,
+)

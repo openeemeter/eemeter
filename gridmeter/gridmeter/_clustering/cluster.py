@@ -11,14 +11,14 @@ import attrs
 import numpy as np
 import pandas as pd
 
-from gridmeter.clustering import (
+from gridmeter._clustering import (
     transform as _transform,
     treatment_fit as _fit,
     bisect_k_means,
     settings as _settings,
     scoring as _scoring,
     bounds as _bounds,
-    data as _data
+    data as _data,
 )
 
 from typing import Iterable
@@ -252,13 +252,11 @@ def get_cluster_result_generator_from_upper_bound_n_cluster(
         )
 
     for label_result in label_results:
-        cluster_result = (
-            ClusterResultIntermediate.from_label_result_and_pool_loadshape_transform_result(
-                label_result=label_result,
-                pool_loadshape_transform_result=pool_loadshape_transform_result,
-                cluster_key=cluster_key,
-                seed=seed,
-            )
+        cluster_result = ClusterResultIntermediate.from_label_result_and_pool_loadshape_transform_result(
+            label_result=label_result,
+            pool_loadshape_transform_result=pool_loadshape_transform_result,
+            cluster_key=cluster_key,
+            seed=seed,
         )
         yield cluster_result
 
@@ -448,7 +446,9 @@ def _get_cluster_ls(df_cp_ls: pd.DataFrame, cluster_df: pd.DataFrame, agg_type: 
     """
 
     df_cp_ls = _transform.unstack_and_ensure_df(df_cp_ls)
-    df_cp_ls.columns = df_cp_ls.columns.droplevel(0) # must do this so that join below does not raise exception due to difference in levels
+    df_cp_ls.columns = df_cp_ls.columns.droplevel(
+        0
+    )  # must do this so that join below does not raise exception due to difference in levels
 
     cluster_df = cluster_df.reset_index().set_index("id")
     # There has got to be a better way to do this
@@ -464,7 +464,7 @@ def _get_cluster_ls(df_cp_ls: pd.DataFrame, cluster_df: pd.DataFrame, agg_type: 
     )
 
     # calculate cp_df
-    df_cluster_ls = cluster_df.groupby(["cluster", "hour"]).agg(ls=("value", agg_type)) # type: ignore
+    df_cluster_ls = cluster_df.groupby(["cluster", "hour"]).agg(ls=("value", agg_type))  # type: ignore
     cluster_ls = df_cluster_ls[
         df_cluster_ls.index.get_level_values(0) > 0
     ]  # don't match to outlier cluster
@@ -506,6 +506,7 @@ def _transform_cluster_loadshape(df_ls_cluster: pd.DataFrame) -> pd.DataFrame:
     )
     return df_ls_cluster_transformed[["ls"]]
 
+
 def _transform_treatment_loadshape(df: pd.DataFrame):
     """
     transforms a dataframe meant to be treatment loadshapes
@@ -526,6 +527,7 @@ def _transform_treatment_loadshape(df: pd.DataFrame):
 
     return pd.concat(df_list).stack().to_frame(name="ls")  # type: ignore
 
+
 def _match_treatment_to_cluster(
     df_ls_t: pd.DataFrame, df_ls_cluster: pd.Series, agg_type: str, dist_metric: str
 ):
@@ -545,6 +547,7 @@ def _match_treatment_to_cluster(
     df_t_coeffs = pd.concat(df_list)
 
     return df_t_coeffs
+
 
 @attrs.define
 class ClusterResult:
@@ -570,9 +573,8 @@ class ClusterResult:
 
     iter_scores: tuple[ClusterScoreElement, ...]
 
-    agg_type:str
+    agg_type: str
     dist_metric: str
-
 
     @classmethod
     def from_cluster_result_and_agg_type(
@@ -580,7 +582,7 @@ class ClusterResult:
         cluster_result: ClusterResultIntermediate,
         score_elements: list[ClusterScoreElement],
         agg_type: str,
-        dist_metric:str
+        dist_metric: str,
     ):
         """
         classmethod to create the final cluster result which can be used
@@ -600,8 +602,7 @@ class ClusterResult:
                 seed=cluster_result.seed,
                 iter_scores=tuple(score_elements),
                 agg_type=agg_type,
-                dist_metric=dist_metric
-
+                dist_metric=dist_metric,
             )
 
         cluster_loadshape_df = _get_cluster_ls(
@@ -625,12 +626,13 @@ class ClusterResult:
             seed=cluster_result.seed,
             iter_scores=tuple(score_elements),
             dist_metric=dist_metric,
-            agg_type=agg_type
+            agg_type=agg_type,
         )
 
-
     @classmethod
-    def from_comparison_pool_loadshapes_and_settings(cls, df_cp_ls:pd.DataFrame, s: _settings.Settings):
+    def from_comparison_pool_loadshapes_and_settings(
+        cls, df_cp_ls: pd.DataFrame, s: _settings.Settings
+    ):
         """
         classmethod for creating a ClusterMatcher instance by providing the comparison pool loadshapes to use and a settings instance.
 
@@ -638,8 +640,10 @@ class ClusterResult:
         of the class that is capable of assigning weights to treatment loadshapes.
         """
         df_cp_ls = _data.set_df_index(df=df_cp_ls)
-        ls_transform = _transform.InitialPoolLoadshapeTransform.from_full_cp_ls_df(df=df_cp_ls, min_var_ratio=s.fpca_min_variance_ratio)
-        
+        ls_transform = _transform.InitialPoolLoadshapeTransform.from_full_cp_ls_df(
+            df=df_cp_ls, min_var_ratio=s.fpca_min_variance_ratio
+        )
+
         best_scored_cluster, score_elements = get_best_scored_cluster_result(
             pool_loadshape_transform_result=ls_transform,
             cluster_key="",
@@ -650,11 +654,14 @@ class ClusterResult:
             num_cluster_bound_lower=s.num_cluster_bound_lower,
             num_cluster_bound_upper=s.num_cluster_bound_upper,
             score_choice=s.score_choice,
-            seed=s.seed
+            seed=s.seed,
         )
 
         return ClusterResult.from_cluster_result_and_agg_type(
-            cluster_result=best_scored_cluster, score_elements=score_elements, agg_type=s.agg_type, dist_metric=s.dist_metric
+            cluster_result=best_scored_cluster,
+            score_elements=score_elements,
+            agg_type=s.agg_type,
+            dist_metric=s.dist_metric,
         )
 
     @property
@@ -665,7 +672,8 @@ class ClusterResult:
         return self.cluster_loadshape_transformed_df["ls"]
 
     def get_match_treatment_to_cluster_df(
-        self, treatment_loadshape_df: pd.DataFrame,
+        self,
+        treatment_loadshape_df: pd.DataFrame,
     ):
         """
         performs the matching logic to a provided treatment_loadshape dataframe
