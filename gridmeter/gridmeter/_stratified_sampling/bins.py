@@ -24,7 +24,8 @@ import itertools
 from operator import and_
 from functools import reduce
 
-__all__ = ('BinnedData','Binning', 'Bin', 'MultiBin')
+__all__ = ("BinnedData", "Binning", "Bin", "MultiBin")
+
 
 class ModelSamplingException(Exception):
     pass
@@ -74,7 +75,7 @@ class BinnedData:
         df = (
             df._bin.value_counts()
             .reset_index()
-            .rename(columns={"index": "bin", "_bin": "n"})
+            .rename(columns={"_bin": "bin", "count": "n"})
         )
         df["n_pct"] = df["n"] / df["n"].sum()
         return df
@@ -83,7 +84,7 @@ class BinnedData:
         df_bins = (
             self.df._bin.value_counts()
             .reset_index()
-            .rename(columns={"_bin": "n", "index": "bin"})
+            .rename(columns={"_bin": "bin", "count": "n"})
         )
         df_bins["outlier"] = df_bins["n"] < self.min_n_treatment_per_bin
         return df_bins
@@ -97,7 +98,7 @@ class BinnedData:
 
 
 class Binning(object):
-    """ Contains list of multidimensional bins """
+    """Contains list of multidimensional bins"""
 
     def __init__(self):
         self.bins = {}  # 1-dimensional bins for each column
@@ -149,7 +150,7 @@ class Binning(object):
 
 
 class Bin:
-    """ Single-dimensional bin"""
+    """Single-dimensional bin"""
 
     def __init__(self, column, min, max, index):
         self.column = column
@@ -170,7 +171,7 @@ class Bin:
 
 
 class MultiBin:
-    """ Multi-dimensional bin -- intersection of n Bins"""
+    """Multi-dimensional bin -- intersection of n Bins"""
 
     def __init__(self, bins):
         self.bins = bins
@@ -179,7 +180,7 @@ class MultiBin:
         )
 
     def filter_expr(self):
-        """Make  a function that filters a dataframe to keep only values witihn 
+        """Make  a function that filters a dataframe to keep only values witihn
         each dimension of this bin."""
         return lambda df: reduce(and_, [(b.filter_expr()(df)) for b in self.bins])
 
@@ -187,7 +188,7 @@ class MultiBin:
         return len(df[self.filter_expr()(df)])
 
     def sample(self, df, n_target, min_n_treatment_per_bin, random_seed=1):
-        """Sample n_target elements from dataframe df that fall 
+        """Sample n_target elements from dataframe df that fall
         within each dimension of this bin."""
 
         d1 = df[self.filter_expr()(df)]
@@ -254,7 +255,10 @@ def sample_bins(
 
 
 def get_counts_and_update_n_samples_approx(
-    binned_data_treatment, binned_data_pool, n_samples_approx, relax_n_samples_approx_constraint
+    binned_data_treatment,
+    binned_data_pool,
+    n_samples_approx,
+    relax_n_samples_approx_constraint,
 ):
     counts = binned_data_treatment.count_bins(skip_outliers=True)
 
@@ -289,6 +293,6 @@ def get_counts_and_update_n_samples_approx(
         n_samples_approx = max_possible_n_samples_approx
         counts["n_target"] = np.floor(counts["n_pct"] * n_samples_approx).astype(int)
     # else:
-        # Scenario 4: It will fail during sampling because it can not meet 
-        # n_samples_approx and we did not relax that constraint.
+    # Scenario 4: It will fail during sampling because it can not meet
+    # n_samples_approx and we did not relax that constraint.
     return n_samples_approx, relax_ratio_constraint, counts

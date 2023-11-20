@@ -176,7 +176,7 @@ class DummyMeter:
 
     def features_monthly(self):
         df = self.monthly()
-        df = df.pivot("meter_id", "month", "value")
+        df = pd.pivot_table(df, values="value", index="meter_id", columns="month")
         return df
 
     def features_seasonal_168(self):

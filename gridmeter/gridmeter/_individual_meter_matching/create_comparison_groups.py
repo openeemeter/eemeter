@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from gridmeter._utils.base import Comparison_Group_Algorithm
+from gridmeter._utils.base_comparison_group import Comparison_Group_Algorithm
 
 from gridmeter._individual_meter_matching.settings import Settings
 from gridmeter._individual_meter_matching.distance_calc_selection import (

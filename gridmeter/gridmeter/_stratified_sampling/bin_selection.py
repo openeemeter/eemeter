@@ -165,7 +165,6 @@ class StratifiedSamplingBinSelector(object):
         )
         disqualified_n_bin_options = []
         for n_bin_option in self.n_bin_options_df.to_dict("records"):
-
             [
                 self.model.set_n_bins(name, n_bins)
                 for name, n_bins in n_bin_option.items()
@@ -299,8 +298,11 @@ class StratifiedSamplingBinSelector(object):
         self.n_samples_approx = n_samples_approx
 
         # get averages that can be accessed later
-        self.equiv_treatment_avg = self.equiv_treatment.groupby("feature_index").mean()
-        self.equiv_treatment_avg.columns = ["treatment"]
+        self.equiv_treatment_avg = self.equiv_treatment.groupby("feature_index")[
+            "value"
+        ].mean()
+        self.equiv_treatment_avg = self.equiv_treatment_avg.rename("treatment")
+
         self.equiv_pool_avg = (
             pd.DataFrame(equivalence_feature_matrix)
             .mean()
@@ -311,7 +313,7 @@ class StratifiedSamplingBinSelector(object):
 
         self.equiv_samples_avg = (
             pd.concat(self.equiv_samples)
-            .groupby(["bin_str", "feature_index"])
+            .groupby(["bin_str", "feature_index"])["value"]
             .mean()
             .reset_index()
             .pivot(index="feature_index", columns="bin_str", values="value")
@@ -374,7 +376,6 @@ class StratifiedSamplingBinSelector(object):
         }
 
     def plot_records_based_equiv_average(self, plot=True):
-
         equiv_df = pd.concat(
             [self.equiv_treatment_avg, self.equiv_pool_avg, self.equiv_samples_avg],
             axis=1,
