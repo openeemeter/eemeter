@@ -26,7 +26,6 @@ from eemeter.caltrack.daily.utilities.adaptive_loss_tck import tck
 from eemeter.caltrack.daily.utilities.utils import OoM_numba
 
 
-
 numba_cache = True
 loss_alpha_min = -100.0
 
@@ -213,8 +212,8 @@ def rolling_IQR_outlier(x, y, sigma_threshold=3, quantile=0.25, window=0.05, ste
 @numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
 def get_C(resid, mu, sigma, quantile=0.25):
     """
-    This function calculates the maximum absolute value of the Interquartile Range (IQR) of the residuals 
-    from a given mean (mu) and standard deviation (sigma). If the maximum absolute value is zero, 
+    This function calculates the maximum absolute value of the Interquartile Range (IQR) of the residuals
+    from a given mean (mu) and standard deviation (sigma). If the maximum absolute value is zero,
     it is replaced with the order of magnitude of the maximum value of the IQR.
 
     Parameters:
@@ -262,9 +261,7 @@ def rolling_C(T, resid, mu, sigma=3, quantile=0.25, window=0.2, step=1.0):
 
 
 @numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
-def generalized_loss_fcn(
-    x, a=2, a_min=loss_alpha_min
-):  
+def generalized_loss_fcn(x, a=2, a_min=loss_alpha_min):
     """
     This function calculates the generalized loss function based on the given parameters.
 
@@ -370,13 +367,15 @@ def generalized_loss_weights(x: np.ndarray, a: float = 2, min_weight: float = 0.
     return w * (1 - min_weight) + min_weight
 
 
-# approximate partition function for C=1, tau(alpha < 0)=1E5, tau(alpha >= 0)=inf 
+# approximate partition function for C=1, tau(alpha < 0)=1E5, tau(alpha >= 0)=inf
 # error < 4E-7
 ln_Z_fit = BSpline.construct_fast(*tck)
 ln_Z_inf = 11.206072645530174
-def ln_Z(alpha, alpha_min=-1E6):
+
+
+def ln_Z(alpha, alpha_min=-1e6):
     """
-    Function to fit a spline onto the data points. Since some points may have higher changes in their local neighborhood, 
+    Function to fit a spline onto the data points. Since some points may have higher changes in their local neighborhood,
     we need to fit more points in that region via the spline. The spline is fit on the data points for alpha >= alpha_min.
 
     Parameters:
@@ -384,13 +383,13 @@ def ln_Z(alpha, alpha_min=-1E6):
     alpha_min (float, optional): The minimum value of alpha. Defaults to -1E6.
 
     Returns:
-    float: The spline fit on Z for the given alpha. If alpha is less than or equal to alpha_min, 
+    float: The spline fit on Z for the given alpha. If alpha is less than or equal to alpha_min,
     the function returns the value at infinity, i.e. 11.2.
     """
 
     if alpha <= alpha_min:
         return ln_Z_inf
-    
+
     return ln_Z_fit(alpha)
 
 
@@ -398,7 +397,7 @@ def ln_Z(alpha, alpha_min=-1E6):
 # default to L2 loss
 def penalized_loss_fcn(x, a=2, use_penalty=True):
     """
-    This function calculates the penalized loss for a given input. There is a penalty for more coefficients 
+    This function calculates the penalized loss for a given input. There is a penalty for more coefficients
     being added into the funciton being fit.
 
     Parameters:
@@ -416,7 +415,9 @@ def penalized_loss_fcn(x, a=2, use_penalty=True):
     loss = generalized_loss_fcn(x, a)
 
     if use_penalty:
-        penalty = ln_Z(a, loss_alpha_min)      # approximate partition function for C=1, tau=10
+        penalty = ln_Z(
+            a, loss_alpha_min
+        )  # approximate partition function for C=1, tau=10
         loss += penalty
 
         if not np.isfinite(loss).all():
@@ -428,7 +429,7 @@ def penalized_loss_fcn(x, a=2, use_penalty=True):
     return loss
 
 
-@numba.jit(nopython=True, error_model='numpy', cache=numba_cache) 
+@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
 def alpha_scaled(s, a_max=2):
     """
     This function calculates the alpha value based on the input s and a_max (max alpha allowed).
@@ -456,24 +457,24 @@ def alpha_scaled(s, a_max=2):
         if s > 1:
             s = 1
 
-        s_max = (1 - 2/(1 + 10**a))
-        s = (1 - 2/(1 + 10**(a*s**b)))/s_max
+        s_max = 1 - 2 / (1 + 10**a)
+        s = (1 - 2 / (1 + 10 ** (a * s**b))) / s_max
 
-        alpha = loss_alpha_min + (2 - loss_alpha_min)*s
-    
+        alpha = loss_alpha_min + (2 - loss_alpha_min) * s
+
     else:
         x0 = 1
-        k = 1.5 # 1 or 1.5, testing required
+        k = 1.5  # 1 or 1.5, testing required
 
         if s >= 1:
             return 100
         elif s <= 0:
             return -100
 
-        A = (np.exp((100 - x0)/k) + 1)/(1 - np.exp(200/k))
-        K = (1 - A)*np.exp((x0 - 100)/k) + 1
+        A = (np.exp((100 - x0) / k) + 1) / (1 - np.exp(200 / k))
+        K = (1 - A) * np.exp((x0 - 100) / k) + 1
 
-        alpha = x0 - k*np.log((K - A)/(s - A) - 1)
+        alpha = x0 - k * np.log((K - A) / (s - A) - 1)
 
     return alpha
 
@@ -507,8 +508,8 @@ def adaptive_loss_fcn(x, mu=0, c=1, alpha="adaptive", replace_nonfinite=True):
         res = minimize_scalar(
             lambda s: loss_alpha_fcn(alpha_scaled(s)),
             bounds=[-1e-5, 1 + 1e-5],
-            method="bounded",
-            options={"xtol": 1e-5},
+            method="Bounded",
+            options={"xatol": 1e-5},
         )
         loss_alpha = alpha_scaled(res.x)
         # res = minimize(lambda s: loss_alpha_fcn(alpha_scaled(s[0])), x0=[0.7], bounds=[[0, 1]], method="L-BFGS-B")
