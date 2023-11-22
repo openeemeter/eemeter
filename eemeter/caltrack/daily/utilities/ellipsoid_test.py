@@ -135,6 +135,9 @@ def robust_confidence_ellipse(x, y, var=np.ones([2, 2]) * 1.96, outlier_std=3, N
 
     # remove outliers in N iterations
     for n in range(N):
+        if len(x) <= 1 or np.all(x == x[0]) or np.all(y == y[0]):
+            break
+
         mu, cov, a, b, phi = confidence_ellipse(x, y, var_outlier)
 
         # Center points
@@ -157,7 +160,7 @@ def robust_confidence_ellipse(x, y, var=np.ones([2, 2]) * 1.96, outlier_std=3, N
         x = x[idx]
         y = y[idx]
 
-    if len(x) < 3:
+    if (len(x) < 3) or np.all(x == x[0]) or np.all(y == y[0]):
         mu = cov = a = b = phi = None
         return [mu, cov, a, b, phi]
 

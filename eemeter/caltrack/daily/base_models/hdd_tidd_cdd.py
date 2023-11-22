@@ -53,7 +53,7 @@ def fit_hdd_tidd_cdd(
     bnds=None,
     initial_fit=False,
 ):
-    #assert x0 is None or x0.model_type is ModelType.HDD_TIDD_CDD_SMOOTH
+    # assert x0 is None or x0.model_type is ModelType.HDD_TIDD_CDD_SMOOTH
 
     if initial_fit:
         alpha = settings.alpha_selection
@@ -64,9 +64,7 @@ def fit_hdd_tidd_cdd(
         x0 = _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings, smooth)
 
     max_slope = np.max([x0.hdd_beta, x0.cdd_beta])
-    max_slope += 10 ** (
-        np.log10(np.abs(max_slope)) + np.log10(settings.maximum_slope_OoM_scaler)
-    )
+    max_slope += 10 ** (np.log10(np.abs(max_slope)) + np.log10(settings.maximum_slope_OoM_scaler))
 
     if initial_fit:
         T_min = np.min(T)
@@ -82,30 +80,14 @@ def fit_hdd_tidd_cdd(
     intercept_bnds = np.quantile(obs, [0.01, 0.99])
     if smooth:
         c_hdd_k_bnds = [0, 1]
-        bnds_0 = [
-            c_hdd_bnds,
-            c_hdd_beta_bnds,
-            c_hdd_k_bnds,
-            c_hdd_bnds,
-            c_hdd_beta_bnds,
-            c_hdd_k_bnds,
-            intercept_bnds,
-        ]
+        bnds_0 = [c_hdd_bnds, c_hdd_beta_bnds, c_hdd_k_bnds, c_hdd_bnds, c_hdd_beta_bnds, c_hdd_k_bnds, intercept_bnds]
     else:
         bnds_0 = [c_hdd_bnds, c_hdd_beta_bnds, c_hdd_bnds, c_hdd_beta_bnds, intercept_bnds]
 
     bnds = _hdd_tidd_cdd_smooth_update_bnds(bnds, bnds_0, smooth)
 
     if smooth:
-        coef_id = [
-            "hdd_bp",
-            "hdd_beta",
-            "hdd_k",
-            "cdd_bp",
-            "cdd_beta",
-            "cdd_k",
-            "intercept",
-        ]
+        coef_id = ["hdd_bp", "hdd_beta", "hdd_k", "cdd_bp", "cdd_beta", "cdd_k", "intercept"]
         model_fcn = evaluate_hdd_tidd_cdd_smooth
         weight_fcn = _hdd_tidd_cdd_smooth_weight
         TSS_fcn = None
@@ -114,13 +96,9 @@ def fit_hdd_tidd_cdd(
         model_fcn = _hdd_tidd_cdd
         weight_fcn = _hdd_tidd_cdd_weight
         TSS_fcn = _hdd_tidd_cdd_total_sum_of_squares
-    obj_fcn = obj_fcn_decorator(
-        model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, coef_id, initial_fit
-    )
+    obj_fcn = obj_fcn_decorator(model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, coef_id, initial_fit)
 
-    res = Optimizer(
-        obj_fcn, x0.to_np_array(), bnds, coef_id, settings, opt_options
-    ).run()
+    res = Optimizer(obj_fcn, x0.to_np_array(), bnds, coef_id, settings, opt_options).run()
 
     return res
 
@@ -137,9 +115,7 @@ def _hdd_tidd_cdd(
 ):
     hdd_k = cdd_k = 0
 
-    return full_model(
-        hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept, T_fit_bnds, T
-    )
+    return full_model(hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept, T_fit_bnds, T)
 
 
 @numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
@@ -162,9 +138,7 @@ def evaluate_hdd_tidd_cdd_smooth(
     if pct_k:
         [hdd_bp, hdd_k, cdd_bp, cdd_k] = get_smooth_coeffs(hdd_bp, hdd_k, cdd_bp, cdd_k)
 
-    return _hdd_tidd_cdd_smooth(
-        hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept, T_fit_bnds, T
-    )
+    return _hdd_tidd_cdd_smooth(hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept, T_fit_bnds, T)
 
 
 def _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings, smooth, min_weight=0.0):
@@ -185,9 +159,7 @@ def _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings, smooth, min_weight=0.0):
 
             T_range = T_fit_bnds[1] - T_fit_bnds[0]
 
-            X_lasso = np.array(
-                [np.min(np.abs(X[idx] - T_fit_bnds)) for idx in range(len(X))]
-            )
+            X_lasso = np.array([np.min(np.abs(X[idx] - T_fit_bnds)) for idx in range(len(X))])
             X_lasso += (X[1] - X[0]) / 2
             X_lasso *= wRMSE / T_range
 
@@ -197,7 +169,10 @@ def _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings, smooth, min_weight=0.0):
             if len(x) == 1:
                 hdd_bp = cdd_bp = x[0]
             else:
-                [hdd_bp, cdd_bp] = np.sort(x)
+                if x[0] < x[1]:
+                    [hdd_bp, cdd_bp] = x
+                else:
+                    [cdd_bp, hdd_bp] = x
 
             hdd_beta, cdd_beta, intercept = estimate_betas_and_intercept(
                 T, obs, hdd_bp, cdd_bp, min_T_idx, alpha
@@ -245,17 +220,24 @@ def _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings, smooth, min_weight=0.0):
     algorithm = nlopt_algorithms[settings.initial_guess_algorithm_choice]
     obj_fcn = bp_obj_fcn_dec(T, obs, min_T_idx)
 
-    T_bnds = np.sort([T[min_T_idx - 1], T[-min_T_idx]])
-    T_range = np.diff(T_bnds)[0]
+    T_bnds = [T[min_T_idx - 1], T[-min_T_idx]]
+    if T_bnds[0] == T_bnds[1]:
+        T_bnds = [np.min(T), np.max(T)] # should be able to do [0] and [-1] but getting error where min > max
 
-    x0 = np.array([T_range * 0.10, T_range * 0.90]) + T_bnds[0]
+    if T_bnds[1] < T_bnds[0]:
+        T_bnds = [T_bnds[1], T_bnds[0]]
+
+    T_min = T_bnds[0]
+    T_max = T_bnds[1]
+    T_range = T_max - T_min
+
+    x0 = np.array([T_range * 0.10, T_range * 0.90]) + T_min
     bnds = np.array([T_bnds, T_bnds]).T
-    initial_step = np.array([T_range * 0.10, -T_range * 0.10])
 
     opt = nlopt.opt(algorithm, int(len(x0)))
     opt.set_min_objective(obj_fcn)
 
-    opt.set_initial_step(initial_step)
+    opt.set_initial_step([T_range * 0.10, -T_range * 0.10])
     opt.set_maxeval(200)
     opt.set_xtol_rel(1e-3)
     opt.set_xtol_abs(0.5)
@@ -273,6 +255,7 @@ def _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings, smooth, min_weight=0.0):
     else:
         model_type = ModelType.HDD_TIDD_CDD
         hdd_k = cdd_k = None
+
     return ModelCoefficients(
         model_type=model_type,
         hdd_bp=x0[0],
@@ -292,7 +275,11 @@ def estimate_betas_and_intercept(T, obs, hdd_bp, cdd_bp, min_T_idx, alpha):
 
     if len(idx_tidd) > 0:
         intercept = get_intercept(obs[idx_tidd], alpha)
-    elif (len(idx_cdd) >= min_T_idx) and (len(idx_hdd) >= min_T_idx) and ((idx_cdd[min_T_idx - 1] - idx_hdd[-min_T_idx]) > 0):
+    elif (
+        (len(idx_cdd) >= min_T_idx)
+        and (len(idx_hdd) >= min_T_idx)
+        and (idx_cdd[min_T_idx - 1] - idx_hdd[-min_T_idx]) > 0
+    ):
         intercept = get_intercept(
             obs[idx_hdd[-min_T_idx] : idx_cdd[min_T_idx - 1]], alpha
         )
