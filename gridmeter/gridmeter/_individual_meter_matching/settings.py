@@ -7,11 +7,12 @@ from __future__ import annotations
 import pydantic
 
 import gridmeter._utils.const as _const
+from gridmeter._utils.base_settings import BaseSettings
 
 from typing import Optional
 
 
-class Settings(pydantic.BaseModel):
+class Settings(BaseSettings):
     """distance metric to determine best comparison pool matches"""
     distance_metric: _const.DistanceMetric = pydantic.Field(
         default=_const.DistanceMetric.EUCLIDEAN, 

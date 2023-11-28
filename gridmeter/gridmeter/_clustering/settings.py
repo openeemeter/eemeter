@@ -7,9 +7,10 @@ from __future__ import annotations
 import pydantic
 
 import gridmeter._clustering.const as _const
+from gridmeter._utils.base_settings import BaseSettings
 
 
-class Settings(pydantic.BaseModel):
+class Settings(BaseSettings):
     """scoring choice to determine best cluster composition to use"""
     score_choice: _const.ScoreChoice = pydantic.Field(
         default=_const.ScoreChoice.VARIANCE_RATIO, 

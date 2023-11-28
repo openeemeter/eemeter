@@ -15,7 +15,7 @@ from gridmeter._clustering import settings as _settings, cluster as _cluster
 class Clustering(Comparison_Group_Algorithm):
     Cluster = None
 
-    def __init__(self, settings: _settings.Settings | None):
+    def __init__(self, settings: _settings.Settings | None = None):
         if settings is None:
             settings = _settings.Settings()
 
