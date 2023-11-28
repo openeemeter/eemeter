@@ -1,4 +1,4 @@
-from gridmeter._utils.data_settings import DataSettings
+from gridmeter._utils.loadshape_settings import DataSettings
 import pandas as pd
 
 # TODO: Should this class go in const.py, here, or data_settings.py?
