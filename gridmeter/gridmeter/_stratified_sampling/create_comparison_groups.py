@@ -22,6 +22,7 @@ class Stratified_Sampling(Comparison_Group_Algorithm):
         self.df_raw = None
 
         self.model = StratifiedSampling()
+        self.model_bin_selector = None
 
         for settings in self.settings.STRATIFICATION_COLUMN:
             self.model.add_column(
@@ -71,19 +72,47 @@ class Stratified_Sampling(Comparison_Group_Algorithm):
         return clusters, treatment_weights
 
 
-    def get_comparison_group(self, df_treatment, df_comparison_pool):
+    def get_comparison_group(self, treatment_data, comparison_pool_data):
         settings = self.settings
-        self.model.fit_and_sample(
-            df_treatment, 
-            df_comparison_pool,
-            n_samples_approx=settings.N_SAMPLES_APPROX,
-            relax_n_samples_approx_constraint=settings.RELAX_N_SAMPLES_APPROX_CONSTRAINT,
-            min_n_treatment_per_bin=settings.MIN_N_TREATMENT_PER_BIN,
-            min_n_sampled_to_n_treatment_ratio=settings.MIN_N_SAMPLED_TO_N_TREATMENT_RATIO,
-            random_seed=settings.SEED,
-        )
 
-        t_ids = df_treatment["meter_id"].unique()
+        t_features = treatment_data.features.reset_index().rename(columns={"id": "meter_id"})
+        cp_features = comparison_pool_data.features.reset_index().rename(columns={"id": "meter_id"})
+
+        if settings.EQUIVALENCE_METHOD is None:
+            self.model.fit_and_sample(
+                t_features, 
+                cp_features,
+                n_samples_approx=settings.N_SAMPLES_APPROX,
+                relax_n_samples_approx_constraint=settings.RELAX_N_SAMPLES_APPROX_CONSTRAINT,
+                min_n_treatment_per_bin=settings.MIN_N_TREATMENT_PER_BIN,
+                min_n_sampled_to_n_treatment_ratio=settings.MIN_N_SAMPLED_TO_N_TREATMENT_RATIO,
+                random_seed=settings.SEED,
+            )
+        else:
+            df_equiv = pd.concat([treatment_data.loadshape, comparison_pool_data.loadshape])
+            df_equiv.index.name = "meter_id"
+
+            self.model_bin_selector = StratifiedSamplingBinSelector(
+                self.model,
+                t_features, 
+                cp_features,
+                equivalence_feature_ids=df_equiv.index,
+                equivalence_feature_matrix=df_equiv,
+                df_id_col="meter_id",
+                equivalence_method=settings.EQUIVALENCE_METHOD,
+                equivalence_quantile_size=settings.EQUIVALENCE_QUANTILE,
+                
+                n_samples_approx=settings.N_SAMPLES_APPROX,
+                relax_n_samples_approx_constraint=settings.RELAX_N_SAMPLES_APPROX_CONSTRAINT,
+
+                min_n_bins=settings.MIN_N_BINS,
+                max_n_bins=settings.MAX_N_BINS,
+                min_n_treatment_per_bin=settings.MIN_N_TREATMENT_PER_BIN,
+                min_n_sampled_to_n_treatment_ratio=settings.MIN_N_SAMPLED_TO_N_TREATMENT_RATIO,
+                random_seed=settings.SEED,
+            )
+
+        t_ids = t_features["meter_id"].unique()
         clusters, treatment_weights = self._create_output_dfs(t_ids)
 
         return clusters, treatment_weights
@@ -94,47 +123,3 @@ class Stratified_Sampling(Comparison_Group_Algorithm):
             raise RuntimeError("Must run get_comparison_group() before calling diagnostics()")
         
         return StratifiedSamplingDiagnostics(model=self.model)
-    
-
-class Distance_Stratified_Sampling(Stratified_Sampling):
-    def __init__(self, settings: Settings | None = None):
-        if settings is None:
-            settings = Settings()
-
-        super().__init__(settings=settings)
-
-
-    def _split_df(self, df):
-        feature_cols = [col for col in df.columns if not isinstance(col, int)]
-        loadshape_cols = [col for col in df.columns if isinstance(col, int)]
-
-        return df[feature_cols], df[loadshape_cols]
-
-
-    def get_comparison_group(self, df_treatment, df_comparison_pool):
-        settings = self.settings
-
-        # split dfs into features and loadshapes
-        df_features_t, df_ls_t = self._split_df(df_treatment)
-        df_features_cp, df_ls_cp = self._split_df(df_comparison_pool)
-
-        # combine loadshapes into one df
-        df_ls = pd.concat([df_ls_t, df_ls_cp])
-
-        self.model_bin_selector = StratifiedSamplingBinSelector(
-            self.model,
-            df_features_t,
-            df_features_cp,
-            equivalence_feature_ids=df_ls.index,
-            equivalence_feature_matrix=df_ls,
-            equivalence_method="chisquare",
-            df_id_col = "meter_id",
-            min_n_bins=2,
-            max_n_bins=8,
-            random_seed=settings.SEED,
-        )
-
-        t_ids = df_treatment["meter_id"].unique()
-        clusters, treatment_weights = self._create_output_dfs(t_ids)
-
-        return clusters, treatment_weights

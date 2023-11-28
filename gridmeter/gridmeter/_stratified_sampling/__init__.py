@@ -18,7 +18,6 @@
 
 """
 
-from gridmeter._stratified_sampling.model import StratifiedSampling
-from gridmeter._stratified_sampling.bins import ModelSamplingException
-from gridmeter._stratified_sampling.diagnostics import StratifiedSamplingDiagnostics
-from gridmeter._stratified_sampling.bin_selection import StratifiedSamplingBinSelector
+from gridmeter._stratified_sampling.create_comparison_groups import Stratified_Sampling
+from gridmeter._stratified_sampling.settings import Settings  as SS_Settings
+from gridmeter._stratified_sampling.settings import stratified_sampling_settings, distance_stratified_sampling_settings

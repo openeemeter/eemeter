@@ -43,7 +43,9 @@ class DataConstants:
 class Data:
     def __init__(self, settings: Data_Settings | None  = None):
         if settings is None:
-            self.settings = Data_Settings()
+            settings = Data_Settings()
+
+        self.settings = settings
 
         self.excluded_ids = pd.DataFrame(columns=["id", "reason"])
 
@@ -105,7 +107,7 @@ class Data:
         missing_columns = [c for c in expected_columns if c not in df.columns]
 
         if missing_columns:
-            raise ValueError(f"Missing columns in time_series_df: {missing_columns}")
+            raise ValueError(f"Missing columns in loadshape_df: {missing_columns}")
 
         # Check if all values are present in the columns as required
         # Else update the values via interpolation if missing, also ignore duplicates if present
@@ -119,6 +121,7 @@ class Data:
         if self.settings.INTERPOLATE_MISSING:
             # Check that the number of missing values is less than the threshold
             for id, group in df.groupby("id"):
+                # TODO: if I input a loadshape, I don't want to have to tell it the time_period I used
                 if (
                     group.count().min()
                     < self.settings.MIN_DATA_PCT_REQUIRED
@@ -161,7 +164,7 @@ class Data:
     def _validate_format_features(self, df: pd.DataFrame) -> pd.DataFrame:
         # Check columns missing in features_df
         if "id" not in df.columns:
-            raise ValueError(f"Missing columns in time_series_df: 'id'")
+            raise ValueError(f"Missing columns in features_df: 'id'")
         
         # get a list of any rows with missing values
         excluded_ids = df[df.isnull().any(axis=1)]['id'].values
