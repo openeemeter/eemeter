@@ -1,7 +1,7 @@
-from data_settings import Settings
+from gridmeter._utils.data_settings import DataSettings
 import pandas as pd
 
-
+# TODO: Should this class go in const.py, here, or data_settings.py?
 class DataConstants:
     """
         Utility class defining the constants used by the Data class.
@@ -36,59 +36,14 @@ class DataConstants:
         "season_hourly_weekday_weekend": 3 * 24 * 2,
     }
 
-    season_order = {
-        "summer": 0,
-        "shoulder": 1,
-        "winter": 2,
-    }
-
-    weekday_weekend_order = {
-        "weekday": 0,
-        "weekend": 1,
-    }
-
     # This list ordering is important for the groupby columns
     unique_time_periods = ["season", "month", "day_of_week", "weekday_weekend", "hour"]
 
-    min_data_pct_required = (
-        0.8  # 80% of data required for a meter to be included in the analysis
-    )
-
 
 class Data:
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: DataSettings):
         if settings is None:
-            self.settings = Settings()
-
-        self.settings = {
-            "agg_type": "mean",
-            "loadshape_type": "observed",  # ["observed", "modeled", "error"]
-            "time_period": "season_hourly_day_of_week",  # ["hour", "day_of_week", "weekday_weekend", "month", "season_hourly_day_of_week", "season_weekday_weekend"]
-            "interpolate_missing": True,  # False should throw error if missing values
-            "seasons": {  # 0 = summer, 1 = shoulder, 2 = winter, conversion done later on
-                1: "winter",
-                2: "winter",
-                3: "shoulder",
-                4: "shoulder",
-                5: "shoulder",
-                6: "summer",
-                7: "summer",
-                8: "summer",
-                9: "summer",
-                10: "shoulder",
-                11: "winter",
-                12: "winter",
-            },
-            "weekday_weekend": {
-                0: "weekday",
-                1: "weekday",
-                2: "weekday",
-                3: "weekday",
-                4: "weekday",
-                5: "weekend",
-                6: "weekend",
-            },
-        }
+            self.settings = DataSettings()
 
     def _find_groupby_columns(self) -> list:
         """
@@ -105,39 +60,39 @@ class Data:
         cols = ["id"]
 
         for period in DataConstants.unique_time_periods:
-            if period in self.settings["time_period"]:
+            if period in self.settings.TIME_PERIOD:
                 cols.append(period)
 
         return cols
 
     def _add_index_columns_from_datetime(self, df: pd.DataFrame) -> pd.DataFrame:
         # Add hour column
-        if "hour" in self.settings["time_period"]:
+        if "hour" in self.settings.TIME_PERIOD:
             df["hour"] = df.index.hour
 
         # Add month column
-        if "month" in self.settings["time_period"]:
+        if "month" in self.settings.TIME_PERIOD:
             df["month"] = df.index.month
 
         # Add day_of_week column
-        if "day_of_week" in self.settings["time_period"]:
+        if "day_of_week" in self.settings.TIME_PERIOD:
             df["day_of_week"] = df.index.dayofweek
 
         # Add weekday_weekend column
-        if "weekday_weekend" in self.settings["time_period"]:
+        if "weekday_weekend" in self.settings.TIME_PERIOD:
             df["weekday_weekend"] = df.index.dayofweek
 
             # Setting the ordering to weekday, weekend
             df["weekday_weekend"] = (
                 df["weekday_weekend"]
-                .map(self.settings["weekday_weekend"])
-                .map(DataConstants.weekday_weekend_order)
+                .map(self.settings.WEEKDAY_WEEKEND._NUM_DICT)
+                .map(self.settings.WEEKDAY_WEEKEND._ORDER)
             )
 
         # Add season column
-        if "season" in self.settings["time_period"]:
-            df["season"] = df.index.month.map(self.settings["seasons"]).map(
-                DataConstants.season_order
+        if "season" in self.settings.TIME_PERIOD:
+            df["season"] = df.index.month.map(self.settings.SEASON._NUM_DICT).map(
+                self.settings.SEASON._ORDER
             )
 
         return df
@@ -149,20 +104,20 @@ class Data:
         # loadshape df has the "hour" column or similar, whereas timeseries df has the "datetime" column
         subset_columns = [
             "id",
-            self.settings["time_period"]
-            if self.settings["time_period"] in df.columns
+            self.settings.TIME_PERIOD
+            if self.settings.TIME_PERIOD in df.columns
             else "agg_loadshape",
         ]
 
         df = df.drop_duplicates(subset=subset_columns, keep="first")
 
-        if self.settings["interpolate_missing"]:
+        if self.settings.INTERPOLATE_MISSING:
             # Check that the number of missing values is less than the threshold
             for id, group in df.groupby("id"):
                 if (
                     group.count().min()
-                    < DataConstants.min_data_pct_required
-                    * DataConstants.time_period_row_counts[self.settings["time_period"]]
+                    < self.settings.MIN_DATA_PCT_REQUIRED
+                    * DataConstants.time_period_row_counts[self.settings.TIME_PERIOD]
                 ):
                     raise ValueError(
                         f"Missing minimum threshold number of values in dataframe for id: {id}"
@@ -198,11 +153,12 @@ class Data:
         """
 
         # Check columns missing in time_series_df
-        expected_columns = [
-            "id",
-            "datetime",
-            self.settings["loadshape_type"],
-        ]  # except error which requires both observed and modeled
+        expected_columns = ["id", "datetime"]
+        if self.settings.LOADSHAPE_TYPE == "error":
+            expected_columns.extend(["observed", "modeled"])
+        else:
+            expected_columns.append(self.settings.LOADSHAPE_TYPE)
+
         missing_columns = [
             c for c in expected_columns if c not in time_series_df.columns
         ]
@@ -211,16 +167,14 @@ class Data:
             raise ValueError(f"Missing columns in time_series_df: {missing_columns}")
 
         # Ensure the loadshape type only uses observed, modeled or error
-        df_type = self.settings["loadshape_type"]
-        if df_type not in ["observed", "modeled", "error"]:
-            raise ValueError(f"Invalid loadshape_type: {df_type}")
+        df_type = self.settings.LOADSHAPE_TYPE
 
         # Check that the datetime column is actually of type datetime
         if time_series_df["datetime"].dtypes != "datetime64[ns]":
             raise ValueError("The 'datetime' column must be of datetime type")
 
         if df_type == "error":
-            pass  # calculate error
+            pass  # TODO: calculate error
 
         # Create a base df for adding all required columns
         base_df = time_series_df.set_index("datetime")
@@ -230,9 +184,9 @@ class Data:
 
         group_by_columns = self._find_groupby_columns()
 
-        grouped_df = base_df.groupby(group_by_columns)[self.settings["loadshape_type"]]
+        grouped_df = base_df.groupby(group_by_columns)[self.settings.LOADSHAPE_TYPE]
 
-        agg_df = grouped_df.agg(agg_loadshape=self.settings["agg_type"]).reset_index()
+        agg_df = grouped_df.agg(agg_loadshape=self.settings.AGG_TYPE).reset_index()
 
         # Sort the values so that the ordering is maintained correctly
         agg_df = agg_df.sort_values(by=group_by_columns)
@@ -278,7 +232,7 @@ class Data:
 
         if loadshape_df is not None:
             # Check columns missing in loadshape_df
-            expected_columns = ["id", self.settings["time_period"], "loadshape"]
+            expected_columns = ["id", self.settings.TIME_PERIOD, "loadshape"]
             missing_columns = [
                 c for c in expected_columns if c not in loadshape_df.columns
             ]
@@ -292,7 +246,7 @@ class Data:
 
             # Aggregate the input loadshape based on time_period
             output_loadshape = loadshape_df.pivot(
-                index="id", columns=[self.settings["time_period"]], values="loadshape"
+                index="id", columns=[self.settings.TIME_PERIOD], values="loadshape"
             )
 
         elif time_series_df is not None:
