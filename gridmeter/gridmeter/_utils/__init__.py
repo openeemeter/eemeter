@@ -23,3 +23,6 @@ from gridmeter._utils.dummy_data import (
     DummyPopulation,
     DummyTreatmentPoolPopulation,
 )
+
+from gridmeter._utils.data_processing import Data
+from gridmeter._utils.loadshape_settings import Data_Settings

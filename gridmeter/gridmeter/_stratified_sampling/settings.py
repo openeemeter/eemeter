@@ -95,7 +95,7 @@ class Settings(BaseSettings):
     )
 
     STRATIFICATION_COLUMN: Union[list[StratificationColumnSettings], list[dict]] = pydantic.Field(
-        default_factory=lambda: [
+        default=[
             StratificationColumnSettings(column_name="summer_usage"),
             StratificationColumnSettings(column_name="winter_usage"),
         ],

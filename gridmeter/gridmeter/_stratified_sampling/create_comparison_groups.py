@@ -34,13 +34,6 @@ class Stratified_Sampling(Comparison_Group_Algorithm):
             )
 
 
-    def diagnostics(self):
-        if self.df_raw is None:
-            raise RuntimeError("Must run get_comparison_group() before calling diagnostics()")
-        
-        return StratifiedSamplingDiagnostics(model=self.model)
-        
-        
     def _create_clusters_df(self, ids):
         clusters = pd.DataFrame(ids, columns=["id"])
         clusters["cluster"] = 0
@@ -59,6 +52,23 @@ class Stratified_Sampling(Comparison_Group_Algorithm):
         treatment_weights.index.name = "id"
 
         return treatment_weights
+    
+    def _create_output_dfs(self, t_ids):
+        self.df_raw = self.model.data_sample.df
+
+        # Create comparison group
+        df_cg = self.df_raw[self.df_raw["_outlier_bin"] == False]
+        clusters = self._create_clusters_df(df_cg["meter_id"].unique())
+
+        # Create treatment_weights
+        
+        treatment_weights = self._create_treatment_weights_df(t_ids)
+
+        # Assign dfs to self
+        self.clusters = clusters
+        self.treatment_weights = treatment_weights
+
+        return clusters, treatment_weights
 
 
     def get_comparison_group(self, df_treatment, df_comparison_pool):
@@ -73,18 +83,58 @@ class Stratified_Sampling(Comparison_Group_Algorithm):
             random_seed=settings.SEED,
         )
 
-        self.df_raw = self.model.data_sample.df
-
-        # Create comparison group
-        df_cg = self.df_raw[self.df_raw["_outlier_bin"] == False]
-        clusters = self._create_clusters_df(df_cg["meter_id"].unique())
-
-        # Create treatment_weights
         t_ids = df_treatment["meter_id"].unique()
-        treatment_weights = self._create_treatment_weights_df(t_ids)
+        clusters, treatment_weights = self._create_output_dfs(t_ids)
 
-        # Assign dfs to self
-        self.clusters = clusters
-        self.treatment_weights = treatment_weights
+        return clusters, treatment_weights
+
+
+    def diagnostics(self):
+        if self.df_raw is None:
+            raise RuntimeError("Must run get_comparison_group() before calling diagnostics()")
+        
+        return StratifiedSamplingDiagnostics(model=self.model)
+    
+
+class Distance_Stratified_Sampling(Stratified_Sampling):
+    def __init__(self, settings: Settings | None = None):
+        if settings is None:
+            settings = Settings()
+
+        super().__init__(settings=settings)
+
+
+    def _split_df(self, df):
+        feature_cols = [col for col in df.columns if not isinstance(col, int)]
+        loadshape_cols = [col for col in df.columns if isinstance(col, int)]
+
+        return df[feature_cols], df[loadshape_cols]
+
+
+    def get_comparison_group(self, df_treatment, df_comparison_pool):
+        settings = self.settings
+
+        # split dfs into features and loadshapes
+        df_features_t, df_ls_t = self._split_df(df_treatment)
+        df_features_cp, df_ls_cp = self._split_df(df_comparison_pool)
+
+        # combine loadshapes into one df
+        df_ls = pd.concat([df_ls_t, df_ls_cp])
+
+        self.model_bin_selector = StratifiedSamplingBinSelector(
+            self.model,
+            df_features_t,
+            df_features_cp,
+            equivalence_feature_ids=df_ls.index,
+            equivalence_feature_matrix=df_ls,
+            equivalence_method="chisquare",
+            df_id_col = "meter_id",
+            min_n_bins=2,
+            max_n_bins=8,
+            random_seed=settings.SEED,
+        )
+
+        t_ids = df_treatment["meter_id"].unique()
+        clusters, treatment_weights = self._create_output_dfs(t_ids)
 
         return clusters, treatment_weights

@@ -1,4 +1,4 @@
-from gridmeter._utils.loadshape_settings import DataSettings
+from gridmeter._utils.loadshape_settings import Data_Settings
 import pandas as pd
 
 # TODO: Should this class go in const.py, here, or data_settings.py?
@@ -41,9 +41,11 @@ class DataConstants:
 
 
 class Data:
-    def __init__(self, settings: DataSettings):
+    def __init__(self, settings: Data_Settings | None  = None):
         if settings is None:
-            self.settings = DataSettings()
+            self.settings = Data_Settings()
+
+        self.excluded_ids = pd.DataFrame(columns=["id", "reason"])
 
     def _find_groupby_columns(self) -> list:
         """
@@ -97,18 +99,21 @@ class Data:
 
         return df
 
-    def _validate(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _validate_format_loadshape(self, df: pd.DataFrame) -> pd.DataFrame:
+        # Check columns missing in loadshape_df
+        expected_columns = ["id", "time", "loadshape"]
+        missing_columns = [c for c in expected_columns if c not in df.columns]
+
+        if missing_columns:
+            raise ValueError(f"Missing columns in time_series_df: {missing_columns}")
+
         # Check if all values are present in the columns as required
         # Else update the values via interpolation if missing, also ignore duplicates if present
 
-        # loadshape df has the "hour" column or similar, whereas timeseries df has the "datetime" column
-        subset_columns = [
-            "id",
-            self.settings.TIME_PERIOD
-            if self.settings.TIME_PERIOD in df.columns
-            else "agg_loadshape",
-        ]
-
+        # loadshape df has the "time" column, whereas timeseries df has the "datetime" column
+        subset_columns = expected_columns[:-1]
+        
+        # TODO: What to do with duplicates?
         df = df.drop_duplicates(subset=subset_columns, keep="first")
 
         if self.settings.INTERPOLATE_MISSING:
@@ -133,11 +138,47 @@ class Data:
             # TODO : Interpolation should only occur on within seasons, not across seasons
 
         else:
+            # TODO: throw out meters with null values and record them, do not throw error
             missing_values = df[df.isnull().any(axis=1)]
             if missing_values.shape[0] > 0:
                 raise ValueError(
                     f"Missing values in loadshape_df: {missing_values.shape[0]}"
                 )
+            
+        # pivot the loadshape_df to have the time as columns
+        df = df.pivot(index="id", columns=["time"], values="loadshape")
+
+        # Convert multi level index to single level
+        df = (
+            df.rename_axis(None, axis=1)
+            .reset_index()
+            .set_index("id")
+            .drop(columns="index", axis=1, errors="ignore")
+        )
+
+        return df
+    
+    def _validate_format_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        # Check columns missing in features_df
+        if "id" not in df.columns:
+            raise ValueError(f"Missing columns in time_series_df: 'id'")
+        
+        # get a list of any rows with missing values
+        excluded_ids = df[df.isnull().any(axis=1)]['id'].values
+        if excluded_ids.size > 0:
+            excluded_ids = pd.DataFrame({"id": excluded_ids})
+            excluded_ids["reason"] = "null values in features_df"
+            self.excluded_ids = pd.concat([self.excluded_ids, excluded_ids])
+
+        # remove any rows with missing values
+        df = df.dropna()
+
+        # TODO: What to do with duplicates?
+        df = df.drop_duplicates(keep="first")
+
+        # drop any ids that are in excluded_ids from loadshape (or init)
+        df = df[~df['id'].isin(self.excluded_ids['id'])]
+        df = df.reset_index().set_index("id").drop(columns="index", axis=1, errors="ignore")
 
         return df
 
@@ -153,21 +194,16 @@ class Data:
         """
 
         # Check columns missing in time_series_df
+        df_type = self.settings.LOADSHAPE_TYPE
         expected_columns = ["id", "datetime"]
-        if self.settings.LOADSHAPE_TYPE == "error":
+        if df_type == "error":
             expected_columns.extend(["observed", "modeled"])
         else:
-            expected_columns.append(self.settings.LOADSHAPE_TYPE)
+            expected_columns.append(df_type)
 
-        missing_columns = [
-            c for c in expected_columns if c not in time_series_df.columns
-        ]
-
+        missing_columns = [c for c in expected_columns if c not in time_series_df.columns]
         if missing_columns:
             raise ValueError(f"Missing columns in time_series_df: {missing_columns}")
-
-        # Ensure the loadshape type only uses observed, modeled or error
-        df_type = self.settings.LOADSHAPE_TYPE
 
         # Check that the datetime column is actually of type datetime
         if time_series_df["datetime"].dtypes != "datetime64[ns]":
@@ -186,28 +222,20 @@ class Data:
 
         grouped_df = base_df.groupby(group_by_columns)[self.settings.LOADSHAPE_TYPE]
 
-        agg_df = grouped_df.agg(agg_loadshape=self.settings.AGG_TYPE).reset_index()
+        agg_df = grouped_df.agg(loadshape=self.settings.AGG_TYPE).reset_index()
 
         # Sort the values so that the ordering is maintained correctly
         agg_df = agg_df.sort_values(by=group_by_columns)
 
-        # Validate that all the values are correct
-        agg_df = self._validate(agg_df)
-
-        # uncomment this for testing
-        # return agg_df
-
         # Create the count of the index per ID
         agg_df["time"] = agg_df.groupby("id").cumcount() + 1
 
-        # Pivot the rolled up column
-        loadshape_df = agg_df.pivot(
-            index="id", columns=["time"], values="agg_loadshape"
-        )
+        # Validate that all the values are correct
+        loadshape_df = self._validate_format_loadshape(agg_df)
 
         return loadshape_df
 
-    def set_data(self, loadshape_df=None, time_series_df=None) -> None:
+    def set_data(self, loadshape_df=None, time_series_df=None, features_df=None) -> None:
         """
 
         Args:
@@ -215,14 +243,18 @@ class Data:
 
             Time_series_df: columns = [id, datetime, observed, observed_error, modeled, modeled_error]
 
+            Features_df: columns = [id, {feature_1}, {feature_2}, ...]
+
         Output:
             loadshape: index = id, columns = time, values = loadshape
 
+            features: index = id, columns = [{feature_1}, {feature_2}, ...]
+
 
         """
-        if loadshape_df is None and time_series_df is None:
+        if loadshape_df is None and time_series_df is None and features_df is None:
             raise ValueError(
-                "Either loadshape dataframe or time series dataframe must be provided."
+                "A loadshape, time series, or features dataframe must be provided."
             )
 
         elif loadshape_df is not None and time_series_df is not None:
@@ -231,30 +263,18 @@ class Data:
             )
 
         if loadshape_df is not None:
-            # Check columns missing in loadshape_df
-            expected_columns = ["id", self.settings.TIME_PERIOD, "loadshape"]
-            missing_columns = [
-                c for c in expected_columns if c not in loadshape_df.columns
-            ]
-
-            if missing_columns:
-                raise ValueError(
-                    f"Missing columns in time_series_df: {missing_columns}"
-                )
-
-            loadshape_df = self._validate(loadshape_df)
-
-            # Aggregate the input loadshape based on time_period
-            output_loadshape = loadshape_df.pivot(
-                index="id", columns=[self.settings.TIME_PERIOD], values="loadshape"
-            )
+            loadshape_df = self._validate_format_loadshape(loadshape_df)
 
         elif time_series_df is not None:
-            output_loadshape = self._convert_timeseries_to_loadshape(time_series_df)
+            loadshape_df = self._convert_timeseries_to_loadshape(time_series_df)            
 
-        # Convert multi level index to single level
-        self.loadshape = (
-            output_loadshape.rename_axis(None, axis=1)
-            .reset_index()
-            .drop(columns="index", axis=1, errors="ignore")
-        )
+        # TODO: need to track dropped ids in loadshape and apply to features
+        if features_df is not None:
+            features_df = self._validate_format_features(features_df)            
+
+        if loadshape_df is not None:
+            # drop any ids that are in the excluded_ids list
+            loadshape_df = loadshape_df[~loadshape_df.index.isin(self.excluded_ids['id'])]
+
+        self.features = features_df
+        self.loadshape = loadshape_df

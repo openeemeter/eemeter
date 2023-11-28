@@ -13,7 +13,7 @@ from gridmeter._utils.base_settings import BaseSettings
 
 
 # Note: Options list order defines how seasons will be ordered in the loadshape
-class SeasonDefinition(BaseSettings):
+class Season_Definition(BaseSettings):
     JANUARY: str = pydantic.Field(default="winter")
     FEBRUARY: str = pydantic.Field(default="winter")
     MARCH: str = pydantic.Field(default="shoulder")
@@ -31,7 +31,7 @@ class SeasonDefinition(BaseSettings):
 
     """Set dictionaries of seasons"""
     @pydantic.model_validator(mode="after")
-    def set_numeric_dict(self) -> SeasonDefinition:
+    def set_numeric_dict(self) -> Season_Definition:
         season_dict = {}
         for month, num in _const.season_num.items():
             val = getattr(self, month.upper())
@@ -46,7 +46,7 @@ class SeasonDefinition(BaseSettings):
         return self
 
 
-class WeekdayWeekendDefinition(BaseSettings):
+class Weekday_Weekend_Definition(BaseSettings):
     MONDAY: str = pydantic.Field(default="weekday")
     TUESDAY: str = pydantic.Field(default="weekday")
     WEDNESDAY: str = pydantic.Field(default="weekday")
@@ -59,7 +59,7 @@ class WeekdayWeekendDefinition(BaseSettings):
 
     """Set dictionaries of weekday/weekend"""
     @pydantic.model_validator(mode="after")
-    def set_numeric_dict(self) -> WeekdayWeekendDefinition:
+    def set_numeric_dict(self) -> Weekday_Weekend_Definition:
         weekday_dict = {}
         for day, num in _const.weekday_num.items():
             val = getattr(self, day.upper())
@@ -74,7 +74,7 @@ class WeekdayWeekendDefinition(BaseSettings):
         return self
     
 
-class DataSettings(BaseSettings):
+class Data_Settings(BaseSettings):
     """aggregation type for the loadshape"""
     AGG_TYPE: _const.AggType = pydantic.Field(
         default=_const.AggType.MEAN,
@@ -114,12 +114,12 @@ class DataSettings(BaseSettings):
         return value
 
     """season definition to be used for the loadshape"""
-    SEASON: Union[dict, SeasonDefinition] = pydantic.Field(
+    SEASON: Union[dict, Season_Definition] = pydantic.Field(
         default=_const.default_season_def, 
     )
 
     """weekday/weekend definition to be used for the loadshape"""
-    WEEKDAY_WEEKEND: Union[dict, WeekdayWeekendDefinition] = pydantic.Field(
+    WEEKDAY_WEEKEND: Union[dict, Weekday_Weekend_Definition] = pydantic.Field(
         default=_const.default_weekday_weekend_def, 
     )
 
@@ -128,10 +128,10 @@ class DataSettings(BaseSettings):
     @pydantic.model_validator(mode="after")
     def _set_nested_classes(self):
         if isinstance(self.SEASON, dict):
-            self.SEASON = SeasonDefinition(**self.SEASON)
+            self.SEASON = Season_Definition(**self.SEASON)
 
         if isinstance(self.WEEKDAY_WEEKEND, dict):
-            self.WEEKDAY_WEEKEND = WeekdayWeekendDefinition(**self.WEEKDAY_WEEKEND)
+            self.WEEKDAY_WEEKEND = Weekday_Weekend_Definition(**self.WEEKDAY_WEEKEND)
 
         return self
 
@@ -175,7 +175,7 @@ if __name__ == "__main__":
     # print(weekday_weekend.model_dump_json())
 
     # Test DataSettings
-    settings = DataSettings(
+    settings = Data_Settings(
         AGG_TYPE="median",
         season=season_dict, 
         weekday_weekend=weekday_weekend_dict,
