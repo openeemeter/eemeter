@@ -6,31 +6,28 @@ from __future__ import annotations
 
 import pydantic
 
-from typing import (
-    Union,
-    Literal,
-)
+from typing import Union
 
 import gridmeter._utils.const as _const
 from gridmeter._utils.base_settings import BaseSettings
 
 
-# Note: Options list order defines how seasons will be orderd in the loadshape
+# Note: Options list order defines how seasons will be ordered in the loadshape
 class SeasonDefinition(BaseSettings):
-    JANUARY: str = pydantic.Field(default="winter", validate_default=True)
-    FEBRUARY: str = pydantic.Field(default="winter", validate_default=True)
-    MARCH: str = pydantic.Field(default="shoulder", validate_default=True)
-    APRIL: str = pydantic.Field(default="shoulder", validate_default=True)
-    MAY: str = pydantic.Field(default="shoulder", validate_default=True)
-    JUNE: str = pydantic.Field(default="summer", validate_default=True)
-    JULY: str = pydantic.Field(default="summer", validate_default=True)
-    AUGUST: str = pydantic.Field(default="summer", validate_default=True)
-    SEPTEMBER: str = pydantic.Field(default="summer", validate_default=True)
-    OCTOBER: str = pydantic.Field(default="shoulder", validate_default=True)
-    NOVEMBER: str = pydantic.Field(default="winter", validate_default=True)
-    DECEMBER: str = pydantic.Field(default="winter", validate_default=True)
+    JANUARY: str = pydantic.Field(default="winter")
+    FEBRUARY: str = pydantic.Field(default="winter")
+    MARCH: str = pydantic.Field(default="shoulder")
+    APRIL: str = pydantic.Field(default="shoulder")
+    MAY: str = pydantic.Field(default="shoulder")
+    JUNE: str = pydantic.Field(default="summer")
+    JULY: str = pydantic.Field(default="summer")
+    AUGUST: str = pydantic.Field(default="summer")
+    SEPTEMBER: str = pydantic.Field(default="summer")
+    OCTOBER: str = pydantic.Field(default="shoulder")
+    NOVEMBER: str = pydantic.Field(default="winter")
+    DECEMBER: str = pydantic.Field(default="winter")
 
-    OPTIONS: list[str] = pydantic.Field(default=["summer", "shoulder", "winter"], validate_default=True)
+    OPTIONS: list[str] = pydantic.Field(default=["summer", "shoulder", "winter"])
 
     """Set dictionaries of seasons"""
     @pydantic.model_validator(mode="after")
@@ -50,15 +47,15 @@ class SeasonDefinition(BaseSettings):
 
 
 class WeekdayWeekendDefinition(BaseSettings):
-    MONDAY: str = pydantic.Field(default="weekday", validate_default=True)
-    TUESDAY: str = pydantic.Field(default="weekday", validate_default=True)
-    WEDNESDAY: str = pydantic.Field(default="weekday", validate_default=True)
-    THURSDAY: str = pydantic.Field(default="weekday", validate_default=True)
-    FRIDAY: str = pydantic.Field(default="weekday", validate_default=True)
-    SATURDAY: str = pydantic.Field(default="weekend", validate_default=True)
-    SUNDAY: str = pydantic.Field(default="weekend", validate_default=True)
+    MONDAY: str = pydantic.Field(default="weekday")
+    TUESDAY: str = pydantic.Field(default="weekday")
+    WEDNESDAY: str = pydantic.Field(default="weekday")
+    THURSDAY: str = pydantic.Field(default="weekday")
+    FRIDAY: str = pydantic.Field(default="weekday")
+    SATURDAY: str = pydantic.Field(default="weekend")
+    SUNDAY: str = pydantic.Field(default="weekend")
 
-    OPTIONS: list[str] = pydantic.Field(default=["weekday", "weekend"], validate_default=True)
+    OPTIONS: list[str] = pydantic.Field(default=["weekday", "weekend"])
 
     """Set dictionaries of weekday/weekend"""
     @pydantic.model_validator(mode="after")
@@ -79,25 +76,52 @@ class WeekdayWeekendDefinition(BaseSettings):
 
 class DataSettings(BaseSettings):
     """aggregation type for the loadshape"""
-    AGG_TYPE: str = pydantic.Field(default=_const.AggType.MEAN, validate_default=True)
+    AGG_TYPE: _const.AggType = pydantic.Field(
+        default=_const.AggType.MEAN,
+        validate_default=True,
+    )
     
     """type of loadshape to be used"""
-    LOADSHAPE_TYPE: str = pydantic.Field(default=_const.LoadshapeType.MODELED, validate_default=True)
+    LOADSHAPE_TYPE: _const.LoadshapeType = pydantic.Field(
+        default=_const.LoadshapeType.MODELED, 
+        validate_default=True,
+    )
 
     """time period to be used for the loadshape"""
-    TIME_PERIOD: str = pydantic.Field(default=_const.TimePeriod.SEASON_HOURLY_DAY_OF_WEEK, validate_default=True)
+    TIME_PERIOD: _const.TimePeriod = pydantic.Field(
+        default=_const.TimePeriod.SEASON_HOURLY_DAY_OF_WEEK, 
+        validate_default=True,
+    )
 
     """interpolate missing values"""
-    INTERPOLATE_MISSING: bool = pydantic.Field(default=True, validate_default=True)
+    INTERPOLATE_MISSING: bool = pydantic.Field(
+        default=True, 
+        validate_default=True,
+    )
 
     """minimum percentage of data required for a meter to be included"""
-    MIN_DATA_PCT_REQUIRED: Literal[0.8]
+    MIN_DATA_PCT_REQUIRED: float = pydantic.Field(
+        default=0.8, 
+        validate_default=True,
+    )
+
+    @pydantic.field_validator("MIN_DATA_PCT_REQUIRED")
+    @classmethod
+    def validate_min_data_pct_required(cls, value):
+        if value != 0.8:
+            raise ValueError("MIN_DATA_PCT_REQUIRED must be 0.8")
+        
+        return value
 
     """season definition to be used for the loadshape"""
-    SEASON: Union[dict, SeasonDefinition] = pydantic.Field(default=_const.default_season_def, validate_default=True)
+    SEASON: Union[dict, SeasonDefinition] = pydantic.Field(
+        default=_const.default_season_def, 
+    )
 
     """weekday/weekend definition to be used for the loadshape"""
-    WEEKDAY_WEEKEND: Union[dict, WeekdayWeekendDefinition] = pydantic.Field(default=_const.default_weekday_weekend_def, validate_default=True)
+    WEEKDAY_WEEKEND: Union[dict, WeekdayWeekendDefinition] = pydantic.Field(
+        default=_const.default_weekday_weekend_def, 
+    )
 
 
     """set season and weekday_weekend classes with given dictionaries"""
