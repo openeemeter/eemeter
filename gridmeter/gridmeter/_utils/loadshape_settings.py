@@ -88,7 +88,7 @@ class Data_Settings(BaseSettings):
     )
 
     """time period to be used for the loadshape"""
-    TIME_PERIOD: _const.TimePeriod = pydantic.Field(
+    TIME_PERIOD: _const.TimePeriod | None = pydantic.Field(
         default=_const.TimePeriod.SEASONAL_HOURLY_DAY_OF_WEEK, 
         validate_default=True,
     )

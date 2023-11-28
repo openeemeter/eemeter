@@ -125,6 +125,9 @@ class Settings(BaseSettings):
     """set stratification column classes with given dictionaries"""
     @pydantic.model_validator(mode="after")
     def _set_nested_classes(self):
+        if len(self.STRATIFICATION_COLUMN) > 3:
+            raise ValueError("A maximum of 3 STRATIFICATION_COLUMN's are allowed")
+
         settings = []
         has_dict = False
         for strat_item in self.STRATIFICATION_COLUMN:
