@@ -15,13 +15,9 @@ from gridmeter._individual_meter_matching.distance_calc_selection import (
 class Individual_Meter_Matching(Comparison_Group_Algorithm):
     def __init__(self, settings: Settings | None = None):
         if settings is None:
-            self.settings = Settings()
+            settings = Settings()
         
         self.settings = settings
-
-        self.dist_metric = settings.distance_metric
-        if self.dist_metric == "manhattan":
-            self.dist_metric = "cityblock"
 
     def _create_clusters_df(self, df_raw):
         clusters = df_raw
@@ -46,17 +42,20 @@ class Individual_Meter_Matching(Comparison_Group_Algorithm):
         return treatment_weights
     
 
-    def get_comparison_group(self, df_ls_t, df_ls_cp, weights=None):
+    def get_comparison_group(self, treatment_data, comparison_pool_data, weights=None):
         distance_matching = DistanceMatching(self.settings)
+
+        df_t = treatment_data.loadshape
+        df_cp = comparison_pool_data.loadshape
 
         # Get clusters
         df_raw = distance_matching.get_comparison_group(
-            df_ls_t, df_ls_cp, weights=weights
+            df_t, df_cp, weights=weights
         )
         clusters = self._create_clusters_df(df_raw)
 
         # Create treatment_weights
-        t_ids = df_ls_t.index.unique()
+        t_ids = df_t.index.unique()
         treatment_weights = self._create_treatment_weights_df(t_ids)
 
         # Assign dfs to self

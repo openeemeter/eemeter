@@ -641,27 +641,27 @@ class ClusterResult:
         """
         df_cp_ls = _data.set_df_index(df=df_cp_ls)
         ls_transform = _transform.InitialPoolLoadshapeTransform.from_full_cp_ls_df(
-            df=df_cp_ls, min_var_ratio=s.fpca_min_variance_ratio
+            df=df_cp_ls, min_var_ratio=s.FPCA_MIN_VARIANCE_RATIO
         )
 
         best_scored_cluster, score_elements = get_best_scored_cluster_result(
             pool_loadshape_transform_result=ls_transform,
             cluster_key="",
-            dist_metric=s.dist_metric,
-            max_non_outlier_cluster_count=s.max_non_outlier_cluster_count,
-            min_cluster_size=s.min_cluster_size,
+            dist_metric=s.DIST_METRIC,
+            max_non_outlier_cluster_count=s.MAX_NON_OUTLIER_CLUSTER_COUNT,
+            min_cluster_size=s.MIN_CLUSTER_SIZE,
             n_iter_cluster=1,
-            num_cluster_bound_lower=s.num_cluster_bound_lower,
-            num_cluster_bound_upper=s.num_cluster_bound_upper,
-            score_choice=s.score_choice,
-            seed=s.seed,
+            num_cluster_bound_lower=s.NUM_CLUSTER_BOUND_LOWER,
+            num_cluster_bound_upper=s.NUM_CLUSTER_BOUND_UPPER,
+            score_choice=s.SCORE_CHOICE,
+            seed=s.SEED,
         )
 
         return ClusterResult.from_cluster_result_and_agg_type(
             cluster_result=best_scored_cluster,
             score_elements=score_elements,
-            agg_type=s.agg_type,
-            dist_metric=s.dist_metric,
+            agg_type=s.AGG_TYPE,
+            dist_metric=s.DIST_METRIC,
         )
 
     @property

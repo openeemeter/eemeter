@@ -60,6 +60,10 @@ class DistanceMatching:
                 "invalid settings provided to 'individual_metering_matching'"
             )
 
+        self.dist_metric = settings.DISTANCE_METRIC
+        if self.dist_metric == "manhattan":
+            self.dist_metric = "cityblock"
+
     def _get_min_distance_from_matrix_df(self, dist_df):
         match_cols = dist_df.columns[(np.argmin(dist_df.values, axis=1))]
         dist = np.diag(dist_df[match_cols])
@@ -171,7 +175,7 @@ class DistanceMatching:
         settings = self.settings
 
         # chunk the treatment group due to memory constraints
-        n_treatments_per_chunk = settings.n_treatments_per_chunk
+        n_treatments_per_chunk = settings.N_TREATMENTS_PER_CHUNK
 
         # if you're using weights make sure to normalize the data first
         if weights:
@@ -192,17 +196,17 @@ class DistanceMatching:
             mat = scipy.spatial.distance.cdist(
                 treatment_group_chunk.values,
                 comparison_pool.values,
-                metric=settings.distance_metric,
+                metric=self.dist_metric,
             )
             dist_df = pd.DataFrame(mat)
             # get the best n matches
-            for _ in range(settings.n_matches_per_treatment):
+            for _ in range(settings.N_MATCHES_PER_TREATMENT):
                 dist_df = dist_df[
                     dist_df.columns[~dist_df.columns.isin(comparison_group["match"])]
                 ]
                 if dist_df.empty:
                     continue
-                new_df = self._get_best_match(dist_df, settings.n_duplicate_check)
+                new_df = self._get_best_match(dist_df, settings.N_DUPLICATE_CHECK)
                 comparison_group = pd.concat([comparison_group, new_df])
 
         # rename columns and reindex to get original ids back
@@ -216,9 +220,9 @@ class DistanceMatching:
         comparison_group.drop("match", axis=1, inplace=True)
         comparison_group.index.name = "id"
 
-        if isinstance(settings.max_distance_threshold, (int, float)):
+        if isinstance(settings.MAX_DISTANCE_THRESHOLD, (int, float)):
             comparison_group = comparison_group[
-                comparison_group["distance"] < settings.max_distance_threshold
+                comparison_group["distance"] < settings.MAX_DISTANCE_THRESHOLD
             ]
 
         return comparison_group
