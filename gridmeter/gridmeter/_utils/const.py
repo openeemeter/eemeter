@@ -47,6 +47,9 @@ class TimePeriod(str, Enum):
     SEASONAL_HOURLY_WEEKDAY_WEEKEND = "seasonal_hourly_weekday_weekend"
 
 
+datetime_types = ["datetime", "datetime64", "datetime64[ns]", "datetimetz"]
+
+
 default_season_def = {
     "options": ["summer", "shoulder", "winter"],
     "January": "winter",

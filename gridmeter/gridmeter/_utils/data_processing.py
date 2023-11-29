@@ -230,11 +230,13 @@ class Data:
             raise ValueError(f"Missing columns in time_series_df: {missing_columns}")
 
         # Check that the datetime column is actually of type datetime
-        if time_series_df["datetime"].dtypes != "datetime64[ns]":
+        if time_series_df["datetime"].dtypes in _const.datetime_types:
+            time_series_df["datetime"] = pd.to_datetime(time_series_df["datetime"], utc=True)
+        else:
             raise ValueError("The 'datetime' column must be of datetime type")
 
         if df_type == "error":
-            pass  # TODO: calculate error
+            time_series_df['error'] = 1 - time_series_df['observed'] / time_series_df['modeled']
 
         # Remove duplicates
         subset_columns = expected_columns[:-1]
