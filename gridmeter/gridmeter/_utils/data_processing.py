@@ -11,6 +11,9 @@ class Data:
 
         self.settings = settings
 
+        self.loadshape = None
+        self.features = None
+
         self.excluded_ids = pd.DataFrame(columns=["id", "reason"])
 
     def _find_groupby_columns(self) -> list:
@@ -86,7 +89,7 @@ class Data:
         # TODO: What to do with duplicates?
         df = df.drop_duplicates(subset=subset_columns, keep="first")
 
-        # Check that the minimum time counts per id is consisitent
+        # Check that the minimum time counts per id is consistent for the input loadshape_df
         unique_time_counts = df["time"].nunique()
         unique_time_counts_per_id = df.groupby("id")["time"].nunique()
 
@@ -100,14 +103,14 @@ class Data:
                     unique_time_counts_per_id
                     < unique_time_counts * self.settings.MIN_DATA_PCT_REQUIRED
                 ].index.tolist()
-                invalid_ids_df = pd.DataFrame(
+                excluded_ids = pd.DataFrame(
                     {
                         "id": invalid_ids,
                         "reason": "Unique time counts per id don't have the minimum time counts required",
                     }
                 )
-                self.excluded_ids = self.excluded_ids.append(
-                    invalid_ids_df, ignore_index=True
+                self.excluded_ids = pd.concat(
+                    [self.excluded_ids, excluded_ids], ignore_index=True
                 )
 
             else:
@@ -120,12 +123,17 @@ class Data:
                     ):
                         # throw out meters with missing values and record them, do not throw error
 
-                        self.excluded_ids = self.excluded_ids.append(
+                        excluded_ids = pd.DataFrame(
                             {
-                                "id": id,
-                                "reason": "missing minimum number of values in loadshape_df",
-                            },
-                            ignore_index=True,
+                                "id": [id],
+                                "reason": [
+                                    "missing minimum number of values in loadshape_df"
+                                ],
+                            }
+                        )
+
+                        self.excluded_ids = pd.concat(
+                            [self.excluded_ids, excluded_ids], ignore_index=True
                         )
 
             # Fill NaN values with interpolation
@@ -149,8 +157,8 @@ class Data:
                         "reason": "Unique time counts per id don't have the minimum time counts required",
                     }
                 )
-                self.excluded_ids = self.excluded_ids.append(
-                    invalid_ids_df, ignore_index=True
+                self.excluded_ids = pd.concat(
+                    [self.excluded_ids, invalid_ids], ignore_index=True
                 )
 
             else:
@@ -215,6 +223,8 @@ class Data:
             Loadshape dataframe with columns = [id, time, loadshape]
         """
 
+        base_df = time_series_df.copy()  # don't change the original dataframe
+
         # Check columns missing in time_series_df
         df_type = self.settings.LOADSHAPE_TYPE
         expected_columns = ["id", "datetime"]
@@ -223,42 +233,51 @@ class Data:
         else:
             expected_columns.append(df_type)
 
-        missing_columns = [
-            c for c in expected_columns if c not in time_series_df.columns
-        ]
+        missing_columns = [c for c in expected_columns if c not in base_df.columns]
         if missing_columns:
             raise ValueError(f"Missing columns in time_series_df: {missing_columns}")
 
         # Check that the datetime column is actually of type datetime
-        if time_series_df["datetime"].dtypes in _const.datetime_types:
-            time_series_df["datetime"] = pd.to_datetime(time_series_df["datetime"], utc=True)
+        if base_df["datetime"].dtypes in _const.datetime_types:
+            base_df["datetime"] = pd.to_datetime(base_df["datetime"], utc=True)
         else:
             raise ValueError("The 'datetime' column must be of datetime type")
 
         if df_type == "error":
-            time_series_df['error'] = 1 - time_series_df['observed'] / time_series_df['modeled']
+            base_df["error"] = 1 - base_df["observed"] / base_df["modeled"]
 
         # Remove duplicates
         subset_columns = expected_columns[:-1]
 
         # TODO: What to do with duplicates?
-        base_df = time_series_df.drop_duplicates(subset=subset_columns, keep="first")
+        base_df = base_df.drop_duplicates(subset=subset_columns, keep="first")
 
         # Create a base df for adding all required columns
         base_df = base_df.set_index("datetime")
 
         # Check that the time column is having a minimum granularity lower than requested time period, otherwise we cannot aggregate
         base_df["time_diff"] = base_df.index.diff()
-        min_time_diff_per_id = base_df.groupby("id")["time_diff"].min().dt.total_seconds() / 60
+        min_time_diff_per_id = (
+            base_df.groupby("id")["time_diff"].min().dt.total_seconds() / 60
+        )
 
         # Get the ids that have a higher minimum granularity than defined
-        invalid_ids = min_time_diff_per_id[min_time_diff_per_id > _const.min_granularity_per_time_period[self.settings.TIME_PERIOD]].index.tolist()
+        invalid_ids = min_time_diff_per_id[
+            min_time_diff_per_id
+            > _const.min_granularity_per_time_period[self.settings.TIME_PERIOD]
+        ].index.tolist()
 
         # If there are any invalid ids, add them to the excluded_ids dataframe
         if invalid_ids:
-            invalid_ids_df = pd.DataFrame({'id': invalid_ids, 'reason': "Minimum time interval is more than the specified TimePeriod"})
-            self.excluded_ids = self.excluded_ids.append(invalid_ids_df, ignore_index=True)
-
+            invalid_ids_df = pd.DataFrame(
+                {
+                    "id": invalid_ids,
+                    "reason": "Minimum time interval is more than the specified TimePeriod",
+                }
+            )
+            self.excluded_ids = pd.concat(
+                [self.excluded_ids, invalid_ids_df], ignore_index=True
+            )
 
         base_df = self._add_index_columns_from_datetime(base_df)
 
@@ -285,6 +304,16 @@ class Data:
         self, loadshape_df=None, time_series_df=None, features_df=None
     ) -> None:
         """
+            Loadshape, timeseries and features dataframes are input. The loadshape and features dataframes are validated and formatted.
+            The timeseries dataframe is converted to a loadshape dataframe and then validated and formatted.
+
+            Either loadshape or timeseries data is allowed, but not both. Atleast one of them must be provided as well.
+            Features is independent of the loadshape and timeseries dataframes.
+
+            Loadshape / timeseries only input => Clustering / IMM
+            Features only input => Stratified Sampling
+
+            Note the loadshape and features dataframe can only be set once per class.
 
         Args:
             Loadshape_df: columns = [id, time, loadshape]
@@ -311,12 +340,20 @@ class Data:
             )
 
         if loadshape_df is not None:
+            if self.loadshape is not None:
+                raise ValueError("Loadshape Data has already been set.")
+
             loadshape_df = self._validate_format_loadshape(loadshape_df)
 
         elif time_series_df is not None:
+            if self.loadshape is not None:
+                raise ValueError("Loadshape Data has already been set.")
+
             loadshape_df = self._convert_timeseries_to_loadshape(time_series_df)
 
         if features_df is not None:
+            if self.features is not None:
+                raise ValueError("Features Data has already been set.")
             features_df = self._validate_format_features(features_df)
 
         if loadshape_df is not None:
@@ -327,6 +364,8 @@ class Data:
 
         self.features = features_df
         self.loadshape = loadshape_df
+
+        return self
 
 
 if __name__ == "__main__":
@@ -357,6 +396,8 @@ if __name__ == "__main__":
     # Convert 'datetime' column to datetime type
     df["datetime"] = pd.to_datetime(df["datetime"])
 
-    data = Data(None)
-    data.set_data(time_series_df=df)
+    settings = Data_Settings(TIME_PERIOD=_const.TimePeriod.DAY_OF_WEEK)
+
+    data = Data(None).set_data(time_series_df=df)
+    data = Data(settings).set_data(time_series_df=df)
     print(data.loadshape)
