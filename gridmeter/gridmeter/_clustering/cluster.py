@@ -459,12 +459,12 @@ def _get_cluster_ls(df_cp_ls: pd.DataFrame, cluster_df: pd.DataFrame, agg_type: 
     )
     cluster_df = (
         cluster_df.reset_index()
-        .rename(columns={"level_2": "hour", 0: "value"})
+        .rename(columns={"level_2": "time", 0: "value"})
         .set_index("id")
     )
 
     # calculate cp_df
-    df_cluster_ls = cluster_df.groupby(["cluster", "hour"]).agg(ls=("value", agg_type))  # type: ignore
+    df_cluster_ls = cluster_df.groupby(["cluster", "time"]).agg(ls=("value", agg_type))  # type: ignore
     cluster_ls = df_cluster_ls[
         df_cluster_ls.index.get_level_values(0) > 0
     ]  # don't match to outlier cluster
@@ -483,7 +483,7 @@ def _transform_cluster_loadshape(df_ls_cluster: pd.DataFrame) -> pd.DataFrame:
     # prepend cluster_ to prevent potential names from clashing
     cluster_num = df_ls_cluster.index.get_level_values("cluster")
     df_ls_cluster["id"] = [f"cluster_{n}" for n in cluster_num]
-    df_ls_cluster = df_ls_cluster.reset_index().set_index(["id", "hour"])
+    df_ls_cluster = df_ls_cluster.reset_index().set_index(["id", "time"])
     df_ls_cluster_srs = df_ls_cluster[["ls"]]
 
     df_list: list[pd.DataFrame] = []
@@ -502,7 +502,7 @@ def _transform_cluster_loadshape(df_ls_cluster: pd.DataFrame) -> pd.DataFrame:
     # remove prefix cluster_
     df_ls_cluster_transformed["cluster"] = cluster_num
     df_ls_cluster_transformed = df_ls_cluster_transformed.reset_index().set_index(
-        ["cluster", "hour"]
+        ["cluster", "time"]
     )
     return df_ls_cluster_transformed[["ls"]]
 

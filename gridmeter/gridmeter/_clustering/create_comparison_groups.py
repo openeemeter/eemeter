@@ -47,6 +47,10 @@ class Clustering(Comparison_Group_Algorithm):
         df_t = treatment_data.loadshape
         df_cp = comparison_pool_data.loadshape
 
+        # TODO: Should fix in clustering algorithm to eliminate need for this transformation
+        df_t = df_t.stack().reset_index().rename(columns={"level_1": "time", 0: "ls"}).set_index(["id", "time"])
+        df_cp = df_cp.stack().reset_index().rename(columns={"level_1": "time", 0: "ls"}).set_index(["id", "time"])
+
         clusters = self.get_clusters(df_cp)
         treatment_weights = self.match_treatment_to_clusters(df_t)
 

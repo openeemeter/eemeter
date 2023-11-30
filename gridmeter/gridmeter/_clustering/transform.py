@@ -96,7 +96,7 @@ class _TransformInput:
 
     time_arr: np.ndarray
     """
-    time_arr is always the hours unlike columns which is only sometimes.
+    time_arr is always the time unlike columns which is only sometimes.
     Needed to pass to certain transforms (fPCA)
     """
 
@@ -116,7 +116,7 @@ class _TransformInput:
         ids = df_unstack.index
 
         # USED TO BE IN IF CONDITIONAL IF THE INDEX WAS A MULTI_INDEX, NOW ASSUMING IT ALWAYS IS
-        time = df_unstack.columns.get_level_values("hour")
+        time = df_unstack.columns.get_level_values("time")
 
         name = "ls"
 
@@ -178,7 +178,7 @@ def _normalize_transposed_loadshape_np_arr_min_max(ls_arr: np.ndarray):
 def get_min_maxed_normalized_unstacked_ls_df(ls_df: pd.DataFrame, drop_nonfinite: bool):
     """
     receives loadshape dataframe and applies min max normalization
-    on the values and returns a dataframe where the hours are the columns
+    on the values and returns a dataframe where the agg times are the columns
 
     This is done before performing FPCA on the comparison pool
     """
