@@ -252,20 +252,18 @@ class Data:
         # TODO: What to do with duplicates?
         base_df = base_df.drop_duplicates(subset=subset_columns, keep="first")
 
-        # Create a base df for adding all required columns
-        base_df = base_df.set_index("datetime")
-
-        # Check that the time column is having a minimum granularity lower than requested time period, otherwise we cannot aggregate
-        base_df["time_diff"] = base_df.index.diff()
-        min_time_diff_per_id = (
-            base_df.groupby("id")["time_diff"].min().dt.total_seconds() / 60
-        )
+        # Check that each id has a minimum granularity lower than requested time period, otherwise we cannot aggregate
+        # get minimum time interval per id
+        base_df["time_diff"] = base_df.groupby("id")["datetime"].diff()
+        min_time_diff_per_id = base_df.groupby("id")["time_diff"].min() / np.timedelta64(1, 'm')
 
         # Get the ids that have a higher minimum granularity than defined
         invalid_ids = min_time_diff_per_id[
-            min_time_diff_per_id
-            > _const.min_granularity_per_time_period[self.settings.TIME_PERIOD]
+            min_time_diff_per_id > _const.min_granularity_per_time_period[self.settings.TIME_PERIOD]
         ].index.tolist()
+
+        # Remove the invalid ids from the base_df
+        base_df = base_df[~base_df["id"].isin(invalid_ids)]        
 
         # If there are any invalid ids, add them to the excluded_ids dataframe
         if invalid_ids:
@@ -279,6 +277,8 @@ class Data:
                 [self.excluded_ids, invalid_ids_df], ignore_index=True
             )
 
+        # Set the index to datetime
+        base_df = base_df.set_index("datetime")
         base_df = self._add_index_columns_from_datetime(base_df)
 
         # Aggregate the input time_series based on time_period

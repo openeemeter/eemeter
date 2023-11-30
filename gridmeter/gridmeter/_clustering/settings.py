@@ -74,8 +74,8 @@ class Settings(BaseSettings):
 
     @pydantic.model_validator(mode="after")
     def _check_num_cluster_bounds(self):
-        if self.num_cluster_bound_lower > self.num_cluster_bound_upper:
-            raise ValueError("num_cluster_bound_lower must be less than or equal to num_cluster_bound_upper")
+        if self.NUM_CLUSTER_BOUND_LOWER >= self.NUM_CLUSTER_BOUND_UPPER:
+            raise ValueError("NUM_CLUSTER_BOUND_LOWER must be less than NUM_CLUSTER_BOUND_UPPER")
 
         return self
 

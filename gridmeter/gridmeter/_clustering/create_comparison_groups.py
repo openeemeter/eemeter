@@ -43,11 +43,11 @@ class Clustering(Comparison_Group_Algorithm):
 
         return self.treatment_weights
 
-    def get_comparison_group(self, df_ls_t: pd.DataFrame, df_ls_cp: pd.DataFrame):
-        df_ls_t = df_ls_t.stack().reset_index().rename(columns={0: "ls"})
-        df_ls_cp = df_ls_cp.stack().reset_index().rename(columns={0: "ls"})
+    def get_comparison_group(self, treatment_data, comparison_pool_data):
+        df_t = treatment_data.loadshape
+        df_cp = comparison_pool_data.loadshape
 
-        clusters = self.get_clusters(df_ls_cp)
-        treatment_weights = self.match_treatment_to_clusters(df_ls_t)
+        clusters = self.get_clusters(df_cp)
+        treatment_weights = self.match_treatment_to_clusters(df_t)
 
         return clusters, treatment_weights
