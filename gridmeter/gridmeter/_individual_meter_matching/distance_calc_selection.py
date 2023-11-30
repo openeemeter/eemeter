@@ -207,6 +207,8 @@ class DistanceMatching:
                 if dist_df.empty:
                     continue
                 new_df = self._get_best_match(dist_df, settings.N_DUPLICATE_CHECK)
+
+                # TODO: deprecation warning: Don't do this for empty dataframes
                 comparison_group = pd.concat([comparison_group, new_df])
 
         # rename columns and reindex to get original ids back

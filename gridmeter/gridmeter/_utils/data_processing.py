@@ -3,7 +3,7 @@ from gridmeter._utils import const as _const
 import pandas as pd
 import numpy as np
 
-
+# TODO: what to do with empty ls/ts/feature dataframes?
 class Data:
     def __init__(self, settings: Data_Settings | None = None):
         if settings is None:
@@ -14,6 +14,7 @@ class Data:
         self.loadshape = None
         self.features = None
 
+        # TODO: let's make id the index
         self.excluded_ids = pd.DataFrame(columns=["id", "reason"])
 
     def _find_groupby_columns(self) -> list:
@@ -93,6 +94,7 @@ class Data:
         unique_time_counts = df["time"].nunique()
         unique_time_counts_per_id = df.groupby("id")["time"].nunique()
 
+        # TODO: We need to throw an error if TS not given and TIME_PERIOD is set
         if self.settings.INTERPOLATE_MISSING:
             if self.settings.TIME_PERIOD is None:
                 # for loadshape type dataframe
@@ -136,6 +138,7 @@ class Data:
                             [self.excluded_ids, excluded_ids], ignore_index=True
                         )
 
+            # TODO: Getting lots of deprecation warnings here (refer to Tutorial)
             # Fill NaN values with interpolation
             df = (
                 df.groupby("id")
@@ -257,6 +260,7 @@ class Data:
         base_df["time_diff"] = base_df.groupby("id")["datetime"].diff()
         min_time_diff_per_id = base_df.groupby("id")["time_diff"].min() / np.timedelta64(1, 'm')
 
+        # TODO: this doesn't work well with months (refer to Tutorial)
         # Get the ids that have a higher minimum granularity than defined
         invalid_ids = min_time_diff_per_id[
             min_time_diff_per_id > _const.min_granularity_per_time_period[self.settings.TIME_PERIOD]
