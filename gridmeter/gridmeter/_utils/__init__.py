@@ -25,4 +25,4 @@ from gridmeter._utils.dummy_data import (
 )
 
 from gridmeter._utils.data_processing import Data
-from gridmeter._utils.loadshape_settings import Data_Settings
+from gridmeter._utils.data_processing_settings import Data_Settings

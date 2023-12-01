@@ -1,7 +1,16 @@
-from gridmeter._utils.loadshape_settings import Data_Settings
+from gridmeter._utils.data_processing_settings import Data_Settings
 from gridmeter._utils import const as _const
 import pandas as pd
 import numpy as np
+
+
+# TODO: LOADSHAPE_Type should be None if inputing loadshape just like TIME_PERIOD
+
+# TODO: Need to think through interpolate_missing with loadshape input vs time_series
+
+# TODO: Min data should probably if interpolation is set to true
+
+# TODO: Need a way to combine Data classes into a single Data class
 
 # TODO: what to do with empty ls/ts/feature dataframes?
 class Data:
