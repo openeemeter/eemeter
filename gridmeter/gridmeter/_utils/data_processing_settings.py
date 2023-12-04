@@ -99,6 +99,7 @@ class Data_Settings(BaseSettings):
         validate_default=True,
     )
 
+    # TODO: only set if interpolate_missing is True
     """minimum percentage of data required for a meter to be included"""
     MIN_DATA_PCT_REQUIRED: float = pydantic.Field(
         default=0.8, 

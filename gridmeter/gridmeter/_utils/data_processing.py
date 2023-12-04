@@ -7,12 +7,25 @@ import numpy as np
 # TODO: LOADSHAPE_Type should be None if inputing loadshape just like TIME_PERIOD
 
 # TODO: Need to think through interpolate_missing with loadshape input vs time_series
+    # - Time Series: 
+    #     - check that datetime is continuous for given input
+    #     - interpolate nan values
+
+    # - Loadshape:
+    #     - Assuming integer indexing for time column, need to find max time value
+    #     - create a new dataframe with id's and correct time column
+    #     - join on new df and old
+    #     - interpolate nan values
+
 
 # TODO: Min data should probably if interpolation is set to true
 
 # TODO: Need a way to combine Data classes into a single Data class
 
-# TODO: what to do with empty ls/ts/feature dataframes?
+# TODO: what to do with empty ls/ts/feature dataframes? (if dataframe is empty, then it should be None)
+
+# TODO: if TIME_PERIOD is month, then minimum check doesn't work as is
+
 class Data:
     def __init__(self, settings: Data_Settings | None = None):
         if settings is None:
