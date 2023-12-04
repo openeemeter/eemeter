@@ -12,6 +12,9 @@ import gridmeter._utils.const as _const
 from gridmeter._utils.base_settings import BaseSettings
 
 
+min_data_pct = 0.8
+
+
 # Note: Options list order defines how seasons will be ordered in the loadshape
 class Season_Definition(BaseSettings):
     JANUARY: str = pydantic.Field(default="winter")
@@ -76,13 +79,13 @@ class Weekday_Weekend_Definition(BaseSettings):
 
 class Data_Settings(BaseSettings):
     """aggregation type for the loadshape"""
-    AGG_TYPE: _const.AggType = pydantic.Field(
+    AGG_TYPE: _const.AggType | None = pydantic.Field(
         default=_const.AggType.MEAN,
         validate_default=True,
     )
     
     """type of loadshape to be used"""
-    LOADSHAPE_TYPE: _const.LoadshapeType = pydantic.Field(
+    LOADSHAPE_TYPE: _const.LoadshapeType | None = pydantic.Field(
         default=_const.LoadshapeType.MODELED, 
         validate_default=True,
     )
@@ -99,18 +102,20 @@ class Data_Settings(BaseSettings):
         validate_default=True,
     )
 
-    # TODO: only set if interpolate_missing is True
     """minimum percentage of data required for a meter to be included"""
-    MIN_DATA_PCT_REQUIRED: float = pydantic.Field(
-        default=0.8, 
+    MIN_DATA_PCT_REQUIRED: float | None = pydantic.Field(
+        default=min_data_pct, 
         validate_default=True,
     )
 
     @pydantic.field_validator("MIN_DATA_PCT_REQUIRED")
     @classmethod
     def validate_min_data_pct_required(cls, value):
-        if value != 0.8:
-            raise ValueError("MIN_DATA_PCT_REQUIRED must be 0.8")
+        if value is None:
+            pass
+
+        elif value != min_data_pct:
+            raise ValueError(f"MIN_DATA_PCT_REQUIRED must be {min_data_pct}")
         
         return value
 
@@ -124,7 +129,6 @@ class Data_Settings(BaseSettings):
         default=_const.default_weekday_weekend_def, 
     )
 
-
     """set season and weekday_weekend classes with given dictionaries"""
     @pydantic.model_validator(mode="after")
     def _set_nested_classes(self):
@@ -135,7 +139,29 @@ class Data_Settings(BaseSettings):
             self.WEEKDAY_WEEKEND = Weekday_Weekend_Definition(**self.WEEKDAY_WEEKEND)
 
         return self
+    
+    """validate loadshape/time series settings"""
+    @pydantic.model_validator(mode="after")
+    def _validate_loadshape_time_series_settings(self):
+        ls_dict = {"AGG_TYPE": self.AGG_TYPE, "LOADSHAPE_TYPE": self.LOADSHAPE_TYPE, "TIME_PERIOD": self.TIME_PERIOD}
+        is_set = {k: v is not None for k, v in ls_dict.items()}
+        if any(is_set.values()):
+            for k, v in is_set.items():
+                if v is False:
+                    raise ValueError(f"{k} must be set if any of the following are set: {list(is_set.keys())}")
 
+        return self
+
+    """set MIN_DATA_PCT_REQUIRED"""
+    @pydantic.model_validator(mode="after")
+    def _set_min_data_pct_on_interpolate(self):
+        if self.INTERPOLATE_MISSING:
+            self.MIN_DATA_PCT_REQUIRED = min_data_pct
+        else:
+            self.MIN_DATA_PCT_REQUIRED = None
+
+        return self
+    
 
 if __name__ == "__main__":
     # Test SeasonDefinition
@@ -177,7 +203,7 @@ if __name__ == "__main__":
 
     # Test DataSettings
     settings = Data_Settings(
-        AGG_TYPE="median",
+        agg_type="median",
         season=season_dict, 
         weekday_weekend=weekday_weekend_dict,
     )
