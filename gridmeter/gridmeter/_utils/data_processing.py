@@ -240,7 +240,7 @@ class Data:
         df = df.dropna()
 
         # TODO: What to do with duplicates?
-        df = df.drop_duplicates(keep="first" , inplace = True)
+        df.drop_duplicates(keep="first" , inplace = True)
 
         # drop any ids that are in excluded_ids from loadshape (or init)
         df = df[~df["id"].isin(self.excluded_ids["id"])]
