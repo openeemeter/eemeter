@@ -5,20 +5,6 @@ import numpy as np
 import time
 
 
-# TODO: Need to think through interpolate_missing with loadshape input vs time_series
-    # - Time Series: 
-    #     - check that datetime is continuous for given input
-    #     - create a new dataframe with id's and correct time column
-    #     - join on new df and old
-    #     - interpolate nan values
-
-    # - Loadshape:
-    #     - Assuming integer indexing for time column, need to find max time value
-    #     - create a new dataframe with id's and correct time column
-    #     - join on new df and old
-    #     - interpolate nan values
-
-
 class Data:
     def __init__(self, settings: Data_Settings | None = None):
         if settings is None:
@@ -106,6 +92,41 @@ class Data:
 
         return df
 
+    def _create_values_for_interpolation(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Interpolate missing values in the dataframe based on the settings.
+        
+        - create a new dataframe with id's and correct time column
+        - join on new df and old
+        - interpolate nan values
+
+
+        """
+
+        if self.settings.INTERPOLATE_MISSING:
+            unique_ids = df['id'].unique()
+            unique_time_counts = None
+
+            if self.settings.TIME_PERIOD is None: # loadshape type dataframe
+                unique_time_counts = df["time"].max()
+
+            else: # timeseries type dataframe
+                unique_time_counts = _const.time_period_row_counts[self.settings.TIME_PERIOD]
+                    
+
+            time_values = range(1, unique_time_counts + 1)
+            # Create the expected dataframe having the correct number of timestamps for each id    
+            df_expected = pd.DataFrame({
+                'id': np.repeat(unique_ids, unique_time_counts),
+                'time': np.tile(time_values, len(unique_ids))
+            })
+
+            # Join the expected dataframe with the input dataframe
+            df = df_expected.merge(df, how='left', on=['id', 'time'])
+
+        return df
+
+
     def _validate_format_loadshape(self, df: pd.DataFrame) -> pd.DataFrame:
         # Check columns missing in loadshape_df
         expected_columns = ["id", "time", "loadshape"]
@@ -120,17 +141,11 @@ class Data:
         # loadshape df has the "time" column, whereas timeseries df has the "datetime" column
         subset_columns = expected_columns[:-1]
 
-        # TODO : To eliminate duplicates, find the absolute minimum value of loadshape
-        # The below command takes 20x time to execute than the one below it !!!!!
-
-        # create another dataframe having the duplicates
-        # df['abs_loadshape'] = df['loadshape'].abs()
-        # df = df.loc[df.groupby(subset_columns)['abs_loadshape'].idxmin()]
-
-        df.drop_duplicates(subset=subset_columns, keep="first", inplace = True)
+        # To eliminate duplicates, sort the values by loadshape and the keep the first (i.e. the lowest) value
+        df = df.sort_values(by='loadshape', key=abs).drop_duplicates(subset=subset_columns, keep="first")
 
         # Check that the minimum time counts per id is consistent for the input loadshape_df
-        unique_time_counts = df["time"].nunique()
+        unique_time_counts = df["time"].max()
         unique_time_counts_per_id = df.groupby("id")["time"].nunique()
 
         if self.settings.INTERPOLATE_MISSING:
@@ -176,14 +191,14 @@ class Data:
                             [self.excluded_ids, excluded_ids], ignore_index=True
                         )
 
+            df = self._create_values_for_interpolation(df)
+
             # Fill NaN values with interpolation
             df['loadshape'] = (
                 df.groupby("id")['loadshape']
                 .apply(lambda x: x.interpolate(method="linear", limit_direction="both"))
                 .reset_index(drop=True)
             )
-
-            # TODO : Interpolation should only occur on within seasons, not across seasons
 
         else:
             if self.settings.TIME_PERIOD is None:
@@ -210,6 +225,8 @@ class Data:
                     excluded_ids = pd.DataFrame({"id": excluded_ids})
                     excluded_ids["reason"] = "null values in features_df"
                     self.excluded_ids = pd.concat([self.excluded_ids, excluded_ids])
+
+        df = df[ ~df["id"].isin(self.excluded_ids["id"])]
 
         # pivot the loadshape_df to have the time as columns
         df = df.pivot(index="id", columns=["time"], values="loadshape")
@@ -239,7 +256,6 @@ class Data:
         # remove any rows with missing values
         df = df.dropna()
 
-        # TODO: What to do with duplicates?
         df.drop_duplicates(keep="first" , inplace = True)
 
         # drop any ids that are in excluded_ids from loadshape (or init)
@@ -289,12 +305,8 @@ class Data:
         # Remove duplicates
         subset_columns = expected_columns[:-1]
 
-        # TODO: To eliminate duplicates, find the absolute minimum value of loadshape
-        # The below command takes 20x time to execute than the one below it !!!!!
-        # base_df['abs_' + df_type] = base_df[df_type].abs()
-        # base_df = base_df.loc[base_df.groupby(subset_columns)['abs_' + df_type].idxmin()] 
-
-        base_df = base_df.drop_duplicates(subset=subset_columns, keep="first")
+        # To eliminate duplicates, sort the values by loadshape and the keep the first (i.e. the lowest) value
+        base_df = base_df.sort_values(by=df_type, key=abs).drop_duplicates(subset=subset_columns, keep="first")
 
         base_df = self._add_index_columns_from_datetime(base_df) # Add month / day_of_week / hour / etc columns
 
@@ -451,15 +463,18 @@ if __name__ == "__main__":
     )
 
     # # Create a boolean mask for Mondays and Wednesdays , will give ValueError at 80% threshold
-    # day_mask = df['datetime'].dt.dayofweek.isin([0,2])
+    day_mask = df['datetime'].dt.dayofweek.isin([2])
 
     # # Set 'observed' and 'modeled' values to NaN for all Mondays and Wednesdays
     # df.loc[day_mask, ['observed', 'modeled']] = np.nan
 
+    # # Remove all rows with NaN values
+    df = df.loc[~day_mask]
+
     # Convert 'datetime' column to datetime type
     df["datetime"] = pd.to_datetime(df["datetime"])
 
-    settings = Data_Settings(TIME_PERIOD=_const.TimePeriod.HOURLY_MONTH)
+    settings = Data_Settings(TIME_PERIOD=_const.TimePeriod.SEASONAL_HOURLY_DAY_OF_WEEK)
 
     data = Data(None).set_data(time_series_df=df)
     start_time = time.time()
