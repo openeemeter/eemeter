@@ -12,48 +12,30 @@ import numpy as np
 import pandas as pd
 
 from gridmeter._utils.adaptive_loss import adaptive_weights
-from gridmeter._clustering import (
-    transform as _transform,
-)
-
-
-def _transform_treatment_loadshape(df: pd.DataFrame):
-    """
-    transforms a dataframe meant to be treatment loadshapes
-
-    It can work either on a dataframe containing all treatment loadshapes
-    or a single loadshape.
-
-    Meant to be used on treatment matching as the transform is needed to occur as part of the matching process
-    """
-    # df_list: list[pd.DataFrame] = []
-    # # TODO: This is slow. Need to vectorize or use apply?
-    # for _id, data in df.iterrows():
-    #     transformed_data = _transform._normalize_loadshape(
-    #         ls_arr=data.values
-    #     )
-    #     df_list.append(transformed_data)
-    # 
-    # df_transformed = pd.concat(df_list).to_frame(name="ls")  # type: ignore
-
-    df_transformed = df.apply(_transform._normalize_loadshape, axis=1)
-
-    return df_transformed
 
 
 def fit_to_clusters(t_ls, cp_ls, x0, agg_type: str):
     # agg_type = 'mean' # overwrite to force agg_type to be mean
-    sigma = 2.698  # 1.5 IQR
+    _SIGMA = 2.698  # 1.5 IQR
+    _MIN_PCT_CLUSTER = 1E-6
+
+    def _remove_small_x(x: np.ndarray):
+        # remove small values and normalize to 1
+        x[x < _MIN_PCT_CLUSTER] = 0
+        x /= np.sum(x)
+
+        return x
 
     def obj_fcn_dec(t_ls, cp_ls, idx=None):
         if idx is not None:
             cp_ls = cp_ls[idx, :]
 
         def obj_fcn(x):
+            x = _remove_small_x(x)
             resid = (t_ls - (cp_ls * x[:, None]).sum(axis=0)).flatten()
 
             weight, _, _ = adaptive_weights(
-                x=resid, sigma=sigma, agg_type=agg_type  # type: ignore
+                x=resid, sigma=_SIGMA, agg_type=agg_type  # type: ignore
             )
 
             wSSE = np.sum(weight * resid**2)
@@ -68,8 +50,8 @@ def fit_to_clusters(t_ls, cp_ls, x0, agg_type: str):
 
     x0 = np.array(x0).flatten()
 
-    # only optimize if > 0.1%
-    idx = np.argwhere(x0 >= 0.001).flatten()
+    # only optimize if >= _MIN_PCT_CLUSTER
+    idx = np.argwhere(x0 >= _MIN_PCT_CLUSTER).flatten()
     if len(idx) == 0:
         idx = np.arange(0, len(x0))
 
@@ -90,7 +72,7 @@ def fit_to_clusters(t_ls, cp_ls, x0, agg_type: str):
     # res = basinhopping(obj_fcn, x0, niter=10, minimizer_kwargs={'bounds': bnds, 'method': 'Powell'})
 
     x = np.zeros_like(x0)
-    x[idx] = res.x
+    x[idx] = _remove_small_x(res.x)
 
     return x
 

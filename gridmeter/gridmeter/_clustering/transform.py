@@ -18,7 +18,7 @@ import skfda.preprocessing.dim_reduction.feature_extraction
 _NORMALIZATION_QUANTILE = 0.1
 
 
-def _normalize_loadshape(ls_arr: np.ndarray):
+def _normalize_single_loadshape(ls_arr: np.ndarray):
     """
     applies the min and max normalization logic to a dataframe which contains the transformed
     loadshape
@@ -37,7 +37,30 @@ def _normalize_loadshape(ls_arr: np.ndarray):
     return ret_arr.T
 
 
-def _get_fpca(
+def _normalize_df_loadshapes(df: pd.DataFrame):
+    """
+    transforms a loadshape dataframe
+
+    It can work either on a dataframe containing all treatment loadshapes
+    or a single loadshape.
+
+    """
+    # df_list: list[pd.DataFrame] = []
+    # # TODO: This is slow. Need to vectorize or use apply?
+    # for _id, data in df.iterrows():
+    #     transformed_data = _normalize_loadshape(
+    #         ls_arr=data.values
+    #     )
+    #     df_list.append(transformed_data)
+    # 
+    # df_transformed = pd.concat(df_list).to_frame(name="ls")  # type: ignore
+
+    df_transformed = df.apply(_normalize_single_loadshape, axis=1)
+
+    return df_transformed
+
+
+def _fpca_base(
     x: np.ndarray, y: np.ndarray, min_var_ratio: float
 ) -> tuple[np.ndarray, str | None]:
     """
@@ -103,7 +126,7 @@ def _get_fpca_from_loadshape(
     time = df.columns.to_numpy().astype(float)
     ls = df.values
 
-    fcpa_mixture_components, err_msg = _get_fpca(
+    fcpa_mixture_components, err_msg = _fpca_base(
         x=time, 
         y=ls, 
         min_var_ratio=min_var_ratio
@@ -174,7 +197,7 @@ class InitialPoolLoadshapeTransform:
         is ready for clustering
         """
 
-        df_transformed = df.apply(_normalize_loadshape, axis=1)
+        df_transformed = _normalize_df_loadshapes(df=df)
 
         fpca_result, err_msg = _get_fpca_from_loadshape(
             df=df_transformed, min_var_ratio=min_var_ratio

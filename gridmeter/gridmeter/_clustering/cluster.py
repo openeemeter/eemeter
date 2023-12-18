@@ -5,8 +5,6 @@ module is responsible for creating clusters
 
 from __future__ import annotations
 
-import copy
-
 import attrs
 import numpy as np
 import pandas as pd
@@ -18,7 +16,6 @@ from gridmeter._clustering import (
     settings as _settings,
     scoring as _scoring,
     bounds as _bounds,
-    data as _data,
 )
 
 from typing import Iterable
@@ -46,13 +43,14 @@ def _get_bisecting_kmeans_cluster_label_dict(
         bisecting_strategy="largest_cluster",  # ['biggest_inertia', 'largest_cluster']
     )
     algo.fit(data)
+
     return algo.labels_full
 
 
 def _final_cluster_renumber(clusters: np.ndarray, min_cluster_size: int):
     """
-    final renumbering which also adds 1
-    valid clusters will be 1 -> max_cluster_num
+    final renumbering
+    valid clusters will be 0 -> max_cluster_num
     """
 
     clusters = _scoring.merge_small_clusters(
@@ -64,7 +62,7 @@ def _final_cluster_renumber(clusters: np.ndarray, min_cluster_size: int):
 @attrs.define
 class _LabelResult:
     """
-    contains metrics about a cluster label returned from skitlearn
+    contains metrics about a cluster label returned from sklearn
     """
 
     labels: np.ndarray
@@ -454,15 +452,6 @@ def _get_cluster_ls(df_cp_ls: pd.DataFrame, cluster_df: pd.DataFrame, agg_type: 
     return cluster_ls
 
 
-def _transform_cluster_loadshape(df_ls_cluster: pd.DataFrame) -> pd.DataFrame:
-    """
-    applies the transform to the cluster loadshapes
-    """
-    df_ls_cluster_transformed = df_ls_cluster.apply(_transform._normalize_loadshape, axis=1)
-
-    return df_ls_cluster_transformed
-
-
 @attrs.define
 class ClusterResult:
     """
@@ -525,8 +514,8 @@ class ClusterResult:
             agg_type=agg_type,
         )
 
-        cluster_loadshape_transformed_df = _transform_cluster_loadshape(
-            df_ls_cluster=cluster_loadshape_df  # type: ignore
+        cluster_loadshape_transformed_df = _transform._normalize_df_loadshapes(
+            df=cluster_loadshape_df
         )
 
         return ClusterResult(
@@ -577,13 +566,6 @@ class ClusterResult:
             dist_metric=s.DIST_METRIC,
         )
 
-    @property
-    def cluster_loadshape_transformed_srs(self):
-        """
-        returns the series version of the dataframe to be used for matching
-        """
-        return self.cluster_loadshape_transformed_df["ls"]
-
     def get_match_treatment_to_cluster_df(
         self,
         treatment_loadshape_df: pd.DataFrame,
@@ -595,15 +577,15 @@ class ClusterResult:
 
         """
 
-        transformed_treatment_loadshape = _fit._transform_treatment_loadshape(
+        transformed_treatment_loadshape = _transform._normalize_df_loadshapes(
             df=treatment_loadshape_df
         )
 
-        df_ls_cluster = self.cluster_loadshape_transformed_df
-
-        return _fit._match_treatment_to_cluster(
+        df_t_coeffs = _fit._match_treatment_to_cluster(
             df_ls_t=transformed_treatment_loadshape,
-            df_ls_cluster=df_ls_cluster,
+            df_ls_cluster=self.cluster_loadshape_transformed_df,
             agg_type=self.agg_type,
             dist_metric=self.dist_metric,
         )
+
+        return df_t_coeffs
