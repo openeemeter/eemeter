@@ -10,8 +10,6 @@ from gridmeter._utils.base_comparison_group import Comparison_Group_Algorithm
 from gridmeter._clustering import settings as _settings, cluster as _cluster
 
 
-# TODO: Make this work better with Data class
-# TODO: get_clusters and match_treatment_to_cluster will break if passed a Data class
 class Clustering(Comparison_Group_Algorithm):
     Cluster = None
 

@@ -225,10 +225,10 @@ def get_cluster_result_generator_from_upper_bound_n_cluster(
         )
 
     if data is None:
-        data = pool_loadshape_transform_result.fpca_result.unstack().to_numpy()
+        data = pool_loadshape_transform_result.fpca_result
 
     label_results = _get_all_label_results(
-        data=data,
+        data=data.values,
         n_cluster_upper=upper_bound_n_cluster,
         score_choice=score_choice,
         dist_metric=dist_metric,
@@ -394,7 +394,7 @@ def get_best_scored_cluster_result(
     All the labels up to that number are saved and then scored.
     Then the best scored labels are returned so that the values can be
     """
-    data = pool_loadshape_transform_result.fpca_result.unstack().to_numpy()
+    data = pool_loadshape_transform_result.fpca_result
     cluster_bound_lower, cluster_bound_upper = _bounds.get_cluster_bounds(
         data=data,
         min_cluster_size=min_cluster_size,
@@ -444,66 +444,23 @@ def _get_cluster_ls(df_cp_ls: pd.DataFrame, cluster_df: pd.DataFrame, agg_type: 
     settings for agg_type
     """
 
-    df_cp_ls = _transform.unstack_and_ensure_df(df_cp_ls)
-    df_cp_ls.columns = df_cp_ls.columns.droplevel(
-        0
-    )  # must do this so that join below does not raise exception due to difference in levels
-
-    cluster_df = cluster_df.reset_index().set_index("id")
-    # There has got to be a better way to do this
-
     cluster_df = cluster_df.join(df_cp_ls, on="id")
-    cluster_df = (
-        cluster_df.reset_index().set_index(["id", "cluster"]).stack().to_frame()  # type: ignore
-    )
-    cluster_df = (
-        cluster_df.reset_index()
-        .rename(columns={"level_2": "time", 0: "value"})
-        .set_index("id")
-    )
+    cluster_df = cluster_df.reset_index().set_index(["id", "cluster"])  # type: ignore
 
     # calculate cp_df
-    df_cluster_ls = cluster_df.groupby(["cluster", "time"]).agg(ls=("value", agg_type))  # type: ignore
-    cluster_ls = df_cluster_ls[
-        df_cluster_ls.index.get_level_values(0) > 0
-    ]  # don't match to outlier cluster
+    df_cluster_ls = cluster_df.groupby("cluster").agg(agg_type)  # type: ignore
+    cluster_ls = df_cluster_ls[df_cluster_ls.index.get_level_values(0) > -1]  # don't match to outlier cluster
 
     return cluster_ls
 
 
 def _transform_cluster_loadshape(df_ls_cluster: pd.DataFrame) -> pd.DataFrame:
     """
-    applies the transform to the cluster loadshape and returns as pandas Series.
-
-    It is needed to be Series (I believe) for cluster matching/weights
+    applies the transform to the cluster loadshapes
     """
-    df_ls_cluster = copy.deepcopy(df_ls_cluster)
+    df_ls_cluster_transformed = df_ls_cluster.apply(_transform._normalize_loadshape, axis=1)
 
-    # prepend cluster_ to prevent potential names from clashing
-    cluster_num = df_ls_cluster.index.get_level_values("cluster")
-    df_ls_cluster["id"] = [f"cluster_{n}" for n in cluster_num]
-    df_ls_cluster = df_ls_cluster.reset_index().set_index(["id", "time"])
-    df_ls_cluster_srs = df_ls_cluster[["ls"]]
-
-    df_list: list[pd.DataFrame] = []
-    all_ids = df_ls_cluster_srs.index.get_level_values("id").unique().values
-    for _id in all_ids:
-        data = df_ls_cluster_srs.iloc[
-            df_ls_cluster_srs.index.get_level_values("id") == _id
-        ]
-        transformed_data = _transform.get_min_max_normalized_ls_df(
-            ls_df=data, drop_nonfinite=True
-        )
-        df_list.append(transformed_data)
-
-    df_ls_cluster_transformed = pd.concat(df_list).stack().to_frame(name="ls")  # type: ignore
-
-    # remove prefix cluster_
-    df_ls_cluster_transformed["cluster"] = cluster_num
-    df_ls_cluster_transformed = df_ls_cluster_transformed.reset_index().set_index(
-        ["cluster", "time"]
-    )
-    return df_ls_cluster_transformed[["ls"]]
+    return df_ls_cluster_transformed
 
 
 @attrs.define
@@ -596,15 +553,9 @@ class ClusterResult:
         Will do all necessary transformations and clustering/scoring needed in order to return the instance
         of the class that is capable of assigning weights to treatment loadshapes.
         """
-        # TODO: delete this line when everything works on loadshape df
-        df_cp = df_cp.stack().reset_index().rename(columns={"level_1": "time", 0: "ls"}).set_index(["id", "time"])
-
-        df_cp = _data.set_df_index(df=df_cp)
         ls_transform = _transform.InitialPoolLoadshapeTransform.from_full_cp_ls_df(
             df=df_cp, min_var_ratio=s.FPCA_MIN_VARIANCE_RATIO
         )
-
-        # ls_transform = _transform.unstack_and_ensure_df(ls_transform)
 
         best_scored_cluster, score_elements = get_best_scored_cluster_result(
             pool_loadshape_transform_result=ls_transform,
@@ -648,7 +599,7 @@ class ClusterResult:
             df=treatment_loadshape_df
         )
 
-        df_ls_cluster = _transform.unstack_and_ensure_df(self.cluster_loadshape_transformed_srs)
+        df_ls_cluster = self.cluster_loadshape_transformed_df
 
         return _fit._match_treatment_to_cluster(
             df_ls_t=transformed_treatment_loadshape,

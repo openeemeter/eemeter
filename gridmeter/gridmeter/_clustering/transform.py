@@ -14,146 +14,8 @@ import skfda.representation.grid
 import skfda.representation.basis
 import skfda.preprocessing.dim_reduction.feature_extraction
 
-from typing import cast
-
 
 _NORMALIZATION_QUANTILE = 0.1
-
-
-def unstack_and_ensure_df(df: pd.DataFrame):
-    """
-    util function which unstacks a DataFrame and ensures the result is still a DataFrame.
-
-    Important because some can become Series which will cause issues in the code.
-
-    Also helps with type checking by always returning a DataFrame
-    """
-
-    unstack = df.unstack()
-    if not isinstance(unstack, pd.DataFrame):
-        raise ValueError(
-            f"attempted to unstack a DataFrame and resulted in type not being a DataFrame when explicitly set to be one: type - {type(unstack)}"
-        )
-
-    return unstack
-
-
-def _stack_and_ensure_df(df: pd.DataFrame):
-    """
-    util function which stacks a DataFrame and ensures the result is still a DataFrame.
-
-    Important because some can become Series which will cause issues in the code.
-
-    Also helps with type checking by always returning a DataFrame
-    """
-
-    stacked = df.stack()
-    if not isinstance(stacked, pd.DataFrame):
-        raise ValueError(
-            f"attempted to stack a DataFrame and resulted in type not being a DataFrame when explicitly set to be one: type - {type(stacked)}"
-        )
-
-    return stacked
-
-
-def _drop_nonfinite_from_df(df: pd.DataFrame):
-    """
-    also ensures that dropping nonfinite result is still a dataframe.
-
-    can be a series if not multi-index and will cause issues if so.
-    """
-    df = df.replace([np.inf, -np.inf], np.nan)
-    # with pd.option_context("mode.use_inf_as_null", True):
-    unstacked = unstack_and_ensure_df(df=df)
-    dropped = unstacked.dropna(axis=1, how="any")
-    return _stack_and_ensure_df(df=dropped)
-
-
-@attrs.define
-class _TransformInput:
-    """
-    contains the numpy array used for the various transforms needed
-    for clustering.
-
-    creating as a class so all necessary components needed for converting back to a dataframe
-    are provided.
-    """
-
-    ids: pd.Index
-    """ids needed to reconstruct dataframe from array"""
-
-    ls_values: np.ndarray
-    """
-    the loadshape values as an array. often used as basis of transform
-    """
-
-    is_for_fpca: bool
-    """
-    flag for if the inputs are specifically for fpca. changes a few of the internal fields
-    """
-
-    name: str
-
-    time_arr: np.ndarray
-    """
-    time_arr is always the time unlike columns which is only sometimes.
-    Needed to pass to certain transforms (fPCA)
-    """
-
-    time_idx: pd.Index
-
-    @classmethod
-    def from_multi_index_dataframe(
-        cls, df: pd.DataFrame, is_for_fpca: bool, drop_nonfinite: bool
-    ):
-        """ """
-        if drop_nonfinite:
-            df = _drop_nonfinite_from_df(df=df)
-
-        df_unstack = unstack_and_ensure_df(df=df)
-        ls_values = df_unstack.values
-
-        ids = df_unstack.index
-
-        # USED TO BE IN IF CONDITIONAL IF THE INDEX WAS A MULTI_INDEX, NOW ASSUMING IT ALWAYS IS
-        time = df_unstack.columns.get_level_values("time")
-
-        name = "ls"
-
-        time_arr = time.to_numpy().astype(float)
-
-        return _TransformInput(
-            ids=ids,
-            ls_values=ls_values,
-            is_for_fpca=is_for_fpca,
-            name=name,
-            time_arr=time_arr,
-            time_idx=time,
-        )
-
-    def _get_columns(self, transformed_ls_values: np.ndarray):
-        if not self.is_for_fpca:
-            return self.time_idx
-
-        return pd.Series(
-            np.arange(transformed_ls_values.shape[1]) + 1,
-            #
-            name="fPCA_component",
-        )
-
-    def get_transformed_result_as_df(
-        self, transformed_ls_values: np.ndarray
-    ) -> pd.DataFrame:
-        """
-        uses saved fields and an np array that was transformed
-        to create a dataframe
-        """
-        columns = self._get_columns(transformed_ls_values=transformed_ls_values)
-        return (
-            pd.DataFrame(transformed_ls_values, index=self.ids, columns=columns)
-            .stack()
-            .rename(self.name)  # type: ignore
-        )
 
 
 def _normalize_loadshape(ls_arr: np.ndarray):
@@ -175,52 +37,6 @@ def _normalize_loadshape(ls_arr: np.ndarray):
     return ret_arr.T
 
 
-def get_min_max_normalized_ls_df(ls_df: pd.DataFrame, drop_nonfinite: bool):
-    """
-    receives loadshape dataframe and applies min max normalization
-    on the values
-
-    This is done before performing FPCA on the comparison pool
-    """
-
-    t_in = _TransformInput.from_multi_index_dataframe(
-        df=ls_df, is_for_fpca=False, drop_nonfinite=drop_nonfinite
-    )
-
-    normalized_np_arr = _normalize_loadshape(
-        ls_arr=t_in.ls_values
-    )
-
-    df = t_in.get_transformed_result_as_df(transformed_ls_values=normalized_np_arr)
-
-    return unstack_and_ensure_df(df)
-
-
-def _get_all_normalized_ls_dfs_as_list(
-    total_cp_df: pd.DataFrame,
-) -> list[pd.DataFrame]:
-    """
-    iterates through unique indices to extract all dataframes to be normalized as a list
-    """
-    dataframes = []
-    ids = total_cp_df.index.get_level_values("id").unique().values
-    for _id in ids:
-        data = total_cp_df.iloc[total_cp_df.index.get_level_values("id") == _id]
-        dataframes.append(data)
-
-    return dataframes
-
-
-def concatenate_normalized_ls_dfs(ls_dfs: list[pd.DataFrame]):
-    """
-    concatenates the normalized loadshape dataframes into a single one ready for fpca
-    """
-    concat_df = pd.concat(ls_dfs)
-    srs = concat_df.stack()
-    srs = cast(pd.Series, srs)
-    return srs.to_frame(name="ls")
-
-
 def _get_fpca(
     x: np.ndarray, y: np.ndarray, min_var_ratio: float
 ) -> tuple[np.ndarray, str | None]:
@@ -237,21 +53,21 @@ def _get_fpca(
 
     if 0 >= min_var_ratio or min_var_ratio >= 1:
         raise ValueError("min_var_ratio but be greater than 0 and less than 1")
-
-    n_min = 1
-    # get maximum n components
-    n_max = np.min(
-        np.array(np.shape(y)) - [1, 5]
-    )  # smallest 1  || min(largest = number of samples - 1, # time points)
-    if n_max < n_min:
-        n_max = n_min
-
-    # get maximum principle components
+    
     if len(x) == 0 or len(y) == 0:
         return np.array([]), "provided empty values for fpca"
 
-    n_max = cast(int, n_max)
+    n_min = 1
+    # get maximum n components
 
+    # smallest 1  || min(largest = number of samples - 1, # time points)
+    n_max = np.min(np.array(np.shape(y)) - [1, 5])  
+    if n_max < n_min:
+        n_max = n_min
+
+    n_max = int(n_max)
+
+    # get maximum principle components
     fd = skfda.representation.grid.FDataGrid(grid_points=x, data_matrix=y)
     basis_fcn = skfda.representation.basis.Fourier
 
@@ -274,8 +90,8 @@ def _get_fpca(
     return mixture_components, None
 
 
-def _get_fpca_from_concatenate_normalized_ls(
-    concat_df: pd.DataFrame, min_var_ratio: float
+def _get_fpca_from_loadshape(
+    df: pd.DataFrame, min_var_ratio: float
 ) -> tuple[pd.DataFrame, str | None]:
     """
     function which receives concatenated dataframe of normalized loadshape
@@ -283,22 +99,26 @@ def _get_fpca_from_concatenate_normalized_ls(
 
     Also returns a string that if not empty, implies an error message/something went wrong
     """
-    t_in = _TransformInput.from_multi_index_dataframe(
-        df=concat_df, is_for_fpca=True, drop_nonfinite=True
-    )
+    ids = df.index
+    time = df.columns.to_numpy().astype(float)
+    ls = df.values
 
     fcpa_mixture_components, err_msg = _get_fpca(
-        x=t_in.time_arr, y=t_in.ls_values, min_var_ratio=min_var_ratio
+        x=time, 
+        y=ls, 
+        min_var_ratio=min_var_ratio
     )
-    if err_msg is not None:
-        return pd.DataFrame(), None
 
-    return (
-        t_in.get_transformed_result_as_df(
-            transformed_ls_values=fcpa_mixture_components
-        ),
-        None,
-    )
+    if err_msg is None:
+        fpca_components = np.arange(fcpa_mixture_components.shape[1])
+        columns = pd.Series(fpca_components, name="fPCA_component")
+
+        df_fpca = pd.DataFrame(fcpa_mixture_components, index=ids, columns=columns)
+
+    else:
+        df_fpca = pd.DataFrame()
+
+    return df_fpca, None
 
 
 @attrs.define
@@ -336,8 +156,8 @@ class InitialPoolLoadshapeTransform:
         is the concatenated result of all the transformed loadshapes that will have fpca performed on it
         """
 
-        fpca_result, err_msg = _get_fpca_from_concatenate_normalized_ls(
-            concat_df=concat_transform_df, min_var_ratio=min_var_ratio
+        fpca_result, err_msg = _get_fpca_from_loadshape(
+            df=concat_transform_df, min_var_ratio=min_var_ratio
         )
         return InitialPoolLoadshapeTransform(
             fpca_result=fpca_result,
@@ -354,15 +174,10 @@ class InitialPoolLoadshapeTransform:
         is ready for clustering
         """
 
-        all_cp_dfs = _get_all_normalized_ls_dfs_as_list(total_cp_df=df)
-        transformed_dfs = [
-            get_min_max_normalized_ls_df(ls_df=df, drop_nonfinite=True)
-            for df in all_cp_dfs
-        ]
-        concat_transformed = concatenate_normalized_ls_dfs(ls_dfs=transformed_dfs)
+        df_transformed = df.apply(_normalize_loadshape, axis=1)
 
-        fpca_result, err_msg = _get_fpca_from_concatenate_normalized_ls(
-            concat_df=concat_transformed, min_var_ratio=min_var_ratio
+        fpca_result, err_msg = _get_fpca_from_loadshape(
+            df=df_transformed, min_var_ratio=min_var_ratio
         )
 
         return InitialPoolLoadshapeTransform(

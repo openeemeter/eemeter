@@ -119,71 +119,62 @@ def score_clusters(
     # merge clusters to outlier cluster
     labels = merge_small_clusters(labels, min_cluster_size)
 
-    # don't include outlier cluster in scoring
-    idx = np.argwhere(labels != -1).flatten()
-
     non_outlier_cluster_count = labels.max() + 1
     if non_outlier_cluster_count < cluster_bound_lower:
         return get_max_score_from_system_size(), True
 
     if non_outlier_cluster_count > max_non_outlier_cluster_count:
         return get_max_score_from_system_size(), True
+    
+    # don't include outlier cluster in scoring
+    idx = np.argwhere(labels != -1).flatten()
+    data_non_outlier = data[idx, :]
+    labels_non_outlier = labels[idx]
 
+    score_error = False
     if score_choice == _const.ScoreChoice.SILHOUETTE:
         try:
             # if sample size is a number then it randomly samples within the group, None looks at all
             # if using silhouette score for large datasets, might want to specify sample_size
-            return (
-                float(
-                    sklearn.metrics.silhouette_score(
-                        data[idx, :],
-                        labels[idx],
+            score = float(sklearn.metrics.silhouette_score(
+                        data_non_outlier,
+                        labels_non_outlier,
                         metric=dist_metric,
                         sample_size=10_000,
-                    )
-                ),
-                False,
-            )
+                    ))
 
         except Exception:
-            return float(10.0), True
+            score = float(10.0)
+            score_error = True
 
-    if score_choice == _const.ScoreChoice.SILHOUETTE_MEDIAN:
+    elif score_choice == _const.ScoreChoice.SILHOUETTE_MEDIAN:
         try:
             # if this is too computationally intensive, could sample clusters instead
             score_all = -10 * sklearn.metrics.silhouette_samples(
-                data, labels, metric=dist_metric
-            )  # type: ignore
-            return float(np.median(score_all[idx])), False
-
+                data_non_outlier, 
+                labels_non_outlier, 
+                metric=dist_metric
+            ) # type: ignore
+            score = float(np.median(score_all[idx]))
         except Exception:
-            return float(10.0), True
+            score = float(10.0)
+            score_error = True
 
-    if score_choice in [
-        _const.ScoreChoice.VARIANCE_RATIO,
-        _const.ScoreChoice.CALINSKI_HARABASZ,
-    ]:
+    elif score_choice in [_const.ScoreChoice.VARIANCE_RATIO, _const.ScoreChoice.CALINSKI_HARABASZ]:
         try:
-            return (
-                float(
-                    -1
-                    * sklearn.metrics.calinski_harabasz_score(data[idx, :], labels[idx])
-                ),
-                False,
-            )
+            score = -1*sklearn.metrics.calinski_harabasz_score(data_non_outlier, labels_non_outlier)   
         except Exception:
-            return get_max_score_from_system_size(), True
+            score = get_max_score_from_system_size()
+            score_error = True
 
-    if score_choice == _const.ScoreChoice.DAVIES_BOULDIN:
+    elif score_choice == _const.ScoreChoice.DAVIES_BOULDIN:
         try:
-            return (
-                float(sklearn.metrics.davies_bouldin_score(data[idx, :], labels[idx])),
-                False,
-            )
-
+            score = float(sklearn.metrics.davies_bouldin_score(data_non_outlier, labels_non_outlier))
         except Exception:
-            return get_max_score_from_system_size(), True
+            score = get_max_score_from_system_size()
+            score_error = True
 
-    raise ValueError(
-        f"{score_choice} is not a recognized scoring function in clustering"
-    )
+    else:
+        raise ValueError(f"{score_choice} is not a recognized scoring function in clustering")
+    
+    return score, score_error
