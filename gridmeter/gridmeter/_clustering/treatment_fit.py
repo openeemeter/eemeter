@@ -12,6 +12,33 @@ import numpy as np
 import pandas as pd
 
 from gridmeter._utils.adaptive_loss import adaptive_weights
+from gridmeter._clustering import (
+    transform as _transform,
+)
+
+
+def _transform_treatment_loadshape(df: pd.DataFrame):
+    """
+    transforms a dataframe meant to be treatment loadshapes
+
+    It can work either on a dataframe containing all treatment loadshapes
+    or a single loadshape.
+
+    Meant to be used on treatment matching as the transform is needed to occur as part of the matching process
+    """
+    # df_list: list[pd.DataFrame] = []
+    # # TODO: This is slow. Need to vectorize or use apply?
+    # for _id, data in df.iterrows():
+    #     transformed_data = _transform._normalize_loadshape(
+    #         ls_arr=data.values
+    #     )
+    #     df_list.append(transformed_data)
+    # 
+    # df_transformed = pd.concat(df_list).to_frame(name="ls")  # type: ignore
+
+    df_transformed = df.apply(_transform._normalize_loadshape, axis=1)
+
+    return df_transformed
 
 
 def fit_to_clusters(t_ls, cp_ls, x0, agg_type: str):
@@ -68,30 +95,40 @@ def fit_to_clusters(t_ls, cp_ls, x0, agg_type: str):
     return x
 
 
-def t_meter_match(
-    df_ls_t: pd.DataFrame, df_ls_clusters: pd.Series, agg_type: str, dist_metric: str
-):
+# TODO: this is not a fast way to do this, could be parallelized
+def _match_treatment_to_cluster(
+    df_ls_t: pd.DataFrame, 
+    df_ls_cluster: pd.Series, 
+    agg_type: str, 
+    dist_metric: str
+):   
     if dist_metric == "manhattan":
         dist_metric = "cityblock"
 
-    t_ls = df_ls_t.unstack().to_numpy()
-    cp_ls = df_ls_clusters.unstack().to_numpy()
+    t_ls = df_ls_t.to_numpy()
+    cp_ls = df_ls_cluster.to_numpy()
 
     # Get percent from each cluster
-    # distances = cdist(t_ls_all, cp_ls, metric='euclidean')
     distances = scipy.spatial.distance.cdist(t_ls, cp_ls, metric=dist_metric)  # type: ignore
     distances_norm = (np.min(distances, axis=1) / distances.T).T
-    distances_norm = (
-        distances_norm**20
-    )  # change this number to alter weights, larger centralizes the weight, smaller spreads them out
+    # change this number (20) to alter weights, larger centralizes the weight, smaller spreads them out
+    distances_norm = (distances_norm**20)  
     distances_norm = (distances_norm.T / np.sum(distances_norm, axis=1)).T
 
-    coeffs = fit_to_clusters(
-        t_ls=t_ls, cp_ls=cp_ls, x0=distances_norm, agg_type=agg_type
-    )
+    coeffs = []
+    for n, t_id in enumerate(df_ls_t.index):
+        t_id_ls = t_ls[n, :]
+        x0 = distances_norm[n, :]
 
-    t_ids = df_ls_t.index.get_level_values("id").unique()
-    columns = [f"pct_cluster_{int(n)}" for n in np.arange(coeffs.shape[0])]
-    df_t_coeffs = pd.DataFrame(coeffs[:, None].T, index=t_ids, columns=columns)
+        id_coeffs = fit_to_clusters(t_ls=t_id_ls, cp_ls=cp_ls, x0=x0, agg_type=agg_type)
+
+        coeffs.append(id_coeffs)
+
+    coeffs = np.vstack(coeffs)
+
+    # Create dataframe
+    t_ids = df_ls_t.index
+    columns = [f"pct_cluster_{int(n)}" for n in df_ls_cluster.index]
+    df_t_coeffs = pd.DataFrame(coeffs, index=t_ids, columns=columns)
 
     return df_t_coeffs

@@ -58,7 +58,6 @@ def _final_cluster_renumber(clusters: np.ndarray, min_cluster_size: int):
     clusters = _scoring.merge_small_clusters(
         clusters=clusters, min_cluster_size=min_cluster_size
     )
-    clusters = clusters + 1  # type: ignore
     return clusters
 
 
@@ -492,7 +491,7 @@ def _transform_cluster_loadshape(df_ls_cluster: pd.DataFrame) -> pd.DataFrame:
         data = df_ls_cluster_srs.iloc[
             df_ls_cluster_srs.index.get_level_values("id") == _id
         ]
-        transformed_data = _transform.get_min_maxed_normalized_unstacked_ls_df(
+        transformed_data = _transform.get_min_max_normalized_ls_df(
             ls_df=data, drop_nonfinite=True
         )
         df_list.append(transformed_data)
@@ -505,48 +504,6 @@ def _transform_cluster_loadshape(df_ls_cluster: pd.DataFrame) -> pd.DataFrame:
         ["cluster", "time"]
     )
     return df_ls_cluster_transformed[["ls"]]
-
-
-def _transform_treatment_loadshape(df: pd.DataFrame):
-    """
-    transforms a dataframe meant to be treatment loadshapes
-
-    It can work either on a dataframe containing all treatment loadshapes
-    or a single loadshape.
-
-    Meant to be used on treatment matching as the transform is needed to occur as part of the matching process
-    """
-    df_list: list[pd.DataFrame] = []
-    all_ids = df.index.get_level_values("id").unique().values
-    for _id in all_ids:
-        data = df.iloc[df.index.get_level_values("id") == _id]
-        transformed_data = _transform.get_min_maxed_normalized_unstacked_ls_df(
-            ls_df=data, drop_nonfinite=True
-        )
-        df_list.append(transformed_data)
-
-    return pd.concat(df_list).stack().to_frame(name="ls")  # type: ignore
-
-
-def _match_treatment_to_cluster(
-    df_ls_t: pd.DataFrame, df_ls_cluster: pd.Series, agg_type: str, dist_metric: str
-):
-    all_ids = df_ls_t.index.get_level_values("id").unique().values
-
-    df_list = []
-    for id in all_ids:
-        data = df_ls_t.iloc[df_ls_t.index.get_level_values("id") == id]
-        matched_df = _fit.t_meter_match(
-            df_ls_t=data,
-            df_ls_clusters=df_ls_cluster,
-            agg_type=agg_type,
-            dist_metric=dist_metric,
-        )
-        df_list.append(matched_df)
-
-    df_t_coeffs = pd.concat(df_list)
-
-    return df_t_coeffs
 
 
 @attrs.define
@@ -631,7 +588,7 @@ class ClusterResult:
 
     @classmethod
     def from_comparison_pool_loadshapes_and_settings(
-        cls, df_cp_ls: pd.DataFrame, s: _settings.Settings
+        cls, df_cp: pd.DataFrame, s: _settings.Settings
     ):
         """
         classmethod for creating a ClusterMatcher instance by providing the comparison pool loadshapes to use and a settings instance.
@@ -639,10 +596,15 @@ class ClusterResult:
         Will do all necessary transformations and clustering/scoring needed in order to return the instance
         of the class that is capable of assigning weights to treatment loadshapes.
         """
-        df_cp_ls = _data.set_df_index(df=df_cp_ls)
+        # TODO: delete this line when everything works on loadshape df
+        df_cp = df_cp.stack().reset_index().rename(columns={"level_1": "time", 0: "ls"}).set_index(["id", "time"])
+
+        df_cp = _data.set_df_index(df=df_cp)
         ls_transform = _transform.InitialPoolLoadshapeTransform.from_full_cp_ls_df(
-            df=df_cp_ls, min_var_ratio=s.FPCA_MIN_VARIANCE_RATIO
+            df=df_cp, min_var_ratio=s.FPCA_MIN_VARIANCE_RATIO
         )
+
+        # ls_transform = _transform.unstack_and_ensure_df(ls_transform)
 
         best_scored_cluster, score_elements = get_best_scored_cluster_result(
             pool_loadshape_transform_result=ls_transform,
@@ -681,15 +643,16 @@ class ClusterResult:
         TODO: Handle call when no valid scores were found?
 
         """
-        treatment_loadshape_df = _data.set_df_index(df=treatment_loadshape_df)
 
-        transformed_treatment_loadshape = _transform_treatment_loadshape(
+        transformed_treatment_loadshape = _fit._transform_treatment_loadshape(
             df=treatment_loadshape_df
         )
 
-        return _match_treatment_to_cluster(
+        df_ls_cluster = _transform.unstack_and_ensure_df(self.cluster_loadshape_transformed_srs)
+
+        return _fit._match_treatment_to_cluster(
             df_ls_t=transformed_treatment_loadshape,
-            df_ls_cluster=self.cluster_loadshape_transformed_srs,
+            df_ls_cluster=df_ls_cluster,
             agg_type=self.agg_type,
             dist_metric=self.dist_metric,
         )

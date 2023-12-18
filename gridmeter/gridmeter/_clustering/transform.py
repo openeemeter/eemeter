@@ -156,7 +156,7 @@ class _TransformInput:
         )
 
 
-def _normalize_transposed_loadshape_np_arr_min_max(ls_arr: np.ndarray):
+def _normalize_loadshape(ls_arr: np.ndarray):
     """
     applies the min and max normalization logic to a dataframe which contains the transformed
     loadshape
@@ -175,10 +175,10 @@ def _normalize_transposed_loadshape_np_arr_min_max(ls_arr: np.ndarray):
     return ret_arr.T
 
 
-def get_min_maxed_normalized_unstacked_ls_df(ls_df: pd.DataFrame, drop_nonfinite: bool):
+def get_min_max_normalized_ls_df(ls_df: pd.DataFrame, drop_nonfinite: bool):
     """
     receives loadshape dataframe and applies min max normalization
-    on the values and returns a dataframe where the agg times are the columns
+    on the values
 
     This is done before performing FPCA on the comparison pool
     """
@@ -187,12 +187,13 @@ def get_min_maxed_normalized_unstacked_ls_df(ls_df: pd.DataFrame, drop_nonfinite
         df=ls_df, is_for_fpca=False, drop_nonfinite=drop_nonfinite
     )
 
-    normalized_np_arr = _normalize_transposed_loadshape_np_arr_min_max(
+    normalized_np_arr = _normalize_loadshape(
         ls_arr=t_in.ls_values
     )
 
     df = t_in.get_transformed_result_as_df(transformed_ls_values=normalized_np_arr)
-    return unstack_and_ensure_df(df=df)
+
+    return unstack_and_ensure_df(df)
 
 
 def _get_all_normalized_ls_dfs_as_list(
@@ -355,7 +356,7 @@ class InitialPoolLoadshapeTransform:
 
         all_cp_dfs = _get_all_normalized_ls_dfs_as_list(total_cp_df=df)
         transformed_dfs = [
-            get_min_maxed_normalized_unstacked_ls_df(ls_df=df, drop_nonfinite=True)
+            get_min_max_normalized_ls_df(ls_df=df, drop_nonfinite=True)
             for df in all_cp_dfs
         ]
         concat_transformed = concatenate_normalized_ls_dfs(ls_dfs=transformed_dfs)
