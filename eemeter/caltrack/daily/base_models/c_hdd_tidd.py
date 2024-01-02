@@ -83,15 +83,12 @@ def fit_c_hdd_tidd(
     else:
         x0 = _c_hdd_tidd_x0_final(T, obs, x0, alpha, settings)
 
-    # can replace with:
-    # tdd_beta = x0.hdd_beta if x0.hdd_beta else x0.cdd_beta
-    match x0.model_type:
-        case ModelType.HDD_TIDD_SMOOTH | ModelType.HDD_TIDD:
-            tdd_beta = x0.hdd_beta
-        case ModelType.TIDD_CDD_SMOOTH | ModelType.TIDD_CDD:
-            tdd_beta = x0.cdd_beta
-        case _:
-            raise ValueError
+    if x0.model_type in [ModelType.HDD_TIDD_SMOOTH, ModelType.HDD_TIDD]:
+        tdd_beta = x0.hdd_beta
+    elif x0.model_type in [ModelType.TIDD_CDD_SMOOTH, ModelType.TIDD_CDD]:
+        tdd_beta = x0.cdd_beta
+    else:
+        raise ValueError
 
     # limit slope based on initial regression & configurable order of magnitude
     max_slope = np.abs(tdd_beta) + 10 ** (

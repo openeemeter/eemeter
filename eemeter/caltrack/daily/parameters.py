@@ -120,17 +120,16 @@ class ModelCoefficients(BaseModel):
     @property
     def model_key(self):
         """Used inside OptimizedResult when reducing model"""
-        match self.model_type:
-            case ModelType.HDD_TIDD_CDD_SMOOTH:
-                return "hdd_tidd_cdd_smooth"
-            case ModelType.HDD_TIDD_CDD:
-                return "hdd_tidd_cdd"
-            case ModelType.HDD_TIDD_SMOOTH | ModelType.TIDD_CDD_SMOOTH:
-                return "c_hdd_tidd_smooth"
-            case ModelType.HDD_TIDD | ModelType.TIDD_CDD:
-                return "c_hdd_tidd"
-            case ModelType.TIDD:
-                return "tidd"
+        if self.model_type == ModelType.HDD_TIDD_CDD_SMOOTH:
+            return "hdd_tidd_cdd_smooth"
+        elif self.model_type == ModelType.HDD_TIDD_CDD:
+            return "hdd_tidd_cdd"
+        elif self.model_type in [ModelType.HDD_TIDD_SMOOTH, ModelType.TIDD_CDD_SMOOTH]:
+            return "c_hdd_tidd_smooth"
+        elif self.model_type in [ModelType.HDD_TIDD, ModelType.TIDD_CDD]:
+            return "c_hdd_tidd"
+        elif self.model_type == ModelType.TIDD:
+            return "tidd"
 
     @classmethod
     def from_np_arrays(cls, coefficients, coefficient_ids):
@@ -153,118 +152,117 @@ class ModelCoefficients(BaseModel):
         If the coefficient_ids do not match any of the predefined patterns, it raises a ValueError.
         """
 
-        match coefficient_ids:
-            case [
-                "hdd_bp",
-                "hdd_beta",
-                "hdd_k",
-                "cdd_bp",
-                "cdd_beta",
-                "cdd_k",
-                "intercept",
-            ]:
-                hdd_bp=coefficients[0]
-                hdd_beta=coefficients[1]
-                hdd_k=coefficients[2]
-                cdd_bp=coefficients[3]
-                cdd_beta=coefficients[4]
-                cdd_k=coefficients[5]
-                if cdd_bp < hdd_bp:
-                    hdd_bp, cdd_bp = cdd_bp, hdd_bp
-                    hdd_beta, cdd_beta = cdd_beta, hdd_beta
-                    hdd_k, cdd_k = cdd_k, hdd_k
-                return ModelCoefficients(
-                    model_type=ModelType.HDD_TIDD_CDD_SMOOTH,
-                    hdd_bp=hdd_bp,
-                    hdd_beta=hdd_beta,
-                    hdd_k=hdd_k,
-                    cdd_bp=cdd_bp,
-                    cdd_beta=cdd_beta,
-                    cdd_k=cdd_k,
-                    intercept=coefficients[6],
-                )
-            case [
-                "hdd_bp",
-                "hdd_beta",
-                "cdd_bp",
-                "cdd_beta",
-                "intercept",
-            ]:
-                hdd_bp=coefficients[0]
-                hdd_beta=coefficients[1]
-                cdd_bp=coefficients[2]
-                cdd_beta=coefficients[3]
-                if cdd_bp < hdd_bp:
-                    hdd_bp, cdd_bp = cdd_bp, hdd_bp
-                    hdd_beta, cdd_beta = cdd_beta, hdd_beta
-                return ModelCoefficients(
-                    model_type=ModelType.HDD_TIDD_CDD,
-                    hdd_bp=hdd_bp,
-                    hdd_beta=hdd_beta,
-                    cdd_bp=cdd_bp,
-                    cdd_beta=cdd_beta,
-                    intercept=coefficients[4],
-                )
-            case [
-                "c_hdd_bp",
-                "c_hdd_beta",
-                "c_hdd_k",
-                "intercept",
-            ]:
-                if coefficients[1] < 0:  # model is heating dependent
-                    hdd_bp = coefficients[0]
-                    hdd_beta = coefficients[1]
-                    hdd_k = coefficients[2]
-                    cdd_bp = cdd_beta = cdd_k = None
-                    model_type = ModelType.HDD_TIDD_SMOOTH
-                else:  # model is cooling dependent
-                    cdd_bp = coefficients[0]
-                    cdd_beta = coefficients[1]
-                    cdd_k = coefficients[2]
-                    hdd_bp = hdd_beta = hdd_k = None
-                    model_type = ModelType.TIDD_CDD_SMOOTH
-                return ModelCoefficients(
-                    model_type=model_type,
-                    hdd_bp=hdd_bp,
-                    hdd_beta=hdd_beta,
-                    hdd_k=hdd_k,
-                    cdd_bp=cdd_bp,
-                    cdd_beta=cdd_beta,
-                    cdd_k=cdd_k,
-                    intercept=coefficients[3],
-                )
-            case [
-                "c_hdd_bp",
-                "c_hdd_beta",
-                "intercept",
-            ]:
-                if coefficients[1] < 0:  # model is heating dependent
-                    hdd_bp = coefficients[0]
-                    hdd_beta = coefficients[1]
-                    cdd_bp = cdd_beta = None
-                    model_type = ModelType.HDD_TIDD
-                else:  # model is cooling dependent
-                    cdd_bp = coefficients[0]
-                    cdd_beta = coefficients[1]
-                    hdd_bp = hdd_beta = None
-                    model_type = ModelType.TIDD_CDD
-                return ModelCoefficients(
-                    model_type=model_type,
-                    hdd_bp=hdd_bp,
-                    hdd_beta=hdd_beta,
-                    cdd_bp=cdd_bp,
-                    cdd_beta=cdd_beta,
-                    intercept=coefficients[2],
-                )
-            case [
-                "intercept",
-            ]:
-                return ModelCoefficients(
-                    model_type=ModelType.TIDD,
-                    intercept=coefficients[0],
-                )
-            case _:
-                raise ValueError
+        if coefficient_ids == [
+            "hdd_bp",
+            "hdd_beta",
+            "hdd_k",
+            "cdd_bp",
+            "cdd_beta",
+            "cdd_k",
+            "intercept",
+        ]:
+            hdd_bp=coefficients[0]
+            hdd_beta=coefficients[1]
+            hdd_k=coefficients[2]
+            cdd_bp=coefficients[3]
+            cdd_beta=coefficients[4]
+            cdd_k=coefficients[5]
+            if cdd_bp < hdd_bp:
+                hdd_bp, cdd_bp = cdd_bp, hdd_bp
+                hdd_beta, cdd_beta = cdd_beta, hdd_beta
+                hdd_k, cdd_k = cdd_k, hdd_k
+            return ModelCoefficients(
+                model_type=ModelType.HDD_TIDD_CDD_SMOOTH,
+                hdd_bp=hdd_bp,
+                hdd_beta=hdd_beta,
+                hdd_k=hdd_k,
+                cdd_bp=cdd_bp,
+                cdd_beta=cdd_beta,
+                cdd_k=cdd_k,
+                intercept=coefficients[6],
+            )
+        elif coefficient_ids == [
+            "hdd_bp",
+            "hdd_beta",
+            "cdd_bp",
+            "cdd_beta",
+            "intercept",
+        ]:
+            hdd_bp=coefficients[0]
+            hdd_beta=coefficients[1]
+            cdd_bp=coefficients[2]
+            cdd_beta=coefficients[3]
+            if cdd_bp < hdd_bp:
+                hdd_bp, cdd_bp = cdd_bp, hdd_bp
+                hdd_beta, cdd_beta = cdd_beta, hdd_beta
+            return ModelCoefficients(
+                model_type=ModelType.HDD_TIDD_CDD,
+                hdd_bp=hdd_bp,
+                hdd_beta=hdd_beta,
+                cdd_bp=cdd_bp,
+                cdd_beta=cdd_beta,
+                intercept=coefficients[4],
+            )
+        elif coefficient_ids == [
+            "c_hdd_bp",
+            "c_hdd_beta",
+            "c_hdd_k",
+            "intercept",
+        ]:
+            if coefficients[1] < 0:  # model is heating dependent
+                hdd_bp = coefficients[0]
+                hdd_beta = coefficients[1]
+                hdd_k = coefficients[2]
+                cdd_bp = cdd_beta = cdd_k = None
+                model_type = ModelType.HDD_TIDD_SMOOTH
+            else:  # model is cooling dependent
+                cdd_bp = coefficients[0]
+                cdd_beta = coefficients[1]
+                cdd_k = coefficients[2]
+                hdd_bp = hdd_beta = hdd_k = None
+                model_type = ModelType.TIDD_CDD_SMOOTH
+            return ModelCoefficients(
+                model_type=model_type,
+                hdd_bp=hdd_bp,
+                hdd_beta=hdd_beta,
+                hdd_k=hdd_k,
+                cdd_bp=cdd_bp,
+                cdd_beta=cdd_beta,
+                cdd_k=cdd_k,
+                intercept=coefficients[3],
+            )
+        elif coefficient_ids == [
+            "c_hdd_bp",
+            "c_hdd_beta",
+            "intercept",
+        ]:
+            if coefficients[1] < 0:  # model is heating dependent
+                hdd_bp = coefficients[0]
+                hdd_beta = coefficients[1]
+                cdd_bp = cdd_beta = None
+                model_type = ModelType.HDD_TIDD
+            else:  # model is cooling dependent
+                cdd_bp = coefficients[0]
+                cdd_beta = coefficients[1]
+                hdd_bp = hdd_beta = None
+                model_type = ModelType.TIDD_CDD
+            return ModelCoefficients(
+                model_type=model_type,
+                hdd_bp=hdd_bp,
+                hdd_beta=hdd_beta,
+                cdd_bp=cdd_bp,
+                cdd_beta=cdd_beta,
+                intercept=coefficients[2],
+            )
+        elif coefficient_ids == [
+            "intercept",
+        ]:
+            return ModelCoefficients(
+                model_type=ModelType.TIDD,
+                intercept=coefficients[0],
+            )
+        else:
+            raise ValueError
 
     def to_np_array(self):
         """
@@ -283,43 +281,42 @@ class ModelCoefficients(BaseModel):
             np.array: A numpy array containing the relevant parameters for the model type.
         """
 
-        match self.model_type:
-            case ModelType.HDD_TIDD_CDD_SMOOTH:
-                return np.array(
-                    [
-                        self.hdd_bp,
-                        self.hdd_beta,
-                        self.hdd_k,
-                        self.cdd_bp,
-                        self.cdd_beta,
-                        self.cdd_k,
-                        self.intercept,
-                    ]
-                )
-            case ModelType.HDD_TIDD_CDD:
-                return np.array(
-                    [
-                        self.hdd_bp,
-                        self.hdd_beta,
-                        self.cdd_bp,
-                        self.cdd_beta,
-                        self.intercept,
-                    ]
-                )
-            case ModelType.HDD_TIDD_SMOOTH:
-                return np.array(
-                    [self.hdd_bp, self.hdd_beta, self.hdd_k, self.intercept]
-                )
-            case ModelType.TIDD_CDD_SMOOTH:
-                return np.array(
-                    [self.cdd_bp, self.cdd_beta, self.cdd_k, self.intercept]
-                )
-            case ModelType.HDD_TIDD:
-                return np.array([self.hdd_bp, self.hdd_beta, self.intercept])
-            case ModelType.TIDD_CDD:
-                return np.array([self.cdd_bp, self.cdd_beta, self.intercept])
-            case ModelType.TIDD:
-                return np.array([self.intercept])
+        if self.model_type == ModelType.HDD_TIDD_CDD_SMOOTH:
+            return np.array(
+                [
+                    self.hdd_bp,
+                    self.hdd_beta,
+                    self.hdd_k,
+                    self.cdd_bp,
+                    self.cdd_beta,
+                    self.cdd_k,
+                    self.intercept,
+                ]
+            )
+        elif self.model_type == ModelType.HDD_TIDD_CDD:
+            return np.array(
+                [
+                    self.hdd_bp,
+                    self.hdd_beta,
+                    self.cdd_bp,
+                    self.cdd_beta,
+                    self.intercept,
+                ]
+            )
+        elif self.model_type == ModelType.HDD_TIDD_SMOOTH:
+            return np.array(
+                [self.hdd_bp, self.hdd_beta, self.hdd_k, self.intercept]
+            )
+        elif self.model_type == ModelType.TIDD_CDD_SMOOTH:
+            return np.array(
+                [self.cdd_bp, self.cdd_beta, self.cdd_k, self.intercept]
+            )
+        elif self.model_type == ModelType.HDD_TIDD:
+            return np.array([self.hdd_bp, self.hdd_beta, self.intercept])
+        elif self.model_type == ModelType.TIDD_CDD:
+            return np.array([self.cdd_bp, self.cdd_beta, self.intercept])
+        elif self.model_type == ModelType.TIDD:
+            return np.array([self.intercept])
 
 
 class DailySubmodelParameters(BaseModel):
@@ -339,19 +336,19 @@ class DailyModelParameters(BaseModel):
 
     @classmethod
     def from_2_0_params(cls, data):
-        match model_2_0 := data.get('model_type'):
-            case 'intercept_only':
-                model_type = ModelType.TIDD
-            case 'hdd_only':
-                model_type = ModelType.HDD_TIDD
-            case 'cdd_only':
-                model_type = ModelType.TIDD_CDD
-            case 'cdd_hdd':
-                model_type = ModelType.HDD_TIDD_CDD
-            case None:
-                raise ValueError(f"Missing model type")
-            case _:
-                raise ValueError(f"Unknown model type: {model_2_0}")
+        model_2_0 = data.get('model_type')
+        if model_2_0 == 'intercept_only':
+            model_type = ModelType.TIDD
+        elif model_2_0 == 'hdd_only':
+            model_type = ModelType.HDD_TIDD
+        elif model_2_0 == 'cdd_only':
+            model_type = ModelType.TIDD_CDD
+        elif model_2_0 == 'cdd_hdd':
+            model_type = ModelType.HDD_TIDD_CDD
+        elif model_2_0 is None:
+            raise ValueError("Missing model type")
+        else:
+            raise ValueError(f"Unknown model type: {model_2_0}")
         params = data['model_params']
         daily_coeffs = ModelCoefficients(
             model_type=model_type,
