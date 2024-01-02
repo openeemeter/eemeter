@@ -168,6 +168,7 @@ class DailyModel:
         self.error["PNRMSE"] = PNRMSE
 
         self.params = self._create_params_from_fit_model()
+        self.is_fitted = True
         return self
 
     def predict(self, df_eval):
@@ -180,6 +181,9 @@ class DailyModel:
         Returns:
             pandas.DataFrame: The evaluation dataframe with model predictions added.
         """
+        if not self.is_fitted:
+            raise RuntimeError("Model must be fit before predictions can be made.")
+
         #TODO decide whether to allow temperature series vs requiring "design matrix"
         if isinstance(df_eval, pd.Series):
             df_eval = df_eval.to_frame("temperature_mean")
