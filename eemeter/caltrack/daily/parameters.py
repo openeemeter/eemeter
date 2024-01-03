@@ -18,7 +18,7 @@
 
 """
 import numpy as np
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from pydantic import BaseModel
 from enum import Enum
 
@@ -102,12 +102,12 @@ class ModelCoefficients(BaseModel):
     
     model_type: ModelType
     intercept: float
-    hdd_bp: float | None = None
-    hdd_beta: float | None = None
-    hdd_k: float | None = None
-    cdd_bp: float | None = None
-    cdd_beta: float | None = None
-    cdd_k: float | None = None
+    hdd_bp: Optional[float] = None
+    hdd_beta: Optional[float] = None
+    hdd_k: Optional[float] = None
+    cdd_bp: Optional[float] = None
+    cdd_beta: Optional[float] = None
+    cdd_k: Optional[float] = None
 
     @property
     def is_smooth(self):
@@ -331,8 +331,8 @@ class DailySubmodelParameters(BaseModel):
 
 class DailyModelParameters(BaseModel):
     submodels: Dict[str, DailySubmodelParameters]
-    metrics: Dict[str, Any] | None
-    settings: Dict[str, Any] | None
+    metrics: Optional[Dict[str, Any]]
+    settings: Optional[Dict[str, Any]]
 
     @classmethod
     def from_2_0_params(cls, data):
