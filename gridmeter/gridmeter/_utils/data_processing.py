@@ -2,7 +2,6 @@ from gridmeter._utils.data_processing_settings import Data_Settings
 from gridmeter._utils import const as _const
 import pandas as pd
 import numpy as np
-import time
 
 
 class Data:
@@ -15,7 +14,7 @@ class Data:
         self.loadshape = None
         self.features = None
 
-        # TODO: let's make id the index
+        # TODO: let's make id the index for the excluded ids dataframe
         self.excluded_ids = pd.DataFrame(columns=["id", "reason"])
 
 
@@ -28,6 +27,8 @@ class Data:
 
         for data_instance in other:
             if isinstance(data_instance, Data):
+                if self.settings.TIME_PERIOD != data_instance.settings.TIME_PERIOD:
+                    raise ValueError("Time period setting must be the same for all Data instances.")
                 if self.features is not None and data_instance.features is not None:
                     self.features = pd.concat([self.features, data_instance.features])
                 if self.loadshape is not None and data_instance.loadshape is not None:
@@ -126,6 +127,31 @@ class Data:
 
         return df
 
+    def _validate_unstacked_loadshape(self, df: pd.DataFrame) -> pd.DataFrame:
+        unstacked_cols = df.columns.drop('id')
+        unstacked_cols = sorted(map(int, unstacked_cols))
+
+        # TODO : Add the ids that are missing values to the excluded_ids dataframe
+        # expected_cols = range(1, max(unstacked_cols) + 1)
+
+        # if unstacked_cols != expected_cols:
+        #     if not self.settings.INTERPOLATE_MISSING or unstacked_cols.count() < expected_cols.count() * self.settings.MIN_DATA_PCT_REQUIRED:
+        #             raise ValueError(f"Unique time counts per id don't have the minimum time counts required")
+            
+
+        # Find the missing columns and add them to df with NaN as the default value
+        expected_cols = df.columns.union(range(1, max(unstacked_cols) + 1))
+        df.reindex(columns= expected_cols, fill_value=np.nan)
+
+        if self.settings.INTERPOLATE_MISSING:
+            # Get non-id columns
+            non_id_cols = df.columns[df.columns != 'id']
+
+            # Perform interpolation on non-id columns and update the original DataFrame
+            df[non_id_cols] = df[non_id_cols].interpolate(method="linear", limit_direction="both", axis=1)
+
+        return df
+
 
     def _validate_format_loadshape(self, df: pd.DataFrame) -> pd.DataFrame:
         # Check columns missing in loadshape_df
@@ -133,7 +159,13 @@ class Data:
         missing_columns = [c for c in expected_columns if c not in df.columns]
 
         if missing_columns:
-            raise ValueError(f"Missing columns in loadshape_df: {missing_columns}")
+            # TODO : handle the case when index is the id. Then we don't need to check for id in the columns. But how to ensure we don't have wrong index?
+            if "loadshape" in missing_columns and "time" in missing_columns and "id" not in missing_columns:
+                # Handle loadshapes in unstacked version
+                return self._validate_unstacked_loadshape(df)
+            
+            else:  
+                raise ValueError(f"Missing columns in loadshape_df: {missing_columns}")
 
         # Check if all values are present in the columns as required
         # Else update the values via interpolation if missing, also ignore duplicates if present
@@ -393,7 +425,6 @@ class Data:
 
         """
 
-        # TODO : we should accept loadshapes in unstacked version as well
         if loadshape_df is None and time_series_df is None and features_df is None:
             raise ValueError(
                 "A loadshape, time series, or features dataframe must be provided."
@@ -431,6 +462,11 @@ class Data:
 
         if loadshape_df is not None:
             # drop any ids that are in the excluded_ids list
+
+            # If loadshape still has id as one of its columns, set it as index
+            if 'id' in loadshape_df.columns:
+                loadshape_df.set_index('id', inplace=True)
+
             loadshape_df = loadshape_df[
                 ~loadshape_df.index.isin(self.excluded_ids["id"])
             ]
@@ -441,46 +477,3 @@ class Data:
         self.loadshape = loadshape_df if not loadshape_df.empty else None
 
         return self
-
-
-if __name__ == "__main__":
-    # Create a testing dataframe having an id, datetime of 15 min intervals, observed and modeled values
-    num_intervals = 4 * 24 * 365  # 4 intervals/hour * 24 hours/day * 365 days
-
-    # Create a DataFrame with 'id', 'datetime', 'observed', and 'modeled' columns
-    df = pd.DataFrame(
-        {
-            "id": np.repeat(
-                ["id1", "id2", "id3"], num_intervals
-            ),  # only 3 ids for easier comparison
-            "datetime": pd.date_range(
-                start="2023-01-01", periods=num_intervals, freq="15T"
-            ).tolist()
-            * 3,
-            "observed": np.random.rand(num_intervals * 3),  # randomized
-            "modeled": np.random.rand(num_intervals * 3),  # randomized
-        }
-    )
-
-    # # Create a boolean mask for Mondays and Wednesdays , will give ValueError at 80% threshold
-    day_mask = df['datetime'].dt.dayofweek.isin([2])
-
-    # # Set 'observed' and 'modeled' values to NaN for all Mondays and Wednesdays
-    # df.loc[day_mask, ['observed', 'modeled']] = np.nan
-
-    # # Remove all rows with NaN values
-    df = df.loc[~day_mask]
-
-    # Convert 'datetime' column to datetime type
-    df["datetime"] = pd.to_datetime(df["datetime"])
-
-    settings = Data_Settings(TIME_PERIOD=_const.TimePeriod.SEASONAL_HOURLY_DAY_OF_WEEK)
-
-    data = Data(None).set_data(time_series_df=df)
-    start_time = time.time()
-    data = Data(settings).set_data(time_series_df=df)
-    end_time = time.time()
-    print(data.loadshape)
-
-    execution_time = end_time - start_time
-    print(f"The command took {execution_time} seconds to execute.")

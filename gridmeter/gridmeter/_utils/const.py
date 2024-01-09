@@ -124,7 +124,7 @@ time_period_row_counts = {
 min_granularity_per_time_period = {
     # All the values are in minutes
     "hourly": 60,
-    "month": 60 * 24 * 28,
+    "month": 60 * 24 * 28, # this is not used since we can have a different day per month
     "hourly_month": 60,
     "day_of_week": 60 * 24 * 7,
     "day_of_year": 60 * 24 * 7,
