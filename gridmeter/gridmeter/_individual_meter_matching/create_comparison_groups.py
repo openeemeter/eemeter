@@ -34,7 +34,7 @@ class Individual_Meter_Matching(Comparison_Group_Algorithm):
     
 
     def _create_treatment_weights_df(self, ids):
-        coeffs = np.ones(ids.values.size)
+        coeffs = np.ones(len(ids))
 
         treatment_weights = pd.DataFrame(coeffs, index=ids, columns=["pct_cluster_0"])
         treatment_weights.index.name = "id"
@@ -45,18 +45,23 @@ class Individual_Meter_Matching(Comparison_Group_Algorithm):
     def get_comparison_group(self, treatment_data, comparison_pool_data, weights=None):
         distance_matching = DistanceMatching(self.settings)
 
-        df_t = treatment_data.loadshape
-        df_cp = comparison_pool_data.loadshape
+        self.treatment_data = treatment_data
+        self.comparison_pool_data = comparison_pool_data
+
+        self.treatment_ids = treatment_data.get_ids()
+        self.treatment_loadshape = treatment_data.get_loadshape()
+        self.comparison_pool_loadshape = comparison_pool_data.get_loadshape()
 
         # Get clusters
         df_raw = distance_matching.get_comparison_group(
-            df_t, df_cp, weights=weights
+            self.treatment_loadshape, 
+            self.comparison_pool_loadshape, 
+            weights=weights
         )
         clusters = self._create_clusters_df(df_raw)
 
         # Create treatment_weights
-        t_ids = df_t.index.unique()
-        treatment_weights = self._create_treatment_weights_df(t_ids)
+        treatment_weights = self._create_treatment_weights_df(self.treatment_ids)
 
         # Assign dfs to self
         self.clusters = clusters

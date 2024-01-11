@@ -272,6 +272,9 @@ class Data:
             .drop(columns="index", axis=1, errors="ignore")
         )
 
+        # Convert columns to int
+        df.columns = df.columns.astype(int)
+
         return df
 
     def _validate_format_features(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -496,6 +499,14 @@ class Data:
             return None
         else :
             return self._features.copy()
+
+    def get_ids(self):
+        if isinstance(self._loadshape, pd.DataFrame):
+            return self._loadshape.index.unique().to_list()
+        elif isinstance(self._features, pd.DataFrame):
+            return self._features.index.unique().to_list()
+        else:
+            return None
 
     def get_excluded_ids(self):
         if self._excluded_ids is None:

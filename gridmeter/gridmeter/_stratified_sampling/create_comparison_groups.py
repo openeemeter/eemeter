@@ -47,7 +47,7 @@ class Stratified_Sampling(Comparison_Group_Algorithm):
 
 
     def _create_treatment_weights_df(self, ids):
-        coeffs = np.ones(ids.size)
+        coeffs = np.ones(len(ids))
 
         treatment_weights = pd.DataFrame(coeffs, index=ids, columns=["pct_cluster_0"])
         treatment_weights.index.name = "id"
@@ -75,8 +75,15 @@ class Stratified_Sampling(Comparison_Group_Algorithm):
     def get_comparison_group(self, treatment_data, comparison_pool_data):
         settings = self.settings
 
-        t_features = treatment_data.features.reset_index().rename(columns={"id": "meter_id"})
-        cp_features = comparison_pool_data.features.reset_index().rename(columns={"id": "meter_id"})
+        self.treatment_data = treatment_data
+        self.comparison_pool_data = comparison_pool_data
+
+        t_ids = treatment_data.get_ids()
+        t_features = treatment_data.get_features()
+        t_features = t_features.reset_index().rename(columns={"id": "meter_id"})
+
+        cp_features = comparison_pool_data.get_features()
+        cp_features = cp_features.reset_index().rename(columns={"id": "meter_id"})
 
         if settings.EQUIVALENCE_METHOD is None:
             self.model.fit_and_sample(
@@ -89,7 +96,13 @@ class Stratified_Sampling(Comparison_Group_Algorithm):
                 random_seed=settings.SEED,
             )
         else:
-            df_equiv = pd.concat([treatment_data.loadshape, comparison_pool_data.loadshape])
+            self.treatment_ids = t_ids
+            self.treatment_loadshape = treatment_data.get_loadshape()
+            self.comparison_pool_loadshape = comparison_pool_data.get_loadshape()
+            t_loadshape = self.treatment_loadshape
+            cp_loadshape = self.comparison_pool_loadshape
+
+            df_equiv = pd.concat([t_loadshape, cp_loadshape])
             df_equiv.index.name = "meter_id"
 
             self.model_bin_selector = StratifiedSamplingBinSelector(
@@ -112,7 +125,6 @@ class Stratified_Sampling(Comparison_Group_Algorithm):
                 random_seed=settings.SEED,
             )
 
-        t_ids = t_features["meter_id"].unique()
         clusters, treatment_weights = self._create_output_dfs(t_ids)
 
         return clusters, treatment_weights
