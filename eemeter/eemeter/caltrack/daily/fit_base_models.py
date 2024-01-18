@@ -64,7 +64,7 @@ def fit_initial_models_from_full_model(df_meter, settings, print_res=False):
     Fits initial models from the full model based on the given settings.
 
     Parameters:
-        df_meter (pandas.DataFrame): The meter data to fit the models to.
+        df_meter (pandas.DataFrame): The meter data to fit the models to. Columns : date, meter_value, temperature_mean
         settings (Settings): The settings object containing the model selection and fitting options.
         print_res (bool, optional): Whether to print the results of the model fitting. Defaults to False.
 
