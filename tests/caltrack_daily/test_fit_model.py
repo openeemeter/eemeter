@@ -88,5 +88,6 @@ class TestFitModel:
             "RMSE": 16.95324536039207,
             "MAE": 13.38096518529209,
             "CVRMSE": 0.32064123575928577,
+            "PNRMSE": 0.270778281497731,
         }
         assert fm.error == expected_model_error
