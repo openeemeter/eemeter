@@ -42,6 +42,12 @@ from eemeter.eemeter.caltrack.daily.base_models.full_model import full_model, ge
 from eemeter.eemeter.caltrack.daily.utilities.selection_criteria import selection_criteria
 from eemeter.eemeter.caltrack.daily.utilities.base_model import get_smooth_coeffs
 
+#TODO move to new ./models/hourly dir after refactor
+from eemeter.eemeter.caltrack.hourly import fit_caltrack_hourly_model, CalTRACKHourlyModelResults
+from eemeter.eemeter.features import estimate_hour_of_week_occupancy, fit_temperature_bins
+from eemeter.eemeter.segmentation import segment_time_series
+from eemeter.eemeter.caltrack.design_matrices import create_caltrack_hourly_segmented_design_matrices
+
 
 class DailyModel:
     def __init__(
@@ -881,3 +887,73 @@ class DailyModel:
         cdd_load[cdd_idx] = load_only[cdd_idx]
 
         return model, f_unc, hdd_load, cdd_load
+
+
+class HourlyModel:
+    #TODO move to new ./models/hourly dir after refactor
+    #TODO inherit from ABC Model
+
+    def __init__(self, settings=None):
+        pass
+
+    def fit(self, preliminary_design_matrix):
+        segmentation = segment_time_series(
+            preliminary_design_matrix.index, "three_month_weighted"
+        )
+        occupancy_lookup = estimate_hour_of_week_occupancy(
+            preliminary_design_matrix, segmentation=segmentation
+        )
+        (
+            occupied_temperature_bins,
+            unoccupied_temperature_bins,
+        ) = fit_temperature_bins(
+            preliminary_design_matrix,
+            segmentation=segmentation,
+            occupancy_lookup=occupancy_lookup,
+        )
+        segmented_design_matrices = create_caltrack_hourly_segmented_design_matrices(
+            preliminary_design_matrix,
+            segmentation,
+            occupancy_lookup,
+            occupied_temperature_bins,
+            unoccupied_temperature_bins,
+        )
+        baseline_model = fit_caltrack_hourly_model(
+            segmented_design_matrices,
+            occupancy_lookup,
+            occupied_temperature_bins,
+            unoccupied_temperature_bins,
+        )
+        self.model = baseline_model
+        self.is_fitted = True
+        return self
+
+    def predict(self, df_eval):
+        if not self.is_fitted:
+            raise RuntimeError("Model must be fit before predictions can be made.")
+        prediction_index = df_eval.index
+        temperature_series = df_eval['temperature_mean']
+        model_prediction = self.model.predict(
+            prediction_index, temperature_series
+        )
+        return model_prediction.result
+
+    @classmethod
+    def from_dict(cls, data):
+        hourly_model = cls()
+        hourly_model.model = CalTRACKHourlyModelResults.from_json(data)
+        hourly_model.is_fitted = True
+        return hourly_model
+        
+    @classmethod
+    def from_json(cls, str_data):
+        return cls.from_dict(json.loads(str_data))
+
+    def plot(
+        self,
+        ax=None,
+        title=None,
+        figsize=None,
+        temp_range=None,
+    ):
+        raise NotImplementedError
