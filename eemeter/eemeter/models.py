@@ -234,6 +234,7 @@ class DailyModel:
             metrics=data.get('metrics'),
             settings=settings,
         )
+        daily_model.is_fitted = True
         return daily_model
         
     @classmethod
@@ -244,6 +245,7 @@ class DailyModel:
     def from_2_0_dict(cls, data):
         daily_model = cls(model="2.0")
         daily_model.params = DailyModelParameters.from_2_0_params(data)
+        daily_model.is_fitted = True
         return daily_model
 
     @classmethod
