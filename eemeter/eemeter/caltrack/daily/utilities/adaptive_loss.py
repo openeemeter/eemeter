@@ -353,7 +353,11 @@ def generalized_loss_weights(x: np.ndarray, a: float = 2, min_weight: float = 0.
     np.ndarray: The calculated weights for the input array.
     """
 
-    w = np.ones(len(x), dtype=numba.float64)
+    dtype = numba.float64
+    if numba.config.DISABLE_JIT:
+        dtype = np.float64
+
+    w = np.ones(len(x), dtype=dtype)
     for i, xi in enumerate(x):
         if a == 2 or xi <= 0:
             w[i] = 1
