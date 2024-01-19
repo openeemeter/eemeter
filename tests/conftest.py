@@ -28,7 +28,7 @@ from eemeter import load_sample
 
 @pytest.fixture
 def sample_metadata():
-    with resource_stream("eemeter.samples", "metadata.json") as f:
+    with resource_stream("eemeter.eemeter.samples", "metadata.json") as f:
         metadata = json.loads(f.read().decode("utf-8"))
     return metadata
 

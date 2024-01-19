@@ -32,7 +32,7 @@ from ..derivatives import metered_savings
 from ..features import estimate_hour_of_week_occupancy, fit_temperature_bins, compute_temperature_features
 from ..segmentation import segment_time_series
 
-from eemeter.models import DailyModel
+from eemeter.eemeter.models import DailyModel
 import pandas as pd
 
 __all__ = (

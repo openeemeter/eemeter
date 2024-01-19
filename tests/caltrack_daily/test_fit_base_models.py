@@ -20,18 +20,18 @@
 import numpy as np
 import pandas as pd
 import pytest
-from eemeter.caltrack.daily.parameters import ModelCoefficients
+from eemeter.eemeter.caltrack.daily.parameters import ModelCoefficients
 
-from eemeter.caltrack.daily.utilities.config import DailySettings as Settings
-from eemeter.caltrack.daily.parameters import ModelType
-from eemeter.caltrack.daily.fit_base_models import (
+from eemeter.eemeter.caltrack.daily.utilities.config import DailySettings as Settings
+from eemeter.eemeter.caltrack.daily.parameters import ModelType
+from eemeter.eemeter.caltrack.daily.fit_base_models import (
     fit_initial_models_from_full_model,
     fit_model,
     fit_final_model,
     _get_opt_options,
 )
 
-from eemeter.caltrack.daily.optimize_results import OptimizedResult
+from eemeter.eemeter.caltrack.daily.optimize_results import OptimizedResult
 
 
 @pytest.fixture

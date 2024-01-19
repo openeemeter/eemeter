@@ -21,8 +21,8 @@ import numpy as np
 import pytest
 from scipy.stats import linregress, theilslopes
 
-from eemeter.caltrack.daily.utilities.config import DailySettings
-from eemeter.caltrack.daily.utilities.base_model import (
+from eemeter.eemeter.caltrack.daily.utilities.config import DailySettings
+from eemeter.eemeter.caltrack.daily.utilities.base_model import (
     get_slope,
     linear_fit,
     get_smooth_coeffs,

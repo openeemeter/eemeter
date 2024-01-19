@@ -25,7 +25,7 @@ import pandas as pd
 import pytest
 import pytz
 
-from eemeter.transform import (
+from eemeter.eemeter.transform import (
     as_freq,
     clean_caltrack_billing_data,
     downsample_and_clean_caltrack_daily_data,

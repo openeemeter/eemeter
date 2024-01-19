@@ -19,7 +19,7 @@
 """
 import pytest
 
-from eemeter.caltrack.daily.utilities.config import simple_validation, DailySettings
+from eemeter.eemeter.caltrack.daily.utilities.config import simple_validation, DailySettings
 
 
 def test_default_settings():

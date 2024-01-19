@@ -20,7 +20,7 @@
 import numpy as np
 import numba
 
-from eemeter.caltrack.daily.utilities.utils import (
+from eemeter.eemeter.caltrack.daily.utilities.utils import (
     np_clip,
     OoM,
     RoundToSigFigs,

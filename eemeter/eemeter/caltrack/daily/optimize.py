@@ -29,7 +29,7 @@ import nlopt
 from scipy.optimize import minimize as scipy_minimize
 from scipy.optimize import minimize_scalar as scipy_minimize_scalar
 
-from eemeter.caltrack.daily.optimize_results import OptimizedResult
+from eemeter.eemeter.caltrack.daily.optimize_results import OptimizedResult
 
 
 nlopt_algorithms = {

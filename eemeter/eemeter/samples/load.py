@@ -29,7 +29,7 @@ __all__ = ("samples", "load_sample")
 
 
 def _load_sample_metadata():
-    with resource_stream("eemeter.samples", "metadata.json") as f:
+    with resource_stream("eemeter.eemeter.samples", "metadata.json") as f:
         metadata = json.loads(f.read().decode("utf-8"))
     return metadata
 
@@ -40,7 +40,7 @@ def samples():
     Returns
     -------
     samples : :any:`list` of :any:`str`
-        List of sample identifiers for use with :any:`eemeter.load_sample`.
+        List of sample identifiers for use with :any:`eemeter.eemeter.load_sample`.
     """
     sample_metadata = _load_sample_metadata()
     return list(sorted(sample_metadata.keys()))
@@ -54,7 +54,7 @@ def load_sample(sample, tempF=True):
     ----------
     sample : :any:`str`
         Identifier of sample. Complete list can be obtained with
-        :any:`eemeter.samples`.
+        :any:`eemeter.eemeter.samples`.
     tempF : :any 'bool'
         Flag regarding whether the sample temperature dataset is associated with Fahrenheit or Celsius.
 
@@ -85,11 +85,11 @@ def load_sample(sample, tempF=True):
         freq = None
 
     meter_data_filename = metadata["meter_data_filename"]
-    with resource_stream("eemeter.samples", meter_data_filename) as f:
+    with resource_stream("eemeter.eemeter.samples", meter_data_filename) as f:
         meter_data = meter_data_from_csv(f, gzipped=True, freq=freq)
 
     temperature_filename = metadata["temperature_filename"]
-    with resource_stream("eemeter.samples", temperature_filename) as f:
+    with resource_stream("eemeter.eemeter.samples", temperature_filename) as f:
         temperature_data = temperature_data_from_csv(
             f, gzipped=True, freq="hourly", temp_col=temp_units
         )

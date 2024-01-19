@@ -22,7 +22,7 @@ import json
 
 import click
 
-from eemeter.models import DailyModel
+from eemeter.eemeter.models import DailyModel
 from .features import (
     compute_usage_per_day_feature,
     compute_temperature_features,
@@ -66,15 +66,15 @@ def _get_data(
     sample, meter_file, temperature_file, heating_balance_points, cooling_balance_points
 ):
     if sample is not None:
-        with resource_stream("eemeter.samples", "metadata.json") as f:
+        with resource_stream("eemeter.eemeter.samples", "metadata.json") as f:
             metadata = json.loads(f.read().decode("utf-8"))
         if sample in metadata:
             click.echo("Loading sample: {}".format(sample))
             meter_file = resource_stream(
-                "eemeter.samples", metadata[sample]["meter_data_filename"]
+                "eemeter.eemeter.samples", metadata[sample]["meter_data_filename"]
             )
             temperature_file = resource_stream(
-                "eemeter.samples", metadata[sample]["temperature_filename"]
+                "eemeter.eemeter.samples", metadata[sample]["temperature_filename"]
             )
         else:
             raise click.ClickException(

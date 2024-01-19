@@ -1,4 +1,4 @@
-from eemeter.common.abstract_data_processor import AbstractDataProcessor
+from eemeter.eemeter.common.abstract_data_processor import AbstractDataProcessor
 import pandas as pd
 
 class DataProcessorDaily(AbstractDataProcessor):

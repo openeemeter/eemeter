@@ -23,8 +23,8 @@ import pytest
 
 matplotlib.use("Agg")
 
-from eemeter.visualization import plot_energy_signature, plot_time_series
-from eemeter.models import DailyModel
+from eemeter.eemeter.visualization import plot_energy_signature, plot_time_series
+from eemeter.eemeter.models import DailyModel
 
 
 def test_plot_time_series(il_electricity_cdd_hdd_daily):

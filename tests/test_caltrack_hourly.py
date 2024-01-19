@@ -22,13 +22,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from eemeter.caltrack.hourly import (
+from eemeter.eemeter.caltrack.hourly import (
     caltrack_hourly_fit_feature_processor,
     caltrack_hourly_prediction_feature_processor,
     fit_caltrack_hourly_model_segment,
     fit_caltrack_hourly_model,
 )
-from eemeter.features import (
+from eemeter.eemeter.features import (
     compute_time_features,
     compute_temperature_features,
     compute_usage_per_day_feature,

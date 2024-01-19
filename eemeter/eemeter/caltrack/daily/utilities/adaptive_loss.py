@@ -22,8 +22,8 @@ from scipy.optimize import minimize_scalar
 from scipy.interpolate import BSpline
 import numba
 
-from eemeter.caltrack.daily.utilities.adaptive_loss_tck import tck
-from eemeter.caltrack.daily.utilities.utils import OoM_numba
+from eemeter.eemeter.caltrack.daily.utilities.adaptive_loss_tck import tck
+from eemeter.eemeter.caltrack.daily.utilities.utils import OoM_numba
 
 
 numba_cache = True

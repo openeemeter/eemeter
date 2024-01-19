@@ -17,7 +17,7 @@
    limitations under the License.
 
 """
-from eemeter.warnings import EEMeterWarning
+from eemeter.eemeter.warnings import EEMeterWarning
 
 
 def test_eemeter_warning():

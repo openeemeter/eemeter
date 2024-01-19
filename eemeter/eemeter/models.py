@@ -22,25 +22,25 @@ import pandas as pd
 import numpy as np
 import json
 
-from eemeter.caltrack.daily.parameters import DailyModelParameters, DailySubmodelParameters
+from eemeter.eemeter.caltrack.daily.parameters import DailyModelParameters, DailySubmodelParameters
 
 import itertools
 
-from eemeter.caltrack.daily.utilities.config import (
+from eemeter.eemeter.caltrack.daily.utilities.config import (
     caltrack_2_1_settings,
     caltrack_legacy_settings,
     update_daily_settings,
 )
-from eemeter.caltrack.daily.utilities.ellipsoid_test import ellipsoid_split_filter
+from eemeter.eemeter.caltrack.daily.utilities.ellipsoid_test import ellipsoid_split_filter
 
-from eemeter.caltrack.daily.fit_base_models import (
+from eemeter.eemeter.caltrack.daily.fit_base_models import (
     fit_initial_models_from_full_model,
     fit_final_model,
 )
 
-from eemeter.caltrack.daily.base_models.full_model import full_model, get_full_model_x
-from eemeter.caltrack.daily.utilities.selection_criteria import selection_criteria
-from eemeter.caltrack.daily.utilities.base_model import get_smooth_coeffs
+from eemeter.eemeter.caltrack.daily.base_models.full_model import full_model, get_full_model_x
+from eemeter.eemeter.caltrack.daily.utilities.selection_criteria import selection_criteria
+from eemeter.eemeter.caltrack.daily.utilities.base_model import get_smooth_coeffs
 
 
 class DailyModel:

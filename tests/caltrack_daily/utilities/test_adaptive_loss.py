@@ -20,7 +20,7 @@
 import numpy as np
 import pytest
 
-from eemeter.caltrack.daily.utilities.adaptive_loss import (
+from eemeter.eemeter.caltrack.daily.utilities.adaptive_loss import (
     remove_outliers,
     adaptive_weights,
     adaptive_loss_fcn,

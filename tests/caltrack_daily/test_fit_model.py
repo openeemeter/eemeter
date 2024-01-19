@@ -19,8 +19,8 @@
 """
 import numpy as np
 import pandas as pd
-from eemeter.models import DailyModel
-from eemeter.caltrack.daily.optimize_results import OptimizedResult
+from eemeter.eemeter.models import DailyModel
+from eemeter.eemeter.caltrack.daily.optimize_results import OptimizedResult
 
 
 class TestFitModel:

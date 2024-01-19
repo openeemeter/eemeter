@@ -20,15 +20,15 @@
 import numpy as np
 from copy import deepcopy as copy
 
-from eemeter.caltrack.daily.base_models.tidd import fit_tidd
-from eemeter.caltrack.daily.base_models.c_hdd_tidd import fit_c_hdd_tidd
-from eemeter.caltrack.daily.base_models.hdd_tidd_cdd import fit_hdd_tidd_cdd
-from eemeter.caltrack.daily.parameters import ModelCoefficients, ModelType
+from eemeter.eemeter.caltrack.daily.base_models.tidd import fit_tidd
+from eemeter.eemeter.caltrack.daily.base_models.c_hdd_tidd import fit_c_hdd_tidd
+from eemeter.eemeter.caltrack.daily.base_models.hdd_tidd_cdd import fit_hdd_tidd_cdd
+from eemeter.eemeter.caltrack.daily.parameters import ModelCoefficients, ModelType
 
-from eemeter.caltrack.daily.utilities.utils import OoM
-from eemeter.caltrack.daily.utilities.config import FullModelSelection
+from eemeter.eemeter.caltrack.daily.utilities.utils import OoM
+from eemeter.eemeter.caltrack.daily.utilities.config import FullModelSelection
 
-from eemeter.caltrack.daily.optimize_results import OptimizedResult
+from eemeter.eemeter.caltrack.daily.optimize_results import OptimizedResult
 
 
 def _get_opt_options(settings):

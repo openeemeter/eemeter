@@ -20,18 +20,18 @@
 import numpy as np
 import pytest
 
-from eemeter.caltrack.daily.objective_function import (
+from eemeter.eemeter.caltrack.daily.objective_function import (
     get_idx,
     no_weights_obj_fcn,
     obj_fcn_decorator,
 )
 
-from eemeter.caltrack.daily.base_models.hdd_tidd_cdd import (
+from eemeter.eemeter.caltrack.daily.base_models.hdd_tidd_cdd import (
     evaluate_hdd_tidd_cdd_smooth,
     _hdd_tidd_cdd_smooth_weight,
 )
 
-from eemeter.caltrack.daily.utilities.config import DailySettings as Settings
+from eemeter.eemeter.caltrack.daily.utilities.config import DailySettings as Settings
 
 
 def test_get_idx():
