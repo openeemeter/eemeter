@@ -1,5 +1,0 @@
-user provides dataframe for loadshapes both treatment and comparison pool
-    - needs following columns
-        - id, hour->time, ls
-        - agnostic to index. will set multi index using df.set_index(["id", "hour"])
-    

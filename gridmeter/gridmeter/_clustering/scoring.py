@@ -11,7 +11,10 @@ import sklearn.metrics
 import sklearn.cluster
 import numpy as np
 
-from gridmeter._clustering import const as _const
+from gridmeter._clustering import (
+    const as _const,
+    settings as _settings,
+)
 
 
 def get_max_score_from_system_size() -> float:
@@ -87,11 +90,8 @@ def merge_small_clusters(clusters: np.ndarray, min_cluster_size: int):
 def score_clusters(
     data: np.ndarray,
     labels: np.ndarray,
-    score_choice: str,
-    dist_metric: str,
-    min_cluster_size: int,
-    cluster_bound_lower: int,
-    max_non_outlier_cluster_count: int,
+    n_cluster_lower: int,
+    s: _settings.Settings,
 ) -> tuple[float, bool]:
     """
     ---
@@ -104,23 +104,22 @@ def score_clusters(
     Args:
         data (np.array): Load shapes being clustered
         labels (list|np.array): A list defining what cluster each load shape belongs to
-        score_choice (str): What scoring method to use
-            Options: ['silhouette', 'silhouette_median', 'variance_ratio', 'calinski-harabasz', 'davies-bouldin']
-        dist_metric (str): What distance metric to use when calculating distance
-            Options: ['euclidean', 'seuclidean', 'manhattan', 'cosine']
-        min_cluster_size (int): Minumum number of meters for a cluster
-            Options: 2 < val
 
     Returns:
         score (float): Lower is better
         unable_to_calc_score (bool): Boolean that if true, means max score was used
     """
 
+    score_choice=s.SCORE_CHOICE.value
+    dist_metric=s.DIST_METRIC
+    min_cluster_size=s.MIN_CLUSTER_SIZE
+    max_non_outlier_cluster_count=s.MAX_NON_OUTLIER_CLUSTER_COUNT
+
     # merge clusters to outlier cluster
     labels = merge_small_clusters(labels, min_cluster_size)
 
     non_outlier_cluster_count = labels.max() + 1
-    if non_outlier_cluster_count < cluster_bound_lower:
+    if non_outlier_cluster_count < n_cluster_lower:
         return get_max_score_from_system_size(), True
 
     if non_outlier_cluster_count > max_non_outlier_cluster_count:
@@ -175,6 +174,6 @@ def score_clusters(
             score_error = True
 
     else:
-        raise ValueError(f"{score_choice} is not a recognized scoring function in clustering")
+        raise ValueError(f"{score_choice} is not a recognized clustering scoring function")
     
     return score, score_error

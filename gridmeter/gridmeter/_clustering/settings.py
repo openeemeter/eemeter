@@ -8,6 +8,7 @@ import pydantic
 
 import gridmeter._clustering.const as _const
 from gridmeter._utils.base_settings import BaseSettings
+from gridmeter._utils.adaptive_loss import _LOSS_ALPHA_MIN
 
 
 class Settings(BaseSettings):
@@ -65,6 +66,18 @@ class Settings(BaseSettings):
         validate_default=True,
     )
 
+    """treatment meter match loss type"""
+    TREATMENT_MATCH_LOSS: str | float = pydantic.Field(
+        default="MAE", 
+        validate_default=True,
+    )
+
+    """enable/disable multiprocessing"""
+    USE_MULTIPROCESSING: bool = pydantic.Field(
+        default=True, 
+        validate_default=True,
+    )
+
     """seed which allows for reproducibility due the random nature of bisecting k means"""
     SEED: int = pydantic.Field(
         default=42, 
@@ -76,6 +89,30 @@ class Settings(BaseSettings):
     def _check_num_cluster_bounds(self):
         if self.NUM_CLUSTER_BOUND_LOWER >= self.NUM_CLUSTER_BOUND_UPPER:
             raise ValueError("NUM_CLUSTER_BOUND_LOWER must be less than NUM_CLUSTER_BOUND_UPPER")
+
+        return self
+
+    """Check if valid settings for treatment meter match loss"""
+    @pydantic.model_validator(mode="after")
+    def _check_treatment_match_loss(self):
+        self._TREATMENT_MATCH_LOSS_ALPHA = self.TREATMENT_MATCH_LOSS
+
+        if isinstance(self._TREATMENT_MATCH_LOSS_ALPHA, str):
+            if self._TREATMENT_MATCH_LOSS_ALPHA.upper() in ["SSE", "L2"]:
+                self._TREATMENT_MATCH_LOSS_ALPHA = 2.0
+
+            elif self._TREATMENT_MATCH_LOSS_ALPHA.upper() in ["MAE", "L1"]:
+                self._TREATMENT_MATCH_LOSS_ALPHA = 1.0
+                
+            elif self._TREATMENT_MATCH_LOSS_ALPHA != "adaptive":
+                raise ValueError("TREATMENT_MATCH_LOSS must be either ['SSE', 'MAE', 'L2', 'L1', 'adaptive'] or a float")
+            
+        else:
+            if self._TREATMENT_MATCH_LOSS_ALPHA < _LOSS_ALPHA_MIN:
+                raise ValueError(f"TREATMENT_MATCH_LOSS must be greater than {_LOSS_ALPHA_MIN:.0f}")
+            
+            if self._TREATMENT_MATCH_LOSS_ALPHA > 2:
+                raise ValueError("TREATMENT_MATCH_LOSS must be less than 2")
 
         return self
 

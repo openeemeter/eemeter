@@ -74,13 +74,11 @@ class _LabelResult:
 def _get_all_label_results(
     data: np.ndarray,
     n_cluster_upper: int,
-    cluster_bound_lower: int,
-    score_choice: str,
-    dist_metric: str,
-    min_cluster_size: int,
+    n_cluster_lower: int,
     seed: int,
-    max_non_outlier_cluster_count: int,
+    s: _settings.Settings,
 ) -> list[_LabelResult]:
+        
     if n_cluster_upper < 2:
         """
         occurs with following:
@@ -96,25 +94,25 @@ def _get_all_label_results(
         return []
 
     labels_dict = _get_bisecting_kmeans_cluster_label_dict(
-        data=data, n_clusters=n_cluster_upper, seed=seed
+        data=data, 
+        n_clusters=n_cluster_upper, 
+        seed=seed
     )
 
     results = []
     for n_cluster, labels in labels_dict.items():
-        if n_cluster < cluster_bound_lower:
+        if n_cluster < n_cluster_lower:
             continue
 
         score, score_unable_to_be_calculated = _scoring.score_clusters(
             data=data,
             labels=labels,
-            score_choice=score_choice,
-            dist_metric=dist_metric,
-            min_cluster_size=min_cluster_size,
-            cluster_bound_lower=cluster_bound_lower,
-            max_non_outlier_cluster_count=max_non_outlier_cluster_count,
+            n_cluster_lower=n_cluster_lower,
+            s=s,
         )
         labels = _final_cluster_renumber(
-            clusters=labels, min_cluster_size=min_cluster_size
+            clusters=labels, 
+            min_cluster_size=s.MIN_CLUSTER_SIZE
         )
         label_res = _LabelResult(
             labels=labels,
@@ -148,7 +146,7 @@ class ClusterResultIntermediate:
 
     @classmethod
     def from_label_result_and_pool_loadshape_transform_result(
-        cls,
+        self,
         label_result: _LabelResult,
         pool_loadshape_transform_result: _transform.InitialPoolLoadshapeTransform,
         cluster_key: str,
@@ -190,17 +188,14 @@ def _create_cluster_dataframe(df_cp: pd.DataFrame, clusters: np.ndarray):
     return cluster_df
 
 
-def get_cluster_result_generator_from_upper_bound_n_cluster(
-    pool_loadshape_transform_result: _transform.InitialPoolLoadshapeTransform,
-    upper_bound_n_cluster: int,
-    cluster_bound_lower: int,
-    score_choice: str,
-    dist_metric: str,
-    min_cluster_size: int,
-    cluster_key: str,
+def get_all_cluster_results_generator(
     data: np.ndarray | None,
+    pool_loadshape_transform_result: _transform.InitialPoolLoadshapeTransform,
+    cluster_bound_upper: int,
+    cluster_bound_lower: int,
+    cluster_key: str,
     seed: int,
-    max_non_outlier_cluster_count: int,
+    s: _settings.Settings,
 ) -> Iterable[ClusterResultIntermediate]:
     """
     similar to the calculate_cluster_result function but
@@ -212,7 +207,7 @@ def get_cluster_result_generator_from_upper_bound_n_cluster(
 
     if pool_loadshape_transform_result.err_msg is not None:
         yield ClusterResultIntermediate(
-            n_clusters=upper_bound_n_cluster,
+            n_clusters=cluster_bound_upper,
             cluster_key=cluster_key,
             cluster_df=pd.DataFrame(),
             labels=np.array([]),
@@ -222,23 +217,21 @@ def get_cluster_result_generator_from_upper_bound_n_cluster(
             seed=seed,
         )
 
+    # TODO: Why is this needed?
     if data is None:
         data = pool_loadshape_transform_result.fpca_result
 
     label_results = _get_all_label_results(
         data=data.values,
-        n_cluster_upper=upper_bound_n_cluster,
-        score_choice=score_choice,
-        dist_metric=dist_metric,
-        min_cluster_size=min_cluster_size,
+        n_cluster_upper=cluster_bound_upper,
+        n_cluster_lower=cluster_bound_lower,
         seed=seed,
-        cluster_bound_lower=cluster_bound_lower,
-        max_non_outlier_cluster_count=max_non_outlier_cluster_count,
+        s=s,
     )
 
     if len(label_results) == 0:
         yield ClusterResultIntermediate(
-            n_clusters=upper_bound_n_cluster,
+            n_clusters=cluster_bound_upper,
             cluster_key=cluster_key,
             cluster_df=pd.DataFrame(),
             labels=np.array([]),
@@ -322,17 +315,14 @@ class ClusterScoreElement:
 
 
 def _get_all_cluster_result_generator(
-    pool_loadshape_transform_result: _transform.InitialPoolLoadshapeTransform,
-    upper_bound_n_cluster: int,
-    cluster_bound_lower: int,
-    score_choice: str,
-    dist_metric: str,
-    min_cluster_size: int,
-    cluster_key: str,
     data: np.ndarray | None,
-    seed: int,
+    pool_loadshape_transform_result: _transform.InitialPoolLoadshapeTransform,
+    cluster_bound_upper: int,
+    cluster_bound_lower: int,
+    cluster_key: str,
     n_iter_cluster: int,
-    max_non_outlier_cluster_count: int,
+    s: _settings.Settings,
+
 ) -> Iterable[tuple[ClusterResultIntermediate, ClusterScoreElement]]:
     """
     same as generator but increases seed for each n_iter_cluster to choose a different starting point
@@ -342,19 +332,16 @@ def _get_all_cluster_result_generator(
     """
 
     for seed_inc in range(n_iter_cluster):
-        incremented_seed = seed + seed_inc
+        incremented_seed = s.SEED + seed_inc
 
-        cluster_res_gen = get_cluster_result_generator_from_upper_bound_n_cluster(
-            pool_loadshape_transform_result=pool_loadshape_transform_result,
-            upper_bound_n_cluster=upper_bound_n_cluster,
-            score_choice=score_choice,
-            dist_metric=dist_metric,
-            min_cluster_size=min_cluster_size,
-            cluster_key=cluster_key,
+        cluster_res_gen = get_all_cluster_results_generator(
             data=data,
-            seed=incremented_seed,
+            pool_loadshape_transform_result=pool_loadshape_transform_result,
+            cluster_bound_upper=cluster_bound_upper,
             cluster_bound_lower=cluster_bound_lower,
-            max_non_outlier_cluster_count=max_non_outlier_cluster_count,
+            cluster_key=cluster_key,
+            seed=incremented_seed,
+            s=s,
         )
 
         best_scored_cluster_for_seed = _iterate_best_found_cluster(
@@ -374,15 +361,9 @@ def _get_all_cluster_result_generator(
 
 def get_best_scored_cluster_result(
     pool_loadshape_transform_result: _transform.InitialPoolLoadshapeTransform,
-    min_cluster_size: int,
-    num_cluster_bound_upper: int,
-    num_cluster_bound_lower: int,
-    score_choice: str,
-    dist_metric: str,
     cluster_key: str,
-    seed: int,
     n_iter_cluster: int,
-    max_non_outlier_cluster_count: int,
+    s: _settings.Settings,
 ) -> tuple[ClusterResultIntermediate, list[ClusterScoreElement]]:
     """
     function which performs bisecting kmeans clustering on the pool loadshapes
@@ -392,26 +373,25 @@ def get_best_scored_cluster_result(
     All the labels up to that number are saved and then scored.
     Then the best scored labels are returned so that the values can be
     """
-    data = pool_loadshape_transform_result.fpca_result
+
+    fpca_data = pool_loadshape_transform_result.fpca_result
+
+    data_size = np.shape(fpca_data)[0]
     cluster_bound_lower, cluster_bound_upper = _bounds.get_cluster_bounds(
-        data=data,
-        min_cluster_size=min_cluster_size,
-        num_cluster_bound_upper=num_cluster_bound_upper,
-        num_cluster_bound_lower=num_cluster_bound_lower,
+        data_size=data_size,
+        min_cluster_size=s.MIN_CLUSTER_SIZE,
+        num_cluster_bound_upper=s.NUM_CLUSTER_BOUND_UPPER,
+        num_cluster_bound_lower=s.NUM_CLUSTER_BOUND_LOWER,
     )
 
     cluster_result_gen = _get_all_cluster_result_generator(
+        data=fpca_data,
         pool_loadshape_transform_result=pool_loadshape_transform_result,
-        upper_bound_n_cluster=cluster_bound_upper,
-        score_choice=score_choice,
-        dist_metric=dist_metric,
-        min_cluster_size=min_cluster_size,
-        cluster_key=cluster_key,
-        data=data,
-        seed=seed,
-        n_iter_cluster=n_iter_cluster,
+        cluster_bound_upper=cluster_bound_upper,
         cluster_bound_lower=cluster_bound_lower,
-        max_non_outlier_cluster_count=max_non_outlier_cluster_count,
+        cluster_key=cluster_key,
+        n_iter_cluster=n_iter_cluster,
+        s=s,
     )
 
     best_scored_cluster = None
@@ -481,7 +461,7 @@ class ClusterResult:
 
     @classmethod
     def from_cluster_result_and_agg_type(
-        cls,
+        self,
         cluster_result: ClusterResultIntermediate,
         score_elements: list[ClusterScoreElement],
         agg_type: str,
@@ -534,7 +514,9 @@ class ClusterResult:
 
     @classmethod
     def from_comparison_pool_loadshapes_and_settings(
-        cls, df_cp: pd.DataFrame, s: _settings.Settings
+        self, 
+        df_cp: pd.DataFrame, 
+        s: _settings.Settings
     ):
         """
         classmethod for creating a ClusterMatcher instance by providing the comparison pool loadshapes to use and a settings instance.
@@ -543,20 +525,15 @@ class ClusterResult:
         of the class that is capable of assigning weights to treatment loadshapes.
         """
         ls_transform = _transform.InitialPoolLoadshapeTransform.from_full_cp_ls_df(
-            df=df_cp, min_var_ratio=s.FPCA_MIN_VARIANCE_RATIO
+            df=df_cp,
+            s=s,
         )
 
         best_scored_cluster, score_elements = get_best_scored_cluster_result(
-            pool_loadshape_transform_result=ls_transform,
+            pool_loadshape_transform_result=ls_transform, 
             cluster_key="",
-            dist_metric=s.DIST_METRIC,
-            max_non_outlier_cluster_count=s.MAX_NON_OUTLIER_CLUSTER_COUNT,
-            min_cluster_size=s.MIN_CLUSTER_SIZE,
             n_iter_cluster=1,
-            num_cluster_bound_lower=s.NUM_CLUSTER_BOUND_LOWER,
-            num_cluster_bound_upper=s.NUM_CLUSTER_BOUND_UPPER,
-            score_choice=s.SCORE_CHOICE,
-            seed=s.SEED,
+            s=s,
         )
 
         return ClusterResult.from_cluster_result_and_agg_type(
@@ -569,6 +546,7 @@ class ClusterResult:
     def get_match_treatment_to_cluster_df(
         self,
         treatment_loadshape_df: pd.DataFrame,
+        s: _settings.Settings,
     ):
         """
         performs the matching logic to a provided treatment_loadshape dataframe
@@ -584,8 +562,7 @@ class ClusterResult:
         df_t_coeffs = _fit._match_treatment_to_cluster(
             df_ls_t=transformed_treatment_loadshape,
             df_ls_cluster=self.cluster_loadshape_transformed_df,
-            agg_type=self.agg_type,
-            dist_metric=self.dist_metric,
+            s=s,
         )
 
         return df_t_coeffs

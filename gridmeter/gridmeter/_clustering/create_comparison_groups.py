@@ -42,7 +42,8 @@ class Clustering(Comparison_Group_Algorithm):
         self.treatment_loadshape = treatment_data.get_loadshape()
 
         self.treatment_weights = self.Cluster.get_match_treatment_to_cluster_df(
-            treatment_loadshape_df=self.treatment_loadshape
+            treatment_loadshape_df=self.treatment_loadshape,
+            s=self.settings
         )
 
         return self.treatment_weights

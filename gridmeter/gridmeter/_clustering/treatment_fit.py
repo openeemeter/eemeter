@@ -11,14 +11,25 @@ import scipy.spatial.distance
 import numpy as np
 import pandas as pd
 
-from gridmeter._utils.adaptive_loss import adaptive_weights
+from gridmeter._utils import (
+    adaptive_loss as _adaptive_loss,
+    multiprocessing as _multiprocessing,
+)
+from gridmeter._clustering import settings as _settings
 
 
-def fit_to_clusters(t_ls, cp_ls, x0, agg_type: str):
-    # agg_type = 'mean' # overwrite to force agg_type to be mean
+def fit_to_clusters(
+    t_ls, 
+    cp_ls, 
+    x0, 
+    s: _settings.Settings,
+):
+    # _AGG_TYPE = 'mean' # overwrite to force agg_type to be mean
+    _AGG_TYPE = s.AGG_TYPE
+    _ALPHA = s._TREATMENT_MATCH_LOSS_ALPHA
     _SIGMA = 2.698  # 1.5 IQR
     _MIN_PCT_CLUSTER = 1E-6
-
+    
     def _remove_small_x(x: np.ndarray):
         # remove small values and normalize to 1
         x[x < _MIN_PCT_CLUSTER] = 0
@@ -34,11 +45,19 @@ def fit_to_clusters(t_ls, cp_ls, x0, agg_type: str):
             x = _remove_small_x(x)
             resid = (t_ls - (cp_ls * x[:, None]).sum(axis=0)).flatten()
 
-            weight, _, _ = adaptive_weights(
-                x=resid, sigma=_SIGMA, agg_type=agg_type  # type: ignore
-            )
+            if _ALPHA == 2:
+                wSSE = np.sum(resid**2)
 
-            wSSE = np.sum(weight * resid**2)
+            else:
+                weight, _, _ = _adaptive_loss.adaptive_weights(
+                    x=resid,
+                    alpha=_ALPHA,
+                    sigma=_SIGMA, 
+                    agg_type=_AGG_TYPE,
+
+                ) # type: ignore
+
+                wSSE = np.sum(weight * resid**2)
 
             return wSSE
 
@@ -76,35 +95,39 @@ def fit_to_clusters(t_ls, cp_ls, x0, agg_type: str):
 
     return x
 
+def fit_to_clusters_dec(args_list):
+    return fit_to_clusters(*args_list)
+
 
 # TODO: this is not a fast way to do this, could be parallelized
 def _match_treatment_to_cluster(
     df_ls_t: pd.DataFrame, 
     df_ls_cluster: pd.Series, 
-    agg_type: str, 
-    dist_metric: str
-):   
-    if dist_metric == "manhattan":
-        dist_metric = "cityblock"
+    s: _settings.Settings
+):
 
     t_ls = df_ls_t.to_numpy()
     cp_ls = df_ls_cluster.to_numpy()
 
     # Get percent from each cluster
-    distances = scipy.spatial.distance.cdist(t_ls, cp_ls, metric=dist_metric)  # type: ignore
+    distances = scipy.spatial.distance.cdist(t_ls, cp_ls, metric="euclidean")  # type: ignore
     distances_norm = (np.min(distances, axis=1) / distances.T).T
     # change this number (20) to alter weights, larger centralizes the weight, smaller spreads them out
     distances_norm = (distances_norm**20)  
     distances_norm = (distances_norm.T / np.sum(distances_norm, axis=1)).T
 
-    coeffs = []
+    args_list = []
     for n, t_id in enumerate(df_ls_t.index):
         t_id_ls = t_ls[n, :]
         x0 = distances_norm[n, :]
 
-        id_coeffs = fit_to_clusters(t_ls=t_id_ls, cp_ls=cp_ls, x0=x0, agg_type=agg_type)
+        args_list.append([t_id_ls, cp_ls, x0, s])
 
-        coeffs.append(id_coeffs)
+    coeffs = _multiprocessing._run_with_mp(
+        fit_to_clusters_dec, 
+        args_list, 
+        use_mp=s.USE_MULTIPROCESSING
+    )
 
     coeffs = np.vstack(coeffs)
 

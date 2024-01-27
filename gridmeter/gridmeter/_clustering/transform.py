@@ -14,6 +14,8 @@ import skfda.representation.grid
 import skfda.representation.basis
 import skfda.preprocessing.dim_reduction.feature_extraction
 
+from gridmeter._clustering import settings as _settings
+
 
 _NORMALIZATION_QUANTILE = 0.1
 
@@ -33,7 +35,11 @@ def _normalize_single_loadshape(ls_arr: np.ndarray):
         axis=0,
     )
 
+    if ls_min == ls_max:
+        return np.full_like(ls_arr, (a + b)/2)
+
     ret_arr = (b - a) * (ls_arr_transposed - ls_min) / (ls_max - ls_min) + a
+
     return ret_arr.T
 
 
@@ -43,6 +49,8 @@ def _normalize_df_loadshapes(df: pd.DataFrame):
 
     It can work either on a dataframe containing all treatment loadshapes
     or a single loadshape.
+
+    This is left as a function in the event more complex logic is needed later
 
     """
     # df_list: list[pd.DataFrame] = []
@@ -60,9 +68,13 @@ def _normalize_df_loadshapes(df: pd.DataFrame):
     return df_transformed
 
 
+class FpcaError(Exception):
+    pass
+
+
 def _fpca_base(
     x: np.ndarray, y: np.ndarray, min_var_ratio: float
-) -> tuple[np.ndarray, str | None]:
+) -> np.ndarray:
     """
     applies fpca to concatenated transform loadshape dataframe values
 
@@ -75,10 +87,13 @@ def _fpca_base(
     """
 
     if 0 >= min_var_ratio or min_var_ratio >= 1:
-        raise ValueError("min_var_ratio but be greater than 0 and less than 1")
+        raise FpcaError("min_var_ratio but be greater than 0 and less than 1")
+
+    if not np.all(np.isfinite(x)) or not np.all(np.isfinite(y)):
+        raise FpcaError("provided non finite values for fpca")
     
     if len(x) == 0 or len(y) == 0:
-        return np.array([]), "provided empty values for fpca"
+        raise FpcaError("provided empty values for fpca")
 
     n_min = 1
     # get maximum n components
@@ -110,11 +125,13 @@ def _fpca_base(
     fpca.fit(basis_fd)
 
     mixture_components = fpca.transform(basis_fd)
-    return mixture_components, None
+
+    return mixture_components
 
 
 def _get_fpca_from_loadshape(
-    df: pd.DataFrame, min_var_ratio: float
+    df: pd.DataFrame,
+    s: _settings.Settings,
 ) -> tuple[pd.DataFrame, str | None]:
     """
     function which receives concatenated dataframe of normalized loadshape
@@ -126,20 +143,19 @@ def _get_fpca_from_loadshape(
     time = df.columns.to_numpy().astype(float)
     ls = df.values
 
-    fcpa_mixture_components, err_msg = _fpca_base(
-        x=time, 
-        y=ls, 
-        min_var_ratio=min_var_ratio
-    )
+    try:
+        fcpa_mixture_components = _fpca_base(
+            x=time, 
+            y=ls, 
+            min_var_ratio=s.FPCA_MIN_VARIANCE_RATIO
+        )
+    except FpcaError as e:
+        return pd.DataFrame(), str(e)
 
-    if err_msg is None:
-        fpca_components = np.arange(fcpa_mixture_components.shape[1])
-        columns = pd.Series(fpca_components, name="fPCA_component")
+    fpca_components = np.arange(fcpa_mixture_components.shape[1])
+    columns = pd.Series(fpca_components, name="fPCA_component")
 
-        df_fpca = pd.DataFrame(fcpa_mixture_components, index=ids, columns=columns)
-
-    else:
-        df_fpca = pd.DataFrame()
+    df_fpca = pd.DataFrame(fcpa_mixture_components, index=ids, columns=columns)
 
     return df_fpca, None
 
@@ -164,15 +180,23 @@ class InitialPoolLoadshapeTransform:
     contains the concatenation of all loadshapes pertaining to this group.
     """
 
+    s: _settings.Settings | None
+    """
+    settings object used within this class
+    """
+
     err_msg: str | None
     """error message that if present, means something went wrong and the transform should be discarded"""
 
+
+    # Unused
     @classmethod
     def from_concat_df_and_min_var_ratio(
-        cls,
+        self,
         concat_transform_df: pd.DataFrame,
-        min_var_ratio: float,
         concat_loadshape_df: pd.DataFrame,
+        s: _settings.Settings
+
     ):
         """
         classmethod which creates the dataclass assumming that the concat_df provided
@@ -180,16 +204,19 @@ class InitialPoolLoadshapeTransform:
         """
 
         fpca_result, err_msg = _get_fpca_from_loadshape(
-            df=concat_transform_df, min_var_ratio=min_var_ratio
+            df=concat_transform_df,
+            s=s,
         )
         return InitialPoolLoadshapeTransform(
             fpca_result=fpca_result,
             concatenated_loadshapes=concat_loadshape_df,
+            s=s,
             err_msg=err_msg,
         )
 
+
     @classmethod
-    def from_full_cp_ls_df(cls, df: pd.DataFrame, min_var_ratio: float):
+    def from_full_cp_ls_df(self, df: pd.DataFrame, s: _settings.Settings):
         """
         classmethod to create dataclass with transform results
 
@@ -200,11 +227,13 @@ class InitialPoolLoadshapeTransform:
         df_transformed = _normalize_df_loadshapes(df=df)
 
         fpca_result, err_msg = _get_fpca_from_loadshape(
-            df=df_transformed, min_var_ratio=min_var_ratio
+            df=df_transformed, 
+            s=s,
         )
 
         return InitialPoolLoadshapeTransform(
             fpca_result=fpca_result,
             concatenated_loadshapes=df,
+            s=s,
             err_msg=err_msg,
         )

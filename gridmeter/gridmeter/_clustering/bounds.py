@@ -3,11 +3,13 @@ from __future__ import annotations
 import numpy as np
 
 
-def _get_num_cluster_max_from_n_data(
-    n_data: int, min_cluster_size: int, num_cluster_bound_upper: int
+def _get_num_cluster_max(
+    data_size: int, 
+    min_cluster_size: int, 
+    num_cluster_bound_upper: int
 ):
     """
-    returns bounds using n_data which is number models in cluster
+    returns bounds using data_size which is number models in cluster
     """
     n_min = min_cluster_size
 
@@ -34,17 +36,17 @@ def _get_num_cluster_max_from_n_data(
         TODO: Figure out better way to handle this.
         Currently occurs when num_cluster_bound_upper is less than n_max_set
         """
-        return min(n_data, num_cluster_bound_upper)
+        return min(data_size, num_cluster_bound_upper)
 
     num_cluster_max = (2 * max_clusters - min_clusters) * (
-        1 / (1 + np.exp(-(n_data - n_min) / k)) - 0.5
+        1 / (1 + np.exp(-(data_size - n_min) / k)) - 0.5
     ) + min_clusters
 
     return int(np.floor(num_cluster_max))
 
 
-def get_cluster_bounds_from_n_data(
-    n_data: int,
+def get_cluster_bounds(
+    data_size: int,
     min_cluster_size: int,
     num_cluster_bound_lower: int,
     num_cluster_bound_upper: int,
@@ -53,8 +55,8 @@ def get_cluster_bounds_from_n_data(
     function which returns lower and upper bound based off config values and number of data points
     """
 
-    num_cluster_max = _get_num_cluster_max_from_n_data(
-        n_data=n_data,
+    num_cluster_max = _get_num_cluster_max(
+        data_size=data_size,
         min_cluster_size=min_cluster_size,
         num_cluster_bound_upper=num_cluster_bound_upper,
     )
@@ -67,18 +69,3 @@ def get_cluster_bounds_from_n_data(
         num_cluster_bounds[1] += 1
 
     return num_cluster_bounds[0], num_cluster_bounds[1]
-
-
-def get_cluster_bounds(
-    data: np.ndarray,
-    min_cluster_size: int,
-    num_cluster_bound_lower: int,
-    num_cluster_bound_upper: int,
-):
-    n_data = np.shape(data)[0]
-    return get_cluster_bounds_from_n_data(
-        n_data=n_data,
-        min_cluster_size=min_cluster_size,
-        num_cluster_bound_lower=num_cluster_bound_lower,
-        num_cluster_bound_upper=num_cluster_bound_upper,
-    )
