@@ -21,7 +21,7 @@
 import multiprocessing as mp
 
 
-def _run_with_mp(fcn, args_list, use_mp=True):
+def _execute_with_mp(fcn, args_list, use_mp=True):
     """Runs a function with multiprocessing if use_mp is True, otherwise runs
     the function without multiprocessing.
 

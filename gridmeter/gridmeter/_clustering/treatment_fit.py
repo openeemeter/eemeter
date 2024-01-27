@@ -123,7 +123,7 @@ def _match_treatment_to_cluster(
 
         args_list.append([t_id_ls, cp_ls, x0, s])
 
-    coeffs = _multiprocessing._run_with_mp(
+    coeffs = _multiprocessing._execute_with_mp(
         fit_to_clusters_dec, 
         args_list, 
         use_mp=s.USE_MULTIPROCESSING

@@ -5,7 +5,6 @@ for clustering transforms and the transform logic itself
 
 from __future__ import annotations
 
-import attrs
 import numpy as np
 import pandas as pd
 
@@ -73,7 +72,9 @@ class FpcaError(Exception):
 
 
 def _fpca_base(
-    x: np.ndarray, y: np.ndarray, min_var_ratio: float
+    x: np.ndarray, 
+    y: np.ndarray, 
+    min_var_ratio: float
 ) -> np.ndarray:
     """
     applies fpca to concatenated transform loadshape dataframe values
@@ -160,7 +161,6 @@ def _get_fpca_from_loadshape(
     return df_fpca, None
 
 
-@attrs.define
 class InitialPoolLoadshapeTransform:
 
     """
@@ -189,40 +189,14 @@ class InitialPoolLoadshapeTransform:
     """error message that if present, means something went wrong and the transform should be discarded"""
 
 
-    # Unused
-    @classmethod
-    def from_concat_df_and_min_var_ratio(
-        self,
-        concat_transform_df: pd.DataFrame,
-        concat_loadshape_df: pd.DataFrame,
-        s: _settings.Settings
-
-    ):
+    def __init__(self, df: pd.DataFrame, s: _settings.Settings):
         """
-        classmethod which creates the dataclass assumming that the concat_df provided
-        is the concatenated result of all the transformed loadshapes that will have fpca performed on it
-        """
-
-        fpca_result, err_msg = _get_fpca_from_loadshape(
-            df=concat_transform_df,
-            s=s,
-        )
-        return InitialPoolLoadshapeTransform(
-            fpca_result=fpca_result,
-            concatenated_loadshapes=concat_loadshape_df,
-            s=s,
-            err_msg=err_msg,
-        )
-
-
-    @classmethod
-    def from_full_cp_ls_df(self, df: pd.DataFrame, s: _settings.Settings):
-        """
-        classmethod to create dataclass with transform results
-
         applies normalization to each loadshape and then perform fpca so the data
         is ready for clustering
         """
+
+        self.concatenated_loadshapes = df
+        self.s = s
 
         df_transformed = _normalize_df_loadshapes(df=df)
 
@@ -231,9 +205,5 @@ class InitialPoolLoadshapeTransform:
             s=s,
         )
 
-        return InitialPoolLoadshapeTransform(
-            fpca_result=fpca_result,
-            concatenated_loadshapes=df,
-            s=s,
-            err_msg=err_msg,
-        )
+        self.fpca_result = fpca_result
+        self.err_msg = err_msg

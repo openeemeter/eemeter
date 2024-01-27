@@ -456,16 +456,14 @@ class ClusterResult:
 
     iter_scores: tuple[ClusterScoreElement, ...]
 
-    agg_type: str
-    dist_metric: str
+    s: _settings.Settings
 
     @classmethod
     def from_cluster_result_and_agg_type(
         self,
         cluster_result: ClusterResultIntermediate,
         score_elements: list[ClusterScoreElement],
-        agg_type: str,
-        dist_metric: str,
+        s: _settings.Settings,
     ):
         """
         classmethod to create the final cluster result which can be used
@@ -484,14 +482,13 @@ class ClusterResult:
                 score_unable_to_be_calculated=True,
                 seed=cluster_result.seed,
                 iter_scores=tuple(score_elements),
-                agg_type=agg_type,
-                dist_metric=dist_metric,
+                s=s,
             )
 
         cluster_loadshape_df = _get_cluster_ls(
             df_cp_ls=cluster_result.pool_loadshape_transform_result.concatenated_loadshapes,
             cluster_df=cluster_result.cluster_df,
-            agg_type=agg_type,
+            agg_type=s.AGG_TYPE,
         )
 
         cluster_loadshape_transformed_df = _transform._normalize_df_loadshapes(
@@ -508,8 +505,7 @@ class ClusterResult:
             cluster_key=cluster_result.cluster_key,
             seed=cluster_result.seed,
             iter_scores=tuple(score_elements),
-            dist_metric=dist_metric,
-            agg_type=agg_type,
+            s=s,
         )
 
     @classmethod
@@ -524,7 +520,7 @@ class ClusterResult:
         Will do all necessary transformations and clustering/scoring needed in order to return the instance
         of the class that is capable of assigning weights to treatment loadshapes.
         """
-        ls_transform = _transform.InitialPoolLoadshapeTransform.from_full_cp_ls_df(
+        ls_transform = _transform.InitialPoolLoadshapeTransform(
             df=df_cp,
             s=s,
         )
@@ -539,8 +535,7 @@ class ClusterResult:
         return ClusterResult.from_cluster_result_and_agg_type(
             cluster_result=best_scored_cluster,
             score_elements=score_elements,
-            agg_type=s.AGG_TYPE,
-            dist_metric=s.DIST_METRIC,
+            s=s,
         )
 
     def get_match_treatment_to_cluster_df(
