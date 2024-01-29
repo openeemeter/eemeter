@@ -53,4 +53,7 @@ class AbstractDataProcessor(ABC):
         """
         pass
 
+    @abstractmethod
+    def _interpolate_data(self, data):
+        pass
     
