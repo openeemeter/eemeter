@@ -105,7 +105,7 @@ class Settings(BaseSettings):
                 self._TREATMENT_MATCH_LOSS_ALPHA = 1.0
                 
             elif self._TREATMENT_MATCH_LOSS_ALPHA != "adaptive":
-                raise ValueError("TREATMENT_MATCH_LOSS must be either ['SSE', 'MAE', 'L2', 'L1', 'adaptive'] or a float")
+                raise ValueError("TREATMENT_MATCH_LOSS must be either ['SSE', 'MAE', 'L2', 'L1', 'adaptive'] or float")
             
         else:
             if self._TREATMENT_MATCH_LOSS_ALPHA < _LOSS_ALPHA_MIN:

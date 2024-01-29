@@ -12,6 +12,8 @@ from gridmeter._clustering import settings as _settings, cluster as _cluster
 
 class Clustering(Comparison_Group_Algorithm):
     Cluster = None
+    comparison_pool_loadshape = None
+    treatment_loadshape = None
 
     def __init__(self, settings: _settings.Settings | None = None):
         if settings is None:
@@ -20,6 +22,7 @@ class Clustering(Comparison_Group_Algorithm):
         self.settings = settings
 
     def get_clusters(self, comparison_pool_data):
+        self.comparison_pool_data = comparison_pool_data
         self.comparison_pool_loadshape = comparison_pool_data.get_loadshape()
         
         self.Cluster = (
@@ -38,6 +41,7 @@ class Clustering(Comparison_Group_Algorithm):
                 "Comparison group has been not been clustered. Please run 'get_clusters' first."
             )
         
+        self.treatment_data = treatment_data
         self.treatment_ids = treatment_data.get_ids()
         self.treatment_loadshape = treatment_data.get_loadshape()
 

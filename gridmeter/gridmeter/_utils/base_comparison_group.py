@@ -4,6 +4,7 @@
 import pandas as pd
 import numpy as np
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 
@@ -60,8 +61,8 @@ class Comparison_Group_Algorithm:
         agg_ls.index = ['Comparison Pool']
 
         return agg_ls
-
-    def plot_comparison_group_loadshape(self, id=None):
+    
+    def get_loadshapes(self, id=None):
         if id is None:
             id = self.treatment_data.get_ids()
         if not isinstance(id, (list, np.ndarray, pd.Series)):
@@ -73,15 +74,29 @@ class Comparison_Group_Algorithm:
 
         # concat ls
         ls = pd.concat([treatment_ls, treatment_match_ls, comparison_pool_ls])
+        ls.columns = [col - 1 for col in ls.columns]
+
+        return ls
+
+    def plot_loadshapes(self, id=None):
+        ls = self.get_loadshapes(id=id)
+
+        t_min = ls.T.index[0]
+        t_max = ls.T.index[-1]
 
         # plot ls
-        fig, ax = plt.subplots()
+        fig = plt.figure(figsize=(14, 4), dpi=300)
+        ax = fig.subplots()
+
         for col in ls.T.columns:
             ax.plot(ls.T.index, ls.T[col], label=col)
 
+        if (t_max - t_min) % 24 and (t_max - t_min) > 24:
+            ax.xaxis.set_minor_locator(mpl.ticker.AutoMinorLocator(4))
+            ax.set_xticks(np.arange(t_min, t_max, 24))
+
+        ax.set_xlim([t_min, t_max])
         ax.set_xlabel('Time')
         ax.set_ylabel('Loadshape')
         ax.legend()
         fig.show()
-
-        return ls
