@@ -21,19 +21,19 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from eemeter.eemeter.caltrack.design_matrices import (
+from eemeter.eemeter.models.design_matrices import (
     create_caltrack_daily_design_matrix,
     create_caltrack_billing_design_matrix,
     create_caltrack_hourly_preliminary_design_matrix,
     create_caltrack_hourly_segmented_design_matrices,
 )
-from eemeter.eemeter.caltrack.hourly import fit_caltrack_hourly_model
-from eemeter.eemeter.derivatives import metered_savings, modeled_savings
+from eemeter.eemeter.models.hourly.model import fit_caltrack_hourly_model
+from eemeter.eemeter.models.hourly.derivatives import metered_savings, modeled_savings
 from eemeter.eemeter.exceptions import MissingModelParameterError
 from eemeter.eemeter.features import estimate_hour_of_week_occupancy, fit_temperature_bins
 from eemeter.eemeter.segmentation import segment_time_series
 from eemeter.eemeter.transform import get_baseline_data, get_reporting_data
-from eemeter.eemeter.models import DailyModel
+from eemeter.eemeter.models.daily.model import DailyModel
 
 
 @pytest.fixture

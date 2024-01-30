@@ -25,7 +25,7 @@ from ..transform import (
     day_counts,
 )
 from ..warnings import EEMeterWarning
-from eemeter.eemeter.models import DailyModel
+from eemeter.eemeter.models.daily.model import DailyModel
 
 
 __all__ = (

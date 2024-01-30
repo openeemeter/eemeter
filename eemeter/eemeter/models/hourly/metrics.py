@@ -22,7 +22,7 @@ import pandas as pd
 from scipy.stats import t
 
 
-from .warnings import EEMeterWarning
+from ...warnings import EEMeterWarning
 
 __all__ = ("ModelMetrics",)
 

@@ -19,4 +19,5 @@
 """
 from .design_matrices import *
 from .hourly import *
+from .daily import *
 from .quickstart import *

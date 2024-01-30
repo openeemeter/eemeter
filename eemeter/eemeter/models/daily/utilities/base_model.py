@@ -25,7 +25,7 @@ from scipy.special import lambertw
 
 from scipy.optimize import minimize_scalar
 
-from eemeter.eemeter.caltrack.daily.utilities.utils import OoM_numba
+from eemeter.eemeter.models.daily.utilities.utils import OoM_numba
 
 numba_cache = True
 # To compile ahead of time: https://numba.readthedocs.io/en/stable/user/pycc.html

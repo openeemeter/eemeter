@@ -20,17 +20,17 @@
 import numpy as np
 import numba
 
-from eemeter.eemeter.caltrack.daily.base_models.full_model import full_model
-from eemeter.eemeter.caltrack.daily.base_models.full_model import full_model_weight
-from eemeter.eemeter.caltrack.daily.parameters import ModelCoefficients
+from eemeter.eemeter.models.daily.base_models.full_model import full_model
+from eemeter.eemeter.models.daily.base_models.full_model import full_model_weight
+from eemeter.eemeter.models.daily.parameters import ModelCoefficients
 
-from eemeter.eemeter.caltrack.daily.utilities.base_model import fix_identical_bnds
+from eemeter.eemeter.models.daily.utilities.base_model import fix_identical_bnds
 
-from eemeter.eemeter.caltrack.daily.objective_function import obj_fcn_decorator
+from eemeter.eemeter.models.daily.objective_function import obj_fcn_decorator
 
-from eemeter.eemeter.caltrack.daily.optimize import Optimizer
+from eemeter.eemeter.models.daily.optimize import Optimizer
 
-from eemeter.eemeter.caltrack.daily.parameters import ModelType
+from eemeter.eemeter.models.daily.parameters import ModelType
 from typing import Optional
 
 # To compile ahead of time: https://numba.readthedocs.io/en/stable/user/pycc.html

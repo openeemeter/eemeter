@@ -22,7 +22,7 @@ import json
 
 import click
 
-from eemeter.eemeter.models import DailyModel
+from eemeter.eemeter.models.daily.model import DailyModel
 from .features import (
     compute_usage_per_day_feature,
     compute_temperature_features,

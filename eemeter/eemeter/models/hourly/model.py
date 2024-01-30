@@ -20,20 +20,21 @@
 import pandas as pd
 import statsmodels.formula.api as smf
 
-from ..features import (
+
+from ...features import (
     compute_time_features,
     compute_temperature_bin_features,
     compute_occupancy_feature,
     merge_features,
 
 )
-from ..metrics import ModelMetrics
-from ..segmentation import (
+from .metrics import ModelMetrics
+from ...segmentation import (
     CalTRACKSegmentModel,
     SegmentedModel,
     fit_model_segments,
 )
-from ..warnings import EEMeterWarning
+from ...warnings import EEMeterWarning
 
 
 __all__ = (
@@ -598,5 +599,3 @@ def fit_caltrack_hourly_model(
         seg_model.segment_name: seg_model.totals_metrics for seg_model in segment_models
     }
     return model_results
-
-

@@ -18,7 +18,7 @@
 
 """
 import eemeter
-from eemeter.eemeter.models import DailyModel
+from eemeter.eemeter.models.daily.model import DailyModel
 import json
 
 

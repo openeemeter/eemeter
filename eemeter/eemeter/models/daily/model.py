@@ -1,52 +1,18 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
+from eemeter.eemeter.models.daily.base_models.full_model import full_model, get_full_model_x
+from eemeter.eemeter.models.daily.fit_base_models import fit_final_model, fit_initial_models_from_full_model
+from eemeter.eemeter.models.daily.parameters import DailyModelParameters, DailySubmodelParameters
+from eemeter.eemeter.models.daily.utilities.base_model import get_smooth_coeffs
+from eemeter.eemeter.models.daily.utilities.config import caltrack_2_1_settings, caltrack_legacy_settings, update_daily_settings
+from eemeter.eemeter.models.daily.utilities.ellipsoid_test import ellipsoid_split_filter
+from eemeter.eemeter.models.daily.utilities.selection_criteria import selection_criteria
 
-   Copyright 2014-2023 OpenEEmeter contributors
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-"""
-
-import pandas as pd
 import numpy as np
-import json
+import pandas as pd
 
-from eemeter.eemeter.caltrack.daily.parameters import DailyModelParameters, DailySubmodelParameters
 
 import itertools
-
-from eemeter.eemeter.caltrack.daily.utilities.config import (
-    caltrack_2_1_settings,
-    caltrack_legacy_settings,
-    update_daily_settings,
-)
-from eemeter.eemeter.caltrack.daily.utilities.ellipsoid_test import ellipsoid_split_filter
-
-from eemeter.eemeter.caltrack.daily.fit_base_models import (
-    fit_initial_models_from_full_model,
-    fit_final_model,
-)
-
-from eemeter.eemeter.caltrack.daily.base_models.full_model import full_model, get_full_model_x
-from eemeter.eemeter.caltrack.daily.utilities.selection_criteria import selection_criteria
-from eemeter.eemeter.caltrack.daily.utilities.base_model import get_smooth_coeffs
-
-#TODO move to new ./models/hourly dir after refactor
-from eemeter.eemeter.caltrack.hourly import fit_caltrack_hourly_model, CalTRACKHourlyModelResults
-from eemeter.eemeter.features import estimate_hour_of_week_occupancy, fit_temperature_bins
-from eemeter.eemeter.segmentation import segment_time_series
-from eemeter.eemeter.caltrack.design_matrices import create_caltrack_hourly_segmented_design_matrices
+import json
 
 
 class DailyModel:
@@ -165,7 +131,7 @@ class DailyModel:
         self.model = self._final_fit(self.best_combination)
 
         self.id = meter_data.index.unique()[0]
-        
+
         wRMSE, RMSE, MAE, CVRMSE, PNRMSE = self._get_error_metrics(self.best_combination)
         self.error["wRMSE"] = wRMSE
         self.error["RMSE"] = RMSE
@@ -227,7 +193,7 @@ class DailyModel:
 
     def to_dict(self):
         return self.params.model_dump()
-        
+
     def to_json(self):
         return json.dumps(self.to_dict())
 
@@ -242,7 +208,7 @@ class DailyModel:
         )
         daily_model.is_fitted = True
         return daily_model
-        
+
     @classmethod
     def from_json(cls, str_data):
         return cls.from_dict(json.loads(str_data))
@@ -322,7 +288,7 @@ class DailyModel:
         submodels = {}
         for key, submodel in self.model.items():
             temperature_constraints = {
-                "T_min": submodel.T_min,     
+                "T_min": submodel.T_min,
                 "T_max": submodel.T_max,
                 "T_min_seg": submodel.T_min_seg,
                 "T_max_seg": submodel.T_max_seg,
@@ -702,7 +668,7 @@ class DailyModel:
         Returns:
             float: The selection criteria for the given combination.
         """
-         
+
         components = combination.split("__")
 
         N = np.sum([self.fit_components[X].N for X in components])
@@ -887,73 +853,3 @@ class DailyModel:
         cdd_load[cdd_idx] = load_only[cdd_idx]
 
         return model, f_unc, hdd_load, cdd_load
-
-
-class HourlyModel:
-    #TODO move to new ./models/hourly dir after refactor
-    #TODO inherit from ABC Model
-
-    def __init__(self, settings=None):
-        pass
-
-    def fit(self, preliminary_design_matrix):
-        segmentation = segment_time_series(
-            preliminary_design_matrix.index, "three_month_weighted"
-        )
-        occupancy_lookup = estimate_hour_of_week_occupancy(
-            preliminary_design_matrix, segmentation=segmentation
-        )
-        (
-            occupied_temperature_bins,
-            unoccupied_temperature_bins,
-        ) = fit_temperature_bins(
-            preliminary_design_matrix,
-            segmentation=segmentation,
-            occupancy_lookup=occupancy_lookup,
-        )
-        segmented_design_matrices = create_caltrack_hourly_segmented_design_matrices(
-            preliminary_design_matrix,
-            segmentation,
-            occupancy_lookup,
-            occupied_temperature_bins,
-            unoccupied_temperature_bins,
-        )
-        baseline_model = fit_caltrack_hourly_model(
-            segmented_design_matrices,
-            occupancy_lookup,
-            occupied_temperature_bins,
-            unoccupied_temperature_bins,
-        )
-        self.model = baseline_model
-        self.is_fitted = True
-        return self
-
-    def predict(self, df_eval):
-        if not self.is_fitted:
-            raise RuntimeError("Model must be fit before predictions can be made.")
-        prediction_index = df_eval.index
-        temperature_series = df_eval['temperature_mean']
-        model_prediction = self.model.predict(
-            prediction_index, temperature_series
-        )
-        return model_prediction.result
-
-    @classmethod
-    def from_dict(cls, data):
-        hourly_model = cls()
-        hourly_model.model = CalTRACKHourlyModelResults.from_json(data)
-        hourly_model.is_fitted = True
-        return hourly_model
-        
-    @classmethod
-    def from_json(cls, str_data):
-        return cls.from_dict(json.loads(str_data))
-
-    def plot(
-        self,
-        ax=None,
-        title=None,
-        figsize=None,
-        temp_range=None,
-    ):
-        raise NotImplementedError

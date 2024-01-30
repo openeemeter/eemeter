@@ -26,7 +26,7 @@ from eemeter.eemeter.features import (
     merge_features,
 )
 from eemeter.eemeter.segmentation import iterate_segmented_dataset
-from eemeter.eemeter.caltrack.hourly import caltrack_hourly_fit_feature_processor
+from eemeter.eemeter.models.hourly.model import caltrack_hourly_fit_feature_processor
 from pkg_resources import resource_filename
 
 

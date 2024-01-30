@@ -18,11 +18,11 @@
 
 """
 import numpy as np
-from eemeter.eemeter.caltrack.daily.parameters import ModelCoefficients
-from eemeter.eemeter.caltrack.daily.parameters import ModelType
-from eemeter.eemeter.caltrack.daily.utilities.config import DailySettings as Settings
-from eemeter.eemeter.caltrack.daily.base_models.c_hdd_tidd import fit_c_hdd_tidd
-from eemeter.eemeter.caltrack.daily.fit_base_models import _get_opt_options
+from eemeter.eemeter.models.daily.parameters import ModelCoefficients
+from eemeter.eemeter.models.daily.parameters import ModelType
+from eemeter.eemeter.models.daily.utilities.config import DailySettings as Settings
+from eemeter.eemeter.models.daily.base_models.c_hdd_tidd import fit_c_hdd_tidd
+from eemeter.eemeter.models.daily.fit_base_models import _get_opt_options
 
 
 def test_fit_c_hdd_tidd_smooth():

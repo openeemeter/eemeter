@@ -19,8 +19,8 @@
 """
 from scipy.stats import t
 
-from eemeter.eemeter.models import DailyModel
-from eemeter.eemeter.caltrack.design_matrices import create_caltrack_daily_design_matrix, create_caltrack_billing_design_matrix
+from eemeter.eemeter.models.daily.model import DailyModel
+from eemeter.eemeter.models.design_matrices import create_caltrack_daily_design_matrix, create_caltrack_billing_design_matrix
 
 
 __all__ = ("metered_savings", "modeled_savings")

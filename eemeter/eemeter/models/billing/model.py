@@ -1,4 +1,4 @@
-from eemeter.eemeter.models import DailyModel
+from eemeter.eemeter.models.daily.model import DailyModel
 
 class BillingModel(DailyModel): 
     """wrapper for DailyModel using billing presets"""

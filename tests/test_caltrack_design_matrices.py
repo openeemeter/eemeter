@@ -19,7 +19,7 @@
 """
 import pytest
 
-from eemeter.eemeter.caltrack.design_matrices import (
+from eemeter.eemeter.models.design_matrices import (
     create_caltrack_hourly_preliminary_design_matrix,
     create_caltrack_hourly_segmented_design_matrices,
     create_caltrack_daily_design_matrix,

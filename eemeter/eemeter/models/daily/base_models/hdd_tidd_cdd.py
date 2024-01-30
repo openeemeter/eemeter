@@ -21,21 +21,21 @@ import numpy as np
 import numba
 import nlopt
 
-from eemeter.eemeter.caltrack.daily.base_models.full_model import full_model, full_model_weight
+from eemeter.eemeter.models.daily.base_models.full_model import full_model, full_model_weight
 
-from eemeter.eemeter.caltrack.daily.parameters import ModelCoefficients
+from eemeter.eemeter.models.daily.parameters import ModelCoefficients
 
-from eemeter.eemeter.caltrack.daily.utilities.adaptive_loss import adaptive_weights
+from eemeter.eemeter.models.daily.utilities.adaptive_loss import adaptive_weights
 
-from eemeter.eemeter.caltrack.daily.utilities.base_model import get_slope, get_intercept
-from eemeter.eemeter.caltrack.daily.utilities.base_model import fix_identical_bnds
-from eemeter.eemeter.caltrack.daily.utilities.base_model import get_smooth_coeffs
+from eemeter.eemeter.models.daily.utilities.base_model import get_slope, get_intercept
+from eemeter.eemeter.models.daily.utilities.base_model import fix_identical_bnds
+from eemeter.eemeter.models.daily.utilities.base_model import get_smooth_coeffs
 
-from eemeter.eemeter.caltrack.daily.objective_function import obj_fcn_decorator
-from eemeter.eemeter.caltrack.daily.optimize import Optimizer, nlopt_algorithms
+from eemeter.eemeter.models.daily.objective_function import obj_fcn_decorator
+from eemeter.eemeter.models.daily.optimize import Optimizer, nlopt_algorithms
 
 from timeit import default_timer as timer
-from eemeter.eemeter.caltrack.daily.parameters import ModelType
+from eemeter.eemeter.models.daily.parameters import ModelType
 from typing import Optional
 
 
