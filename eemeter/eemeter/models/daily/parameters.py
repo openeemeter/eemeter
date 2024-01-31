@@ -19,7 +19,7 @@
 """
 import numpy as np
 from typing import Dict, Any, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from enum import Enum
 
 
@@ -108,6 +108,11 @@ class ModelCoefficients(BaseModel):
     cdd_bp: Optional[float] = None
     cdd_beta: Optional[float] = None
     cdd_k: Optional[float] = None
+
+    # suppress namespace warning for model_type
+    model_config = ConfigDict(
+        protected_namespaces=()
+    )
 
     @property
     def is_smooth(self):
