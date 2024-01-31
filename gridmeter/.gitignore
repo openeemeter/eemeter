@@ -13,4 +13,3 @@ docs/_build/*
 .coverage
 scripts/.ipynb_checkpoints
 .envrc
-data/

@@ -34,6 +34,8 @@ class Stratified_Sampling(Comparison_Group_Algorithm):
                 auto_bin_require_equivalence=settings.AUTO_BIN_EQUIVALENCE,
             )
 
+        self._diagnostics = None
+
 
     def _create_clusters_df(self, ids):
         clusters = pd.DataFrame(ids, columns=["id"])
@@ -134,4 +136,7 @@ class Stratified_Sampling(Comparison_Group_Algorithm):
         if self.df_raw is None:
             raise RuntimeError("Must run get_comparison_group() before calling diagnostics()")
         
-        return StratifiedSamplingDiagnostics(model=self.model)
+        if self._diagnostics is None:
+            self._diagnostics = StratifiedSamplingDiagnostics(model=self.model)
+        
+        return self._diagnostics

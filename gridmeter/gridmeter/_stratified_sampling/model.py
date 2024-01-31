@@ -22,8 +22,6 @@ import copy
 import pandas as pd
 import itertools
 import logging
-from plotnine import *
-import plotnine
 import numpy as np
 from .diagnostics import StratifiedSamplingDiagnostics
 from .bins import (
@@ -341,8 +339,9 @@ class StratifiedSampling(object):
         random_seed=1,
         relax_n_samples_approx_constraint=False,
     ):
-        if not self.trained and data_treatment is not None:
+        if not self.trained and self.data_treatment is not None:
             raise ValueError("No model found; please run fit()")
+        
         self._check_columns_present(df_pool)
         df_pool = self._perturb(self._chop_outliers(df_pool), random_seed=random_seed)
         self.data_pool = BinnedData(df_pool, self.binning)

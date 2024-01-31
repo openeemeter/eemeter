@@ -121,6 +121,7 @@ class DiagnosticPlotter:
             cols = self.default_cols
         col_pairs = combinations(cols, 2)
         plots = [self._scatter(df, p[0], p[1]) for p in col_pairs]
+        
         return [p for p in plots]
 
     def _scatter(self, df, col_x, col_y):
@@ -163,6 +164,7 @@ class DiagnosticPlotter:
     def histogram(self, df, cols=None):
         if cols is None:
             cols = self.default_cols
+
         return [self._histogram(df, c) for c in cols]
 
     def _histogram(self, df, col):
