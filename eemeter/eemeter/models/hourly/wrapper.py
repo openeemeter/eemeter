@@ -20,7 +20,7 @@
 import json
 
 from eemeter.eemeter.features import estimate_hour_of_week_occupancy, fit_temperature_bins
-from eemeter.eemeter.models.design_matrices import create_caltrack_hourly_segmented_design_matrices
+from eemeter.eemeter.models.design_matrices import create_caltrack_hourly_segmented_design_matrices, create_caltrack_hourly_preliminary_design_matrix
 from eemeter.eemeter.models.hourly.model import CalTRACKHourlyModelResults, fit_caltrack_hourly_model
 from eemeter.eemeter.segmentation import segment_time_series
 
@@ -29,7 +29,10 @@ class HourlyModel:
     def __init__(self, settings=None):
         pass
 
-    def fit(self, preliminary_design_matrix):
+    def fit(self, data):
+        meter_data = data.df['observed'].to_frame('value')
+        temperature_data = data.df['temperature']
+        preliminary_design_matrix = create_caltrack_hourly_preliminary_design_matrix(meter_data, temperature_data)
         segmentation = segment_time_series(
             preliminary_design_matrix.index, "three_month_weighted"
         )
@@ -61,11 +64,11 @@ class HourlyModel:
         self.is_fitted = True
         return self
 
-    def predict(self, df_eval):
+    def predict(self, reporting_data):
         if not self.is_fitted:
             raise RuntimeError("Model must be fit before predictions can be made.")
-        prediction_index = df_eval.index
-        temperature_series = df_eval['temperature_mean']
+        prediction_index = reporting_data.df.index
+        temperature_series = reporting_data.df['temperature']
         model_prediction = self.model.predict(
             prediction_index, temperature_series
         )

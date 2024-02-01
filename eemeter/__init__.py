@@ -35,6 +35,7 @@ from .eemeter.models.hourly.derivatives import *
 from .eemeter.models.hourly.metrics import *
 from .eemeter.models import *
 from .eemeter.models.hourly.wrapper import HourlyModel
+from .eemeter.models.hourly.data import HourlyBaseline
 
 
 def get_version():
