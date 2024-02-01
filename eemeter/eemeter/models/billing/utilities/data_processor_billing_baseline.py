@@ -64,6 +64,7 @@ class DataProcessorBillingBaseline(AbstractDataProcessor):
         #         return
 
         # TODO : reuse the code in /app/eemeter/eemeter/features.py compute_time_features() method
+        data['meter_value'] = clean_caltrack_billing_daily_data(data['meter_value'], 'billing')
         pass
 
     def set_data(self, data : pd.DataFrame, is_electricity_data : bool):
@@ -113,17 +114,3 @@ class DataProcessorBillingBaseline(AbstractDataProcessor):
 
 
         # TODO : Rollup the data, resample?
-
-    def extend(self, df):
-        """Extend data.
-
-        Parameters
-        ----------
-        data : pd.DataFrame
-            Data to extend.
-
-        Returns
-        -------
-        extended_data : pd.DataFrame
-        """
-        pass

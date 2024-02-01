@@ -38,22 +38,6 @@ class AbstractDataProcessor(ABC):
         pass
 
     @abstractmethod
-    def extend(self, data):
-        """Extend data.
-
-        Parameters
-        ----------
-        data : pd.DataFrame
-            Data to extend.
-
-        Returns
-        -------
-        extended_data : pd.DataFrame
-            Extended data.
-        """
-        pass
-
-    @abstractmethod
     def _interpolate_data(self, data):
         pass
     

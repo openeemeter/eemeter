@@ -1,4 +1,8 @@
 from eemeter.common.abstract_data_processor import AbstractDataProcessor
+from eemeter.eemeter.transform import (
+    clean_caltrack_billing_daily_data,
+    get_reporting_data
+)
 import pandas as pd
 
 class DataProcessorDailyReporting(AbstractDataProcessor):
@@ -30,22 +34,10 @@ class DataProcessorDailyReporting(AbstractDataProcessor):
             Whether the data is sufficient.
         """
         # TODO : reuse the eemeter.clean_caltrack_billing_daily_data('daily') method instead of rewriting it here
-        pass
 
-    def extend(self, data):
-        # TODO : Is this even required?
-        """Extend data.
-
-        Parameters
-        ----------
-        data : pd.DataFrame
-            Data to extend.
-
-        Returns
-        -------
-        extended_data : pd.DataFrame
-            Extended data.
-        """
+        data['meter_value'] = clean_caltrack_billing_daily_data(data['meter_value'], 'billing')  
+        
+              
         pass
 
     def _interpolate_data(self, data):

@@ -1,7 +1,10 @@
 from eemeter.common.abstract_data_processor import AbstractDataProcessor
 import eemeter.common.const as _const
 from config import DailySettings
-from eemeter.eemeter.transform import day_counts
+from eemeter.eemeter.common.data_processor_utilities import (
+    day_counts,
+    clean_caltrack_billing_daily_data
+)
 from eemeter.eemeter.warnings import EEMeterWarning
 import numpy as np
 import pandas as pd
@@ -11,7 +14,6 @@ class DataProcessorDailyBaseline(AbstractDataProcessor):
     """Data processor for daily data.
     
     2.2.1.4. Values of 0 are considered missing for electricity data, but not gas data.
-    TODO : How to know if it is electricity or gas data?
     
     """
     def __init__(self, settings : DailySettings | None):
@@ -29,21 +31,19 @@ class DataProcessorDailyBaseline(AbstractDataProcessor):
 
         self._baseline_meter_df = None
         self._meter_id = None
-        self._sufficiency_warnings = None
+        self._sufficiency_warnings = None 
 
     def _caltrack_sufficiency_criteria_baseline(self,
         data_quality,
         requested_start = None,
         requested_end = None,
         num_days=365,
-        min_fraction_daily_coverage=0.9,  # TODO: needs to be per year
+        min_fraction_daily_coverage=0.9,
         min_fraction_hourly_temperature_coverage_per_period=0.9,
     ):
         """
             Refer to usage_per_day.py in eemeter/caltrack/ folder
         """
-
-        #TODO : Compute temperature quality matching, refer to compute_temperature_features in eemeter/caltrack/features.py
 
         if data_quality.dropna().empty:
             warnings.append(
@@ -228,7 +228,42 @@ class DataProcessorDailyBaseline(AbstractDataProcessor):
                 )
             )
 
-        # TODO : Add the check for 90% for seasons and weekday/ weekends present
+
+        # Test for more than 50% of high frequency data being missing
+        """
+            2.2.2.1. If summing to daily usage from higher frequency interval data, no more than 50% of high-frequency values should be missing. 
+            Missing values should be filled in with average of non-missing values (e.g., for hourly data, 24 * average hourly usage).
+        """  
+        # TODO : Figure out minimum granularity
+        min_granularity = 'unknown'
+        if min_granularity != 'daily':
+            # TODO: the warning applied should be specific to temperature or meter data
+            data_quality['meter_value'] = clean_caltrack_billing_daily_data(data_quality['meter_value'], min_granularity, critical_warnings)
+            data_quality['temperature_mean'] = clean_caltrack_billing_daily_data(data_quality['temperature_mean'], min_granularity, critical_warnings)
+
+        
+        # Check for 90% for individual months present:
+        non_null_temp_percentage_per_month = data_quality['temperature_mean'].groupby(data_quality.index.month).apply(lambda x: x.notna().mean())
+        if (non_null_temp_percentage_per_month < min_fraction_daily_coverage).any():
+            critical_warnings.append(
+                EEMeterWarning(
+                    qualified_name="eemeter.caltrack_sufficiency_criteria.missing_temperature_data",
+                    description=("More than 10% of the monthly temperature data is missing."),
+
+                )
+            )
+
+        non_null_meter_percentage_per_month = data_quality['meter_value'].groupby(data_quality.index.month).apply(lambda x: x.notna().mean())
+        if (non_null_meter_percentage_per_month < min_fraction_daily_coverage).any():
+            critical_warnings.append(
+                EEMeterWarning(
+                    qualified_name="eemeter.caltrack_sufficiency_criteria.missing_meter_data",
+                    description=("More than 10% of the monthly meter data is missing."),
+
+                )
+            )
+        
+        # TODO : Do we need 90% of seasons & weekday/weekend checks needed?
 
         non_critical_warnings = []
         if n_extreme_values > 0:
@@ -263,11 +298,17 @@ class DataProcessorDailyBaseline(AbstractDataProcessor):
             Check under section 2.2 : Data constraints
         """
 
+        # Add Season and Weekday_weekend columns
+        df['season'] = df.index.month_name().map(_const.default_season_def)
+        df['weekday_weekend'] = df.index.day_name().map(_const.default_weekday_weekend_def)
 
-        # check data sufficiency
-        
-        # Check if the data has 365 days 
+        df['temperature_null'] = df.temperature_mean.isnull().astype(int)
+        df['temperature_not_null'] = df.temperature_mean.notnull().astype(int)
+
         warnings = self._caltrack_sufficiency_criteria_baseline(df)
+
+        # Drop unnecessary columns
+        df.drop(columns=['temperature_null', 'temperature_not_null'], inplace=True)
 
         self._sufficiency_warnings = warnings
 
@@ -286,13 +327,8 @@ class DataProcessorDailyBaseline(AbstractDataProcessor):
         pd.DataFrame
             Dataframe with missing data interpolated
         """
-        # TODO : Implement this
+        # TODO : Is this actually necessary? Or just throw a warning if we have missing data?
         return df
-
-
-    # TODO : remove this from abstract parent class
-    def extend(self, data):
-        return super().extend(data)
     
     
     def set_data(self, data : pd.DataFrame, is_electricity_data : bool):
@@ -317,7 +353,7 @@ class DataProcessorDailyBaseline(AbstractDataProcessor):
             raise ValueError("Data is missing required columns: {}".format(
                 set(expected_columns) - set(data.columns)))
 
-        # TODO : Handle the case if the datetime is not the index but provided in a separate column
+        # Handle the case if the datetime is not the index but provided in a separate column -> not required for now
 
         # Check that the datetime index is timezone aware timestamp
         if not isinstance(data.index, pd.DatetimeIndex):
@@ -331,26 +367,21 @@ class DataProcessorDailyBaseline(AbstractDataProcessor):
 
         # TODO : Check missing value in datetime and add a warning/ exception if missing
 
-        # Convert electricity_Data having 0 meter values to NaNs
+        # Convert electricity data having 0 meter values to NaNs
         if is_electricity_data:
             df.loc[df['meter_value'] == 0, 'meter_value'] = np.nan
 
-        # Add Season and Weekday_weekend columns
-        df['season'] = df.index.month_name().map(_const.default_season_def)
-        df["weekday_weekend"] = df.index.day_name().map(_const.default_weekday_weekend_def)
 
         # Data Sufficiency Check
         self._check_data_sufficiency(df)
-        self._baseline_meter_df = df
-        
+    
         if self._sufficiency_warnings is not None:
-            # TODO : how to handle the warnings?
-            print(self._sufficiency_warnings)
+            for warning in self._sufficiency_warnings:
+                print(warning.json())
 
-        # TODO : The rollup should be done according to day_counts() method
-        # Roll up the data into daily if the data is not already daily by the mean
-        df  = df.resample('D').mean()
-
+        # Is this the valid way for doing the rollups?
+        df['meter_value'] = df['meter_value'] / day_counts(df.index)
+        self._baseline_meter_df = df
 
 
 if __name__ == "__main__":

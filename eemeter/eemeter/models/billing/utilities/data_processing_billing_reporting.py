@@ -42,17 +42,3 @@ class BillingDataProcessorReporting(AbstractDataProcessor):
 
         # TODO : try and abstract out the baseline version instead of copying it here
         pass
-
-    def extend(self, df):
-        """Extend data.
-
-        Parameters
-        ----------
-        data : pd.DataFrame
-            Data to extend.
-
-        Returns
-        -------
-        extended_data : pd.DataFrame
-        """
-        pass
