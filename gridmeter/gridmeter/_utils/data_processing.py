@@ -5,9 +5,17 @@ import numpy as np
 
 
 class Data:
-    def __init__(self, settings: Data_Settings | None = None):
+    def __init__(self, 
+        loadshape_df: pd.DataFrame | None = None, 
+        time_series_df: pd.DataFrame | None = None, 
+        features_df: pd.DataFrame | None = None, 
+        settings: Data_Settings | None = None
+    ):
         if settings is None:
-            settings = Data_Settings()
+            if loadshape_df is None:
+                settings = Data_Settings()
+            else: # if loadshape is provided, then apply appropriate settings
+                settings = Data_Settings(AGG_TYPE=None, LOADSHAPE_TYPE=None, TIME_PERIOD=None)
 
         self._settings = settings
 
@@ -16,6 +24,26 @@ class Data:
 
         # TODO: let's make id the index for the excluded ids dataframe
         self._excluded_ids = pd.DataFrame(columns=["id", "reason"])
+
+        # basic error checking
+        if loadshape_df is None and time_series_df is None and features_df is None:
+            raise ValueError(
+                "A loadshape, time series, or features dataframe must be provided."
+            )
+
+        elif loadshape_df is not None and time_series_df is not None:
+            raise ValueError(
+                "Both loadshape dataframe and time series dataframe are provided. Please provide only one."
+            )
+
+        if self._settings.TIME_PERIOD is not None and (loadshape_df is not None or time_series_df is None):
+            # Time period should only be set if a time series dataframe is provided
+            raise ValueError(
+                "Time period is set, but no time series dataframe is provided. Please provide a time series dataframe."
+            )
+
+        # set the data
+        self._set_data(loadshape_df, time_series_df, features_df)
 
 
     def extend(self, other):
@@ -58,6 +86,7 @@ class Data:
 
         return cols
 
+
     def _add_index_columns_from_datetime(self, df: pd.DataFrame) -> pd.DataFrame:
         # Add hour column
         if "hour" in self._settings.TIME_PERIOD:
@@ -94,6 +123,7 @@ class Data:
 
         return df
 
+
     def _create_values_for_interpolation(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Interpolate missing values in the dataframe based on the settings.
@@ -128,6 +158,7 @@ class Data:
 
         return df
 
+
     def _validate_unstacked_loadshape(self, df: pd.DataFrame) -> pd.DataFrame:
         unstacked_cols = df.columns.drop('id')
         unstacked_cols = sorted(map(int, unstacked_cols))
@@ -155,6 +186,10 @@ class Data:
 
 
     def _validate_format_loadshape(self, df: pd.DataFrame) -> pd.DataFrame:
+        # Reset index to remove any existing index
+        df = df.reset_index()
+        df = df.drop(columns="index", axis=1, errors="ignore")
+
         # Check columns missing in loadshape_df
         expected_columns = ["id", "time", "loadshape"]
         missing_columns = [c for c in expected_columns if c not in df.columns]
@@ -277,7 +312,12 @@ class Data:
 
         return df
 
+
     def _validate_format_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        # Reset index to remove any existing index
+        df = df.reset_index()
+        df = df.drop(columns="index", axis=1, errors="ignore")
+
         # Check columns missing in features_df
         if "id" not in df.columns:
             raise ValueError(f"Missing columns in features_df: 'id'")
@@ -304,6 +344,7 @@ class Data:
 
         return df
 
+
     def _convert_timeseries_to_loadshape(
         self, time_series_df: pd.DataFrame
     ) -> pd.DataFrame:
@@ -317,10 +358,16 @@ class Data:
 
         base_df = time_series_df.copy()  # don't change the original dataframe
 
+        # Reset index to remove any existing index
+        base_df = base_df.reset_index()
+        base_df = base_df.drop(columns="index", axis=1, errors="ignore")
+
         # Check columns missing in time_series_df
         df_type = self._settings.LOADSHAPE_TYPE
         expected_columns = ["id", "datetime"]
-        if df_type == "error":
+        if (df_type == "error") and ("error" in base_df.columns):
+            expected_columns.append("error")
+        elif (df_type == "error") and ("error" not in base_df.columns):
             expected_columns.extend(["observed", "modeled"])
         else:
             expected_columns.append(df_type)
@@ -335,7 +382,7 @@ class Data:
         else:
             raise ValueError("The 'datetime' column must be of datetime type")
 
-        if df_type == "error":
+        if df_type == "error" and ("error" not in base_df.columns):
             base_df["error"] = 1 - base_df["observed"] / base_df["modeled"]
 
         # Remove duplicates
@@ -399,7 +446,8 @@ class Data:
 
         return loadshape_df
 
-    def set_data(
+
+    def _set_data(
         self, loadshape_df=None, time_series_df=None, features_df=None
     ) -> None:
         """
@@ -431,22 +479,6 @@ class Data:
 
 
         """
-
-        if loadshape_df is None and time_series_df is None and features_df is None:
-            raise ValueError(
-                "A loadshape, time series, or features dataframe must be provided."
-            )
-
-        elif loadshape_df is not None and time_series_df is not None:
-            raise ValueError(
-                "Both loadshape dataframe and time series dataframe are provided. Please provide only one."
-            )
-
-        if self._settings.TIME_PERIOD is not None and (loadshape_df is not None or time_series_df is None):
-            # Time period should only be set if a time series dataframe is provided
-            raise ValueError(
-                "Time period is set, but no time series dataframe is provided. Please provide a time series dataframe."
-            )
 
         if loadshape_df is not None:
             if self._loadshape is not None :
