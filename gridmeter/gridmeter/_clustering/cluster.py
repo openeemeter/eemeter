@@ -492,7 +492,8 @@ class ClusterResult:
         )
 
         cluster_loadshape_transformed_df = _transform._normalize_df_loadshapes(
-            df=cluster_loadshape_df
+            df=cluster_loadshape_df,
+            s=s
         )
 
         return ClusterResult(
@@ -551,7 +552,8 @@ class ClusterResult:
         """
 
         transformed_treatment_loadshape = _transform._normalize_df_loadshapes(
-            df=treatment_loadshape_df
+            df=treatment_loadshape_df,
+            s=s
         )
 
         df_t_coeffs = _fit._match_treatment_to_cluster(

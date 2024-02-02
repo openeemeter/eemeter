@@ -36,7 +36,5 @@ from gridmeter._stratified_sampling import (
 from gridmeter._utils import (
     Data,
     Data_Settings,
-    DummyMeter,
-    DummyPopulation,
-    DummyTreatmentPoolPopulation,
+    load_tutorial_data,
 )

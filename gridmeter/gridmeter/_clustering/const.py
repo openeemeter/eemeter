@@ -16,3 +16,8 @@ class ScoreChoice(str, Enum):
     VARIANCE_RATIO = "variance_ratio"
     CALINSKI_HARABASZ = "calinski-harabasz"
     DAVIES_BOULDIN = "davies-bouldin"
+
+
+class NormalizeChoice(str, Enum):
+    MIN_MAX = "min_max"
+    NONE = "none"

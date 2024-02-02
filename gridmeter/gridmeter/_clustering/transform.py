@@ -42,15 +42,12 @@ def _normalize_single_loadshape(ls_arr: np.ndarray):
     return ret_arr.T
 
 
-def _normalize_df_loadshapes(df: pd.DataFrame):
+def _normalize_df_loadshapes(df: pd.DataFrame, s: _settings.Settings):
     """
     transforms a loadshape dataframe
 
     It can work either on a dataframe containing all treatment loadshapes
     or a single loadshape.
-
-    This is left as a function in the event more complex logic is needed later
-
     """
     # df_list: list[pd.DataFrame] = []
     # # TODO: This is slow. Need to vectorize or use apply?
@@ -62,9 +59,10 @@ def _normalize_df_loadshapes(df: pd.DataFrame):
     # 
     # df_transformed = pd.concat(df_list).to_frame(name="ls")  # type: ignore
 
-    df_transformed = df.apply(_normalize_single_loadshape, axis=1)
+    if s.NORMALIZE_METHOD == "min_max":
+        df = df.apply(_normalize_single_loadshape, axis=1)
 
-    return df_transformed
+    return df
 
 
 class FpcaError(Exception):
@@ -198,7 +196,7 @@ class InitialPoolLoadshapeTransform:
         self.concatenated_loadshapes = df
         self.s = s
 
-        df_transformed = _normalize_df_loadshapes(df=df)
+        df_transformed = _normalize_df_loadshapes(df=df, s=s)
 
         fpca_result, err_msg = _get_fpca_from_loadshape(
             df=df_transformed, 

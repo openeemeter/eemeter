@@ -74,7 +74,7 @@ class Comparison_Group_Algorithm:
 
         # concat ls
         ls = pd.concat([treatment_ls, treatment_match_ls, comparison_pool_ls])
-        ls.columns = [col - 1 for col in ls.columns]
+        ls.columns = [int(col) - 1 for col in ls.columns]
 
         return ls
 

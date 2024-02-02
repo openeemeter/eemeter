@@ -87,6 +87,8 @@ class Stratified_Sampling(Comparison_Group_Algorithm):
         cp_features = comparison_pool_data.get_features()
         cp_features = cp_features.reset_index().rename(columns={"id": "meter_id"})
 
+        print(t_features)
+
         if settings.EQUIVALENCE_METHOD is None:
             self.model.fit_and_sample(
                 t_features, 

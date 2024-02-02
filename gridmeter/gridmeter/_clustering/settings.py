@@ -44,6 +44,12 @@ class Settings(BaseSettings):
         ge=2,
         validate_default=True,
     )
+
+    """how to normalize the loadshape before performing fPCA and clustering"""
+    NORMALIZE_METHOD: _const.NormalizeChoice | None = pydantic.Field(
+        default=_const.NormalizeChoice.MIN_MAX, 
+        validate_default=True,
+    )
     
     """minimum variance ratio that the fPCA must account for"""
     FPCA_MIN_VARIANCE_RATIO: float = pydantic.Field(
@@ -89,6 +95,13 @@ class Settings(BaseSettings):
     def _check_num_cluster_bounds(self):
         if self.NUM_CLUSTER_BOUND_LOWER >= self.NUM_CLUSTER_BOUND_UPPER:
             raise ValueError("NUM_CLUSTER_BOUND_LOWER must be less than NUM_CLUSTER_BOUND_UPPER")
+
+        return self
+    
+    @pydantic.model_validator(mode="after")
+    def _check_normalize_method(self):
+        if self.NORMALIZE_METHOD == "none":
+            self.NORMALIZE_METHOD = None
 
         return self
 
