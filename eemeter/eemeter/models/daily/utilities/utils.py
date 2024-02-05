@@ -30,10 +30,10 @@ import numba
 from numba.extending import overload
 
 
-min_pos_system_value = (np.finfo(float).tiny * (1e20)) ** (1 / 2)
-max_pos_system_value = (np.finfo(float).max * (1e-20)) ** (1 / 2)
-ln_min_pos_system_value = np.log(min_pos_system_value)
-ln_max_pos_system_value = np.log(max_pos_system_value)
+MIN_POS_SYSTEM_VALUE = (np.finfo(float).tiny * (1e20)) ** (1 / 2)
+MAX_POS_SYSTEM_VALUE = (np.finfo(float).max * (1e-20)) ** (1 / 2)
+LN_MIN_POS_SYSTEM_VALUE = np.log(MIN_POS_SYSTEM_VALUE)
+LN_MAX_POS_SYSTEM_VALUE = np.log(MAX_POS_SYSTEM_VALUE)
 
 
 @overload(np.clip)

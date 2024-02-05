@@ -22,11 +22,11 @@ from scipy.optimize import minimize_scalar
 from scipy.interpolate import BSpline
 import numba
 
-from eemeter.eemeter.models.daily.utilities.adaptive_loss_tck import tck
+from eemeter.eemeter.models.daily.utilities.adaptive_loss_tck import TCK
 from eemeter.eemeter.models.daily.utilities.utils import OoM_numba
 
 
-loss_alpha_min = -100.0
+LOSS_ALPHA_MIN = -100.0
 
 
 @numba.jit(nopython=True, cache=True)
@@ -259,14 +259,14 @@ def rolling_C(T, resid, mu, sigma=3, quantile=0.25, window=0.2, step=1.0):
 
 
 @numba.jit(nopython=True, error_model="numpy", cache=True)
-def generalized_loss_fcn(x, a=2, a_min=loss_alpha_min):
+def generalized_loss_fcn(x, a=2, a_min=LOSS_ALPHA_MIN):
     """
     This function calculates the generalized loss function based on the given parameters.
 
     Parameters:
     x (float): The input value for which the loss is to be calculated.
     a (float): The parameter that determines the type of loss function to be used. Default is 2.
-    a_min (float): The minimum value of 'a' for which the Welsch/Leclerc loss is to be calculated. Default is loss_alpha_min.
+    a_min (float): The minimum value of 'a' for which the Welsch/Leclerc loss is to be calculated. Default is LOSS_ALPHA_MIN.
 
     Returns:
     float: The calculated loss.
@@ -317,7 +317,7 @@ def generalized_loss_derivative(x, c=1, a=2):
     - Smoothed L1 loss for a=1.0
     - Charbonnier loss for a=0.0
     - Cauchy/Lorentzian loss for a=-2.0
-    - Welsch/Leclerc loss for a<=loss_alpha_min
+    - Welsch/Leclerc loss for a<=LOSS_ALPHA_MIN
     - Generalized loss for other values of alpha
     """
 
@@ -329,7 +329,7 @@ def generalized_loss_derivative(x, c=1, a=2):
         dloss_dx = 2 * x / (x**2 + 2 * c**2)
     elif a == -2.0:  # Cauchy/Lorentzian loss
         dloss_dx = 16 * c**2 * x / (4 * c**2 + x**2) ** 2
-    elif a <= loss_alpha_min:  # at -infinity, Welsch/Leclerc loss
+    elif a <= LOSS_ALPHA_MIN:  # at -infinity, Welsch/Leclerc loss
         dloss_dx = x / c**2 * np.exp(-0.5 * (x / c) ** 2)
     else:
         dloss_dx = x / c**2 * ((x / c) ** 2 / np.abs(a - 2) + 1)
@@ -361,7 +361,7 @@ def generalized_loss_weights(x: np.ndarray, a: float = 2, min_weight: float = 0.
             w[i] = 1
         elif a == 0:
             w[i] = 1 / (0.5 * xi**2 + 1)
-        elif a <= loss_alpha_min:
+        elif a <= LOSS_ALPHA_MIN:
             w[i] = np.exp(-0.5 * xi**2)
         else:
             w[i] = (xi**2 / np.abs(a - 2) + 1) ** (0.5 * a - 1)
@@ -371,7 +371,7 @@ def generalized_loss_weights(x: np.ndarray, a: float = 2, min_weight: float = 0.
 
 # approximate partition function for C=1, tau(alpha < 0)=1E5, tau(alpha >= 0)=inf
 # error < 4E-7
-ln_Z_fit = BSpline.construct_fast(*tck)
+ln_Z_fit = BSpline.construct_fast(*TCK)
 ln_Z_inf = 11.206072645530174
 
 
@@ -418,7 +418,7 @@ def penalized_loss_fcn(x, a=2, use_penalty=True):
 
     if use_penalty:
         penalty = ln_Z(
-            a, loss_alpha_min
+            a, LOSS_ALPHA_MIN
         )  # approximate partition function for C=1, tau=10
         loss += penalty
 
@@ -462,7 +462,7 @@ def alpha_scaled(s, a_max=2):
         s_max = 1 - 2 / (1 + 10**a)
         s = (1 - 2 / (1 + 10 ** (a * s**b))) / s_max
 
-        alpha = loss_alpha_min + (2 - loss_alpha_min) * s
+        alpha = LOSS_ALPHA_MIN + (2 - LOSS_ALPHA_MIN) * s
 
     else:
         x0 = 1

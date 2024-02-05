@@ -33,9 +33,6 @@ from eemeter.eemeter.models.daily.utilities.utils import unc_factor
 from eemeter.eemeter.models.daily.parameters import ModelCoefficients
 
 
-from timeit import default_timer as timer
-
-
 def get_k(X, T_min_seg, T_max_seg):
     """
     Calculates the heating and cooling degree day breakpoints and slopes based on the given input parameters.

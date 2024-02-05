@@ -34,7 +34,6 @@ from eemeter.eemeter.models.daily.utilities.base_model import get_smooth_coeffs
 from eemeter.eemeter.models.daily.objective_function import obj_fcn_decorator
 from eemeter.eemeter.models.daily.optimize import Optimizer, nlopt_algorithms
 
-from timeit import default_timer as timer
 from eemeter.eemeter.models.daily.parameters import ModelType
 from typing import Optional
 

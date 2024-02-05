@@ -23,8 +23,8 @@ import numba
 from eemeter.eemeter.models.daily.utilities.adaptive_loss import adaptive_weights
 
 from eemeter.eemeter.models.daily.utilities.utils import (
-    ln_min_pos_system_value,
-    ln_max_pos_system_value,
+    LN_MIN_POS_SYSTEM_VALUE,
+    LN_MAX_POS_SYSTEM_VALUE,
 )
 
 
@@ -100,7 +100,7 @@ def full_model(
 
             exp_interior = 1 / k * (Ti - T_bp)
             exp_interior = np.clip(
-                exp_interior, ln_min_pos_system_value, ln_max_pos_system_value
+                exp_interior, LN_MIN_POS_SYSTEM_VALUE, LN_MAX_POS_SYSTEM_VALUE
             )
             E_tot[n] = abs(beta * k) * (np.exp(exp_interior) - 1) + c_hdd
 
