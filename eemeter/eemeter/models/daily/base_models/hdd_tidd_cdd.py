@@ -39,10 +39,6 @@ from eemeter.eemeter.models.daily.parameters import ModelType
 from typing import Optional
 
 
-# To compile ahead of time: https://numba.readthedocs.io/en/stable/user/pycc.html
-numba_cache = True
-
-
 def fit_hdd_tidd_cdd(
     T,
     obs,
@@ -103,7 +99,7 @@ def fit_hdd_tidd_cdd(
     return res
 
 
-@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
+@numba.jit(nopython=True, error_model="numpy", cache=True)
 def _hdd_tidd_cdd(
     hdd_bp,
     hdd_beta,
@@ -118,7 +114,7 @@ def _hdd_tidd_cdd(
     return full_model(hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept, T_fit_bnds, T)
 
 
-@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
+@numba.jit(nopython=True, error_model="numpy", cache=True)
 def _hdd_tidd_cdd_smooth(*args):
     return full_model(*args)
 

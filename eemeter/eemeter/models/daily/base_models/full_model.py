@@ -27,11 +27,8 @@ from eemeter.eemeter.models.daily.utilities.utils import (
     ln_max_pos_system_value,
 )
 
-# To compile ahead of time: https://numba.readthedocs.io/en/stable/user/pycc.html
-numba_cache = True
 
-
-@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
+@numba.jit(nopython=True, error_model="numpy", cache=True)
 def full_model(
     hdd_bp,
     hdd_beta,
@@ -110,7 +107,7 @@ def full_model(
     return E_tot
 
 
-@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
+@numba.jit(nopython=True, error_model="numpy", cache=True)
 def get_full_model_x(model_key, x, T_min, T_max, T_min_seg, T_max_seg):
     """
     This function adjusts the parameters of a full model based on certain conditions.
@@ -173,7 +170,7 @@ def get_full_model_x(model_key, x, T_min, T_max, T_min_seg, T_max_seg):
     return fix_full_model_x(x, T_min, T_max)
 
 
-@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
+@numba.jit(nopython=True, error_model="numpy", cache=True)
 def fix_full_model_x(x, T_min_seg, T_max_seg):
     """
     This function adjusts the parameters of a full model based on certain conditions.

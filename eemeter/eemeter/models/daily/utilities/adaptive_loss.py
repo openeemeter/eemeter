@@ -26,11 +26,10 @@ from eemeter.eemeter.models.daily.utilities.adaptive_loss_tck import tck
 from eemeter.eemeter.models.daily.utilities.utils import OoM_numba
 
 
-numba_cache = True
 loss_alpha_min = -100.0
 
 
-@numba.jit(nopython=True, cache=numba_cache)
+@numba.jit(nopython=True, cache=True)
 def weighted_quantile(
     values, quantiles, weights=None, values_presorted=False, old_style=False
 ):
@@ -82,7 +81,7 @@ def remove_outliers(data, weights=None, sigma_threshold=3, quantile=0.25):
     return data_no_outliers, idx_no_outliers
 
 
-@numba.jit(nopython=True, cache=numba_cache)
+@numba.jit(nopython=True, cache=True)
 def IQR_outlier(data, weights=None, sigma_threshold=3, quantile=0.25):
     # only use finite data
     if weights is None:
@@ -101,7 +100,7 @@ def IQR_outlier(data, weights=None, sigma_threshold=3, quantile=0.25):
     return outlier_threshold
 
 
-@numba.jit(nopython=True, cache=numba_cache)
+@numba.jit(nopython=True, cache=True)
 def sliding_window(
     arr, window_size, step=0
 ):  # https://giov.dev/2018/05/a-window-on-numpy-s-views.html
@@ -147,7 +146,6 @@ def sliding_window(
     return strided
 
 
-# @numba.jit(nopython=True, error_model='numpy', cache=numba_cache)
 def rolling_IQR_outlier(x, y, sigma_threshold=3, quantile=0.25, window=0.05, step=1):
     """
     This function calculates the outlier threshold using the rolling Interquartile Range (IQR) method.
@@ -209,7 +207,7 @@ def rolling_IQR_outlier(x, y, sigma_threshold=3, quantile=0.25, window=0.05, ste
 
 
 # TODO: uncertain if these C functions should use np.min, np.mean, or np.max
-@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
+@numba.jit(nopython=True, error_model="numpy", cache=True)
 def get_C(resid, mu, sigma, quantile=0.25):
     """
     This function calculates the maximum absolute value of the Interquartile Range (IQR) of the residuals
@@ -260,7 +258,7 @@ def rolling_C(T, resid, mu, sigma=3, quantile=0.25, window=0.2, step=1.0):
     return C
 
 
-@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
+@numba.jit(nopython=True, error_model="numpy", cache=True)
 def generalized_loss_fcn(x, a=2, a_min=loss_alpha_min):
     """
     This function calculates the generalized loss function based on the given parameters.
@@ -301,7 +299,7 @@ def generalized_loss_fcn(x, a=2, a_min=loss_alpha_min):
     return loss
 
 
-@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
+@numba.jit(nopython=True, error_model="numpy", cache=True)
 def generalized_loss_derivative(x, c=1, a=2):
     """
     This function calculates the derivative of the generalized loss function.
@@ -339,7 +337,7 @@ def generalized_loss_derivative(x, c=1, a=2):
     return dloss_dx
 
 
-@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
+@numba.jit(nopython=True, error_model="numpy", cache=True)
 def generalized_loss_weights(x: np.ndarray, a: float = 2, min_weight: float = 0.00):
     """
     This function calculates the generalized loss weights for a given array of values.
@@ -433,7 +431,7 @@ def penalized_loss_fcn(x, a=2, use_penalty=True):
     return loss
 
 
-@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
+@numba.jit(nopython=True, error_model="numpy", cache=True)
 def alpha_scaled(s, a_max=2):
     """
     This function calculates the alpha value based on the input s and a_max (max alpha allowed).

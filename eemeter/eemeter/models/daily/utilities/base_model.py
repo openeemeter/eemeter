@@ -27,9 +27,6 @@ from scipy.optimize import minimize_scalar
 
 from eemeter.eemeter.models.daily.utilities.utils import OoM_numba
 
-numba_cache = True
-# To compile ahead of time: https://numba.readthedocs.io/en/stable/user/pycc.html
-
 
 def get_intercept(y, alpha=2):
     """
@@ -123,7 +120,7 @@ def get_smooth_coeffs(hdd_bp, pct_hdd_k, cdd_bp, pct_cdd_k, min_pct_k=0.01):
     return np.array([hdd_bp, hdd_k, cdd_bp, cdd_k])
 
 
-@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
+@numba.jit(nopython=True, error_model="numpy", cache=True)
 def fix_identical_bnds(bnds):
     for i in np.argwhere(bnds[:, 0] == bnds[:, 1]):
         bnds[i, :] = bnds[i, :] + np.array([-1.0, 1.0]) * 10 ** OoM_numba(

@@ -33,9 +33,6 @@ from eemeter.eemeter.models.daily.optimize import Optimizer
 from eemeter.eemeter.models.daily.parameters import ModelType
 from typing import Optional
 
-# To compile ahead of time: https://numba.readthedocs.io/en/stable/user/pycc.html
-numba_cache = True
-
 
 def fit_tidd(
     T,
@@ -83,7 +80,7 @@ def _tidd_x0(T, obs):
     return ModelCoefficients(model_type=ModelType.TIDD, intercept=intercept)
 
 
-@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
+@numba.jit(nopython=True, error_model="numpy", cache=True)
 def set_full_model_coeffs(intercept):
     hdd_bp = hdd_beta = hdd_k = cdd_bp = cdd_beta = cdd_k = 0
 

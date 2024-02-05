@@ -44,8 +44,6 @@ from eemeter.eemeter.models.daily.utilities.adaptive_loss import adaptive_weight
 
 from eemeter.eemeter.models.daily.optimize import Optimizer, nlopt_algorithms
 
-# To compile ahead of time: https://numba.readthedocs.io/en/stable/user/pycc.html
-numba_cache = True
 
 def fit_c_hdd_tidd(
     T,
@@ -154,7 +152,7 @@ def fit_c_hdd_tidd(
     return res
 
 
-@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
+@numba.jit(nopython=True, error_model="numpy", cache=True)
 def set_full_model_coeffs_smooth(c_hdd_bp, c_hdd_beta, c_hdd_k, intercept):
     """
     This function sets the smoothed full model coefficients based on the given parameters.
@@ -181,7 +179,7 @@ def set_full_model_coeffs_smooth(c_hdd_bp, c_hdd_beta, c_hdd_k, intercept):
     return np.array([hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept])
 
 
-@numba.jit(nopython=True, error_model="numpy", cache=numba_cache)
+@numba.jit(nopython=True, error_model="numpy", cache=True)
 def set_full_model_coeffs(c_hdd_bp, c_hdd_beta, intercept):
     """
     This function sets the full model coefficients based on the given parameters.

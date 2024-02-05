@@ -30,10 +30,6 @@ import numba
 from numba.extending import overload
 
 
-# To compile ahead of time: https://numba.readthedocs.io/en/stable/user/pycc.html
-numba_cache = True
-
-
 min_pos_system_value = (np.finfo(float).tiny * (1e20)) ** (1 / 2)
 max_pos_system_value = (np.finfo(float).max * (1e-20)) ** (1 / 2)
 ln_min_pos_system_value = np.log(min_pos_system_value)
@@ -108,7 +104,7 @@ def OoM(x, method="round"):
     return OoM_numba(x, method=method)
 
 
-@numba.jit(nopython=True, cache=numba_cache)
+@numba.jit(nopython=True, cache=True)
 def OoM_numba(x, method="round"):
     """
     This function calculates the order of magnitude (OoM) of each element in the input array 'x' using the specified method.
@@ -228,7 +224,7 @@ def median_absolute_deviation(x):
     return sigma
 
 
-@numba.jit(nopython=True, cache=numba_cache)
+@numba.jit(nopython=True, cache=True)
 def weighted_std(x, w, mean=None, w_sum_err=1e-6):
     """
     Calculate the weighted standard deviation of a given array.
