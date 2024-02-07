@@ -1,6 +1,13 @@
 from eemeter.common.abstract_data_processor import AbstractDataProcessor
 import eemeter.common.const as _const
 from eemeter.common.data_settings import MonthlySettings
+from eemeter.eemeter.common.data_processor_utilities import (
+    caltrack_sufficiency_criteria_baseline,
+    clean_caltrack_billing_daily_data,
+    compute_minimum_granularity,
+    day_counts,
+    as_freq
+)
 import numpy as np
 import pandas as pd
 
@@ -13,7 +20,8 @@ class DataProcessorBillingBaseline(AbstractDataProcessor):
     2.2.3.5. For pseudo-monthly billing cycles, periods spanning more than 35 days should be dropped from analysis. 
     For bi-monthly billing cycles, periods spanning more than 70 days should be dropped from the analysis.
     """
-    def __init__(self, settings : MonthlySettings | None):
+
+    def __init__(self, data : pd.DataFrame, is_electricity_data, settings : MonthlySettings | None = None):
         """Initialize the data processor.
         
         Parameters
@@ -27,45 +35,42 @@ class DataProcessorBillingBaseline(AbstractDataProcessor):
             self._settings = settings
 
         self._baseline_meter_df = None
-        self._reporting_meter_df = None
+        self.sufficiency_warnings = None
+        self.critical_sufficiency_warnings = None
+
+        self.set_data(data = data, is_electricity_data = is_electricity_data)
 
 
-    def _check_data_sufficiency(self, data : pd.DataFrame):
-        # s = self._settings
-        # descriptions = []
-        # details = []
+    def _check_data_sufficiency(self, df : pd.DataFrame):
+        # Add Season and Weekday_weekend columns
+        df['season'] = df.index.month_name().map(_const.default_season_def)
+        df['weekday_weekend'] = df.index.day_name().map(_const.default_weekday_weekend_def)
 
-        # def _update_from_n_days_kept():
-        #     if self.data_sufficiency is None:
-        #         descriptions.append(
-        #             "unable to verify n_days_kept requirement due to missing data_sufficiency field"
-        #         )
-        #         details.append(
-        #             "unable to verify n_days_kept requirement due to missing data_sufficiency field"
-        #         )
-        #         return
+        df['temperature_null'] = df.temperature_mean.isnull().astype(int)
+        df['temperature_not_null'] = df.temperature_mean.notnull().astype(int)
 
-        #     if self.data_sufficiency.n_days_kept is None:
-        #         descriptions.append(
-        #             "n_days_kept is None. likely means a daily model was unable to be created"
-        #         )
-        #         details.append(
-        #             "n_days_kept is None. likely means a daily model was unable to be created"
-        #         )
-        #         return
+        df, self.critical_sufficiency_warnings, self.sufficiency_warnings = caltrack_sufficiency_criteria_baseline(data = df)
 
-        #     if self.data_sufficiency.n_days_kept < s.n_days_kept_min:
-        #         descriptions.append(
-        #             f"n_days_kept requirment of {s.n_days_kept_min} not met"
-        #         )
-        #         details.append(
-        #             f"n_days_kept min: {s.n_days_kept_min}; received {self.data_sufficiency.n_days_kept}"
-        #         )
-        #         return
+        # TODO : Assume if the billing cycle is mixed between monthly and bimonthly, then the minimum granularity is bimonthly
+        # Test for more than 50% of high frequency data being missing
+        """
+            2.2.2.1. If summing to daily usage from higher frequency interval data, no more than 50% of high-frequency values should be missing. 
+            Missing values should be filled in with average of non-missing values (e.g., for hourly data, 24 * average hourly usage).
+        """  
+        min_granularity = compute_minimum_granularity(df.index)
 
-        # TODO : reuse the code in /app/eemeter/eemeter/features.py compute_time_features() method
-        data['meter_value'] = clean_caltrack_billing_daily_data(data['meter_value'], 'billing')
-        pass
+        # Ensure higher frequency data is aggregated to the monthly model
+        if not min_granularity.startswith('billing'):
+            min_granularity = 'billing_monthly'
+
+        meter_value_df = clean_caltrack_billing_daily_data(df['meter_value'], min_granularity, self.sufficiency_warnings)
+        temperature_df = as_freq(df['temperature_mean'], 'M', series_type = 'instantaneous').to_frame(name='temperature_mean')
+
+        # Perform a join
+        meter_value_df = meter_value_df.merge(temperature_df, left_index=True, right_index=True, how='outer')
+
+        df = meter_value_df
+        return df
 
     def set_data(self, data : pd.DataFrame, is_electricity_data : bool):
         """Process data for the monthly / billing case
@@ -87,11 +92,17 @@ class DataProcessorBillingBaseline(AbstractDataProcessor):
             raise ValueError("Data is missing required columns: {}".format(
                 set(expected_columns) - set(data.columns)))
 
-        # TODO : Handle the case if the datetime is not the index but provided in a separate column
 
         # Check that the datetime index is timezone aware timestamp
-        if not isinstance(data.index, pd.DatetimeIndex):
-            raise ValueError("Index is not datetime")
+        if not isinstance(data.index, pd.DatetimeIndex) and 'datetime' not in data.columns:
+            raise ValueError("Index is not datetime and datetime not provided")
+        
+        elif 'datetime' in data.columns:
+            if data['datetime'].dt.tz is None:
+                raise ValueError("Datatime is missing timezone information")
+            data['datetime'] = pd.to_datetime(data['datetime'])
+            data.set_index('datetime', inplace=True)
+
         elif data.index.tz is None:
             raise ValueError("Datatime is missing timezone information")
         
@@ -99,18 +110,28 @@ class DataProcessorBillingBaseline(AbstractDataProcessor):
         # Copy the input dataframe so that the original is not modified
         df = data.copy()
 
-        # TODO : Check missing value in datetime and add a warning/ exception if missing
-
-        if not is_electricity_data:
+        if is_electricity_data:
             df.loc[df['meter_value'] == 0, 'meter_value'] = np.nan
 
         # Data Sufficiency Check
-        self._check_data_sufficiency(df)
+        df = self._check_data_sufficiency(df)
+        # TODO : how to handle the warnings? Should we throw an exception or just print the warnings?
+        if self.critical_sufficiency_warnings or self.sufficiency_warnings:
+            for warning in self.critical_sufficiency_warnings + self.sufficiency_warnings:
+                print(warning.json())
+
+
+        # TODO : Do we need to downsample the daily data for monthly models?
         self._baseline_meter_df = df
-        
-        if self._sufficiency_warnings is not None:
-            # TODO : how to handle the warnings?
-            print(self._sufficiency_warnings)
 
+if __name__ == "__main__":
+    data = pd.read_csv("eemeter/common/test_data.csv")
+    data.drop(columns=['season', 'day_of_week'], inplace=True)
+    data['datetime'] = pd.to_datetime(data['datetime'], utc=True)
+    data.set_index('datetime', inplace=True)
 
-        # TODO : Rollup the data, resample?
+    # print(data.head())
+
+    cl = DataProcessorBillingBaseline(data = data, is_electricity_data=True)
+
+    print(cl._baseline_meter_df.head())

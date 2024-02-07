@@ -1,6 +1,7 @@
 from eemeter.eemeter.warnings import EEMeterWarning
 import numpy as np
 import pandas as pd
+import pytz
 
 
 def remove_duplicates(df_or_series):
@@ -44,7 +45,10 @@ def day_counts(index):
 
     return pd.Series(timedelta_days, index=index)
 
-def clean_caltrack_billing_data(data, source_interval):
+def clean_caltrack_billing_data(data, source_interval, warnings):
+
+    data = as_freq(data, "M", include_coverage=True)
+
     # check for empty data
     if data["value"].dropna().empty:
         return data[:0]
@@ -53,6 +57,7 @@ def clean_caltrack_billing_data(data, source_interval):
         diff = list((data.index[1:] - data.index[:-1]).days)
         filter_ = pd.Series(diff + [np.nan], index=data.index)
 
+        # TODO : append warnings here
         # CalTRACK 2.2.3.4, 2.2.3.5
         if source_interval == "billing_monthly":
             data = data[
@@ -123,7 +128,7 @@ def clean_caltrack_billing_data(data, source_interval):
     if data.dropna().empty:
         return data[:0]
 
-    return data
+    return data['value'].to_frame('meter_value')
 
 
 def as_freq(
@@ -229,8 +234,8 @@ def downsample_and_clean_caltrack_daily_data(dataset, warnings):
     if dataset[dataset.coverage <= 0.5] is not None:
         warnings.append(
             EEMeterWarning(
-                qualified_name="eemeter.caltrack_sufficiency_criteria.missing_high_frequency_data",
-                description=("More than 50% of the high frequency  data is missing."),
+                qualified_name="eemeter.caltrack_sufficiency_criteria.missing_high_frequency_meter_data",
+                description=("More than 50% of the high frequency Meter data is missing."),
                 data = (
                     dataset[dataset.coverage <= 0.5].index.to_list()
                 )
@@ -254,6 +259,270 @@ def clean_caltrack_billing_daily_data(data, source_interval, warnings):
     # higher intervals like daily, hourly, 30min, 15min are
     # resampled (daily) or downsampled (hourly, 30min, 15min)
     elif source_interval == "daily":
-        return data
+        return data.to_frame("value")
     else:
         return downsample_and_clean_caltrack_daily_data(data, warnings)
+
+# TODO : requires more testing
+def compute_minimum_granularity(index : pd.Series):
+    # Figure out minimum granularity
+    max_difference = day_counts(index).max()
+    min_difference = day_counts(index).min()
+    min_granularity = 'unknown'
+    # The other cases still result in granularity being unknown so this causes the frequency to be resampled to daily
+
+    if max_difference == 1 and min_difference == 1:
+        min_granularity = 'daily'
+    elif max_difference < 1:
+        min_granularity = 'hourly'
+    elif max_difference >= 60:
+        min_granularity = 'billing_bimonthly'
+    elif max_difference >= 30:
+        min_granularity = 'billing_monthly'
+
+    return min_granularity
+
+
+def caltrack_sufficiency_criteria_baseline(
+    data,
+    requested_start = None,
+    requested_end = None,
+    num_days=365,
+    min_fraction_daily_coverage=0.9,
+    min_fraction_hourly_temperature_coverage_per_period=0.9,
+):
+    """
+        Refer to usage_per_day.py in eemeter/caltrack/ folder
+    """
+
+    warnings = []
+    if data.dropna().empty:
+        warnings.append(
+                EEMeterWarning(
+                    qualified_name="eemeter.caltrack_sufficiency_criteria.no_data",
+                    description=("No data available."),
+                    data={},
+                )
+        )
+        return warnings, []
+
+    data_start = data.index.min().tz_convert("UTC")
+    data_end = data.index.max().tz_convert("UTC")
+    n_days_data = (data_end - data_start).days
+
+    if requested_start is not None:
+        # check for gap at beginning
+        requested_start = requested_start.astimezone(pytz.UTC)
+        n_days_start_gap = (data_start - requested_start).days
+    else:
+        n_days_start_gap = 0
+
+    if requested_end is not None:
+        # check for gap at end
+        requested_end = requested_end.astimezone(pytz.UTC)
+        n_days_end_gap = (requested_end - data_end).days
+    else:
+        n_days_end_gap = 0
+
+    critical_warnings = []
+
+    if n_days_end_gap < 0:
+        # CalTRACK 2.2.4
+        critical_warnings.append(
+            EEMeterWarning(
+                qualified_name=(
+                    "eemeter.caltrack_sufficiency_criteria"
+                    ".extra_data_after_requested_end_date"
+                ),
+                description=("Extra data found after requested end date."),
+                data={
+                    "requested_end": requested_end.isoformat(),
+                    "data_end": data_end.isoformat(),
+                },
+            )
+        )
+        n_days_end_gap = 0
+
+    if n_days_start_gap < 0:
+        # CalTRACK 2.2.4
+        critical_warnings.append(
+            EEMeterWarning(
+                qualified_name=(
+                    "eemeter.caltrack_sufficiency_criteria"
+                    ".extra_data_before_requested_start_date"
+                ),
+                description=("Extra data found before requested start date."),
+                data={
+                    "requested_start": requested_start.isoformat(),
+                    "data_start": data_start.isoformat(),
+                },
+            )
+        )
+        n_days_start_gap = 0
+
+    n_days_total = n_days_data + n_days_start_gap + n_days_end_gap
+
+    n_negative_meter_values = data.meter_value[
+        data.meter_value < 0
+    ].shape[0]
+
+    if n_negative_meter_values > 0:
+        # CalTrack 2.3.5
+        critical_warnings.append(
+            EEMeterWarning(
+                qualified_name=(
+                    "eemeter.caltrack_sufficiency_criteria" ".negative_meter_values"
+                ),
+                description=(
+                    "Found negative meter data values, which may indicate presence"
+                    " of solar net metering."
+                ),
+                data={"n_negative_meter_values": n_negative_meter_values},
+            )
+        )
+
+    # TODO(philngo): detect and report unsorted or repeated values.
+
+    # create masks showing which daily or billing periods meet criteria
+
+    # TODO : How to handle temperature if already rolled up in the dataframe?
+    valid_meter_value_rows = data.meter_value.notnull()
+    valid_temperature_rows = (
+        data.temperature_not_null
+        / (data.temperature_not_null + data.temperature_null)
+    ) > min_fraction_hourly_temperature_coverage_per_period
+    valid_rows = valid_meter_value_rows & valid_temperature_rows
+
+    # get number of days per period - for daily this should be a series of ones
+    row_day_counts = day_counts(data.index)
+
+    # apply masks, giving total
+    n_valid_meter_value_days = int((valid_meter_value_rows * row_day_counts).sum())
+    n_valid_temperature_days = int((valid_temperature_rows * row_day_counts).sum())
+    n_valid_days = int((valid_rows * row_day_counts).sum())
+
+    median = data.meter_value.median()
+    upper_quantile = data.meter_value.quantile(0.75)
+    lower_quantile = data.meter_value.quantile(0.25)
+    iqr = upper_quantile - lower_quantile
+    extreme_value_limit = median + (3 * iqr)
+    n_extreme_values = data.meter_value[
+        data.meter_value > extreme_value_limit
+    ].shape[0]
+    max_value = float(data.meter_value.max())
+
+    if n_days_total > 0:
+        fraction_valid_meter_value_days = n_valid_meter_value_days / float(n_days_total)
+        fraction_valid_temperature_days = n_valid_temperature_days / float(n_days_total)
+        fraction_valid_days = n_valid_days / float(n_days_total)
+    else:
+        # unreachable, I think.
+        fraction_valid_meter_value_days = 0
+        fraction_valid_temperature_days = 0
+        fraction_valid_days = 0
+
+    if n_days_total != num_days:
+        critical_warnings.append(
+            EEMeterWarning(
+                qualified_name=(
+                    "eemeter.caltrack_sufficiency_criteria"
+                    ".incorrect_number_of_total_days"
+                ),
+                description=("Total data span does not match the required value."),
+                data={"num_days": num_days, "n_days_total": n_days_total},
+            )
+        )
+
+    if fraction_valid_days < min_fraction_daily_coverage:
+        critical_warnings.append(
+            EEMeterWarning(
+                qualified_name=(
+                    "eemeter.caltrack_sufficiency_criteria"
+                    ".too_many_days_with_missing_data"
+                ),
+                description=(
+                    "Too many days in data have missing meter data or"
+                    " temperature data."
+                ),
+                data={"n_valid_days": n_valid_days, "n_days_total": n_days_total},
+            )
+        )
+
+    if fraction_valid_meter_value_days < min_fraction_daily_coverage:
+        critical_warnings.append(
+            EEMeterWarning(
+                qualified_name=(
+                    "eemeter.caltrack_sufficiency_criteria"
+                    ".too_many_days_with_missing_meter_data"
+                ),
+                description=("Too many days in data have missing meter data."),
+                data={
+                    "n_valid_meter_data_days": n_valid_meter_value_days,
+                    "n_days_total": n_days_total,
+                },
+            )
+        )
+
+
+    if fraction_valid_temperature_days < min_fraction_daily_coverage:
+        critical_warnings.append(
+            EEMeterWarning(
+                qualified_name=(
+                    "eemeter.caltrack_sufficiency_criteria"
+                    ".too_many_days_with_missing_temperature_data"
+                ),
+                description=("Too many days in data have missing temperature data."),
+                data={
+                    "n_valid_temperature_data_days": n_valid_temperature_days,
+                    "n_days_total": n_days_total,
+                },
+            )
+        )
+    
+    # Check for 90% for individual months present:
+    non_null_temp_percentage_per_month = data['temperature_mean'].groupby(data.index.month).apply(lambda x: x.notna().mean())
+    if (non_null_temp_percentage_per_month < min_fraction_daily_coverage).any():
+        critical_warnings.append(
+            EEMeterWarning(
+                qualified_name="eemeter.caltrack_sufficiency_criteria.missing_temperature_data",
+                description=("More than 10% of the monthly temperature data is missing."),
+
+            )
+        )
+
+    non_null_meter_percentage_per_month = data['meter_value'].groupby(data.index.month).apply(lambda x: x.notna().mean())
+    if (non_null_meter_percentage_per_month < min_fraction_daily_coverage).any():
+        critical_warnings.append(
+            EEMeterWarning(
+                qualified_name="eemeter.caltrack_sufficiency_criteria.missing_meter_data",
+                description=("More than 10% of the monthly meter data is missing."),
+
+            )
+        )
+    
+    # TODO : Check 90% of seasons & weekday/weekend available?
+
+    non_critical_warnings = []
+    if n_extreme_values > 0:
+        # CalTRACK 2.3.6
+        non_critical_warnings.append(
+            EEMeterWarning(
+                qualified_name=(
+                    "eemeter.caltrack_sufficiency_criteria" ".extreme_values_detected"
+                ),
+                description=(
+                    "Extreme values (greater than (median + (3 * IQR)),"
+                    " must be flagged for manual review."
+                ),
+                data={
+                    "n_extreme_values": n_extreme_values,
+                    "median": median,
+                    "upper_quantile": upper_quantile,
+                    "lower_quantile": lower_quantile,
+                    "extreme_value_limit": extreme_value_limit,
+                    "max_value": max_value,
+                },
+            )
+        )
+
+    return data, critical_warnings, non_critical_warnings

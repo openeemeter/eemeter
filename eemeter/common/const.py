@@ -25,3 +25,8 @@ default_weekday_weekend_def = {
     "Saturday": "weekend",
     "Sunday": "weekend",
 }
+
+column_names = {
+    "METER": "meter_value",
+    "TEMPERATURE": "temperature_mean",
+}

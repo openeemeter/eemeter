@@ -33,9 +33,8 @@ class DataProcessorDailyReporting(AbstractDataProcessor):
         is_sufficient : bool
             Whether the data is sufficient.
         """
-        # TODO : reuse the eemeter.clean_caltrack_billing_daily_data('daily') method instead of rewriting it here
-
-        data['meter_value'] = clean_caltrack_billing_daily_data(data['meter_value'], 'billing')  
+        min_granularity = 'unknown'
+        data['meter_value'] = clean_caltrack_billing_daily_data(data['meter_value'], min_granularity)  
         
               
         pass

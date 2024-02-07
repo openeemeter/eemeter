@@ -36,8 +36,4 @@ class AbstractDataProcessor(ABC):
             Whether the data is sufficient.
         """
         pass
-
-    @abstractmethod
-    def _interpolate_data(self, data):
-        pass
     
