@@ -7,7 +7,6 @@ from eemeter.eemeter.common.data_processor_utilities import (
     compute_minimum_granularity,
     as_freq
 )
-from eemeter.eemeter.warnings import EEMeterWarning
 import numpy as np
 import pandas as pd
 
@@ -32,8 +31,9 @@ class DataDailyBaseline(AbstractDataProcessor):
             self._settings = settings
 
         self._baseline_meter_df = None
-        self.sufficiency_warnings = None 
-        self.critical_sufficiency_warnings = None
+        self.warnings = None 
+        self.disqualification = None
+        self.is_electricity_data = is_electricity_data
 
         self.set_data(data = data, is_electricity_data = is_electricity_data)
 
@@ -51,7 +51,7 @@ class DataDailyBaseline(AbstractDataProcessor):
         df['temperature_null'] = df.temperature_mean.isnull().astype(int)
         df['temperature_not_null'] = df.temperature_mean.notnull().astype(int)
 
-        df, self.critical_sufficiency_warnings, self.sufficiency_warnings = caltrack_sufficiency_criteria_baseline(data = df)
+        df, self.disqualification, self.warnings = caltrack_sufficiency_criteria_baseline(data = df)
 
 
         # Test for more than 50% of high frequency data being missing
@@ -66,7 +66,7 @@ class DataDailyBaseline(AbstractDataProcessor):
             raise ValueError("Billing data is not allowed in the daily model")
             
         # Ensure higher frequency data is aggregated to the monthly model
-        meter_value_df = clean_caltrack_billing_daily_data(df['meter_value'], min_granularity, self.sufficiency_warnings)
+        meter_value_df = clean_caltrack_billing_daily_data(df['meter_value'], min_granularity, self.warnings)
         meter_value_df.rename(columns={'value': 'meter_value'}, inplace=True)
 
         temperature_df = as_freq(df['temperature_mean'], 'D', series_type = 'instantaneous').to_frame(name='temperature_mean')
@@ -126,8 +126,8 @@ class DataDailyBaseline(AbstractDataProcessor):
         df = self._check_data_sufficiency(df)
 
         # TODO : how to handle the warnings? Should we throw an exception or just print the warnings?
-        if self.critical_sufficiency_warnings or self.sufficiency_warnings:
-            for warning in self.critical_sufficiency_warnings + self.sufficiency_warnings:
+        if self.disqualification or self.warnings:
+            for warning in self.disqualification + self.warnings:
                 print(warning.json())
 
         self._baseline_meter_df = df

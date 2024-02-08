@@ -22,8 +22,8 @@ class DataBillingReporting(AbstractDataProcessor):
             self._settings = settings
 
         self._reporting_meter_df = None
-        self.sufficiency_warnings = None 
-        self.critical_sufficiency_warnings = None
+        self.warnings = None 
+        self.disqualification = None
 
         # TODO : do we need to set electric data for reporting?
         self.set_data(data = data, is_electricity_data = False)
@@ -34,7 +34,7 @@ class DataBillingReporting(AbstractDataProcessor):
         df['temperature_null'] = df.temperature_mean.isnull().astype(int)
         df['temperature_not_null'] = df.temperature_mean.notnull().astype(int)
 
-        df, self.critical_sufficiency_warnings, self.sufficiency_warnings = caltrack_sufficiency_criteria_baseline(data = df, is_reporting_data = True)
+        df, self.disqualification, self.warnings = caltrack_sufficiency_criteria_baseline(data = df, is_reporting_data = True)
 
         df = as_freq(df['temperature_mean'], 'M', series_type = 'instantaneous').to_frame(name='temperature_mean') 
 
@@ -76,8 +76,8 @@ class DataBillingReporting(AbstractDataProcessor):
 
         df = self._check_data_sufficiency(df)
 
-        if self.critical_sufficiency_warnings or self.sufficiency_warnings:
-            for warning in self.critical_sufficiency_warnings + self.sufficiency_warnings:
+        if self.disqualification or self.warnings:
+            for warning in self.disqualification + self.warnings:
                 print(warning.json())
 
         self._reporting_meter_df = df

@@ -35,8 +35,9 @@ class DataBillingBaseline(AbstractDataProcessor):
             self._settings = settings
 
         self._baseline_meter_df = None
-        self.sufficiency_warnings = None
-        self.critical_sufficiency_warnings = None
+        self.warnings = None
+        self.disqualification = None
+        self.is_electricity_data = is_electricity_data
 
         self.set_data(data = data, is_electricity_data = is_electricity_data)
 
@@ -49,7 +50,7 @@ class DataBillingBaseline(AbstractDataProcessor):
         df['temperature_null'] = df.temperature_mean.isnull().astype(int)
         df['temperature_not_null'] = df.temperature_mean.notnull().astype(int)
 
-        df, self.critical_sufficiency_warnings, self.sufficiency_warnings = caltrack_sufficiency_criteria_baseline(data = df)
+        df, self.disqualification, self.warnings = caltrack_sufficiency_criteria_baseline(data = df)
 
         # TODO : Assume if the billing cycle is mixed between monthly and bimonthly, then the minimum granularity is bimonthly
         # Test for more than 50% of high frequency data being missing
@@ -63,7 +64,7 @@ class DataBillingBaseline(AbstractDataProcessor):
         if not min_granularity.startswith('billing'):
             min_granularity = 'billing_monthly'
 
-        meter_value_df = clean_caltrack_billing_daily_data(df['meter_value'], min_granularity, self.sufficiency_warnings)
+        meter_value_df = clean_caltrack_billing_daily_data(df['meter_value'], min_granularity, self.warnings)
         temperature_df = as_freq(df['temperature_mean'], 'M', series_type = 'instantaneous').to_frame(name='temperature_mean')
 
         # Perform a join
@@ -116,8 +117,8 @@ class DataBillingBaseline(AbstractDataProcessor):
         # Data Sufficiency Check
         df = self._check_data_sufficiency(df)
         # TODO : how to handle the warnings? Should we throw an exception or just print the warnings?
-        if self.critical_sufficiency_warnings or self.sufficiency_warnings:
-            for warning in self.critical_sufficiency_warnings + self.sufficiency_warnings:
+        if self.disqualification or self.warnings:
+            for warning in self.disqualification + self.warnings:
                 print(warning.json())
 
 
