@@ -290,6 +290,7 @@ def caltrack_sufficiency_criteria_baseline(
     num_days=365,
     min_fraction_daily_coverage=0.9,
     min_fraction_hourly_temperature_coverage_per_period=0.9,
+    is_reporting_data = False
 ):
     """
         Refer to usage_per_day.py in eemeter/caltrack/ folder
@@ -362,57 +363,66 @@ def caltrack_sufficiency_criteria_baseline(
 
     n_days_total = n_days_data + n_days_start_gap + n_days_end_gap
 
-    n_negative_meter_values = data.meter_value[
-        data.meter_value < 0
-    ].shape[0]
+    if not is_reporting_data:
+        n_negative_meter_values = data.meter_value[
+            data.meter_value < 0
+        ].shape[0]
 
-    if n_negative_meter_values > 0:
-        # CalTrack 2.3.5
-        critical_warnings.append(
-            EEMeterWarning(
-                qualified_name=(
-                    "eemeter.caltrack_sufficiency_criteria" ".negative_meter_values"
-                ),
-                description=(
-                    "Found negative meter data values, which may indicate presence"
-                    " of solar net metering."
-                ),
-                data={"n_negative_meter_values": n_negative_meter_values},
+        # TODO : This check should only be done for non electric data
+        if n_negative_meter_values > 0:
+            # CalTrack 2.3.5
+            critical_warnings.append(
+                EEMeterWarning(
+                    qualified_name=(
+                        "eemeter.caltrack_sufficiency_criteria" ".negative_meter_values"
+                    ),
+                    description=(
+                        "Found negative meter data values"
+                    ),
+                    data={"n_negative_meter_values": n_negative_meter_values},
+                )
             )
-        )
 
     # TODO(philngo): detect and report unsorted or repeated values.
 
     # create masks showing which daily or billing periods meet criteria
 
     # TODO : How to handle temperature if already rolled up in the dataframe?
-    valid_meter_value_rows = data.meter_value.notnull()
+    if not is_reporting_data:
+        valid_meter_value_rows = data.meter_value.notnull()
     valid_temperature_rows = (
         data.temperature_not_null
         / (data.temperature_not_null + data.temperature_null)
     ) > min_fraction_hourly_temperature_coverage_per_period
-    valid_rows = valid_meter_value_rows & valid_temperature_rows
+
+    if not is_reporting_data:
+        valid_rows = valid_meter_value_rows & valid_temperature_rows
+    else :
+        valid_rows = valid_temperature_rows
 
     # get number of days per period - for daily this should be a series of ones
     row_day_counts = day_counts(data.index)
 
     # apply masks, giving total
-    n_valid_meter_value_days = int((valid_meter_value_rows * row_day_counts).sum())
+    if not is_reporting_data:
+        n_valid_meter_value_days = int((valid_meter_value_rows * row_day_counts).sum())
     n_valid_temperature_days = int((valid_temperature_rows * row_day_counts).sum())
     n_valid_days = int((valid_rows * row_day_counts).sum())
 
-    median = data.meter_value.median()
-    upper_quantile = data.meter_value.quantile(0.75)
-    lower_quantile = data.meter_value.quantile(0.25)
-    iqr = upper_quantile - lower_quantile
-    extreme_value_limit = median + (3 * iqr)
-    n_extreme_values = data.meter_value[
-        data.meter_value > extreme_value_limit
-    ].shape[0]
-    max_value = float(data.meter_value.max())
+    if not is_reporting_data:
+        median = data.meter_value.median()
+        upper_quantile = data.meter_value.quantile(0.75)
+        lower_quantile = data.meter_value.quantile(0.25)
+        iqr = upper_quantile - lower_quantile
+        extreme_value_limit = median + (3 * iqr)
+        n_extreme_values = data.meter_value[
+            data.meter_value > extreme_value_limit
+        ].shape[0]
+        max_value = float(data.meter_value.max())
 
     if n_days_total > 0:
-        fraction_valid_meter_value_days = n_valid_meter_value_days / float(n_days_total)
+        if not is_reporting_data:
+            fraction_valid_meter_value_days = n_valid_meter_value_days / float(n_days_total)
         fraction_valid_temperature_days = n_valid_temperature_days / float(n_days_total)
         fraction_valid_days = n_valid_days / float(n_days_total)
     else:
@@ -448,7 +458,7 @@ def caltrack_sufficiency_criteria_baseline(
             )
         )
 
-    if fraction_valid_meter_value_days < min_fraction_daily_coverage:
+    if not is_reporting_data and fraction_valid_meter_value_days < min_fraction_daily_coverage:
         critical_warnings.append(
             EEMeterWarning(
                 qualified_name=(
@@ -490,20 +500,21 @@ def caltrack_sufficiency_criteria_baseline(
             )
         )
 
-    non_null_meter_percentage_per_month = data['meter_value'].groupby(data.index.month).apply(lambda x: x.notna().mean())
-    if (non_null_meter_percentage_per_month < min_fraction_daily_coverage).any():
-        critical_warnings.append(
-            EEMeterWarning(
-                qualified_name="eemeter.caltrack_sufficiency_criteria.missing_meter_data",
-                description=("More than 10% of the monthly meter data is missing."),
+    if not is_reporting_data:
+        non_null_meter_percentage_per_month = data['meter_value'].groupby(data.index.month).apply(lambda x: x.notna().mean())
+        if (non_null_meter_percentage_per_month < min_fraction_daily_coverage).any():
+            critical_warnings.append(
+                EEMeterWarning(
+                    qualified_name="eemeter.caltrack_sufficiency_criteria.missing_meter_data",
+                    description=("More than 10% of the monthly meter data is missing."),
 
+                )
             )
-        )
     
     # TODO : Check 90% of seasons & weekday/weekend available?
 
     non_critical_warnings = []
-    if n_extreme_values > 0:
+    if not is_reporting_data and n_extreme_values > 0:
         # CalTRACK 2.3.6
         non_critical_warnings.append(
             EEMeterWarning(
