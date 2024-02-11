@@ -20,7 +20,7 @@
 import pandas as pd
 import numpy as np
 from eemeter import merge_features, compute_temperature_features, caltrack_sufficiency_criteria
-from typing import Union
+from typing import Union, Optional
 
 class HourlyBaseline:
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
@@ -53,13 +53,17 @@ class HourlyBaseline:
 
 class HourlyReporting:
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
+        #TODO add missing observed column
         if is_electricity_data:
             df.loc[df['observed'] == 0, 'observed'] = np.nan
         self.df = df
 
     @classmethod
-    def from_series(cls, meter_data: pd.Series, temperature_data: pd.Series, is_electricity_data: bool):
-        df = merge_features([meter_data, temperature_data])
+    def from_series(cls, meter_data: Optional[pd.Series], temperature_data: pd.Series, is_electricity_data: bool):
+        #TODO verify
+        if meter_data is None:
+            meter_data = temperature_data.copy().rename('observed') * np.nan
+        df = merge_features([meter_data, temperature_data], keep_partial_nan_rows=True)
         df = df.rename({
             df.columns[0]: 'observed',
             df.columns[1]: 'temperature',

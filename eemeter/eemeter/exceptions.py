@@ -54,3 +54,15 @@ class UnrecognizedModelTypeError(EEMeterError):
     """Error indicating unrecognized model type."""
 
     pass
+
+
+class DataSufficiencyError(EEMeterError):
+    """Error indicating insufficient data to fit model on."""
+
+    pass
+
+
+class PoorModelFitError(EEMeterError):
+    """Error indicating attempt to predict with a poorly fit model."""
+
+    pass
