@@ -22,7 +22,7 @@ import numpy as np
 from eemeter import merge_features, compute_temperature_features, caltrack_sufficiency_criteria
 from typing import Union, Optional
 
-class HourlyBaseline:
+class HourlyBaselineData:
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
         if is_electricity_data:
             df.loc[df['observed'] == 0, 'observed'] = np.nan
@@ -51,7 +51,7 @@ class HourlyBaseline:
         return cls(df, is_electricity_data)
 
 
-class HourlyReporting:
+class HourlyReportingData:
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
         #TODO add missing observed column
         if is_electricity_data:

@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 
-class DataDailyBaseline(AbstractDataProcessor):
+class DailyBaselineData(AbstractDataProcessor):
     """Data processor for daily data.
 
     2.2.1.4. Values of 0 are considered missing for electricity data, but not gas data.
@@ -130,7 +130,7 @@ class DataDailyBaseline(AbstractDataProcessor):
         self._baseline_meter_df = df
 
 
-class DataDailyReporting(AbstractDataProcessor):
+class DailyReportingData(AbstractDataProcessor):
 
     """
         Refer to Section 3.5 in https://docs.caltrack.org/en/latest/methods.html#section-2-data-management

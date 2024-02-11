@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 
-class DataBillingBaseline(AbstractDataProcessor):
+class BillingBaselineData(AbstractDataProcessor):
     """Baseline data processor for billing data.
 
     2.2.3.4. Off-cycle reads (spanning less than 25 days) should be dropped from analysis. 
@@ -123,7 +123,7 @@ class DataBillingBaseline(AbstractDataProcessor):
         self._baseline_meter_df = df
 
 
-class DataBillingReporting(AbstractDataProcessor):
+class BillingReportingData(AbstractDataProcessor):
     def __init__(self, data : pd.DataFrame, settings : MonthlySettings | None = None):
         """Initialize the data processor.
 
