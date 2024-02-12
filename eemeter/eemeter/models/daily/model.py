@@ -5,6 +5,8 @@ from eemeter.eemeter.models.daily.utilities.base_model import get_smooth_coeffs
 from eemeter.eemeter.models.daily.utilities.config import caltrack_2_1_settings, caltrack_legacy_settings, update_daily_settings
 from eemeter.eemeter.models.daily.utilities.ellipsoid_test import ellipsoid_split_filter
 from eemeter.eemeter.models.daily.utilities.selection_criteria import selection_criteria
+from eemeter.eemeter.models.daily.data import DailyBaselineData, DailyReportingData
+from eemeter.eemeter.exceptions import DataSufficiencyError
 
 
 import numpy as np
@@ -13,6 +15,7 @@ import pandas as pd
 
 import itertools
 import json
+from typing import Union
 
 
 class DailyModel:
@@ -114,7 +117,19 @@ class DailyModel:
             "PNRMSE": np.nan,
         }
 
-    def fit(self, meter_data):
+    def fit(self, baseline_data: DailyBaselineData, ignore_disqualification=False):
+        if not isinstance(baseline_data, DailyBaselineData):
+            raise TypeError("baseline_data must be a DailyBaselineData object")
+        if baseline_data.disqualification and not ignore_disqualification:
+            for warning in baseline_data.disqualification + baseline_data.warnings:
+                print(warning.json())
+            raise DataSufficiencyError("Can't fit model on disqualified baseline data")
+        self.warnings = baseline_data.warnings
+        self.disqualification = baseline_data.disqualification
+        for warning in baseline_data.warnings + baseline_data.disqualification:
+            print(warning.json())
+        meter_data = baseline_data._baseline_meter_df #TODO make df public attr
+
         # Initialize dataframe
         self.df_meter = self._initialize_data(meter_data)
 
@@ -143,7 +158,7 @@ class DailyModel:
         self.is_fitted = True
         return self
 
-    def predict(self, df_eval):
+    def predict(self, reporting_data: Union[DailyBaselineData, DailyReportingData]):
         """
         Makes model prediction on given temperature data.
 
@@ -155,6 +170,15 @@ class DailyModel:
         """
         if not self.is_fitted:
             raise RuntimeError("Model must be fit before predictions can be made.")
+
+        if not isinstance(reporting_data, (DailyBaselineData, DailyReportingData)):
+            raise TypeError("reporting_data must be a DailyBaselineData or DailyReportingData object")
+
+        #TODO do we really need different attribute names for baseline/reporting?
+        if isinstance(reporting_data, DailyBaselineData):
+            df_eval = reporting_data._baseline_meter_df
+        if isinstance(reporting_data, DailyReportingData):
+            df_eval = reporting_data._reporting_meter_df
 
         #TODO decide whether to allow temperature series vs requiring "design matrix"
         if isinstance(df_eval, pd.Series):

@@ -7,6 +7,8 @@ from eemeter.eemeter.common.data_processor_utilities import as_freq, caltrack_su
 import numpy as np
 import pandas as pd
 
+from typing import Optional
+
 
 class BillingBaselineData(AbstractDataProcessor):
     """Baseline data processor for billing data.
@@ -18,7 +20,7 @@ class BillingBaselineData(AbstractDataProcessor):
     For bi-monthly billing cycles, periods spanning more than 70 days should be dropped from the analysis.
     """
 
-    def __init__(self, data : pd.DataFrame, is_electricity_data, settings : MonthlySettings | None = None):
+    def __init__(self, data : pd.DataFrame, is_electricity_data, settings : Optional[MonthlySettings]=None):
         """Initialize the data processor.
 
         Parameters
@@ -124,7 +126,7 @@ class BillingBaselineData(AbstractDataProcessor):
 
 
 class BillingReportingData(AbstractDataProcessor):
-    def __init__(self, data : pd.DataFrame, settings : MonthlySettings | None = None):
+    def __init__(self, data : pd.DataFrame, settings : Optional[MonthlySettings]=None):
         """Initialize the data processor.
 
         Parameters

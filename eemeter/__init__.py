@@ -36,6 +36,8 @@ from .eemeter.models.hourly.metrics import *
 from .eemeter.models import *
 from .eemeter.models.hourly.wrapper import HourlyModel
 from .eemeter.models.hourly.data import HourlyBaselineData, HourlyReportingData
+from .eemeter.models.daily.data import DailyBaselineData, DailyReportingData
+from .eemeter.models.billing.data import BillingBaselineData, BillingReportingData
 
 
 def get_version():

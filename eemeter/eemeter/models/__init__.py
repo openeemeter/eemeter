@@ -21,4 +21,3 @@ from .design_matrices import *
 from .usage_per_day import *
 from .hourly import *
 from .daily import *
-from .quickstart import *
