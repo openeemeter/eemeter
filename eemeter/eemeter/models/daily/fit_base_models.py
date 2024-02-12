@@ -64,7 +64,7 @@ def fit_initial_models_from_full_model(df_meter, settings, print_res=False):
     Fits initial models from the full model based on the given settings.
 
     Parameters:
-        df_meter (pandas.DataFrame): The meter data to fit the models to. Columns : date, meter_value, temperature_mean
+        df_meter (pandas.DataFrame): The meter data to fit the models to. Columns : date, observed, temperature_mean
         settings (Settings): The settings object containing the model selection and fitting options.
         print_res (bool, optional): Whether to print the results of the model fitting. Defaults to False.
 
@@ -73,7 +73,7 @@ def fit_initial_models_from_full_model(df_meter, settings, print_res=False):
     """
 
     T = df_meter["temperature_mean"].values
-    obs = df_meter["meter_value"].values
+    obs = df_meter["observed"].values
 
     opt_options = _get_opt_options(settings)
     fit_input = [T, obs, settings, opt_options]
@@ -134,7 +134,7 @@ def fit_final_model(df_meter, HoF: OptimizedResult, settings, print_res=False):
     HoF (Hall of Fame) denotes the optimized results.
 
     Args:
-        df_meter (pandas.DataFrame): DataFrame containing temperature_mean and meter_value values.
+        df_meter (pandas.DataFrame): DataFrame containing temperature_mean and observed values.
         HoF (OptimizedResult): OptimizedResult object containing the optimized model and coefficients.
         settings (Settings): DailySettings object containing the settings for the model fitting.
         print_res (bool, optional): Whether to print the results. Defaults to False.
@@ -149,7 +149,7 @@ def fit_final_model(df_meter, HoF: OptimizedResult, settings, print_res=False):
         return bnds
 
     T = df_meter["temperature_mean"].values
-    obs = df_meter["meter_value"].values
+    obs = df_meter["observed"].values
 
     opt_options = _get_opt_options(settings)
     fit_input = [T, obs, settings, opt_options]

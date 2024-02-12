@@ -59,7 +59,7 @@ def meter_data():
                 95.0,
                 100.0,
             ],
-            "meter_value": [
+            "observed": [
                 100.0,
                 150.0,
                 200.0,
@@ -168,7 +168,7 @@ def test_fit_initial_models_from_full_model(meter_data, get_settings):
 def test_fit_model(meter_data, get_settings):
     # Test case 1: Test for model_key = "hdd_tidd_cdd_smooth"
     T = np.array(meter_data["temperature_mean"])
-    obs = np.array(meter_data["meter_value"])
+    obs = np.array(meter_data["observed"])
 
     fit_input = [T, obs, get_settings, _get_opt_options(get_settings)]
     res = fit_model("hdd_tidd_cdd_smooth", fit_input, None, None)

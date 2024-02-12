@@ -117,7 +117,7 @@ def test_ellipsoid_split_filter():
             ],
             "day_of_week": [1, 2, 3, 4, 5, 6, 7, 1, 2],
             "temperature_mean": [20, 25, 30, 15, 20, 25, 10, 5, 0],
-            "meter_value": [10, 20, 30, 15, 25, 35, 5, 10, 15],
+            "observed": [10, 20, 30, 15, 25, 35, 5, 10, 15],
         }
     )
     expected_output = {

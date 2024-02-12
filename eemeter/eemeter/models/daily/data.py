@@ -50,13 +50,13 @@ class DailyBaselineData(AbstractDataProcessor):
             2.2.2.1. If summing to daily usage from higher frequency interval data, no more than 50% of high-frequency values should be missing. 
             Missing values should be filled in with average of non-missing values (e.g., for hourly data, 24 * average hourly usage).
         """
-        meter_series = df['meter_value'].dropna()
+        meter_series = df['observed'].dropna()
         min_granularity = compute_minimum_granularity(meter_series.index)
         if min_granularity.startswith('billing'):
             # TODO : make this a warning instead of an exception
             raise ValueError("Billing data is not allowed in the daily model")
         meter_value_df = clean_caltrack_billing_daily_data(meter_series, min_granularity, self.warnings)
-        meter_value_df = meter_value_df.rename(columns={'value': 'meter_value'})
+        meter_value_df = meter_value_df.rename(columns={'value': 'observed'})
 
         temp_series = df['temperature_mean'].rename('temperature')
         temp_series.index.freq = temp_series.index.inferred_freq
@@ -109,7 +109,7 @@ class DailyBaselineData(AbstractDataProcessor):
             Dataframe appended with the correct season and day of week.
         """
 
-        expected_columns = ["meter_value", "temperature_mean"]
+        expected_columns = ["observed", "temperature_mean"]
         if not set(expected_columns).issubset(set(data.columns)):
             # show the columns that are missing
 
@@ -135,7 +135,7 @@ class DailyBaselineData(AbstractDataProcessor):
 
         # Convert electricity data having 0 meter values to NaNs
         if is_electricity_data:
-            df.loc[df['meter_value'] == 0, 'meter_value'] = np.nan
+            df.loc[df['observed'] == 0, 'observed'] = np.nan
 
 
         # Data Sufficiency Check

@@ -63,7 +63,7 @@ class BillingBaselineData(AbstractDataProcessor):
         if not min_granularity.startswith('billing'):
             min_granularity = 'billing_monthly'
 
-        meter_value_df = clean_caltrack_billing_daily_data(df['meter_value'], min_granularity, self.warnings)
+        meter_value_df = clean_caltrack_billing_daily_data(df['observed'], min_granularity, self.warnings)
         temperature_df = as_freq(df['temperature_mean'], 'M', series_type = 'instantaneous').to_frame(name='temperature_mean')
 
         # Perform a join
@@ -85,7 +85,7 @@ class BillingBaselineData(AbstractDataProcessor):
         processed_data : pd.DataFrame
             Processed data.
         """
-        expected_columns = ["meter_value", "temperature_mean"]
+        expected_columns = ["observed", "temperature_mean"]
         if not set(expected_columns).issubset(set(data.columns)):
             # show the columns that are missing
 
@@ -111,7 +111,7 @@ class BillingBaselineData(AbstractDataProcessor):
         df = data.copy()
 
         if is_electricity_data:
-            df.loc[df['meter_value'] == 0, 'meter_value'] = np.nan
+            df.loc[df['observed'] == 0, 'observed'] = np.nan
 
         # Data Sufficiency Check
         df = self._check_data_sufficiency(df)

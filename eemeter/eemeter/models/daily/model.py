@@ -344,7 +344,7 @@ class DailyModel:
         - Converts the index to a DatetimeIndex if it is not already
         - Adds a 'season' column based on the month of the index using the settings.season dictionary
         - Adds a 'day_of_week' column based on the day of the week of the index
-        - Removes any rows with NaN values in the 'temperature_mean' or 'meter_value' columns
+        - Removes any rows with NaN values in the 'temperature_mean' or 'observed' columns
         - Sorts the data by the index
         - Reorders the columns to have 'season' and 'day_of_week' first, followed by the remaining columns
 
@@ -385,8 +385,8 @@ class DailyModel:
             # return early to avoid np.isfinite exception
             return meter_data
         meter_data = meter_data[np.isfinite(meter_data["temperature_mean"])]
-        if "meter_value" in cols:
-            meter_data = meter_data[np.isfinite(meter_data["meter_value"])]
+        if "observed" in cols:
+            meter_data = meter_data[np.isfinite(meter_data["observed"])]
         return meter_data
 
     def _combinations(self):
