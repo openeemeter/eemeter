@@ -231,7 +231,7 @@ def as_freq(
 def downsample_and_clean_caltrack_daily_data(dataset, warnings):
     dataset = as_freq(dataset, "D", include_coverage=True)
 
-    if dataset[dataset.coverage <= 0.5] is not None:
+    if not dataset[dataset.coverage <= 0.5].empty:
         warnings.append(
             EEMeterWarning(
                 qualified_name="eemeter.caltrack_sufficiency_criteria.missing_high_frequency_meter_data",
