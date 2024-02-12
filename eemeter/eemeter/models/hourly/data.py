@@ -43,11 +43,14 @@ class HourlyBaselineData:
 
     @classmethod
     def from_series(cls, meter_data: Union[pd.Series, pd.DataFrame], temperature_data: Union[pd.Series, pd.DataFrame], is_electricity_data: bool):
-        df = merge_features([meter_data, temperature_data])
-        df = df.rename({
-            df.columns[0]: 'observed',
-            df.columns[1]: 'temperature',
-        }, axis=1)
+        if isinstance(meter_data, pd.Series):
+            meter_data = meter_data.to_frame()
+        if isinstance(temperature_data, pd.Series):
+            temperature_data = temperature_data.to_frame()
+        meter_data = meter_data.rename(columns={meter_data.columns[0]: 'observed'})
+        temperature_data = temperature_data.rename(columns={temperature_data.columns[0]: 'temperature'})
+        temperature_data.index = temperature_data.index.tz_convert(meter_data.index.tzinfo)
+        df = pd.concat([meter_data, temperature_data], axis=1).dropna()
         return cls(df, is_electricity_data)
 
 

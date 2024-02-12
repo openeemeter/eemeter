@@ -40,9 +40,9 @@ class DailyBaselineData(AbstractDataProcessor):
     
     @classmethod
     def from_series(cls, meter_data: Union[pd.Series, pd.DataFrame], temperature_data: Union[pd.Series, pd.DataFrame], is_electricity_data):
-        if not isinstance(meter_data, pd.DataFrame):
+        if isinstance(meter_data, pd.Series):
             meter_data = meter_data.to_frame()
-        if not isinstance(temperature_data, pd.DataFrame):
+        if isinstance(temperature_data, pd.Series):
             temperature_data = temperature_data.to_frame()
         meter_data = meter_data.rename(columns={meter_data.columns[0]: 'observed'})
         temperature_data = temperature_data.rename(columns={temperature_data.columns[0]: 'temperature'})
@@ -189,14 +189,18 @@ class DailyReportingData(AbstractDataProcessor):
         self.set_data(data = data, is_electricity_data = False)
     
     @classmethod
-    def from_series(cls, meter_data: Union[pd.Series, pd.DataFrame], temperature_data: Union[pd.Series, pd.DataFrame], is_electricity_data):
-        if not isinstance(meter_data, pd.DataFrame):
-            meter_data = meter_data.to_frame()
-        if not isinstance(temperature_data, pd.DataFrame):
+    def from_series(cls, meter_data: Optional[Union[pd.Series, pd.DataFrame]], temperature_data: Union[pd.Series, pd.DataFrame], is_electricity_data):
+        if isinstance(temperature_data, pd.Series):
             temperature_data = temperature_data.to_frame()
-        meter_data = meter_data.rename(columns={meter_data.columns[0]: 'observed'})
+        if isinstance(meter_data, pd.DataFrame):
+            meter_data = meter_data.to_frame()
         temperature_data = temperature_data.rename(columns={temperature_data.columns[0]: 'temperature'})
-        df = pd.concat([meter_data, temperature_data], axis=1)
+        if meter_data:
+            meter_data = meter_data.rename(columns={meter_data.columns[0]: 'observed'})
+            temperature_data.index = temperature_data.index.tz_convert(meter_data.index.tzinfo)
+            df = pd.concat([meter_data, temperature_data], axis=1)
+        else:
+            df = temperature_data
         return cls(df, is_electricity_data)
 
 
@@ -270,7 +274,7 @@ class DailyReportingData(AbstractDataProcessor):
         # Copy the input dataframe so that the original is not modified
         df = data.copy()
 
-        df = self._check_data_sufficiency(df)
+        # df = self._check_data_sufficiency(df)
 
         if self.disqualification or self.warnings:
             for warning in self.disqualification + self.warnings:

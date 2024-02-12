@@ -128,7 +128,7 @@ class DailyModel:
         self.disqualification = baseline_data.disqualification
         for warning in baseline_data.warnings + baseline_data.disqualification:
             print(warning.json())
-        meter_data = baseline_data._baseline_meter_df #TODO make df public attr
+        meter_data = baseline_data._baseline_meter_df.copy() #TODO make df public attr
         return self._fit(meter_data)
 
     def _fit(self, meter_data):
