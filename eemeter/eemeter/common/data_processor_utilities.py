@@ -295,7 +295,6 @@ def caltrack_sufficiency_criteria_baseline(
     """
         Refer to usage_per_day.py in eemeter/caltrack/ folder
     """
-
     warnings = []
     if data.dropna().empty:
         warnings.append(
@@ -305,7 +304,7 @@ def caltrack_sufficiency_criteria_baseline(
                     data={},
                 )
         )
-        return warnings, []
+        return warnings, [], []
 
     data_start = data.index.min().tz_convert("UTC")
     data_end = data.index.max().tz_convert("UTC")
@@ -496,7 +495,9 @@ def caltrack_sufficiency_criteria_baseline(
             EEMeterWarning(
                 qualified_name="eemeter.caltrack_sufficiency_criteria.missing_temperature_data",
                 description=("More than 10% of the monthly temperature data is missing."),
-
+                data={
+                    #TODO report percentage
+                },
             )
         )
 
@@ -507,7 +508,9 @@ def caltrack_sufficiency_criteria_baseline(
                 EEMeterWarning(
                     qualified_name="eemeter.caltrack_sufficiency_criteria.missing_meter_data",
                     description=("More than 10% of the monthly meter data is missing."),
-
+                    data={
+                        #TODO report percentage     
+                    },
                 )
             )
     

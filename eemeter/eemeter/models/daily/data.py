@@ -1,10 +1,14 @@
 import eemeter.common.const as _const
 from eemeter.common.abstract_data_processor import AbstractDataProcessor
 from eemeter.eemeter.common.data_processor_utilities import as_freq, caltrack_sufficiency_criteria_baseline, clean_caltrack_billing_daily_data, compute_minimum_granularity
+from eemeter import compute_temperature_features
 from eemeter.eemeter.models.daily.utilities.config import DailySettings
+from eemeter.eemeter.warnings import EEMeterWarning
 
 import numpy as np
 import pandas as pd
+
+from typing import Optional
 
 
 class DailyBaselineData(AbstractDataProcessor):
@@ -13,7 +17,7 @@ class DailyBaselineData(AbstractDataProcessor):
     2.2.1.4. Values of 0 are considered missing for electricity data, but not gas data.
 
     """
-    def __init__(self, data : pd.DataFrame, is_electricity_data : bool, settings : DailySettings | None = None):
+    def __init__(self, data : pd.DataFrame, is_electricity_data : bool, settings : Optional[DailySettings] = None):
         # Because the init method has some specific initializations for Daily / Billing
         """Initialize the data processor.
 
@@ -40,38 +44,53 @@ class DailyBaselineData(AbstractDataProcessor):
             https://docs.caltrack.org/en/latest/methods.html#section-2-data-management
             Check under section 2.2 : Data constraints
         """
+        self.warnings = []
+        
+        """
+            2.2.2.1. If summing to daily usage from higher frequency interval data, no more than 50% of high-frequency values should be missing. 
+            Missing values should be filled in with average of non-missing values (e.g., for hourly data, 24 * average hourly usage).
+        """
+        meter_series = df['meter_value'].dropna()
+        min_granularity = compute_minimum_granularity(meter_series.index)
+        if min_granularity.startswith('billing'):
+            # TODO : make this a warning instead of an exception
+            raise ValueError("Billing data is not allowed in the daily model")
+        meter_value_df = clean_caltrack_billing_daily_data(meter_series, min_granularity, self.warnings)
+        meter_value_df = meter_value_df.rename(columns={'value': 'meter_value'})
+
+        temp_series = df['temperature_mean'].rename('temperature')
+        temp_series.index.freq = temp_series.index.inferred_freq
+        if temp_series.index.freq != 'H':
+            self.warnings.append(
+                EEMeterWarning(
+                    qualified_name="eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency",
+                    description=("Cannot confirm that pre-aggregated temperature data had sufficient hours kept"),
+                    data={},
+                )
+            )
+            # TODO consider disallowing this until a later patch
+            temperature_features = temp_series.rename('temperature_mean').to_frame()
+            temperature_features['temperature_null'] = temp_series.isnull().astype(int)
+            temperature_features['temperature_not_null'] = temp_series.notnull().astype(int)
+            temperature_features['n_days_kept'] = 0  # unused
+            temperature_features['n_days_dropped'] = 0  # unused
+        else:
+            temperature_features = compute_temperature_features(
+                meter_value_df.index,
+                temp_series,
+                data_quality=True,
+            )
+        criteria_df = meter_value_df.merge(temperature_features, left_index=True, right_index=True, how='outer')
+        df, self.disqualification, warnings = caltrack_sufficiency_criteria_baseline(criteria_df)
+        self.warnings += warnings
 
         # Add Season and Weekday_weekend 
         df['season'] = df.index.month_name().map(_const.default_season_def)
         df['weekday_weekend'] = df.index.day_name().map(_const.default_weekday_weekend_def)
 
-        df['temperature_null'] = df.temperature_mean.isnull().astype(int)
-        df['temperature_not_null'] = df.temperature_mean.notnull().astype(int)
+        # drop data quality columns
+        df = df.drop(columns=['temperature_null', 'temperature_not_null', 'n_days_kept', 'n_days_dropped'])
 
-        df, self.disqualification, self.warnings = caltrack_sufficiency_criteria_baseline(data = df)
-
-
-        # Test for more than 50% of high frequency data being missing
-        """
-            2.2.2.1. If summing to daily usage from higher frequency interval data, no more than 50% of high-frequency values should be missing. 
-            Missing values should be filled in with average of non-missing values (e.g., for hourly data, 24 * average hourly usage).
-        """
-        min_granularity = compute_minimum_granularity(df.index)
-
-        if min_granularity.startswith('billing'):
-            # TODO : make this a warning instead of an exception
-            raise ValueError("Billing data is not allowed in the daily model")
-
-        # Ensure higher frequency data is aggregated to the monthly model
-        meter_value_df = clean_caltrack_billing_daily_data(df['meter_value'], min_granularity, self.warnings)
-        meter_value_df.rename(columns={'value': 'meter_value'}, inplace=True)
-
-        temperature_df = as_freq(df['temperature_mean'], 'D', series_type = 'instantaneous').to_frame(name='temperature_mean')
-
-        # Perform a join
-        meter_value_df = meter_value_df.merge(temperature_df, left_index=True, right_index=True, how='outer')
-
-        df = meter_value_df
         return df
 
 
@@ -131,14 +150,13 @@ class DailyBaselineData(AbstractDataProcessor):
 
 
 class DailyReportingData(AbstractDataProcessor):
-
     """
         Refer to Section 3.5 in https://docs.caltrack.org/en/latest/methods.html#section-2-data-management
 
         The Set data will be very similar (might be the exact same) as the Baseline version of this class. The only difference will be
         the data_sufficiency check. Although that will also be reused.
     """
-    def __init__(self, data : pd.DataFrame, settings : DailySettings | None = None):
+    def __init__(self, data : pd.DataFrame, settings : Optional[DailySettings] = None):
         """Initialize the data processor.
 
         Parameters
@@ -178,6 +196,7 @@ class DailyReportingData(AbstractDataProcessor):
         is_sufficient : bool
             Whether the data is sufficient.
         """
+        
         df['temperature_null'] = df.temperature_mean.isnull().astype(int)
         df['temperature_not_null'] = df.temperature_mean.notnull().astype(int)
 
