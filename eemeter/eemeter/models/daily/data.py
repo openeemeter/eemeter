@@ -8,7 +8,7 @@ from eemeter.eemeter.warnings import EEMeterWarning
 import numpy as np
 import pandas as pd
 
-from typing import Optional
+from typing import Optional, Union
 
 
 class DailyBaselineData(AbstractDataProcessor):
@@ -37,7 +37,17 @@ class DailyBaselineData(AbstractDataProcessor):
         self.is_electricity_data = is_electricity_data
 
         self.set_data(data = data, is_electricity_data = is_electricity_data)
-
+    
+    @classmethod
+    def from_series(cls, meter_data: Union[pd.Series, pd.DataFrame], temperature_data: Union[pd.Series, pd.DataFrame], is_electricity_data):
+        if not isinstance(meter_data, pd.DataFrame):
+            meter_data = meter_data.to_frame()
+        if not isinstance(temperature_data, pd.DataFrame):
+            temperature_data = temperature_data.to_frame()
+        meter_data = meter_data.rename(columns={meter_data.columns[0]: 'observed'})
+        temperature_data = temperature_data.rename(columns={temperature_data.columns[0]: 'temperature'})
+        df = pd.concat([meter_data, temperature_data], axis=1)
+        return cls(df, is_electricity_data)
 
     def _check_data_sufficiency(self, df : pd.DataFrame):
         """
@@ -176,6 +186,17 @@ class DailyReportingData(AbstractDataProcessor):
 
         # TODO : do we need to set electric data for reporting?
         self.set_data(data = data, is_electricity_data = False)
+    
+    @classmethod
+    def from_series(cls, meter_data: Union[pd.Series, pd.DataFrame], temperature_data: Union[pd.Series, pd.DataFrame], is_electricity_data):
+        if not isinstance(meter_data, pd.DataFrame):
+            meter_data = meter_data.to_frame()
+        if not isinstance(temperature_data, pd.DataFrame):
+            temperature_data = temperature_data.to_frame()
+        meter_data = meter_data.rename(columns={meter_data.columns[0]: 'observed'})
+        temperature_data = temperature_data.rename(columns={temperature_data.columns[0]: 'temperature'})
+        df = pd.concat([meter_data, temperature_data], axis=1)
+        return cls(df, is_electricity_data)
 
 
     def _check_data_sufficiency(self, df : pd.DataFrame):
