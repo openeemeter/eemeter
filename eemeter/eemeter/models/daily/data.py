@@ -46,6 +46,7 @@ class DailyBaselineData(AbstractDataProcessor):
             temperature_data = temperature_data.to_frame()
         meter_data = meter_data.rename(columns={meter_data.columns[0]: 'observed'})
         temperature_data = temperature_data.rename(columns={temperature_data.columns[0]: 'temperature'})
+        temperature_data.index = temperature_data.index.tz_convert(meter_data.index.tzinfo)
         df = pd.concat([meter_data, temperature_data], axis=1)
         return cls(df, is_electricity_data)
 
