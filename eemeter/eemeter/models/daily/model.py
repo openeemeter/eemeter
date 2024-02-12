@@ -129,7 +129,9 @@ class DailyModel:
         for warning in baseline_data.warnings + baseline_data.disqualification:
             print(warning.json())
         meter_data = baseline_data._baseline_meter_df #TODO make df public attr
+        return self._fit(meter_data)
 
+    def _fit(self, meter_data):
         # Initialize dataframe
         self.df_meter = self._initialize_data(meter_data)
 
@@ -159,15 +161,7 @@ class DailyModel:
         return self
 
     def predict(self, reporting_data: Union[DailyBaselineData, DailyReportingData]):
-        """
-        Makes model prediction on given temperature data.
-
-        Parameters:
-            df_eval (pandas.DataFrame): The evaluation dataframe.
-
-        Returns:
-            pandas.DataFrame: The evaluation dataframe with model predictions added.
-        """
+        """Perform initial sufficiency and typechecks before passing to private predict"""
         if not self.is_fitted:
             raise RuntimeError("Model must be fit before predictions can be made.")
 
@@ -178,8 +172,19 @@ class DailyModel:
         if isinstance(reporting_data, DailyBaselineData):
             df_eval = reporting_data._baseline_meter_df
         if isinstance(reporting_data, DailyReportingData):
-            df_eval = reporting_data._reporting_meter_df
+            df_eval = reporting_data._reporting_meter_df 
+        return self._predict(df_eval)
 
+    def _predict(self, df_eval):
+        """
+        Makes model prediction on given temperature data.
+
+        Parameters:
+            df_eval (pandas.DataFrame): The evaluation dataframe.
+
+        Returns:
+            pandas.DataFrame: The evaluation dataframe with model predictions added.
+        """
         #TODO decide whether to allow temperature series vs requiring "design matrix"
         if isinstance(df_eval, pd.Series):
             df_eval = df_eval.to_frame("temperature_mean")
