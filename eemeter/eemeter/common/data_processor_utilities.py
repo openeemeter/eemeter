@@ -489,7 +489,7 @@ def caltrack_sufficiency_criteria_baseline(
         )
     
     # Check for 90% for individual months present:
-    non_null_temp_percentage_per_month = data['temperature_mean'].groupby(data.index.month).apply(lambda x: x.notna().mean())
+    non_null_temp_percentage_per_month = data['temperature'].groupby(data.index.month).apply(lambda x: x.notna().mean())
     if (non_null_temp_percentage_per_month < min_fraction_daily_coverage).any():
         critical_warnings.append(
             EEMeterWarning(

@@ -1,4 +1,4 @@
-datetime,temperature_mean,observed,season,day_of_week
+datetime,temperature,observed,season,day_of_week
 2019-03-02,53.137118613144565,73.24072778136863,shoulder,6
 2019-03-03,53.73536557792833,20.576371394610867,shoulder,7
 2019-03-04,52.27461468937442,107.59656751108996,shoulder,1

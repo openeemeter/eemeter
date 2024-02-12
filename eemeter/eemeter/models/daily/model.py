@@ -187,7 +187,7 @@ class DailyModel:
         """
         #TODO decide whether to allow temperature series vs requiring "design matrix"
         if isinstance(df_eval, pd.Series):
-            df_eval = df_eval.to_frame("temperature_mean")
+            df_eval = df_eval.to_frame("temperature")
 
         # initialize data to input dataframe
         df_eval = self._initialize_data(df_eval)
@@ -195,7 +195,7 @@ class DailyModel:
         df_all_models = []
         for component_key in self.params.submodels.keys():
             eval_segment = self._meter_segment(component_key, df_eval)
-            T = eval_segment["temperature_mean"].values
+            T = eval_segment["temperature"].values
 
             #model, unc, hdd_load, cdd_load = self.model[component_key].eval(T)
             model, unc, hdd_load, cdd_load = self._predict_submodel(self.params.submodels[component_key], T)
@@ -344,7 +344,7 @@ class DailyModel:
         - Converts the index to a DatetimeIndex if it is not already
         - Adds a 'season' column based on the month of the index using the settings.season dictionary
         - Adds a 'day_of_week' column based on the day of the week of the index
-        - Removes any rows with NaN values in the 'temperature_mean' or 'observed' columns
+        - Removes any rows with NaN values in the 'temperature' or 'observed' columns
         - Sorts the data by the index
         - Reorders the columns to have 'season' and 'day_of_week' first, followed by the remaining columns
 
@@ -384,7 +384,7 @@ class DailyModel:
         if meter_data.empty:
             # return early to avoid np.isfinite exception
             return meter_data
-        meter_data = meter_data[np.isfinite(meter_data["temperature_mean"])]
+        meter_data = meter_data[np.isfinite(meter_data["temperature"])]
         if "observed" in cols:
             meter_data = meter_data[np.isfinite(meter_data["observed"])]
         return meter_data

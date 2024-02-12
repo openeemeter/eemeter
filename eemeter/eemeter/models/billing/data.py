@@ -46,8 +46,8 @@ class BillingBaselineData(AbstractDataProcessor):
         df['season'] = df.index.month_name().map(_const.default_season_def)
         df['weekday_weekend'] = df.index.day_name().map(_const.default_weekday_weekend_def)
 
-        df['temperature_null'] = df.temperature_mean.isnull().astype(int)
-        df['temperature_not_null'] = df.temperature_mean.notnull().astype(int)
+        df['temperature_null'] = df.temperature.isnull().astype(int)
+        df['temperature_not_null'] = df.temperature.notnull().astype(int)
 
         df, self.disqualification, self.warnings = caltrack_sufficiency_criteria_baseline(data = df)
 
@@ -64,7 +64,7 @@ class BillingBaselineData(AbstractDataProcessor):
             min_granularity = 'billing_monthly'
 
         meter_value_df = clean_caltrack_billing_daily_data(df['observed'], min_granularity, self.warnings)
-        temperature_df = as_freq(df['temperature_mean'], 'M', series_type = 'instantaneous').to_frame(name='temperature_mean')
+        temperature_df = as_freq(df['temperature'], 'M', series_type = 'instantaneous').to_frame(name='temperature')
 
         # Perform a join
         meter_value_df = meter_value_df.merge(temperature_df, left_index=True, right_index=True, how='outer')
@@ -85,7 +85,7 @@ class BillingBaselineData(AbstractDataProcessor):
         processed_data : pd.DataFrame
             Processed data.
         """
-        expected_columns = ["observed", "temperature_mean"]
+        expected_columns = ["observed", "temperature"]
         if not set(expected_columns).issubset(set(data.columns)):
             # show the columns that are missing
 
@@ -149,12 +149,12 @@ class BillingReportingData(AbstractDataProcessor):
 
     def _check_data_sufficiency(self, df : pd.DataFrame):
 
-        df['temperature_null'] = df.temperature_mean.isnull().astype(int)
-        df['temperature_not_null'] = df.temperature_mean.notnull().astype(int)
+        df['temperature_null'] = df.temperature.isnull().astype(int)
+        df['temperature_not_null'] = df.temperature.notnull().astype(int)
 
         df, self.disqualification, self.warnings = caltrack_sufficiency_criteria_baseline(data = df, is_reporting_data = True)
 
-        df = as_freq(df['temperature_mean'], 'M', series_type = 'instantaneous').to_frame(name='temperature_mean')
+        df = as_freq(df['temperature'], 'M', series_type = 'instantaneous').to_frame(name='temperature')
 
         return df
 
@@ -172,7 +172,7 @@ class BillingReportingData(AbstractDataProcessor):
             Processed data.
         """
 
-        if 'temperature_mean' not in data.columns:
+        if 'temperature' not in data.columns:
             raise ValueError("Temperature data is missing")
 
         # Check that the datetime index is timezone aware timestamp

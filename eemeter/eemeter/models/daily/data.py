@@ -58,7 +58,7 @@ class DailyBaselineData(AbstractDataProcessor):
         meter_value_df = clean_caltrack_billing_daily_data(meter_series, min_granularity, self.warnings)
         meter_value_df = meter_value_df.rename(columns={'value': 'observed'})
 
-        temp_series = df['temperature_mean'].rename('temperature')
+        temp_series = df['temperature']
         temp_series.index.freq = temp_series.index.inferred_freq
         if temp_series.index.freq != 'H':
             self.warnings.append(
@@ -69,7 +69,7 @@ class DailyBaselineData(AbstractDataProcessor):
                 )
             )
             # TODO consider disallowing this until a later patch
-            temperature_features = temp_series.rename('temperature_mean').to_frame()
+            temperature_features = temp_series.to_frame()
             temperature_features['temperature_null'] = temp_series.isnull().astype(int)
             temperature_features['temperature_not_null'] = temp_series.notnull().astype(int)
             temperature_features['n_days_kept'] = 0  # unused
@@ -81,6 +81,7 @@ class DailyBaselineData(AbstractDataProcessor):
                 data_quality=True,
             )
         criteria_df = meter_value_df.merge(temperature_features, left_index=True, right_index=True, how='outer')
+        criteria_df = criteria_df.rename({'temperature_mean': 'temperature'}, axis=1)
         df, self.disqualification, warnings = caltrack_sufficiency_criteria_baseline(criteria_df)
         self.warnings += warnings
 
@@ -109,7 +110,7 @@ class DailyBaselineData(AbstractDataProcessor):
             Dataframe appended with the correct season and day of week.
         """
 
-        expected_columns = ["observed", "temperature_mean"]
+        expected_columns = ["observed", "temperature"]
         if not set(expected_columns).issubset(set(data.columns)):
             # show the columns that are missing
 
@@ -197,12 +198,12 @@ class DailyReportingData(AbstractDataProcessor):
             Whether the data is sufficient.
         """
         
-        df['temperature_null'] = df.temperature_mean.isnull().astype(int)
-        df['temperature_not_null'] = df.temperature_mean.notnull().astype(int)
+        df['temperature_null'] = df.temperature.isnull().astype(int)
+        df['temperature_not_null'] = df.temperature.notnull().astype(int)
 
         df, self.disqualification, self.warnings = caltrack_sufficiency_criteria_baseline(data = df, is_reporting_data = True)
 
-        df = as_freq(df['temperature_mean'], 'D', series_type = 'instantaneous').to_frame(name='temperature_mean')
+        df = as_freq(df['temperature'], 'D', series_type = 'instantaneous').to_frame(name='temperature')
 
         # TODO : interpolate if necessary
 
@@ -227,7 +228,7 @@ class DailyReportingData(AbstractDataProcessor):
             Processed data.
         """
 
-        if 'temperature_mean' not in data.columns:
+        if 'temperature' not in data.columns:
             raise ValueError("Temperature data is missing")
 
         # Check that the datetime index is timezone aware timestamp

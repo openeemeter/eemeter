@@ -198,9 +198,9 @@ def ellipsoid_split_filter(meter, n_std=[1.4, 1.4]):
                 (meter["season"] == season) & (meter["observed"].notna())
             ]
             meter_season = meter_season[meter_season["day_of_week"].isin(day_num)]
-            meter_season = meter_season.sort_values(by=["temperature_mean"])
+            meter_season = meter_season.sort_values(by=["temperature"])
 
-            T = meter_season["temperature_mean"].values
+            T = meter_season["temperature"].values
             obs = meter_season["observed"].values
 
             if (len(T) < 3) or (len(obs) < 3):
