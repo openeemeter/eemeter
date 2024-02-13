@@ -32,8 +32,8 @@ class DailyBaselineData(AbstractDataProcessor):
             self._settings = settings
 
         self._baseline_meter_df = None
-        self.warnings = None
-        self.disqualification = None
+        self.warnings = []
+        self.disqualification = []
         self.is_electricity_data = is_electricity_data
 
         self.set_data(data = data, is_electricity_data = is_electricity_data)
@@ -72,15 +72,32 @@ class DailyBaselineData(AbstractDataProcessor):
         temp_series = df['temperature']
         temp_series.index.freq = temp_series.index.inferred_freq
         if temp_series.index.freq != 'H':
-            self.warnings.append(
-                EEMeterWarning(
-                    qualified_name="eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency",
-                    description=("Cannot confirm that pre-aggregated temperature data had sufficient hours kept"),
-                    data={},
+            if temp_series.index.freq > pd.Timedelta(hours=1):
+                # Add warning for frequencies longer than 1 hour
+                self.warnings.append(
+                    EEMeterWarning(
+                        qualified_name="eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency",
+                        description=("Cannot confirm that pre-aggregated temperature data had sufficient hours kept"),
+                        data={},
+                    )
                 )
-            )
             # TODO consider disallowing this until a later patch
-            temperature_features = temp_series.to_frame()
+            # Downsample / Upsample the temperature data to daily
+            temperature_features = as_freq(temp_series, 'D', series_type = 'instantaneous', include_coverage = True).rename(columns={'value' : 'temperature_mean'})
+            # If high frequency data check for 50% data coverage in rollup
+            if len(temperature_features[temperature_features.coverage <= 0.5]) > 0:
+                self.warnings.append(
+                    EEMeterWarning(
+                        qualified_name="eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data",
+                        description=("More than 50% of the high frequency Temperature data is missing."),
+                        data = (
+                            temperature_features[temperature_features.coverage <= 0.5].index.to_list()
+                        )
+                    )
+                )
+            if 'coverage' in temperature_features.columns:
+                temperature_features = temperature_features.drop(columns=['coverage'])
+
             temperature_features['temperature_null'] = temp_series.isnull().astype(int)
             temperature_features['temperature_not_null'] = temp_series.notnull().astype(int)
             temperature_features['n_days_kept'] = 0  # unused
@@ -113,7 +130,7 @@ class DailyBaselineData(AbstractDataProcessor):
         Parameters
         ----------
         data : pd.DataFrame
-            Required columns - datetime, meter value, temperature mean
+            Required columns - datetime, observed, temperature
 
         Returns
         -------

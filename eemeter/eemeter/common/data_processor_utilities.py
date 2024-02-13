@@ -210,6 +210,7 @@ def as_freq(
     elif series_type == "instantaneous":
         atomic_series = series.asfreq(atomic_freq, method="ffill")
         resampled = atomic_series.resample(freq).mean()
+        n_coverage = atomic_series.resample(freq).count()
 
     if resampled.index[-1] < series.index[-1]:
         # this adds a null at the end using the target frequency
@@ -304,7 +305,7 @@ def caltrack_sufficiency_criteria_baseline(
                     data={},
                 )
         )
-        return warnings, [], []
+        return data, warnings, []
 
     data_start = data.index.min().tz_convert("UTC")
     data_end = data.index.max().tz_convert("UTC")
