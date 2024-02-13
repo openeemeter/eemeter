@@ -1,6 +1,5 @@
 import eemeter.common.const as _const
 from eemeter.common.abstract_data_processor import AbstractDataProcessor
-from eemeter.common.data_settings import MonthlySettings
 from eemeter.eemeter.common.data_processor_utilities import as_freq, caltrack_sufficiency_criteria_baseline, clean_caltrack_billing_daily_data, compute_minimum_granularity
 
 
@@ -20,19 +19,7 @@ class BillingBaselineData(AbstractDataProcessor):
     For bi-monthly billing cycles, periods spanning more than 70 days should be dropped from the analysis.
     """
 
-    def __init__(self, data : pd.DataFrame, is_electricity_data, settings : Optional[MonthlySettings]=None):
-        """Initialize the data processor.
-
-        Parameters
-        ----------
-        settings : DailySettings
-            Settings for the data processor.
-        """
-        if settings is None:
-            self._settings = MonthlySettings()
-        else:
-            self._settings = settings
-
+    def __init__(self, data : pd.DataFrame, is_electricity_data):
         self._baseline_meter_df = None
         self.warnings = None
         self.disqualification = None
@@ -126,19 +113,7 @@ class BillingBaselineData(AbstractDataProcessor):
 
 
 class BillingReportingData(AbstractDataProcessor):
-    def __init__(self, data : pd.DataFrame, settings : Optional[MonthlySettings]=None):
-        """Initialize the data processor.
-
-        Parameters
-        ----------
-        settings : DailySettings
-            Settings for the data processor.
-        """
-        if settings is None:
-            self._settings = MonthlySettings()
-        else:
-            self._settings = settings
-
+    def __init__(self, data : pd.DataFrame):
         self._reporting_meter_df = None
         self.warnings = None
         self.disqualification = None
@@ -154,6 +129,7 @@ class BillingReportingData(AbstractDataProcessor):
 
         df, self.disqualification, self.warnings = caltrack_sufficiency_criteria_baseline(data = df, is_reporting_data = True)
 
+        #TODO should be 'D', 'cumulative'
         df = as_freq(df['temperature'], 'M', series_type = 'instantaneous').to_frame(name='temperature')
 
         return df

@@ -2,7 +2,6 @@ import eemeter.common.const as _const
 from eemeter.common.abstract_data_processor import AbstractDataProcessor
 from eemeter.eemeter.common.data_processor_utilities import as_freq, caltrack_sufficiency_criteria_baseline, clean_caltrack_billing_daily_data, compute_minimum_granularity
 from eemeter import compute_temperature_features
-from eemeter.eemeter.models.daily.utilities.config import DailySettings
 from eemeter.eemeter.warnings import EEMeterWarning
 
 import numpy as np
@@ -17,20 +16,7 @@ class DailyBaselineData(AbstractDataProcessor):
     2.2.1.4. Values of 0 are considered missing for electricity data, but not gas data.
 
     """
-    def __init__(self, data : pd.DataFrame, is_electricity_data : bool, settings : Optional[DailySettings] = None):
-        # Because the init method has some specific initializations for Daily / Billing
-        """Initialize the data processor.
-
-        Parameters
-        ----------
-        settings : DailySettings
-            Settings for the data processor.
-        """
-        if settings is None:
-            self._settings = DailySettings()
-        else:
-            self._settings = settings
-
+    def __init__(self, data : pd.DataFrame, is_electricity_data : bool):
         self._baseline_meter_df = None
         self.warnings = []
         self.disqualification = []
@@ -185,19 +171,7 @@ class DailyReportingData(AbstractDataProcessor):
         The Set data will be very similar (might be the exact same) as the Baseline version of this class. The only difference will be
         the data_sufficiency check. Although that will also be reused.
     """
-    def __init__(self, data : pd.DataFrame, settings : Optional[DailySettings] = None):
-        """Initialize the data processor.
-
-        Parameters
-        ----------
-        settings : DailySettings
-            Settings for the data processor.
-        """
-        if settings is None:
-            self._settings = DailySettings()
-        else:
-            self._settings = settings
-
+    def __init__(self, data : pd.DataFrame):
         self._reporting_meter_df = None
         self.warnings = None
         self.disqualification = None
