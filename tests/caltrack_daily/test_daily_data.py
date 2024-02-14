@@ -91,28 +91,47 @@ def get_meter_data_daily(get_datetime_index_daily_with_timezone):
 
     return df
 
-# @pytest.mark.parametrize('get_datetime_index', [['D', False]], indirect=True)
-# def test_daily_baseline_data_with_same_daily_frequencies(get_datetime_index):
-#     datetime_index = get_datetime_index
+# Check that a missing timezone raises a Value Error
+@pytest.mark.parametrize('get_datetime_index', [['D', False]], indirect=True)
+def test_daily_baseline_data_with_missing_timezone(get_datetime_index):
+    datetime_index = get_datetime_index
 
-#     # Create a 'temperature_mean' and meter_value columns with random data
-#     temperature_mean = np.random.rand(len(datetime_index))
-#     meter_value = np.random.rand(len(datetime_index))
+    # Create a 'temperature_mean' and meter_value columns with random data
+    temperature_mean = np.random.rand(len(datetime_index))
+    meter_value = np.random.rand(len(datetime_index))
 
-#     # Create the DataFrame
-#     df = pd.DataFrame(data={'meter_value' : meter_value, 'temperature_mean': temperature_mean}, index=datetime_index)
+    # Create the DataFrame
+    df = pd.DataFrame(data={'meter' : meter_value, 'temperature': temperature_mean}, index=datetime_index)
 
-#     cls = DailyBaselineData(df, is_electricity_data=True)
+    with pytest.raises(ValueError):
+        cls = DailyBaselineData(df, is_electricity_data=True)
 
-#     assert cls._baseline_meter_df is not None
-#     assert len(cls.warnings) == 1
-#     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
-#     assert len(cls.disqualification) == 0
+# Check that a missing datetime index and column raises a Value Error
+def test_daily_baseline_data_with_missing_datetime_index_and_column():
 
+    # Create a 'temperature_mean' and meter_value columns with random data
+    temperature_mean = np.random.rand(365)
+    meter_value = np.random.rand(365)
 
-def test_daily_baseline_data_with_datetime_column():
-    pass
+    # Create the DataFrame
+    df = pd.DataFrame(data={'meter' : meter_value, 'temperature': temperature_mean})
 
+    with pytest.raises(ValueError):
+        cls = DailyBaselineData(df, is_electricity_data=True)
+
+@pytest.mark.parametrize('get_datetime_index', [['D', True]], indirect=True)
+def test_daily_baseline_data_with_datetime_column(get_datetime_index):
+    df = pd.DataFrame()
+    df['datetime'] = get_datetime_index
+    df['temperature'] = np.random.rand(len(get_datetime_index))
+    df['observed'] = np.random.rand(len(get_datetime_index))
+
+    cls = DailyBaselineData(df, is_electricity_data=True)
+    
+    assert cls._baseline_meter_df is not None
+    assert len(cls.warnings) == 1
+    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
+    assert len(cls.disqualification) == 0
 
 @pytest.mark.parametrize('get_datetime_index', [['D', True]], indirect=True)
 def test_daily_baseline_data_with_same_daily_frequencies(get_datetime_index):
@@ -201,3 +220,49 @@ def test_daily_baseline_data_with_daily_and_hourly_frequencies(get_meter_data_da
     assert cls._baseline_meter_df is not None
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
+
+def test_daily_baseline_data_with_missing_temperature_data(get_meter_data_daily, get_temperature_data_hourly):
+    df = get_temperature_data_hourly
+
+    # Create a mask for Tuesdays and Thursdays
+    mask = df.index.dayofweek.isin([1, 3])
+    
+    # Set 60% of the temperature data as missing on Tuesdays and Thursdays
+    df.loc[df[mask].sample(frac=0.6).index, 'temperature'] = np.nan
+
+    # Create a DataFrame with daily frequency
+    df_meter = get_meter_data_daily
+
+    # Merge 'df' and 'df_meter' in an outer join
+    df = df.merge(df_meter, left_index=True, right_index=True, how='outer')
+
+    cls = DailyBaselineData(df, is_electricity_data=True)
+
+    assert cls._baseline_meter_df is not None
+    assert len(cls.warnings) == 0
+
+    # TODO : BUG : the 'compute_temperature_features' method in features.py does not add a warning for missing high frequency data. Should be fixed.
+    assert len(cls.disqualification) == 2
+    expected_disqualifications = ['eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_temperature_data']
+    assert all(disqualification.qualified_name in expected_disqualifications for disqualification in cls.disqualification)
+
+def test_daily_baseline_data_with_missing_meter_data(get_meter_data_daily, get_temperature_data_hourly):
+    df = get_temperature_data_hourly
+
+    # Create a DataFrame with daily frequency
+    df_meter = get_meter_data_daily
+
+    # Set Tuesdays & Thursdays data as missing
+    df_meter.loc[df_meter.index.dayofweek.isin([1,3]), 'observed'] = np.nan
+
+    # Merge 'df' and 'df_meter' in an outer join
+    df = df.merge(df_meter, left_index=True, right_index=True, how='outer')
+
+    cls = DailyBaselineData(df, is_electricity_data=True)
+
+    assert cls._baseline_meter_df is not None
+    assert len(cls.warnings) == 0
+    # assert all(warning.qualified_name in expected_warnings for warning in cls.warnings)
+    assert len(cls.disqualification) == 3
+    expected_disqualifications = ['eemeter.caltrack_sufficiency_criteria.missing_monthly_meter_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_meter_data']
+    assert all(disqualification.qualified_name in expected_disqualifications for disqualification in cls.disqualification)

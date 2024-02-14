@@ -44,7 +44,7 @@ class BillingBaselineData(AbstractDataProcessor):
             2.2.2.1. If summing to daily usage from higher frequency interval data, no more than 50% of high-frequency values should be missing. 
             Missing values should be filled in with average of non-missing values (e.g., for hourly data, 24 * average hourly usage).
         """
-        min_granularity = compute_minimum_granularity(df.index)
+        min_granularity = compute_minimum_granularity(df.index, default_granularity='billing_bimonthly')
 
         # Ensure higher frequency data is aggregated to the monthly model
         if not min_granularity.startswith('billing'):

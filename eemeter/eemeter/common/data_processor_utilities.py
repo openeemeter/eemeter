@@ -212,6 +212,7 @@ def as_freq(
         resampled = atomic_series.resample(freq).mean()
         n_coverage = atomic_series.resample(freq).count()
 
+    # TODO : BUG?: Check why this is needed. This adds a NaN at the end of the series if the last index is not the same as the original series
     if resampled.index[-1] < series.index[-1]:
         # this adds a null at the end using the target frequency
         last_index = pd.date_range(resampled.index[-1], freq=freq, periods=2)[1:]
@@ -265,21 +266,32 @@ def clean_caltrack_billing_daily_data(data, source_interval, warnings):
         return downsample_and_clean_caltrack_daily_data(data, warnings)
 
 # TODO : requires more testing
-def compute_minimum_granularity(index : pd.Series):
+def compute_minimum_granularity(index : pd.Series, default_granularity : str | None):
     # Figure out minimum granularity
-    max_difference = day_counts(index).max()
-    min_difference = day_counts(index).min()
-    min_granularity = 'unknown'
+    # max_difference = day_counts(index).max()
+    # min_difference = day_counts(index).min()
+    # Inferred frequency returns None if frequency can't be autodetected
+    index.freq = index.inferred_freq
+    if index.freq is None:
+        return default_granularity
     # The other cases still result in granularity being unknown so this causes the frequency to be resampled to daily
 
-    if max_difference == 1 and min_difference == 1:
-        min_granularity = 'daily'
-    elif max_difference < 1:
+    # if max_difference == 1 and min_difference == 1:
+    #     min_granularity = 'daily'
+    # elif max_difference < 1:
+    #     min_granularity = 'hourly'
+    # elif max_difference >= 60:
+    #     min_granularity = 'billing_bimonthly'
+    # elif max_difference >= 30:
+    #     min_granularity = 'billing_monthly'
+    if index.freq <= pd.Timedelta(hours=1):
         min_granularity = 'hourly'
-    elif max_difference >= 60:
-        min_granularity = 'billing_bimonthly'
-    elif max_difference >= 30:
+    elif index.freq <= pd.Timedelta(days=1):
+        min_granularity = 'daily'
+    elif index.freq <= pd.Timedelta(days=30):
         min_granularity = 'billing_monthly'
+    elif index.freq <= pd.Timedelta(days=60):
+        min_granularity = 'billing_bimonthly'
 
     return min_granularity
 
@@ -494,7 +506,7 @@ def caltrack_sufficiency_criteria_baseline(
     if (non_null_temp_percentage_per_month < min_fraction_daily_coverage).any():
         critical_warnings.append(
             EEMeterWarning(
-                qualified_name="eemeter.caltrack_sufficiency_criteria.missing_temperature_data",
+                qualified_name="eemeter.caltrack_sufficiency_criteria.missing_monthly_temperature_data",
                 description=("More than 10% of the monthly temperature data is missing."),
                 data={
                     #TODO report percentage
@@ -507,7 +519,7 @@ def caltrack_sufficiency_criteria_baseline(
         if (non_null_meter_percentage_per_month < min_fraction_daily_coverage).any():
             critical_warnings.append(
                 EEMeterWarning(
-                    qualified_name="eemeter.caltrack_sufficiency_criteria.missing_meter_data",
+                    qualified_name="eemeter.caltrack_sufficiency_criteria.missing_monthly_meter_data",
                     description=("More than 10% of the monthly meter data is missing."),
                     data={
                         #TODO report percentage     

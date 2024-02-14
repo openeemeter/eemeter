@@ -36,25 +36,29 @@ class DailyBaselineData(AbstractDataProcessor):
         df = pd.concat([meter_data, temperature_data], axis=1)
         return cls(df, is_electricity_data)
 
-    def _check_data_sufficiency(self, df : pd.DataFrame):
-        """
-            https://docs.caltrack.org/en/latest/methods.html#section-2-data-management
-            Check under section 2.2 : Data constraints
-        """
-        self.warnings = []
-        
-        """
-            2.2.2.1. If summing to daily usage from higher frequency interval data, no more than 50% of high-frequency values should be missing. 
-            Missing values should be filled in with average of non-missing values (e.g., for hourly data, 24 * average hourly usage).
-        """
+    def _compute_meter_value_df(self, df : pd.DataFrame):
+
+        # Dropping the NaNs is beneficial when the meter data is spread over hourly temperature data, causing lots of NaNs
+        # But causes problems in detection of frequency when there are genuine missing values. The missing days are accounted for in the sufficiency_criteria_baseline method
+        # whereas they should actually be kept.
         meter_series = df['observed'].dropna()
-        min_granularity = compute_minimum_granularity(meter_series.index)
+        min_granularity = compute_minimum_granularity(meter_series.index, 'daily')
         if min_granularity.startswith('billing'):
             # TODO : make this a warning instead of an exception
             raise ValueError("Billing data is not allowed in the daily model")
         meter_value_df = clean_caltrack_billing_daily_data(meter_series, min_granularity, self.warnings)
         meter_value_df = meter_value_df.rename(columns={'value': 'observed'})
 
+        # To account for the above issue, we create an index with all the days and then merge the meter_value_df with it
+        # This will ensure that the missing days are kept in the dataframe
+        # Create an index with all the days from the start and end date of 'meter_value_df'
+        all_days_index = pd.date_range(start=meter_value_df.index.min(), end=meter_value_df.index.max(), freq='D')
+        all_days_df = pd.DataFrame(index=all_days_index)
+        meter_value_df = meter_value_df.merge(all_days_df, left_index=True, right_index=True, how='outer')
+
+        return meter_value_df
+
+    def _compute_temperature_features(self, df : pd.DataFrame, meter_value_df : pd.DataFrame):
         temp_series = df['temperature']
         temp_series.index.freq = temp_series.index.inferred_freq
         if temp_series.index.freq != 'H':
@@ -69,7 +73,7 @@ class DailyBaselineData(AbstractDataProcessor):
                 )
             # TODO consider disallowing this until a later patch
             # Downsample / Upsample the temperature data to daily
-            temperature_features = as_freq(temp_series, 'D', series_type = 'instantaneous', include_coverage = True).rename(columns={'value' : 'temperature_mean'})
+            temperature_features = as_freq(temp_series, 'D', series_type = 'instantaneous', include_coverage = True)
             # If high frequency data check for 50% data coverage in rollup
             if len(temperature_features[temperature_features.coverage <= 0.5]) > 0:
                 self.warnings.append(
@@ -81,6 +85,14 @@ class DailyBaselineData(AbstractDataProcessor):
                         )
                     )
                 )
+
+            # Set missing high frequency data to NaN
+            temperature_features.value[temperature_features.coverage > 0.5] = (
+                temperature_features[temperature_features.coverage > 0.5].value / temperature_features[temperature_features.coverage > 0.5].coverage
+            )
+
+            temperature_features = temperature_features[temperature_features.coverage > 0.5].reindex(temperature_features.index)[["value"]].rename(columns={'value' : 'temperature_mean'})
+            
             if 'coverage' in temperature_features.columns:
                 temperature_features = temperature_features.drop(columns=['coverage'])
 
@@ -94,6 +106,23 @@ class DailyBaselineData(AbstractDataProcessor):
                 temp_series,
                 data_quality=True,
             )
+
+        return temperature_features
+
+    def _check_data_sufficiency(self, df : pd.DataFrame):
+        """
+            https://docs.caltrack.org/en/latest/methods.html#section-2-data-management
+            Check under section 2.2 : Data constraints
+        """
+        self.warnings = []
+        
+        """
+            2.2.2.1. If summing to daily usage from higher frequency interval data, no more than 50% of high-frequency values should be missing. 
+            Missing values should be filled in with average of non-missing values (e.g., for hourly data, 24 * average hourly usage).
+        """
+        meter_value_df = self._compute_meter_value_df(df)
+        temperature_features = self._compute_temperature_features(df, meter_value_df)
+        
         criteria_df = meter_value_df.merge(temperature_features, left_index=True, right_index=True, how='outer')
         criteria_df = criteria_df.rename({'temperature_mean': 'temperature'}, axis=1)
         df, self.disqualification, warnings = caltrack_sufficiency_criteria_baseline(criteria_df)
