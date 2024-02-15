@@ -27,7 +27,7 @@ from eemeter.common.const import TutorialDataChoice
 current_dir = Path(__file__).parent
 data_dir = current_dir.parents[1] / "data"
 
-def load_data(data_type: str):
+def load_test_data(data_type: str):
     """Returns back tutorial data of the given data type as a dataframe
 
     Args:
@@ -74,5 +74,5 @@ def load_data(data_type: str):
 
 
 if __name__ == "__main__":
-    df = load_data("hourly_data")
+    df = load_test_data("hourly_data")
     print(df.head())
