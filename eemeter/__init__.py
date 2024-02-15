@@ -38,6 +38,7 @@ from .eemeter.models.hourly.wrapper import HourlyModel
 from .eemeter.models.hourly.data import HourlyBaselineData, HourlyReportingData
 from .eemeter.models.daily.data import DailyBaselineData, DailyReportingData
 from .eemeter.models.billing.data import BillingBaselineData, BillingReportingData
+from eemeter.common.sample_data import load_data
 
 
 def get_version():
