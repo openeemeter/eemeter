@@ -1,4 +1,4 @@
-from eemeter.eemeter.models.billing.data import BillingBaselineData
+from eemeter.eemeter.models.billing.data import BillingBaselineData, BillingReportingData
 
 import numpy as np
 import pandas as pd
@@ -93,7 +93,7 @@ def get_meter_data_daily(get_datetime_index_daily_with_timezone):
 
 # Check that a missing timezone raises a Value Error
 @pytest.mark.parametrize('get_datetime_index', [['D', False]], indirect=True)
-def test_daily_baseline_data_with_missing_timezone(get_datetime_index):
+def test_billing_baseline_data_with_missing_timezone(get_datetime_index):
     datetime_index = get_datetime_index
 
     # Create a 'temperature_mean' and meter_value columns with random data
@@ -107,7 +107,7 @@ def test_daily_baseline_data_with_missing_timezone(get_datetime_index):
         cls = BillingBaselineData(df, is_electricity_data=True)
 
 # Check that a missing datetime index and column raises a Value Error
-def test_daily_baseline_data_with_missing_datetime_index_and_column():
+def test_billing_baseline_data_with_missing_datetime_index_and_column():
 
     # Create a 'temperature_mean' and meter_value columns with random data
     temperature_mean = np.random.rand(365)
@@ -120,7 +120,7 @@ def test_daily_baseline_data_with_missing_datetime_index_and_column():
         cls = BillingBaselineData(df, is_electricity_data=True)
 
 @pytest.mark.parametrize('get_datetime_index', [['H', True]], indirect=True)
-def test_daily_baseline_data_with_same_hourly_frequencies(get_datetime_index):
+def test_billing_baseline_data_with_same_hourly_frequencies(get_datetime_index):
     datetime_index = get_datetime_index
 
     # Create a 'temperature_mean' and meter_value columns with random data
@@ -132,12 +132,12 @@ def test_daily_baseline_data_with_same_hourly_frequencies(get_datetime_index):
 
     cls = BillingBaselineData(df, is_electricity_data=True)
 
-    assert cls._baseline_meter_df is not None
+    assert cls.df is not None
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
 @pytest.mark.parametrize('get_datetime_index', [['30T', True]], indirect=True)
-def test_daily_baseline_data_with_same_half_hourly_frequencies(get_datetime_index):
+def test_billing_baseline_data_with_same_half_hourly_frequencies(get_datetime_index):
     datetime_index = get_datetime_index
 
     # Create a 'temperature_mean' and meter_value columns with random data
@@ -149,6 +149,29 @@ def test_daily_baseline_data_with_same_half_hourly_frequencies(get_datetime_inde
 
     cls = BillingBaselineData(df, is_electricity_data=True)
 
-    assert cls._baseline_meter_df is not None
+    assert cls.df is not None
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
+
+@pytest.mark.parametrize('get_datetime_index', [['30T', True],['H', True], ['D', True]], indirect=True)
+def test_billing_reporting_data_with_missing_half_hourly_hourly_daily_frequencies(get_datetime_index):
+    datetime_index = get_datetime_index
+
+    # Create a 'temperature_mean' and meter_value columns with random data
+    temperature_mean = np.random.rand(len(datetime_index))
+
+    # Create the DataFrame
+    df = pd.DataFrame(data={'temperature': temperature_mean}, index=datetime_index)
+
+    # Create a mask for Tuesdays and Thursdays
+    mask = df.index.dayofweek.isin([1, 3])
+    
+    # Set 60% of the temperature data as missing on Tuesdays and Thursdays
+    # This should cause the high frequency temperature check to fail on these days
+    df.loc[df[mask].sample(frac=0.6).index, 'temperature'] = np.nan
+
+    cls = BillingReportingData(df, is_electricity_data=True)
+
+    assert cls.df is not None
+    assert len(cls.warnings) == 0
+    assert len(cls.disqualification) == 3

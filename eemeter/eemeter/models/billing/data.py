@@ -19,13 +19,20 @@ class BillingBaselineData(AbstractDataProcessor):
     For bi-monthly billing cycles, periods spanning more than 70 days should be dropped from the analysis.
     """
 
-    def __init__(self, data : pd.DataFrame, is_electricity_data):
-        self._baseline_meter_df = None
+    def __init__(self, data : pd.DataFrame, is_electricity_data : bool):
+        self._df = None
         self.warnings = None
         self.disqualification = None
         self.is_electricity_data = is_electricity_data
 
         self.set_data(data = data, is_electricity_data = is_electricity_data)
+
+    @property
+    def df(self):
+        if self._df is None:
+            return None
+        else:
+            return self._df.copy()
 
 
     def _check_data_sufficiency(self, df : pd.DataFrame):
@@ -109,17 +116,25 @@ class BillingBaselineData(AbstractDataProcessor):
 
 
         # TODO : Do we need to downsample the daily data for monthly models?
-        self._baseline_meter_df = df
+        self._df = df
 
 
 class BillingReportingData(AbstractDataProcessor):
-    def __init__(self, data : pd.DataFrame):
-        self._reporting_meter_df = None
-        self.warnings = None
-        self.disqualification = None
+    def __init__(self, data : pd.DataFrame, is_electricity_data : bool):
+        self._df = None
+        self.warnings = []
+        self.disqualification = []
+        self.is_electricity_data = is_electricity_data
 
         # TODO : do we need to set electric data for reporting?
-        self.set_data(data = data, is_electricity_data = False)
+        self.set_data(data = data, is_electricity_data = is_electricity_data)
+
+    @property
+    def df(self):
+        if self._df is None:
+            return None
+        else:
+            return self._df.copy()
 
 
     def _check_data_sufficiency(self, df : pd.DataFrame):
@@ -174,4 +189,4 @@ class BillingReportingData(AbstractDataProcessor):
             for warning in self.disqualification + self.warnings:
                 print(warning.json())
 
-        self._reporting_meter_df = df
+        self._df = df

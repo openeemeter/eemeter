@@ -267,30 +267,18 @@ def clean_caltrack_billing_daily_data(data, source_interval, warnings):
 
 # TODO : requires more testing
 def compute_minimum_granularity(index : pd.Series, default_granularity : str | None):
-    # Figure out minimum granularity
-    # max_difference = day_counts(index).max()
-    # min_difference = day_counts(index).min()
     # Inferred frequency returns None if frequency can't be autodetected
     index.freq = index.inferred_freq
     if index.freq is None:
         return default_granularity
     # The other cases still result in granularity being unknown so this causes the frequency to be resampled to daily
-
-    # if max_difference == 1 and min_difference == 1:
-    #     min_granularity = 'daily'
-    # elif max_difference < 1:
-    #     min_granularity = 'hourly'
-    # elif max_difference >= 60:
-    #     min_granularity = 'billing_bimonthly'
-    # elif max_difference >= 30:
-    #     min_granularity = 'billing_monthly'
     if index.freq <= pd.Timedelta(hours=1):
         min_granularity = 'hourly'
     elif index.freq <= pd.Timedelta(days=1):
         min_granularity = 'daily'
     elif index.freq <= pd.Timedelta(days=30):
         min_granularity = 'billing_monthly'
-    elif index.freq <= pd.Timedelta(days=60):
+    else:
         min_granularity = 'billing_bimonthly'
 
     return min_granularity

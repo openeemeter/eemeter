@@ -17,12 +17,19 @@ class DailyBaselineData(AbstractDataProcessor):
 
     """
     def __init__(self, data : pd.DataFrame, is_electricity_data : bool):
-        self._baseline_meter_df = None
+        self._df = None
         self.warnings = []
         self.disqualification = []
         self.is_electricity_data = is_electricity_data
 
         self.set_data(data = data, is_electricity_data = is_electricity_data)
+
+    @property
+    def df(self):
+        if self._df is None:
+            return None
+        else:
+            return self._df.copy()
     
     @classmethod
     def from_series(cls, meter_data: Union[pd.Series, pd.DataFrame], temperature_data: Union[pd.Series, pd.DataFrame], is_electricity_data):
@@ -52,7 +59,7 @@ class DailyBaselineData(AbstractDataProcessor):
         # To account for the above issue, we create an index with all the days and then merge the meter_value_df with it
         # This will ensure that the missing days are kept in the dataframe
         # Create an index with all the days from the start and end date of 'meter_value_df'
-        all_days_index = pd.date_range(start=meter_value_df.index.min(), end=meter_value_df.index.max(), freq='D')
+        all_days_index = pd.date_range(start=df.index.min(), end=df.index.max(), freq='D')
         all_days_df = pd.DataFrame(index=all_days_index)
         meter_value_df = meter_value_df.merge(all_days_df, left_index=True, right_index=True, how='outer')
 
@@ -62,7 +69,7 @@ class DailyBaselineData(AbstractDataProcessor):
         temp_series = df['temperature']
         temp_series.index.freq = temp_series.index.inferred_freq
         if temp_series.index.freq != 'H':
-            if temp_series.index.freq > pd.Timedelta(hours=1):
+            if temp_series.index.freq is None or temp_series.index.freq > pd.Timedelta(hours=1):
                 # Add warning for frequencies longer than 1 hour
                 self.warnings.append(
                     EEMeterWarning(
@@ -72,29 +79,32 @@ class DailyBaselineData(AbstractDataProcessor):
                     )
                 )
             # TODO consider disallowing this until a later patch
-            # Downsample / Upsample the temperature data to daily
-            temperature_features = as_freq(temp_series, 'D', series_type = 'instantaneous', include_coverage = True)
-            # If high frequency data check for 50% data coverage in rollup
-            if len(temperature_features[temperature_features.coverage <= 0.5]) > 0:
-                self.warnings.append(
-                    EEMeterWarning(
-                        qualified_name="eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data",
-                        description=("More than 50% of the high frequency Temperature data is missing."),
-                        data = (
-                            temperature_features[temperature_features.coverage <= 0.5].index.to_list()
+            if temp_series.index.freq != 'D':
+                # Downsample / Upsample the temperature data to daily
+                temperature_features = as_freq(temp_series, 'D', series_type = 'instantaneous', include_coverage = True)
+                # If high frequency data check for 50% data coverage in rollup
+                if len(temperature_features[temperature_features.coverage <= 0.5]) > 0:
+                    self.warnings.append(
+                        EEMeterWarning(
+                            qualified_name="eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data",
+                            description=("More than 50% of the high frequency Temperature data is missing."),
+                            data = (
+                                temperature_features[temperature_features.coverage <= 0.5].index.to_list()
+                            )
                         )
                     )
+
+                # Set missing high frequency data to NaN
+                temperature_features.value[temperature_features.coverage > 0.5] = (
+                    temperature_features[temperature_features.coverage > 0.5].value / temperature_features[temperature_features.coverage > 0.5].coverage
                 )
 
-            # Set missing high frequency data to NaN
-            temperature_features.value[temperature_features.coverage > 0.5] = (
-                temperature_features[temperature_features.coverage > 0.5].value / temperature_features[temperature_features.coverage > 0.5].coverage
-            )
-
-            temperature_features = temperature_features[temperature_features.coverage > 0.5].reindex(temperature_features.index)[["value"]].rename(columns={'value' : 'temperature_mean'})
-            
-            if 'coverage' in temperature_features.columns:
-                temperature_features = temperature_features.drop(columns=['coverage'])
+                temperature_features = temperature_features[temperature_features.coverage > 0.5].reindex(temperature_features.index)[["value"]].rename(columns={'value' : 'temperature_mean'})
+                
+                if 'coverage' in temperature_features.columns:
+                    temperature_features = temperature_features.drop(columns=['coverage'])
+            else:
+                temperature_features = temp_series.to_frame(name='temperature_mean')
 
             temperature_features['temperature_null'] = temp_series.isnull().astype(int)
             temperature_features['temperature_not_null'] = temp_series.notnull().astype(int)
@@ -190,7 +200,7 @@ class DailyBaselineData(AbstractDataProcessor):
             for warning in self.disqualification + self.warnings:
                 print(warning.json())
 
-        self._baseline_meter_df = df
+        self._df = df
 
 
 class DailyReportingData(AbstractDataProcessor):
@@ -200,13 +210,21 @@ class DailyReportingData(AbstractDataProcessor):
         The Set data will be very similar (might be the exact same) as the Baseline version of this class. The only difference will be
         the data_sufficiency check. Although that will also be reused.
     """
-    def __init__(self, data : pd.DataFrame):
-        self._reporting_meter_df = None
-        self.warnings = None
-        self.disqualification = None
+    def __init__(self, data : pd.DataFrame, is_electricity_data : bool):
+        self._df = None
+        self.warnings = []
+        self.disqualification = []
+        self.is_electricity_data = is_electricity_data
 
         # TODO : do we need to set electric data for reporting?
-        self.set_data(data = data, is_electricity_data = False)
+        self.set_data(data = data, is_electricity_data = is_electricity_data)
+
+    @property
+    def df(self):
+        if self._df is None:
+            return None
+        else:
+            return self._df.copy()
     
     @classmethod
     def from_series(cls, meter_data: Optional[Union[pd.Series, pd.DataFrame]], temperature_data: Union[pd.Series, pd.DataFrame], is_electricity_data):
@@ -244,16 +262,59 @@ class DailyReportingData(AbstractDataProcessor):
             Whether the data is sufficient.
         """
         
-        df['temperature_null'] = df.temperature.isnull().astype(int)
-        df['temperature_not_null'] = df.temperature.notnull().astype(int)
+        temp_series = df['temperature']
+        temp_series.index.freq = temp_series.index.inferred_freq
+        if temp_series.index.freq is None or temp_series.index.freq > pd.Timedelta(hours=1):
+                # Add warning for frequencies longer than 1 hour
+                self.warnings.append(
+                    EEMeterWarning(
+                        qualified_name="eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency",
+                        description=("Cannot confirm that pre-aggregated temperature data had sufficient hours kept"),
+                        data={},
+                    )
+                )
+        if temp_series.index.freq != 'D':
+            temperature_df = as_freq(temp_series, 'D', series_type = 'instantaneous', include_coverage=True)
+            # If high frequency data check for 50% data coverage in rollup
+            if len(temperature_df[temperature_df.coverage <= 0.5]) > 0:
+                self.warnings.append(
+                    EEMeterWarning(
+                        qualified_name="eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data",
+                        description=("More than 50% of the high frequency Temperature data is missing."),
+                        data = (
+                            temperature_df[temperature_df.coverage <= 0.5].index.to_list()
+                        )
+                    )
+                )
 
-        df, self.disqualification, self.warnings = caltrack_sufficiency_criteria_baseline(data = df, is_reporting_data = True)
+            # Set missing high frequency data to NaN
+            temperature_df.value[temperature_df.coverage > 0.5] = (
+                temperature_df[temperature_df.coverage > 0.5].value / temperature_df[temperature_df.coverage > 0.5].coverage
+            )
 
-        df = as_freq(df['temperature'], 'D', series_type = 'instantaneous').to_frame(name='temperature')
+            temperature_df = temperature_df[temperature_df.coverage > 0.5].reindex(temperature_df.index)[["value"]].rename(columns={'value' : 'temperature'})
+            
+            if 'coverage' in temperature_df.columns:
+                temperature_df = temperature_df.drop(columns=['coverage'])
+        else :
+            temperature_df = temp_series.to_frame(name='temperature')
+
+        # This will ensure that the missing days are kept in the dataframe
+        # Create an index with all the days from the start and end date of 'meter_value_df'
+        all_days_index = pd.date_range(start=df.index.min(), end=df.index.max(), freq='D')
+        all_days_df = pd.DataFrame(index=all_days_index)
+        temperature_df = temperature_df.merge(all_days_df, left_index=True, right_index=True, how='outer')
+
+        temperature_df['temperature_null'] = temperature_df.temperature.isnull().astype(int)
+        temperature_df['temperature_not_null'] = temperature_df.temperature.notnull().astype(int)
+
+        temperature_df, self.disqualification, warnings = caltrack_sufficiency_criteria_baseline(data = temperature_df, is_reporting_data = True)
+
+        self.warnings += warnings
 
         # TODO : interpolate if necessary
 
-        return df
+        return temperature_df
 
     def _interpolate_data(self, data):
         # TODO : Is this even required? Or just throw a warning if we don't have the reporting data?
@@ -294,10 +355,10 @@ class DailyReportingData(AbstractDataProcessor):
         # Copy the input dataframe so that the original is not modified
         df = data.copy()
 
-        # df = self._check_data_sufficiency(df)
+        df = self._check_data_sufficiency(df)
 
         if self.disqualification or self.warnings:
             for warning in self.disqualification + self.warnings:
                 print(warning.json())
 
-        self._reporting_meter_df = df
+        self._df = df
