@@ -23,7 +23,7 @@ class Clustering(Comparison_Group_Algorithm):
 
     def get_clusters(self, comparison_pool_data):
         self.comparison_pool_data = comparison_pool_data
-        self.comparison_pool_loadshape = comparison_pool_data.get_loadshape()
+        self.comparison_pool_loadshape = comparison_pool_data.loadshape
         
         self.Cluster = (
             _cluster.ClusterResult.from_comparison_pool_loadshapes_and_settings(
@@ -42,8 +42,8 @@ class Clustering(Comparison_Group_Algorithm):
             )
         
         self.treatment_data = treatment_data
-        self.treatment_ids = treatment_data.get_ids()
-        self.treatment_loadshape = treatment_data.get_loadshape()
+        self.treatment_ids = treatment_data.ids
+        self.treatment_loadshape = treatment_data.loadshape
 
         self.treatment_weights = self.Cluster.get_match_treatment_to_cluster_df(
             treatment_loadshape_df=self.treatment_loadshape,

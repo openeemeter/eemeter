@@ -80,11 +80,11 @@ class Stratified_Sampling(Comparison_Group_Algorithm):
         self.treatment_data = treatment_data
         self.comparison_pool_data = comparison_pool_data
 
-        t_ids = treatment_data.get_ids()
-        t_features = treatment_data.get_features()
+        t_ids = treatment_data.ids
+        t_features = treatment_data.features
         t_features = t_features.reset_index().rename(columns={"id": "meter_id"})
 
-        cp_features = comparison_pool_data.get_features()
+        cp_features = comparison_pool_data.features
         cp_features = cp_features.reset_index().rename(columns={"id": "meter_id"})
 
         if settings.EQUIVALENCE_METHOD is None:
@@ -99,8 +99,8 @@ class Stratified_Sampling(Comparison_Group_Algorithm):
             )
         else:
             self.treatment_ids = t_ids
-            self.treatment_loadshape = treatment_data.get_loadshape()
-            self.comparison_pool_loadshape = comparison_pool_data.get_loadshape()
+            self.treatment_loadshape = treatment_data.loadshape
+            self.comparison_pool_loadshape = comparison_pool_data.loadshape
             t_loadshape = self.treatment_loadshape
             cp_loadshape = self.comparison_pool_loadshape
 

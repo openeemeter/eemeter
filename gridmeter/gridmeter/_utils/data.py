@@ -1,4 +1,6 @@
-from gridmeter._utils.data_processing_settings import Data_Settings
+from copy import deepcopy
+
+from gridmeter._utils.data_settings import Data_Settings
 from gridmeter._utils import const as _const
 import pandas as pd
 import numpy as np
@@ -56,12 +58,12 @@ class Data:
         for data_instance in other:
             # TODO : What happens if the same id exists in multiple dataframes? Average them out?
             if isinstance(data_instance, Data):
-                if self._settings.TIME_PERIOD != data_instance.get_settings().TIME_PERIOD:
+                if self._settings.TIME_PERIOD != data_instance.settings.TIME_PERIOD:
                     raise ValueError("Time period setting must be the same for all Data instances.")
-                if self._features is not None and data_instance.get_features() is not None:
-                    self._features = pd.concat([self._features, data_instance.get_features()])
-                if self._loadshape is not None and data_instance.get_loadshape() is not None:
-                    self._loadshape = pd.concat([self._loadshape, data_instance.get_loadshape()])
+                if self._features is not None and data_instance.features is not None:
+                    self._features = pd.concat([self._features, data_instance.features])
+                if self._loadshape is not None and data_instance.loadshape is not None:
+                    self._loadshape = pd.concat([self._loadshape, data_instance.loadshape])
             else:
                 raise TypeError("All elements in other must be instances of Data")
             
@@ -517,30 +519,35 @@ class Data:
 
         return self
 
-    def get_settings(self):
+    @property
+    def settings(self):
         return self._settings.model_copy()
     
-    def get_loadshape(self):
+    @property
+    def loadshape(self):
         if self._loadshape is None:
             return None
         else :
             return self._loadshape.copy()
-
-    def get_features(self):
+    
+    @property
+    def features(self):
         if self._features is None:
             return None
         else :
             return self._features.copy()
 
-    def get_ids(self):
+    @property
+    def ids(self):
         if isinstance(self._loadshape, pd.DataFrame):
-            return self._loadshape.index.unique().to_list()
+            return deepcopy(self._loadshape.index.unique().to_list())
         elif isinstance(self._features, pd.DataFrame):
-            return self._features.index.unique().to_list()
+            return deepcopy(self._features.index.unique().to_list())
         else:
             return None
 
-    def get_excluded_ids(self):
+    @property
+    def excluded_ids(self):
         if self._excluded_ids is None:
             return None
         else :

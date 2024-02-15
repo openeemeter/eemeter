@@ -64,7 +64,7 @@ class Comparison_Group_Algorithm:
     
     def get_loadshapes(self, id=None):
         if id is None:
-            id = self.treatment_data.get_ids()
+            id = self.treatment_data.ids
         if not isinstance(id, (list, np.ndarray, pd.Series)):
             id = [id]
 

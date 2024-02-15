@@ -5,14 +5,10 @@ import pandas as pd
 
 from gridmeter._utils.base_comparison_group import Comparison_Group_Algorithm
 
-from gridmeter._individual_meter_matching.settings import Settings
-from gridmeter._individual_meter_matching.distance_calc_selection import (
-    DistanceMatching,
-)
+from gridmeter._random_sampling.settings import Settings
 
 
-# TODO: Should treatment, distance, and duplicated be somewhere else?
-class Individual_Meter_Matching(Comparison_Group_Algorithm):
+class Random_Sampling(Comparison_Group_Algorithm):
     def __init__(self, settings: Settings | None = None):
         if settings is None:
             settings = Settings()
@@ -26,9 +22,7 @@ class Individual_Meter_Matching(Comparison_Group_Algorithm):
         clusters = clusters.reset_index().set_index("id")
 
         # reorder columns
-        clusters = clusters[
-            ["treatment", "distance", "duplicated", "cluster", "weight"]
-        ]
+        clusters = clusters[["cluster", "weight"]]
 
         return clusters
     
@@ -43,8 +37,18 @@ class Individual_Meter_Matching(Comparison_Group_Algorithm):
     
 
     def get_comparison_group(self, treatment_data, comparison_pool_data, weights=None):
-        distance_matching = DistanceMatching(self.settings)
+        settings = self.settings
 
+        if settings.N_METERS_TOTAL is not None:
+            n_meters = self.settings.N_METERS_TOTAL
+
+        elif settings.N_METERS_PER_TREATMENT is not None:
+            n_treatment_meters = len(treatment_data.ids)
+            n_meters = n_treatment_meters * settings.N_METERS_PER_TREATMENT
+
+        else:
+            raise ValueError("N_METERS_TOTAL or N_METERS_PER_TREATMENT must be defined")
+        
         self.treatment_data = treatment_data
         self.comparison_pool_data = comparison_pool_data
 
@@ -52,13 +56,10 @@ class Individual_Meter_Matching(Comparison_Group_Algorithm):
         self.treatment_loadshape = treatment_data.loadshape
         self.comparison_pool_loadshape = comparison_pool_data.loadshape
 
-        # Get clusters
-        df_raw = distance_matching.get_comparison_group(
-            self.treatment_loadshape, 
-            self.comparison_pool_loadshape, 
-            weights=weights
-        )
-        clusters = self._create_clusters_df(df_raw)
+        # randomly sample n_meters from comparison pool
+        df_cg = comparison_pool_data.loadshape.sample(n_meters, random_state=settings.SEED)
+
+        clusters = self._create_clusters_df(df_cg)
 
         # Create treatment_weights
         treatment_weights = self._create_treatment_weights_df(self.treatment_ids)

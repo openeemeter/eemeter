@@ -18,28 +18,5 @@
 
 """
 
-from gridmeter.__version__ import *
-
-from gridmeter._clustering import Clustering
-from gridmeter._clustering import Clustering_Settings
-
-from gridmeter._individual_meter_matching import IMM
-from gridmeter._individual_meter_matching import IMM_Settings
-
-from gridmeter._stratified_sampling import (
-    Stratified_Sampling,
-    SS_Settings,
-    stratified_sampling_settings, 
-    distance_stratified_sampling_settings
-)
-
-from gridmeter._random_sampling import (
-    Random_Sampling,
-    RS_Settings,
-)
-
-from gridmeter._utils import (
-    Data,
-    Data_Settings,
-    load_tutorial_data,
-)
+from gridmeter._random_sampling.create_comparison_groups import Random_Sampling
+from gridmeter._random_sampling.settings import Settings as RS_Settings
