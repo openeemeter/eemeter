@@ -23,6 +23,8 @@ __all__ = (
     "NoReportingDataError",
     "MissingModelParameterError",
     "UnrecognizedModelTypeError",
+    "DataSufficiencyError",
+    "PoorModelFitError",
 )
 
 
