@@ -48,9 +48,6 @@ def day_counts(index):
     return pd.Series(timedelta_days, index=index)
 
 def clean_caltrack_billing_data(data, source_interval, warnings):
-
-    data = as_freq(data, "M", include_coverage=True)
-
     # check for empty data
     if data["value"].dropna().empty:
         return data[:0]
@@ -66,11 +63,33 @@ def clean_caltrack_billing_data(data, source_interval, warnings):
                 (filter_ <= 35) & (filter_ >= 25)  # keep these, inclusive
             ].reindex(data.index)
 
+            if len(data[(filter_ > 35) | (filter_ < 25)]) > 0:
+                warnings.append(
+                    EEMeterWarning(
+                        qualified_name="eemeter.caltrack_sufficiency_criteria.offcycle_reads_in_billing_monthly_data",
+                        description=("Off-cycle reads found in billing monthly data having a duration of less than 25 days"),
+                        data = (
+                            data[(filter_ > 35) | (filter_ < 25)].index.to_list()
+                        )
+                    )
+                )
+
         # CalTRACK 2.2.3.4, 2.2.3.5
         if source_interval == "billing_bimonthly":
             data = data[
                 (filter_ <= 70) & (filter_ >= 25)  # keep these, inclusive
             ].reindex(data.index)
+
+            if len(data[(filter_ > 70) | (filter_ < 25)]) > 0:
+                warnings.append(
+                    EEMeterWarning(
+                        qualified_name="eemeter.caltrack_sufficiency_criteria.offcycle_reads_in_billing_monthly_data",
+                        description=("Off-cycle reads found in billing monthly data having a duration of less than 25 days"),
+                        data = (
+                            data[(filter_ > 70) | (filter_ < 25)].index.to_list()
+                        )
+                    )
+                )
 
         # CalTRACK 2.2.3.1
         """
@@ -272,7 +291,19 @@ def compute_minimum_granularity(index : pd.Series, default_granularity : Optiona
     # Inferred frequency returns None if frequency can't be autodetected
     index.freq = index.inferred_freq
     if index.freq is None:
-        return default_granularity
+        max_difference = day_counts(index).max()
+        min_difference = day_counts(index).min()
+        if max_difference == 1 and min_difference == 1:
+            min_granularity = 'daily'
+        elif max_difference < 1:
+            min_granularity = 'hourly'
+        elif max_difference >= 60:
+            min_granularity = 'billing_bimonthly'
+        elif max_difference >= 30:
+            min_granularity = 'billing_monthly'
+        else:
+            min_granularity = default_granularity
+        return min_granularity
     # The other cases still result in granularity being unknown so this causes the frequency to be resampled to daily
     if index.freq <= pd.Timedelta(hours=1):
         min_granularity = 'hourly'

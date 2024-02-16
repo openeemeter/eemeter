@@ -59,7 +59,7 @@ class DailyBaselineData(AbstractDataProcessor):
         # To account for the above issue, we create an index with all the days and then merge the meter_value_df with it
         # This will ensure that the missing days are kept in the dataframe
         # Create an index with all the days from the start and end date of 'meter_value_df'
-        all_days_index = pd.date_range(start=df.index.min(), end=df.index.max(), freq='D')
+        all_days_index = pd.date_range(start=df.index.min(), end=df.index.max(), freq='D', tz=df.index.tz)
         all_days_df = pd.DataFrame(index=all_days_index)
         meter_value_df = meter_value_df.merge(all_days_df, left_index=True, right_index=True, how='outer')
 
@@ -301,7 +301,7 @@ class DailyReportingData(AbstractDataProcessor):
 
         # This will ensure that the missing days are kept in the dataframe
         # Create an index with all the days from the start and end date of 'meter_value_df'
-        all_days_index = pd.date_range(start=df.index.min(), end=df.index.max(), freq='D')
+        all_days_index = pd.date_range(start=df.index.min(), end=df.index.max(), freq='D', tz=df.index.tz)
         all_days_df = pd.DataFrame(index=all_days_index)
         temperature_df = temperature_df.merge(all_days_df, left_index=True, right_index=True, how='outer')
 

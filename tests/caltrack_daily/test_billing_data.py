@@ -119,7 +119,7 @@ def test_billing_baseline_data_with_missing_datetime_index_and_column():
     with pytest.raises(ValueError):
         cls = BillingBaselineData(df, is_electricity_data=True)
 
-@pytest.mark.parametrize('get_datetime_index', [['H', True]], indirect=True)
+@pytest.mark.parametrize('get_datetime_index', [['30T', True], ['H', True]], indirect=True)
 def test_billing_baseline_data_with_same_hourly_frequencies(get_datetime_index):
     datetime_index = get_datetime_index
 
@@ -134,24 +134,7 @@ def test_billing_baseline_data_with_same_hourly_frequencies(get_datetime_index):
 
     assert cls.df is not None
     assert len(cls.warnings) == 0
-    assert len(cls.disqualification) == 0
-
-@pytest.mark.parametrize('get_datetime_index', [['30T', True]], indirect=True)
-def test_billing_baseline_data_with_same_half_hourly_frequencies(get_datetime_index):
-    datetime_index = get_datetime_index
-
-    # Create a 'temperature_mean' and meter_value columns with random data
-    temperature_mean = np.random.rand(len(datetime_index))
-    meter_value = np.random.rand(len(datetime_index))
-
-    # Create the DataFrame
-    df = pd.DataFrame(data={'observed' : meter_value, 'temperature': temperature_mean}, index=datetime_index)
-
-    cls = BillingBaselineData(df, is_electricity_data=True)
-
-    assert cls.df is not None
-    assert len(cls.warnings) == 0
-    assert len(cls.disqualification) == 0
+    assert len(cls.disqualification) == 1
 
 @pytest.mark.parametrize('get_datetime_index', [['30T', True],['H', True], ['D', True]], indirect=True)
 def test_billing_reporting_data_with_missing_half_hourly_hourly_daily_frequencies(get_datetime_index):
