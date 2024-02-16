@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from typing import Optional, Union
+import warnings
 
 
 class DailyBaselineData(AbstractDataProcessor):
@@ -23,6 +24,9 @@ class DailyBaselineData(AbstractDataProcessor):
         self.is_electricity_data = is_electricity_data
 
         self.set_data(data = data, is_electricity_data = is_electricity_data)
+        for warning in self.warnings + self.disqualification:
+            warning.warn()
+
 
     @property
     def df(self):
@@ -125,8 +129,6 @@ class DailyBaselineData(AbstractDataProcessor):
             https://docs.caltrack.org/en/latest/methods.html#section-2-data-management
             Check under section 2.2 : Data constraints
         """
-        self.warnings = []
-        
         """
             2.2.2.1. If summing to daily usage from higher frequency interval data, no more than 50% of high-frequency values should be missing. 
             Missing values should be filled in with average of non-missing values (e.g., for hourly data, 24 * average hourly usage).
@@ -164,30 +166,30 @@ class DailyBaselineData(AbstractDataProcessor):
             Dataframe appended with the correct season and day of week.
         """
 
-        expected_columns = ["observed", "temperature"]
-        if not set(expected_columns).issubset(set(data.columns)):
-            # show the columns that are missing
-
-            raise ValueError("Data is missing required columns: {}".format(
-                set(expected_columns) - set(data.columns)))
-
-        # Check that the datetime index is timezone aware timestamp
-        if not isinstance(data.index, pd.DatetimeIndex) and 'datetime' not in data.columns:
-            raise ValueError("Index is not datetime and datetime not provided")
-
-        elif 'datetime' in data.columns:
-            if data['datetime'].dt.tz is None:
-                raise ValueError("Datatime is missing timezone information")
-            data['datetime'] = pd.to_datetime(data['datetime'])
-            data.set_index('datetime', inplace=True)
-
-        elif data.index.tz is None:
-            raise ValueError("Datatime is missing timezone information")
-
-
         # Copy the input dataframe so that the original is not modified
         df = data.copy()
 
+        expected_columns = ["observed", "temperature"]
+        if not set(expected_columns).issubset(set(df.columns)):
+            # show the columns that are missing
+
+            raise ValueError("Data is missing required columns: {}".format(
+                set(expected_columns) - set(df.columns)))
+
+        # Check that the datetime index is timezone aware timestamp
+        if not isinstance(df.index, pd.DatetimeIndex) and 'datetime' not in df.columns:
+            raise ValueError("Index is not datetime and datetime not provided")
+
+        elif 'datetime' in df.columns:
+            if df['datetime'].dt.tz is None:
+                raise ValueError("Datatime is missing timezone information")
+            df['datetime'] = pd.to_datetime(df['datetime'])
+            df.set_index('datetime', inplace=True)
+
+        elif df.index.tz is None:
+            raise ValueError("Datatime is missing timezone information")
+        elif str(df.index.tz) == 'UTC':
+            warnings.warn('Datetime index is in UTC. Use tz_localize() with the local timezone to ensure correct aggregations')
         # Convert electricity data having 0 meter values to NaNs
         if is_electricity_data:
             df.loc[df['observed'] == 0, 'observed'] = np.nan
@@ -195,11 +197,6 @@ class DailyBaselineData(AbstractDataProcessor):
 
         # Data Sufficiency Check
         df = self._check_data_sufficiency(df)
-
-        # TODO : how to handle the warnings? Should we throw an exception or just print the warnings?
-        if self.disqualification or self.warnings:
-            for warning in self.disqualification + self.warnings:
-                print(warning.json())
 
         self._df = df
 
@@ -357,9 +354,5 @@ class DailyReportingData(AbstractDataProcessor):
         df = data.copy()
 
         df = self._check_data_sufficiency(df)
-
-        if self.disqualification or self.warnings:
-            for warning in self.disqualification + self.warnings:
-                print(warning.json())
 
         self._df = df
