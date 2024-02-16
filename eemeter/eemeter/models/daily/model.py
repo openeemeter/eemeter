@@ -128,8 +128,7 @@ class DailyModel:
         self.disqualification = baseline_data.disqualification
         for warning in baseline_data.warnings + baseline_data.disqualification:
             print(warning.json())
-        meter_data = baseline_data._baseline_meter_df.copy() #TODO make df public attr
-        return self._fit(meter_data)
+        return self._fit(baseline_data.df)
 
     def _fit(self, meter_data):
         # Initialize dataframe
@@ -168,12 +167,7 @@ class DailyModel:
         if not isinstance(reporting_data, (DailyBaselineData, DailyReportingData)):
             raise TypeError("reporting_data must be a DailyBaselineData or DailyReportingData object")
 
-        #TODO do we really need different attribute names for baseline/reporting?
-        if isinstance(reporting_data, DailyBaselineData):
-            df_eval = reporting_data._baseline_meter_df
-        if isinstance(reporting_data, DailyReportingData):
-            df_eval = reporting_data._reporting_meter_df 
-        return self._predict(df_eval)
+        return self._predict(reporting_data.df)
 
     def _predict(self, df_eval):
         """

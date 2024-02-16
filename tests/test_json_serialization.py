@@ -18,7 +18,7 @@
 
 """
 import eemeter
-from eemeter.eemeter.models.daily.model import DailyModel
+from eemeter import DailyBaselineData, DailyReportingData, DailyModel
 import json
 
 
@@ -30,46 +30,32 @@ def test_json_daily():
     blackout_start_date = sample_metadata["blackout_start_date"]
     blackout_end_date = sample_metadata["blackout_end_date"]
 
-    # get meter data suitable for fitting a baseline model
+    # fit baseline model
     baseline_meter_data, warnings = eemeter.get_baseline_data(
         meter_data, end=blackout_start_date, max_days=365
     )
+    baseline_data = DailyBaselineData.from_series(baseline_meter_data, temperature_data, is_electricity_data=True)
+    baseline_model = DailyModel().fit(baseline_data, ignore_disqualification=True)
 
-    # create a design matrix (the input to the model fitting step)
-    baseline_design_matrix = eemeter.create_caltrack_daily_design_matrix(
-        baseline_meter_data, temperature_data
-    )
-
-    # build a CalTRACK model
-    baseline_model = DailyModel().fit(baseline_design_matrix)
-
-    # get a year of reporting period data
+    # predict on reporting year and calculate savings
     reporting_meter_data, warnings = eemeter.get_reporting_data(
         meter_data, start=blackout_end_date, max_days=365
     )
+    #TODO change to Reporting once class is fixed
+    reporting_data = DailyBaselineData.from_series(reporting_meter_data, temperature_data, is_electricity_data=True)
+    metered_savings_dataframe = baseline_model.predict(reporting_data)
+    total_metered_savings = (metered_savings_dataframe['observed'] - metered_savings_dataframe['model']).sum()
 
-    # compute metered savings
-    metered_savings_dataframe, error_bounds = eemeter.metered_savings(
-        baseline_model, reporting_meter_data, temperature_data, with_disaggregated=True
-    )
-
-    # total metered savings
-    total_metered_savings = metered_savings_dataframe.metered_savings.sum()
-
-    # test JSON
+    # serialize, deserialize model
     json_str = baseline_model.to_json()
-
-    m = DailyModel.from_json(json_str)
+    loaded_model = DailyModel.from_json(json_str)
 
     # compute metered savings from the loaded model
-    metered_savings_dataframe, error_bounds = eemeter.metered_savings(
-        m, reporting_meter_data, temperature_data, with_disaggregated=True
-    )
+    prediction_json = loaded_model.predict(reporting_data)
+    total_metered_savings_loaded = (prediction_json['observed'] - prediction_json['model']).sum()
 
-    # total metered savings
-    total_metered_savings_2 = metered_savings_dataframe.metered_savings.sum()
-
-    assert total_metered_savings == total_metered_savings_2
+    # compare results
+    assert total_metered_savings == total_metered_savings_loaded
 
 
 def test_json_hourly():

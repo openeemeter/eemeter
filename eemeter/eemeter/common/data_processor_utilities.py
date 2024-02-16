@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import pytz
 
+from typing import Optional
+
 
 def remove_duplicates(df_or_series):
     """Remove duplicate rows or values by keeping the first of each duplicate.
@@ -266,7 +268,7 @@ def clean_caltrack_billing_daily_data(data, source_interval, warnings):
         return downsample_and_clean_caltrack_daily_data(data, warnings)
 
 # TODO : requires more testing
-def compute_minimum_granularity(index : pd.Series, default_granularity : str | None):
+def compute_minimum_granularity(index : pd.Series, default_granularity : Optional[str]):
     # Inferred frequency returns None if frequency can't be autodetected
     index.freq = index.inferred_freq
     if index.freq is None:
