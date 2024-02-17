@@ -20,6 +20,7 @@
 import numpy as np
 import pandas as pd
 from eemeter.eemeter.models.daily.model import DailyModel
+from eemeter.eemeter.models.daily.data import DailyBaselineData
 from eemeter.eemeter.models.daily.optimize_results import OptimizedResult
 
 
@@ -27,11 +28,14 @@ class TestFitModel:
     @classmethod
     def setup_class(cls):
         # Create a sample meter data DataFrame from the test data
-        cls.meter_data = pd.read_csv("tests/caltrack_daily/test_data.csv")
+        df = pd.read_csv("tests/caltrack_daily/test_data.csv")
+        df.index = pd.to_datetime(df['datetime'])
+        df = df[['temperature', 'observed']]
+        cls.meter_data = DailyBaselineData(df, is_electricity_data=True)
 
     def test_fit_model(self):
         # Create a DailyModel instance
-        fm = DailyModel().fit(self.meter_data)
+        fm = DailyModel().fit(self.meter_data, ignore_disqualification=True)
 
         # Test that the combinations attribute is a list
         assert isinstance(fm.combinations, list)
