@@ -23,7 +23,7 @@ class DailyBaselineData(AbstractDataProcessor):
         self.disqualification = []
         self.is_electricity_data = is_electricity_data
 
-        self.set_data(data = data, is_electricity_data = is_electricity_data)
+        self.set_data(data = data)
         for warning in self.warnings + self.disqualification:
             warning.warn()
 
@@ -151,7 +151,7 @@ class DailyBaselineData(AbstractDataProcessor):
         return df
 
 
-    def set_data(self, data : pd.DataFrame, is_electricity_data : bool):
+    def set_data(self, data : pd.DataFrame):
         """Process data input for the Daily Model Baseline Class
         Datetime has to be either index or a separate column in the dataframe.
 
@@ -191,7 +191,7 @@ class DailyBaselineData(AbstractDataProcessor):
         elif str(df.index.tz) == 'UTC':
             warnings.warn('Datetime index is in UTC. Use tz_localize() with the local timezone to ensure correct aggregations')
         # Convert electricity data having 0 meter values to NaNs
-        if is_electricity_data:
+        if self.is_electricity_data:
             df.loc[df['observed'] == 0, 'observed'] = np.nan
 
 
@@ -215,7 +215,7 @@ class DailyReportingData(AbstractDataProcessor):
         self.is_electricity_data = is_electricity_data
 
         # TODO : do we need to set electric data for reporting?
-        self.set_data(data = data, is_electricity_data = is_electricity_data)
+        self.set_data(data = data)
 
     @property
     def df(self):
@@ -310,6 +310,9 @@ class DailyReportingData(AbstractDataProcessor):
 
         self.warnings += warnings
 
+        # drop data quality columns
+        temperature_df = temperature_df.drop(columns=['temperature_null', 'temperature_not_null'])
+
         # TODO : interpolate if necessary
 
         return temperature_df
@@ -319,7 +322,7 @@ class DailyReportingData(AbstractDataProcessor):
         pass
 
 
-    def set_data(self, data : pd.DataFrame, is_electricity_data : bool):
+    def set_data(self, data : pd.DataFrame):
         """Process reporting data. This will be very similar to the Baseline version of this method.
 
         Parameters

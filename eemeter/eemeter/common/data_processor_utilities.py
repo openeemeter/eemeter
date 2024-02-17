@@ -1,6 +1,7 @@
 from eemeter.eemeter.warnings import EEMeterWarning
 import numpy as np
 import pandas as pd
+from pandas.tseries.offsets import MonthEnd
 import pytz
 
 from typing import Optional
@@ -305,7 +306,12 @@ def compute_minimum_granularity(index : pd.Series, default_granularity : Optiona
             min_granularity = default_granularity
         return min_granularity
     # The other cases still result in granularity being unknown so this causes the frequency to be resampled to daily
-    if index.freq <= pd.Timedelta(hours=1):
+    if isinstance(index.freq, MonthEnd):
+        if index.freq.n == 1:
+            min_granularity = 'billing_monthly'
+        else:
+            min_granularity = 'billing_bimonthly'
+    elif index.freq <= pd.Timedelta(hours=1):
         min_granularity = 'hourly'
     elif index.freq <= pd.Timedelta(days=1):
         min_granularity = 'daily'

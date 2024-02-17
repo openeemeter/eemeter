@@ -6,8 +6,10 @@ from eemeter.eemeter.warnings import EEMeterWarning
 
 import numpy as np
 import pandas as pd
+from pandas.tseries.offsets import MonthEnd
 
 from typing import Optional
+import warnings
 
 
 class BillingBaselineData(AbstractDataProcessor):
@@ -26,7 +28,9 @@ class BillingBaselineData(AbstractDataProcessor):
         self.disqualification = []
         self.is_electricity_data = is_electricity_data
 
-        self.set_data(data = data, is_electricity_data = is_electricity_data)
+        self.set_data(data = data)
+        for warning in self.warnings + self.disqualification:
+            warning.warn()
 
     @property
     def df(self):
@@ -44,7 +48,7 @@ class BillingBaselineData(AbstractDataProcessor):
             Missing values should be filled in with average of non-missing values (e.g., for hourly data, 24 * average hourly usage).
         """
         meter_series = df['observed'].dropna()
-        min_granularity = compute_minimum_granularity(df.index, default_granularity='billing_bimonthly')
+        min_granularity = compute_minimum_granularity(meter_series.index, default_granularity='billing_bimonthly')
 
         # Ensure higher frequency data is aggregated to the monthly model
         if not min_granularity.startswith('billing'):
@@ -77,7 +81,7 @@ class BillingBaselineData(AbstractDataProcessor):
         temp_series = df['temperature']
         temp_series.index.freq = temp_series.index.inferred_freq
         if temp_series.index.freq != 'H':
-            if temp_series.index.freq is None or temp_series.index.freq > pd.Timedelta(hours=1):
+            if temp_series.index.freq is None or isinstance(temp_series.index.freq, MonthEnd) or temp_series.index.freq > pd.Timedelta(hours=1):
                 # Add warning for frequencies longer than 1 hour
                 self.warnings.append(
                     EEMeterWarning(
@@ -148,7 +152,7 @@ class BillingBaselineData(AbstractDataProcessor):
 
         return df
 
-    def set_data(self, data : pd.DataFrame, is_electricity_data : bool):
+    def set_data(self, data : pd.DataFrame):
         """Process data for the monthly / billing case
 
         Parameters
@@ -168,6 +172,8 @@ class BillingBaselineData(AbstractDataProcessor):
             raise ValueError("Data is missing required columns: {}".format(
                 set(expected_columns) - set(data.columns)))
 
+        # Copy the input dataframe so that the original is not modified
+        df = data.copy()
 
         # Check that the datetime index is timezone aware timestamp
         if not isinstance(data.index, pd.DatetimeIndex) and 'datetime' not in data.columns:
@@ -181,23 +187,15 @@ class BillingBaselineData(AbstractDataProcessor):
 
         elif data.index.tz is None:
             raise ValueError("Datatime is missing timezone information")
+        elif str(df.index.tz) == 'UTC':
+            warnings.warn('Datetime index is in UTC. Use tz_localize() with the local timezone to ensure correct aggregations')
 
-
-        # Copy the input dataframe so that the original is not modified
-        df = data.copy()
-
-        if is_electricity_data:
+        if self.is_electricity_data:
             df.loc[df['observed'] == 0, 'observed'] = np.nan
 
         # Data Sufficiency Check
         df = self._check_data_sufficiency(df)
-        # TODO : how to handle the warnings? Should we throw an exception or just print the warnings?
-        if self.disqualification or self.warnings:
-            for warning in self.disqualification + self.warnings:
-                print(warning.json())
 
-
-        # TODO : Do we need to downsample the daily data for monthly models?
         self._df = df
 
 
@@ -209,7 +207,7 @@ class BillingReportingData(AbstractDataProcessor):
         self.is_electricity_data = is_electricity_data
 
         # TODO : do we need to set electric data for reporting?
-        self.set_data(data = data, is_electricity_data = is_electricity_data)
+        self.set_data(data = data)
 
     @property
     def df(self):
@@ -221,17 +219,64 @@ class BillingReportingData(AbstractDataProcessor):
 
     def _check_data_sufficiency(self, df : pd.DataFrame):
 
-        df['temperature_null'] = df.temperature.isnull().astype(int)
-        df['temperature_not_null'] = df.temperature.notnull().astype(int)
+        temp_series = df['temperature']
+        temp_series.index.freq = temp_series.index.inferred_freq
+        if temp_series.index.freq is None or isinstance(temp_series.index.freq, MonthEnd) or temp_series.index.freq > pd.Timedelta(hours=1):
+                # Add warning for frequencies longer than 1 hour
+                self.warnings.append(
+                    EEMeterWarning(
+                        qualified_name="eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency",
+                        description=("Cannot confirm that pre-aggregated temperature data had sufficient hours kept"),
+                        data={},
+                    )
+                )
+        if temp_series.index.freq != 'D':
+            temperature_df = as_freq(temp_series, 'D', series_type = 'instantaneous', include_coverage=True)
+            # If high frequency data check for 50% data coverage in rollup
+            if len(temperature_df[temperature_df.coverage <= 0.5]) > 0:
+                self.warnings.append(
+                    EEMeterWarning(
+                        qualified_name="eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data",
+                        description=("More than 50% of the high frequency Temperature data is missing."),
+                        data = (
+                            temperature_df[temperature_df.coverage <= 0.5].index.to_list()
+                        )
+                    )
+                )
 
-        df, self.disqualification, self.warnings = caltrack_sufficiency_criteria_baseline(data = df, is_reporting_data = True)
+            # Set missing high frequency data to NaN
+            temperature_df.value[temperature_df.coverage > 0.5] = (
+                temperature_df[temperature_df.coverage > 0.5].value / temperature_df[temperature_df.coverage > 0.5].coverage
+            )
 
-        #TODO should be 'D', 'cumulative'
-        df = as_freq(df['temperature'], 'M', series_type = 'instantaneous').to_frame(name='temperature')
+            temperature_df = temperature_df[temperature_df.coverage > 0.5].reindex(temperature_df.index)[["value"]].rename(columns={'value' : 'temperature'})
+            
+            if 'coverage' in temperature_df.columns:
+                temperature_df = temperature_df.drop(columns=['coverage'])
+        else :
+            temperature_df = temp_series.to_frame(name='temperature')
 
-        return df
+        # This will ensure that the missing days are kept in the dataframe
+        # Create an index with all the days from the start and end date of 'meter_value_df'
+        all_days_index = pd.date_range(start=df.index.min(), end=df.index.max(), freq='D', tz=df.index.tz)
+        all_days_df = pd.DataFrame(index=all_days_index)
+        temperature_df = temperature_df.merge(all_days_df, left_index=True, right_index=True, how='outer')
 
-    def set_data(self, data : pd.DataFrame, is_electricity_data : bool):
+        temperature_df['temperature_null'] = temperature_df.temperature.isnull().astype(int)
+        temperature_df['temperature_not_null'] = temperature_df.temperature.notnull().astype(int)
+
+        temperature_df, self.disqualification, warnings = caltrack_sufficiency_criteria_baseline(data = temperature_df, is_reporting_data = True)
+
+        self.warnings += warnings
+
+        # drop data quality columns
+        temperature_df = temperature_df.drop(columns=['temperature_null', 'temperature_not_null'])
+
+        # TODO : interpolate if necessary
+
+        return temperature_df
+
+    def set_data(self, data : pd.DataFrame):
         """Process data.
 
         Parameters
@@ -266,9 +311,5 @@ class BillingReportingData(AbstractDataProcessor):
         df = data.copy()
 
         df = self._check_data_sufficiency(df)
-
-        if self.disqualification or self.warnings:
-            for warning in self.disqualification + self.warnings:
-                print(warning.json())
 
         self._df = df
