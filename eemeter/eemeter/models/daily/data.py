@@ -234,12 +234,12 @@ class DailyReportingData(AbstractDataProcessor):
         if isinstance(meter_data, pd.Series):
             meter_data = meter_data.to_frame()
         temperature_data = temperature_data.rename(columns={temperature_data.columns[0]: 'temperature'})
-        if not meter_data.empty:
+        if meter_data and not meter_data.empty:
             meter_data = meter_data.rename(columns={meter_data.columns[0]: 'observed'})
             temperature_data.index = temperature_data.index.tz_convert(meter_data.index.tzinfo)
             df = pd.concat([meter_data, temperature_data], axis=1)
         else:
-            df = temperature_data.to_frame()
+            df = temperature_data
         return cls(df, is_electricity_data)
 
 

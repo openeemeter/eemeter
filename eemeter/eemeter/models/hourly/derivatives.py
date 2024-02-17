@@ -225,33 +225,7 @@ def metered_savings(
 
     model_type = None
     if isinstance(baseline_model, DailyModel):
-        #TODO handle billing/daily distinction with new dataclass
-        if billing_data:
-            dm = create_caltrack_billing_design_matrix(reporting_meter_data, temperature_data)
-        else:
-            dm = create_caltrack_daily_design_matrix(reporting_meter_data, temperature_data)
-        columns = ["meter_value", "model"]
-        rename_columns = {
-            "meter_value": "reporting_observed",
-            "model": "counterfactual_usage",
-        }
-        if with_disaggregated:
-            columns.extend([
-                "heating_load",
-                "cooling_load",
-            ])
-            rename_columns["heating_load"] = "counterfactual_heating_load"
-            rename_columns["cooling_load"] = "counterfactual_cooling_load"
-        prediction_df = baseline_model.predict(dm)[columns].rename(
-            columns=rename_columns
-        ).assign(metered_savings=lambda row: row.counterfactual_usage - row.reporting_observed)
-        if with_disaggregated:
-            prediction_df = prediction_df.assign(
-                counterfactual_base_load=lambda row: row.counterfactual_usage - row.counterfactual_heating_load - row.counterfactual_cooling_load,
-            )
-        prediction_df = prediction_df.dropna().reindex(prediction_df.index)  # carry NaNs
-        error_bands = None
-        return prediction_df, error_bands
+        raise NotImplementedError('Use predict() with daily and billing models to compute metered savings.')
 
     prediction_index = reporting_meter_data.index
     model_prediction = baseline_model.predict(
@@ -279,13 +253,6 @@ def metered_savings(
     # compute t-statistic associated with n degrees of freedom
     # and a two-tailed confidence level.
     error_bands = None
-    if model_type == "usage_per_day":  # has totals_metrics
-        error_bands = _compute_error_bands_metered_savings(
-            baseline_model.totals_metrics,
-            results,
-            baseline_model.interval,
-            confidence_level,
-        )
     return results, error_bands
 
 
@@ -473,14 +440,10 @@ def modeled_savings(
         predict_kwargs = {}
 
     model_type = None  # generic
-    if isinstance(baseline_model, DailyModel) and isinstance(reporting_model, DailyModel):
-        model_type = "usage_per_day"
+    if isinstance(baseline_model, DailyModel) or isinstance(reporting_model, DailyModel):
+        raise NotImplementedError('Use predict() with daily and billing models to compute modeled savings.')
     
     def _predicted_usage(model):
-        if model_type == "usage_per_day":
-            return model.predict(temperature_data[prediction_index]).rename(
-                columns={"model": "predicted_usage"}
-            ).assign(base_load=lambda row: row.predicted_usage - row.heating_load - row.cooling_load)
         model_prediction = model.predict(
             prediction_index, temperature_data, **predict_kwargs
         )
@@ -503,60 +466,7 @@ def modeled_savings(
         modeled_savings=modeled_savings_func
     )
 
-    if model_type == "usage_per_day" and with_disaggregated:
-        modeled_baseline_usage_disaggregated = predicted_baseline_usage[
-            ["base_load", "heating_load", "cooling_load"]
-        ].rename(
-            columns={
-                "base_load": "modeled_baseline_base_load",
-                "heating_load": "modeled_baseline_heating_load",
-                "cooling_load": "modeled_baseline_cooling_load",
-            }
-        )
-
-        modeled_reporting_usage_disaggregated = predicted_reporting_usage[
-            ["base_load", "heating_load", "cooling_load"]
-        ].rename(
-            columns={
-                "base_load": "modeled_reporting_base_load",
-                "heating_load": "modeled_reporting_heating_load",
-                "cooling_load": "modeled_reporting_cooling_load",
-            }
-        )
-
-        def modeled_base_load_savings_func(row):
-            return row.modeled_baseline_base_load - row.modeled_reporting_base_load
-
-        def modeled_heating_load_savings_func(row):
-            return (
-                row.modeled_baseline_heating_load - row.modeled_reporting_heating_load
-            )
-
-        def modeled_cooling_load_savings_func(row):
-            return (
-                row.modeled_baseline_cooling_load - row.modeled_reporting_cooling_load
-            )
-
-        results = (
-            results.join(modeled_baseline_usage_disaggregated)
-            .join(modeled_reporting_usage_disaggregated)
-            .assign(
-                modeled_base_load_savings=modeled_base_load_savings_func,
-                modeled_heating_load_savings=modeled_heating_load_savings_func,
-                modeled_cooling_load_savings=modeled_cooling_load_savings_func,
-            )
-        )
-
     results = results.dropna().reindex(results.index)  # carry NaNs
 
     error_bands = None
-    # if model_type == "usage_per_day":  # has totals_metrics
-    #     error_bands = _compute_error_bands_modeled_savings(
-    #         baseline_model.totals_metrics,
-    #         reporting_model.totals_metrics,
-    #         results,
-    #         baseline_model.interval,
-    #         reporting_model.interval,
-    #         confidence_level,
-    #     )
     return results, error_bands
