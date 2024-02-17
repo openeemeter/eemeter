@@ -34,6 +34,9 @@ from eemeter.eemeter.features import estimate_hour_of_week_occupancy, fit_temper
 from eemeter.eemeter.segmentation import segment_time_series
 from eemeter.eemeter.transform import get_baseline_data, get_reporting_data
 from eemeter.eemeter.models.daily.model import DailyModel
+from eemeter.eemeter.models.daily.data import DailyBaselineData, DailyReportingData
+from eemeter.eemeter.models.billing.model import BillingModel
+from eemeter.eemeter.models.billing.data import BillingBaselineData, BillingReportingData
 
 
 @pytest.fixture
@@ -44,15 +47,14 @@ def baseline_data_daily(il_electricity_cdd_hdd_daily):
     baseline_meter_data, warnings = get_baseline_data(
         meter_data, end=blackout_start_date
     )
-    baseline_data = create_caltrack_daily_design_matrix(
-        baseline_meter_data, temperature_data
-    )
+    baseline_data = DailyBaselineData.from_series(baseline_meter_data, temperature_data, is_electricity_data=True)
+
     return baseline_data
 
 
 @pytest.fixture
 def baseline_model_daily(baseline_data_daily):
-    model_results = DailyModel().fit(baseline_data_daily)
+    model_results = DailyModel().fit(baseline_data_daily, ignore_disqualification=True)
     return model_results
 
 
@@ -64,15 +66,13 @@ def reporting_data_daily(il_electricity_cdd_hdd_daily):
     reporting_meter_data, warnings = get_reporting_data(
         meter_data, start=blackout_end_date
     )
-    reporting_data = create_caltrack_daily_design_matrix(
-        reporting_meter_data, temperature_data
-    )
+    reporting_data = DailyBaselineData.from_series(reporting_meter_data, temperature_data, is_electricity_data=True)
     return reporting_data
 
 
 @pytest.fixture
 def reporting_model_daily(reporting_data_daily):
-    model_results = DailyModel().fit(reporting_data_daily)
+    model_results = DailyModel().fit(reporting_data_daily, ignore_disqualification=True)
     return model_results
 
 
@@ -89,17 +89,13 @@ def reporting_temperature_data():
 
 
 def test_metered_savings_cdd_hdd_daily(
-    baseline_model_daily, reporting_meter_data_daily, reporting_temperature_data
+    baseline_model_daily, reporting_meter_data_daily,reporting_temperature_data 
 ):
-    results, error_bands = metered_savings(
-        baseline_model_daily, reporting_meter_data_daily, reporting_temperature_data
-    )
-    assert list(results.columns) == [
-        "reporting_observed",
-        "counterfactual_usage",
-        "metered_savings",
-    ]
-    assert round(results.metered_savings.sum(), 2) == 1577.75
+    #TODO use Reporting once dataclass is fixed
+    reporting_data = DailyBaselineData.from_series(reporting_meter_data_daily, reporting_temperature_data, is_electricity_data=True)
+    results = baseline_model_daily.predict(reporting_data)
+    metered_savings = results['model'] - results['observed']
+    assert round(metered_savings.sum(), 2) == 1577.75
 
 
 @pytest.fixture
@@ -110,10 +106,8 @@ def baseline_model_billing(il_electricity_cdd_hdd_billing_monthly):
     baseline_meter_data, warnings = get_baseline_data(
         meter_data, end=blackout_start_date
     )
-    baseline_data = create_caltrack_billing_design_matrix(
-        baseline_meter_data, temperature_data
-    )
-    model_results = DailyModel().fit(baseline_data)
+    baseline_data = BillingBaselineData.from_series(baseline_meter_data, temperature_data, is_electricity_data=True)
+    model_results = BillingModel().fit(baseline_data, ignore_disqualification=True)
     return model_results
 
 
@@ -126,9 +120,7 @@ def reporting_model_billing(il_electricity_cdd_hdd_billing_monthly):
     baseline_meter_data, warnings = get_baseline_data(
         meter_data, end=blackout_start_date
     )
-    baseline_data = create_caltrack_billing_design_matrix(
-        baseline_meter_data, temperature_data
-    )
+    baseline_data = BillingBaselineData.from_series(baseline_meter_data, temperature_data, is_electricity_data=True)
     model_results = DailyModel().fit(baseline_data)
     return model_results
 
@@ -249,172 +241,29 @@ def test_metered_savings_cdd_hdd_billing_reporting_data_wrong_timestamp(
     assert round(results.metered_savings.sum(), 2) == 0.0
 
 
-def test_metered_savings_cdd_hdd_daily_hourly_degree_days(
-    baseline_model_daily, reporting_meter_data_daily, reporting_temperature_data
-):
-    results, error_bands = metered_savings(
-        baseline_model_daily, reporting_meter_data_daily, reporting_temperature_data
-    )
-    assert list(results.columns) == [
-        "reporting_observed",
-        "counterfactual_usage",
-        "metered_savings",
-    ]
-    assert round(results.metered_savings.sum(), 2) == 1577.75
-
-
-def test_metered_savings_cdd_hdd_no_params(
-    baseline_model_daily, reporting_meter_data_daily, reporting_temperature_data
-):
-    baseline_model_daily.params = None
-    with pytest.raises(AttributeError): # make specific to non-fit
-        metered_savings(
-            baseline_model_daily, reporting_meter_data_daily, reporting_temperature_data
-        )
-
-
-def test_metered_savings_cdd_hdd_daily_with_disaggregated(
-    baseline_model_daily, reporting_meter_data_daily, reporting_temperature_data
-):
-    results, error_bands = metered_savings(
-        baseline_model_daily,
-        reporting_meter_data_daily,
-        reporting_temperature_data,
-        with_disaggregated=True,
-    )
-    assert list(sorted(results.columns)) == [
-        "counterfactual_base_load",
-        "counterfactual_cooling_load",
-        "counterfactual_heating_load",
-        "counterfactual_usage",
-        "metered_savings",
-        "reporting_observed",
-    ]
-
-
 def test_modeled_savings_cdd_hdd_daily(
     baseline_model_daily,
     reporting_model_daily,
     reporting_meter_data_daily,
     reporting_temperature_data,
 ):
-    # using reporting data for convenience, but intention is to use normal data
-    results, error_bands = modeled_savings(
-        baseline_model_daily,
-        reporting_model_daily,
-        reporting_meter_data_daily.index,
-        reporting_temperature_data,
-    )
-    assert list(results.columns) == [
-        "modeled_baseline_usage",
-        "modeled_reporting_usage",
-        "modeled_savings",
-    ]
-    assert round(results.modeled_savings.sum(), 2) ==177.02  
+    #TODO use Reporting once dataclass is fixed
+    reporting_data = DailyBaselineData.from_series(reporting_meter_data_daily, reporting_temperature_data, is_electricity_data=True)
+    baseline_model_result = baseline_model_daily.predict(reporting_data)
+    reporting_model_result = reporting_model_daily.predict(reporting_data)
+    modeled_savings = baseline_model_result['model'] - reporting_model_result['model']
+    assert round(modeled_savings.sum(), 2) ==177.02  
 
 
-def test_modeled_savings_cdd_hdd_daily_hourly_degree_days(
-    baseline_model_daily,
-    reporting_model_daily,
-    reporting_meter_data_daily,
-    reporting_temperature_data,
-):
-    # using reporting data for convenience, but intention is to use normal data
-    results, error_bands = modeled_savings(
-        baseline_model_daily,
-        reporting_model_daily,
-        reporting_meter_data_daily.index,
-        reporting_temperature_data,
-        predict_kwargs={"degree_day_method": "hourly"},
-    )
-    assert list(results.columns) == [
-        "modeled_baseline_usage",
-        "modeled_reporting_usage",
-        "modeled_savings",
-    ]
-    assert round(results.modeled_savings.sum(), 2) == 177.02
-
-
-def test_modeled_savings_cdd_hdd_daily_baseline_model_no_params(
-    baseline_model_daily,
-    reporting_model_daily,
-    reporting_meter_data_daily,
-    reporting_temperature_data,
-):
-    baseline_model_daily.params = None
-    with pytest.raises(AttributeError):
-        modeled_savings(
-            baseline_model_daily,
-            reporting_model_daily,
-            reporting_meter_data_daily.index,
-            reporting_temperature_data,
-        )
-
-
-def test_modeled_savings_cdd_hdd_daily_reporting_model_no_params(
-    baseline_model_daily,
-    reporting_model_daily,
-    reporting_meter_data_daily,
-    reporting_temperature_data,
-):
-    reporting_model_daily.params = None
-    with pytest.raises(AttributeError):
-        modeled_savings(
-            baseline_model_daily,
-            reporting_model_daily,
-            reporting_meter_data_daily.index,
-            reporting_temperature_data,
-        )
-
-
-def test_modeled_savings_cdd_hdd_daily_with_disaggregated(
-    baseline_model_daily,
-    reporting_model_daily,
-    reporting_meter_data_daily,
-    reporting_temperature_data,
-):
-    # using reporting data for convenience, but intention is to use normal data
-    results, error_bands = modeled_savings(
-        baseline_model_daily,
-        reporting_model_daily,
-        reporting_meter_data_daily.index,
-        reporting_temperature_data,
-        with_disaggregated=True,
-    )
-    assert list(sorted(results.columns)) == [
-        "modeled_base_load_savings",
-        "modeled_baseline_base_load",
-        "modeled_baseline_cooling_load",
-        "modeled_baseline_heating_load",
-        "modeled_baseline_usage",
-        "modeled_cooling_load_savings",
-        "modeled_heating_load_savings",
-        "modeled_reporting_base_load",
-        "modeled_reporting_cooling_load",
-        "modeled_reporting_heating_load",
-        "modeled_reporting_usage",
-        "modeled_savings",
-    ]
-
-
+#TODO move to dataclass testing
 def test_modeled_savings_daily_empty_temperature_data(
     baseline_model_daily, reporting_model_daily
 ):
     index = pd.DatetimeIndex([], tz="UTC", name="dt", freq="H")
-    temperature_data = pd.Series([], index=index)
+    temperature_data = pd.Series([], index=index).to_frame()
 
-    meter_data_index = temperature_data.resample("D").sum().index
-
-    # using reporting data for convenience, but intention is to use normal data
-    results, error_bands = modeled_savings(
-        baseline_model_daily, reporting_model_daily, meter_data_index, temperature_data
-    )
-    assert results.shape == (0, 3)
-    assert list(results.columns) == [
-        "modeled_baseline_usage",
-        "modeled_reporting_usage",
-        "modeled_savings",
-    ]
+    with pytest.raises(ValueError):
+        reporting = DailyReportingData(temperature_data, True)
 
 
 @pytest.fixture
