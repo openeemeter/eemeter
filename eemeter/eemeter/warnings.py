@@ -17,8 +17,7 @@
    limitations under the License.
 
 """
-import warnings
-
+import logging
 
 __all__ = ("EEMeterWarning",)
 
@@ -61,4 +60,4 @@ class EEMeterWarning(object):
         data = ""
         if self.data:
             data = f"\n{self.data}"
-        warnings.warn(f"{self.description}{data}")
+        logging.getLogger('eemeter').warning(f"{self.description}{data}")
