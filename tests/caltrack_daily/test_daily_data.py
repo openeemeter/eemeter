@@ -10,41 +10,28 @@ def get_datetime_index(request):
     # Request = [frequency , is_timezone_aware]
 
     # Create a DateTimeIndex at 30-minute intervals
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', freq=request.param[0])
-
-    # Localize the DateTimeIndex to a timezone
-    if request.param[1]:
-        datetime_index = datetime_index.tz_localize('UTC')
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', freq=request.param[0], tz = 'US/Eastern' if request.param[1] else None)
 
     return datetime_index
 
 @pytest.fixture
 def get_datetime_index_half_hourly_with_timezone():
     # Create a DateTimeIndex at 30-minute intervals
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', freq='30T')
-
-    # Localize the DateTimeIndex to a timezone
-    datetime_index = datetime_index.tz_localize('UTC')
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', freq='30T', tz = 'US/Eastern')
 
     return datetime_index
 
 @pytest.fixture
 def get_datetime_index_hourly_with_timezone():
     # Create a DateTimeIndex at 30-minute intervals
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', freq='H')
-
-    # Localize the DateTimeIndex to a timezone
-    datetime_index = datetime_index.tz_localize('UTC')
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', freq='H', tz = 'US/Eastern')
 
     return datetime_index
 
 @pytest.fixture
 def get_datetime_index_daily_with_timezone():
     # Create a DateTimeIndex at daily intervals
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', freq='D')
-
-    # Localize the DateTimeIndex to a timezone
-    datetime_index = datetime_index.tz_localize('UTC')
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', freq='D', tz = 'US/Eastern')
 
     return datetime_index
 
