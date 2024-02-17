@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 
 from typing import Optional, Union
-import warnings
 
 
 class DailyBaselineData(AbstractDataProcessor):
@@ -189,7 +188,11 @@ class DailyBaselineData(AbstractDataProcessor):
         elif df.index.tz is None:
             raise ValueError("Datatime is missing timezone information")
         elif str(df.index.tz) == 'UTC':
-            warnings.warn('Datetime index is in UTC. Use tz_localize() with the local timezone to ensure correct aggregations')
+            self.warnings.append(EEMeterWarning(
+                qualified_name="eemeter.data_quality.utc_index",
+                description=("Datetime index is in UTC. Use tz_localize() with the local timezone to ensure correct aggregations"),
+                data={},
+            ))
         # Convert electricity data having 0 meter values to NaNs
         if self.is_electricity_data:
             df.loc[df['observed'] == 0, 'observed'] = np.nan

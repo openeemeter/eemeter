@@ -234,8 +234,8 @@ def test_daily_baseline_data_with_specific_input():
 
     assert cls.df is not None
     assert len(cls.df) == 366
-    assert len(cls.warnings) == 1
-    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.extreme_values_detected'
+    assert len(cls.warnings) == 2
+    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.caltrack_sufficiency_criteria.extreme_values_detected']
     assert len(cls.disqualification) == 0
 
 def test_daily_baseline_data_with_missing_hourly_temperature_data(get_meter_data_daily, get_temperature_data_hourly):
