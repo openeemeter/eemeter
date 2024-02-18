@@ -25,18 +25,25 @@ from eemeter import DataSufficiencyError, DisqualifiedModelError
 
 
 @pytest.fixture
-def bad_daily_series():
+def daily_series():
     meter_data, temperature_data, sample_metadata = load_sample(
         "il-electricity-cdd-hdd-daily"
     )
     blackout_start_date = sample_metadata["blackout_start_date"]
     blackout_end_date = sample_metadata["blackout_end_date"]
 
+    meter_data.index = meter_data.index.tz_convert('US/Pacific')
+
     baseline_meter_data, warnings = get_baseline_data(
         meter_data, end=blackout_start_date, max_days=365
     )
-    baseline_meter_data[:50] += 3000
     return baseline_meter_data, temperature_data
+
+@pytest.fixture
+def bad_daily_series(daily_series):
+    meter, temp = daily_series
+    meter[:50] += 3000
+    return meter, temp
 
 @pytest.fixture
 def missing_daily_data(bad_daily_series) -> DailyBaselineData:
@@ -64,3 +71,35 @@ def test_model_cvrmse_error(bad_daily_data):
     with pytest.raises(DisqualifiedModelError):
         model.predict(bad_daily_data)
     model.predict(bad_daily_data, ignore_disqualification=True)
+
+def test_timezone_behavior(daily_series):
+    #TODO probably move some of this to dataclass tests
+    meter, temp = daily_series
+    # ensure that meter is using local tz
+    assert str(meter.index.tz) == 'US/Pacific'
+    assert str(temp.index.tz) == 'UTC'
+
+    baseline_data = DailyBaselineData.from_series(meter, temp, is_electricity_data=True)
+    
+    # require is_electricity_data flag when passing meter data
+    with pytest.raises(ValueError):
+        DailyReportingData.from_series(meter, temp)
+    
+    # fail when passing timezone both through index as well as param
+    with pytest.raises(ValueError):
+        DailyReportingData.from_series(meter, temp, tzinfo=meter.index.tz)
+
+    model = DailyModel().fit(baseline_data)
+
+    # fail when attempting to predict on data with different timezone from baseline
+    reporting_data_no_meter_utc = DailyReportingData.from_series(None, temp)
+    assert model.baseline_timezone != reporting_data_no_meter_utc.tz
+    with pytest.raises(ValueError):
+        model.predict(reporting_data_no_meter_utc)
+
+    reporting_data = DailyReportingData.from_series(meter, temp, is_electricity_data=True)
+    res1 = model.predict(reporting_data)
+    reporting_data_no_meter = DailyReportingData.from_series(None, temp, tzinfo=meter.index.tz)
+    res2 = model.predict(reporting_data_no_meter)
+    #TODO currently failing due to weirdness with compute_temperature_features n_days_kept logic
+    assert (res1['model'] - res2['model']).sum() == 0
