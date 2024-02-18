@@ -24,7 +24,7 @@ __all__ = (
     "MissingModelParameterError",
     "UnrecognizedModelTypeError",
     "DataSufficiencyError",
-    "PoorModelFitError",
+    "DisqualifiedModelError",
 )
 
 
@@ -64,7 +64,7 @@ class DataSufficiencyError(EEMeterError):
     pass
 
 
-class PoorModelFitError(EEMeterError):
-    """Error indicating attempt to predict with a poorly fit model."""
+class DisqualifiedModelError(EEMeterError):
+    """Error indicating attempt to predict with disqualified or poorly fit model."""
 
     pass

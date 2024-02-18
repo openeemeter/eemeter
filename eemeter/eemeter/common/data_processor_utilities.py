@@ -471,10 +471,8 @@ def caltrack_sufficiency_criteria_baseline(
         fraction_valid_temperature_days = 0
         fraction_valid_days = 0
 
-    if n_days_total != num_days:
-        #TODO do we want the hard check on a 365 day index? setting to non_critical for now
-        #TODO also, we don't want to check for reporting year, right?
-        non_critical_warnings.append(
+    if not is_reporting_data and n_days_total != num_days:
+        critical_warnings.append(
             EEMeterWarning(
                 qualified_name=(
                     "eemeter.caltrack_sufficiency_criteria"

@@ -6,7 +6,8 @@ from eemeter.eemeter.models.daily.utilities.config import caltrack_2_1_settings,
 from eemeter.eemeter.models.daily.utilities.ellipsoid_test import ellipsoid_split_filter
 from eemeter.eemeter.models.daily.utilities.selection_criteria import selection_criteria
 from eemeter.eemeter.models.daily.data import DailyBaselineData, DailyReportingData
-from eemeter.eemeter.exceptions import DataSufficiencyError
+from eemeter.eemeter.exceptions import DataSufficiencyError, DisqualifiedModelError
+from eemeter.eemeter.warnings import EEMeterWarning
 
 
 import numpy as np
@@ -17,6 +18,9 @@ import itertools
 import json
 from typing import Union
 
+
+#TODO move to settings class
+_CVRMSE_THRESHOLD = 1.0
 
 class DailyModel:
     def __init__(
@@ -126,9 +130,16 @@ class DailyModel:
         self.baseline_timezone = baseline_data.tz
         self.warnings = baseline_data.warnings
         self.disqualification = baseline_data.disqualification
-        for warning in baseline_data.warnings + baseline_data.disqualification:
-            print(warning.json())
-        return self._fit(baseline_data.df)
+        self._fit(baseline_data.df)
+        if self.error["CVRMSE"] > _CVRMSE_THRESHOLD:
+            cvrmse_warning = EEMeterWarning(
+                qualified_name="eemeter.model_fit_metrics.cvrmse",
+                description=(f"Fit model has CVRMSE > {_CVRMSE_THRESHOLD}"),
+                data={"CVRMSE": self.error["CVRMSE"]}
+            )
+            cvrmse_warning.warn()
+            self.disqualification.append(cvrmse_warning)
+        return self
 
     def _fit(self, meter_data):
         # Initialize dataframe
@@ -159,10 +170,13 @@ class DailyModel:
         self.is_fitted = True
         return self
 
-    def predict(self, reporting_data: Union[DailyBaselineData, DailyReportingData]):
+    def predict(self, reporting_data: Union[DailyBaselineData, DailyReportingData], ignore_disqualification=False):
         """Perform initial sufficiency and typechecks before passing to private predict"""
         if not self.is_fitted:
             raise RuntimeError("Model must be fit before predictions can be made.")
+
+        if self.disqualification and not ignore_disqualification:
+            raise DisqualifiedModelError("Attempting to predict using disqualified model without setting ignore_disqualification=True")
 
         if not isinstance(reporting_data, (DailyBaselineData, DailyReportingData)):
             raise TypeError("reporting_data must be a DailyBaselineData or DailyReportingData object")
