@@ -71,7 +71,8 @@ class _DailyData:
             raise ValueError("Billing data is not allowed in the daily model")
         meter_value_df = clean_caltrack_billing_daily_data(meter_series, min_granularity, self.warnings)
         if np.isnan(meter_value_df.iloc[-1]['value']):
-            #TODO test behavior here. we might be able to get away with a dropna(), but this is less aggressive
+            #TODO test behavior here. we might be able to get away with a dropna() if we alter the n_days check, but this is less aggressive
+            #TODO need to refactor the clean caltrack data method and remove the nan logic, this breaks when original df has nan in last row
             meter_value_df = meter_value_df[:-1]
 
         meter_value_df = meter_value_df.rename(columns={'value': 'observed'})
