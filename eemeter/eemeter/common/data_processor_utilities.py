@@ -346,9 +346,9 @@ def caltrack_sufficiency_criteria_baseline(
         )
         return data, warnings, []
 
-    data_start = data.index.min().tz_convert("UTC")
-    data_end = data.index.max().tz_convert("UTC")
-    n_days_data = (data_end - data_start).days
+    data_start = data.index.min()
+    data_end = data.index.max()
+    n_days_data = (data_end - data_start).days + 1  #TODO confirm. no longer using last row nan
 
     if requested_start is not None:
         # check for gap at beginning
@@ -365,6 +365,7 @@ def caltrack_sufficiency_criteria_baseline(
         n_days_end_gap = 0
 
     critical_warnings = []
+    non_critical_warnings = []
 
     if n_days_end_gap < 0:
         # CalTRACK 2.2.4
@@ -471,7 +472,8 @@ def caltrack_sufficiency_criteria_baseline(
         fraction_valid_days = 0
 
     if n_days_total != num_days:
-        critical_warnings.append(
+        #TODO do we want the hard check on a 365 day index? setting to non_critical for now
+        non_critical_warnings.append(
             EEMeterWarning(
                 qualified_name=(
                     "eemeter.caltrack_sufficiency_criteria"
@@ -556,7 +558,6 @@ def caltrack_sufficiency_criteria_baseline(
     
     # TODO : Check 90% of seasons & weekday/weekend available?
 
-    non_critical_warnings = []
     if not is_reporting_data and n_extreme_values > 0:
         # CalTRACK 2.3.6
         non_critical_warnings.append(

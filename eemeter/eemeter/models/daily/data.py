@@ -1,28 +1,35 @@
 import eemeter.common.const as _const
-from eemeter.common.abstract_data_processor import AbstractDataProcessor
 from eemeter.eemeter.common.data_processor_utilities import as_freq, caltrack_sufficiency_criteria_baseline, clean_caltrack_billing_daily_data, compute_minimum_granularity
 from eemeter import compute_temperature_features
 from eemeter.eemeter.warnings import EEMeterWarning
 
 import numpy as np
 import pandas as pd
+from datetime import datetime
 
 from typing import Optional, Union
 
 
-class DailyBaselineData(AbstractDataProcessor):
+class DailyBaselineData:
     """Data processor for daily data.
 
     2.2.1.4. Values of 0 are considered missing for electricity data, but not gas data.
 
     """
-    def __init__(self, data : pd.DataFrame, is_electricity_data : bool):
+    def __init__(self, df : pd.DataFrame, is_electricity_data : bool):
         self._df = None
         self.warnings = []
         self.disqualification = []
         self.is_electricity_data = is_electricity_data
+        self.tz = None
 
-        self.set_data(data = data)
+        #TODO re-examine dq/warning pattern. keep consistent between
+        # either implicitly setting as side effects, or returning and assigning outside
+        self._df, temp_coverage = self._set_data(df)
+        disqualification, warnings = self._check_data_sufficiency(self._df, temp_coverage)
+
+        self.disqualification += disqualification
+        self.warnings += warnings
         for warning in self.warnings + self.disqualification:
             warning.warn()
 
@@ -57,6 +64,10 @@ class DailyBaselineData(AbstractDataProcessor):
             # TODO : make this a warning instead of an exception
             raise ValueError("Billing data is not allowed in the daily model")
         meter_value_df = clean_caltrack_billing_daily_data(meter_series, min_granularity, self.warnings)
+        if np.isnan(meter_value_df.iloc[-1]['value']):
+            #TODO test behavior here. we might be able to get away with a dropna(), but this is less aggressive
+            meter_value_df = meter_value_df[:-1]
+
         meter_value_df = meter_value_df.rename(columns={'value': 'observed'})
         meter_value_df.index = meter_value_df.index.map(lambda dt: dt.replace(hour=0)) # in case of daily data where hour is not midnight
 
@@ -69,7 +80,7 @@ class DailyBaselineData(AbstractDataProcessor):
 
         return meter_value_df
 
-    def _compute_temperature_features(self, df : pd.DataFrame, meter_value_df : pd.DataFrame):
+    def _compute_temperature_features(self, df: pd.DataFrame, meter_index: pd.DatetimeIndex):
         temp_series = df['temperature']
         temp_series.index.freq = temp_series.index.inferred_freq
         if temp_series.index.freq != 'H':
@@ -82,7 +93,6 @@ class DailyBaselineData(AbstractDataProcessor):
                         data={},
                     )
                 )
-            # TODO consider disallowing this until a later patch
             if temp_series.index.freq != 'D':
                 # Downsample / Upsample the temperature data to daily
                 temperature_features = as_freq(temp_series, 'D', series_type = 'instantaneous', include_coverage = True)
@@ -115,15 +125,29 @@ class DailyBaselineData(AbstractDataProcessor):
             temperature_features['n_days_kept'] = 0  # unused
             temperature_features['n_days_dropped'] = 0  # unused
         else:
+            #TODO hacky method of avoiding the last index nan convention
+            buffer_idx = pd.to_datetime('2090-01-01 00:00:00+00:00') 
             temperature_features = compute_temperature_features(
-                meter_value_df.index,
+                meter_index.union([buffer_idx]),
                 temp_series,
                 data_quality=True,
             )
+            temperature_features = temperature_features[:-1]
+        temp = temperature_features['temperature_mean'].rename('temperature')
+        features = temperature_features.drop(columns=['temperature_mean'])
+        return temp, features
+    
+    def _merge_meter_temp(self, meter, temp):
+        df = meter.merge(temp, left_index=True, right_index=True, how='outer').tz_convert(meter.index.tz)
 
-        return temperature_features
+        # Add Season and Weekday_weekend 
+        df['season'] = df.index.month_name().map(_const.default_season_def)
+        df['weekday_weekend'] = df.index.day_name().map(_const.default_weekday_weekend_def)
 
-    def _check_data_sufficiency(self, df : pd.DataFrame):
+        return df
+        
+
+    def _check_data_sufficiency(self, df : pd.DataFrame, sufficiency, is_reporting_data=False):
         """
             https://docs.caltrack.org/en/latest/methods.html#section-2-data-management
             Check under section 2.2 : Data constraints
@@ -132,25 +156,12 @@ class DailyBaselineData(AbstractDataProcessor):
             2.2.2.1. If summing to daily usage from higher frequency interval data, no more than 50% of high-frequency values should be missing. 
             Missing values should be filled in with average of non-missing values (e.g., for hourly data, 24 * average hourly usage).
         """
-        meter_value_df = self._compute_meter_value_df(df)
-        temperature_features = self._compute_temperature_features(df, meter_value_df)
-        
-        criteria_df = meter_value_df.merge(temperature_features, left_index=True, right_index=True, how='outer')
-        criteria_df = criteria_df.rename({'temperature_mean': 'temperature'}, axis=1)
-        df, self.disqualification, warnings = caltrack_sufficiency_criteria_baseline(criteria_df)
-        self.warnings += warnings
-
-        # Add Season and Weekday_weekend 
-        df['season'] = df.index.month_name().map(_const.default_season_def)
-        df['weekday_weekend'] = df.index.day_name().map(_const.default_weekday_weekend_def)
-
-        # drop data quality columns
-        df = df.drop(columns=['temperature_null', 'temperature_not_null', 'n_days_kept', 'n_days_dropped'])
-
-        return df
+        sufficiency_df = df.merge(sufficiency, left_index=True, right_index=True, how='outer')
+        _, disqualification, warnings = caltrack_sufficiency_criteria_baseline(sufficiency_df, is_reporting_data=is_reporting_data)
+        return disqualification, warnings
 
 
-    def set_data(self, data : pd.DataFrame):
+    def _set_data(self, data : pd.DataFrame):
         """Process data input for the Daily Model Baseline Class
         Datetime has to be either index or a separate column in the dataframe.
 
@@ -168,7 +179,8 @@ class DailyBaselineData(AbstractDataProcessor):
         # Copy the input dataframe so that the original is not modified
         df = data.copy()
 
-        expected_columns = ["observed", "temperature"]
+        expected_columns = ["observed", "temperature"] #TODO will change when extending to report
+        #TODO maybe check datatypes
         if not set(expected_columns).issubset(set(df.columns)):
             # show the columns that are missing
 
@@ -197,14 +209,13 @@ class DailyBaselineData(AbstractDataProcessor):
         if self.is_electricity_data:
             df.loc[df['observed'] == 0, 'observed'] = np.nan
 
+        meter = self._compute_meter_value_df(df)
+        temp, temp_coverage = self._compute_temperature_features(df, meter.index)
+        final_df = self._merge_meter_temp(meter, temp)
+        return final_df, temp_coverage
 
-        # Data Sufficiency Check
-        df = self._check_data_sufficiency(df)
 
-        self._df = df
-
-
-class DailyReportingData(AbstractDataProcessor):
+class DailyReportingData:
     """
         Refer to Section 3.5 in https://docs.caltrack.org/en/latest/methods.html#section-2-data-management
 
@@ -218,7 +229,7 @@ class DailyReportingData(AbstractDataProcessor):
         self.is_electricity_data = is_electricity_data
 
         # TODO : do we need to set electric data for reporting?
-        self.set_data(data = data)
+        self._set_data(data = data)
 
     @property
     def df(self):
@@ -325,7 +336,7 @@ class DailyReportingData(AbstractDataProcessor):
         pass
 
 
-    def set_data(self, data : pd.DataFrame):
+    def _set_data(self, data : pd.DataFrame):
         """Process reporting data. This will be very similar to the Baseline version of this method.
 
         Parameters
