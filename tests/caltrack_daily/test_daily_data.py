@@ -10,35 +10,35 @@ def get_datetime_index(request):
     # Request = [frequency , is_timezone_aware]
 
     # Create a DateTimeIndex at 30-minute intervals
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', freq=request.param[0], tz = 'US/Eastern' if request.param[1] else None)
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', inclusive="left", freq=request.param[0], tz = 'US/Eastern' if request.param[1] else None)
 
     return datetime_index
 
 @pytest.fixture
 def get_datetime_index_half_hourly_with_timezone():
     # Create a DateTimeIndex at 30-minute intervals
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', freq='30T', tz = 'US/Eastern')
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', inclusive="left", freq='30T', tz = 'US/Eastern')
 
     return datetime_index
 
 @pytest.fixture
 def get_datetime_index_hourly_with_timezone():
     # Create a DateTimeIndex at 30-minute intervals
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', freq='H', tz = 'US/Eastern')
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', inclusive="left", freq='H', tz = 'US/Eastern')
 
     return datetime_index
 
 @pytest.fixture
 def get_datetime_index_daily_with_timezone():
     # Create a DateTimeIndex at daily intervals
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', freq='D', tz = 'US/Eastern')
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', inclusive="left", freq='D', tz = 'US/Eastern')
 
     return datetime_index
 
 @pytest.fixture
 def get_datetime_index_daily_without_timezone():
     # Create a DateTimeIndex at daily intervals
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', freq='D')
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', inclusive="left", freq='D')
 
     return datetime_index
 
@@ -128,7 +128,7 @@ def test_daily_baseline_data_with_datetime_column(get_datetime_index):
     cls = DailyBaselineData(df, is_electricity_data=True)
     
     assert cls.df is not None
-    assert len(cls.df) == 366
+    assert len(cls.df) == 365
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 0
@@ -147,7 +147,7 @@ def test_daily_baseline_data_with_same_daily_frequencies(get_datetime_index):
     cls = DailyBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 366
+    assert len(cls.df) == 365
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 0
@@ -166,10 +166,8 @@ def test_daily_baseline_data_with_same_hourly_frequencies(get_datetime_index):
     cls = DailyBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 366
-    assert len(cls.warnings) == 1
-    # TODO : this seems like a pre-existing bug in the 'as_freq' method, why is the last element set as null in the high frequency data?
-    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.missing_high_frequency_meter_data'
+    assert len(cls.df) == 365
+    assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
 @pytest.mark.parametrize('get_datetime_index', [['30T', True]], indirect=True)
@@ -186,7 +184,7 @@ def test_daily_baseline_data_with_same_half_hourly_frequencies(get_datetime_inde
     cls = DailyBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 366
+    assert len(cls.df) == 365
     assert len(cls.warnings) == 1
     # TODO : this seems like a pre-existing bug in the 'as_freq' method, why is the last element set as null in the high frequency data?
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.missing_high_frequency_meter_data'
@@ -205,7 +203,7 @@ def test_daily_baseline_data_with_daily_and_half_hourly_frequencies(get_temperat
     cls = DailyBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 366
+    assert len(cls.df) == 365
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
@@ -222,7 +220,7 @@ def test_daily_baseline_data_with_daily_and_hourly_frequencies(get_meter_data_da
     cls = DailyBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 366
+    assert len(cls.df) == 365
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
@@ -233,7 +231,7 @@ def test_daily_baseline_data_with_specific_input():
     cls = DailyBaselineData.from_series(meter, temperature, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 366
+    assert len(cls.df) == 365
     assert len(cls.warnings) == 2
     assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.caltrack_sufficiency_criteria.extreme_values_detected']
     assert len(cls.disqualification) == 0
@@ -256,7 +254,7 @@ def test_daily_baseline_data_with_missing_hourly_temperature_data(get_meter_data
     cls = DailyBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 366
+    assert len(cls.df) == 365
     assert len(cls.warnings) == 0
 
     # TODO : BUG : the 'compute_temperature_features' method in features.py does not add a warning for missing high frequency data. Should be fixed.
@@ -283,7 +281,7 @@ def test_daily_baseline_data_with_missing_half_hourly_temperature_data(get_meter
     cls = DailyBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 366
+    assert len(cls.df) == 365
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data'
     assert len(cls.disqualification) == 3
@@ -306,7 +304,7 @@ def test_daily_baseline_data_with_missing_daily_temperature_data(get_meter_data_
     cls = DailyBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 366
+    assert len(cls.df) == 365
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 3
@@ -328,7 +326,7 @@ def test_daily_baseline_data_with_missing_meter_data(get_meter_data_daily, get_t
     cls = DailyBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 366
+    assert len(cls.df) == 365
     assert len(cls.warnings) == 0
     # assert all(warning.qualified_name in expected_warnings for warning in cls.warnings)
     assert len(cls.disqualification) == 3
@@ -348,7 +346,7 @@ def test_daily_reporting_data_with_half_hourly_and_hourly_daily_frequencies(get_
     cls = DailyReportingData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 366
+    assert len(cls.df) == 365
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
@@ -373,7 +371,7 @@ def test_daily_reporting_data_with_missing_half_hourly_and_hourly_frequencies(ge
     cls = DailyReportingData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 366
+    assert len(cls.df) == 365
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data'
     expected_disqualifications = ['eemeter.caltrack_sufficiency_criteria.missing_monthly_temperature_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_temperature_data']
@@ -400,7 +398,7 @@ def test_daily_reporting_data_with_missing_daily_frequencies(get_datetime_index)
     cls = DailyReportingData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 366
+    assert len(cls.df) == 365
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     expected_disqualifications = ['eemeter.caltrack_sufficiency_criteria.missing_monthly_temperature_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_temperature_data']
