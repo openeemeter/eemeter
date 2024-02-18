@@ -178,6 +178,13 @@ class DailyModel:
         if self.disqualification and not ignore_disqualification:
             raise DisqualifiedModelError("Attempting to predict using disqualified model without setting ignore_disqualification=True")
 
+        if str(self.baseline_timezone) != str(reporting_data.tz):
+            """would be preferable to directly compare, but 
+                * using str() helps accomodate mixed tzinfo implementations,
+                * the likelihood of sub-hour offset inconsistencies being relevant to the daily model is low
+            """
+            raise ValueError("Reporting data must use the same timezone that the model was initially fit on.")
+
         if not isinstance(reporting_data, (DailyBaselineData, DailyReportingData)):
             raise TypeError("reporting_data must be a DailyBaselineData or DailyReportingData object")
 
