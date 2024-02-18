@@ -91,8 +91,7 @@ def reporting_temperature_data():
 def test_metered_savings_cdd_hdd_daily(
     baseline_model_daily, reporting_meter_data_daily,reporting_temperature_data 
 ):
-    #TODO use Reporting once dataclass is fixed
-    reporting_data = DailyBaselineData.from_series(reporting_meter_data_daily, reporting_temperature_data, is_electricity_data=True)
+    reporting_data = DailyReportingData.from_series(reporting_meter_data_daily, reporting_temperature_data, is_electricity_data=True)
     results = baseline_model_daily.predict(reporting_data)
     metered_savings = results['model'] - results['observed']
     assert round(metered_savings.sum(), 2) == 1577.75
@@ -247,8 +246,7 @@ def test_modeled_savings_cdd_hdd_daily(
     reporting_meter_data_daily,
     reporting_temperature_data,
 ):
-    #TODO use Reporting once dataclass is fixed
-    reporting_data = DailyBaselineData.from_series(reporting_meter_data_daily, reporting_temperature_data, is_electricity_data=True)
+    reporting_data = DailyReportingData.from_series(reporting_meter_data_daily, reporting_temperature_data, is_electricity_data=True)
     baseline_model_result = baseline_model_daily.predict(reporting_data)
     reporting_model_result = reporting_model_daily.predict(reporting_data)
     modeled_savings = baseline_model_result['model'] - reporting_model_result['model']

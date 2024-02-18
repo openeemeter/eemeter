@@ -120,10 +120,10 @@ class DailyModel:
     def fit(self, baseline_data: DailyBaselineData, ignore_disqualification=False):
         if not isinstance(baseline_data, DailyBaselineData):
             raise TypeError("baseline_data must be a DailyBaselineData object")
+        baseline_data.log_warnings()
         if baseline_data.disqualification and not ignore_disqualification:
-            for warning in baseline_data.disqualification + baseline_data.warnings:
-                print(warning.json())
             raise DataSufficiencyError("Can't fit model on disqualified baseline data")
+        self.baseline_timezone = baseline_data.tz
         self.warnings = baseline_data.warnings
         self.disqualification = baseline_data.disqualification
         for warning in baseline_data.warnings + baseline_data.disqualification:
