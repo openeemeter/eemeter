@@ -64,15 +64,25 @@ def load_test_data(data_type: str):
     elif data_type == TutorialDataChoice.MONTH_LOADSHAPE:
         df = pd.read_csv(data_dir / "month_loadshape.csv")
     
-    elif data_type == TutorialDataChoice.HOURLY_DATA:
-        df = pd.read_parquet(data_dir / "hourly_data.parquet")
+    elif data_type == TutorialDataChoice.HOURLY_COMPARISON_GROUP_DATA:
+        df = pd.concat(
+            [
+                pd.read_parquet(data_dir / "hourly_data_0.parquet"), 
+                pd.read_parquet(data_dir / "hourly_data_1.parquet")
+            ], 
+            axis=0
+        )
+
+    elif data_type == TutorialDataChoice.HOURLY_TREATMENT_DATA:
+        df = pd.read_parquet(data_dir / "hourly_data_2.parquet")
     
-    if data_type != TutorialDataChoice.HOURLY_DATA:
+    if data_type not in [TutorialDataChoice.HOURLY_COMPARISON_GROUP_DATA, TutorialDataChoice.HOURLY_TREATMENT_DATA]:
         df = df.set_index("id")
     
     return df
 
 
 if __name__ == "__main__":
-    df = load_test_data("hourly_data")
+    df = load_test_data("hourly_treatment_data")
+    print(df.index.get_level_values(0).nunique())
     print(df.head())
