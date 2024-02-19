@@ -17,3 +17,5 @@
    limitations under the License.
 
 """
+
+from eemeter.common.test_data import load_test_data, download_all_test_data

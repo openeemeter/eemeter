@@ -23,6 +23,7 @@ import logging
 from .__version__ import __title__, __description__, __url__, __version__
 from .__version__ import __author__, __author_email__, __license__
 from .__version__ import __copyright__
+from .common import *
 from .eemeter.exceptions import *
 from .eemeter.features import *
 from .eemeter.io import *
@@ -38,7 +39,6 @@ from .eemeter.models.hourly.wrapper import HourlyModel
 from .eemeter.models.hourly.data import HourlyBaselineData, HourlyReportingData
 from .eemeter.models.daily.data import DailyBaselineData, DailyReportingData
 from .eemeter.models.billing.data import BillingBaselineData, BillingReportingData
-from eemeter.common.test_data import load_test_data
 
 
 def get_version():
