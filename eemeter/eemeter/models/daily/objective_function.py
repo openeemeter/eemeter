@@ -21,12 +21,12 @@ from copy import deepcopy as copy
 
 import numpy as np
 
-from eemeter.eemeter.models.daily.utilities.adaptive_loss import remove_outliers
-from eemeter.eemeter.models.daily.utilities.adaptive_loss import rolling_C
-from eemeter.eemeter.models.daily.utilities.adaptive_loss import adaptive_weights
+from eemeter.common.utils.adaptive_loss import remove_outliers
+from eemeter.common.utils.adaptive_loss import rolling_C
+from eemeter.common.utils.adaptive_loss import adaptive_weights
 
-from eemeter.eemeter.models.daily.utilities.utils import OoM
-from eemeter.eemeter.models.daily.utilities.utils import fast_std as stdev
+from eemeter.common.utils.utils import OoM
+from eemeter.common.utils.utils import fast_std as stdev
 
 
 def get_idx(A, B):

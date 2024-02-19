@@ -20,9 +20,9 @@
 import numpy as np
 import numba
 
-from eemeter.eemeter.models.daily.utilities.adaptive_loss import adaptive_weights
+from eemeter.common.utils.adaptive_loss import adaptive_weights
 
-from eemeter.eemeter.models.daily.utilities.utils import (
+from eemeter.common.utils.utils import (
     LN_MIN_POS_SYSTEM_VALUE,
     LN_MAX_POS_SYSTEM_VALUE,
 )

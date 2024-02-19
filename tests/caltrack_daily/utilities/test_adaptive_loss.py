@@ -20,7 +20,7 @@
 import numpy as np
 import pytest
 
-from eemeter.eemeter.models.daily.utilities.adaptive_loss import (
+from eemeter.common.utils.adaptive_loss import (
     remove_outliers,
     adaptive_weights,
     adaptive_loss_fcn,
