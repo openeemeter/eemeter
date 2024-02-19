@@ -17,6 +17,7 @@
    limitations under the License.
 
 """
+
 import numpy as np
 from typing import Dict, Any, Optional
 from pydantic import BaseModel, ConfigDict

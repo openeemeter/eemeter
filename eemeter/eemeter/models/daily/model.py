@@ -1,3 +1,23 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+
+   Copyright 2014-2023 OpenEEmeter contributors
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+"""
+
 from eemeter.eemeter.models.daily.base_models.full_model import full_model, get_full_model_x
 from eemeter.eemeter.models.daily.fit_base_models import fit_final_model, fit_initial_models_from_full_model
 from eemeter.eemeter.models.daily.parameters import DailyModelParameters, DailySubmodelParameters
@@ -5,6 +25,7 @@ from eemeter.eemeter.models.daily.utilities.base_model import get_smooth_coeffs
 from eemeter.eemeter.models.daily.utilities.config import caltrack_2_1_settings, caltrack_legacy_settings, update_daily_settings
 from eemeter.eemeter.models.daily.utilities.ellipsoid_test import ellipsoid_split_filter
 from eemeter.eemeter.models.daily.utilities.selection_criteria import selection_criteria
+from eemeter.eemeter.models.daily.plot import plot
 from eemeter.eemeter.models.daily.data import DailyBaselineData, DailyReportingData
 from eemeter.eemeter.exceptions import DataSufficiencyError, DisqualifiedModelError
 from eemeter.eemeter.warnings import EEMeterWarning
@@ -270,6 +291,7 @@ class DailyModel:
 
     def plot(
         self,
+        df_eval,
         ax=None,
         title=None,
         figsize=None,
@@ -300,33 +322,35 @@ class DailyModel:
         except ImportError:  # pragma: no cover
             raise ImportError("matplotlib is required for plotting.")
 
-        if figsize is None:
-            figsize = (10, 4)
+        plot(self, self._predict(df_eval.df))
 
-        if ax is None:
-            fig, ax = plt.subplots(figsize=figsize)
+        # if figsize is None:
+        #     figsize = (10, 4)
 
-        color = "C1"
-        alpha = 1
+        # if ax is None:
+        #     fig, ax = plt.subplots(figsize=figsize)
 
-        temp_min, temp_max = (30, 90) if temp_range is None else temp_range
+        # color = "C1"
+        # alpha = 1
 
-        temps = np.arange(temp_min, temp_max)
+        # temp_min, temp_max = (30, 90) if temp_range is None else temp_range
 
-        prediction_index = pd.date_range(
-            "2017-01-01T00:00:00Z", periods=len(temps), freq="D"
-        )
+        # temps = np.arange(temp_min, temp_max)
 
-        temps_daily = pd.Series(temps, index=prediction_index).resample("D").mean()
-        prediction = self.predict(temps_daily).model
+        # prediction_index = pd.date_range(
+        #     "2017-01-01T00:00:00Z", periods=len(temps), freq="D"
+        # )
 
-        plot_kwargs = {"color": color, "alpha": alpha or 0.3}
-        ax.plot(temps, prediction, **plot_kwargs)
+        # temps_daily = pd.Series(temps, index=prediction_index).resample("D").mean()
+        # prediction = self._predict(temps_daily).model
 
-        if title is not None:
-            ax.set_title(title)
+        # plot_kwargs = {"color": color, "alpha": alpha or 0.3}
+        # ax.plot(temps, prediction, **plot_kwargs)
 
-        return ax
+        # if title is not None:
+        #     ax.set_title(title)
+
+        # return ax
 
     def _create_params_from_fit_model(self):
         submodels = {}
