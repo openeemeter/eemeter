@@ -133,7 +133,8 @@ class _DailyData:
             temperature_features['n_days_dropped'] = 0  # unused
         else:
             #TODO hacky method of avoiding the last index nan convention
-            buffer_idx = pd.to_datetime('2090-01-01 00:00:00+00:00') 
+            buffer_idx = pd.to_datetime('2090-01-01 00:00:00+00:00').tz_convert(meter_index.tz)
+
             temperature_features = compute_temperature_features(
                 meter_index.union([buffer_idx]),
                 temp_series,
