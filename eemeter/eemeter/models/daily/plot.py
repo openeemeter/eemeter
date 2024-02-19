@@ -144,3 +144,32 @@ def plot(fit, meter_eval, include_resid=False, plot_gaussian_ellipses=False, plo
     # legend._legend_box.align = 'left'
 
     plt.show()
+
+
+    # if figsize is None:
+    #     figsize = (10, 4)
+
+    # if ax is None:
+    #     fig, ax = plt.subplots(figsize=figsize)
+
+    # color = "C1"
+    # alpha = 1
+
+    # temp_min, temp_max = (30, 90) if temp_range is None else temp_range
+
+    # temps = np.arange(temp_min, temp_max)
+
+    # prediction_index = pd.date_range(
+    #     "2017-01-01T00:00:00Z", periods=len(temps), freq="D"
+    # )
+
+    # temps_daily = pd.Series(temps, index=prediction_index).resample("D").mean()
+    # prediction = self._predict(temps_daily).model
+
+    # plot_kwargs = {"color": color, "alpha": alpha or 0.3}
+    # ax.plot(temps, prediction, **plot_kwargs)
+
+    # if title is not None:
+    #     ax.set_title(title)
+
+    # return ax
