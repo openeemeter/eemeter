@@ -139,8 +139,11 @@ def _load_time_series_data(data_type):
 
 def _aggregate_hourly_data(df, agg):
     df_agg = df.reset_index().set_index("datetime").groupby("id")
-    df_agg_temperature = df_agg["temperature"].resample(agg).mean()
+    df_agg_temperature = df_agg["temperature"].resample("D").mean()
     df_agg_observed = df_agg["observed"].resample(agg).sum()
+
+    if agg == "MS":
+        df_agg_observed = df_agg_observed.reindex(df_agg_temperature.index)
 
     df = pd.concat([df_agg_temperature, df_agg_observed], axis=1)
     df = df.reset_index().set_index(["id", "datetime"])
