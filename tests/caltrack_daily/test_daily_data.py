@@ -185,9 +185,7 @@ def test_daily_baseline_data_with_same_half_hourly_frequencies(get_datetime_inde
 
     assert cls.df is not None
     assert len(cls.df) == 365
-    assert len(cls.warnings) == 1
-    # TODO : this seems like a pre-existing bug in the 'as_freq' method, why is the last element set as null in the high frequency data?
-    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.missing_high_frequency_meter_data'
+    assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
 def test_daily_baseline_data_with_daily_and_half_hourly_frequencies(get_temperature_data_half_hourly, get_meter_data_daily):
@@ -247,6 +245,21 @@ def test_daily_baseline_data_with_specific_daily_input():
     assert len(cls.warnings) == 2
     assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.caltrack_sufficiency_criteria.extreme_values_detected']
     assert len(cls.disqualification) == 0
+
+def test_daily_baseline_data_with_missing_specific_daily_input():
+    meter, temperature, _ = load_sample('il-electricity-cdd-hdd-daily')
+    meter = meter[meter.index.year==2017]
+    # Set 1 month meter data to NaN
+    meter.loc[meter.index.month == 4] = np.nan
+    temperature = temperature[temperature.index.year==2017]
+    cls = DailyBaselineData.from_series(meter, temperature, is_electricity_data=True)
+
+    assert cls.df is not None
+    assert len(cls.df) == 365
+    assert len(cls.warnings) == 2
+    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.caltrack_sufficiency_criteria.extreme_values_detected']
+    assert len(cls.disqualification) == 1
+    assert cls.disqualification[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.missing_monthly_meter_data'
 
 def test_daily_baseline_data_with_missing_hourly_temperature_data(get_meter_data_daily, get_temperature_data_hourly):
     df = get_temperature_data_hourly
@@ -346,7 +359,7 @@ def test_daily_baseline_data_with_missing_meter_data(get_meter_data_daily, get_t
     assert all(disqualification.qualified_name in expected_disqualifications for disqualification in cls.disqualification)
 
 @pytest.mark.parametrize('get_datetime_index', [['30T', True],['H', True]], indirect=True)
-def test_daily_reporting_data_with_half_hourly_and_hourly_daily_frequencies(get_datetime_index):
+def test_daily_reporting_data_with_half_hourly_and_hourly_frequencies(get_datetime_index):
     datetime_index = get_datetime_index
 
     # Create a 'temperature_mean' and meter_value columns with random data

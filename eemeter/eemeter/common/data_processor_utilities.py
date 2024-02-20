@@ -235,7 +235,8 @@ def as_freq(
         n_coverage = atomic_series.resample(freq).count()
 
     # TODO : BUG?: Check why this is needed. This adds a NaN at the end of the series if the last index is not the same as the original series
-    if resampled.index[-1] < series.index[-1]:
+    # Edit : Added a check so that hourly and daily frequencies don't have a null value at the end
+    if freq not in ['H','D'] and resampled.index[-1] < series.index[-1]:
         # this adds a null at the end using the target frequency
         last_index = pd.date_range(resampled.index[-1], freq=freq, periods=2)[1:]
         resampled = (
