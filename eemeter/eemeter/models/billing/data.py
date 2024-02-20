@@ -1,18 +1,23 @@
-import eemeter.common.const as _const
-from eemeter.common.abstract_data_processor import AbstractDataProcessor
 from eemeter.eemeter.common.data_processor_utilities import as_freq, caltrack_sufficiency_criteria_baseline, clean_caltrack_billing_daily_data, compute_minimum_granularity
 from eemeter import compute_temperature_features
 from eemeter.eemeter.warnings import EEMeterWarning
+from eemeter.eemeter.models.daily.data import _DailyData
 
 import numpy as np
 import pandas as pd
 from pandas.tseries.offsets import MonthEnd
 
-from typing import Optional
-import warnings
+from typing import Optional, Union
 
 
-class BillingBaselineData(AbstractDataProcessor):
+"""TODO there is still a ton of unecessarily duplicated code between billing+daily.
+    we should be able to perform a few transforms within the billing baseclass, and then call super() for the rest
+
+    unsure whether we should inherit from the public classes because we'll have to take care to use type(data)
+    instead of isinstance(data,  _) when doing the checks in the model/wrapper to avoid unintentionally allowing a mix of data/model type
+"""
+
+class _BillingData(_DailyData):
     """Baseline data processor for billing data.
 
     2.2.3.4. Off-cycle reads (spanning less than 25 days) should be dropped from analysis. 
@@ -22,25 +27,7 @@ class BillingBaselineData(AbstractDataProcessor):
     For bi-monthly billing cycles, periods spanning more than 70 days should be dropped from the analysis.
     """
 
-    def __init__(self, data : pd.DataFrame, is_electricity_data : bool):
-        self._df = None
-        self.warnings = []
-        self.disqualification = []
-        self.is_electricity_data = is_electricity_data
-
-        self.set_data(data = data)
-        for warning in self.warnings + self.disqualification:
-            warning.warn()
-
-    @property
-    def df(self):
-        if self._df is None:
-            return None
-        else:
-            return self._df.copy()
-
-
-    def _compute_meter_value_df(self, df : pd.DataFrame):
+    def _compute_meter_value_df(self, df: pd.DataFrame):
         # TODO : Assume if the billing cycle is mixed between monthly and bimonthly, then the minimum granularity is bimonthly
         # Test for more than 50% of high frequency data being missing
         """
@@ -77,7 +64,7 @@ class BillingBaselineData(AbstractDataProcessor):
 
         return meter_value_df
 
-    def _compute_temperature_features(self, df : pd.DataFrame, meter_value_df : pd.DataFrame):
+    def _compute_temperature_features(self, df: pd.DataFrame, meter_index: pd.DatetimeIndex):
         temp_series = df['temperature']
         temp_series.index.freq = temp_series.index.inferred_freq
         if temp_series.index.freq != 'H':
@@ -124,192 +111,39 @@ class BillingBaselineData(AbstractDataProcessor):
             temperature_features['n_days_dropped'] = 0  # unused
         else:
             temperature_features = compute_temperature_features(
-                meter_value_df.index,
+                meter_index,
                 temp_series,
                 data_quality=True,
             )
-
-        return temperature_features
-
-
-    def _check_data_sufficiency(self, df : pd.DataFrame):
-        
-        meter_value_df = self._compute_meter_value_df(df)
-        temperature_features = self._compute_temperature_features(df, meter_value_df)
-
-        criteria_df = meter_value_df.merge(temperature_features, left_index=True, right_index=True, how='outer')
-        criteria_df = criteria_df.rename({'temperature_mean': 'temperature'}, axis=1)
-        df, self.disqualification, warnings = caltrack_sufficiency_criteria_baseline(criteria_df)
-        self.warnings += warnings
+        temp = temperature_features['temperature_mean'].rename('temperature')
+        features = temperature_features.drop(columns=['temperature_mean'])
+        return temp, features
 
 
-        # Add Season and Weekday_weekend 
-        df['season'] = df.index.month_name().map(_const.default_season_def)
-        df['weekday_weekend'] = df.index.day_name().map(_const.default_weekday_weekend_def)
-
-        # drop data quality columns
-        df = df.drop(columns=['temperature_null', 'temperature_not_null', 'n_days_kept', 'n_days_dropped'])
-
-        return df
-
-    def set_data(self, data : pd.DataFrame):
-        """Process data for the monthly / billing case
-
-        Parameters
-        ----------
-        data : pd.DataFrame
-            Data to process.
-
-        Returns
-        -------
-        processed_data : pd.DataFrame
-            Processed data.
-        """
-        expected_columns = ["observed", "temperature"]
-        if not set(expected_columns).issubset(set(data.columns)):
-            # show the columns that are missing
-
-            raise ValueError("Data is missing required columns: {}".format(
-                set(expected_columns) - set(data.columns)))
-
-        # Copy the input dataframe so that the original is not modified
-        df = data.copy()
-
-        # Check that the datetime index is timezone aware timestamp
-        if not isinstance(data.index, pd.DatetimeIndex) and 'datetime' not in data.columns:
-            raise ValueError("Index is not datetime and datetime not provided")
-
-        elif 'datetime' in data.columns:
-            if data['datetime'].dt.tz is None:
-                raise ValueError("Datatime is missing timezone information")
-            data['datetime'] = pd.to_datetime(data['datetime'])
-            data.set_index('datetime', inplace=True)
-
-        elif data.index.tz is None:
-            raise ValueError("Datatime is missing timezone information")
-        elif str(df.index.tz) == 'UTC':
-            warnings.warn('Datetime index is in UTC. Use tz_localize() with the local timezone to ensure correct aggregations')
-
-        if self.is_electricity_data:
-            df.loc[df['observed'] == 0, 'observed'] = np.nan
-
-        # Data Sufficiency Check
-        df = self._check_data_sufficiency(df)
-
-        self._df = df
+class BillingBaselineData(_BillingData):
+    def _check_data_sufficiency(self, sufficiency_df):
+        _, disqualification, warnings = caltrack_sufficiency_criteria_baseline(sufficiency_df, is_reporting_data=False)
+        return disqualification, warnings
 
 
-class BillingReportingData(AbstractDataProcessor):
-    def __init__(self, data : pd.DataFrame, is_electricity_data : bool):
-        self._df = None
-        self.warnings = []
-        self.disqualification = []
-        self.is_electricity_data = is_electricity_data
+class BillingReportingData(_BillingData):
+    def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
+        if 'observed' not in df.columns:
+            df['observed'] = np.nan
+        super().__init__(df, is_electricity_data)        
 
-        # TODO : do we need to set electric data for reporting?
-        self.set_data(data = data)
+    @classmethod
+    def from_series(cls, meter_data: Optional[Union[pd.Series, pd.DataFrame]], temperature_data: Union[pd.Series, pd.DataFrame], is_electricity_data: Optional[bool]=None, tzinfo=None):
+        if tzinfo and meter_data is not None:
+            raise ValueError('When passing meter data to BillingReportingData, convert its DatetimeIndex to local timezone first; `tzinfo` param should only be used in the absence of reporting meter data.')
+        if is_electricity_data is None and meter_data is not None:
+            raise ValueError('Must specify is_electricity_data when passing meter data.')
+        if meter_data is None:
+            meter_data = pd.DataFrame({'observed': np.nan}, index=temperature_data.index)
+            if tzinfo:
+                meter_data = meter_data.tz_convert(tzinfo)
+        return super().from_series(meter_data, temperature_data, is_electricity_data)
 
-    @property
-    def df(self):
-        if self._df is None:
-            return None
-        else:
-            return self._df.copy()
-
-
-    def _check_data_sufficiency(self, df : pd.DataFrame):
-
-        temp_series = df['temperature']
-        temp_series.index.freq = temp_series.index.inferred_freq
-        if temp_series.index.freq is None or isinstance(temp_series.index.freq, MonthEnd) or temp_series.index.freq > pd.Timedelta(hours=1):
-                # Add warning for frequencies longer than 1 hour
-                self.warnings.append(
-                    EEMeterWarning(
-                        qualified_name="eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency",
-                        description=("Cannot confirm that pre-aggregated temperature data had sufficient hours kept"),
-                        data={},
-                    )
-                )
-        if temp_series.index.freq != 'D':
-            temperature_df = as_freq(temp_series, 'D', series_type = 'instantaneous', include_coverage=True)
-            # If high frequency data check for 50% data coverage in rollup
-            if len(temperature_df[temperature_df.coverage <= 0.5]) > 0:
-                self.warnings.append(
-                    EEMeterWarning(
-                        qualified_name="eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data",
-                        description=("More than 50% of the high frequency Temperature data is missing."),
-                        data = (
-                            temperature_df[temperature_df.coverage <= 0.5].index.to_list()
-                        )
-                    )
-                )
-
-            # Set missing high frequency data to NaN
-            temperature_df.value[temperature_df.coverage > 0.5] = (
-                temperature_df[temperature_df.coverage > 0.5].value / temperature_df[temperature_df.coverage > 0.5].coverage
-            )
-
-            temperature_df = temperature_df[temperature_df.coverage > 0.5].reindex(temperature_df.index)[["value"]].rename(columns={'value' : 'temperature'})
-            
-            if 'coverage' in temperature_df.columns:
-                temperature_df = temperature_df.drop(columns=['coverage'])
-        else :
-            temperature_df = temp_series.to_frame(name='temperature')
-
-        # This will ensure that the missing days are kept in the dataframe
-        # Create an index with all the days from the start and end date of 'meter_value_df'
-        all_days_index = pd.date_range(start=df.index.min(), end=df.index.max(), freq='D', tz=df.index.tz)
-        all_days_df = pd.DataFrame(index=all_days_index)
-        temperature_df = temperature_df.merge(all_days_df, left_index=True, right_index=True, how='outer')
-
-        temperature_df['temperature_null'] = temperature_df.temperature.isnull().astype(int)
-        temperature_df['temperature_not_null'] = temperature_df.temperature.notnull().astype(int)
-
-        temperature_df, self.disqualification, warnings = caltrack_sufficiency_criteria_baseline(data = temperature_df, is_reporting_data = True)
-
-        self.warnings += warnings
-
-        # drop data quality columns
-        temperature_df = temperature_df.drop(columns=['temperature_null', 'temperature_not_null'])
-
-        # TODO : interpolate if necessary
-
-        return temperature_df
-
-    def set_data(self, data : pd.DataFrame):
-        """Process data.
-
-        Parameters
-        ----------
-        data : pd.DataFrame
-            Data to process.
-
-        Returns
-        -------
-        processed_data : pd.DataFrame
-            Processed data.
-        """
-
-        if 'temperature' not in data.columns:
-            raise ValueError("Temperature data is missing")
-
-        # Check that the datetime index is timezone aware timestamp
-        if not isinstance(data.index, pd.DatetimeIndex) and 'datetime' not in data.columns:
-            raise ValueError("Index is not datetime and datetime not provided")
-
-        elif 'datetime' in data.columns:
-            if data['datetime'].dt.tz is None:
-                raise ValueError("Datatime is missing timezone information")
-            data['datetime'] = pd.to_datetime(data['datetime'])
-            data.set_index('datetime', inplace=True)
-
-        elif data.index.tz is None:
-            raise ValueError("Datatime is missing timezone information")
-
-
-        # Copy the input dataframe so that the original is not modified
-        df = data.copy()
-
-        df = self._check_data_sufficiency(df)
-
-        self._df = df
+    def _check_data_sufficiency(self, sufficiency_df):
+        _, disqualification, warnings = caltrack_sufficiency_criteria_baseline(sufficiency_df, is_reporting_data=True)
+        return disqualification, warnings     

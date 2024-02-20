@@ -228,6 +228,11 @@ class DailyReportingData(_DailyData):
     Uses looser criteria to determine sufficiency
     Adds ability to omit meter_data for predictions
     """
+    def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
+        if 'observed' not in df.columns:
+            df['observed'] = np.nan
+        super().__init__(df, is_electricity_data)        
+        
     @classmethod
     def from_series(cls, meter_data: Optional[Union[pd.Series, pd.DataFrame]], temperature_data: Union[pd.Series, pd.DataFrame], is_electricity_data: Optional[bool]=None, tzinfo=None):
         if tzinfo and meter_data is not None:
