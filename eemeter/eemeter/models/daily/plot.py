@@ -70,9 +70,6 @@ def plot(fit, meter_eval, include_resid=False, plot_gaussian_ellipses=False, plo
                 marker = "D"
                 s = 5.5**2
                 label = f"{season} weekend"
-        # for day_num in [[0], [1], [2], [3], [4], [5], [6]]:
-        #     color = adjust_lightness(copy(c[n]), amount=(day_num[0]/6*0.8 + 0.7))
-        #     label = ['m', 't', 'w', 'th', 'f', 'sa', 'su'][day_num[0]]
 
             meter_season = meter_eval[(meter_eval['season'] == season) & (meter_eval['observed'].notna())]
             meter_season = meter_season[meter_season['day_of_week'].isin(day_num)]
