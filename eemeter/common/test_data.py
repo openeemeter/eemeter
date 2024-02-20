@@ -33,6 +33,19 @@ data_dir = current_dir.parents[1] / "data"
 branch = "feature/caltrack-2.1-daily"
 
 
+comparison_group_time_series = [
+    TutorialDataChoice.HOURLY_COMPARISON_GROUP_DATA,
+    TutorialDataChoice.DAILY_COMPARISON_GROUP_DATA,
+    TutorialDataChoice.MONTHLY_COMPARISON_GROUP_DATA,
+]
+
+treatment_time_series = [
+    TutorialDataChoice.HOURLY_TREATMENT_DATA,
+    TutorialDataChoice.DAILY_TREATMENT_DATA,
+    TutorialDataChoice.MONTHLY_TREATMENT_DATA,
+]
+
+
 def load_test_data(data_type: str):
     """Returns back tutorial data of the given data type as a dataframe
 
@@ -58,34 +71,11 @@ def load_test_data(data_type: str):
     if data_type not in valid_list: 
         raise ValueError(f"Data type {data_type} not recognized. \nMust be one of {keys}.")
 
-    if data_type == TutorialDataChoice.FEATURES:
-        df = _load_file("features.csv")
-    
-    elif data_type == TutorialDataChoice.SEASONAL_HOUR_DAY_WEEK_LOADSHAPE:
-        df = _load_file("seasonal_hourly_day_of_week_loadshape.csv")
-    
-    elif data_type == TutorialDataChoice.SEASONAL_DAY_WEEK_LOADSHAPE:
-        df = _load_file("seasonal_day_of_week_loadshape.csv")
-    
-    elif data_type == TutorialDataChoice.MONTH_LOADSHAPE:
-        df = _load_file("month_loadshape.csv")
-    
-    elif data_type == TutorialDataChoice.HOURLY_COMPARISON_GROUP_DATA:
-        df = pd.concat(
-            [
-                _load_file("hourly_data_0.parquet"),
-                _load_file("hourly_data_1.parquet")
-            ], 
-            axis=0
-        )
+    if data_type in [*comparison_group_time_series, *treatment_time_series]:
+        return _load_time_series_data(data_type)
 
-    elif data_type == TutorialDataChoice.HOURLY_TREATMENT_DATA:
-        df = _load_file("hourly_data_2.parquet")
-    
-    if data_type not in [TutorialDataChoice.HOURLY_COMPARISON_GROUP_DATA, TutorialDataChoice.HOURLY_TREATMENT_DATA]:
-        df = df.set_index("id")
-    
-    return df
+    else:
+        return _load_other_data(data_type)
 
 
 def download_all_test_data():
@@ -108,6 +98,72 @@ def download_all_test_data():
     # download all repo files
     for file in files:
         _download_repo_data_file(file)
+
+
+def _load_time_series_data(data_type):
+    if data_type in comparison_group_time_series:
+        df = pd.concat(
+            [
+                _load_file("hourly_data_0.parquet"),
+                _load_file("hourly_data_1.parquet")
+            ], 
+            axis=0
+        )
+
+    elif data_type in treatment_time_series:
+        df = _load_file("hourly_data_2.parquet")
+
+    # localize datetime and convert to CST
+    df = df.reset_index()
+    df["datetime"] = df["datetime"].dt.tz_localize('UTC')
+    df["datetime"] = df["datetime"] + pd.Timedelta(hours=5)
+    df["datetime"] = df["datetime"].dt.tz_convert('America/Chicago')
+    df = df.set_index(["id", "datetime"])
+
+    df_baseline = df[["temperature", "observed_baseline"]]
+    df_baseline = df_baseline.rename(columns={"observed_baseline": "observed"})
+
+    df_reporting = df[["temperature", "observed_reporting"]]
+    df_reporting = df_reporting.rename(columns={"observed_reporting": "observed"})
+
+    if "daily" in data_type:
+        df_baseline = _aggregate_hourly_data(df_baseline, "D")
+        df_reporting = _aggregate_hourly_data(df_reporting, "D")
+
+    elif "monthly" in data_type:
+        df_baseline = _aggregate_hourly_data(df_baseline, "MS")
+        df_reporting = _aggregate_hourly_data(df_reporting, "MS")
+
+    return df_baseline, df_reporting
+
+
+def _aggregate_hourly_data(df, agg):
+    df_agg = df.reset_index().set_index("datetime").groupby("id")
+    df_agg_temperature = df_agg["temperature"].resample(agg).mean()
+    df_agg_observed = df_agg["observed"].resample(agg).sum()
+
+    df = pd.concat([df_agg_temperature, df_agg_observed], axis=1)
+    df = df.reset_index().set_index(["id", "datetime"])
+
+    return df
+
+
+def _load_other_data(data_type):
+    if data_type == TutorialDataChoice.FEATURES:
+        df = _load_file("features.csv")
+    
+    elif data_type == TutorialDataChoice.SEASONAL_HOUR_DAY_WEEK_LOADSHAPE:
+        df = _load_file("seasonal_hourly_day_of_week_loadshape.csv")
+    
+    elif data_type == TutorialDataChoice.SEASONAL_DAY_WEEK_LOADSHAPE:
+        df = _load_file("seasonal_day_of_week_loadshape.csv")
+    
+    elif data_type == TutorialDataChoice.MONTH_LOADSHAPE:
+        df = _load_file("month_loadshape.csv")
+        
+    df = df.set_index("id")
+
+    return df
 
 
 def _load_file(file):

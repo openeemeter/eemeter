@@ -49,3 +49,7 @@ class TutorialDataChoice(str, Enum):
     MONTH_LOADSHAPE = "month_loadshape".replace("_", "")
     HOURLY_COMPARISON_GROUP_DATA = "hourly_comparison_group_data".replace("_", "")
     HOURLY_TREATMENT_DATA = "hourly_treatment_data".replace("_", "")
+    DAILY_COMPARISON_GROUP_DATA = "daily_comparison_group_data".replace("_", "")
+    DAILY_TREATMENT_DATA = "daily_treatment_data".replace("_", "")
+    MONTHLY_COMPARISON_GROUP_DATA = "monthly_comparison_group_data".replace("_", "")
+    MONTHLY_TREATMENT_DATA = "monthly_treatment_data".replace("_", "")
