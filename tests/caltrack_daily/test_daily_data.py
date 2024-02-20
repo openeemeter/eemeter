@@ -224,8 +224,20 @@ def test_daily_baseline_data_with_daily_and_hourly_frequencies(get_meter_data_da
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
-def test_daily_baseline_data_with_specific_input():
+def test_daily_baseline_data_with_specific_hourly_input():
     meter, temperature, _ = load_sample('il-electricity-cdd-hdd-hourly')
+    meter = meter[meter.index.year==2017]
+    temperature = temperature[temperature.index.year==2017]
+    cls = DailyBaselineData.from_series(meter, temperature, is_electricity_data=True)
+
+    assert cls.df is not None
+    assert len(cls.df) == 365
+    assert len(cls.warnings) == 2
+    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.caltrack_sufficiency_criteria.extreme_values_detected']
+    assert len(cls.disqualification) == 0
+
+def test_daily_baseline_data_with_specific_daily_input():
+    meter, temperature, _ = load_sample('il-electricity-cdd-hdd-daily')
     meter = meter[meter.index.year==2017]
     temperature = temperature[temperature.index.year==2017]
     cls = DailyBaselineData.from_series(meter, temperature, is_electricity_data=True)

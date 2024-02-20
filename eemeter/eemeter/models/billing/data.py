@@ -39,11 +39,23 @@ class _BillingData(_DailyData):
 
         # Ensure higher frequency data is aggregated to the monthly model
         if not min_granularity.startswith('billing'):
+            meter_series = meter_series.resample('MS').sum()
+            self.warnings.append( 
+                EEMeterWarning(
+                        qualified_name="eemeter.caltrack_sufficiency_criteria.inferior_model_usage",
+                        description=("Daily data is provided but the model used is monthly. Are you sure this is the intended model?"),
+                        data={},
+                    )
+            )
             min_granularity = 'billing_monthly'
 
         # This checks for offcycle reads. That is a disqualification if the billing cycle is less than 25 days
         meter_value_df = clean_caltrack_billing_daily_data(meter_series.to_frame('value'), min_granularity, self.disqualification)
         meter_value_df = meter_value_df.rename(columns={'value': 'observed'})
+
+        # Convert all non-zero time datetimes to zero time (i.e., set the time to midnight), for proper join since we only want one reading per day for billing
+        meter_value_df.index = meter_value_df.index.normalize()
+
         # This will ensure that the missing days are kept in the dataframe
         # Create an index with all the days from the start and end date of 'meter_value_df'
         all_days_index = pd.date_range(start=df.index.min(), end=df.index.max(), freq='D', tz=df.index.tz)
@@ -58,9 +70,10 @@ class _BillingData(_DailyData):
         """
 
         # Concatenate the first row to the end of the DataFrame
-        meter_value_df = pd.concat([meter_value_df, meter_value_df.dropna().head(1)])
-        meter_value_df = meter_value_df.bfill()
-        meter_value_df = meter_value_df.iloc[:-1]
+        # meter_value_df = pd.concat([meter_value_df, meter_value_df.dropna().head(1)])
+        # meter_value_df = meter_value_df.bfill()
+        # meter_value_df = meter_value_df.iloc[:-1]
+        meter_value_df = meter_value_df.ffill()
 
         return meter_value_df
 
@@ -68,7 +81,7 @@ class _BillingData(_DailyData):
         temp_series = df['temperature']
         temp_series.index.freq = temp_series.index.inferred_freq
         if temp_series.index.freq != 'H':
-            if temp_series.index.freq is None or isinstance(temp_series.index.freq, MonthEnd) or temp_series.index.freq > pd.Timedelta(hours=1):
+            if temp_series.index.freq is None or not isinstance(temp_series.index.freq, pd.Timedelta) or temp_series.index.freq > pd.Timedelta(hours=1):
                 # Add warning for frequencies longer than 1 hour
                 self.warnings.append(
                     EEMeterWarning(

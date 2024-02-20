@@ -1,7 +1,7 @@
 from eemeter.eemeter.warnings import EEMeterWarning
 import numpy as np
 import pandas as pd
-from pandas.tseries.offsets import MonthEnd
+from pandas.tseries.offsets import MonthEnd, MonthBegin
 import pytz
 
 from typing import Optional
@@ -150,7 +150,7 @@ def clean_caltrack_billing_data(data, source_interval, warnings):
     if data.dropna().empty:
         return data[:0]
 
-    return data['value'].to_frame('observed')
+    return data['value'].to_frame()
 
 
 def as_freq(
@@ -292,21 +292,30 @@ def compute_minimum_granularity(index : pd.Series, default_granularity : Optiona
     # Inferred frequency returns None if frequency can't be autodetected
     index.freq = index.inferred_freq
     if index.freq is None:
-        max_difference = day_counts(index).max()
-        min_difference = day_counts(index).min()
-        if max_difference == 1 and min_difference == 1:
-            min_granularity = 'daily'
-        elif max_difference < 1:
-            min_granularity = 'hourly'
-        elif max_difference >= 60:
-            min_granularity = 'billing_bimonthly'
-        elif max_difference >= 30:
-            min_granularity = 'billing_monthly'
-        else:
-            min_granularity = default_granularity
+        # max_difference = day_counts(index).max()
+        # min_difference = day_counts(index).min()
+        median_difference = day_counts(index).median()
+        # if max_difference == 1 and min_difference == 1:
+        #     min_granularity = 'daily'
+        # elif max_difference < 1:
+        #     min_granularity = 'hourly'
+        # elif max_difference >= 60:
+        #     min_granularity = 'billing_bimonthly'
+        # elif max_difference >= 30:
+        #     min_granularity = 'billing_monthly'
+        # else:
+        #     min_granularity = default_granularity
+
+        granularity_dict = {
+            median_difference < 1: 'hourly',
+            median_difference == 1: 'daily',
+            1 < median_difference <= 35: 'billing_monthly',
+            35 < median_difference <= 70: 'billing_bimonthly'
+        }
+        min_granularity = granularity_dict.get(True, default_granularity)
         return min_granularity
     # The other cases still result in granularity being unknown so this causes the frequency to be resampled to daily
-    if isinstance(index.freq, MonthEnd):
+    if isinstance(index.freq, MonthEnd) or isinstance(index.freq, MonthBegin): # Can be MonthEnd or MonthBegin instance
         if index.freq.n == 1:
             min_granularity = 'billing_monthly'
         else:
