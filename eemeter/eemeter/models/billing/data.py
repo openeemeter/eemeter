@@ -5,7 +5,7 @@ from eemeter.eemeter.models.daily.data import _DailyData
 
 import numpy as np
 import pandas as pd
-from pandas.tseries.offsets import MonthEnd
+from pandas.tseries.offsets import MonthEnd, MonthBegin
 
 from typing import Optional, Union
 
@@ -62,17 +62,7 @@ class _BillingData(_DailyData):
         all_days_df = pd.DataFrame(index=all_days_index)
         meter_value_df = meter_value_df.merge(all_days_df, left_index=True, right_index=True, how='outer')
 
-        """
-            Data Backfilling logic - 
-            Reasoning is that the day we get the meter data is for the last month. So we should backfill it rather than forward fill it.
-            To handle that the data at the end of the cycle is filled, we concatenate the first (filled) row at the end of the DataFrame and then backfill it.
-            TODO : Verify if this is the right way in case there are actual missing values.
-        """
-
-        # Concatenate the first row to the end of the DataFrame
-        # meter_value_df = pd.concat([meter_value_df, meter_value_df.dropna().head(1)])
-        # meter_value_df = meter_value_df.bfill()
-        # meter_value_df = meter_value_df.iloc[:-1]
+        # Forward fill the data since it is assumed the meter date is for the start date of the billing cycle
         meter_value_df = meter_value_df.ffill()
 
         return meter_value_df
@@ -81,7 +71,7 @@ class _BillingData(_DailyData):
         temp_series = df['temperature']
         temp_series.index.freq = temp_series.index.inferred_freq
         if temp_series.index.freq != 'H':
-            if temp_series.index.freq is None or not isinstance(temp_series.index.freq, pd.Timedelta) or temp_series.index.freq > pd.Timedelta(hours=1):
+            if temp_series.index.freq is None or isinstance(temp_series.index.freq, MonthEnd) or isinstance(temp_series.index.freq, MonthBegin) or temp_series.index.freq > pd.Timedelta(hours=1):
                 # Add warning for frequencies longer than 1 hour
                 self.warnings.append(
                     EEMeterWarning(

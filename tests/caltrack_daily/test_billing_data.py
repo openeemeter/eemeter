@@ -296,6 +296,21 @@ def test_billing_baseline_data_with_specific_daily_input():
     assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.caltrack_sufficiency_criteria.inferior_model_usage']
     assert len(cls.disqualification) == 0
 
+def test_billing_baseline_data_with_specific_missing_daily_input():
+    meter, temperature, _ = load_sample('il-electricity-cdd-hdd-daily')
+    meter = meter[meter.index.year==2017]
+    # Set 1 month meter data to NaN
+    meter.loc[meter.index.month == 4] = np.nan
+
+    temperature = temperature[temperature.index.year==2017]
+    cls = BillingBaselineData.from_series(meter, temperature, is_electricity_data=True)
+
+    assert cls.df is not None
+    assert len(cls.df) == 365
+    assert len(cls.warnings) == 2
+    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.caltrack_sufficiency_criteria.inferior_model_usage']
+    assert len(cls.disqualification) == 0
+
 def test_billing_baseline_data_with_specific_monthly_input():
     meter, temperature, _ = load_sample('il-electricity-cdd-hdd-billing_monthly')
     meter = meter[meter.index.year==2017]

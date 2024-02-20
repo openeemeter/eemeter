@@ -70,13 +70,13 @@ class _DailyData:
             # TODO : make this a warning instead of an exception
             raise ValueError("Billing data is not allowed in the daily model")
         meter_value_df = clean_caltrack_billing_daily_data(meter_series, min_granularity, self.warnings)
-        if np.isnan(meter_value_df.iloc[-1]['value']):
-            #TODO test behavior here. we might be able to get away with a dropna() if we alter the n_days check, but this is less aggressive
-            #TODO need to refactor the clean caltrack data method and remove the nan logic, this breaks when original df has nan in last row
-            meter_value_df = meter_value_df[:-1]
+        # if np.isnan(meter_value_df.iloc[-1]['value']):
+        #     #TODO test behavior here. we might be able to get away with a dropna() if we alter the n_days check, but this is less aggressive
+        #     #TODO need to refactor the clean caltrack data method and remove the nan logic, this breaks when original df has nan in last row
+        #     meter_value_df = meter_value_df[:-1]
 
         meter_value_df = meter_value_df.rename(columns={'value': 'observed'})
-        meter_value_df.index = meter_value_df.index.map(lambda dt: dt.replace(hour=0)) # in case of daily data where hour is not midnight
+        meter_value_df.index = meter_value_df.index.normalize() # in case of daily data where hour is not midnight
 
         # To account for the above issue, we create an index with all the days and then merge the meter_value_df with it
         # This will ensure that the missing days are kept in the dataframe
