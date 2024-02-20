@@ -154,6 +154,12 @@ class _DailyData:
         df['season'] = df.index.month_name().map(_const.default_season_def)
         df['weekday_weekend'] = df.index.day_name().map(_const.default_weekday_weekend_def)
 
+        # Reorder the columns Create a list of columns
+        columns = ['season', 'weekday_weekend', 'temperature']
+        if 'observed' in df.columns:
+            columns.append('observed')
+        df = df[columns]
+
         return df
         
     def _check_data_sufficiency(self, sufficiency_df):
