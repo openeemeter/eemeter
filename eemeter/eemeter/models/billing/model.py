@@ -1,7 +1,11 @@
 from typing import Union
 
+import numpy as np
+import pandas as pd
+
 from eemeter.eemeter.models.daily.model import DailyModel
 from eemeter.eemeter.models.billing.data import BillingBaselineData, BillingReportingData
+from eemeter.eemeter.models.billing.plot import plot
 from eemeter.eemeter.exceptions import DataSufficiencyError
 
 
@@ -18,22 +22,82 @@ class BillingModel(DailyModel):
             for warning in baseline_data.disqualification + baseline_data.warnings:
                 print(warning.json())
             raise DataSufficiencyError("Can't fit model on disqualified baseline data")
+        
         self.warnings = baseline_data.warnings
         self.disqualification = baseline_data.disqualification
         for warning in baseline_data.warnings + baseline_data.disqualification:
             print(warning.json())
-        meter_data = baseline_data._baseline_meter_df #TODO make df public attr
-        return self._fit(meter_data)
 
-    def predict(self, reporting_data: Union[BillingBaselineData, BillingReportingData]):
+        return self._fit(baseline_data.df)
+
+    def predict(self, reporting_data: Union[BillingBaselineData, BillingReportingData], aggregation=None):
         if not self.is_fitted:
             raise RuntimeError("Model must be fit before predictions can be made.")
 
         if not isinstance(reporting_data, (BillingBaselineData, BillingReportingData)):
             raise TypeError("reporting_data must be a BillingBaselineData or BillingReportingData object")
+        
+        df_res = self._predict(reporting_data.df)
 
-        if isinstance(reporting_data, BillingBaselineData):
-            df_eval = reporting_data._baseline_meter_df
-        if isinstance(reporting_data, BillingReportingData):
-            df_eval = reporting_data._reporting_meter_df 
-        return self._predict(df_eval)
+        if aggregation == "monthly":
+            agg = "MS"
+        elif aggregation == "bimonthly":
+            agg = "2MS"
+        else:
+            agg = None
+
+        if agg is not None:
+            sum_quad = lambda x: np.sqrt(np.sum(np.square(x)))
+
+            season = df_res["season"].resample(agg).first()
+            temperature = df_res["temperature"].resample(agg).mean()
+            observed = df_res["observed"].resample(agg).sum()
+            model = df_res["model"].resample(agg).sum()
+            model_unc = df_res["model_unc"].resample(agg).apply(sum_quad)
+            heating_load = df_res["heating_load"].resample(agg).sum()
+            cooling_load = df_res["cooling_load"].resample(agg).sum()
+            model_split = df_res["model_split"].resample(agg).first()
+            model_type = df_res["model_type"].resample(agg).first()
+
+            df_res = pd.concat([season, temperature, observed, model, model_unc, 
+                                heating_load, cooling_load, model_split, model_type], axis=1)
+
+        return df_res
+    
+    def plot(
+        self,
+        df_eval,
+        ax=None,
+        title=None,
+        figsize=None,
+        temp_range=None,
+        aggregation=None,
+    ):
+        """Plot a model fit.
+
+        Parameters
+        ----------
+        ax : :any:`matplotlib.axes.Axes`, optional
+            Existing axes to plot on.
+        title : :any:`str`, optional
+            Chart title.
+        figsize : :any:`tuple`, optional
+            (width, height) of chart.
+        with_candidates : :any:`bool`
+            If True, also plot candidate models.
+        temp_range : :any:`tuple`, optionl
+            Temperature range to plot
+
+        Returns
+        -------
+        ax : :any:`matplotlib.axes.Axes`
+            Matplotlib axes.
+        """
+        try:
+            import matplotlib.pyplot as plt
+        except ImportError:  # pragma: no cover
+            raise ImportError("matplotlib is required for plotting.")
+
+        #TODO: pass more kwargs to plotting function
+
+        plot(self, self.predict(df_eval, aggregation=aggregation))
