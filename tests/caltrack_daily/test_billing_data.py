@@ -1,5 +1,5 @@
 from eemeter.eemeter.models.billing.data import BillingBaselineData, BillingReportingData
-
+from eemeter import load_sample
 import numpy as np
 import pandas as pd
 import pytest
@@ -10,49 +10,49 @@ def get_datetime_index(request):
     # Request = [frequency , is_timezone_aware]
 
     # Create a DateTimeIndex at given frequency and timezone if requested
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', freq=request.param[0], tz = 'US/Eastern' if request.param[1] else None)
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', inclusive="left", freq=request.param[0], tz = 'US/Eastern' if request.param[1] else None)
 
     return datetime_index
 
 @pytest.fixture
 def get_datetime_index_half_hourly_with_timezone():
     # Create a DateTimeIndex at 30-minute intervals
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', freq='30T', tz = 'US/Eastern')
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', inclusive="left", freq='30T', tz = 'US/Eastern')
 
     return datetime_index
 
 @pytest.fixture
 def get_datetime_index_hourly_with_timezone():
     # Create a DateTimeIndex at 30-minute intervals
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', freq='H', tz = 'US/Eastern')
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', inclusive="left", freq='H', tz = 'US/Eastern')
 
     return datetime_index
 
 @pytest.fixture
 def get_datetime_index_daily_with_timezone():
     # Create a DateTimeIndex at daily intervals
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', freq='D', tz = 'US/Eastern')
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', inclusive="left", freq='D', tz = 'US/Eastern')
 
     return datetime_index
 
 @pytest.fixture
 def get_datetime_index_monthly_with_timezone():
     # Create a DateTimeIndex at daily intervals
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', freq='M', tz = 'US/Eastern')
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', inclusive="left", freq='MS', tz = 'US/Eastern')
 
     return datetime_index
 
 @pytest.fixture
 def get_datetime_index_bimonthly_with_timezone():
     # Create a DateTimeIndex at daily intervals
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', freq='2M', tz = 'US/Eastern')
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', inclusive="left", freq='2MS', tz = 'US/Eastern')
 
     return datetime_index
 
 @pytest.fixture
 def get_datetime_index_daily_without_timezone():
     # Create a DateTimeIndex at daily intervals
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', freq='D')
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', inclusive="left", freq='D')
 
     return datetime_index
 
@@ -156,7 +156,7 @@ def test_billing_baseline_data_with_missing_datetime_index_and_column():
     with pytest.raises(ValueError):
         cls = BillingBaselineData(df, is_electricity_data=True)
 
-@pytest.mark.parametrize('get_datetime_index', [['M', True]], indirect=True)
+@pytest.mark.parametrize('get_datetime_index', [['MS', True]], indirect=True)
 def test_billing_baseline_data_with_monthly_frequencies(get_datetime_index):
     datetime_index = get_datetime_index
 
@@ -177,7 +177,7 @@ def test_billing_baseline_data_with_monthly_frequencies(get_datetime_index):
     # TODO : Why should there be a DQ here though?
     assert len(cls.disqualification) == 3
 
-@pytest.mark.parametrize('get_datetime_index', [['2M', True]], indirect=True)
+@pytest.mark.parametrize('get_datetime_index', [['2MS', True]], indirect=True)
 def test_billing_baseline_data_with_bimonthly_frequencies(get_datetime_index):
     datetime_index = get_datetime_index
 
@@ -192,7 +192,7 @@ def test_billing_baseline_data_with_bimonthly_frequencies(get_datetime_index):
 
     assert cls.df is not None
     # Because two months are missing
-    assert len(cls.df) == 304
+    assert len(cls.df) == 305
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     # TODO : Why should there be a DQ here though?
@@ -212,7 +212,7 @@ def test_billing_baseline_data_with_monthly_hourly_frequencies(get_meter_data_mo
     cls = BillingBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 366
+    assert len(cls.df) == 365
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
@@ -230,7 +230,7 @@ def test_billing_baseline_data_with_bimonthly_hourly_frequencies(get_meter_data_
     cls = BillingBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 366
+    assert len(cls.df) == 365
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
@@ -248,7 +248,7 @@ def test_billing_baseline_data_with_monthly_daily_frequencies(get_meter_data_mon
     cls = BillingBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 366
+    assert len(cls.df) == 365
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 0
@@ -267,10 +267,48 @@ def test_billing_baseline_data_with_bimonthly_daily_frequencies(get_meter_data_b
     cls = BillingBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 366
+    assert len(cls.df) == 365
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 0
+
+def test_billing_baseline_data_with_specific_hourly_input():
+    meter, temperature, _ = load_sample('il-electricity-cdd-hdd-hourly')
+    meter = meter[meter.index.year==2017]
+    temperature = temperature[temperature.index.year==2017]
+    cls = BillingBaselineData.from_series(meter, temperature, is_electricity_data=True)
+
+    assert cls.df is not None
+    assert len(cls.df) == 365
+    assert len(cls.warnings) == 2
+    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.caltrack_sufficiency_criteria.inferior_model_usage']
+    assert len(cls.disqualification) == 0
+
+def test_billing_baseline_data_with_specific_daily_input():
+    meter, temperature, _ = load_sample('il-electricity-cdd-hdd-daily')
+    meter = meter[meter.index.year==2017]
+    temperature = temperature[temperature.index.year==2017]
+    cls = BillingBaselineData.from_series(meter, temperature, is_electricity_data=True)
+
+    assert cls.df is not None
+    assert len(cls.df) == 365
+    assert len(cls.warnings) == 2
+    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.caltrack_sufficiency_criteria.inferior_model_usage']
+    assert len(cls.disqualification) == 0
+
+def test_billing_baseline_data_with_specific_monthly_input():
+    meter, temperature, _ = load_sample('il-electricity-cdd-hdd-billing_monthly')
+    meter = meter[meter.index.year==2017]
+    temperature = temperature[temperature.index.year==2017]
+    cls = BillingBaselineData.from_series(meter, temperature, is_electricity_data=True)
+
+    assert cls.df is not None
+    assert len(cls.df) == 365
+    assert len(cls.warnings) == 1
+    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index']
+    assert len(cls.disqualification) == 1
+    # Since the first 21 days are missing so the first month is missing
+    assert [disqualification.qualified_name for disqualification in cls.disqualification] == ['eemeter.caltrack_sufficiency_criteria.missing_monthly_meter_data']
 
 @pytest.mark.parametrize('get_datetime_index', [['30T', True],['H', True]], indirect=True)
 def test_billing_reporting_data_with_missing_half_hourly_hourly_frequencies(get_datetime_index):
@@ -292,7 +330,7 @@ def test_billing_reporting_data_with_missing_half_hourly_hourly_frequencies(get_
     cls = BillingReportingData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 366
+    assert len(cls.df) == 365
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data'
     assert len(cls.disqualification) == 3
@@ -319,7 +357,7 @@ def test_billing_reporting_data_with_missing_daily_frequencies(get_datetime_inde
     cls = BillingReportingData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 366
+    assert len(cls.df) == 365
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 3
