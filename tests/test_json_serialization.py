@@ -44,7 +44,7 @@ def test_json_daily():
     #TODO change to Reporting once class is fixed
     reporting_data = DailyBaselineData.from_series(reporting_meter_data, temperature_data, is_electricity_data=True)
     metered_savings_dataframe = baseline_model.predict(reporting_data)
-    total_metered_savings = (metered_savings_dataframe['observed'] - metered_savings_dataframe['model']).sum()
+    total_metered_savings = (metered_savings_dataframe['observed'] - metered_savings_dataframe['predicted']).sum()
 
     # serialize, deserialize model
     json_str = baseline_model.to_json()
@@ -52,7 +52,7 @@ def test_json_daily():
 
     # compute metered savings from the loaded model
     prediction_json = loaded_model.predict(reporting_data)
-    total_metered_savings_loaded = (prediction_json['observed'] - prediction_json['model']).sum()
+    total_metered_savings_loaded = (prediction_json['observed'] - prediction_json['predicted']).sum()
 
     # compare results
     assert total_metered_savings == total_metered_savings_loaded

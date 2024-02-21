@@ -238,7 +238,7 @@ class DailyModel:
 
             df_model = pd.DataFrame(
                 data={
-                    "model": model,
+                    "predicted": model,
                     "model_unc": unc,
                     "heating_load": hdd_load,
                     "cooling_load": cdd_load,
@@ -392,8 +392,8 @@ class DailyModel:
         - A pandas DataFrame containing the initialized meter data
         """
 
-        if "model" in meter_data.columns:
-            meter_data = meter_data.rename(columns={"model": "model_old"})
+        if "predicted" in meter_data.columns:
+            meter_data = meter_data.rename(columns={"predicted": "predicted_old"})
 
         cols = list(meter_data.columns)
 
