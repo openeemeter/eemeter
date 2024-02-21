@@ -266,11 +266,28 @@ class DailyModel:
     def from_dict(cls, data):
         settings = data.get('settings')
         daily_model = cls(settings=settings)
+        info = data.get('info')
         daily_model.params = DailyModelParameters(
             submodels=data.get('submodels'),
-            metrics=data.get('metrics'),
+            info=info,
             settings=settings,
         )
+        def deserialize_warnings(warnings):
+            if not warnings:
+                return []
+            warn_list = []
+            for warning in warnings:
+                warn_list.append(
+                    EEMeterWarning(
+                        qualified_name=warning.get("qualified_name"),
+                        description=warning.get("description"),
+                        data=warning.get("data"),
+                    )
+                )
+            return warn_list
+        daily_model.disqualification = deserialize_warnings(info.get("disqualification"))
+        daily_model.warnings = deserialize_warnings(info.get("warnings"))
+        daily_model.baseline_timezone = info.get("baseline_timezone")
         daily_model.is_fitted = True
         return daily_model
 
@@ -282,6 +299,9 @@ class DailyModel:
     def from_2_0_dict(cls, data):
         daily_model = cls(model="2.0")
         daily_model.params = DailyModelParameters.from_2_0_params(data)
+        daily_model.warnings = []
+        daily_model.disqualification = []
+        daily_model.baseline_timezone = "UTC"
         daily_model.is_fitted = True
         return daily_model
 
@@ -342,11 +362,14 @@ class DailyModel:
                 f_unc=submodel.f_unc,
             )
         params = DailyModelParameters(
-            settings=self.settings.to_dict(),
-            metrics={
-                "error": self.error,
-            },
             submodels=submodels,
+            settings=self.settings.to_dict(),
+            info={
+                "error": self.error,
+                "baseline_timezone": str(self.baseline_timezone),
+                "disqualification": [dq.json() for dq in self.disqualification],
+                "warnings": [warning.json() for warning in self.warnings],
+            },
         )
 
         return params
