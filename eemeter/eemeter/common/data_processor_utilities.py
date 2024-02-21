@@ -1,10 +1,12 @@
+from math import ceil
+from typing import Optional
+
 from eemeter.eemeter.warnings import EEMeterWarning
 import numpy as np
 import pandas as pd
 from pandas.tseries.offsets import MonthEnd, MonthBegin
 import pytz
 
-from typing import Optional
 
 
 def remove_duplicates(df_or_series):
@@ -356,8 +358,8 @@ def caltrack_sufficiency_criteria_baseline(
         )
         return data, warnings, []
 
-    data_start = data.index.min()
-    data_end = data.index.max()
+    data_start = data.dropna().index.min()
+    data_end = data.dropna().index.max()
     n_days_data = (data_end - data_start).days + 1  #TODO confirm. no longer using last row nan
 
     if requested_start is not None:
@@ -481,14 +483,16 @@ def caltrack_sufficiency_criteria_baseline(
         fraction_valid_temperature_days = 0
         fraction_valid_days = 0
 
-    if not is_reporting_data and n_days_total != num_days:
+    MAX_BASELINE_LENGTH = 365
+    MIN_BASELINE_LENGTH = ceil(0.9 * MAX_BASELINE_LENGTH)
+    if not is_reporting_data and n_days_total > MAX_BASELINE_LENGTH or n_days_total < MIN_BASELINE_LENGTH:
         critical_warnings.append(
             EEMeterWarning(
                 qualified_name=(
                     "eemeter.caltrack_sufficiency_criteria"
                     ".incorrect_number_of_total_days"
                 ),
-                description=("Total data span does not match the required value."),
+                description=(f"Baseline length is not within the expected range of {MIN_BASELINE_LENGTH}-{MAX_BASELINE_LENGTH} days."),
                 data={"num_days": num_days, "n_days_total": n_days_total},
             )
         )
