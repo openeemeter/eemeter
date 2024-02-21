@@ -23,6 +23,7 @@ import json
 import click
 
 from eemeter.eemeter.models.daily.model import DailyModel
+from eemeter.eemeter.models.daily.data import DailyBaselineData
 from .features import (
     compute_usage_per_day_feature,
     compute_temperature_features,
@@ -63,7 +64,7 @@ def cli():
 
 
 def _get_data(
-    sample, meter_file, temperature_file, heating_balance_points, cooling_balance_points
+    sample, meter_file, temperature_file,
 ):
     if sample is not None:
         with resource_stream("eemeter.eemeter.samples", "metadata.json") as f:
@@ -96,18 +97,10 @@ def _get_data(
         )
     else:
         raise click.ClickException("Temperature data not specified.")
-
-    usage_per_day = compute_usage_per_day_feature(meter_data)
-    temperature_features = compute_temperature_features(
-        meter_data.index,
-        temperature_data,
-        heating_balance_points=heating_balance_points,
-        cooling_balance_points=cooling_balance_points,
-    )
-    merged_features = merge_features([usage_per_day, temperature_features])
-    # usage column must be `meter_value` for model fitting to work
-    merged_features.rename(columns={"usage_per_day": "meter_value"}, inplace=True)
-    return merged_features
+    
+    is_electricity_data = "elec" in sample if sample else False
+    data = DailyBaselineData.from_series(meter_data, temperature_data, is_electricity_data=is_electricity_data)
+    return data
 
 
 @cli.command()
@@ -115,25 +108,15 @@ def _get_data(
 @click.option("--meter-file", default=None, type=click.File("rb"))
 @click.option("--temperature-file", default=None, type=click.File("rb"))
 @click.option("--output-file", default=None, type=click.File("wb"))
-@click.option("--show-candidates/--no-show-candidates", default=False, is_flag=True)
-@click.option("--fit-cdd/--no-fit-cdd", default=True, is_flag=True)
 def caltrack(
-    sample, meter_file, temperature_file, output_file, show_candidates, fit_cdd
+    sample, meter_file, temperature_file, output_file
 ):
-    # TODO(philngo): add project dates and baseline period/reporting period.
-    # TODO(philngo): complain about temperature data that isn't daily
-
-    heating_balance_points = range(55, 66)
-    cooling_balance_points = range(65, 76)
-
     data = _get_data(
         sample,
         meter_file,
         temperature_file,
-        heating_balance_points,
-        cooling_balance_points,
     )
-    model_results = DailyModel().fit(data)
+    model_results = DailyModel().fit(data, ignore_disqualification=True)
     json_str = json.dumps(model_results.to_dict(), indent=2)
 
     if output_file is None:
