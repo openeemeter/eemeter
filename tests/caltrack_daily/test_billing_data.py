@@ -4,6 +4,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
+TEMPERATURE_SEED = 29
+METER_SEED = 41
+NUM_DAYS_IN_YEAR = 365
 
 @pytest.fixture
 def get_datetime_index(request):
@@ -60,6 +63,7 @@ def get_datetime_index_daily_without_timezone():
 def get_temperature_data_half_hourly(get_datetime_index_half_hourly_with_timezone):
     datetime_index = get_datetime_index_half_hourly_with_timezone
 
+    np.random.seed(TEMPERATURE_SEED)
     # Create a 'temperature_mean' column with random data
     temperature_mean = np.random.rand(len(datetime_index))
 
@@ -72,6 +76,7 @@ def get_temperature_data_half_hourly(get_datetime_index_half_hourly_with_timezon
 def get_temperature_data_hourly(get_datetime_index_hourly_with_timezone):
     datetime_index = get_datetime_index_hourly_with_timezone
 
+    np.random.seed(TEMPERATURE_SEED)
     # Create a 'temperature_mean' column with random data
     temperature_mean = np.random.rand(len(datetime_index))
 
@@ -84,6 +89,7 @@ def get_temperature_data_hourly(get_datetime_index_hourly_with_timezone):
 def get_temperature_data_daily(get_datetime_index_daily_with_timezone):
     datetime_index = get_datetime_index_daily_with_timezone
 
+    np.random.seed(TEMPERATURE_SEED)
     # Create a 'temperature_mean' column with random data
     temperature_mean = np.random.rand(len(datetime_index))
 
@@ -96,6 +102,7 @@ def get_temperature_data_daily(get_datetime_index_daily_with_timezone):
 def get_meter_data_daily(get_datetime_index_daily_with_timezone):
     datetime_index = get_datetime_index_daily_with_timezone
 
+    np.random.seed(METER_SEED)
     # Create a 'meter_value' column with random data
     meter_value = np.random.rand(len(datetime_index))
 
@@ -108,6 +115,7 @@ def get_meter_data_daily(get_datetime_index_daily_with_timezone):
 def get_meter_data_monthly(get_datetime_index_monthly_with_timezone):
     datetime_index = get_datetime_index_monthly_with_timezone
 
+    np.random.seed(METER_SEED)
     # Create a 'meter_value' column with random data
     meter_value = np.random.rand(len(datetime_index))
 
@@ -120,6 +128,7 @@ def get_meter_data_monthly(get_datetime_index_monthly_with_timezone):
 def get_meter_data_bimonthly(get_datetime_index_bimonthly_with_timezone):
     datetime_index = get_datetime_index_bimonthly_with_timezone
 
+    np.random.seed(METER_SEED)
     # Create a 'meter_value' column with random data
     meter_value = np.random.rand(len(datetime_index))
 
@@ -133,8 +142,11 @@ def get_meter_data_bimonthly(get_datetime_index_bimonthly_with_timezone):
 def test_billing_baseline_data_with_missing_timezone(get_datetime_index):
     datetime_index = get_datetime_index
 
+    np.random.seed(TEMPERATURE_SEED)
     # Create a 'temperature_mean' and meter_value columns with random data
     temperature_mean = np.random.rand(len(datetime_index))
+
+    np.random.seed(METER_SEED)
     meter_value = np.random.rand(len(datetime_index))
 
     # Create the DataFrame
@@ -146,9 +158,12 @@ def test_billing_baseline_data_with_missing_timezone(get_datetime_index):
 # Check that a missing datetime index and column raises a Value Error
 def test_billing_baseline_data_with_missing_datetime_index_and_column():
 
+    np.random.seed(TEMPERATURE_SEED)
     # Create a 'temperature_mean' and meter_value columns with random data
-    temperature_mean = np.random.rand(365)
-    meter_value = np.random.rand(365)
+    temperature_mean = np.random.rand(NUM_DAYS_IN_YEAR)
+
+    np.random.seed(METER_SEED)
+    meter_value = np.random.rand(NUM_DAYS_IN_YEAR)
 
     # Create the DataFrame
     df = pd.DataFrame(data={'meter' : meter_value, 'temperature': temperature_mean})
@@ -160,8 +175,11 @@ def test_billing_baseline_data_with_missing_datetime_index_and_column():
 def test_billing_baseline_data_with_monthly_frequencies(get_datetime_index):
     datetime_index = get_datetime_index
 
+    np.random.seed(TEMPERATURE_SEED)
     # Create a 'temperature_mean' and meter_value columns with random data
     temperature_mean = np.random.rand(len(datetime_index))
+
+    np.random.seed(METER_SEED)
     meter_value = np.random.rand(len(datetime_index))
 
     # Create the DataFrame
@@ -174,15 +192,19 @@ def test_billing_baseline_data_with_monthly_frequencies(get_datetime_index):
     assert len(cls.df) == 335
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
-    # TODO : Why should there be a DQ here though?
-    assert len(cls.disqualification) == 3
+    # DQ because only 12 days worth of temperature data is available
+    assert len(cls.disqualification) == 2
+    assert [dq.qualified_name for dq in cls.disqualification] == ['eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_temperature_data']
 
 @pytest.mark.parametrize('get_datetime_index', [['2MS', True]], indirect=True)
 def test_billing_baseline_data_with_bimonthly_frequencies(get_datetime_index):
     datetime_index = get_datetime_index
 
+    np.random.seed(TEMPERATURE_SEED)
     # Create a 'temperature_mean' and meter_value columns with random data
     temperature_mean = np.random.rand(len(datetime_index))
+
+    np.random.seed(METER_SEED)
     meter_value = np.random.rand(len(datetime_index))
 
     # Create the DataFrame
@@ -195,8 +217,9 @@ def test_billing_baseline_data_with_bimonthly_frequencies(get_datetime_index):
     assert len(cls.df) == 305
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
-    # TODO : Why should there be a DQ here though?
+    # DQ because only 6 days worth of temperature data is available
     assert len(cls.disqualification) == 3
+    assert [dq.qualified_name for dq in cls.disqualification] == ['eemeter.caltrack_sufficiency_criteria.incorrect_number_of_total_days','eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_temperature_data']
 
 def test_billing_baseline_data_with_monthly_hourly_frequencies(get_meter_data_monthly, get_temperature_data_hourly):
 
@@ -212,7 +235,7 @@ def test_billing_baseline_data_with_monthly_hourly_frequencies(get_meter_data_mo
     cls = BillingBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
@@ -230,7 +253,7 @@ def test_billing_baseline_data_with_bimonthly_hourly_frequencies(get_meter_data_
     cls = BillingBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
@@ -248,7 +271,7 @@ def test_billing_baseline_data_with_monthly_daily_frequencies(get_meter_data_mon
     cls = BillingBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 0
@@ -267,7 +290,7 @@ def test_billing_baseline_data_with_bimonthly_daily_frequencies(get_meter_data_b
     cls = BillingBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 0
@@ -279,7 +302,7 @@ def test_billing_baseline_data_with_specific_hourly_input():
     cls = BillingBaselineData.from_series(meter, temperature, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 2
     assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.caltrack_sufficiency_criteria.inferior_model_usage']
     assert len(cls.disqualification) == 0
@@ -291,7 +314,7 @@ def test_billing_baseline_data_with_specific_daily_input():
     cls = BillingBaselineData.from_series(meter, temperature, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 2
     assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.caltrack_sufficiency_criteria.inferior_model_usage']
     assert len(cls.disqualification) == 0
@@ -306,7 +329,7 @@ def test_billing_baseline_data_with_specific_missing_daily_input():
     cls = BillingBaselineData.from_series(meter, temperature, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 2
     assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.caltrack_sufficiency_criteria.inferior_model_usage']
     assert len(cls.disqualification) == 0
@@ -318,7 +341,7 @@ def test_billing_baseline_data_with_specific_monthly_input():
     cls = BillingBaselineData.from_series(meter, temperature, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
     assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index']
     assert len(cls.disqualification) == 1
@@ -329,6 +352,7 @@ def test_billing_baseline_data_with_specific_monthly_input():
 def test_billing_reporting_data_with_missing_half_hourly_hourly_frequencies(get_datetime_index):
     datetime_index = get_datetime_index
 
+    np.random.seed(TEMPERATURE_SEED)
     # Create a 'temperature_mean' and meter_value columns with random data
     temperature_mean = np.random.rand(len(datetime_index))
 
@@ -345,7 +369,7 @@ def test_billing_reporting_data_with_missing_half_hourly_hourly_frequencies(get_
     cls = BillingReportingData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data'
     assert len(cls.disqualification) == 3
@@ -356,6 +380,7 @@ def test_billing_reporting_data_with_missing_half_hourly_hourly_frequencies(get_
 def test_billing_reporting_data_with_missing_daily_frequencies(get_datetime_index):
     datetime_index = get_datetime_index
 
+    np.random.seed(TEMPERATURE_SEED)
     # Create a 'temperature_mean' and meter_value columns with random data
     temperature_mean = np.random.rand(len(datetime_index))
 
@@ -372,7 +397,7 @@ def test_billing_reporting_data_with_missing_daily_frequencies(get_datetime_inde
     cls = BillingReportingData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 3

@@ -4,6 +4,9 @@ import numpy as np
 import pandas as pd
 import pytest
 
+TEMPERATURE_SEED = 29
+METER_SEED = 41
+NUM_DAYS_IN_YEAR = 365
 
 @pytest.fixture
 def get_datetime_index(request):
@@ -46,6 +49,7 @@ def get_datetime_index_daily_without_timezone():
 def get_temperature_data_half_hourly(get_datetime_index_half_hourly_with_timezone):
     datetime_index = get_datetime_index_half_hourly_with_timezone
 
+    np.random.seed(TEMPERATURE_SEED)
     # Create a 'temperature_mean' column with random data
     temperature_mean = np.random.rand(len(datetime_index))
 
@@ -58,6 +62,7 @@ def get_temperature_data_half_hourly(get_datetime_index_half_hourly_with_timezon
 def get_temperature_data_hourly(get_datetime_index_hourly_with_timezone):
     datetime_index = get_datetime_index_hourly_with_timezone
 
+    np.random.seed(TEMPERATURE_SEED)
     # Create a 'temperature_mean' column with random data
     temperature_mean = np.random.rand(len(datetime_index))
 
@@ -70,8 +75,32 @@ def get_temperature_data_hourly(get_datetime_index_hourly_with_timezone):
 def get_meter_data_daily(get_datetime_index_daily_with_timezone):
     datetime_index = get_datetime_index_daily_with_timezone
 
+    np.random.seed(METER_SEED)
     # Create a 'meter_value' column with random data
     meter_value = np.random.rand(len(datetime_index))
+
+    # Create the DataFrame
+    df = pd.DataFrame(data={'observed': meter_value}, index=datetime_index)
+
+    return df
+
+@pytest.fixture
+def get_meter_data_daily_with_extreme_values_and_negative_values(get_datetime_index_daily_with_timezone):
+    datetime_index = get_datetime_index_daily_with_timezone
+
+    np.random.seed(METER_SEED)
+    # Create a 'meter_value' column with random data
+    # Last 60 will be for extreme values
+    meter_value = np.random.normal(loc=0.0, scale=100.0, size=len(datetime_index)-60)
+    median = np.median(meter_value)
+    q75, q25 = np.percentile(meter_value, [75 ,25])
+    iqr = q75 - q25
+
+    # Generate some extreme values more than thrice the interquartile range from the median
+    extreme_values_right = median + (3 * iqr) + np.random.normal(loc=0.0, scale=100.0, size=30)
+    extreme_values_left = median - ( (3 * iqr) + np.random.normal(loc=0.0, scale=100.0, size=30))
+
+    meter_value = np.concatenate((extreme_values_right, meter_value, extreme_values_left))
 
     # Create the DataFrame
     df = pd.DataFrame(data={'observed': meter_value}, index=datetime_index)
@@ -82,6 +111,7 @@ def get_meter_data_daily(get_datetime_index_daily_with_timezone):
 def get_temperature_data_daily(get_datetime_index_daily_with_timezone):
     datetime_index = get_datetime_index_daily_with_timezone
 
+    np.random.seed(TEMPERATURE_SEED)
     # Create a 'temperature_mean' column with random data
     temperature_mean = np.random.rand(len(datetime_index))
 
@@ -95,8 +125,11 @@ def get_temperature_data_daily(get_datetime_index_daily_with_timezone):
 def test_daily_baseline_data_with_missing_timezone(get_datetime_index):
     datetime_index = get_datetime_index
 
+    np.random.seed(TEMPERATURE_SEED)
     # Create a 'temperature_mean' and meter_value columns with random data
     temperature_mean = np.random.rand(len(datetime_index))
+
+    np.random.seed(METER_SEED)
     meter_value = np.random.rand(len(datetime_index))
 
     # Create the DataFrame
@@ -108,9 +141,12 @@ def test_daily_baseline_data_with_missing_timezone(get_datetime_index):
 # Check that a missing datetime index and column raises a Value Error
 def test_daily_baseline_data_with_missing_datetime_index_and_column():
 
+    np.random.seed(TEMPERATURE_SEED)
     # Create a 'temperature_mean' and meter_value columns with random data
-    temperature_mean = np.random.rand(365)
-    meter_value = np.random.rand(365)
+    temperature_mean = np.random.rand(NUM_DAYS_IN_YEAR)
+
+    np.random.seed(METER_SEED)
+    meter_value = np.random.rand(NUM_DAYS_IN_YEAR)
 
     # Create the DataFrame
     df = pd.DataFrame(data={'meter' : meter_value, 'temperature': temperature_mean})
@@ -122,13 +158,15 @@ def test_daily_baseline_data_with_missing_datetime_index_and_column():
 def test_daily_baseline_data_with_datetime_column(get_datetime_index):
     df = pd.DataFrame()
     df['datetime'] = get_datetime_index
+    np.random.seed(TEMPERATURE_SEED)
     df['temperature'] = np.random.rand(len(get_datetime_index))
+    np.random.seed(METER_SEED)
     df['observed'] = np.random.rand(len(get_datetime_index))
 
     cls = DailyBaselineData(df, is_electricity_data=True)
     
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 0
@@ -137,8 +175,11 @@ def test_daily_baseline_data_with_datetime_column(get_datetime_index):
 def test_daily_baseline_data_with_same_daily_frequencies(get_datetime_index):
     datetime_index = get_datetime_index
 
+    np.random.seed(TEMPERATURE_SEED)
     # Create a 'temperature_mean' and meter_value columns with random data
     temperature_mean = np.random.rand(len(datetime_index))
+
+    np.random.seed(METER_SEED)
     meter_value = np.random.rand(len(datetime_index))
 
     # Create the DataFrame
@@ -147,7 +188,7 @@ def test_daily_baseline_data_with_same_daily_frequencies(get_datetime_index):
     cls = DailyBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 0
@@ -156,8 +197,11 @@ def test_daily_baseline_data_with_same_daily_frequencies(get_datetime_index):
 def test_daily_baseline_data_with_same_hourly_frequencies(get_datetime_index):
     datetime_index = get_datetime_index
 
+    np.random.seed(TEMPERATURE_SEED)
     # Create a 'temperature_mean' and meter_value columns with random data
     temperature_mean = np.random.rand(len(datetime_index))
+
+    np.random.seed(METER_SEED)
     meter_value = np.random.rand(len(datetime_index))
 
     # Create the DataFrame
@@ -166,7 +210,7 @@ def test_daily_baseline_data_with_same_hourly_frequencies(get_datetime_index):
     cls = DailyBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
@@ -174,8 +218,11 @@ def test_daily_baseline_data_with_same_hourly_frequencies(get_datetime_index):
 def test_daily_baseline_data_with_same_half_hourly_frequencies(get_datetime_index):
     datetime_index = get_datetime_index
 
+    np.random.seed(TEMPERATURE_SEED)
     # Create a 'temperature_mean' and meter_value columns with random data
     temperature_mean = np.random.rand(len(datetime_index))
+
+    np.random.seed(METER_SEED)
     meter_value = np.random.rand(len(datetime_index))
 
     # Create the DataFrame
@@ -184,7 +231,7 @@ def test_daily_baseline_data_with_same_half_hourly_frequencies(get_datetime_inde
     cls = DailyBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
@@ -201,7 +248,7 @@ def test_daily_baseline_data_with_daily_and_half_hourly_frequencies(get_temperat
     cls = DailyBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
@@ -218,9 +265,44 @@ def test_daily_baseline_data_with_daily_and_hourly_frequencies(get_meter_data_da
     cls = DailyBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
+
+def test_daily_baseline_data_with_extreme_values_in_daily_and_hourly_frequencies(get_meter_data_daily_with_extreme_values_and_negative_values, get_temperature_data_hourly):
+    df = get_temperature_data_hourly
+
+    # Create a DataFrame with daily frequency
+    df_meter = get_meter_data_daily_with_extreme_values_and_negative_values
+
+    # Merge 'df' and 'df_meter' in an outer join
+    df = df.merge(df_meter, left_index=True, right_index=True, how='outer')
+
+    cls = DailyBaselineData(df, is_electricity_data=True)
+
+    assert cls.df is not None
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert len(cls.warnings) == 1
+    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.extreme_values_detected'
+    assert len(cls.disqualification) == 0
+
+def test_daily_baseline_data_with_extreme_and_negative_values_in_daily_and_hourly_frequencies(get_meter_data_daily_with_extreme_values_and_negative_values, get_temperature_data_hourly):
+    df = get_temperature_data_hourly
+
+    # Create a DataFrame with daily frequency
+    df_meter = get_meter_data_daily_with_extreme_values_and_negative_values
+
+    # Merge 'df' and 'df_meter' in an outer join
+    df = df.merge(df_meter, left_index=True, right_index=True, how='outer')
+
+    cls = DailyBaselineData(df, is_electricity_data=False)
+
+    assert cls.df is not None
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert len(cls.warnings) == 1
+    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.extreme_values_detected'
+    assert len(cls.disqualification) == 1
+    assert cls.disqualification[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.negative_meter_values'
 
 def test_daily_baseline_data_with_specific_hourly_input():
     meter, temperature, _ = load_sample('il-electricity-cdd-hdd-hourly')
@@ -229,7 +311,7 @@ def test_daily_baseline_data_with_specific_hourly_input():
     cls = DailyBaselineData.from_series(meter, temperature, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 2
     assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.caltrack_sufficiency_criteria.extreme_values_detected']
     assert len(cls.disqualification) == 0
@@ -241,7 +323,7 @@ def test_daily_baseline_data_with_specific_daily_input():
     cls = DailyBaselineData.from_series(meter, temperature, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 2
     assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.caltrack_sufficiency_criteria.extreme_values_detected']
     assert len(cls.disqualification) == 0
@@ -255,7 +337,7 @@ def test_daily_baseline_data_with_missing_specific_daily_input():
     cls = DailyBaselineData.from_series(meter, temperature, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 2
     assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.caltrack_sufficiency_criteria.extreme_values_detected']
     assert len(cls.disqualification) == 1
@@ -279,7 +361,7 @@ def test_daily_baseline_data_with_missing_hourly_temperature_data(get_meter_data
     cls = DailyBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 0
 
     # TODO : BUG : the 'compute_temperature_features' method in features.py does not add a warning for missing high frequency data. Should be fixed.
@@ -306,7 +388,7 @@ def test_daily_baseline_data_with_missing_half_hourly_temperature_data(get_meter
     cls = DailyBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data'
     assert len(cls.disqualification) == 3
@@ -329,7 +411,7 @@ def test_daily_baseline_data_with_missing_daily_temperature_data(get_meter_data_
     cls = DailyBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 3
@@ -351,7 +433,7 @@ def test_daily_baseline_data_with_missing_meter_data(get_meter_data_daily, get_t
     cls = DailyBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 0
     # assert all(warning.qualified_name in expected_warnings for warning in cls.warnings)
     assert len(cls.disqualification) == 3
@@ -362,6 +444,7 @@ def test_daily_baseline_data_with_missing_meter_data(get_meter_data_daily, get_t
 def test_daily_reporting_data_with_half_hourly_and_hourly_frequencies(get_datetime_index):
     datetime_index = get_datetime_index
 
+    np.random.seed(TEMPERATURE_SEED)
     # Create a 'temperature_mean' and meter_value columns with random data
     temperature_mean = np.random.rand(len(datetime_index))
 
@@ -371,7 +454,7 @@ def test_daily_reporting_data_with_half_hourly_and_hourly_frequencies(get_dateti
     cls = DailyReportingData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
@@ -380,6 +463,7 @@ def test_daily_reporting_data_with_half_hourly_and_hourly_frequencies(get_dateti
 def test_daily_reporting_data_with_missing_half_hourly_and_hourly_frequencies(get_datetime_index):
     datetime_index = get_datetime_index
 
+    np.random.seed(TEMPERATURE_SEED)
     # Create a 'temperature_mean' and meter_value columns with random data
     temperature_mean = np.random.rand(len(datetime_index))
 
@@ -396,7 +480,7 @@ def test_daily_reporting_data_with_missing_half_hourly_and_hourly_frequencies(ge
     cls = DailyReportingData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data'
     expected_disqualifications = ['eemeter.caltrack_sufficiency_criteria.missing_monthly_temperature_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_temperature_data']
@@ -407,6 +491,7 @@ def test_daily_reporting_data_with_missing_half_hourly_and_hourly_frequencies(ge
 def test_daily_reporting_data_with_missing_daily_frequencies(get_datetime_index):
     datetime_index = get_datetime_index
 
+    np.random.seed(TEMPERATURE_SEED)
     # Create a 'temperature_mean' and meter_value columns with random data
     temperature_mean = np.random.rand(len(datetime_index))
 
@@ -423,7 +508,7 @@ def test_daily_reporting_data_with_missing_daily_frequencies(get_datetime_index)
     cls = DailyReportingData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 365
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     expected_disqualifications = ['eemeter.caltrack_sufficiency_criteria.missing_monthly_temperature_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_temperature_data']

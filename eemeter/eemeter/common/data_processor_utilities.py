@@ -342,7 +342,8 @@ def caltrack_sufficiency_criteria_baseline(
     num_days=365,
     min_fraction_daily_coverage=0.9,
     min_fraction_hourly_temperature_coverage_per_period=0.9,
-    is_reporting_data = False
+    is_reporting_data = False,
+    is_electricity_data = True
 ):
     """
         Refer to usage_per_day.py in eemeter/caltrack/ folder
@@ -415,7 +416,7 @@ def caltrack_sufficiency_criteria_baseline(
 
     n_days_total = n_days_data + n_days_start_gap + n_days_end_gap
 
-    if not is_reporting_data:
+    if not is_reporting_data and not is_electricity_data:
         n_negative_meter_values = data.observed[
             data.observed < 0
         ].shape[0]
