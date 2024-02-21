@@ -573,7 +573,7 @@ def _estimate_hour_of_week_occupancy(model_data, threshold):
         return int(ratio_positive_residuals > threshold)
 
     return (
-        model_data_with_residuals.groupby(["hour_of_week"])
+        model_data_with_residuals.groupby(["hour_of_week"], observed=False)
         .apply(_is_high_usage)
         .rename("occupancy")
         .reindex(index)
@@ -636,7 +636,7 @@ def _fit_temperature_bins(temperature_data, default_bins, min_temperature_count)
         )
         return (
             pd.DataFrame({"temp": temperature_data, "bin": temp_bins})
-            .groupby("bin")["temp"]
+            .groupby("bin", observed=False)["temp"]
             .count()
             .rename("count")
             .sort_index()

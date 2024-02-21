@@ -29,12 +29,15 @@ class HourlyBaselineData:
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
         if is_electricity_data:
             df[df['observed'] == 0]["observed"] = np.nan
+
+        df = self._correct_frequency(df)
+
         self.df = df
         self.sufficiency_warnings = self._check_data_sufficiency()
 
-    def _check_data_sufficiency(self):
-        meter = self.df['observed'].rename('meter_value')
-        temp = self.df['temperature']
+    def _correct_frequency(self, df: pd.DataFrame):
+        meter = df['observed']
+        temp = df['temperature']
 
         # unknown for weirdly large frequencies. Anything higher frequency than hourly frequency still comes up as hourly
         min_granularity = compute_minimum_granularity(meter.dropna().index, 'unknown')
@@ -50,11 +53,18 @@ class HourlyBaselineData:
         temp = temp.resample('H').mean()
         temp.index.freq = 'H'
 
+        return merge_features([meter, temp])
+
+    def _check_data_sufficiency(self):
+        meter = self.df['observed'].rename('meter_value')
+        temp = self.df['temperature']
+
         temperature_features = compute_temperature_features(
             meter.index,
             temp,
             data_quality=True,
         )
+
         sufficiency_df = merge_features([meter, temperature_features])
         sufficiency = caltrack_sufficiency_criteria(sufficiency_df, requested_start=None, requested_end=None)
         return sufficiency.warnings
@@ -76,7 +86,7 @@ class HourlyReportingData:
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
         #TODO add missing observed column
         if is_electricity_data:
-            df.loc[df['observed'] == 0, 'observed'] = np.nan
+            df[df["observed"] == 0]["observed"] = np.nan
         self.df = df
 
     @classmethod
