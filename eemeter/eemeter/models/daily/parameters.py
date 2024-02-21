@@ -337,7 +337,7 @@ class DailySubmodelParameters(BaseModel):
 
 class DailyModelParameters(BaseModel):
     submodels: Dict[str, DailySubmodelParameters]
-    metrics: Optional[Dict[str, Any]]
+    info: Optional[Dict[str, Any]]
     settings: Optional[Dict[str, Any]]
 
     @classmethod
@@ -377,9 +377,9 @@ class DailyModelParameters(BaseModel):
         return cls(
             #TODO handle settings correctly with something in config.py
             settings = {"from 2.0 - will fail if attempting from_dict()": True},
-            metrics = {},
+            info = {},
             submodels={
                 # no splits, full calendar
                 'fw-su_sh_wi': submodel_params,
-            }
+            },
         )
