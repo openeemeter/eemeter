@@ -25,7 +25,7 @@ from typing import Union, Optional
 class HourlyBaselineData:
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
         if is_electricity_data:
-            df.loc[df['observed'] == 0, 'observed'] = np.nan
+            df[df['observed'] == 0]["observed"] = np.nan
         self.df = df
         self.sufficiency_warnings = self._check_data_sufficiency()
 
