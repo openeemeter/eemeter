@@ -348,8 +348,8 @@ def test_billing_baseline_data_with_specific_monthly_input():
     # Since the first 21 days are missing so the first month is missing
     assert [disqualification.qualified_name for disqualification in cls.disqualification] == ['eemeter.caltrack_sufficiency_criteria.missing_monthly_meter_data']
 
-@pytest.mark.parametrize('get_datetime_index', [['30T', True],['H', True]], indirect=True)
-def test_billing_reporting_data_with_missing_half_hourly_hourly_frequencies(get_datetime_index):
+@pytest.mark.parametrize('get_datetime_index', [['30T', True], ['H', True]], indirect=True)
+def test_billing_reporting_data_with_missing_half_hourly_frequencies(get_datetime_index):
     datetime_index = get_datetime_index
 
     np.random.seed(TEMPERATURE_SEED)

@@ -36,7 +36,6 @@ class _BillingData(_DailyData):
         """
         meter_series = df['observed'].dropna()
         min_granularity = compute_minimum_granularity(meter_series.index, default_granularity='billing_bimonthly')
-        print(min_granularity)
 
         # Ensure higher frequency data is aggregated to the monthly model
         if not min_granularity.startswith('billing'):
@@ -124,6 +123,25 @@ class _BillingData(_DailyData):
                 temp_series,
                 data_quality=True,
             )
+            # Only check for high frequency temperature data if it exists
+            if (temperature_features.temperature_not_null + temperature_features.temperature_null).median() > 1:
+                invalid_temperature_rows = (
+                    temperature_features.temperature_not_null
+                    / (temperature_features.temperature_not_null + temperature_features.temperature_null)
+                ) <= 0.5
+
+                if invalid_temperature_rows.any():
+                    self.warnings.append(
+                        EEMeterWarning(
+                            qualified_name="eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data",
+                            description=("More than 50% of the high frequency temperature data is missing."),
+                            data = (
+                                invalid_temperature_rows.index.to_list()
+                            )
+                        )
+                    )
+                    temperature_features.loc[invalid_temperature_rows, 'temperature_mean'] = np.nan
+
         temp = temperature_features['temperature_mean'].rename('temperature')
         features = temperature_features.drop(columns=['temperature_mean'])
         return temp, features
