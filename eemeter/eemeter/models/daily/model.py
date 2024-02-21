@@ -41,7 +41,7 @@ from typing import Union
 
 
 #TODO move to settings class
-_CVRMSE_THRESHOLD = 1.0
+CVRMSE_THRESHOLD = 1.0
 
 class DailyModel:
     def __init__(
@@ -152,10 +152,10 @@ class DailyModel:
         self.warnings = baseline_data.warnings
         self.disqualification = baseline_data.disqualification
         self._fit(baseline_data.df)
-        if self.error["CVRMSE"] > _CVRMSE_THRESHOLD:
+        if self.error["CVRMSE"] > CVRMSE_THRESHOLD:
             cvrmse_warning = EEMeterWarning(
                 qualified_name="eemeter.model_fit_metrics.cvrmse",
-                description=(f"Fit model has CVRMSE > {_CVRMSE_THRESHOLD}"),
+                description=(f"Fit model has CVRMSE > {CVRMSE_THRESHOLD}"),
                 data={"CVRMSE": self.error["CVRMSE"]}
             )
             cvrmse_warning.warn()
