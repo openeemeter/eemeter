@@ -110,3 +110,8 @@ class BillingModel(DailyModel):
         #TODO: pass more kwargs to plotting function
 
         plot(self, self.predict(df_eval, aggregation=aggregation))
+
+    def to_dict(self):
+        model_dict = super().to_dict()
+        model_dict['settings']['developer_mode'] = True
+        return model_dict
