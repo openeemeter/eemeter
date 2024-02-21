@@ -36,6 +36,7 @@ class _BillingData(_DailyData):
         """
         meter_series = df['observed'].dropna()
         min_granularity = compute_minimum_granularity(meter_series.index, default_granularity='billing_bimonthly')
+        print(min_granularity)
 
         # Ensure higher frequency data is aggregated to the monthly model
         if not min_granularity.startswith('billing'):
@@ -51,6 +52,11 @@ class _BillingData(_DailyData):
 
         # This checks for offcycle reads. That is a disqualification if the billing cycle is less than 25 days
         meter_value_df = clean_caltrack_billing_daily_data(meter_series.to_frame('value'), min_granularity, self.disqualification)
+        
+        # Spread billing data to daily
+        if min_granularity.startswith('billing'):
+            meter_value_df = as_freq(meter_value_df['value'], 'D').to_frame('value')
+
         meter_value_df = meter_value_df.rename(columns={'value': 'observed'})
 
         # Convert all non-zero time datetimes to zero time (i.e., set the time to midnight), for proper join since we only want one reading per day for billing
