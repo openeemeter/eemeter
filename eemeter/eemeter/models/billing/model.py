@@ -48,12 +48,16 @@ class BillingModel(DailyModel):
         
         df_res = self._predict(reporting_data.df)
 
-        if aggregation == "monthly":
+        if aggregation is None:
+            agg = None
+        elif aggregation.lower() == "none":
+            agg = None
+        elif aggregation == "monthly":
             agg = "MS"
         elif aggregation == "bimonthly":
             agg = "2MS"
         else:
-            agg = None
+            raise ValueError("aggregation must be one of [None, 'monthly', 'bimonthly']")
 
         if agg is not None:
             sum_quad = lambda x: np.sqrt(np.sum(np.square(x)))
