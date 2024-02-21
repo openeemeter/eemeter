@@ -141,6 +141,25 @@ class _DailyData:
                 data_quality=True,
             )
             temperature_features = temperature_features[:-1]
+
+            # Only check for high frequency temperature data if it exists
+            if (temperature_features.temperature_not_null + temperature_features.temperature_null).median() > 1:
+                invalid_temperature_rows = (
+                    temperature_features.temperature_not_null
+                    / (temperature_features.temperature_not_null + temperature_features.temperature_null)
+                ) <= 0.5
+
+                if invalid_temperature_rows.any():
+                    self.warnings.append(
+                        EEMeterWarning(
+                            qualified_name="eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data",
+                            description=("More than 50% of the high frequency temperature data is missing."),
+                            data = (
+                                invalid_temperature_rows.index.to_list()
+                            )
+                        )
+                    )
+                    temperature_features.loc[invalid_temperature_rows, 'temperature_mean'] = np.nan
         temp = temperature_features['temperature_mean'].rename('temperature')
         features = temperature_features.drop(columns=['temperature_mean'])
         return temp, features
@@ -224,7 +243,8 @@ class _DailyData:
 class DailyBaselineData(_DailyData):
     """Dataclass for daily baseline data"""
     def _check_data_sufficiency(self, sufficiency_df):
-        _, disqualification, warnings = caltrack_sufficiency_criteria_baseline(sufficiency_df, is_reporting_data=False, is_electricity_data=self.is_electricity_data)
+        # 90% coverage per period only required for billing models
+        _, disqualification, warnings = caltrack_sufficiency_criteria_baseline(sufficiency_df, min_fraction_hourly_temperature_coverage_per_period=0.5, is_reporting_data=False, is_electricity_data=self.is_electricity_data)
         return disqualification, warnings
 
 
@@ -253,5 +273,6 @@ class DailyReportingData(_DailyData):
         return super().from_series(meter_data, temperature_data, is_electricity_data)
 
     def _check_data_sufficiency(self, sufficiency_df):
-        _, disqualification, warnings = caltrack_sufficiency_criteria_baseline(sufficiency_df, is_reporting_data=True, is_electricity_data=self.is_electricity_data)
+        # 90% coverage per period only required for billing models
+        _, disqualification, warnings = caltrack_sufficiency_criteria_baseline(sufficiency_df, min_fraction_hourly_temperature_coverage_per_period=0.5, is_reporting_data=True, is_electricity_data=self.is_electricity_data)
         return disqualification, warnings           

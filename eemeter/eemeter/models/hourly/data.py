@@ -23,8 +23,6 @@ from eemeter import merge_features, compute_temperature_features, caltrack_suffi
 from eemeter.eemeter.common.data_processor_utilities import compute_minimum_granularity
 from typing import Union, Optional
 
-import eemeter as em
-
 class HourlyBaselineData:
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
         if is_electricity_data:
@@ -46,7 +44,7 @@ class HourlyBaselineData:
             raise ValueError(f"Meter Data must be atleast hourly, but is {min_granularity}.")            
         else:
             #TODO : Add the high frequency check for meter data
-            meter = meter.resample('H').sum()
+            meter = meter.resample('H').sum(min_count=1)
             meter.index.freq = 'H'
 
         #TODO : Add the high frequency check for temperature data and add NaNs

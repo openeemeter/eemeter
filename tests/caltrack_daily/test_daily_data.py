@@ -362,11 +362,10 @@ def test_daily_baseline_data_with_missing_hourly_temperature_data(get_meter_data
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
-    assert len(cls.warnings) == 0
-
-    # TODO : BUG : the 'compute_temperature_features' method in features.py does not add a warning for missing high frequency data. Should be fixed.
-    assert len(cls.disqualification) == 2
-    expected_disqualifications = ['eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_temperature_data']
+    assert len(cls.warnings) == 1
+    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data'
+    assert len(cls.disqualification) == 3
+    expected_disqualifications = ['eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_temperature_data', 'eemeter.caltrack_sufficiency_criteria.missing_monthly_temperature_data']
     assert all(disqualification.qualified_name in expected_disqualifications for disqualification in cls.disqualification)
 
 def test_daily_baseline_data_with_missing_half_hourly_temperature_data(get_meter_data_daily, get_temperature_data_half_hourly):
@@ -459,7 +458,7 @@ def test_daily_reporting_data_with_half_hourly_and_hourly_frequencies(get_dateti
     assert len(cls.disqualification) == 0
 
 
-@pytest.mark.parametrize('get_datetime_index', [['30T', True],['H', True]], indirect=True)
+@pytest.mark.parametrize('get_datetime_index', [['30T', True], ['H', True]], indirect=True)
 def test_daily_reporting_data_with_missing_half_hourly_and_hourly_frequencies(get_datetime_index):
     datetime_index = get_datetime_index
 
