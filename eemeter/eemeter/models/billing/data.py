@@ -125,7 +125,7 @@ class _BillingData(_DailyData):
 
 class BillingBaselineData(_BillingData):
     def _check_data_sufficiency(self, sufficiency_df):
-        _, disqualification, warnings = caltrack_sufficiency_criteria_baseline(sufficiency_df, is_reporting_data=False)
+        _, disqualification, warnings = caltrack_sufficiency_criteria_baseline(sufficiency_df, is_reporting_data=False, is_electricity_data=self.is_electricity_data)
         return disqualification, warnings
 
 
@@ -149,5 +149,5 @@ class BillingReportingData(_BillingData):
         return super().from_series(meter_data, temperature_data, is_electricity_data)
 
     def _check_data_sufficiency(self, sufficiency_df):
-        _, disqualification, warnings = caltrack_sufficiency_criteria_baseline(sufficiency_df, is_reporting_data=True)
+        _, disqualification, warnings = caltrack_sufficiency_criteria_baseline(sufficiency_df, is_reporting_data=True, is_electricity_data=self.is_electricity_data)
         return disqualification, warnings     
