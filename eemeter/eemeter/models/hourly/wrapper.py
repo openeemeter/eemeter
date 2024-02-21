@@ -32,6 +32,7 @@ class HourlyModel:
     def fit(self, data):
         meter_data = data.df['observed'].to_frame('value')
         temperature_data = data.df['temperature']
+
         preliminary_design_matrix = create_caltrack_hourly_preliminary_design_matrix(meter_data, temperature_data)
         segmentation = segment_time_series(
             preliminary_design_matrix.index, "three_month_weighted"
