@@ -3,10 +3,11 @@ from typing import Union
 import numpy as np
 import pandas as pd
 
-from eemeter.eemeter.models.daily.model import DailyModel
+from eemeter.eemeter.models.daily.model import DailyModel, CVRMSE_THRESHOLD
 from eemeter.eemeter.models.billing.data import BillingBaselineData, BillingReportingData
 from eemeter.eemeter.models.billing.plot import plot
 from eemeter.eemeter.exceptions import DataSufficiencyError
+from eemeter.eemeter.warnings import EEMeterWarning
 
 
 class BillingModel(DailyModel): 
@@ -16,19 +17,27 @@ class BillingModel(DailyModel):
         super().__init__(model="2.0", settings=settings)
 
     def fit(self, baseline_data: BillingBaselineData, ignore_disqualification=False):
+        #TODO there's a fair bit of duplicated code between this and daily fit(), refactor
         if not isinstance(baseline_data, BillingBaselineData):
             raise TypeError("baseline_data must be a BillingBaselineData object")
+        baseline_data.log_warnings()
         if baseline_data.disqualification and not ignore_disqualification:
             for warning in baseline_data.disqualification + baseline_data.warnings:
                 print(warning.json())
             raise DataSufficiencyError("Can't fit model on disqualified baseline data")
-        
+        self.baseline_timezone = baseline_data.tz
         self.warnings = baseline_data.warnings
         self.disqualification = baseline_data.disqualification
-        for warning in baseline_data.warnings + baseline_data.disqualification:
-            print(warning.json())
-
-        return self._fit(baseline_data.df)
+        self._fit(baseline_data.df)
+        if self.error["CVRMSE"] > CVRMSE_THRESHOLD:
+            cvrmse_warning = EEMeterWarning(
+                qualified_name="eemeter.model_fit_metrics.cvrmse",
+                description=(f"Fit model has CVRMSE > {CVRMSE_THRESHOLD}"),
+                data={"CVRMSE": self.error["CVRMSE"]}
+            )
+            cvrmse_warning.warn()
+            self.disqualification.append(cvrmse_warning)
+        return self
 
     def predict(self, reporting_data: Union[BillingBaselineData, BillingReportingData], aggregation=None):
         if not self.is_fitted:
