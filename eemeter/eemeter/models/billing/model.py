@@ -61,14 +61,14 @@ class BillingModel(DailyModel):
             season = df_res["season"].resample(agg).first()
             temperature = df_res["temperature"].resample(agg).mean()
             observed = df_res["observed"].resample(agg).sum()
-            model = df_res["model"].resample(agg).sum()
-            model_unc = df_res["model_unc"].resample(agg).apply(sum_quad)
+            predicted = df_res["predicted"].resample(agg).sum()
+            predicted_unc = df_res["predicted_unc"].resample(agg).apply(sum_quad)
             heating_load = df_res["heating_load"].resample(agg).sum()
             cooling_load = df_res["cooling_load"].resample(agg).sum()
             model_split = df_res["model_split"].resample(agg).first()
             model_type = df_res["model_type"].resample(agg).first()
 
-            df_res = pd.concat([season, temperature, observed, model, model_unc, 
+            df_res = pd.concat([season, temperature, observed, predicted, predicted_unc,
                                 heating_load, cooling_load, model_split, model_type], axis=1)
 
         return df_res

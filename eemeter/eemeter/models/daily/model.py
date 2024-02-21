@@ -239,7 +239,7 @@ class DailyModel:
             df_model = pd.DataFrame(
                 data={
                     "predicted": model,
-                    "model_unc": unc,
+                    "predicted_unc": unc,
                     "heating_load": hdd_load,
                     "cooling_load": cdd_load,
                 },
