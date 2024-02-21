@@ -133,15 +133,11 @@ def reporting_meter_data_billing():
 def test_metered_savings_cdd_hdd_billing(
     baseline_model_billing, reporting_meter_data_billing, reporting_temperature_data
 ):
-    results, error_bands = metered_savings(
-        baseline_model_billing, reporting_meter_data_billing, reporting_temperature_data, billing_data=True,
-    )
-    assert list(results.columns) == [
-        "reporting_observed",
-        "counterfactual_usage",
-        "metered_savings",
-    ]
-    assert round(results.metered_savings.sum(), 2) == 1640.16
+    reporting_data = BillingReportingData.from_series(reporting_meter_data_billing, reporting_temperature_data, is_electricity_data=True)
+    results = baseline_model_billing.predict(reporting_data)
+    metered_savings = results['predicted'] - results['observed']
+    print(results)
+    assert round(metered_savings.sum(), 2) == 1640.16
 
 
 def test_metered_savings_cdd_hdd_billing_no_reporting_data(
