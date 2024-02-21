@@ -67,7 +67,7 @@ def plot(fit, meter_eval, include_resid=False, plot_gaussian_ellipses=False, plo
 
         T = meter_season['temperature'].values
         obs = meter_season['observed'].values
-        model = meter_season['model'].values
+        model = meter_season['predicted'].values
         resid = obs - model
 
         ax[0].scatter(T, obs, color=color, marker=marker, s=s, label=label)
@@ -79,7 +79,7 @@ def plot(fit, meter_eval, include_resid=False, plot_gaussian_ellipses=False, plo
         meter_segment = meter_eval[meter_eval["model_split"] == split]
 
         name = f"{split}__{meter_segment['model_type'].iloc[0]}"
-        ax[0].plot(meter_segment["temperature"], meter_segment["model"], color="tab:orange", label=f"{name}")
+        ax[0].plot(meter_segment["temperature"], meter_segment["predicted"], color="tab:orange", label=f"{name}")
         
     # ax[0].plot(T, model["c_hdd_baseline"].model, color="tab:red", label=f"c_hdd_baseline")
     

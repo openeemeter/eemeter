@@ -102,4 +102,4 @@ def test_timezone_behavior(daily_series):
     reporting_data_no_meter = DailyReportingData.from_series(None, temp, tzinfo=meter.index.tz)
     res2 = model.predict(reporting_data_no_meter)
     #TODO currently failing due to weirdness with compute_temperature_features n_days_kept logic
-    assert (res1['model'] - res2['model']).sum() == 0
+    assert (res1['predicted'] - res2['predicted']).sum() == 0

@@ -93,7 +93,7 @@ def test_metered_savings_cdd_hdd_daily(
 ):
     reporting_data = DailyReportingData.from_series(reporting_meter_data_daily, reporting_temperature_data, is_electricity_data=True)
     results = baseline_model_daily.predict(reporting_data)
-    metered_savings = results['model'] - results['observed']
+    metered_savings = results['predicted'] - results['observed']
     assert round(metered_savings.sum(), 2) == 1577.75
 
 
@@ -249,7 +249,7 @@ def test_modeled_savings_cdd_hdd_daily(
     reporting_data = DailyReportingData.from_series(reporting_meter_data_daily, reporting_temperature_data, is_electricity_data=True)
     baseline_model_result = baseline_model_daily.predict(reporting_data)
     reporting_model_result = reporting_model_daily.predict(reporting_data)
-    modeled_savings = baseline_model_result['model'] - reporting_model_result['model']
+    modeled_savings = baseline_model_result['predicted'] - reporting_model_result['predicted']
     assert round(modeled_savings.sum(), 2) ==177.02  
 
 
