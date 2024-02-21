@@ -236,6 +236,7 @@ class DailyReportingData(_DailyData):
     """
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
         if 'observed' not in df.columns:
+            df = df.copy()
             df['observed'] = np.nan
         super().__init__(df, is_electricity_data)        
         
