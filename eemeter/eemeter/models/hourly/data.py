@@ -20,7 +20,10 @@
 import pandas as pd
 import numpy as np
 from eemeter import merge_features, compute_temperature_features, caltrack_sufficiency_criteria
+from eemeter.eemeter.common.data_processor_utilities import compute_minimum_granularity
 from typing import Union, Optional
+
+import eemeter as em
 
 class HourlyBaselineData:
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
@@ -32,6 +35,21 @@ class HourlyBaselineData:
     def _check_data_sufficiency(self):
         meter = self.df['observed'].rename('meter_value')
         temp = self.df['temperature']
+
+        # unknown for weirdly large frequencies. Anything higher frequency than hourly frequency still comes up as hourly
+        min_granularity = compute_minimum_granularity(meter.dropna().index, 'unknown')
+
+        if meter.index.inferred_freq is None and min_granularity != 'hourly':
+            raise ValueError(f"Meter Data must be atleast hourly, but is {min_granularity}.")            
+        else:
+            #TODO : Add the high frequency check for meter data
+            meter = meter.resample('H').sum()
+            meter.index.freq = 'H'
+
+        #TODO : Add the high frequency check for temperature data and add NaNs
+        temp = temp.resample('H').mean()
+        temp.index.freq = 'H'
+
         temperature_features = compute_temperature_features(
             meter.index,
             temp,
