@@ -18,7 +18,7 @@
 
 """
 
-from eemeter.eemeter.models.billing.data import BillingBaselineData, BillingReportingData
+from .data import BillingBaselineData, BillingReportingData
 from .model import BillingModel
 
 __all__ = (
