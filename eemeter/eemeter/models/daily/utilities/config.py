@@ -28,61 +28,8 @@ import attrs
 # TODO: define options
 
 Args:
-    algorithm_choice (str, default='KNN'): Algorithm choice
-        Options: ['distance_matching', 'knn', 'birch', 'minibatchkmeans', 'hierarchical', 'kmeans']
     agg_type (str, default='mean'): How to aggregate
         Options: ['mean', 'median']
-    filter_s (float, default=0.0): Filter strength for 'Nadaraya_Watson_filter'
-        Options: 0.0 < val
-    scale (str, default='linear'): scale type
-        Options: ['linear', 'bisymlog']
-    scale_s (None|float, default=None): How to scale 'bisymlog' -2 is log-like and 2 is linear-like
-        Options: no restriction, reasonably should be |val| < 10
-    normalize (None|str, default=None): How to normalize the data
-        Options: [None, 'min_max', 'max', 'integral', 'std', 'MAD', 'mean', 'median']
-    standardize (None|str, default=None): How to standardize the data
-        Options: [None, 'mean', 'median']
-    use_fpca (bool, default=False): Turn on/off using principle component analysis of load shapes
-    fpca_min_variance_ratio (float, default=0.8): Minimum variance ratio that the fPCA must account for
-        Options: 0.0 < val < 1.0
-    dist_metric (str, default='euclidean'): What distance metric to use when calculating distance
-        Options: ['euclidean', 'seuclidean', 'manhattan', 'cosine']
-    score_metric (str, default='silhouette'): What scoring metric to use when scoring clusters
-        Options: ['silhouette', 'silhouette_median', 'variance_ratio', 'davies-bouldin']
-    cluster_search_n (int, default=100): How many iterations to search for the best number of clusters
-        Options: minimum of 20, that's probably too low
-    min_cluster_size (int, default=4): Minumum number of meters for a cluster
-        Options: 2 < val
-    birch_thresh_bnds (list, default=[0.5, 50]): BIRCH threshold bounds. These have been picked arbitrarily
-    num_cluster_perc_bnds (list, default=[0.01, 0.25]): Percentage of meters to search for the optimal number of clusters
-    recluster_n (int, default=0): Number of times to attempt to recluster
-    cluster_merge_method (str, default='score'): How to merge clusters
-        Options: ['score', 'PI', 'CI'] - PI: prediction interval, CI: confidence interval
-    KNN_expand_meter_inclusion (bool): switch to expand KNN meter CGs
-    error_alpha (float, default=0.1): Alpha value for computing uncertainty, 90% CI: alpha = 0.1
-    algo_choice (str): What clustering algorithm to use. 
-        Options: ['distance_matching', 'knn', 'birch', 'minibatchkmeans', 'hierarchical', 'kmeans']
-    transform_opts (list): list of transform options
-    fpca_opts (list): list of fpca options
-    dist_metric (str): What distance metric to use when calculating distance
-        Options: ['euclidean', 'seuclidean', 'manhattan', 'cosine']
-    birch_thresh_bnds (list): BIRCH threshold bounds. These have been picked arbitrarily
-    num_cluster_perc_bnds (list): minimum and maximum percentages 
-        of total number of meters to define the minimum number of clusters when searching for 
-        the number of clusters that maximizes the score
-    cluster_search_n (int): how to divide up search space of num_cluster_perc_bnds when clustering 
-    score (str): What scoring metric to use when scoring clusters
-        Options: ['silhouette', 'silhouette_median', 'variance_ratio', 'davies-bouldin']
-    min_cluster (int): Minumum number of meters for a cluster
-        Options: 2 < val
-    min_recluster (int): minimum number of meters a cluster must have to be eligable to
-        be reclustered (broken apart) in subsequent reclustering efforts
-    recluster_n (int): Number of times to attempt to recluster
-    merge_method (str): What metric clusters should be regrouped by
-        Options:
-            'CI': if confidence intervals overlap
-            'PI': if prediction intervals overlap
-            'score': if the overall score increases
 """
 
 
@@ -737,6 +684,18 @@ class DailySettings:
         on_setattr=attrs.setters.frozen,
         default=0.1,
     )
+
+    cvrmse_threshold: float = attrs.field(
+        converter=lambda x: float(x) if isinstance(x, int) else x,
+        validator=simple_validation(
+            lambda x: isinstance(x, float) and (0 < x),
+            "'cvrmse_threshold' must be 0 < float",
+            dev_setting=False,
+        ),
+        metadata={_KEY_DESCR: "threshold for the CVRMSE to disqualify a model"},
+        on_setattr=attrs.setters.frozen,
+        default=1.0,
+    )
     
     def to_dict(self):
         keys = []
@@ -800,7 +759,7 @@ def update_daily_settings(settings, update_dict):
     return attrs.evolve(settings, **update_dict)
 
 
-def caltrack_2_1_settings(**kwargs) -> DailySettings:
+def default_settings(**kwargs) -> DailySettings:
     """
     Returns default settings.
     """

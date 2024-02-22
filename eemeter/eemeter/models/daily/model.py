@@ -22,7 +22,7 @@ from eemeter.eemeter.models.daily.base_models.full_model import full_model, get_
 from eemeter.eemeter.models.daily.fit_base_models import fit_final_model, fit_initial_models_from_full_model
 from eemeter.eemeter.models.daily.parameters import DailyModelParameters, DailySubmodelParameters
 from eemeter.eemeter.models.daily.utilities.base_model import get_smooth_coeffs
-from eemeter.eemeter.models.daily.utilities.config import caltrack_2_1_settings, caltrack_legacy_settings, update_daily_settings
+from eemeter.eemeter.models.daily.utilities.config import default_settings, caltrack_legacy_settings, update_daily_settings
 from eemeter.eemeter.models.daily.utilities.ellipsoid_test import ellipsoid_split_filter
 from eemeter.eemeter.models.daily.utilities.selection_criteria import selection_criteria
 from eemeter.eemeter.models.daily.plot import plot
@@ -40,13 +40,10 @@ import json
 from typing import Union
 
 
-#TODO move to settings class
-CVRMSE_THRESHOLD = 1.0
-
 class DailyModel:
     def __init__(
         self,
-        model="2.1",
+        model="4.0",
         settings=None,
         check_caltrack_compliant=True,
         verbose=False,
@@ -59,7 +56,7 @@ class DailyModel:
         meter_data : pandas.DataFrame
             A dataframe containing meter data.
         model : str, optional
-            The model to use. Default is '2.1'.
+            The model to use. Default is '4.0'.
         settings : dict, optional
             DailySettings to be changed. Default is None.
         check_caltrack_compliant : bool, optional
@@ -98,19 +95,19 @@ class DailyModel:
         """
 
         # Initialize settings
-        # Note: Model designates the base settings, it can be '2.1' or '2.0'
+        # Note: Model designates the base settings, it can be '4.0' or '2.0'
         #       Settings is to be a dictionary of settings to be changed
 
         if settings is None:
             settings = {}
 
-        if model.replace(" ", "").replace("_", ".").lower() in ["caltrack2.1", "2.1"]:
-            self.settings = caltrack_2_1_settings(**settings)
-        elif model.replace(" ", "").replace("_", ".").lower() in ["caltrack2.0", "2.0"]:
+        if model.replace(" ", "").replace("_", ".").lower() in ["eemeter4.0", "4.0"]:
+            self.settings = default_settings(**settings)
+        elif model.replace(" ", "").replace("_", ".").lower() in ["caltrack2.0", "2.0", "legacy"]:
             self.settings = caltrack_legacy_settings(**settings)
         else:
             raise Exception(
-                "Invalid 'settings' choice: must be 'CalTRACK 2.1', '2.1', 'CalTRACK 2.0', or '2.0'"
+                "Invalid 'settings' choice: must be 'EEmeter 4.0', '4.0', 'CalTRACK 2.0', '2.0', or 'legacy'"
             )
 
         # Initialize seasons and weekday/weekend
@@ -152,10 +149,10 @@ class DailyModel:
         self.warnings = baseline_data.warnings
         self.disqualification = baseline_data.disqualification
         self._fit(baseline_data.df)
-        if self.error["CVRMSE"] > CVRMSE_THRESHOLD:
+        if self.error["CVRMSE"] > self.settings.cvrmse_threshold:
             cvrmse_warning = EEMeterWarning(
                 qualified_name="eemeter.model_fit_metrics.cvrmse",
-                description=(f"Fit model has CVRMSE > {CVRMSE_THRESHOLD}"),
+                description=(f"Fit model has CVRMSE > {self.settings.cvrmse_threshold}"),
                 data={"CVRMSE": self.error["CVRMSE"]}
             )
             cvrmse_warning.warn()

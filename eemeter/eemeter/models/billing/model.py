@@ -22,7 +22,7 @@ from typing import Union
 import numpy as np
 import pandas as pd
 
-from eemeter.eemeter.models.daily.model import DailyModel, CVRMSE_THRESHOLD
+from eemeter.eemeter.models.daily.model import DailyModel
 from eemeter.eemeter.models.billing.data import BillingBaselineData, BillingReportingData
 from eemeter.eemeter.models.billing.plot import plot
 from eemeter.eemeter.exceptions import DataSufficiencyError
@@ -33,7 +33,7 @@ class BillingModel(DailyModel):
     """wrapper for DailyModel using billing presets"""
 
     def __init__(self, settings=None):
-        super().__init__(model="2.0", settings=settings)
+        super().__init__(model="legacy", settings=settings)
 
     def fit(self, baseline_data: BillingBaselineData, ignore_disqualification=False):
         #TODO there's a fair bit of duplicated code between this and daily fit(), refactor
@@ -48,10 +48,10 @@ class BillingModel(DailyModel):
         self.warnings = baseline_data.warnings
         self.disqualification = baseline_data.disqualification
         self._fit(baseline_data.df)
-        if self.error["CVRMSE"] > CVRMSE_THRESHOLD:
+        if self.error["CVRMSE"] > self.settings.cvrmse_threshold:
             cvrmse_warning = EEMeterWarning(
                 qualified_name="eemeter.model_fit_metrics.cvrmse",
-                description=(f"Fit model has CVRMSE > {CVRMSE_THRESHOLD}"),
+                description=(f"Fit model has CVRMSE > {self.settings.cvrmse_threshold}"),
                 data={"CVRMSE": self.error["CVRMSE"]}
             )
             cvrmse_warning.warn()
