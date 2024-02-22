@@ -197,6 +197,40 @@ class CalTRACKHourlyModelResults(object):
         return self.model.predict(prediction_index, temperature_data, **kwargs)
 
 
+class _PredictionSegmentInfo:
+    """
+    Class to handle the different segment_type parameters
+    that provides the correct values to the CalTrackHourlyModel initialization.
+    """
+
+    def __init__(self, segment_type: str):
+        if segment_type not in ["single", "three_month_weighted"]:
+            raise ValueError("segment type must be single or three_month_weighted")
+
+        if segment_type == "single":
+            self.prediction_segment_type = segment_type
+            self.prediction_segment_name_mapping = None
+            return
+
+        if segment_type == "three_month_weighted":
+            self.prediction_segment_name_mapping = {
+                "jan": "dec-jan-feb-weighted",
+                "feb": "jan-feb-mar-weighted",
+                "mar": "feb-mar-apr-weighted",
+                "apr": "mar-apr-may-weighted",
+                "may": "apr-may-jun-weighted",
+                "jun": "may-jun-jul-weighted",
+                "jul": "jun-jul-aug-weighted",
+                "aug": "jul-aug-sep-weighted",
+                "sep": "aug-sep-oct-weighted",
+                "oct": "sep-oct-nov-weighted",
+                "nov": "oct-nov-dec-weighted",
+                "dec": "nov-dec-jan-weighted",
+            }
+            self.prediction_segment_type = "one_month"
+            return
+
+
 class CalTRACKHourlyModel(SegmentedModel):
     """An object which holds CalTRACK Hourly model data and metadata, and
     which can be used for prediction.
@@ -212,6 +246,8 @@ class CalTRACKHourlyModel(SegmentedModel):
         A dataframe of bin endpoint flags for each segment. Segment names are columns.
     unoccupied_temperature_bins : :any:`pandas.DataFrame`
         Ditto for the unoccupied mode.
+    segment_type : :any:`str` 
+        The type of segment used to fit the model
     """
 
     def __init__(
@@ -220,27 +256,19 @@ class CalTRACKHourlyModel(SegmentedModel):
         occupancy_lookup,
         occupied_temperature_bins,
         unoccupied_temperature_bins,
+        segment_type: str,
     ):
+
         self.occupancy_lookup = occupancy_lookup
         self.occupied_temperature_bins = occupied_temperature_bins
         self.unoccupied_temperature_bins = unoccupied_temperature_bins
+        self.segment_type = segment_type
+
+        prediction_info = _PredictionSegmentInfo(segment_type=segment_type)
         super(CalTRACKHourlyModel, self).__init__(
             segment_models=segment_models,
-            prediction_segment_type="one_month",
-            prediction_segment_name_mapping={
-                "jan": "dec-jan-feb-weighted",
-                "feb": "jan-feb-mar-weighted",
-                "mar": "feb-mar-apr-weighted",
-                "apr": "mar-apr-may-weighted",
-                "may": "apr-may-jun-weighted",
-                "jun": "may-jun-jul-weighted",
-                "jul": "jun-jul-aug-weighted",
-                "aug": "jul-aug-sep-weighted",
-                "sep": "aug-sep-oct-weighted",
-                "oct": "sep-oct-nov-weighted",
-                "nov": "oct-nov-dec-weighted",
-                "dec": "nov-dec-jan-weighted",
-            },
+            prediction_segment_type=prediction_info.prediction_segment_type,
+            prediction_segment_name_mapping=prediction_info.prediction_segment_name_mapping,
             prediction_feature_processor=caltrack_hourly_prediction_feature_processor,
             prediction_feature_processor_kwargs={
                 "occupancy_lookup": self.occupancy_lookup,
@@ -265,6 +293,7 @@ class CalTRACKHourlyModel(SegmentedModel):
                 "unoccupied_temperature_bins": self.unoccupied_temperature_bins.to_json(
                     orient="split"
                 ),
+                "segment_type": self.segment_type,
             }
         )
         return data
@@ -289,10 +318,10 @@ class CalTRACKHourlyModel(SegmentedModel):
             occupancy_lookup,
             pd.read_json(data.get("occupied_temperature_bins"), orient="split"),
             pd.read_json(data.get("unoccupied_temperature_bins"), orient="split"),
+            data.get("segment_type"),
         )
 
         return c
-
 
 def caltrack_hourly_fit_feature_processor(
     segment_name,
@@ -551,6 +580,7 @@ def fit_caltrack_hourly_model(
     occupancy_lookup,
     occupied_temperature_bins,
     unoccupied_temperature_bins,
+    segment_type: str,
 ):
     """Fit a CalTRACK hourly model
 
@@ -587,6 +617,7 @@ def fit_caltrack_hourly_model(
         occupancy_lookup,
         occupied_temperature_bins,
         unoccupied_temperature_bins,
+        segment_type,
     )
 
     model_results = CalTRACKHourlyModelResults(
