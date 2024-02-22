@@ -23,7 +23,7 @@ import pytest
 
 matplotlib.use("Agg")
 
-from eemeter.eemeter.visualization import plot_energy_signature, plot_time_series
+from eemeter.eemeter.utilities.visualization import plot_energy_signature, plot_time_series
 from eemeter.eemeter.models.daily.model import DailyModel
 
 

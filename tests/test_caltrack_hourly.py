@@ -28,7 +28,7 @@ from eemeter.eemeter.models.hourly.model import (
     fit_caltrack_hourly_model_segment,
     fit_caltrack_hourly_model,
 )
-from eemeter.eemeter.features import (
+from eemeter.eemeter.common.features import (
     compute_time_features,
     compute_temperature_features,
     compute_usage_per_day_feature,

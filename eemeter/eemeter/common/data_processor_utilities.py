@@ -20,7 +20,7 @@
 from math import ceil
 from typing import Optional
 
-from eemeter.eemeter.warnings import EEMeterWarning
+from eemeter.eemeter.common.warnings import EEMeterWarning
 import numpy as np
 import pandas as pd
 from pandas.tseries.offsets import MonthEnd, MonthBegin

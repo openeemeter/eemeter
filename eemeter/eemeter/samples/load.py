@@ -23,7 +23,7 @@ from pkg_resources import resource_stream
 from dateutil.parser import parse as parse_date
 import pytz
 
-from ..io import meter_data_from_csv, temperature_data_from_csv
+from ..utilities.io import meter_data_from_csv, temperature_data_from_csv
 
 __all__ = ("samples", "load_sample")
 

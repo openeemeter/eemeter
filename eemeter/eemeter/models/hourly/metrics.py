@@ -21,8 +21,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import t
 
-
-from ...warnings import EEMeterWarning
+from eemeter.eemeter.common.warnings import EEMeterWarning
 
 __all__ = ("ModelMetrics",)
 

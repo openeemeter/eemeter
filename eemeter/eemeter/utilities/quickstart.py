@@ -19,18 +19,18 @@
 """
 from dateutil.relativedelta import relativedelta
 
-from .design_matrices import (
+from ..models.hourly.design_matrices import (
     create_caltrack_hourly_preliminary_design_matrix,
     create_caltrack_hourly_segmented_design_matrices,
     create_caltrack_daily_design_matrix,
     create_caltrack_billing_design_matrix,
 )
-from .hourly.model import fit_caltrack_hourly_model
-from .usage_per_day import caltrack_sufficiency_criteria
-from ..transform import get_baseline_data, get_reporting_data, clean_caltrack_billing_daily_data
-from .hourly.derivatives import metered_savings
-from ..features import estimate_hour_of_week_occupancy, fit_temperature_bins, compute_temperature_features
-from ..segmentation import segment_time_series
+from ..models.hourly.model import fit_caltrack_hourly_model
+from ..models.hourly.usage_per_day import caltrack_sufficiency_criteria
+from ..common.transform import get_baseline_data, get_reporting_data, clean_caltrack_billing_daily_data
+from ..models.hourly.derivatives import metered_savings
+from ..common.features import estimate_hour_of_week_occupancy, fit_temperature_bins, compute_temperature_features
+from ..models.hourly.segmentation import segment_time_series
 
 from eemeter.eemeter.models.daily.model import DailyModel
 import pandas as pd
