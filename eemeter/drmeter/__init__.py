@@ -22,5 +22,4 @@ from eemeter.eemeter.models.hourly.data import (
     HourlyBaselineData as BaselineData,
     HourlyReportingData as ReportingData,
 )
-
 from .model import Model
