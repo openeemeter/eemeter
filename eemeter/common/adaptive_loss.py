@@ -22,8 +22,8 @@ from scipy.optimize import minimize_scalar
 from scipy.interpolate import BSpline
 import numba
 
-from eemeter.common.utils.adaptive_loss_tck import TCK
-from eemeter.common.utils.utils import OoM_numba
+from eemeter.common.adaptive_loss_tck import TCK
+from eemeter.common.utils import OoM_numba
 
 
 LOSS_ALPHA_MIN = -100.0

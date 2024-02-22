@@ -25,7 +25,7 @@ from scipy.special import lambertw
 
 from scipy.optimize import minimize_scalar
 
-from eemeter.common.utils.utils import OoM_numba
+from eemeter.common.utils import OoM_numba
 
 
 def get_intercept(y, alpha=2):

@@ -29,7 +29,7 @@ from eemeter.eemeter.models.daily.utilities.base_model import (
     get_T_bnds,
 )
 
-from eemeter.common.utils.utils import unc_factor
+from eemeter.common.utils import unc_factor
 from eemeter.eemeter.models.daily.parameters import ModelCoefficients
 
 

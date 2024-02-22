@@ -27,7 +27,7 @@ from eemeter.eemeter.models.hourly.model import CalTRACKHourlyModelResults, fit_
 from eemeter.eemeter.models.hourly.derivatives import _compute_error_bands_modeled_savings
 from eemeter.eemeter.models.hourly.segmentation import segment_time_series
 
-from eemeter.common.utils.utils import unc_factor, t_stat
+from eemeter.common.utils import unc_factor, t_stat
 
 
 month_dict = {
