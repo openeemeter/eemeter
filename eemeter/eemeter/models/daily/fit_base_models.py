@@ -25,7 +25,7 @@ from eemeter.eemeter.models.daily.base_models.c_hdd_tidd import fit_c_hdd_tidd
 from eemeter.eemeter.models.daily.base_models.hdd_tidd_cdd import fit_hdd_tidd_cdd
 from eemeter.eemeter.models.daily.parameters import ModelCoefficients, ModelType
 
-from eemeter.common.utils.utils import OoM
+from eemeter.common.utils import OoM
 from eemeter.eemeter.models.daily.utilities.config import FullModelSelection
 
 from eemeter.eemeter.models.daily.optimize_results import OptimizedResult

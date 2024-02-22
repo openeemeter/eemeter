@@ -40,7 +40,7 @@ from typing import Optional
 from math import isclose
 import nlopt
 
-from eemeter.common.utils.adaptive_loss import adaptive_weights
+from eemeter.common.adaptive_loss import adaptive_weights
 
 from eemeter.eemeter.models.daily.optimize import Optimizer, nlopt_algorithms
 

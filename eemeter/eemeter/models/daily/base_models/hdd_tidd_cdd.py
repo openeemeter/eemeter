@@ -25,7 +25,7 @@ from eemeter.eemeter.models.daily.base_models.full_model import full_model, full
 
 from eemeter.eemeter.models.daily.parameters import ModelCoefficients
 
-from eemeter.common.utils.adaptive_loss import adaptive_weights
+from eemeter.common.adaptive_loss import adaptive_weights
 
 from eemeter.eemeter.models.daily.utilities.base_model import get_slope, get_intercept
 from eemeter.eemeter.models.daily.utilities.base_model import fix_identical_bnds

@@ -27,7 +27,7 @@ import colorsys
 
 from copy import deepcopy as copy
 
-from eemeter.common.utils.adaptive_loss import IQR_outlier
+from eemeter.common.adaptive_loss import IQR_outlier
 
 
 fontsize = 14

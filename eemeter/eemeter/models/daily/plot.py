@@ -28,7 +28,7 @@ import colorsys
 from copy import deepcopy as copy
 
 from eemeter.eemeter.models.daily.utilities.ellipsoid_test import robust_confidence_ellipse
-from eemeter.common.utils.adaptive_loss import IQR_outlier
+from eemeter.common.adaptive_loss import IQR_outlier
 
 
 fontsize = 14
