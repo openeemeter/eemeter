@@ -1,6 +1,6 @@
 import eemeter.common.const as _const
 from eemeter.eemeter.common.data_processor_utilities import as_freq, caltrack_sufficiency_criteria_baseline, clean_caltrack_billing_daily_data, compute_minimum_granularity
-from eemeter import compute_temperature_features
+from eemeter.eemeter.features import compute_temperature_features
 from eemeter.eemeter.warnings import EEMeterWarning
 
 import numpy as np
