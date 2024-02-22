@@ -24,10 +24,9 @@ import json
 from eemeter.eemeter.common.features import estimate_hour_of_week_occupancy, fit_temperature_bins
 from eemeter.eemeter.models.hourly.design_matrices import create_caltrack_hourly_segmented_design_matrices, create_caltrack_hourly_preliminary_design_matrix
 from eemeter.eemeter.models.hourly.model import CalTRACKHourlyModelResults, fit_caltrack_hourly_model
-from eemeter.eemeter.models.hourly.derivatives import _compute_error_bands_modeled_savings
 from eemeter.eemeter.models.hourly.segmentation import segment_time_series
 
-from eemeter.common.utils import unc_factor, t_stat
+from eemeter.common.utils import t_stat
 
 
 month_dict = {
@@ -45,6 +44,14 @@ month_dict = {
     'dec': 12
 }
 
+class IntermediateModelVariables:
+    preliminary_design_matrix = None
+    segmentation = None
+    occupancy_lookup = None
+    occupied_temperature_bins = None
+    unoccupied_temperature_bins = None
+    segmented_design_matrices = None
+    
 
 class HourlyModel:
     def __init__(self, settings=None):
@@ -55,39 +62,60 @@ class HourlyModel:
         meter_data = data.df['observed'].to_frame('value')
         temperature_data = data.df['temperature']
 
-        self._preliminary_design_matrix = create_caltrack_hourly_preliminary_design_matrix(meter_data, temperature_data)
-        self._segmentation = segment_time_series(
-            self._preliminary_design_matrix.index, self.segment_type
+        self.model_process_variables = IntermediateModelVariables()
+
+        # preliminary design matrix
+        preliminary_design_matrix = create_caltrack_hourly_preliminary_design_matrix(
+            meter_data, 
+            temperature_data
         )
-        self._occupancy_lookup = estimate_hour_of_week_occupancy(
-            self._preliminary_design_matrix, segmentation=self._segmentation
+        self.model_process_variables.preliminary_design_matrix = preliminary_design_matrix
+
+        # segment time series
+        segmentation = segment_time_series(
+            preliminary_design_matrix.index, 
+            self.segment_type
         )
-        (
-            self._occupied_temperature_bins,
-            self._unoccupied_temperature_bins,
-        ) = fit_temperature_bins(
-            self._preliminary_design_matrix,
-            segmentation=self._segmentation,
-            occupancy_lookup=self._occupancy_lookup,
+        self.model_process_variables.segmentation = segmentation
+
+        # estimate occupancy
+        occupancy_lookup = estimate_hour_of_week_occupancy(
+            preliminary_design_matrix, 
+            segmentation=segmentation
         )
-        self._segmented_design_matrices = create_caltrack_hourly_segmented_design_matrices(
-            self._preliminary_design_matrix,
-            self._segmentation,
-            self._occupancy_lookup,
-            self._occupied_temperature_bins,
-            self._unoccupied_temperature_bins,
+        self.model_process_variables.occupancy_lookup = occupancy_lookup
+
+        # fit temperature bins
+        (occupied_t_bins, unoccupied_t_bins) = fit_temperature_bins(
+            preliminary_design_matrix,
+            segmentation=segmentation,
+            occupancy_lookup=occupancy_lookup,
         )
+        self.model_process_variables.occupied_temperature_bins = occupied_t_bins
+        self.model_process_variables.unoccupied_temperature_bins = unoccupied_t_bins
+
+        # create segmented design matrices
+        segmented_design_matrices = create_caltrack_hourly_segmented_design_matrices(
+            preliminary_design_matrix,
+            segmentation,
+            occupancy_lookup,
+            occupied_t_bins,
+            unoccupied_t_bins,
+        )
+        self.model_process_variables.segmented_design_matrices = segmented_design_matrices
+
+        # fit model
         self.model = fit_caltrack_hourly_model(
-            self._segmented_design_matrices,
-            self._occupancy_lookup,
-            self._occupied_temperature_bins,
-            self._unoccupied_temperature_bins,
+            segmented_design_matrices,
+            occupancy_lookup,
+            occupied_t_bins,
+            unoccupied_t_bins,
             self.segment_type,
         )
-
-        self.is_fitted = True
+        self.is_fit = True
         self.model_metrics = self.model.totals_metrics
 
+        # calculate baseline residuals
         prediction = self.model.predict(temperature_data.index, temperature_data)
         meter_data = meter_data.merge(prediction.result, left_index=True, right_index=True)
         meter_data.dropna(inplace=True)
@@ -121,7 +149,7 @@ class HourlyModel:
         return self
 
     def predict(self, reporting_data):
-        if not self.is_fitted:
+        if not self.is_fit:
             raise RuntimeError("Model must be fit before predictions can be made.")
         prediction_index = reporting_data.df.index
         temperature_series = reporting_data.df['temperature']
@@ -165,7 +193,7 @@ class HourlyModel:
     def from_dict(cls, data):
         hourly_model = cls()
         hourly_model.model = CalTRACKHourlyModelResults.from_json(data)
-        hourly_model.is_fitted = True
+        hourly_model.is_fit = True
         return hourly_model
 
     @classmethod

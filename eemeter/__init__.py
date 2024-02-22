@@ -18,7 +18,7 @@
 
 """
 
-import logging
+import logging as _logging
 
 from .__version__ import __title__, __description__, __url__, __version__
 from .__version__ import __author__, __author_email__, __license__
@@ -35,4 +35,4 @@ def get_version():
 
 
 # Set default logging handler to avoid "No handler found" warnings.
-logging.getLogger(__name__).addHandler(logging.NullHandler())
+_logging.getLogger(__name__).addHandler(_logging.NullHandler())
