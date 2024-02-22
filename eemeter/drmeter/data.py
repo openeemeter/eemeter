@@ -18,21 +18,7 @@
 
 """
 
-import logging
-
-from .__version__ import __title__, __description__, __url__, __version__
-from .__version__ import __author__, __author_email__, __license__
-from .__version__ import __copyright__
-
-from .common import *
-from . import (
-    eemeter,
-    drmeter,
+from eemeter.eemeter.models.hourly.data import (
+    HourlyBaselineData as BaselineData,
+    HourlyReportingData as ReportingData,
 )
-
-def get_version():
-    return __version__
-
-
-# Set default logging handler to avoid "No handler found" warnings.
-logging.getLogger(__name__).addHandler(logging.NullHandler())
