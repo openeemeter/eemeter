@@ -749,8 +749,8 @@ class DailySettings:
         return "\n".join(text_all)
 
 
-# TODO: Currently update_daily_settings only works for 2.1. If updating 2.0 it will fail
-#       This could be fixed by adding a setting to indicate 2.0 or 2.1 and then set defaults
+# TODO: Currently update_daily_settings only works for 4.0. If updating 2.0 it will fail
+#       This could be fixed by adding a setting to indicate 2.0 or 4.0 and then set defaults
 #       based on that setting. Maybe using 'default = attrs.Factory(default_fcn)'
 def update_daily_settings(settings, update_dict):
     if not isinstance(settings, DailySettings):
