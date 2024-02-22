@@ -23,15 +23,17 @@ from eemeter import merge_features, compute_temperature_features, caltrack_suffi
 from eemeter.eemeter.common.data_processor_utilities import compute_minimum_granularity
 from typing import Union, Optional
 
-class HourlyBaselineData:
+class HourlyReportingData:
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
+        if "observed" not in df.columns:
+            df["observed"] = np.nan
+
         if is_electricity_data:
-            df[df['observed'] == 0]["observed"] = np.nan
+            df[df["observed"] == 0]["observed"] = np.nan
 
         df = self._correct_frequency(df)
 
         self.df = df
-        self.sufficiency_warnings = self._check_data_sufficiency()
 
     def _correct_frequency(self, df: pd.DataFrame):
         meter = df['observed']
@@ -51,7 +53,30 @@ class HourlyBaselineData:
         temp = temp.resample('H').mean()
         temp.index.freq = 'H'
 
-        return merge_features([meter, temp])
+        return merge_features([meter, temp], keep_partial_nan_rows=True)
+
+    @classmethod
+    def from_series(cls, meter_data: Optional[pd.Series], temperature_data: pd.Series, is_electricity_data: bool):
+        #TODO verify
+        if meter_data is None:
+            meter_data = temperature_data.copy().rename('observed') * np.nan
+        df = merge_features([meter_data, temperature_data], keep_partial_nan_rows=True)
+        df = df.rename({
+            df.columns[0]: 'observed',
+            df.columns[1]: 'temperature',
+        }, axis=1)
+        return cls(df, is_electricity_data)
+
+
+class HourlyBaselineData(HourlyReportingData):
+    def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
+        if is_electricity_data:
+            df[df['observed'] == 0]["observed"] = np.nan
+
+        df = self._correct_frequency(df)
+
+        self.df = df
+        self.sufficiency_warnings = self._check_data_sufficiency()
 
     def _check_data_sufficiency(self):
         meter = self.df['observed'].rename('meter_value')
@@ -80,21 +105,3 @@ class HourlyBaselineData:
         return cls(df, is_electricity_data)
 
 
-class HourlyReportingData:
-    def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
-        #TODO add missing observed column
-        if is_electricity_data:
-            df[df["observed"] == 0]["observed"] = np.nan
-        self.df = df
-
-    @classmethod
-    def from_series(cls, meter_data: Optional[pd.Series], temperature_data: pd.Series, is_electricity_data: bool):
-        #TODO verify
-        if meter_data is None:
-            meter_data = temperature_data.copy().rename('observed') * np.nan
-        df = merge_features([meter_data, temperature_data], keep_partial_nan_rows=True)
-        df = df.rename({
-            df.columns[0]: 'observed',
-            df.columns[1]: 'temperature',
-        }, axis=1)
-        return cls(df, is_electricity_data)

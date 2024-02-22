@@ -182,14 +182,14 @@ def t_stat(alpha, n, tail=2):
     return t_dist.ppf(perc, degrees_of_freedom, 0, 1)
 
 
-def unc_factor(n, interval="PI", alpha=0.05):
+def unc_factor(n, interval="PI", alpha=0.10):
     """
     Calculates the uncertainty factor for a given sample size, confidence interval type, and significance level.
 
     Parameters:
     n (int): The sample size.
     interval (str, optional): The type of confidence interval. Defaults to "PI" (Prediction Interval).
-    alpha (float, optional): The significance level. Defaults to 0.05.
+    alpha (float, optional): The significance level. Defaults to 0.10.
 
     Returns:
     float: The uncertainty factor.
