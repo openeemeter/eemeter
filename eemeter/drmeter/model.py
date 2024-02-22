@@ -1,4 +1,4 @@
-from eemeter import HourlyModel
+from eemeter.eemeter.models.hourly import HourlyModel
 
 
 class Model(HourlyModel):
