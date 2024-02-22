@@ -19,8 +19,8 @@
 """
 import pandas as pd
 import numpy as np
-from eemeter.eemeter.features import merge_features, compute_temperature_features
-from eemeter.eemeter.models.usage_per_day import caltrack_sufficiency_criteria
+from eemeter.eemeter.common.features import merge_features, compute_temperature_features
+from eemeter.eemeter.models.hourly.usage_per_day import caltrack_sufficiency_criteria
 from eemeter.eemeter.common.data_processor_utilities import compute_minimum_granularity
 from typing import Union, Optional
 

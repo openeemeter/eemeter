@@ -21,7 +21,7 @@ from click.testing import CliRunner
 from pkg_resources import resource_filename
 from tempfile import NamedTemporaryFile
 
-from eemeter.eemeter.cli import cli, caltrack
+from eemeter.eemeter.utilities.cli import cli, caltrack
 
 
 def test_eemeter_cli():

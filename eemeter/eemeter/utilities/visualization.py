@@ -20,7 +20,7 @@
 import numpy as np
 import pandas as pd
 
-from .features import (
+from eemeter.eemeter.common.features import (
     merge_features,
     compute_usage_per_day_feature,
     compute_temperature_features,

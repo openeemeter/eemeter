@@ -21,11 +21,11 @@ import numpy as np
 import pandas as pd
 import json
 
-from eemeter.eemeter.features import estimate_hour_of_week_occupancy, fit_temperature_bins
-from eemeter.eemeter.models.design_matrices import create_caltrack_hourly_segmented_design_matrices, create_caltrack_hourly_preliminary_design_matrix
+from eemeter.eemeter.common.features import estimate_hour_of_week_occupancy, fit_temperature_bins
+from eemeter.eemeter.models.hourly.design_matrices import create_caltrack_hourly_segmented_design_matrices, create_caltrack_hourly_preliminary_design_matrix
 from eemeter.eemeter.models.hourly.model import CalTRACKHourlyModelResults, fit_caltrack_hourly_model
 from eemeter.eemeter.models.hourly.derivatives import _compute_error_bands_modeled_savings
-from eemeter.eemeter.segmentation import segment_time_series
+from eemeter.eemeter.models.hourly.segmentation import segment_time_series
 
 from eemeter.common.utils.utils import unc_factor, t_stat
 

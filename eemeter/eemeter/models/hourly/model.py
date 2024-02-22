@@ -21,20 +21,20 @@ import pandas as pd
 import statsmodels.formula.api as smf
 
 
-from ...features import (
+from eemeter.eemeter.common.features import (
     compute_time_features,
     compute_temperature_bin_features,
     compute_occupancy_feature,
     merge_features,
 
 )
-from .metrics import ModelMetrics
-from ...segmentation import (
+from eemeter.eemeter.models.hourly.metrics import ModelMetrics
+from eemeter.eemeter.models.hourly.segmentation import (
     CalTRACKSegmentModel,
     SegmentedModel,
     fit_model_segments,
 )
-from ...warnings import EEMeterWarning
+from eemeter.eemeter.common.warnings import EEMeterWarning
 
 
 __all__ = (
