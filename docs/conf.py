@@ -37,16 +37,14 @@
 
 # -- Project information -----------------------------------------------------
 
-from eemeter import get_version
+import eemeter
 
 project = "eemeter"
 copyright = "Copyright 2014-2024 OpenEEmeter contributors"
 author = "Phil Ngo"
 
-# The short X.Y version
-version = get_version()
 # The full version, including alpha/beta/rc tags
-release = version
+release = eemeter.__version__
 
 
 # -- General configuration ---------------------------------------------------
