@@ -46,7 +46,7 @@ class _DailyData:
         # either implicitly setting as side effects, or returning and assigning outside
         self._df, temp_coverage = self._set_data(df)
 
-        sufficiency_df = self._df.merge(temp_coverage, left_index=True, right_index=True, how='outer')
+        sufficiency_df = self._df.merge(temp_coverage, left_index=True, right_index=True, how='left')
         disqualification, warnings = self._check_data_sufficiency(sufficiency_df)
 
         self.disqualification += disqualification
@@ -55,6 +55,12 @@ class _DailyData:
 
     @property
     def df(self):
+        """
+        Get the corrected input data stored in the class. The actual dataframe is immutable, this returns a copy.
+
+        Returns:
+            pandas.DataFrame or None: A copy of the DataFrame if it exists, otherwise None.
+        """
         if self._df is None:
             return None
         else:
@@ -62,6 +68,17 @@ class _DailyData:
     
     @classmethod
     def from_series(cls, meter_data: Union[pd.Series, pd.DataFrame], temperature_data: Union[pd.Series, pd.DataFrame], is_electricity_data):
+        """
+        Create an instance of the Data class from meter data and temperature data.
+
+        Parameters:
+        - meter_data (pd.Series or pd.DataFrame): The meter data.
+        - temperature_data (pd.Series or pd.DataFrame): The temperature data.
+        - is_electricity_data: A flag indicating whether the data represents electricity data. This is required as electricity data with 0 values are converted to NaNs.
+
+        Returns:
+        - Data: An instance of the Data class with the dataframe populated with the corrected data, alongwith warnings and disqualifications based on the input.
+        """
         if isinstance(meter_data, pd.Series):
             meter_data = meter_data.to_frame()
         if isinstance(temperature_data, pd.Series):
@@ -73,11 +90,26 @@ class _DailyData:
         return cls(df, is_electricity_data)
 
     def log_warnings(self):
+        """
+        Logs the warnings and disqualifications associated with the data.
+
+        """
         for warning in self.warnings + self.disqualification:
             warning.warn()
 
     def _compute_meter_value_df(self, df : pd.DataFrame):
+        """
+        Computes the meter value DataFrame by cleaning and processing the observed meter data.
+        1. The minimum granularity is computed from the non null rows.
+        2. The meter data is cleaned and downsampled/upsampled into the correct frequency using clean_caltrack_billing_daily_data()
+        3. Add missing days as NaN by merging with a full year daily index.
+        
+        Args:
+            df (pd.DataFrame): The DataFrame containing the observed meter data.
 
+        Returns:
+            pd.DataFrame: The cleaned and processed meter value DataFrame.
+        """
         # Dropping the NaNs is beneficial when the meter data is spread over hourly temperature data, causing lots of NaNs
         # But causes problems in detection of frequency when there are genuine missing values. The missing days are accounted for in the sufficiency_criteria_baseline method
         # whereas they should actually be kept.
@@ -107,6 +139,21 @@ class _DailyData:
         return meter_value_df
 
     def _compute_temperature_features(self, df: pd.DataFrame, meter_index: pd.DatetimeIndex):
+        """
+        Compute temperature features for the given DataFrame and meter index.
+        1. The frequency of the temperature data is inferred and set to hourly if not already. If frequency is not inferred or its lower than hourly, a warning is added.
+        2. The temperature data is downsampled/upsampled into the daily frequency using as_freq()
+        3. High frequency temperature data is checked for missing values and a warning is added if more than 50% of the data is missing, and those rows are set to NaN.
+        4. If frequency was already hourly, compute_temperature_features() is used to recompute the temperature to match with the meter index.
+
+        Args:
+            df (pd.DataFrame): The DataFrame containing temperature data.
+            meter_index (pd.DatetimeIndex): The meter index.
+
+        Returns:
+            pd.Series: The computed temperature values.
+            pd.DataFrame: The computed temperature features.
+        """
         temp_series = df['temperature']
         temp_series.index.freq = temp_series.index.inferred_freq
         if temp_series.index.freq != 'H':
@@ -128,9 +175,9 @@ class _DailyData:
                         EEMeterWarning(
                             qualified_name="eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data",
                             description=("More than 50% of the high frequency Temperature data is missing."),
-                            data = (
-                                temperature_features[temperature_features.coverage <= 0.5].index.to_list()
-                            )
+                            data = {
+                                'high_frequency_data_missing_count' : len(temperature_features[temperature_features.coverage <= 0.5].index.to_list())
+                            }
                         )
                     )
 
@@ -168,6 +215,7 @@ class _DailyData:
                     / (temperature_features.temperature_not_null + temperature_features.temperature_null)
                 ) <= 0.5
 
+                # Set high frequency temperature data with more than 50% data missing as NaN
                 if invalid_temperature_rows.any():
                     self.warnings.append(
                         EEMeterWarning(
@@ -179,12 +227,24 @@ class _DailyData:
                         )
                     )
                     temperature_features.loc[invalid_temperature_rows, 'temperature_mean'] = np.nan
+
         temp = temperature_features['temperature_mean'].rename('temperature')
         features = temperature_features.drop(columns=['temperature_mean'])
         return temp, features
     
     def _merge_meter_temp(self, meter, temp):
-        df = meter.merge(temp, left_index=True, right_index=True, how='outer').tz_convert(meter.index.tz)
+        """
+        Merge the meter and temperature dataframes and reorder the columns to have the order -
+            [season, weekday_weekend, temperature, observed (if present)]
+
+        Args:
+            meter (pd.DataFrame): The meter dataframe.
+            temp (pd.DataFrame): The temperature dataframe.
+
+        Returns:
+            pd.DataFrame: The merged and transformed dataframe.
+        """
+        df = meter.merge(temp, left_index=True, right_index=True, how='left').tz_convert(meter.index.tz)
         if df['observed'].dropna().empty:
             df = df.drop(columns=['observed'])
 
@@ -206,6 +266,7 @@ class _DailyData:
     def _set_data(self, data: pd.DataFrame):
         """Process data input for the Daily Model Baseline Class
         Datetime has to be either index or a separate column in the dataframe.
+        Electricity data with 0 meter values are converted to NaNs.
 
         Parameters
         ----------

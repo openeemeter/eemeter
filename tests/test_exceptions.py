@@ -17,7 +17,7 @@
    limitations under the License.
 
 """
-from eemeter import (
+from eemeter.eemeter.common.exceptions import (
     EEMeterError,
     NoBaselineDataError,
     NoReportingDataError,

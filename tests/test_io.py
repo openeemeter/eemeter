@@ -24,7 +24,7 @@ from tempfile import TemporaryFile
 import pandas as pd
 import pytest
 
-from eemeter import (
+from eemeter.eemeter.utilities.io import (
     meter_data_from_csv,
     meter_data_from_json,
     meter_data_to_csv,

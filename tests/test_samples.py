@@ -22,7 +22,7 @@ import datetime
 import pytest
 import pytz
 
-from eemeter import samples, load_sample
+from eemeter.eemeter.samples import samples, load_sample
 
 
 def test_samples():

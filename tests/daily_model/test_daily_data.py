@@ -18,7 +18,7 @@
 
 """
 from eemeter.eemeter.models.daily.data import DailyBaselineData, DailyReportingData
-from eemeter import load_sample
+from eemeter.eemeter.samples import load_sample
 import numpy as np
 import pandas as pd
 import pytest
