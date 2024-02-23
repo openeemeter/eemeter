@@ -19,7 +19,7 @@
 """
 from eemeter.eemeter.samples import load_sample
 from eemeter.eemeter.common.transform import get_baseline_data, get_reporting_data
-from eemeter.eemeter import DailyBaselineData, DailyReportingData, DailyModel, BillingBaselineData, BillingReportingData, BillingModel
+from eemeter.eemeter import DailyBaselineData, DailyReportingData, DailyModel, BillingBaselineData, BillingReportingData, BillingModel, HourlyModel, HourlyBaselineData, HourlyReportingData
 from eemeter.eemeter.models.hourly.design_matrices import create_caltrack_hourly_preliminary_design_matrix, create_caltrack_hourly_segmented_design_matrices
 from eemeter.eemeter.models.hourly.segmentation import segment_time_series
 from eemeter.eemeter.common.features import fit_temperature_bins, estimate_hour_of_week_occupancy
@@ -111,78 +111,23 @@ def test_json_hourly():
     baseline_meter_data, warnings = get_baseline_data(
         meter_data, end=blackout_start_date, max_days=365
     )
-
-    # create a design matrix for occupancy and segmentation
-    preliminary_design_matrix = (
-        create_caltrack_hourly_preliminary_design_matrix(
-            baseline_meter_data, temperature_data
-        )
-    )
-
-    # build 12 monthly models - each step from now on operates on each segment
-    segmentation = segment_time_series(
-        preliminary_design_matrix.index, "three_month_weighted"
-    )
-
-    # assign an occupancy status to each hour of the week (0-167)
-    occupancy_lookup = estimate_hour_of_week_occupancy(
-        preliminary_design_matrix, segmentation=segmentation
-    )
-
-    # assign temperatures to bins
-    (
-        occupied_temperature_bins,
-        unoccupied_temperature_bins,
-    ) = fit_temperature_bins(
-        preliminary_design_matrix,
-        segmentation=segmentation,
-        occupancy_lookup=occupancy_lookup,
-    )
-
-    # build a design matrix for each monthly segment
-    segmented_design_matrices = (
-        create_caltrack_hourly_segmented_design_matrices(
-            preliminary_design_matrix,
-            segmentation,
-            occupancy_lookup,
-            occupied_temperature_bins,
-            unoccupied_temperature_bins,
-        )
-    )
+    baseline = HourlyBaselineData.from_series(baseline_meter_data, temperature_data, is_electricity_data=True)
 
     # build a CalTRACK hourly model
-    baseline_model = fit_caltrack_hourly_model(
-        segmented_design_matrices,
-        occupancy_lookup,
-        occupied_temperature_bins,
-        unoccupied_temperature_bins,
-        segment_type = "three_month_weighted"
-    )
+    baseline_model = HourlyModel().fit(baseline)
 
     # get a year of reporting period data
     reporting_meter_data, warnings = get_reporting_data(
         meter_data, start=blackout_end_date, max_days=365
     )
+    reporting = HourlyReportingData.from_series(reporting_meter_data, temperature_data, is_electricity_data=True)
 
-    # compute metered savings
-    metered_savings_dataframe, error_bands = metered_savings(
-        baseline_model, reporting_meter_data, temperature_data, with_disaggregated=True
-    )
+    result1 = baseline_model.predict(reporting)
 
-    # total metered savings
-    total_metered_savings = metered_savings_dataframe.metered_savings.sum()
+    # serialize, deserialize
+    json_str = baseline_model.to_json()
+    m = HourlyModel.from_json(json_str)
 
-    # test JSON
-    json_str = json.dumps(baseline_model.json())
+    result2 = m.predict(reporting)
 
-    m = CalTRACKHourlyModelResults.from_json(json.loads(json_str))
-
-    # compute metered savings from the loaded model
-    metered_savings_dataframe, error_bands = metered_savings(
-        m, reporting_meter_data, temperature_data, with_disaggregated=True
-    )
-
-    # total metered savings
-    total_metered_savings_2 = metered_savings_dataframe.metered_savings.sum()
-
-    assert total_metered_savings == total_metered_savings_2
+    assert result1['predicted'].sum() == result2['predicted'].sum()
