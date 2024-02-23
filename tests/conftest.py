@@ -23,7 +23,7 @@ from pkg_resources import resource_stream
 import pandas as pd
 import pytest
 
-from eemeter import load_sample
+from eemeter.eemeter.samples import load_sample
 
 
 @pytest.fixture

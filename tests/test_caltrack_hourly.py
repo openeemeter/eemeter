@@ -173,19 +173,21 @@ def temps():
     temps = pd.Series(np.linspace(0, 100, 24), index=index)
     return temps
 
-
+@pytest.mark.parametrize("segment_type", ["three_month_weighted"])
 def test_fit_caltrack_hourly_model(
     segmented_design_matrices,
     occupancy_lookup,
     occupied_temperature_bins,
     unoccupied_temperature_bins,
     temps,
+    segment_type
 ):
     segmented_model_results = fit_caltrack_hourly_model(
         segmented_design_matrices,
         occupancy_lookup,
         occupied_temperature_bins,
         unoccupied_temperature_bins,
+        segment_type = segment_type
     )
 
     assert segmented_model_results.model.segment_models is not None
@@ -193,18 +195,21 @@ def test_fit_caltrack_hourly_model(
     prediction = segmented_model_results.predict(temps.index, temps).result
 
 
+@pytest.mark.parametrize("segment_type", ["single", "three_month_weighted"])
 def test_serialize_caltrack_hourly_model(
     segmented_design_matrices,
     occupancy_lookup,
     occupied_temperature_bins,
     unoccupied_temperature_bins,
     temps,
+    segment_type
 ):
     segmented_model = fit_caltrack_hourly_model(
         segmented_design_matrices,
         occupancy_lookup,
         occupied_temperature_bins,
         unoccupied_temperature_bins,
+        segment_type = segment_type
     )
     assert json.dumps(segmented_model.json())
 
@@ -275,18 +280,21 @@ def segmented_design_matrices_nans(
     }
 
 
+@pytest.mark.parametrize("segment_type", ["three_month_weighted"])
 def test_fit_caltrack_hourly_model_nans_less_than_week_predict(
     segmented_design_matrices_nans,
     occupancy_lookup_nans,
     temperature_bins_nans,
     temps_extended,
     temps,
+    segment_type,
 ):
     segmented_model_results = fit_caltrack_hourly_model(
         segmented_design_matrices_nans,
         occupancy_lookup_nans,
         temperature_bins_nans,
         temperature_bins_nans,
+        segment_type=segment_type
     )
 
     assert segmented_model_results.model.segment_models is not None
@@ -373,17 +381,20 @@ def temps_extended():
     return temps
 
 
+@pytest.mark.parametrize("segment_type", ["three_month_weighted"])
 def test_fit_caltrack_hourly_model_nans_less_than_week_fit(
     segmented_design_matrices_nans_less_than_week,
     occupancy_lookup_nans_less_than_week,
     temperature_bins_nans_less_than_week,
     temps_extended,
+    segment_type
 ):
     segmented_model_results = fit_caltrack_hourly_model(
         segmented_design_matrices_nans_less_than_week,
         occupancy_lookup_nans_less_than_week,
         temperature_bins_nans_less_than_week,
         temperature_bins_nans_less_than_week,
+        segment_type=segment_type
     )
 
     assert segmented_model_results.model.segment_models is not None
@@ -411,19 +422,21 @@ def segmented_design_matrices_empty_models(
         )
     }
 
-
+@pytest.mark.parametrize("segment_type", [ "three_month_weighted"])
 def test_predict_caltrack_hourly_model_empty_models(
     temps,
     segmented_design_matrices_empty_models,
     occupancy_lookup,
     occupied_temperature_bins,
     unoccupied_temperature_bins,
+    segment_type
 ):
     segmented_model_results = fit_caltrack_hourly_model(
         segmented_design_matrices_empty_models,
         occupancy_lookup,
         occupied_temperature_bins,
         unoccupied_temperature_bins,
+        segment_type=segment_type
     )
 
     assert segmented_model_results.model.segment_models is not None

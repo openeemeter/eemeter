@@ -17,6 +17,7 @@
    limitations under the License.
 
 """
+import eemeter.common.const as _const
 from eemeter.eemeter.common.data_processor_utilities import as_freq, caltrack_sufficiency_criteria_baseline, clean_caltrack_billing_daily_data, compute_minimum_granularity
 from eemeter.eemeter.common.features import compute_temperature_features
 from eemeter.eemeter.common.warnings import EEMeterWarning
@@ -54,11 +55,14 @@ class _BillingData(_DailyData):
             Missing values should be filled in with average of non-missing values (e.g., for hourly data, 24 * average hourly usage).
         """
         meter_series = df['observed'].dropna()
+        if meter_series.empty:
+            return df['observed'].resample('D').first().to_frame()
         min_granularity = compute_minimum_granularity(meter_series.index, default_granularity='billing_bimonthly')
 
         # Ensure higher frequency data is aggregated to the monthly model
         if not min_granularity.startswith('billing'):
-            meter_series = meter_series.resample('MS').sum()
+            # MS is so that the date for Month Start
+            meter_series = meter_series.resample('MS').sum(min_count=1)
             self.warnings.append( 
                 EEMeterWarning(
                         qualified_name="eemeter.caltrack_sufficiency_criteria.inferior_model_usage",
@@ -72,22 +76,24 @@ class _BillingData(_DailyData):
         meter_value_df = clean_caltrack_billing_daily_data(meter_series.to_frame('value'), min_granularity, self.disqualification)
         
         # Spread billing data to daily
-        if min_granularity.startswith('billing'):
-            meter_value_df = as_freq(meter_value_df['value'], 'D').to_frame('value')
+        meter_value_df = as_freq(meter_value_df['value'], 'D').to_frame('value')
 
         meter_value_df = meter_value_df.rename(columns={'value': 'observed'})
+
+        # Drop the NaN at the end
+        if len(meter_value_df) > 0 and np.isnan(meter_value_df.iloc[-1]['observed']):
+            #TODO need to refactor the clean caltrack data method and remove the nan logic, this breaks when original df has nan in last row
+            meter_value_df = meter_value_df[:-1]
 
         # Convert all non-zero time datetimes to zero time (i.e., set the time to midnight), for proper join since we only want one reading per day for billing
         meter_value_df.index = meter_value_df.index.normalize()
 
         # This will ensure that the missing days are kept in the dataframe
         # Create an index with all the days from the start and end date of 'meter_value_df'
-        all_days_index = pd.date_range(start=df.index.min(), end=df.index.max(), freq='D', tz=df.index.tz)
-        all_days_df = pd.DataFrame(index=all_days_index)
-        meter_value_df = meter_value_df.merge(all_days_df, left_index=True, right_index=True, how='outer')
-
-        # Forward fill the data since it is assumed the meter date is for the start date of the billing cycle
-        meter_value_df = meter_value_df.ffill()
+        if len(meter_value_df) > 0:
+            all_days_index = pd.date_range(start=meter_value_df.index.min(), end=meter_value_df.index.max(), freq='D', tz=df.index.tz)
+            all_days_df = pd.DataFrame(index=all_days_index)
+            meter_value_df = meter_value_df.merge(all_days_df, left_index=True, right_index=True, how='outer')
 
         return meter_value_df
 
@@ -114,9 +120,9 @@ class _BillingData(_DailyData):
                         EEMeterWarning(
                             qualified_name="eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data",
                             description=("More than 50% of the high frequency Temperature data is missing."),
-                            data = (
-                                temperature_features[temperature_features.coverage <= 0.5].index.to_list()
-                            )
+                            data = {
+                                'high_frequency_data_missing_count' : len(temperature_features[temperature_features.coverage <= 0.5].index.to_list())
+                            }
                         )
                     )
 

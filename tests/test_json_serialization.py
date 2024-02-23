@@ -17,13 +17,20 @@
    limitations under the License.
 
 """
-import eemeter
-from eemeter import DailyBaselineData, DailyReportingData, DailyModel, BillingBaselineData, BillingReportingData, BillingModel
+from eemeter.eemeter.samples import load_sample
+from eemeter.eemeter.common.transform import get_baseline_data, get_reporting_data
+from eemeter.eemeter import DailyBaselineData, DailyReportingData, DailyModel, BillingBaselineData, BillingReportingData, BillingModel
+from eemeter.eemeter.models.hourly.design_matrices import create_caltrack_hourly_preliminary_design_matrix, create_caltrack_hourly_segmented_design_matrices
+from eemeter.eemeter.models.hourly.segmentation import segment_time_series
+from eemeter.eemeter.common.features import fit_temperature_bins, estimate_hour_of_week_occupancy
+from eemeter.eemeter.models.hourly.model import CalTRACKHourlyModelResults, fit_caltrack_hourly_model
+from eemeter.eemeter.models.hourly.derivatives import metered_savings
+
 import json
 
 
 def test_json_daily():
-    meter_data, temperature_data, sample_metadata = eemeter.load_sample(
+    meter_data, temperature_data, sample_metadata = load_sample(
         "il-electricity-cdd-hdd-daily"
     )
 
@@ -31,14 +38,14 @@ def test_json_daily():
     blackout_end_date = sample_metadata["blackout_end_date"]
 
     # fit baseline model
-    baseline_meter_data, warnings = eemeter.get_baseline_data(
+    baseline_meter_data, warnings = get_baseline_data(
         meter_data, end=blackout_start_date, max_days=365
     )
     baseline_data = DailyBaselineData.from_series(baseline_meter_data, temperature_data, is_electricity_data=True)
     baseline_model = DailyModel().fit(baseline_data, ignore_disqualification=True)
 
     # predict on reporting year and calculate savings
-    reporting_meter_data, warnings = eemeter.get_reporting_data(
+    reporting_meter_data, warnings = get_reporting_data(
         meter_data, start=blackout_end_date, max_days=365
     )
     #TODO change to Reporting once class is fixed
@@ -58,7 +65,7 @@ def test_json_daily():
     assert total_metered_savings == total_metered_savings_loaded
 
 def test_json_billing():
-    meter_data, temperature_data, sample_metadata = eemeter.load_sample(
+    meter_data, temperature_data, sample_metadata = load_sample(
         "il-electricity-cdd-hdd-billing_monthly"
     )
 
@@ -66,14 +73,14 @@ def test_json_billing():
     blackout_end_date = sample_metadata["blackout_end_date"]
 
     # fit baseline model
-    baseline_meter_data, warnings = eemeter.get_baseline_data(
+    baseline_meter_data, warnings = get_baseline_data(
         meter_data, end=blackout_start_date, max_days=365
     )
     baseline_data = BillingBaselineData.from_series(baseline_meter_data, temperature_data, is_electricity_data=True)
     baseline_model = BillingModel().fit(baseline_data, ignore_disqualification=True)
 
     # predict on reporting year and calculate savings
-    reporting_meter_data, warnings = eemeter.get_reporting_data(
+    reporting_meter_data, warnings = get_reporting_data(
         meter_data, start=blackout_end_date, max_days=365
     )
     reporting_data = BillingReportingData.from_series(reporting_meter_data, temperature_data, is_electricity_data=True)
@@ -93,7 +100,7 @@ def test_json_billing():
 
 
 def test_json_hourly():
-    meter_data, temperature_data, sample_metadata = eemeter.load_sample(
+    meter_data, temperature_data, sample_metadata = load_sample(
         "il-electricity-cdd-hdd-hourly"
     )
 
@@ -101,24 +108,24 @@ def test_json_hourly():
     blackout_end_date = sample_metadata["blackout_end_date"]
 
     # get meter data suitable for fitting a baseline model
-    baseline_meter_data, warnings = eemeter.get_baseline_data(
+    baseline_meter_data, warnings = get_baseline_data(
         meter_data, end=blackout_start_date, max_days=365
     )
 
     # create a design matrix for occupancy and segmentation
     preliminary_design_matrix = (
-        eemeter.create_caltrack_hourly_preliminary_design_matrix(
+        create_caltrack_hourly_preliminary_design_matrix(
             baseline_meter_data, temperature_data
         )
     )
 
     # build 12 monthly models - each step from now on operates on each segment
-    segmentation = eemeter.segment_time_series(
+    segmentation = segment_time_series(
         preliminary_design_matrix.index, "three_month_weighted"
     )
 
     # assign an occupancy status to each hour of the week (0-167)
-    occupancy_lookup = eemeter.estimate_hour_of_week_occupancy(
+    occupancy_lookup = estimate_hour_of_week_occupancy(
         preliminary_design_matrix, segmentation=segmentation
     )
 
@@ -126,7 +133,7 @@ def test_json_hourly():
     (
         occupied_temperature_bins,
         unoccupied_temperature_bins,
-    ) = eemeter.fit_temperature_bins(
+    ) = fit_temperature_bins(
         preliminary_design_matrix,
         segmentation=segmentation,
         occupancy_lookup=occupancy_lookup,
@@ -134,7 +141,7 @@ def test_json_hourly():
 
     # build a design matrix for each monthly segment
     segmented_design_matrices = (
-        eemeter.create_caltrack_hourly_segmented_design_matrices(
+        create_caltrack_hourly_segmented_design_matrices(
             preliminary_design_matrix,
             segmentation,
             occupancy_lookup,
@@ -144,20 +151,21 @@ def test_json_hourly():
     )
 
     # build a CalTRACK hourly model
-    baseline_model = eemeter.fit_caltrack_hourly_model(
+    baseline_model = fit_caltrack_hourly_model(
         segmented_design_matrices,
         occupancy_lookup,
         occupied_temperature_bins,
         unoccupied_temperature_bins,
+        segment_type = "three_month_weighted"
     )
 
     # get a year of reporting period data
-    reporting_meter_data, warnings = eemeter.get_reporting_data(
+    reporting_meter_data, warnings = get_reporting_data(
         meter_data, start=blackout_end_date, max_days=365
     )
 
     # compute metered savings
-    metered_savings_dataframe, error_bands = eemeter.metered_savings(
+    metered_savings_dataframe, error_bands = metered_savings(
         baseline_model, reporting_meter_data, temperature_data, with_disaggregated=True
     )
 
@@ -167,10 +175,10 @@ def test_json_hourly():
     # test JSON
     json_str = json.dumps(baseline_model.json())
 
-    m = eemeter.CalTRACKHourlyModelResults.from_json(json.loads(json_str))
+    m = CalTRACKHourlyModelResults.from_json(json.loads(json_str))
 
     # compute metered savings from the loaded model
-    metered_savings_dataframe, error_bands = eemeter.metered_savings(
+    metered_savings_dataframe, error_bands = metered_savings(
         m, reporting_meter_data, temperature_data, with_disaggregated=True
     )
 
