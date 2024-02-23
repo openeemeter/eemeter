@@ -189,10 +189,19 @@ class HourlyModel:
 
         return df_res
 
+    def to_dict(self):
+        model_dict = self.model.json()
+        model_dict['model']['unc_vars'] = self._autocorr_unc_vars
+        return model_dict
+    
+    def to_json(self):
+        return json.dumps(self.to_dict())    
+
     @classmethod
     def from_dict(cls, data):
         hourly_model = cls()
         hourly_model.model = CalTRACKHourlyModelResults.from_json(data)
+        hourly_model._autocorr_unc_vars = data['model']['unc_vars']
         hourly_model.is_fit = True
         return hourly_model
 
