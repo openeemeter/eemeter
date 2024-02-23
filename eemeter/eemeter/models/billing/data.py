@@ -20,8 +20,8 @@
 import eemeter.common.const as _const
 from eemeter.eemeter.common.data_processor_utilities import (
     as_freq,
-    caltrack_sufficiency_criteria_baseline,
-    clean_caltrack_billing_daily_data,
+    sufficiency_criteria_baseline,
+    clean_billing_daily_data,
     compute_minimum_granularity,
 )
 from eemeter.eemeter.common.features import compute_temperature_features
@@ -57,7 +57,7 @@ class _BillingData(_DailyData):
         """
         Computes the meter value DataFrame by cleaning and processing the observed meter data.
         1. The minimum granularity is computed from the non null rows. If the billing cycle is mixed between monthly and bimonthly, then the minimum granularity is bimonthly
-        2. The meter data is cleaned and downsampled/upsampled into the correct frequency using clean_caltrack_billing_daily_data()
+        2. The meter data is cleaned and downsampled/upsampled into the correct frequency using clean_billing_daily_data()
         3. Add missing days as NaN by merging with a full year daily index.
 
         Parameters
@@ -82,7 +82,7 @@ class _BillingData(_DailyData):
             meter_series = meter_series.resample("MS").sum(min_count=1)
             self.warnings.append(
                 EEMeterWarning(
-                    qualified_name="eemeter.caltrack_sufficiency_criteria.inferior_model_usage",
+                    qualified_name="eemeter.sufficiency_criteria.inferior_model_usage",
                     description=(
                         "Daily data is provided but the model used is monthly. Are you sure this is the intended model?"
                     ),
@@ -92,7 +92,7 @@ class _BillingData(_DailyData):
             min_granularity = "billing_monthly"
 
         # This checks for offcycle reads. That is a disqualification if the billing cycle is less than 25 days
-        meter_value_df = clean_caltrack_billing_daily_data(
+        meter_value_df = clean_billing_daily_data(
             meter_series.to_frame("value"), min_granularity, self.disqualification
         )
 
@@ -159,7 +159,7 @@ class _BillingData(_DailyData):
                 # Add warning for frequencies longer than 1 hour
                 self.warnings.append(
                     EEMeterWarning(
-                        qualified_name="eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency",
+                        qualified_name="eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency",
                         description=(
                             "Cannot confirm that pre-aggregated temperature data had sufficient hours kept"
                         ),
@@ -176,7 +176,7 @@ class _BillingData(_DailyData):
                 if len(temperature_features[temperature_features.coverage <= 0.5]) > 0:
                     self.warnings.append(
                         EEMeterWarning(
-                            qualified_name="eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data",
+                            qualified_name="eemeter.sufficiency_criteria.missing_high_frequency_temperature_data",
                             description=(
                                 "More than 50% of the high frequency Temperature data is missing."
                             ),
@@ -237,7 +237,7 @@ class _BillingData(_DailyData):
                 if invalid_temperature_rows.any():
                     self.warnings.append(
                         EEMeterWarning(
-                            qualified_name="eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data",
+                            qualified_name="eemeter.sufficiency_criteria.missing_high_frequency_temperature_data",
                             description=(
                                 "More than 50% of the high frequency temperature data is missing."
                             ),
@@ -304,7 +304,7 @@ class BillingBaselineData(_BillingData):
             warnings (list): List of warnings
 
         """
-        _, disqualification, warnings = caltrack_sufficiency_criteria_baseline(
+        _, disqualification, warnings = sufficiency_criteria_baseline(
             sufficiency_df,
             is_reporting_data=False,
             is_electricity_data=self.is_electricity_data,
@@ -416,7 +416,7 @@ class BillingReportingData(_BillingData):
             warnings (list): List of warnings
 
         """
-        _, disqualification, warnings = caltrack_sufficiency_criteria_baseline(
+        _, disqualification, warnings = sufficiency_criteria_baseline(
             sufficiency_df,
             is_reporting_data=True,
             is_electricity_data=self.is_electricity_data,

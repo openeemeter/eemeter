@@ -69,7 +69,7 @@ def day_counts(index):
 
     return pd.Series(timedelta_days, index=index)
 
-def clean_caltrack_billing_data(data, source_interval, warnings):
+def clean_billing_data(data, source_interval, warnings):
     # check for empty data
     if data["value"].dropna().empty:
         return data[:0]
@@ -88,7 +88,7 @@ def clean_caltrack_billing_data(data, source_interval, warnings):
             if len(data[(filter_ > 35) | (filter_ < 25)]) > 0:
                 warnings.append(
                     EEMeterWarning(
-                        qualified_name="eemeter.caltrack_sufficiency_criteria.offcycle_reads_in_billing_monthly_data",
+                        qualified_name="eemeter.sufficiency_criteria.offcycle_reads_in_billing_monthly_data",
                         description=("Off-cycle reads found in billing monthly data having a duration of less than 25 days"),
                         data = (
                             data[(filter_ > 35) | (filter_ < 25)].index.to_list()
@@ -105,7 +105,7 @@ def clean_caltrack_billing_data(data, source_interval, warnings):
             if len(data[(filter_ > 70) | (filter_ < 25)]) > 0:
                 warnings.append(
                     EEMeterWarning(
-                        qualified_name="eemeter.caltrack_sufficiency_criteria.offcycle_reads_in_billing_monthly_data",
+                        qualified_name="eemeter.sufficiency_criteria.offcycle_reads_in_billing_monthly_data",
                         description=("Off-cycle reads found in billing monthly data having a duration of less than 25 days"),
                         data = (
                             data[(filter_ > 70) | (filter_ < 25)].index.to_list()
@@ -274,13 +274,13 @@ def as_freq(
         return resampled
 
 
-def downsample_and_clean_caltrack_daily_data(dataset, warnings):
+def downsample_and_clean_daily_data(dataset, warnings):
     dataset = as_freq(dataset, "D", include_coverage=True)
 
     if not dataset[dataset.coverage <= 0.5].empty:
         warnings.append(
             EEMeterWarning(
-                qualified_name="eemeter.caltrack_sufficiency_criteria.missing_high_frequency_meter_data",
+                qualified_name="eemeter.sufficiency_criteria.missing_high_frequency_meter_data",
                 description=("More than 50% of the high frequency Meter data is missing."),
                 data = (
                     dataset[dataset.coverage <= 0.5].index.to_list()
@@ -296,18 +296,18 @@ def downsample_and_clean_caltrack_daily_data(dataset, warnings):
     return dataset[dataset.coverage > 0.5].reindex(dataset.index)[["value"]]
 
 
-def clean_caltrack_billing_daily_data(data, source_interval, warnings):
+def clean_billing_daily_data(data, source_interval, warnings):
     # billing data is cleaned but not resampled
     if source_interval.startswith("billing"):
         # CalTRACK 2.2.3.4, 2.2.3.5
-        return clean_caltrack_billing_data(data, source_interval, warnings)
+        return clean_billing_data(data, source_interval, warnings)
 
     # higher intervals like daily, hourly, 30min, 15min are
     # resampled (daily) or downsampled (hourly, 30min, 15min)
     elif source_interval == "daily":
         return data.to_frame("value")
     else:
-        return downsample_and_clean_caltrack_daily_data(data, warnings)
+        return downsample_and_clean_daily_data(data, warnings)
 
 # TODO : requires more testing
 def compute_minimum_granularity(index : pd.Series, default_granularity : Optional[str]):
@@ -354,7 +354,7 @@ def compute_minimum_granularity(index : pd.Series, default_granularity : Optiona
     return min_granularity
 
 
-def caltrack_sufficiency_criteria_baseline(
+def sufficiency_criteria_baseline(
     data,
     requested_start = None,
     requested_end = None,
@@ -371,7 +371,7 @@ def caltrack_sufficiency_criteria_baseline(
     if data.dropna().empty:
         warnings.append(
                 EEMeterWarning(
-                    qualified_name="eemeter.caltrack_sufficiency_criteria.no_data",
+                    qualified_name="eemeter.sufficiency_criteria.no_data",
                     description=("No data available."),
                     data={},
                 )
@@ -404,7 +404,7 @@ def caltrack_sufficiency_criteria_baseline(
         critical_warnings.append(
             EEMeterWarning(
                 qualified_name=(
-                    "eemeter.caltrack_sufficiency_criteria"
+                    "eemeter.sufficiency_criteria"
                     ".extra_data_after_requested_end_date"
                 ),
                 description=("Extra data found after requested end date."),
@@ -421,7 +421,7 @@ def caltrack_sufficiency_criteria_baseline(
         critical_warnings.append(
             EEMeterWarning(
                 qualified_name=(
-                    "eemeter.caltrack_sufficiency_criteria"
+                    "eemeter.sufficiency_criteria"
                     ".extra_data_before_requested_start_date"
                 ),
                 description=("Extra data found before requested start date."),
@@ -446,7 +446,7 @@ def caltrack_sufficiency_criteria_baseline(
             critical_warnings.append(
                 EEMeterWarning(
                     qualified_name=(
-                        "eemeter.caltrack_sufficiency_criteria" ".negative_meter_values"
+                        "eemeter.sufficiency_criteria" ".negative_meter_values"
                     ),
                     description=(
                         "Found negative meter data values"
@@ -509,7 +509,7 @@ def caltrack_sufficiency_criteria_baseline(
         critical_warnings.append(
             EEMeterWarning(
                 qualified_name=(
-                    "eemeter.caltrack_sufficiency_criteria"
+                    "eemeter.sufficiency_criteria"
                     ".incorrect_number_of_total_days"
                 ),
                 description=(f"Baseline length is not within the expected range of {MIN_BASELINE_LENGTH}-{MAX_BASELINE_LENGTH} days."),
@@ -521,7 +521,7 @@ def caltrack_sufficiency_criteria_baseline(
         critical_warnings.append(
             EEMeterWarning(
                 qualified_name=(
-                    "eemeter.caltrack_sufficiency_criteria"
+                    "eemeter.sufficiency_criteria"
                     ".too_many_days_with_missing_data"
                 ),
                 description=(
@@ -536,7 +536,7 @@ def caltrack_sufficiency_criteria_baseline(
         critical_warnings.append(
             EEMeterWarning(
                 qualified_name=(
-                    "eemeter.caltrack_sufficiency_criteria"
+                    "eemeter.sufficiency_criteria"
                     ".too_many_days_with_missing_meter_data"
                 ),
                 description=("Too many days in data have missing meter data."),
@@ -552,7 +552,7 @@ def caltrack_sufficiency_criteria_baseline(
         critical_warnings.append(
             EEMeterWarning(
                 qualified_name=(
-                    "eemeter.caltrack_sufficiency_criteria"
+                    "eemeter.sufficiency_criteria"
                     ".too_many_days_with_missing_temperature_data"
                 ),
                 description=("Too many days in data have missing temperature data."),
@@ -568,7 +568,7 @@ def caltrack_sufficiency_criteria_baseline(
     if (non_null_temp_percentage_per_month < min_fraction_daily_coverage).any():
         critical_warnings.append(
             EEMeterWarning(
-                qualified_name="eemeter.caltrack_sufficiency_criteria.missing_monthly_temperature_data",
+                qualified_name="eemeter.sufficiency_criteria.missing_monthly_temperature_data",
                 description=("More than 10% of the monthly temperature data is missing."),
                 data={
                     #TODO report percentage
@@ -581,7 +581,7 @@ def caltrack_sufficiency_criteria_baseline(
         if (non_null_meter_percentage_per_month < min_fraction_daily_coverage).any():
             critical_warnings.append(
                 EEMeterWarning(
-                    qualified_name="eemeter.caltrack_sufficiency_criteria.missing_monthly_meter_data",
+                    qualified_name="eemeter.sufficiency_criteria.missing_monthly_meter_data",
                     description=("More than 10% of the monthly meter data is missing."),
                     data={
                         #TODO report percentage     
@@ -596,7 +596,7 @@ def caltrack_sufficiency_criteria_baseline(
         non_critical_warnings.append(
             EEMeterWarning(
                 qualified_name=(
-                    "eemeter.caltrack_sufficiency_criteria" ".extreme_values_detected"
+                    "eemeter.sufficiency_criteria" ".extreme_values_detected"
                 ),
                 description=(
                     "Extreme values (greater than (median + (3 * IQR)),"

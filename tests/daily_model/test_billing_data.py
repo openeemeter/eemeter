@@ -210,10 +210,10 @@ def test_billing_baseline_data_with_monthly_frequencies(get_datetime_index):
     # Because one month is missing
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
-    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
+    assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     # DQ because only 12 days worth of temperature data is available
     assert len(cls.disqualification) == 2
-    assert [dq.qualified_name for dq in cls.disqualification] == ['eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_temperature_data']
+    assert [dq.qualified_name for dq in cls.disqualification] == ['eemeter.sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_temperature_data']
 
 @pytest.mark.parametrize('get_datetime_index', [['2MS', True]], indirect=True)
 def test_billing_baseline_data_with_bimonthly_frequencies(get_datetime_index):
@@ -235,10 +235,10 @@ def test_billing_baseline_data_with_bimonthly_frequencies(get_datetime_index):
     # Because two months are missing
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
-    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
+    assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     # DQ because only 6 days worth of temperature data is available
     assert len(cls.disqualification) == 3
-    assert [dq.qualified_name for dq in cls.disqualification] == ['eemeter.caltrack_sufficiency_criteria.incorrect_number_of_total_days','eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_temperature_data']
+    assert [dq.qualified_name for dq in cls.disqualification] == ['eemeter.sufficiency_criteria.incorrect_number_of_total_days','eemeter.sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_temperature_data']
 
 def test_billing_baseline_data_with_monthly_hourly_frequencies(get_meter_data_monthly, get_temperature_data_hourly):
 
@@ -292,7 +292,7 @@ def test_billing_baseline_data_with_monthly_daily_frequencies(get_meter_data_mon
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
-    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
+    assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 0
 
 def test_billing_baseline_data_with_bimonthly_daily_frequencies(get_meter_data_bimonthly, get_temperature_data_daily):
@@ -311,7 +311,7 @@ def test_billing_baseline_data_with_bimonthly_daily_frequencies(get_meter_data_b
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
-    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
+    assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 0
 
 def test_billing_baseline_data_with_specific_hourly_input():
@@ -325,7 +325,7 @@ def test_billing_baseline_data_with_specific_hourly_input():
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 2
-    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.caltrack_sufficiency_criteria.inferior_model_usage']
+    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.sufficiency_criteria.inferior_model_usage']
     assert len(cls.disqualification) == 0
 
 def test_billing_baseline_data_with_specific_daily_input():
@@ -338,7 +338,7 @@ def test_billing_baseline_data_with_specific_daily_input():
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 2
-    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.caltrack_sufficiency_criteria.inferior_model_usage']
+    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.sufficiency_criteria.inferior_model_usage']
     assert len(cls.disqualification) == 0
 
 def test_billing_baseline_data_with_specific_missing_daily_input():
@@ -354,9 +354,9 @@ def test_billing_baseline_data_with_specific_missing_daily_input():
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 2
-    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.caltrack_sufficiency_criteria.inferior_model_usage']
+    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.sufficiency_criteria.inferior_model_usage']
     assert len(cls.disqualification) == 1
-    assert cls.disqualification[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.missing_monthly_meter_data'
+    assert cls.disqualification[0].qualified_name == 'eemeter.sufficiency_criteria.missing_monthly_meter_data'
 
 def test_billing_baseline_data_with_specific_monthly_input():
     meter, temperature, _ = load_sample('il-electricity-cdd-hdd-billing_monthly')
@@ -395,9 +395,9 @@ def test_billing_reporting_data_with_missing_half_hourly_frequencies(get_datetim
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
-    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data'
+    assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.missing_high_frequency_temperature_data'
     assert len(cls.disqualification) == 3
-    expected_disqualifications = ['eemeter.caltrack_sufficiency_criteria.missing_monthly_temperature_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_temperature_data']
+    expected_disqualifications = ['eemeter.sufficiency_criteria.missing_monthly_temperature_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_temperature_data']
     assert all(disqualification.qualified_name in expected_disqualifications for disqualification in cls.disqualification)
 
 @pytest.mark.parametrize('get_datetime_index', [['D', True]], indirect=True)
@@ -424,7 +424,7 @@ def test_billing_reporting_data_with_missing_daily_frequencies(get_datetime_inde
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
-    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
+    assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 3
-    expected_disqualifications = ['eemeter.caltrack_sufficiency_criteria.missing_monthly_temperature_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_temperature_data']
+    expected_disqualifications = ['eemeter.sufficiency_criteria.missing_monthly_temperature_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_temperature_data']
     assert all(disqualification.qualified_name in expected_disqualifications for disqualification in cls.disqualification)
