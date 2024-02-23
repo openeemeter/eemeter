@@ -510,9 +510,14 @@ class DailyReportingData(_DailyData):
     """
 
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
+        df = df.copy()
         if "observed" not in df.columns:
-            df = df.copy()
             df["observed"] = np.nan
+
+        # Caltrack 3.5.1.1
+        if not df.observed.dropna().empty and 'temperature' in df.columns:
+            df.loc[df['observed'].isna(), 'temperature'] = np.nan
+        
         super().__init__(df, is_electricity_data)
 
     @classmethod

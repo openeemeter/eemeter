@@ -359,8 +359,7 @@ def test_daily_baseline_data_with_missing_specific_daily_input():
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 2
     assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.sufficiency_criteria.extreme_values_detected']
-    assert len(cls.disqualification) == 1
-    assert cls.disqualification[0].qualified_name == 'eemeter.sufficiency_criteria.missing_monthly_meter_data'
+    assert len(cls.disqualification) == 0
 
 def test_daily_baseline_data_with_missing_hourly_temperature_data(get_meter_data_daily, get_temperature_data_hourly):
     df = get_temperature_data_hourly
@@ -454,8 +453,8 @@ def test_daily_baseline_data_with_missing_meter_data(get_meter_data_daily, get_t
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 0
     # assert all(warning.qualified_name in expected_warnings for warning in cls.warnings)
-    assert len(cls.disqualification) == 3
-    expected_disqualifications = ['eemeter.sufficiency_criteria.missing_monthly_meter_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_meter_data']
+    assert len(cls.disqualification) == 2
+    expected_disqualifications = [ 'eemeter.sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_meter_data']
     assert all(disqualification.qualified_name in expected_disqualifications for disqualification in cls.disqualification)
 
 @pytest.mark.parametrize('get_datetime_index', [['30T', True],['H', True]], indirect=True)

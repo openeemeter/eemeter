@@ -78,7 +78,6 @@ def clean_billing_data(data, source_interval, warnings):
         diff = list((data.index[1:] - data.index[:-1]).days)
         filter_ = pd.Series(diff + [np.nan], index=data.index)
 
-        # TODO : append warnings here
         # CalTRACK 2.2.3.4, 2.2.3.5
         if source_interval == "billing_monthly":
             data = data[
@@ -576,18 +575,18 @@ def sufficiency_criteria_baseline(
             )
         )
 
-    if not is_reporting_data:
-        non_null_meter_percentage_per_month = data['observed'].groupby(data.index.month).apply(lambda x: x.notna().mean())
-        if (non_null_meter_percentage_per_month < min_fraction_daily_coverage).any():
-            critical_warnings.append(
-                EEMeterWarning(
-                    qualified_name="eemeter.sufficiency_criteria.missing_monthly_meter_data",
-                    description=("More than 10% of the monthly meter data is missing."),
-                    data={
-                        #TODO report percentage     
-                    },
-                )
-            )
+    # if not is_reporting_data:
+    #     non_null_meter_percentage_per_month = data['observed'].groupby(data.index.month).apply(lambda x: x.notna().mean())
+    #     if (non_null_meter_percentage_per_month < min_fraction_daily_coverage).any():
+    #         critical_warnings.append(
+    #             EEMeterWarning(
+    #                 qualified_name="eemeter.sufficiency_criteria.missing_monthly_meter_data",
+    #                 description=("More than 10% of the monthly meter data is missing."),
+    #                 data={
+    #                     #TODO report percentage     
+    #                 },
+    #             )
+    #         )
     
     # TODO : Check 90% of seasons & weekday/weekend available?
 
