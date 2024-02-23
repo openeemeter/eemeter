@@ -30,9 +30,5 @@ from . import (
     drmeter,
 )
 
-def get_version():
-    return __version__
-
-
 # Set default logging handler to avoid "No handler found" warnings.
 _logging.getLogger(__name__).addHandler(_logging.NullHandler())

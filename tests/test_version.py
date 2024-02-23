@@ -17,8 +17,8 @@
    limitations under the License.
 
 """
-from eemeter import get_version
 
+import eemeter
 
-def test_get_version():
-    assert get_version().startswith("4")
+def test_version():
+    assert eemeter.__version__.startswith("4")
