@@ -187,7 +187,7 @@ def test_daily_baseline_data_with_datetime_column(get_datetime_index):
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
-    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
+    assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 0
 
 @pytest.mark.parametrize('get_datetime_index', [['D', True]], indirect=True)
@@ -209,7 +209,7 @@ def test_daily_baseline_data_with_same_daily_frequencies(get_datetime_index):
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
-    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
+    assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 0
 
 @pytest.mark.parametrize('get_datetime_index', [['H', True]], indirect=True)
@@ -302,7 +302,7 @@ def test_daily_baseline_data_with_extreme_values_in_daily_and_hourly_frequencies
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
-    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.extreme_values_detected'
+    assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.extreme_values_detected'
     assert len(cls.disqualification) == 0
 
 def test_daily_baseline_data_with_extreme_and_negative_values_in_daily_and_hourly_frequencies(get_meter_data_daily_with_extreme_values_and_negative_values, get_temperature_data_hourly):
@@ -319,9 +319,9 @@ def test_daily_baseline_data_with_extreme_and_negative_values_in_daily_and_hourl
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
-    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.extreme_values_detected'
+    assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.extreme_values_detected'
     assert len(cls.disqualification) == 1
-    assert cls.disqualification[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.negative_meter_values'
+    assert cls.disqualification[0].qualified_name == 'eemeter.sufficiency_criteria.negative_meter_values'
 
 def test_daily_baseline_data_with_specific_hourly_input():
     meter, temperature, _ = load_sample('il-electricity-cdd-hdd-hourly')
@@ -332,7 +332,7 @@ def test_daily_baseline_data_with_specific_hourly_input():
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 2
-    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.caltrack_sufficiency_criteria.extreme_values_detected']
+    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.sufficiency_criteria.extreme_values_detected']
     assert len(cls.disqualification) == 0
 
 def test_daily_baseline_data_with_specific_daily_input():
@@ -344,7 +344,7 @@ def test_daily_baseline_data_with_specific_daily_input():
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 2
-    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.caltrack_sufficiency_criteria.extreme_values_detected']
+    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.sufficiency_criteria.extreme_values_detected']
     assert len(cls.disqualification) == 0
 
 def test_daily_baseline_data_with_missing_specific_daily_input():
@@ -358,9 +358,9 @@ def test_daily_baseline_data_with_missing_specific_daily_input():
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 2
-    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.caltrack_sufficiency_criteria.extreme_values_detected']
+    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.sufficiency_criteria.extreme_values_detected']
     assert len(cls.disqualification) == 1
-    assert cls.disqualification[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.missing_monthly_meter_data'
+    assert cls.disqualification[0].qualified_name == 'eemeter.sufficiency_criteria.missing_monthly_meter_data'
 
 def test_daily_baseline_data_with_missing_hourly_temperature_data(get_meter_data_daily, get_temperature_data_hourly):
     df = get_temperature_data_hourly
@@ -382,9 +382,9 @@ def test_daily_baseline_data_with_missing_hourly_temperature_data(get_meter_data
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
-    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data'
+    assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.missing_high_frequency_temperature_data'
     assert len(cls.disqualification) == 3
-    expected_disqualifications = ['eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_temperature_data', 'eemeter.caltrack_sufficiency_criteria.missing_monthly_temperature_data']
+    expected_disqualifications = ['eemeter.sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_temperature_data', 'eemeter.sufficiency_criteria.missing_monthly_temperature_data']
     assert all(disqualification.qualified_name in expected_disqualifications for disqualification in cls.disqualification)
 
 def test_daily_baseline_data_with_missing_half_hourly_temperature_data(get_meter_data_daily, get_temperature_data_half_hourly):
@@ -408,9 +408,9 @@ def test_daily_baseline_data_with_missing_half_hourly_temperature_data(get_meter
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
-    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data'
+    assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.missing_high_frequency_temperature_data'
     assert len(cls.disqualification) == 3
-    expected_disqualifications = ['eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_temperature_data', 'eemeter.caltrack_sufficiency_criteria.missing_monthly_temperature_data']
+    expected_disqualifications = ['eemeter.sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_temperature_data', 'eemeter.sufficiency_criteria.missing_monthly_temperature_data']
     assert all(disqualification.qualified_name in expected_disqualifications for disqualification in cls.disqualification)
 
 def test_daily_baseline_data_with_missing_daily_temperature_data(get_meter_data_daily, get_temperature_data_daily):
@@ -431,9 +431,9 @@ def test_daily_baseline_data_with_missing_daily_temperature_data(get_meter_data_
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
-    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
+    assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 3
-    expected_disqualifications = ['eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_temperature_data', 'eemeter.caltrack_sufficiency_criteria.missing_monthly_temperature_data']
+    expected_disqualifications = ['eemeter.sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_temperature_data', 'eemeter.sufficiency_criteria.missing_monthly_temperature_data']
     assert all(disqualification.qualified_name in expected_disqualifications for disqualification in cls.disqualification)
 
 def test_daily_baseline_data_with_missing_meter_data(get_meter_data_daily, get_temperature_data_hourly):
@@ -455,7 +455,7 @@ def test_daily_baseline_data_with_missing_meter_data(get_meter_data_daily, get_t
     assert len(cls.warnings) == 0
     # assert all(warning.qualified_name in expected_warnings for warning in cls.warnings)
     assert len(cls.disqualification) == 3
-    expected_disqualifications = ['eemeter.caltrack_sufficiency_criteria.missing_monthly_meter_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_meter_data']
+    expected_disqualifications = ['eemeter.sufficiency_criteria.missing_monthly_meter_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_meter_data']
     assert all(disqualification.qualified_name in expected_disqualifications for disqualification in cls.disqualification)
 
 @pytest.mark.parametrize('get_datetime_index', [['30T', True],['H', True]], indirect=True)
@@ -500,8 +500,8 @@ def test_daily_reporting_data_with_missing_half_hourly_and_hourly_frequencies(ge
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
-    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.missing_high_frequency_temperature_data'
-    expected_disqualifications = ['eemeter.caltrack_sufficiency_criteria.missing_monthly_temperature_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_temperature_data']
+    assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.missing_high_frequency_temperature_data'
+    expected_disqualifications = ['eemeter.sufficiency_criteria.missing_monthly_temperature_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_temperature_data']
     assert all(disqualification.qualified_name in expected_disqualifications for disqualification in cls.disqualification)
 
 
@@ -528,6 +528,6 @@ def test_daily_reporting_data_with_missing_daily_frequencies(get_datetime_index)
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 1
-    assert cls.warnings[0].qualified_name == 'eemeter.caltrack_sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
-    expected_disqualifications = ['eemeter.caltrack_sufficiency_criteria.missing_monthly_temperature_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.caltrack_sufficiency_criteria.too_many_days_with_missing_temperature_data']
+    assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
+    expected_disqualifications = ['eemeter.sufficiency_criteria.missing_monthly_temperature_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_temperature_data']
     assert all(disqualification.qualified_name in expected_disqualifications for disqualification in cls.disqualification)
