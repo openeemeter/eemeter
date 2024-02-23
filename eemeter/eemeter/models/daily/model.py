@@ -43,9 +43,8 @@ from typing import Union
 class DailyModel:
     def __init__(
         self,
-        model="4.0",
+        model="current",
         settings=None,
-        check_caltrack_compliant=True,
         verbose=False,
     ):
         """
@@ -56,11 +55,9 @@ class DailyModel:
         meter_data : pandas.DataFrame
             A dataframe containing meter data.
         model : str, optional
-            The model to use. Default is '4.0'.
+            The model to use. Default is 'current'.
         settings : dict, optional
             DailySettings to be changed. Default is None.
-        check_caltrack_compliant : bool, optional
-            Whether to check if the data is CalTRACK compliant. Default is True.
         verbose : bool, optional
             Whether to print verbose output. Default is False.
 
@@ -95,19 +92,19 @@ class DailyModel:
         """
 
         # Initialize settings
-        # Note: Model designates the base settings, it can be '4.0' or '2.0'
+        # Note: Model designates the base settings, it can be 'default' or 'legacy'
         #       Settings is to be a dictionary of settings to be changed
 
         if settings is None:
             settings = {}
 
-        if model.replace(" ", "").replace("_", ".").lower() in ["eemeter4.0", "4.0"]:
+        if model.replace(" ", "").replace("_", ".").lower() in ["current", "default"]:
             self.settings = default_settings(**settings)
-        elif model.replace(" ", "").replace("_", ".").lower() in ["caltrack2.0", "2.0", "legacy"]:
+        elif model.replace(" ", "").replace("_", ".").lower() in ["legacy"]:
             self.settings = caltrack_legacy_settings(**settings)
         else:
             raise Exception(
-                "Invalid 'settings' choice: must be 'EEmeter 4.0', '4.0', 'CalTRACK 2.0', '2.0', or 'legacy'"
+                "Invalid 'settings' choice: must be 'current', 'default', or 'legacy'"
             )
 
         # Initialize seasons and weekday/weekend
