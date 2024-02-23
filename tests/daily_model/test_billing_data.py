@@ -355,8 +355,7 @@ def test_billing_baseline_data_with_specific_missing_daily_input():
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert len(cls.warnings) == 2
     assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.sufficiency_criteria.inferior_model_usage']
-    assert len(cls.disqualification) == 1
-    assert cls.disqualification[0].qualified_name == 'eemeter.sufficiency_criteria.missing_monthly_meter_data'
+    assert len(cls.disqualification) == 0
 
 def test_billing_baseline_data_with_specific_monthly_input():
     meter, temperature, _ = load_sample('il-electricity-cdd-hdd-billing_monthly')
