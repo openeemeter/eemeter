@@ -65,7 +65,8 @@ class _DailyData:
         """
         Get the corrected input data stored in the class. The actual dataframe is immutable, this returns a copy.
 
-        Returns:
+        Returns
+        -------
             pandas.DataFrame or None: A copy of the DataFrame if it exists, otherwise None.
         """
         if self._df is None:
@@ -83,12 +84,16 @@ class _DailyData:
         """
         Create an instance of the Data class from meter data and temperature data.
 
-        Parameters:
+        Parameters
+        ----------
+
         - meter_data (pd.Series or pd.DataFrame): The meter data.
         - temperature_data (pd.Series or pd.DataFrame): The temperature data.
         - is_electricity_data: A flag indicating whether the data represents electricity data. This is required as electricity data with 0 values are converted to NaNs.
 
-        Returns:
+        Returns
+        -------
+
         - Data: An instance of the Data class with the dataframe populated with the corrected data, alongwith warnings and disqualifications based on the input.
         """
         if isinstance(meter_data, pd.Series):
@@ -120,10 +125,13 @@ class _DailyData:
         2. The meter data is cleaned and downsampled/upsampled into the correct frequency using clean_caltrack_billing_daily_data()
         3. Add missing days as NaN by merging with a full year daily index.
 
-        Args:
+        Parameters
+        ----------
+
             df (pd.DataFrame): The DataFrame containing the observed meter data.
 
-        Returns:
+        Returns
+        -------
             pd.DataFrame: The cleaned and processed meter value DataFrame.
         """
         # Dropping the NaNs is beneficial when the meter data is spread over hourly temperature data, causing lots of NaNs
@@ -175,11 +183,15 @@ class _DailyData:
         3. High frequency temperature data is checked for missing values and a warning is added if more than 50% of the data is missing, and those rows are set to NaN.
         4. If frequency was already hourly, compute_temperature_features() is used to recompute the temperature to match with the meter index.
 
-        Args:
+        Parameters
+        ----------
+
             df (pd.DataFrame): The DataFrame containing temperature data.
             meter_index (pd.DatetimeIndex): The meter index.
 
-        Returns:
+        Returns
+        -------
+
             pd.Series: The computed temperature values.
             pd.DataFrame: The computed temperature features.
         """
@@ -297,11 +309,13 @@ class _DailyData:
         Merge the meter and temperature dataframes and reorder the columns to have the order -
             [season, weekday_weekend, temperature, observed (if present)]
 
-        Args:
+        Parameters
+        ----------
             meter (pd.DataFrame): The meter dataframe.
             temp (pd.DataFrame): The temperature dataframe.
 
-        Returns:
+        Returns
+        -------
             pd.DataFrame: The merged and transformed dataframe.
         """
         df = meter.merge(
@@ -512,7 +526,9 @@ class DailyReportingData(_DailyData):
         """
         Create a DailyReportingData instance from meter data and temperature data.
 
-        Args:
+        Parameters
+        ----------
+
         - meter_data: pd.Series or pd.DataFrame (Optional attribute)
             The meter data to be used for the DailyReportingData instance.
         - temperature_data: pd.Series or pd.DataFrame (Required)
@@ -522,7 +538,9 @@ class DailyReportingData(_DailyData):
         - tzinfo: tz (optional)
             Timezone information to be used for the meter data.
 
-        Returns:
+        Returns
+        -------
+
         - DailyReportingData
             A newly created DailyReportingData instance.
         """
@@ -543,6 +561,21 @@ class DailyReportingData(_DailyData):
         return super().from_series(meter_data, temperature_data, is_electricity_data)
 
     def _check_data_sufficiency(self, sufficiency_df):
+        """
+        Private method which checks the sufficiency of the data for daily reporting calculations using the predefined OpenEEMeter sufficiency criteria.
+
+        Parameters
+        ----------
+        1. sufficiency_df (pandas.DataFrame): DataFrame containing the data for sufficiency check. Should have features such as -
+            - temperature_null: number of temperature null periods in each aggregation step
+            - temperature_not_null: number of temperature non null periods in each aggregation step
+
+        Returns
+        -------
+            disqualification (List): List of disqualifications
+            warnings (list): List of warnings
+
+        """
         # 90% coverage per period only required for billing models
         _, disqualification, warnings = caltrack_sufficiency_criteria_baseline(
             sufficiency_df,
