@@ -94,7 +94,7 @@ def test_metered_savings_cdd_hdd_daily(
     reporting_data = DailyReportingData.from_series(reporting_meter_data_daily, reporting_temperature_data, is_electricity_data=True)
     results = baseline_model_daily.predict(reporting_data)
     metered_savings = results['predicted'] - results['observed']
-    assert round(metered_savings.sum(), 2) == 1646.29
+    assert round(metered_savings.sum(), 2) == 1642.34
 
 
 @pytest.fixture
@@ -136,20 +136,14 @@ def test_metered_savings_cdd_hdd_billing(
     reporting_data = BillingReportingData.from_series(reporting_meter_data_billing, reporting_temperature_data, is_electricity_data=True)
     results = baseline_model_billing.predict(reporting_data)
     metered_savings = results['predicted'] - results['observed']
-    # print(results)
     assert round(metered_savings.sum(), 2) == 2889.2
 
 
 def test_metered_savings_cdd_hdd_billing_no_reporting_data(
     baseline_model_billing, reporting_meter_data_billing, reporting_temperature_data
 ):
-    # results, error_bands = metered_savings(
-    #     baseline_model_billing,
-    #     reporting_meter_data_billing[:0],
-    #     reporting_temperature_data,
-    #     billing_data=True,
-    # )
-    results = baseline_model_billing.predict(BillingReportingData.from_series(reporting_meter_data_billing[:0], reporting_temperature_data, is_electricity_data=True))
+    #TODO test makes less sense without the use of derivatives functions. can just be merged with other predict() tests
+    results = baseline_model_billing.predict(BillingReportingData.from_series(None, reporting_temperature_data, is_electricity_data=True))
     assert list(results.columns) == [
         'season', 'day_of_week', 'weekday_weekend', 'temperature', 'predicted', 'predicted_unc', 'heating_load', 'cooling_load', 'model_split', 'model_type'
     ]
@@ -244,7 +238,7 @@ def test_modeled_savings_cdd_hdd_daily(
     baseline_model_result = baseline_model_daily.predict(reporting_data)
     reporting_model_result = reporting_model_daily.predict(reporting_data)
     modeled_savings = baseline_model_result['predicted'] - reporting_model_result['predicted']
-    assert round(modeled_savings.sum(), 2) ==182.74
+    assert round(modeled_savings.sum(), 2) ==182.42
 
 
 #TODO move to dataclass testing
@@ -425,7 +419,7 @@ def test_metered_savings_not_aligned_reporting_data(
     assert list(results.columns) == [
         'season', 'day_of_week', 'weekday_weekend', 'temperature', 'predicted', 'predicted_unc', 'heating_load', 'cooling_load', 'model_split', 'model_type'
     ]
-    assert round(results.predicted.sum(), 2) == 1610.8
+    assert round(results.predicted.sum(), 2) == 0
 
 
 @pytest.fixture

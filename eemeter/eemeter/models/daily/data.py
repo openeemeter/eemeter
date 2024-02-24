@@ -107,6 +107,13 @@ class _DailyData:
         temperature_data.index = temperature_data.index.tz_convert(
             meter_data.index.tzinfo
         )
+        #TODO off by one (additional) day for billing, adjust in subclass accordingly
+        # constrain temperature index to meter index
+        meter_index_min = meter_data.index.min().normalize()
+        meter_index_max = meter_data.index.max().normalize() + pd.Timedelta(days=1)
+        temperature_data = temperature_data[
+            (temperature_data.index >= meter_index_min) & (temperature_data.index < meter_index_max)
+        ]
         df = pd.concat([meter_data, temperature_data], axis=1)
         return cls(df, is_electricity_data)
 
@@ -514,11 +521,12 @@ class DailyReportingData(_DailyData):
         if "observed" not in df.columns:
             df["observed"] = np.nan
 
-        # Caltrack 3.5.1.1
-        if not df.observed.dropna().empty and 'temperature' in df.columns:
-            df.loc[df['observed'].isna(), 'temperature'] = np.nan
-        
         super().__init__(df, is_electricity_data)
+
+        # Caltrack 3.5.1.1
+        #TODO this feels less intuitive than just masking the result from model.predict()
+        if "observed" in self._df.columns and not self._df['observed'].dropna().empty:
+            self._df.loc[self._df["observed"].isna(), "temperature"] = np.nan
 
     @classmethod
     def from_series(
