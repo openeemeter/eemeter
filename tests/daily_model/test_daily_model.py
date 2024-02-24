@@ -31,13 +31,12 @@ def daily_series():
         "il-electricity-cdd-hdd-daily"
     )
     blackout_start_date = sample_metadata["blackout_start_date"]
-    blackout_end_date = sample_metadata["blackout_end_date"]
-
     meter_data.index = meter_data.index.tz_convert('US/Pacific')
 
     baseline_meter_data, warnings = get_baseline_data(
         meter_data, end=blackout_start_date, max_days=365
     )
+    baseline_meter_data = baseline_meter_data[:-1] # drop nan
     return baseline_meter_data, temperature_data
 
 @pytest.fixture
@@ -102,6 +101,5 @@ def test_timezone_behavior(daily_series):
     res1 = model.predict(reporting_data)
     reporting_data_no_meter = DailyReportingData.from_series(None, temp, tzinfo=meter.index.tz)
     res2 = model.predict(reporting_data_no_meter)
-    #TODO currently failing due to weirdness with compute_temperature_features n_days_kept logic
-    # Why such a weird result?
-    assert round((res1['predicted'] - res2['predicted']).sum(),2) == -11.16
+    assert round((res1['temperature'] - res2['temperature']).sum(),2) == 0
+    assert round((res1['predicted'] - res2['predicted']).sum(),2) == 0

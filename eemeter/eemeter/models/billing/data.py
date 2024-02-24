@@ -354,11 +354,11 @@ class BillingReportingData(_BillingData):
         if "observed" not in df.columns:
             df["observed"] = np.nan
 
-        # Caltrack 3.5.1.1
-        if not df.observed.dropna().empty and 'temperature' in df.columns:
-            df.loc[df['observed'].isna(), 'temperature'] = np.nan
-
         super().__init__(df, is_electricity_data)
+
+        # Caltrack 3.5.1.1
+        if "observed" in self._df.columns and not self._df['observed'].dropna().empty:
+            self._df.loc[self._df["observed"].isna(), "temperature"] = np.nan
 
     @classmethod
     def from_series(
