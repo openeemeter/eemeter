@@ -268,6 +268,12 @@ def as_freq(
         n_total = resampled.resample(atomic_freq).count().resample(freq).count()
         resampled = resampled.to_frame("value")
         resampled["coverage"] = n_coverage / n_total
+
+        # TODO : hacky fix to account all occurences of last hour not being counted due to the NaN appended above.
+        # Due to above issue number of median granularity periods would end up being 1 rather than the entire 720(24 * 30), thus squashing the
+        # reported value to 1/720th the actual. Set it back to 1 like the other usual periods. Might break if the last period is uneven.
+        if resampled.coverage[-1] > 1:
+            resampled.coverage[-1] = 1
         return resampled
     else:
         return resampled

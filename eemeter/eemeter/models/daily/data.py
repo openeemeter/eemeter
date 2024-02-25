@@ -23,6 +23,7 @@ from eemeter.eemeter.common.data_processor_utilities import (
     sufficiency_criteria_baseline,
     clean_billing_daily_data,
     compute_minimum_granularity,
+    remove_duplicates
 )
 from eemeter.eemeter.common.features import compute_temperature_features
 from eemeter.eemeter.common.warnings import EEMeterWarning
@@ -413,6 +414,9 @@ class _DailyData:
         if self.is_electricity_data:
             df.loc[df["observed"] == 0, "observed"] = np.nan
 
+        # Caltrack 2.3.2 - Drop duplicates
+        df = remove_duplicates(df)
+
         meter = self._compute_meter_value_df(df)
         temp, temp_coverage = self._compute_temperature_features(df, meter.index)
         final_df = self._merge_meter_temp(meter, temp)
@@ -524,9 +528,8 @@ class DailyReportingData(_DailyData):
         super().__init__(df, is_electricity_data)
 
         # Caltrack 3.5.1.1
-        #TODO this feels less intuitive than just masking the result from model.predict()
-        if "observed" in self._df.columns and not self._df['observed'].dropna().empty:
-            self._df.loc[self._df["observed"].isna(), "temperature"] = np.nan
+        if 'observed' in self._df.columns and not self._df.observed.dropna().empty:
+            self._df.loc[df['temperature'].isna(), 'observed'] = np.nan
 
     @classmethod
     def from_series(

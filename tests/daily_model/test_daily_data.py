@@ -186,6 +186,7 @@ def test_daily_baseline_data_with_datetime_column(get_datetime_index):
     
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(df.observed.sum(), 2)
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 0
@@ -208,11 +209,12 @@ def test_daily_baseline_data_with_same_daily_frequencies(get_datetime_index):
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(df.observed.sum(), 2)
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 0
 
-@pytest.mark.parametrize('get_datetime_index', [['H', True]], indirect=True)
+@pytest.mark.parametrize('get_datetime_index', [['30T', True],['H', True]], indirect=True)
 def test_daily_baseline_data_with_same_hourly_frequencies(get_datetime_index):
     datetime_index = get_datetime_index
 
@@ -230,27 +232,8 @@ def test_daily_baseline_data_with_same_hourly_frequencies(get_datetime_index):
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
-    assert len(cls.warnings) == 0
-    assert len(cls.disqualification) == 0
-
-@pytest.mark.parametrize('get_datetime_index', [['30T', True]], indirect=True)
-def test_daily_baseline_data_with_same_half_hourly_frequencies(get_datetime_index):
-    datetime_index = get_datetime_index
-
-    np.random.seed(TEMPERATURE_SEED)
-    # Create a 'temperature_mean' and meter_value columns with random data
-    temperature_mean = np.random.rand(len(datetime_index))
-
-    np.random.seed(METER_SEED)
-    meter_value = np.random.rand(len(datetime_index))
-
-    # Create the DataFrame
-    df = pd.DataFrame(data={'observed' : meter_value, 'temperature': temperature_mean}, index=datetime_index)
-
-    cls = DailyBaselineData(df, is_electricity_data=True)
-
-    assert cls.df is not None
-    assert len(cls.df) == NUM_DAYS_IN_YEAR
+    # TODO: Because of the weird behaviour of as_freq() on the last hour for downsampling, so we can't add it
+    assert round(cls.df.observed.sum(), 2) == round(df.observed[:-1].sum(), 2)
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
@@ -268,6 +251,7 @@ def test_daily_baseline_data_with_daily_and_half_hourly_frequencies(get_temperat
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(df.observed.sum(), 2)
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
@@ -285,6 +269,7 @@ def test_daily_baseline_data_with_daily_and_hourly_frequencies(get_meter_data_da
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(df.observed.sum(), 2)
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
@@ -301,6 +286,7 @@ def test_daily_baseline_data_with_extreme_values_in_daily_and_hourly_frequencies
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(df.observed.sum(), 2)
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.extreme_values_detected'
     assert len(cls.disqualification) == 0
@@ -318,6 +304,7 @@ def test_daily_baseline_data_with_extreme_and_negative_values_in_daily_and_hourl
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(df.observed.sum(), 2)
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.extreme_values_detected'
     assert len(cls.disqualification) == 1
@@ -331,6 +318,8 @@ def test_daily_baseline_data_with_specific_hourly_input():
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    # TODO: Because of the weird behaviour of as_freq() on the last hour for downsampling, so we can't add it
+    assert round(cls.df.observed.sum(), 2) == round(meter.value[:-1].sum(), 2)
     assert len(cls.warnings) == 2
     assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.sufficiency_criteria.extreme_values_detected']
     assert len(cls.disqualification) == 0
@@ -343,6 +332,7 @@ def test_daily_baseline_data_with_specific_daily_input():
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(meter.value.sum(), 2)
     assert len(cls.warnings) == 2
     assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.sufficiency_criteria.extreme_values_detected']
     assert len(cls.disqualification) == 0
@@ -357,6 +347,7 @@ def test_daily_baseline_data_with_missing_specific_daily_input():
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(meter.value.sum(), 2)
     assert len(cls.warnings) == 2
     assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.sufficiency_criteria.extreme_values_detected']
     assert len(cls.disqualification) == 0
@@ -380,6 +371,7 @@ def test_daily_baseline_data_with_missing_hourly_temperature_data(get_meter_data
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(df.observed.sum(), 2)
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.missing_high_frequency_temperature_data'
     assert len(cls.disqualification) == 3
@@ -406,6 +398,7 @@ def test_daily_baseline_data_with_missing_half_hourly_temperature_data(get_meter
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(df.observed.sum(), 2)
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.missing_high_frequency_temperature_data'
     assert len(cls.disqualification) == 3
@@ -429,6 +422,7 @@ def test_daily_baseline_data_with_missing_daily_temperature_data(get_meter_data_
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(df.observed.sum(), 2)
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 3
@@ -451,11 +445,55 @@ def test_daily_baseline_data_with_missing_meter_data(get_meter_data_daily, get_t
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(df.observed.sum(), 2)
     assert len(cls.warnings) == 0
     # assert all(warning.qualified_name in expected_warnings for warning in cls.warnings)
     assert len(cls.disqualification) == 2
     expected_disqualifications = [ 'eemeter.sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_meter_data']
     assert all(disqualification.qualified_name in expected_disqualifications for disqualification in cls.disqualification)
+
+def test_daily_baseline_data_with_missing_meter_data_37_days(get_meter_data_daily, get_temperature_data_hourly):
+    df = get_temperature_data_hourly
+
+    # Create a DataFrame with daily frequency
+    df_meter = get_meter_data_daily
+
+    # Set Tuesdays & Thursdays data as missing
+    df_meter.loc[df_meter.index[1:38], 'observed'] = np.nan
+
+    # Merge 'df' and 'df_meter' in an outer join
+    df = df.merge(df_meter, left_index=True, right_index=True, how='outer')
+
+    cls = DailyBaselineData(df, is_electricity_data=True)
+
+    assert cls.df is not None
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(df.observed.sum(), 2)
+    assert len(cls.warnings) == 0
+    # assert all(warning.qualified_name in expected_warnings for warning in cls.warnings)
+    assert len(cls.disqualification) == 2
+    expected_disqualifications = [ 'eemeter.sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_meter_data']
+    assert all(disqualification.qualified_name in expected_disqualifications for disqualification in cls.disqualification)
+
+def test_duplicate_datetime_index_values():
+    # Create a Timestamp with a specific date
+    timestamp = pd.Timestamp('2023-01-01')
+
+    # Create an Index with 365 identical timestamps
+    datetime_index = pd.DatetimeIndex([timestamp]*365, tz = 'US/Eastern')
+
+    # Create random values for 'observed' and 'temperature'
+    observed = np.random.rand(len(datetime_index))
+    temperature = np.random.rand(len(datetime_index))
+
+    # Create the DataFrame
+    df = pd.DataFrame(data={'observed': observed, 'temperature': temperature}, index=datetime_index)
+    
+    cls = DailyBaselineData(df, is_electricity_data=True)
+    
+    assert cls.df is not None
+    assert(len(cls.df) == 1)
+
 
 @pytest.mark.parametrize('get_datetime_index', [['30T', True],['H', True]], indirect=True)
 def test_daily_reporting_data_with_half_hourly_and_hourly_frequencies(get_datetime_index):
@@ -492,12 +530,18 @@ def test_daily_reporting_data_with_missing_half_hourly_and_hourly_frequencies(ge
     
     # Set 60% of the temperature data as missing on Tuesdays and Thursdays
     # This should cause the high frequency temperature check to fail on these days
-    df.loc[df[mask].sample(frac=0.6).index, 'temperature'] = np.nan
+    df.loc[df[mask].sample(frac=0.6, random_state=42).index, 'temperature'] = np.nan
 
     cls = DailyReportingData(df, is_electricity_data=True)
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+
+    if datetime_index.freq == '30T':
+        assert len(cls.df.temperature.dropna()) == 268
+    elif datetime_index.freq == 'H':
+        assert len(cls.df.temperature.dropna()) == 270
+
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.missing_high_frequency_temperature_data'
     expected_disqualifications = ['eemeter.sufficiency_criteria.missing_monthly_temperature_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_temperature_data']
@@ -520,12 +564,13 @@ def test_daily_reporting_data_with_missing_daily_frequencies(get_datetime_index)
     
     # Set 60% of the temperature data as missing on Tuesdays and Thursdays
     # This should cause the high frequency temperature check to fail on these days
-    df.loc[df[mask].sample(frac=0.6).index, 'temperature'] = np.nan
+    df.loc[df[mask].sample(frac=0.6, random_state=42).index, 'temperature'] = np.nan
 
     cls = DailyReportingData(df, is_electricity_data=True)
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert len(cls.df.temperature.dropna()) == len(df.temperature.dropna())
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     expected_disqualifications = ['eemeter.sufficiency_criteria.missing_monthly_temperature_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_temperature_data']
