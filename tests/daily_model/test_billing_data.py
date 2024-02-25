@@ -209,6 +209,7 @@ def test_billing_baseline_data_with_monthly_frequencies(get_datetime_index):
     assert cls.df is not None
     # Because one month is missing
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(df[df.index < df.index[-1] - pd.offsets.MonthEnd(1)].observed.sum(), 2)
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     # DQ because only 12 days worth of temperature data is available
@@ -234,6 +235,7 @@ def test_billing_baseline_data_with_bimonthly_frequencies(get_datetime_index):
     assert cls.df is not None
     # Because two months are missing
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(df[df.index <= df.index[-1] - pd.offsets.MonthEnd(1)].observed.sum(), 2)
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     # DQ because only 6 days worth of temperature data is available
@@ -255,6 +257,7 @@ def test_billing_baseline_data_with_monthly_hourly_frequencies(get_meter_data_mo
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(df[df.index <= df.index[-1] - pd.offsets.MonthEnd(1)].observed.sum(), 2)
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
@@ -273,6 +276,7 @@ def test_billing_baseline_data_with_bimonthly_hourly_frequencies(get_meter_data_
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(df[df.index <= df.index[-1] - pd.offsets.MonthEnd(1)].observed.sum(), 2)
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
@@ -291,6 +295,7 @@ def test_billing_baseline_data_with_monthly_daily_frequencies(get_meter_data_mon
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(df[df.index <= df.index[-1] - pd.offsets.MonthEnd(1)].observed.sum(), 2)
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 0
@@ -310,6 +315,8 @@ def test_billing_baseline_data_with_bimonthly_daily_frequencies(get_meter_data_b
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    # assert round(cls.df.observed.sum(), 2) == round(df.observed[:-1].sum(), 2)
+    assert round(cls.df.observed.sum(), 2) == round(df[df.index <= df.index[-1] - pd.offsets.MonthEnd(1)].observed.sum(), 2)
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 0
@@ -324,6 +331,7 @@ def test_billing_baseline_data_with_specific_hourly_input():
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(meter[meter.index <= meter.index[-1] - pd.offsets.MonthEnd(1)].value.sum(), 2)
     assert len(cls.warnings) == 2
     assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.sufficiency_criteria.inferior_model_usage']
     assert len(cls.disqualification) == 0
@@ -337,6 +345,7 @@ def test_billing_baseline_data_with_specific_daily_input():
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(meter[meter.index <= meter.index[-1] - pd.offsets.MonthEnd(1)].value.sum(), 2)
     assert len(cls.warnings) == 2
     assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.sufficiency_criteria.inferior_model_usage']
     assert len(cls.disqualification) == 0
@@ -353,6 +362,7 @@ def test_billing_baseline_data_with_specific_missing_daily_input():
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(meter[meter.index <= meter.index[-1] - pd.offsets.MonthEnd(1)].value.sum(), 2)
     assert len(cls.warnings) == 2
     assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.sufficiency_criteria.inferior_model_usage']
     assert len(cls.disqualification) == 0
@@ -361,13 +371,15 @@ def test_billing_baseline_data_with_specific_monthly_input():
     meter, temperature, _ = load_sample('il-electricity-cdd-hdd-billing_monthly')
     # Take the extra month for billing data
     meter = meter[(meter.index.year == 2017) | ((meter.index.year == 2018) & (meter.index.month == 1))]
+    meter.iloc[-1] = meter.iloc[-2] # Last element should not be NaN
     temperature = temperature[(temperature.index.year == 2017) | ((temperature.index.year == 2018) & (temperature.index.month == 1))]
     cls = BillingBaselineData.from_series(meter, temperature, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == 336
-    assert len(cls.warnings) == 1
-    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index']
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert round(cls.df.observed.sum(), 2) == round(meter[meter.index <= meter.index[-1] - pd.offsets.MonthEnd(1)].value.sum(), 2)
+    assert len(cls.warnings) == 2
+    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.sufficiency_criteria.extreme_values_detected']
     assert len(cls.disqualification) == 0
 
 @pytest.mark.parametrize('get_datetime_index', [['30T', True], ['H', True]], indirect=True)
@@ -387,12 +399,18 @@ def test_billing_reporting_data_with_missing_half_hourly_frequencies(get_datetim
     
     # Set 60% of the temperature data as missing on Tuesdays and Thursdays
     # This should cause the high frequency temperature check to fail on these days
-    df.loc[df[mask].sample(frac=0.6).index, 'temperature'] = np.nan
+    df.loc[df[mask].sample(frac=0.6, random_state=42).index, 'temperature'] = np.nan
 
     cls = BillingReportingData(df, is_electricity_data=True)
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+
+    if datetime_index.freq == '30T':
+        assert len(cls.df.temperature.dropna()) == 268
+    elif datetime_index.freq == 'H':
+        assert len(cls.df.temperature.dropna()) == 269
+
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.missing_high_frequency_temperature_data'
     assert len(cls.disqualification) == 3
@@ -416,12 +434,13 @@ def test_billing_reporting_data_with_missing_daily_frequencies(get_datetime_inde
     
     # Set 60% of the temperature data as missing on Tuesdays and Thursdays
     # This should cause the high frequency temperature check to fail on these days
-    df.loc[df[mask].sample(frac=0.6).index, 'temperature'] = np.nan
+    df.loc[df[mask].sample(frac=0.6, random_state=42).index, 'temperature'] = np.nan
 
     cls = BillingReportingData(df, is_electricity_data=True)
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert len(cls.df.temperature.dropna()) == len(df.temperature.dropna())
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
     assert len(cls.disqualification) == 3
