@@ -529,7 +529,7 @@ class DailyReportingData(_DailyData):
 
         # Caltrack 3.5.1.1
         if 'observed' in self._df.columns and not self._df.observed.dropna().empty:
-            self._df.loc[df['temperature'].isna(), 'observed'] = np.nan
+            self._df.loc[self._df['temperature'].isna(), 'observed'] = np.nan
 
     @classmethod
     def from_series(
