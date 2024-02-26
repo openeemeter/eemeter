@@ -108,13 +108,21 @@ class _DailyData:
         temperature_data.index = temperature_data.index.tz_convert(
             meter_data.index.tzinfo
         )
-        #TODO off by one (additional) day for billing, adjust in subclass accordingly
+        #TODO revisit the following index modifications; there may be a few unintuitive outcomes with offset data
         # constrain temperature index to meter index
-        meter_index_min = meter_data.index.min().normalize()
-        meter_index_max = meter_data.index.max().normalize() + pd.Timedelta(days=1)
-        temperature_data = temperature_data[
-            (temperature_data.index >= meter_index_min) & (temperature_data.index < meter_index_max)
-        ]
+        if not meter_data.empty:
+            meter_index_min = meter_data.index.min().normalize()
+            meter_index_max = meter_data.index.max().normalize() + pd.Timedelta(days=1)
+            temperature_data = temperature_data[
+                (temperature_data.index >= meter_index_min) & (temperature_data.index < meter_index_max)
+            ]
+        # constrain meter index to temperature index
+        if not temperature_data.empty:
+            temp_index_min = temperature_data.index.min().normalize()
+            temp_index_max = temperature_data.index.max().normalize() + pd.Timedelta(days=1)
+            meter_data = meter_data[
+                (meter_data.index >= temp_index_min) & (meter_data.index < temp_index_max)
+            ]
         df = pd.concat([meter_data, temperature_data], axis=1)
         return cls(df, is_electricity_data)
 

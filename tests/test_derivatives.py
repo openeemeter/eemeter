@@ -136,7 +136,7 @@ def test_metered_savings_cdd_hdd_billing(
     reporting_data = BillingReportingData.from_series(reporting_meter_data_billing, reporting_temperature_data, is_electricity_data=True)
     results = baseline_model_billing.predict(reporting_data)
     metered_savings = results['predicted'] - results['observed']
-    assert round(metered_savings.sum(), 2) == 2889.2
+    assert round(metered_savings.sum(), 2) == 1598.03
 
 
 def test_metered_savings_cdd_hdd_billing_no_reporting_data(
@@ -147,7 +147,7 @@ def test_metered_savings_cdd_hdd_billing_no_reporting_data(
     assert list(results.columns) == [
         'season', 'day_of_week', 'weekday_weekend', 'temperature', 'predicted', 'predicted_unc', 'heating_load', 'cooling_load', 'model_split', 'model_type'
     ]
-    assert round(results.predicted.sum(), 2) == 1568.08
+    assert round(results.predicted.sum(), 2) == 1642.6
 
 
 def test_metered_savings_cdd_hdd_billing_single_record_reporting_data(
@@ -200,7 +200,7 @@ def test_metered_savings_cdd_hdd_billing_single_record_baseline_data(
     assert list(results.columns) == [
         'season', 'day_of_week', 'weekday_weekend', 'temperature','observed', 'predicted', 'predicted_unc', 'heating_load', 'cooling_load', 'model_split', 'model_type'
     ]
-    assert round(results.predicted.sum() - results.observed.sum(), 2) == 2939.49
+    assert round(results.predicted.sum() - results.observed.sum(), 2) == 1785.81
 
 
 @pytest.fixture
@@ -395,7 +395,7 @@ def test_modeled_savings_cdd_hdd_billing(
     assert list(results.columns) == [
         'season', 'day_of_week', 'weekday_weekend', 'temperature', 'predicted', 'predicted_unc', 'heating_load', 'cooling_load', 'model_split', 'model_type'
     ]
-    assert round(results.predicted.sum(), 2) == 8044.71
+    assert round(results.predicted.sum(), 2) == 8268.3
 
 
 @pytest.fixture
@@ -451,7 +451,7 @@ def test_metered_savings_model_single_record(
     assert list(results.columns) == [
         'season', 'day_of_week', 'weekday_weekend', 'temperature', 'observed', 'predicted', 'predicted_unc', 'heating_load', 'cooling_load', 'model_split', 'model_type'
     ]
-    assert round(results.predicted.sum() - results.observed.sum(), 2) == 1966.54
+    assert round(results.predicted.sum() - results.observed.sum(), 2) == 1447.88
 
 
 @pytest.fixture
