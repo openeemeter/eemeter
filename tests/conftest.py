@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2023 OpenEEmeter contributors
+   Copyright 2014-2024 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -20,15 +20,14 @@
 import json
 from pkg_resources import resource_stream
 
-import pandas as pd
 import pytest
 
-from eemeter import load_sample
+from eemeter.eemeter.samples import load_sample
 
 
 @pytest.fixture
 def sample_metadata():
-    with resource_stream("eemeter.samples", "metadata.json") as f:
+    with resource_stream("eemeter.eemeter.samples", "metadata.json") as f:
         metadata = json.loads(f.read().decode("utf-8"))
     return metadata
 

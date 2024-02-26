@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2023 OpenEEmeter contributors
+   Copyright 2014-2024 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@
 __title__ = "eemeter"
 __description__ = "Open Energy Efficiency Meter"
 __url__ = "http://github.com/openeemeter/eemeter"
-__version__ = "3.2.0"
+__version__ = "4.0.0"
 __author__ = "Phil Ngo"
 __author_email__ = "admin@openee.io"
 __license__ = "Apache 2.0"
-__copyright__ = "Copyright 2014-2023 OpenEEmeter contributors"
+__copyright__ = "Copyright 2014-2024 OpenEEmeter contributors"
