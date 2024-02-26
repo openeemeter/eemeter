@@ -21,7 +21,10 @@ from copy import deepcopy as copy
 
 import numpy as np
 
-from eemeter.eemeter.models.daily.base_models.full_model import full_model, get_full_model_x
+from eemeter.eemeter.models.daily.base_models.full_model import (
+    full_model,
+    get_full_model_x,
+)
 
 from eemeter.eemeter.models.daily.utilities.selection_criteria import selection_criteria
 from eemeter.eemeter.models.daily.utilities.base_model import (
@@ -369,7 +372,7 @@ class OptimizedResult:
         """
         Set the model key based on the coefficient names.
         """
-        
+
         if self.coef_id == [
             "hdd_bp",
             "hdd_beta",

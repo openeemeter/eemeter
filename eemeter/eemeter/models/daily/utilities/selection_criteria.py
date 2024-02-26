@@ -52,7 +52,7 @@ def selection_criteria(
     penalty_power=1.0,
 ):
     """
-    This function calculates the selection criteria for a given model. There are different criteria that can be used, 
+    This function calculates the selection criteria for a given model. There are different criteria that can be used,
     and the default is the Bayesian information criterion (BIC).
 
     Parameters:

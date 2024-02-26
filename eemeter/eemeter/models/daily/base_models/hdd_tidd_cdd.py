@@ -21,7 +21,10 @@ import numpy as np
 import numba
 import nlopt
 
-from eemeter.eemeter.models.daily.base_models.full_model import full_model, full_model_weight
+from eemeter.eemeter.models.daily.base_models.full_model import (
+    full_model,
+    full_model_weight,
+)
 
 from eemeter.eemeter.models.daily.parameters import ModelCoefficients
 
@@ -59,7 +62,9 @@ def fit_hdd_tidd_cdd(
         x0 = _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings, smooth)
 
     max_slope = np.max([x0.hdd_beta, x0.cdd_beta])
-    max_slope += 10 ** (np.log10(np.abs(max_slope)) + np.log10(settings.maximum_slope_OoM_scaler))
+    max_slope += 10 ** (
+        np.log10(np.abs(max_slope)) + np.log10(settings.maximum_slope_OoM_scaler)
+    )
 
     if initial_fit:
         T_min = np.min(T)
@@ -75,14 +80,36 @@ def fit_hdd_tidd_cdd(
     intercept_bnds = np.quantile(obs, [0.01, 0.99])
     if smooth:
         c_hdd_k_bnds = [0, 1]
-        bnds_0 = [c_hdd_bnds, c_hdd_beta_bnds, c_hdd_k_bnds, c_hdd_bnds, c_hdd_beta_bnds, c_hdd_k_bnds, intercept_bnds]
+        bnds_0 = [
+            c_hdd_bnds,
+            c_hdd_beta_bnds,
+            c_hdd_k_bnds,
+            c_hdd_bnds,
+            c_hdd_beta_bnds,
+            c_hdd_k_bnds,
+            intercept_bnds,
+        ]
     else:
-        bnds_0 = [c_hdd_bnds, c_hdd_beta_bnds, c_hdd_bnds, c_hdd_beta_bnds, intercept_bnds]
+        bnds_0 = [
+            c_hdd_bnds,
+            c_hdd_beta_bnds,
+            c_hdd_bnds,
+            c_hdd_beta_bnds,
+            intercept_bnds,
+        ]
 
     bnds = _hdd_tidd_cdd_smooth_update_bnds(bnds, bnds_0, smooth)
 
     if smooth:
-        coef_id = ["hdd_bp", "hdd_beta", "hdd_k", "cdd_bp", "cdd_beta", "cdd_k", "intercept"]
+        coef_id = [
+            "hdd_bp",
+            "hdd_beta",
+            "hdd_k",
+            "cdd_bp",
+            "cdd_beta",
+            "cdd_k",
+            "intercept",
+        ]
         model_fcn = evaluate_hdd_tidd_cdd_smooth
         weight_fcn = _hdd_tidd_cdd_smooth_weight
         TSS_fcn = None
@@ -91,9 +118,13 @@ def fit_hdd_tidd_cdd(
         model_fcn = _hdd_tidd_cdd
         weight_fcn = _hdd_tidd_cdd_weight
         TSS_fcn = _hdd_tidd_cdd_total_sum_of_squares
-    obj_fcn = obj_fcn_decorator(model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, coef_id, initial_fit)
+    obj_fcn = obj_fcn_decorator(
+        model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, coef_id, initial_fit
+    )
 
-    res = Optimizer(obj_fcn, x0.to_np_array(), bnds, coef_id, settings, opt_options).run()
+    res = Optimizer(
+        obj_fcn, x0.to_np_array(), bnds, coef_id, settings, opt_options
+    ).run()
 
     return res
 
@@ -110,7 +141,9 @@ def _hdd_tidd_cdd(
 ):
     hdd_k = cdd_k = 0
 
-    return full_model(hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept, T_fit_bnds, T)
+    return full_model(
+        hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept, T_fit_bnds, T
+    )
 
 
 @numba.jit(nopython=True, error_model="numpy", cache=True)
@@ -133,7 +166,9 @@ def evaluate_hdd_tidd_cdd_smooth(
     if pct_k:
         [hdd_bp, hdd_k, cdd_bp, cdd_k] = get_smooth_coeffs(hdd_bp, hdd_k, cdd_bp, cdd_k)
 
-    return _hdd_tidd_cdd_smooth(hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept, T_fit_bnds, T)
+    return _hdd_tidd_cdd_smooth(
+        hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept, T_fit_bnds, T
+    )
 
 
 def _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings, smooth, min_weight=0.0):
@@ -154,7 +189,9 @@ def _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings, smooth, min_weight=0.0):
 
             T_range = T_fit_bnds[1] - T_fit_bnds[0]
 
-            X_lasso = np.array([np.min(np.abs(X[idx] - T_fit_bnds)) for idx in range(len(X))])
+            X_lasso = np.array(
+                [np.min(np.abs(X[idx] - T_fit_bnds)) for idx in range(len(X))]
+            )
             X_lasso += (X[1] - X[0]) / 2
             X_lasso *= wRMSE / T_range
 
@@ -217,7 +254,10 @@ def _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings, smooth, min_weight=0.0):
 
     T_bnds = [T[min_T_idx - 1], T[-min_T_idx]]
     if T_bnds[0] == T_bnds[1]:
-        T_bnds = [np.min(T), np.max(T)] # should be able to do [0] and [-1] but getting error where min > max
+        T_bnds = [
+            np.min(T),
+            np.max(T),
+        ]  # should be able to do [0] and [-1] but getting error where min > max
 
     if T_bnds[1] < T_bnds[0]:
         T_bnds = [T_bnds[1], T_bnds[0]]

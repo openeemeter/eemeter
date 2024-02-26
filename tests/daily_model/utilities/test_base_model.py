@@ -72,7 +72,9 @@ def test_get_slope():
     intercept = 0
     alpha = 2
     expected_slope = 2.0102
-    assert np.isclose(get_slope(x, y, x_bp, intercept, alpha), expected_slope, atol=1e-3)
+    assert np.isclose(
+        get_slope(x, y, x_bp, intercept, alpha), expected_slope, atol=1e-3
+    )
 
     # Test case 2: Test with alpha=1
     x = np.array([1, 2, 3, 4, 5])
@@ -81,7 +83,9 @@ def test_get_slope():
     intercept = 0
     alpha = 1
     expected_slope = 2.125
-    assert np.isclose(get_slope(x, y, x_bp, intercept, alpha), expected_slope, atol=1e-3)
+    assert np.isclose(
+        get_slope(x, y, x_bp, intercept, alpha), expected_slope, atol=1e-3
+    )
 
     # Test case 3: Test with negative y values
     x = np.array([1, 2, 3, 4, 5])
@@ -90,7 +94,9 @@ def test_get_slope():
     intercept = 0
     alpha = 2
     expected_slope = -2.016
-    assert np.isclose(get_slope(x, y, x_bp, intercept, alpha), expected_slope, atol=1e-3)
+    assert np.isclose(
+        get_slope(x, y, x_bp, intercept, alpha), expected_slope, atol=1e-3
+    )
 
     # Test case 4: Test with non-zero intercept
     x = np.array([1, 2, 3, 4, 5])

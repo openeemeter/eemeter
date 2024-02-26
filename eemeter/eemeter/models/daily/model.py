@@ -18,16 +18,32 @@
 
 """
 
-from eemeter.eemeter.models.daily.base_models.full_model import full_model, get_full_model_x
-from eemeter.eemeter.models.daily.fit_base_models import fit_final_model, fit_initial_models_from_full_model
-from eemeter.eemeter.models.daily.parameters import DailyModelParameters, DailySubmodelParameters
+from eemeter.eemeter.models.daily.base_models.full_model import (
+    full_model,
+    get_full_model_x,
+)
+from eemeter.eemeter.models.daily.fit_base_models import (
+    fit_final_model,
+    fit_initial_models_from_full_model,
+)
+from eemeter.eemeter.models.daily.parameters import (
+    DailyModelParameters,
+    DailySubmodelParameters,
+)
 from eemeter.eemeter.models.daily.utilities.base_model import get_smooth_coeffs
-from eemeter.eemeter.models.daily.utilities.config import default_settings, caltrack_legacy_settings, update_daily_settings
+from eemeter.eemeter.models.daily.utilities.config import (
+    default_settings,
+    caltrack_legacy_settings,
+    update_daily_settings,
+)
 from eemeter.eemeter.models.daily.utilities.ellipsoid_test import ellipsoid_split_filter
 from eemeter.eemeter.models.daily.utilities.selection_criteria import selection_criteria
 from eemeter.eemeter.models.daily.plot import plot
 from eemeter.eemeter.models.daily.data import DailyBaselineData, DailyReportingData
-from eemeter.eemeter.common.exceptions import DataSufficiencyError, DisqualifiedModelError
+from eemeter.eemeter.common.exceptions import (
+    DataSufficiencyError,
+    DisqualifiedModelError,
+)
 from eemeter.eemeter.common.warnings import EEMeterWarning
 
 
@@ -149,8 +165,10 @@ class DailyModel:
         if self.error["CVRMSE"] > self.settings.cvrmse_threshold:
             cvrmse_warning = EEMeterWarning(
                 qualified_name="eemeter.model_fit_metrics.cvrmse",
-                description=(f"Fit model has CVRMSE > {self.settings.cvrmse_threshold}"),
-                data={"CVRMSE": self.error["CVRMSE"]}
+                description=(
+                    f"Fit model has CVRMSE > {self.settings.cvrmse_threshold}"
+                ),
+                data={"CVRMSE": self.error["CVRMSE"]},
             )
             cvrmse_warning.warn()
             self.disqualification.append(cvrmse_warning)
@@ -174,7 +192,9 @@ class DailyModel:
 
         self.id = meter_data.index.unique()[0]
 
-        wRMSE, RMSE, MAE, CVRMSE, PNRMSE = self._get_error_metrics(self.best_combination)
+        wRMSE, RMSE, MAE, CVRMSE, PNRMSE = self._get_error_metrics(
+            self.best_combination
+        )
         self.error["wRMSE"] = wRMSE
         self.error["RMSE"] = RMSE
         self.error["MAE"] = MAE
@@ -185,23 +205,33 @@ class DailyModel:
         self.is_fitted = True
         return self
 
-    def predict(self, reporting_data: Union[DailyBaselineData, DailyReportingData], ignore_disqualification=False):
+    def predict(
+        self,
+        reporting_data: Union[DailyBaselineData, DailyReportingData],
+        ignore_disqualification=False,
+    ):
         """Perform initial sufficiency and typechecks before passing to private predict"""
         if not self.is_fitted:
             raise RuntimeError("Model must be fit before predictions can be made.")
 
         if self.disqualification and not ignore_disqualification:
-            raise DisqualifiedModelError("Attempting to predict using disqualified model without setting ignore_disqualification=True")
+            raise DisqualifiedModelError(
+                "Attempting to predict using disqualified model without setting ignore_disqualification=True"
+            )
 
         if str(self.baseline_timezone) != str(reporting_data.tz):
-            """would be preferable to directly compare, but 
-                * using str() helps accomodate mixed tzinfo implementations,
-                * the likelihood of sub-hour offset inconsistencies being relevant to the daily model is low
+            """would be preferable to directly compare, but
+            * using str() helps accomodate mixed tzinfo implementations,
+            * the likelihood of sub-hour offset inconsistencies being relevant to the daily model is low
             """
-            raise ValueError("Reporting data must use the same timezone that the model was initially fit on.")
+            raise ValueError(
+                "Reporting data must use the same timezone that the model was initially fit on."
+            )
 
         if not isinstance(reporting_data, (DailyBaselineData, DailyReportingData)):
-            raise TypeError("reporting_data must be a DailyBaselineData or DailyReportingData object")
+            raise TypeError(
+                "reporting_data must be a DailyBaselineData or DailyReportingData object"
+            )
 
         return self._predict(reporting_data.df)
 
@@ -215,7 +245,7 @@ class DailyModel:
         Returns:
             pandas.DataFrame: The evaluation dataframe with model predictions added.
         """
-        #TODO decide whether to allow temperature series vs requiring "design matrix"
+        # TODO decide whether to allow temperature series vs requiring "design matrix"
         if isinstance(df_eval, pd.Series):
             df_eval = df_eval.to_frame("temperature")
 
@@ -228,8 +258,10 @@ class DailyModel:
             eval_segment = self._meter_segment(component_key, df_eval)
             T = eval_segment["temperature"].values
 
-            #model, unc, hdd_load, cdd_load = self.model[component_key].eval(T)
-            model, unc, hdd_load, cdd_load = self._predict_submodel(self.params.submodels[component_key], T)
+            # model, unc, hdd_load, cdd_load = self.model[component_key].eval(T)
+            model, unc, hdd_load, cdd_load = self._predict_submodel(
+                self.params.submodels[component_key], T
+            )
 
             df_model = pd.DataFrame(
                 data={
@@ -241,7 +273,9 @@ class DailyModel:
                 index=eval_segment.index,
             )
             df_model["model_split"] = component_key
-            df_model["model_type"] = self.params.submodels[component_key].model_type.value
+            df_model["model_type"] = self.params.submodels[
+                component_key
+            ].model_type.value
 
             df_all_models.append(df_model)
 
@@ -258,14 +292,15 @@ class DailyModel:
 
     @classmethod
     def from_dict(cls, data):
-        settings = data.get('settings')
+        settings = data.get("settings")
         daily_model = cls(settings=settings)
-        info = data.get('info')
+        info = data.get("info")
         daily_model.params = DailyModelParameters(
-            submodels=data.get('submodels'),
+            submodels=data.get("submodels"),
             info=info,
             settings=settings,
         )
+
         def deserialize_warnings(warnings):
             if not warnings:
                 return []
@@ -279,7 +314,10 @@ class DailyModel:
                     )
                 )
             return warn_list
-        daily_model.disqualification = deserialize_warnings(info.get("disqualification"))
+
+        daily_model.disqualification = deserialize_warnings(
+            info.get("disqualification")
+        )
         daily_model.warnings = deserialize_warnings(info.get("warnings"))
         daily_model.baseline_timezone = info.get("baseline_timezone")
         daily_model.is_fitted = True
@@ -336,10 +374,9 @@ class DailyModel:
         except ImportError:  # pragma: no cover
             raise ImportError("matplotlib is required for plotting.")
 
-        #TODO: pass more kwargs to plotting function
+        # TODO: pass more kwargs to plotting function
 
         plot(self, self._predict(df_eval.df))
-        
 
     def _create_params_from_fit_model(self):
         submodels = {}
@@ -403,7 +440,7 @@ class DailyModel:
 
         for col in ["season", "day_of_week"]:
             if col in cols:
-                meter_data.drop([col], axis = 1, inplace = True)
+                meter_data.drop([col], axis=1, inplace=True)
                 cols.remove(col)
 
         meter_data["season"] = meter_data.index.month.map(self.settings.season)
@@ -877,15 +914,15 @@ class DailyModel:
                 - cdd_load: Array of cooling degree day loads.
         """
 
-        T_min = submodel.temperature_constraints['T_min']
-        T_max = submodel.temperature_constraints['T_max']
+        T_min = submodel.temperature_constraints["T_min"]
+        T_max = submodel.temperature_constraints["T_max"]
         x = get_full_model_x(
             submodel.coefficients.model_key,
             submodel.coefficients.to_np_array(),
             T_min,
             T_max,
-            submodel.temperature_constraints['T_min_seg'],
-            submodel.temperature_constraints['T_max_seg'],
+            submodel.temperature_constraints["T_min_seg"],
+            submodel.temperature_constraints["T_max_seg"],
         )
 
         if submodel.coefficients.model_key == "hdd_tidd_cdd_smooth":

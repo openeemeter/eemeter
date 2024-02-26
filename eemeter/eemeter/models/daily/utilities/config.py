@@ -696,7 +696,7 @@ class DailySettings:
         on_setattr=attrs.setters.frozen,
         default=1.0,
     )
-    
+
     def to_dict(self):
         keys = []
         config = {}

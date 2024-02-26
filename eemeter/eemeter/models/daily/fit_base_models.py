@@ -80,9 +80,13 @@ def fit_initial_models_from_full_model(df_meter, settings, print_res=False):
 
     # initial fitting of the most complicated model allowed
     if settings.full_model == FullModelSelection.HDD_TIDD_CDD:
-        model_res = fit_hdd_tidd_cdd(*fit_input, smooth=settings.smoothed_model, initial_fit=True)
+        model_res = fit_hdd_tidd_cdd(
+            *fit_input, smooth=settings.smoothed_model, initial_fit=True
+        )
     elif settings.full_model == FullModelSelection.C_HDD_TIDD:
-        model_res = fit_c_hdd_tidd(*fit_input, smooth=settings.smoothed_model, initial_fit=True)
+        model_res = fit_c_hdd_tidd(
+            *fit_input, smooth=settings.smoothed_model, initial_fit=True
+        )
     elif settings.full_model == FullModelSelection.TIDD:
         model_res = fit_tidd(*fit_input, initial_fit=True)
 
@@ -111,16 +115,24 @@ def fit_model(model_key, fit_input, x0: ModelCoefficients, bnds):
     """
 
     if model_key == "hdd_tidd_cdd_smooth":
-        res = fit_hdd_tidd_cdd(*fit_input, smooth=True, x0=x0, bnds=bnds, initial_fit=False)
+        res = fit_hdd_tidd_cdd(
+            *fit_input, smooth=True, x0=x0, bnds=bnds, initial_fit=False
+        )
 
     elif model_key == "hdd_tidd_cdd":
-        res = fit_hdd_tidd_cdd(*fit_input, smooth=False, x0=x0, bnds=bnds, initial_fit=False)
+        res = fit_hdd_tidd_cdd(
+            *fit_input, smooth=False, x0=x0, bnds=bnds, initial_fit=False
+        )
 
     elif model_key == "c_hdd_tidd_smooth":
-        res = fit_c_hdd_tidd(*fit_input, smooth=True, x0=x0, bnds=bnds, initial_fit=False)
+        res = fit_c_hdd_tidd(
+            *fit_input, smooth=True, x0=x0, bnds=bnds, initial_fit=False
+        )
 
     elif model_key == "c_hdd_tidd":
-        res = fit_c_hdd_tidd(*fit_input, smooth=False, x0=x0, bnds=bnds, initial_fit=False)
+        res = fit_c_hdd_tidd(
+            *fit_input, smooth=False, x0=x0, bnds=bnds, initial_fit=False
+        )
 
     elif model_key == "tidd":
         res = fit_tidd(*fit_input, x0, bnds, initial_fit=False)
@@ -142,6 +154,7 @@ def fit_final_model(df_meter, HoF: OptimizedResult, settings, print_res=False):
     Returns:
         OptimizedResult: OptimizedResult object with updated coefficients.
     """
+
     def get_bnds(x0, bnds_scalar):
         x_oom = 10 ** (OoM(x0, method="exact") + np.log10(bnds_scalar))
         bnds = (x0 + (np.array([-1, 1]) * x_oom[:, None]).T).T

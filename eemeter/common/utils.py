@@ -108,7 +108,7 @@ def OoM(x, method="round"):
 def OoM_numba(x, method="round"):
     """
     This function calculates the order of magnitude (OoM) of each element in the input array 'x' using the specified method.
-    
+
     Parameters:
     x (numpy array): The input array for which the OoM is to be calculated.
     method (str): The method to be used for calculating the OoM. It can be one of the following:
@@ -166,7 +166,7 @@ def t_stat(alpha, n, tail=2):
     Parameters:
     alpha (float): The significance level.
     n (int): The sample size.
-    tail (int or str): The type of tail test. Can be 1 or "one" for one-tailed test, 
+    tail (int or str): The type of tail test. Can be 1 or "one" for one-tailed test,
                        and 2 or "two" for two-tailed test. Default is 2.
 
     Returns:
@@ -210,7 +210,7 @@ MAD_k = 1 / norm_dist.ppf(
 def median_absolute_deviation(x):
     """
     This function calculates the Median Absolute Deviation (MAD) of a given array.
-    
+
     Parameters:
     x (numpy array): The input array for which the MAD is to be calculated.
 
@@ -255,7 +255,7 @@ def weighted_std(x, w, mean=None, w_sum_err=1e-6):
 
 def fast_std(x, weights=None, mean=None):
     """
-    Function to calculate the approximate standard deviation quickly of a given array. 
+    Function to calculate the approximate standard deviation quickly of a given array.
     This function can handle both weighted and unweighted calculations.
 
     Parameters:

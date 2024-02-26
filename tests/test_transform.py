@@ -904,6 +904,7 @@ def test_overwrite_partial_rows_with_nan(il_electricity_cdd_hdd_billing_monthly)
     meter_data_nanned = overwrite_partial_rows_with_nan(meter_data)
     assert pd.isnull(meter_data_nanned["value"][:3]).all()
 
+
 import pandas as pd
 
 
@@ -921,7 +922,6 @@ def test_add_freq(il_electricity_cdd_hdd_hourly):
 def test_trim_two_dataframes(
     uk_electricity_hdd_only_hourly_sample_1, uk_electricity_hdd_only_hourly_sample_2
 ):
-
     df1 = uk_electricity_hdd_only_hourly_sample_1["meter_data"]
     df2 = uk_electricity_hdd_only_hourly_sample_2["meter_data"]
 
@@ -944,6 +944,7 @@ def test_trim_two_dataframes(
     assert df1_trimmed.index[-1] == df2_trimmed.index[-1]
     assert df1_trimmed.index.max() == df2_trimmed.index.max()
 
+
 def test_format_temperature_data_for_caltrack(il_electricity_cdd_hdd_hourly):
     temperature_data = il_electricity_cdd_hdd_hourly["temperature_data"]
 
@@ -960,7 +961,9 @@ def test_format_temperature_data_for_caltrack(il_electricity_cdd_hdd_hourly):
     # rename column name to 'consumption'
     temperature_data.rename(columns={"value": "consumption"}, inplace=True)
 
-    temperature_data_reformatted = format_temperature_data_for_caltrack(temperature_data)
+    temperature_data_reformatted = format_temperature_data_for_caltrack(
+        temperature_data
+    )
 
     assert isinstance(temperature_data_reformatted, pd.Series)
     assert (
@@ -1043,4 +1046,3 @@ def test_format_energy_data_for_caltrack_billing(il_electricity_cdd_hdd_daily):
     assert df_reformatted.columns[0] == "value"
     assert df_reformatted.index.tzinfo is not None
     assert len(df_reformatted.columns) == 1
-

@@ -19,7 +19,10 @@
 """
 import pytest
 
-from eemeter.eemeter.models.daily.utilities.config import simple_validation, DailySettings
+from eemeter.eemeter.models.daily.utilities.config import (
+    simple_validation,
+    DailySettings,
+)
 
 
 def test_default_settings():

@@ -69,8 +69,8 @@ class _BillingData(_DailyData):
         -------
             pd.DataFrame: The cleaned and processed meter value DataFrame.
         """
-        end = df['observed'].index.max()
-        final_value = df['observed'][end]
+        end = df["observed"].index.max()
+        final_value = df["observed"][end]
         final_nan = np.isnan(final_value) if final_value else False
         meter_series = df["observed"].dropna()
 
@@ -383,8 +383,8 @@ class BillingReportingData(_BillingData):
         super().__init__(df, is_electricity_data)
 
         # Caltrack 3.5.1.1
-        if 'observed' in self._df.columns and not self._df.observed.dropna().empty:
-            self._df.loc[self._df['temperature'].isna(), 'observed'] = np.nan
+        if "observed" in self._df.columns and not self._df.observed.dropna().empty:
+            self._df.loc[self._df["temperature"].isna(), "observed"] = np.nan
 
     @classmethod
     def from_series(

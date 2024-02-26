@@ -53,7 +53,9 @@ def test_eemeter_caltrack_sample_known():
 def test_eemeter_caltrack_meter_data_only():
     runner = CliRunner()
 
-    meter_file = resource_filename("eemeter.eemeter.samples", "il-gas-hdd-only-daily.csv.gz")
+    meter_file = resource_filename(
+        "eemeter.eemeter.samples", "il-gas-hdd-only-daily.csv.gz"
+    )
     result = runner.invoke(caltrack, ["--meter-file={}".format(meter_file)])
 
     assert result.exit_code == 1
@@ -74,7 +76,9 @@ def test_eemeter_caltrack_temperature_data_only():
 def test_eemeter_caltrack_temperature_custom_data():
     runner = CliRunner()
 
-    meter_file = resource_filename("eemeter.eemeter.samples", "il-gas-hdd-only-daily.csv.gz")
+    meter_file = resource_filename(
+        "eemeter.eemeter.samples", "il-gas-hdd-only-daily.csv.gz"
+    )
     temperature_file = resource_filename("eemeter.eemeter.samples", "il-tempF.csv.gz")
 
     result = runner.invoke(

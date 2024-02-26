@@ -71,6 +71,7 @@ class ModelCoefficients(BaseModel):
     to_np_array()
         Converts the ModelCoefficients object to a numpy array.
     """
+
     """
     A class used to represent the coefficients of a model.
 
@@ -100,7 +101,7 @@ class ModelCoefficients(BaseModel):
     to_np_array()
         Converts the ModelCoefficients object to a numpy array.
     """
-    
+
     model_type: ModelType
     intercept: float
     hdd_bp: Optional[float] = None
@@ -111,9 +112,7 @@ class ModelCoefficients(BaseModel):
     cdd_k: Optional[float] = None
 
     # suppress namespace warning for model_type
-    model_config = ConfigDict(
-        protected_namespaces=()
-    )
+    model_config = ConfigDict(protected_namespaces=())
 
     @property
     def is_smooth(self):
@@ -153,8 +152,8 @@ class ModelCoefficients(BaseModel):
         Raises:
             ValueError: If the coefficient_ids do not match any of the expected patterns.
 
-        The method matches the coefficient_ids to predefined patterns and based on the match, 
-        it initializes a ModelCoefficients instance with the corresponding model_type and coefficients. 
+        The method matches the coefficient_ids to predefined patterns and based on the match,
+        it initializes a ModelCoefficients instance with the corresponding model_type and coefficients.
         If the coefficient_ids do not match any of the predefined patterns, it raises a ValueError.
         """
 
@@ -167,12 +166,12 @@ class ModelCoefficients(BaseModel):
             "cdd_k",
             "intercept",
         ]:
-            hdd_bp=coefficients[0]
-            hdd_beta=coefficients[1]
-            hdd_k=coefficients[2]
-            cdd_bp=coefficients[3]
-            cdd_beta=coefficients[4]
-            cdd_k=coefficients[5]
+            hdd_bp = coefficients[0]
+            hdd_beta = coefficients[1]
+            hdd_k = coefficients[2]
+            cdd_bp = coefficients[3]
+            cdd_beta = coefficients[4]
+            cdd_k = coefficients[5]
             if cdd_bp < hdd_bp:
                 hdd_bp, cdd_bp = cdd_bp, hdd_bp
                 hdd_beta, cdd_beta = cdd_beta, hdd_beta
@@ -194,10 +193,10 @@ class ModelCoefficients(BaseModel):
             "cdd_beta",
             "intercept",
         ]:
-            hdd_bp=coefficients[0]
-            hdd_beta=coefficients[1]
-            cdd_bp=coefficients[2]
-            cdd_beta=coefficients[3]
+            hdd_bp = coefficients[0]
+            hdd_beta = coefficients[1]
+            cdd_bp = coefficients[2]
+            cdd_beta = coefficients[3]
             if cdd_bp < hdd_bp:
                 hdd_bp, cdd_bp = cdd_bp, hdd_bp
                 hdd_beta, cdd_beta = cdd_beta, hdd_beta
@@ -310,13 +309,9 @@ class ModelCoefficients(BaseModel):
                 ]
             )
         elif self.model_type == ModelType.HDD_TIDD_SMOOTH:
-            return np.array(
-                [self.hdd_bp, self.hdd_beta, self.hdd_k, self.intercept]
-            )
+            return np.array([self.hdd_bp, self.hdd_beta, self.hdd_k, self.intercept])
         elif self.model_type == ModelType.TIDD_CDD_SMOOTH:
-            return np.array(
-                [self.cdd_bp, self.cdd_beta, self.cdd_k, self.intercept]
-            )
+            return np.array([self.cdd_bp, self.cdd_beta, self.cdd_k, self.intercept])
         elif self.model_type == ModelType.HDD_TIDD:
             return np.array([self.hdd_bp, self.hdd_beta, self.intercept])
         elif self.model_type == ModelType.TIDD_CDD:
@@ -342,27 +337,27 @@ class DailyModelParameters(BaseModel):
 
     @classmethod
     def from_2_0_params(cls, data):
-        model_2_0 = data.get('model_type')
-        if model_2_0 == 'intercept_only':
+        model_2_0 = data.get("model_type")
+        if model_2_0 == "intercept_only":
             model_type = ModelType.TIDD
-        elif model_2_0 == 'hdd_only':
+        elif model_2_0 == "hdd_only":
             model_type = ModelType.HDD_TIDD
-        elif model_2_0 == 'cdd_only':
+        elif model_2_0 == "cdd_only":
             model_type = ModelType.TIDD_CDD
-        elif model_2_0 == 'cdd_hdd':
+        elif model_2_0 == "cdd_hdd":
             model_type = ModelType.HDD_TIDD_CDD
         elif model_2_0 is None:
             raise ValueError("Missing model type")
         else:
             raise ValueError(f"Unknown model type: {model_2_0}")
-        params = data['model_params']
+        params = data["model_params"]
         daily_coeffs = ModelCoefficients(
             model_type=model_type,
-            intercept=params.get('intercept'),
-            hdd_bp=params.get('heating_balance_point'),
-            hdd_beta=params.get('beta_hdd'),
-            cdd_bp=params.get('cooling_balance_point'),
-            cdd_beta=params.get('beta_cdd'),
+            intercept=params.get("intercept"),
+            hdd_bp=params.get("heating_balance_point"),
+            hdd_beta=params.get("beta_hdd"),
+            cdd_bp=params.get("cooling_balance_point"),
+            cdd_beta=params.get("beta_cdd"),
         )
         submodel_params = DailySubmodelParameters(
             coefficients=daily_coeffs,
@@ -375,11 +370,11 @@ class DailyModelParameters(BaseModel):
             f_unc=np.inf,
         )
         return cls(
-            #TODO handle settings correctly with something in config.py
-            settings = {"from 2.0 - will fail if attempting from_dict()": True},
-            info = {},
+            # TODO handle settings correctly with something in config.py
+            settings={"from 2.0 - will fail if attempting from_dict()": True},
+            info={},
             submodels={
                 # no splits, full calendar
-                'fw-su_sh_wi': submodel_params,
+                "fw-su_sh_wi": submodel_params,
             },
         )

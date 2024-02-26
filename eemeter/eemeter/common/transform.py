@@ -793,6 +793,7 @@ def clean_caltrack_billing_daily_data(data, source_interval):
     else:
         return downsample_and_clean_caltrack_daily_data(data)
 
+
 def add_freq(idx, freq=None):
     """Add a frequency attribute to idx, through inference or directly.
 
@@ -829,6 +830,7 @@ def add_freq(idx, freq=None):
             " a frequency string with `freq`."
         )
     return idx
+
 
 def trim(*args, freq="H", tz="UTC"):
     """A helper function which trims a given number of time series dataframes so that they all correspond to the same
@@ -887,6 +889,7 @@ def trim(*args, freq="H", tz="UTC"):
 
     return out_dfs
 
+
 def _check_input_formatting(input, tz="UTC"):
     if not isinstance(input.index, pd.DatetimeIndex):
         if isinstance(input.index, pd.RangeIndex):
@@ -908,7 +911,7 @@ def _check_input_formatting(input, tz="UTC"):
             raise ValueError(
                 "Data is not in correct format - index should be of class 'pd.core.indexes.datetimes.DatetimeIndex',"
                 + " or datetime column should be labelled one of: 'Start', 'start', 'Datetime', 'timestamp', "
-                  "'Timestamp', or 'Datetime'."
+                "'Timestamp', or 'Datetime'."
             )
     if input.index[0].tzinfo is None:
         input.index = input.index.tz_localize(tz=tz)
@@ -923,6 +926,7 @@ def _format_data_for_caltrack_hourly(df, tz="UTC"):
         return df
     else:
         return None
+
 
 def format_energy_data_for_caltrack(*args, method="hourly", tz="UTC"):
     """A helper function which ensures energy consumption data is formatted for eemeter processing.

@@ -100,7 +100,7 @@ def obj_fcn_dec(obj_fcn, x0, bnds):
     - obj_fcn_eval: a function that evaluates the objective function with the given bounds
     - idx_opt: the indices of the variables with non-equal bounds
     """
-    
+
     idx_opt = [n for n in range(np.shape(bnds)[0]) if (bnds[n, 0] < bnds[n, 1])]
 
     def obj_fcn_eval(
@@ -221,7 +221,9 @@ class Optimizer:
                 )
 
             elif algorithm.lower() == "bounded":
-                res = scipy_minimize_scalar(scipy_obj_fcn, bounds=bnds[0], method="bounded")
+                res = scipy_minimize_scalar(
+                    scipy_obj_fcn, bounds=bnds[0], method="bounded"
+                )
 
             res.x = [res.x]
 
@@ -231,7 +233,9 @@ class Optimizer:
 
             scipy_obj_fcn = lambda x: self.obj_fcn(x)
 
-            res = scipy_minimize(scipy_obj_fcn, x0_opt, method=algorithm, bounds=bnds_opt)
+            res = scipy_minimize(
+                scipy_obj_fcn, x0_opt, method=algorithm, bounds=bnds_opt
+            )
 
         x = res.x
         x, mean_loss, TSS, T, model, weight, resid, jac, alpha, C = self.obj_fcn(
