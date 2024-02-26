@@ -220,6 +220,7 @@ class DailyModel:
             df_eval = df_eval.to_frame("temperature")
 
         # initialize data to input dataframe
+        initial_index = df_eval.index
         df_eval = self._initialize_data(df_eval)
 
         df_all_models = []
@@ -245,8 +246,7 @@ class DailyModel:
             df_all_models.append(df_model)
 
         df_model_prediction = pd.concat(df_all_models, axis=0)
-
-        df_eval = df_eval.join(df_model_prediction)
+        df_eval = df_eval.join(df_model_prediction).reindex(initial_index)
 
         return df_eval
 

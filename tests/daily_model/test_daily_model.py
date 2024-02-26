@@ -19,6 +19,8 @@
 """
 import pytest
 
+import numpy as np
+
 from eemeter.eemeter import DailyModel, DailyBaselineData, DailyReportingData
 from eemeter.eemeter.samples import load_sample
 from eemeter.eemeter.common.transform import get_baseline_data
@@ -103,3 +105,13 @@ def test_timezone_behavior(daily_series):
     res2 = model.predict(reporting_data_no_meter)
     assert round((res1['temperature'] - res2['temperature']).sum(),2) == 0
     assert round((res1['predicted'] - res2['predicted']).sum(),2) == 0
+
+def test_predict_df_matches_input_index(daily_series):
+    meter, temp = daily_series
+    baseline_data = DailyBaselineData.from_series(meter, temp, is_electricity_data=True)
+    baseline_model = DailyModel().fit(baseline_data)
+
+    temp[temp.index.day > 20] = np.nan
+    reporting_data_missing_temp = DailyBaselineData.from_series(meter, temp, is_electricity_data=True)
+    res = baseline_model.predict(reporting_data_missing_temp)
+    assert len(res) == len(reporting_data_missing_temp.df)
