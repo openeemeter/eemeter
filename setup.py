@@ -96,7 +96,7 @@ setup(
     author_email=about["__author_email__"],
     url=about["__url__"],
     packages=find_packages(exclude=("tests",)),
-    entry_points={"console_scripts": ["eemeter=eemeter.eemeter.cli:cli"]},
+    entry_points={"console_scripts": ["eemeter=eemeter.eemeter.utilities.cli:cli"]},
     install_requires=REQUIRED,
     include_package_data=True,
     license=about["__license__"],
@@ -107,6 +107,8 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
     ],
     # $ setup.py publish support.
     cmdclass={"upload": UploadCommand},
