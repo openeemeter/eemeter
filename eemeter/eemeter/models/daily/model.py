@@ -43,7 +43,6 @@ from eemeter.eemeter.models.daily.parameters import (
     DailyModelParameters,
     DailySubmodelParameters,
 )
-from eemeter.eemeter.models.daily.plot import plot
 from eemeter.eemeter.models.daily.utilities.base_model import get_smooth_coeffs
 from eemeter.eemeter.models.daily.utilities.config import (
     caltrack_legacy_settings,
@@ -368,7 +367,7 @@ class DailyModel:
             Matplotlib axes.
         """
         try:
-            import matplotlib.pyplot as plt
+            from eemeter.eemeter.models.daily.plot import plot
         except ImportError:  # pragma: no cover
             raise ImportError("matplotlib is required for plotting.")
 

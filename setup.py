@@ -39,6 +39,7 @@ REQUIRED = [
     "nlopt",
     "pydantic>=2.0",
     "attrs",
+    "requests",
 ]
 
 here = os.path.abspath(os.path.dirname(__file__))
