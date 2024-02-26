@@ -28,7 +28,6 @@ from eemeter.eemeter.models.billing.data import (
     BillingBaselineData,
     BillingReportingData,
 )
-from eemeter.eemeter.models.billing.plot import plot
 from eemeter.eemeter.models.daily.model import DailyModel
 
 
@@ -151,7 +150,7 @@ class BillingModel(DailyModel):
             Matplotlib axes.
         """
         try:
-            import matplotlib.pyplot as plt
+            from eemeter.eemeter.models.billing.plot import plot
         except ImportError:  # pragma: no cover
             raise ImportError("matplotlib is required for plotting.")
 
