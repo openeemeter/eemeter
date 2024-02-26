@@ -17,13 +17,8 @@
    limitations under the License.
 
 """
-from copy import deepcopy as copy
 
 import numpy as np
-
-from eemeter.common.adaptive_loss import remove_outliers
-from eemeter.common.adaptive_loss import rolling_C
-from eemeter.common.adaptive_loss import adaptive_weights
 
 from eemeter.common.utils import OoM
 from eemeter.common.utils import fast_std as stdev

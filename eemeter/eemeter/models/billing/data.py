@@ -17,23 +17,21 @@
    limitations under the License.
 
 """
-import eemeter.common.const as _const
+from typing import Optional, Union
+
+import numpy as np
+import pandas as pd
+from pandas.tseries.offsets import MonthBegin, MonthEnd
+
 from eemeter.eemeter.common.data_processor_utilities import (
     as_freq,
-    sufficiency_criteria_baseline,
     clean_billing_daily_data,
     compute_minimum_granularity,
+    sufficiency_criteria_baseline,
 )
 from eemeter.eemeter.common.features import compute_temperature_features
 from eemeter.eemeter.common.warnings import EEMeterWarning
 from eemeter.eemeter.models.daily.data import _DailyData
-
-import numpy as np
-import pandas as pd
-from pandas.tseries.offsets import MonthEnd, MonthBegin
-
-from typing import Optional, Union
-
 
 """TODO there is still a ton of unecessarily duplicated code between billing+daily.
     we should be able to perform a few transforms within the billing baseclass, and then call super() for the rest

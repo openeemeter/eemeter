@@ -18,17 +18,13 @@
 
 """
 
-import numpy as np
-import pandas as pd
+import colorsys
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import colorsys
-
-from copy import deepcopy as copy
+import numpy as np
 
 from eemeter.common.adaptive_loss import IQR_outlier
-
 
 fontsize = 14
 mpl.rc("font", family="sans-serif")

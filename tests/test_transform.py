@@ -18,7 +18,6 @@
 
 """
 from datetime import datetime, timedelta
-from pkg_resources import resource_stream
 
 import numpy as np
 import pandas as pd

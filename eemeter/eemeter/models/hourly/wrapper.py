@@ -17,26 +17,25 @@
    limitations under the License.
 
 """
-import numpy as np
-import pandas as pd
 import json
 
+import numpy as np
+import pandas as pd
+
+from eemeter.common.utils import t_stat
 from eemeter.eemeter.common.features import (
     estimate_hour_of_week_occupancy,
     fit_temperature_bins,
 )
 from eemeter.eemeter.models.hourly.design_matrices import (
-    create_caltrack_hourly_segmented_design_matrices,
     create_caltrack_hourly_preliminary_design_matrix,
+    create_caltrack_hourly_segmented_design_matrices,
 )
 from eemeter.eemeter.models.hourly.model import (
     CalTRACKHourlyModelResults,
     fit_caltrack_hourly_model,
 )
 from eemeter.eemeter.models.hourly.segmentation import segment_time_series
-
-from eemeter.common.utils import t_stat
-
 
 month_dict = {
     "jan": 1,

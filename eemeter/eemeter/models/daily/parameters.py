@@ -18,10 +18,11 @@
 
 """
 
-import numpy as np
-from typing import Dict, Any, Optional
-from pydantic import BaseModel, ConfigDict
 from enum import Enum
+from typing import Any, Dict, Optional
+
+import numpy as np
+from pydantic import BaseModel, ConfigDict
 
 
 class ModelType(str, Enum):

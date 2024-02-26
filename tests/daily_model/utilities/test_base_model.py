@@ -27,7 +27,6 @@ from eemeter.eemeter.models.daily.utilities.base_model import (
     linear_fit,
     get_smooth_coeffs,
     fix_identical_bnds,
-    get_T_bnds,
     get_intercept,
 )
 

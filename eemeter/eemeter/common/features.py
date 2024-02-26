@@ -17,15 +17,13 @@
    limitations under the License.
 
 """
-from .warnings import EEMeterWarning
-from .transform import day_counts, overwrite_partial_rows_with_nan
-from ..models.hourly.segmentation import iterate_segmented_dataset
-
 import numpy as np
 import pandas as pd
 import statsmodels.formula.api as smf
-from pkg_resources import resource_filename
 
+from ..models.hourly.segmentation import iterate_segmented_dataset
+from .transform import day_counts, overwrite_partial_rows_with_nan
+from .warnings import EEMeterWarning
 
 __all__ = (
     "compute_usage_per_day_feature",

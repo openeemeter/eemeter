@@ -17,8 +17,7 @@
    limitations under the License.
 
 """
-from datetime import datetime, timedelta
-from functools import partial
+from datetime import timedelta
 
 import numpy as np
 import pandas as pd
@@ -26,7 +25,6 @@ import pytz
 
 from .exceptions import NoBaselineDataError, NoReportingDataError
 from .warnings import EEMeterWarning
-
 
 __all__ = (
     "Term",

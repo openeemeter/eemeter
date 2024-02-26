@@ -30,9 +30,6 @@ from eemeter.eemeter.models.hourly.model import (
 )
 from eemeter.eemeter.common.features import (
     compute_time_features,
-    compute_temperature_features,
-    compute_usage_per_day_feature,
-    merge_features,
 )
 
 

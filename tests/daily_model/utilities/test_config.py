@@ -20,7 +20,6 @@
 import pytest
 
 from eemeter.eemeter.models.daily.utilities.config import (
-    simple_validation,
     DailySettings,
 )
 

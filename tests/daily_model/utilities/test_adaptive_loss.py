@@ -18,7 +18,6 @@
 
 """
 import numpy as np
-import pytest
 
 from eemeter.common.adaptive_loss import (
     remove_outliers,
