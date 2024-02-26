@@ -69,12 +69,33 @@ class _BillingData(_DailyData):
         -------
             pd.DataFrame: The cleaned and processed meter value DataFrame.
         """
+        end = df['observed'].index.max()
+        final_value = df['observed'][end]
+        final_nan = np.isnan(final_value) if final_value else False
         meter_series = df["observed"].dropna()
+
         if meter_series.empty:
             return df["observed"].resample("D").first().to_frame()
+        if final_nan:
+            # preserve end of final billing period
+            meter_series[end] = np.nan
         min_granularity = compute_minimum_granularity(
             meter_series.index, default_granularity="billing_bimonthly"
         )
+
+        if min_granularity.startswith("billing") and not final_nan:
+            self.warnings.append(
+                EEMeterWarning(
+                    qualified_name="eemeter.sufficiency_criteria.billing_final_row",
+                    description=(
+                        "The provided billing data included a real-valued final row. This row was only used"
+                        " to denote the end of the final billing period, and can be set to NaN in the future."
+                        " If this was the beginning of a billing period that is intended to be measured, append"
+                        " one more row corresponding with the ending timestamp of that period."
+                    ),
+                    data={},
+                )
+            )
 
         # Ensure higher frequency data is aggregated to the monthly model
         if not min_granularity.startswith("billing"):
@@ -216,11 +237,16 @@ class _BillingData(_DailyData):
             temperature_features["n_days_kept"] = 0  # unused
             temperature_features["n_days_dropped"] = 0  # unused
         else:
+            buffer_idx = pd.to_datetime("2090-01-01 00:00:00+00:00").tz_convert(
+                meter_index.tz
+            )
+
             temperature_features = compute_temperature_features(
-                meter_index,
+                meter_index.union([buffer_idx]),
                 temp_series,
                 data_quality=True,
             )
+            temperature_features = temperature_features[:-1]
             # Only check for high frequency temperature data if it exists
             if (
                 temperature_features.temperature_not_null

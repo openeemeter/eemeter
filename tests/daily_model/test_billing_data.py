@@ -32,49 +32,50 @@ def get_datetime_index(request):
     # Request = [frequency , is_timezone_aware]
 
     # Create a DateTimeIndex at given frequency and timezone if requested
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-02-01', inclusive="left", freq=request.param[0], tz = 'US/Eastern' if request.param[1] else None)
+    inclusive = "both" if request.param[0] in ['MS', '2MS'] else "left"
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', inclusive=inclusive, freq=request.param[0], tz = 'US/Eastern' if request.param[1] else None)
 
     return datetime_index
 
 @pytest.fixture
 def get_datetime_index_half_hourly_with_timezone():
     # Create a DateTimeIndex at 30-minute intervals
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-02-01', inclusive="left", freq='30T', tz = 'US/Eastern')
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', inclusive="left", freq='30T', tz = 'US/Eastern')
 
     return datetime_index
 
 @pytest.fixture
 def get_datetime_index_hourly_with_timezone():
     # Create a DateTimeIndex at 30-minute intervals
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-02-01', inclusive="left", freq='H', tz = 'US/Eastern')
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', inclusive="left", freq='H', tz = 'US/Eastern')
 
     return datetime_index
 
 @pytest.fixture
 def get_datetime_index_daily_with_timezone():
     # Create a DateTimeIndex at daily intervals
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-02-01', inclusive="left", freq='D', tz = 'US/Eastern')
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', inclusive="left", freq='D', tz = 'US/Eastern')
 
     return datetime_index
 
 @pytest.fixture
 def get_datetime_index_monthly_with_timezone():
     # Create a DateTimeIndex at daily intervals
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-02-01', inclusive="left", freq='MS', tz = 'US/Eastern')
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', inclusive="both", freq='MS', tz = 'US/Eastern')
 
     return datetime_index
 
 @pytest.fixture
 def get_datetime_index_bimonthly_with_timezone():
     # Create a DateTimeIndex at daily intervals
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-02-01', inclusive="left", freq='2MS', tz = 'US/Eastern')
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', inclusive="both", freq='2MS', tz = 'US/Eastern')
 
     return datetime_index
 
 @pytest.fixture
 def get_datetime_index_daily_without_timezone():
     # Create a DateTimeIndex at daily intervals
-    datetime_index = pd.date_range(start='2023-01-01', end='2024-02-01', inclusive="left", freq='D')
+    datetime_index = pd.date_range(start='2023-01-01', end='2024-01-01', inclusive="left", freq='D')
 
     return datetime_index
 
@@ -140,6 +141,7 @@ def get_meter_data_monthly(get_datetime_index_monthly_with_timezone):
 
     # Create the DataFrame
     df = pd.DataFrame(data={'observed': meter_value}, index=datetime_index)
+    df['observed'][-1] = np.nan
 
     return df
 
@@ -153,6 +155,7 @@ def get_meter_data_bimonthly(get_datetime_index_bimonthly_with_timezone):
 
     # Create the DataFrame
     df = pd.DataFrame(data={'observed': meter_value}, index=datetime_index)
+    df['observed'][-1] = np.nan
 
     return df
 
@@ -200,6 +203,7 @@ def test_billing_baseline_data_with_monthly_frequencies(get_datetime_index):
 
     np.random.seed(METER_SEED)
     meter_value = np.random.rand(len(datetime_index))
+    meter_value[-1] = np.nan
 
     # Create the DataFrame
     df = pd.DataFrame(data={'observed' : meter_value, 'temperature': temperature_mean}, index=datetime_index)
@@ -236,8 +240,10 @@ def test_billing_baseline_data_with_bimonthly_frequencies(get_datetime_index):
     # Because two months are missing
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     assert round(cls.df.observed.sum(), 2) == round(df[df.index <= df.index[-1] - pd.offsets.MonthEnd(1)].observed.sum(), 2)
-    assert len(cls.warnings) == 1
-    assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'
+    assert len(cls.warnings) == 2
+    # final row not nan doesnt affect result, but will be dropped and issues a warning
+    #TODO maybe worth creating a helper function to test the warnings+dq rather than rewriting the comprehension each time
+    assert set([warning.qualified_name for warning in cls.warnings]) == set(['eemeter.sufficiency_criteria.billing_final_row', 'eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency'])
     # DQ because only 6 days worth of temperature data is available
     assert len(cls.disqualification) == 3
     assert [dq.qualified_name for dq in cls.disqualification] == ['eemeter.sufficiency_criteria.incorrect_number_of_total_days','eemeter.sufficiency_criteria.too_many_days_with_missing_data', 'eemeter.sufficiency_criteria.too_many_days_with_missing_temperature_data']
@@ -371,15 +377,14 @@ def test_billing_baseline_data_with_specific_monthly_input():
     meter, temperature, _ = load_sample('il-electricity-cdd-hdd-billing_monthly')
     # Take the extra month for billing data
     meter = meter[(meter.index.year == 2017) | ((meter.index.year == 2018) & (meter.index.month == 1))]
-    meter.iloc[-1] = meter.iloc[-2] # Last element should not be NaN
     temperature = temperature[(temperature.index.year == 2017) | ((temperature.index.year == 2018) & (temperature.index.month == 1))]
     cls = BillingBaselineData.from_series(meter, temperature, is_electricity_data=True)
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
-    assert round(cls.df.observed.sum(), 2) == round(meter[meter.index <= meter.index[-1] - pd.offsets.MonthEnd(1)].value.sum(), 2)
-    assert len(cls.warnings) == 2
-    assert [warning.qualified_name for warning in cls.warnings] == ['eemeter.data_quality.utc_index', 'eemeter.sufficiency_criteria.extreme_values_detected']
+    assert round(cls.df.observed.sum(), 2) == round(meter.value.sum(), 2)
+    assert len(cls.warnings) == 1
+    assert cls.warnings[0].qualified_name == 'eemeter.data_quality.utc_index'
     assert len(cls.disqualification) == 0
 
 @pytest.mark.parametrize('get_datetime_index', [['30T', True], ['H', True]], indirect=True)
@@ -409,7 +414,7 @@ def test_billing_reporting_data_with_missing_half_hourly_frequencies(get_datetim
     if datetime_index.freq == '30T':
         assert len(cls.df.temperature.dropna()) == 268
     elif datetime_index.freq == 'H':
-        assert len(cls.df.temperature.dropna()) == 269
+        assert len(cls.df.temperature.dropna()) == 270
 
     assert len(cls.warnings) == 1
     assert cls.warnings[0].qualified_name == 'eemeter.sufficiency_criteria.missing_high_frequency_temperature_data'
