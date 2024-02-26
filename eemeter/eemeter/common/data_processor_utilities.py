@@ -27,7 +27,6 @@ from pandas.tseries.offsets import MonthEnd, MonthBegin
 import pytz
 
 
-
 def remove_duplicates(df_or_series):
     """Remove duplicate rows or values by keeping the first of each duplicate.
 
@@ -43,6 +42,7 @@ def remove_duplicates(df_or_series):
     """
     # CalTrack 2.3.2.2
     return df_or_series[~df_or_series.index.duplicated(keep="first")]
+
 
 def day_counts(index):
     """Days between DatetimeIndex values as a :any:`pandas.Series`.
@@ -69,6 +69,7 @@ def day_counts(index):
 
     return pd.Series(timedelta_days, index=index)
 
+
 def clean_billing_data(data, source_interval, warnings):
     # check for empty data
     if data["value"].dropna().empty:
@@ -88,10 +89,10 @@ def clean_billing_data(data, source_interval, warnings):
                 warnings.append(
                     EEMeterWarning(
                         qualified_name="eemeter.sufficiency_criteria.offcycle_reads_in_billing_monthly_data",
-                        description=("Off-cycle reads found in billing monthly data having a duration of less than 25 days"),
-                        data = (
-                            data[(filter_ > 35) | (filter_ < 25)].index.to_list()
-                        )
+                        description=(
+                            "Off-cycle reads found in billing monthly data having a duration of less than 25 days"
+                        ),
+                        data=(data[(filter_ > 35) | (filter_ < 25)].index.to_list()),
                     )
                 )
 
@@ -105,10 +106,10 @@ def clean_billing_data(data, source_interval, warnings):
                 warnings.append(
                     EEMeterWarning(
                         qualified_name="eemeter.sufficiency_criteria.offcycle_reads_in_billing_monthly_data",
-                        description=("Off-cycle reads found in billing monthly data having a duration of less than 25 days"),
-                        data = (
-                            data[(filter_ > 70) | (filter_ < 25)].index.to_list()
-                        )
+                        description=(
+                            "Off-cycle reads found in billing monthly data having a duration of less than 25 days"
+                        ),
+                        data=(data[(filter_ > 70) | (filter_ < 25)].index.to_list()),
                     )
                 )
 
@@ -170,7 +171,7 @@ def clean_billing_data(data, source_interval, warnings):
     if data.dropna().empty:
         return data[:0]
 
-    return data['value'].to_frame()
+    return data["value"].to_frame()
 
 
 def as_freq(
@@ -251,19 +252,19 @@ def as_freq(
 
     elif series_type == "instantaneous":
         """TODO ffill on series.asfreq can produce unintuitive results if resampling a sparse matrix.
-            for example, attempting to resample 2 months of hourly data to daily with a month of
-            absent rows (not NaN, but missing from the dataframe) will ffill that month with the previous read.
+        for example, attempting to resample 2 months of hourly data to daily with a month of
+        absent rows (not NaN, but missing from the dataframe) will ffill that month with the previous read.
 
-            a similar effect can happen if you have NaNs at a different frequency appended to the end
-            of a series. this could happen if you concat a monthly series with an hourly one at an offset.
-            the call to asfreq() could erroneously fill in a month of data, followed by NaNs
+        a similar effect can happen if you have NaNs at a different frequency appended to the end
+        of a series. this could happen if you concat a monthly series with an hourly one at an offset.
+        the call to asfreq() could erroneously fill in a month of data, followed by NaNs
         """
         atomic_series = series.asfreq(atomic_freq, method="ffill")
         resampled = atomic_series.resample(freq).mean()
         n_coverage = atomic_series.resample(freq).count()
 
     # Edit : Added a check so that hourly and daily frequencies don't have a null value at the end
-    if freq not in ['H','D'] and resampled.index[-1] < series.index[-1]:
+    if freq not in ["H", "D"] and resampled.index[-1] < series.index[-1]:
         # this adds a null at the end using the target frequency
         last_index = pd.date_range(resampled.index[-1], freq=freq, periods=2)[1:]
         resampled = (
@@ -293,10 +294,10 @@ def downsample_and_clean_daily_data(dataset, warnings):
         warnings.append(
             EEMeterWarning(
                 qualified_name="eemeter.sufficiency_criteria.missing_high_frequency_meter_data",
-                description=("More than 50% of the high frequency Meter data is missing."),
-                data = (
-                    dataset[dataset.coverage <= 0.5].index.to_list()
-                )
+                description=(
+                    "More than 50% of the high frequency Meter data is missing."
+                ),
+                data=(dataset[dataset.coverage <= 0.5].index.to_list()),
             )
         )
 
@@ -321,8 +322,9 @@ def clean_billing_daily_data(data, source_interval, warnings):
     else:
         return downsample_and_clean_daily_data(data, warnings)
 
+
 # TODO : requires more testing
-def compute_minimum_granularity(index : pd.Series, default_granularity : Optional[str]):
+def compute_minimum_granularity(index: pd.Series, default_granularity: Optional[str]):
     # Inferred frequency returns None if frequency can't be autodetected
     index.freq = index.inferred_freq
     if index.freq is None:
@@ -341,58 +343,62 @@ def compute_minimum_granularity(index : pd.Series, default_granularity : Optiona
         #     min_granularity = default_granularity
 
         granularity_dict = {
-            median_difference < 1: 'hourly',
-            median_difference == 1: 'daily',
-            1 < median_difference <= 35: 'billing_monthly',
-            35 < median_difference <= 70: 'billing_bimonthly'
+            median_difference < 1: "hourly",
+            median_difference == 1: "daily",
+            1 < median_difference <= 35: "billing_monthly",
+            35 < median_difference <= 70: "billing_bimonthly",
         }
         min_granularity = granularity_dict.get(True, default_granularity)
         return min_granularity
     # The other cases still result in granularity being unknown so this causes the frequency to be resampled to daily
-    if isinstance(index.freq, MonthEnd) or isinstance(index.freq, MonthBegin): # Can be MonthEnd or MonthBegin instance
+    if isinstance(index.freq, MonthEnd) or isinstance(
+        index.freq, MonthBegin
+    ):  # Can be MonthEnd or MonthBegin instance
         if index.freq.n == 1:
-            min_granularity = 'billing_monthly'
+            min_granularity = "billing_monthly"
         else:
-            min_granularity = 'billing_bimonthly'
+            min_granularity = "billing_bimonthly"
     elif index.freq <= pd.Timedelta(hours=1):
-        min_granularity = 'hourly'
+        min_granularity = "hourly"
     elif index.freq <= pd.Timedelta(days=1):
-        min_granularity = 'daily'
+        min_granularity = "daily"
     elif index.freq <= pd.Timedelta(days=30):
-        min_granularity = 'billing_monthly'
+        min_granularity = "billing_monthly"
     else:
-        min_granularity = 'billing_bimonthly'
+        min_granularity = "billing_bimonthly"
 
     return min_granularity
 
 
 def sufficiency_criteria_baseline(
     data,
-    requested_start = None,
-    requested_end = None,
+    requested_start=None,
+    requested_end=None,
     num_days=365,
     min_fraction_daily_coverage=0.9,
     min_fraction_hourly_temperature_coverage_per_period=0.9,
-    is_reporting_data = False,
-    is_electricity_data = True
+    is_reporting_data=False,
+    is_electricity_data=True,
 ):
     """
-        Refer to usage_per_day.py in eemeter/caltrack/ folder
+    Refer to usage_per_day.py in eemeter/caltrack/ folder
     """
     warnings = []
     if data.dropna().empty:
         warnings.append(
-                EEMeterWarning(
-                    qualified_name="eemeter.sufficiency_criteria.no_data",
-                    description=("No data available."),
-                    data={},
-                )
+            EEMeterWarning(
+                qualified_name="eemeter.sufficiency_criteria.no_data",
+                description=("No data available."),
+                data={},
+            )
         )
         return data, warnings, []
 
     data_start = data.dropna().index.min()
     data_end = data.dropna().index.max()
-    n_days_data = (data_end - data_start).days + 1  #TODO confirm. no longer using last row nan
+    n_days_data = (
+        data_end - data_start
+    ).days + 1  # TODO confirm. no longer using last row nan
 
     if requested_start is not None:
         # check for gap at beginning
@@ -448,9 +454,7 @@ def sufficiency_criteria_baseline(
     n_days_total = n_days_data + n_days_start_gap + n_days_end_gap
 
     if not is_reporting_data and not is_electricity_data:
-        n_negative_meter_values = data.observed[
-            data.observed < 0
-        ].shape[0]
+        n_negative_meter_values = data.observed[data.observed < 0].shape[0]
 
         # TODO : This check should only be done for non electric data
         if n_negative_meter_values > 0:
@@ -460,9 +464,7 @@ def sufficiency_criteria_baseline(
                     qualified_name=(
                         "eemeter.sufficiency_criteria" ".negative_meter_values"
                     ),
-                    description=(
-                        "Found negative meter data values"
-                    ),
+                    description=("Found negative meter data values"),
                     data={"n_negative_meter_values": n_negative_meter_values},
                 )
             )
@@ -475,13 +477,12 @@ def sufficiency_criteria_baseline(
     if not is_reporting_data:
         valid_meter_value_rows = data.observed.notnull()
     valid_temperature_rows = (
-        data.temperature_not_null
-        / (data.temperature_not_null + data.temperature_null)
+        data.temperature_not_null / (data.temperature_not_null + data.temperature_null)
     ) > min_fraction_hourly_temperature_coverage_per_period
 
     if not is_reporting_data:
         valid_rows = valid_meter_value_rows & valid_temperature_rows
-    else :
+    else:
         valid_rows = valid_temperature_rows
 
     # get number of days per period - for daily this should be a series of ones
@@ -499,14 +500,14 @@ def sufficiency_criteria_baseline(
         lower_quantile = data.observed.quantile(0.25)
         iqr = upper_quantile - lower_quantile
         extreme_value_limit = median + (3 * iqr)
-        n_extreme_values = data.observed[
-            data.observed > extreme_value_limit
-        ].shape[0]
+        n_extreme_values = data.observed[data.observed > extreme_value_limit].shape[0]
         max_value = float(data.observed.max())
 
     if n_days_total > 0:
         if not is_reporting_data:
-            fraction_valid_meter_value_days = n_valid_meter_value_days / float(n_days_total)
+            fraction_valid_meter_value_days = n_valid_meter_value_days / float(
+                n_days_total
+            )
         fraction_valid_temperature_days = n_valid_temperature_days / float(n_days_total)
         fraction_valid_days = n_valid_days / float(n_days_total)
     else:
@@ -517,14 +518,19 @@ def sufficiency_criteria_baseline(
 
     MAX_BASELINE_LENGTH = 365
     MIN_BASELINE_LENGTH = ceil(0.9 * MAX_BASELINE_LENGTH)
-    if not is_reporting_data and n_days_total > MAX_BASELINE_LENGTH or n_days_total < MIN_BASELINE_LENGTH:
+    if (
+        not is_reporting_data
+        and n_days_total > MAX_BASELINE_LENGTH
+        or n_days_total < MIN_BASELINE_LENGTH
+    ):
         critical_warnings.append(
             EEMeterWarning(
                 qualified_name=(
-                    "eemeter.sufficiency_criteria"
-                    ".incorrect_number_of_total_days"
+                    "eemeter.sufficiency_criteria" ".incorrect_number_of_total_days"
                 ),
-                description=(f"Baseline length is not within the expected range of {MIN_BASELINE_LENGTH}-{MAX_BASELINE_LENGTH} days."),
+                description=(
+                    f"Baseline length is not within the expected range of {MIN_BASELINE_LENGTH}-{MAX_BASELINE_LENGTH} days."
+                ),
                 data={"num_days": num_days, "n_days_total": n_days_total},
             )
         )
@@ -533,8 +539,7 @@ def sufficiency_criteria_baseline(
         critical_warnings.append(
             EEMeterWarning(
                 qualified_name=(
-                    "eemeter.sufficiency_criteria"
-                    ".too_many_days_with_missing_data"
+                    "eemeter.sufficiency_criteria" ".too_many_days_with_missing_data"
                 ),
                 description=(
                     "Too many days in data have missing meter data or"
@@ -544,7 +549,10 @@ def sufficiency_criteria_baseline(
             )
         )
 
-    if not is_reporting_data and fraction_valid_meter_value_days < min_fraction_daily_coverage:
+    if (
+        not is_reporting_data
+        and fraction_valid_meter_value_days < min_fraction_daily_coverage
+    ):
         critical_warnings.append(
             EEMeterWarning(
                 qualified_name=(
@@ -558,7 +566,6 @@ def sufficiency_criteria_baseline(
                 },
             )
         )
-
 
     if fraction_valid_temperature_days < min_fraction_daily_coverage:
         critical_warnings.append(
@@ -574,16 +581,20 @@ def sufficiency_criteria_baseline(
                 },
             )
         )
-    
+
     # Check for 90% for individual months present:
-    non_null_temp_percentage_per_month = data['temperature'].groupby(data.index.month).apply(lambda x: x.notna().mean())
+    non_null_temp_percentage_per_month = (
+        data["temperature"].groupby(data.index.month).apply(lambda x: x.notna().mean())
+    )
     if (non_null_temp_percentage_per_month < min_fraction_daily_coverage).any():
         critical_warnings.append(
             EEMeterWarning(
                 qualified_name="eemeter.sufficiency_criteria.missing_monthly_temperature_data",
-                description=("More than 10% of the monthly temperature data is missing."),
+                description=(
+                    "More than 10% of the monthly temperature data is missing."
+                ),
                 data={
-                    #TODO report percentage
+                    # TODO report percentage
                 },
             )
         )
@@ -596,11 +607,11 @@ def sufficiency_criteria_baseline(
     #                 qualified_name="eemeter.sufficiency_criteria.missing_monthly_meter_data",
     #                 description=("More than 10% of the monthly meter data is missing."),
     #                 data={
-    #                     #TODO report percentage     
+    #                     #TODO report percentage
     #                 },
     #             )
     #         )
-    
+
     # TODO : Check 90% of seasons & weekday/weekend available?
 
     if not is_reporting_data and n_extreme_values > 0:

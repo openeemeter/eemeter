@@ -20,7 +20,10 @@
 from scipy.stats import t
 
 from eemeter.eemeter.models.daily.model import DailyModel
-from eemeter.eemeter.models.hourly.design_matrices import create_caltrack_daily_design_matrix, create_caltrack_billing_design_matrix
+from eemeter.eemeter.models.hourly.design_matrices import (
+    create_caltrack_daily_design_matrix,
+    create_caltrack_billing_design_matrix,
+)
 
 
 __all__ = ("metered_savings", "modeled_savings")
@@ -225,7 +228,9 @@ def metered_savings(
 
     model_type = None
     if isinstance(baseline_model, DailyModel):
-        raise NotImplementedError('Use predict() with daily and billing models to compute metered savings.')
+        raise NotImplementedError(
+            "Use predict() with daily and billing models to compute metered savings."
+        )
 
     prediction_index = reporting_meter_data.index
     model_prediction = baseline_model.predict(
@@ -440,9 +445,13 @@ def modeled_savings(
         predict_kwargs = {}
 
     model_type = None  # generic
-    if isinstance(baseline_model, DailyModel) or isinstance(reporting_model, DailyModel):
-        raise NotImplementedError('Use predict() with daily and billing models to compute modeled savings.')
-    
+    if isinstance(baseline_model, DailyModel) or isinstance(
+        reporting_model, DailyModel
+    ):
+        raise NotImplementedError(
+            "Use predict() with daily and billing models to compute modeled savings."
+        )
+
     def _predicted_usage(model):
         model_prediction = model.predict(
             prediction_index, temperature_data, **predict_kwargs

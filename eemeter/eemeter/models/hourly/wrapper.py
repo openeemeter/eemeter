@@ -21,28 +21,38 @@ import numpy as np
 import pandas as pd
 import json
 
-from eemeter.eemeter.common.features import estimate_hour_of_week_occupancy, fit_temperature_bins
-from eemeter.eemeter.models.hourly.design_matrices import create_caltrack_hourly_segmented_design_matrices, create_caltrack_hourly_preliminary_design_matrix
-from eemeter.eemeter.models.hourly.model import CalTRACKHourlyModelResults, fit_caltrack_hourly_model
+from eemeter.eemeter.common.features import (
+    estimate_hour_of_week_occupancy,
+    fit_temperature_bins,
+)
+from eemeter.eemeter.models.hourly.design_matrices import (
+    create_caltrack_hourly_segmented_design_matrices,
+    create_caltrack_hourly_preliminary_design_matrix,
+)
+from eemeter.eemeter.models.hourly.model import (
+    CalTRACKHourlyModelResults,
+    fit_caltrack_hourly_model,
+)
 from eemeter.eemeter.models.hourly.segmentation import segment_time_series
 
 from eemeter.common.utils import t_stat
 
 
 month_dict = {
-    'jan': 1,
-    'feb': 2,
-    'mar': 3,
-    'apr': 4,
-    'may': 5,
-    'jun': 6,
-    'jul': 7,
-    'aug': 8,
-    'sep': 9,
-    'oct': 10,
-    'nov': 11,
-    'dec': 12
+    "jan": 1,
+    "feb": 2,
+    "mar": 3,
+    "apr": 4,
+    "may": 5,
+    "jun": 6,
+    "jul": 7,
+    "aug": 8,
+    "sep": 9,
+    "oct": 10,
+    "nov": 11,
+    "dec": 12,
 }
+
 
 class IntermediateModelVariables:
     preliminary_design_matrix = None
@@ -51,7 +61,7 @@ class IntermediateModelVariables:
     occupied_temperature_bins = None
     unoccupied_temperature_bins = None
     segmented_design_matrices = None
-    
+
 
 class HourlyModel:
     def __init__(self, settings=None):
@@ -59,29 +69,28 @@ class HourlyModel:
         self.alpha = 0.1
 
     def fit(self, data):
-        meter_data = data.df['observed'].to_frame('value')
-        temperature_data = data.df['temperature']
+        meter_data = data.df["observed"].to_frame("value")
+        temperature_data = data.df["temperature"]
 
         self.model_process_variables = IntermediateModelVariables()
 
         # preliminary design matrix
         preliminary_design_matrix = create_caltrack_hourly_preliminary_design_matrix(
-            meter_data, 
-            temperature_data
+            meter_data, temperature_data
         )
-        self.model_process_variables.preliminary_design_matrix = preliminary_design_matrix
+        self.model_process_variables.preliminary_design_matrix = (
+            preliminary_design_matrix
+        )
 
         # segment time series
         segmentation = segment_time_series(
-            preliminary_design_matrix.index, 
-            self.segment_type
+            preliminary_design_matrix.index, self.segment_type
         )
         self.model_process_variables.segmentation = segmentation
 
         # estimate occupancy
         occupancy_lookup = estimate_hour_of_week_occupancy(
-            preliminary_design_matrix, 
-            segmentation=segmentation
+            preliminary_design_matrix, segmentation=segmentation
         )
         self.model_process_variables.occupancy_lookup = occupancy_lookup
 
@@ -102,7 +111,9 @@ class HourlyModel:
             occupied_t_bins,
             unoccupied_t_bins,
         )
-        self.model_process_variables.segmented_design_matrices = segmented_design_matrices
+        self.model_process_variables.segmented_design_matrices = (
+            segmented_design_matrices
+        )
 
         # fit model
         self.model = fit_caltrack_hourly_model(
@@ -117,7 +128,9 @@ class HourlyModel:
 
         # calculate baseline residuals
         prediction = self.model.predict(temperature_data.index, temperature_data)
-        meter_data = meter_data.merge(prediction.result, left_index=True, right_index=True)
+        meter_data = meter_data.merge(
+            prediction.result, left_index=True, right_index=True
+        )
         meter_data.dropna(inplace=True)
         meter_data["resid"] = meter_data["value"] - meter_data["predicted_usage"]
 
@@ -128,11 +141,14 @@ class HourlyModel:
                 "mean_baseline_usage": np.mean(meter_data["value"]),
                 "n": self.model_metrics["all"].observed_length,
                 "n_prime": self.model_metrics["all"].n_prime,
-                "MSE": np.mean(meter_data["resid"]**2),
+                "MSE": np.mean(meter_data["resid"] ** 2),
             }
         else:
             # monthly segment model
-            model_month_dict = {k.replace("-weighted", "").split("-")[1]:k for k in self.model_metrics.keys()}
+            model_month_dict = {
+                k.replace("-weighted", "").split("-")[1]: k
+                for k in self.model_metrics.keys()
+            }
             meter_data["month"] = meter_data.index.month
 
             for month_abbr, model_key in model_month_dict.items():
@@ -143,7 +159,7 @@ class HourlyModel:
                     "mean_baseline_usage": np.mean(month_data["value"]),
                     "n": self.model_metrics[model_key].observed_length,
                     "n_prime": self.model_metrics[model_key].n_prime,
-                    "MSE": np.mean(month_data["resid"]**2),
+                    "MSE": np.mean(month_data["resid"] ** 2),
                 }
 
         return self
@@ -152,10 +168,8 @@ class HourlyModel:
         if not self.is_fit:
             raise RuntimeError("Model must be fit before predictions can be made.")
         prediction_index = reporting_data.df.index
-        temperature_series = reporting_data.df['temperature']
-        model_prediction = self.model.predict(
-            prediction_index, temperature_series
-        )
+        temperature_series = reporting_data.df["temperature"]
+        model_prediction = self.model.predict(prediction_index, temperature_series)
 
         df_res = pd.concat([reporting_data.df, model_prediction.result], axis=1)
         df_res = df_res[["temperature", "observed", "predicted_usage"]]
@@ -168,7 +182,7 @@ class HourlyModel:
                 if month_n == "all":
                     idx = df_res.index
                 else:
-                    idx = df_res.index[df_res.index.month == month_n]                   
+                    idx = df_res.index[df_res.index.month == month_n]
 
                 mean_baseline_usage = unc_vars["mean_baseline_usage"]
                 n = unc_vars["n"]
@@ -180,28 +194,32 @@ class HourlyModel:
                 t = t_stat(self.alpha, m, tail=2)
 
                 # ASHRAE 14
-                total_unc = 1.26*t*reporting_usage/(m*mean_baseline_usage)*np.sqrt(
-                    mse*n/n_prime*(1 + 2/n_prime)*m
+                total_unc = (
+                    1.26
+                    * t
+                    * reporting_usage
+                    / (m * mean_baseline_usage)
+                    * np.sqrt(mse * n / n_prime * (1 + 2 / n_prime) * m)
                 )
 
-                avg_unc = np.sqrt(total_unc**2/m)
+                avg_unc = np.sqrt(total_unc**2 / m)
                 df_res.loc[idx, "predicted_uncertainty"] = avg_unc
 
         return df_res
 
     def to_dict(self):
         model_dict = self.model.json()
-        model_dict['model']['unc_vars'] = self._autocorr_unc_vars
+        model_dict["model"]["unc_vars"] = self._autocorr_unc_vars
         return model_dict
-    
+
     def to_json(self):
-        return json.dumps(self.to_dict())    
+        return json.dumps(self.to_dict())
 
     @classmethod
     def from_dict(cls, data):
         hourly_model = cls()
         hourly_model.model = CalTRACKHourlyModelResults.from_json(data)
-        hourly_model._autocorr_unc_vars = data['model']['unc_vars']
+        hourly_model._autocorr_unc_vars = data["model"]["unc_vars"]
         hourly_model.is_fit = True
         return hourly_model
 

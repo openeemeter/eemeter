@@ -20,6 +20,7 @@
 
 from abc import ABC, abstractmethod
 
+
 class AbstractDataProcessor(ABC):
     """Abstract class for data processors."""
 
@@ -39,8 +40,6 @@ class AbstractDataProcessor(ABC):
         """
         pass
 
-
-
     @abstractmethod
     def _check_data_sufficiency(self, data):
         """Check data sufficiency.
@@ -56,4 +55,3 @@ class AbstractDataProcessor(ABC):
             Whether the data is sufficient.
         """
         pass
-    

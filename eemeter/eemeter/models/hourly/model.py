@@ -26,7 +26,6 @@ from eemeter.eemeter.common.features import (
     compute_temperature_bin_features,
     compute_occupancy_feature,
     merge_features,
-
 )
 from eemeter.eemeter.models.hourly.metrics import ModelMetrics
 from eemeter.eemeter.models.hourly.segmentation import (
@@ -246,7 +245,7 @@ class CalTRACKHourlyModel(SegmentedModel):
         A dataframe of bin endpoint flags for each segment. Segment names are columns.
     unoccupied_temperature_bins : :any:`pandas.DataFrame`
         Ditto for the unoccupied mode.
-    segment_type : :any:`str` 
+    segment_type : :any:`str`
         The type of segment used to fit the model
     """
 
@@ -258,7 +257,6 @@ class CalTRACKHourlyModel(SegmentedModel):
         unoccupied_temperature_bins,
         segment_type: str,
     ):
-
         self.occupancy_lookup = occupancy_lookup
         self.occupied_temperature_bins = occupied_temperature_bins
         self.unoccupied_temperature_bins = unoccupied_temperature_bins
@@ -322,6 +320,7 @@ class CalTRACKHourlyModel(SegmentedModel):
         )
 
         return c
+
 
 def caltrack_hourly_fit_feature_processor(
     segment_name,

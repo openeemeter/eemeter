@@ -580,9 +580,8 @@ def _estimate_hour_of_week_occupancy(model_data, threshold):
         .astype(bool)
     )  # guarantee an index value for all hours
 
-def estimate_hour_of_week_occupancy(
-    data, segmentation=None, threshold=0.65
-):
+
+def estimate_hour_of_week_occupancy(data, segmentation=None, threshold=0.65):
     """Estimate occupancy features for each segment.
 
     Parameters

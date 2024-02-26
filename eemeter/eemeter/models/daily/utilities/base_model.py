@@ -44,7 +44,7 @@ def get_intercept(y, alpha=2):
     intercept : float
         Intercept of the linear regression model.
     """
-    
+
     if alpha == 2:
         intercept = np.mean(y)
     else:
@@ -78,7 +78,7 @@ def get_slope(x, y, x_bp, intercept, alpha=2):
 
 def linear_fit(x, y, alpha):
     if alpha == 2:
-        #TODO raises exception if meter usage is identical for this period
+        # TODO raises exception if meter usage is identical for this period
         # try/catch and return np.inf?
         res = linregress(x, y)
 

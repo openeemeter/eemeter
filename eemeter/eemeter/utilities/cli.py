@@ -64,7 +64,9 @@ def cli():
 
 
 def _get_data(
-    sample, meter_file, temperature_file,
+    sample,
+    meter_file,
+    temperature_file,
 ):
     if sample is not None:
         with resource_stream("eemeter.eemeter.samples", "metadata.json") as f:
@@ -97,9 +99,11 @@ def _get_data(
         )
     else:
         raise click.ClickException("Temperature data not specified.")
-    
+
     is_electricity_data = "elec" in sample if sample else False
-    data = DailyBaselineData.from_series(meter_data, temperature_data, is_electricity_data=is_electricity_data)
+    data = DailyBaselineData.from_series(
+        meter_data, temperature_data, is_electricity_data=is_electricity_data
+    )
     return data
 
 
@@ -108,9 +112,7 @@ def _get_data(
 @click.option("--meter-file", default=None, type=click.File("rb"))
 @click.option("--temperature-file", default=None, type=click.File("rb"))
 @click.option("--output-file", default=None, type=click.File("wb"))
-def caltrack(
-    sample, meter_file, temperature_file, output_file
-):
+def caltrack(sample, meter_file, temperature_file, output_file):
     data = _get_data(
         sample,
         meter_file,

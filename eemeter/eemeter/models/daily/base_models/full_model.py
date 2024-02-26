@@ -121,7 +121,7 @@ def get_full_model_x(model_key, x, T_min, T_max, T_min_seg, T_max_seg):
     list: A list of adjusted parameters.
 
     """
-    
+
     if model_key == "hdd_tidd_cdd_smooth":
         [hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept] = x
 

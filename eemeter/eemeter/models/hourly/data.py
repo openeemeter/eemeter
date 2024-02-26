@@ -24,6 +24,7 @@ from eemeter.eemeter.models.hourly.usage_per_day import caltrack_sufficiency_cri
 from eemeter.eemeter.common.data_processor_utilities import compute_minimum_granularity
 from typing import Union, Optional
 
+
 class HourlyReportingData:
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
         if "observed" not in df.columns:
@@ -37,42 +38,52 @@ class HourlyReportingData:
         self.df = df
 
     def _correct_frequency(self, df: pd.DataFrame):
-        meter = df['observed']
-        temp = df['temperature']
+        meter = df["observed"]
+        temp = df["temperature"]
 
         # unknown for weirdly large frequencies. Anything higher frequency than hourly frequency still comes up as hourly
-        min_granularity = compute_minimum_granularity(meter.dropna().index, 'unknown')
+        min_granularity = compute_minimum_granularity(meter.dropna().index, "unknown")
 
-        if meter.index.inferred_freq is None and min_granularity != 'hourly':
-            raise ValueError(f"Meter Data must be atleast hourly, but is {min_granularity}.")            
+        if meter.index.inferred_freq is None and min_granularity != "hourly":
+            raise ValueError(
+                f"Meter Data must be atleast hourly, but is {min_granularity}."
+            )
         else:
-            #TODO : Add the high frequency check for meter data
-            meter = meter.resample('H').sum(min_count=1)
-            meter.index.freq = 'H'
+            # TODO : Add the high frequency check for meter data
+            meter = meter.resample("H").sum(min_count=1)
+            meter.index.freq = "H"
 
-        #TODO : Add the high frequency check for temperature data and add NaNs
-        temp = temp.resample('H').mean()
-        temp.index.freq = 'H'
+        # TODO : Add the high frequency check for temperature data and add NaNs
+        temp = temp.resample("H").mean()
+        temp.index.freq = "H"
 
         return merge_features([meter, temp], keep_partial_nan_rows=True)
 
     @classmethod
-    def from_series(cls, meter_data: Optional[pd.Series], temperature_data: pd.Series, is_electricity_data: bool):
-        #TODO verify
+    def from_series(
+        cls,
+        meter_data: Optional[pd.Series],
+        temperature_data: pd.Series,
+        is_electricity_data: bool,
+    ):
+        # TODO verify
         if meter_data is None:
-            meter_data = temperature_data.copy().rename('observed') * np.nan
+            meter_data = temperature_data.copy().rename("observed") * np.nan
         df = merge_features([meter_data, temperature_data], keep_partial_nan_rows=True)
-        df = df.rename({
-            df.columns[0]: 'observed',
-            df.columns[1]: 'temperature',
-        }, axis=1)
+        df = df.rename(
+            {
+                df.columns[0]: "observed",
+                df.columns[1]: "temperature",
+            },
+            axis=1,
+        )
         return cls(df, is_electricity_data)
 
 
 class HourlyBaselineData(HourlyReportingData):
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
         if is_electricity_data:
-            df[df['observed'] == 0]["observed"] = np.nan
+            df[df["observed"] == 0]["observed"] = np.nan
 
         df = self._correct_frequency(df)
 
@@ -80,8 +91,8 @@ class HourlyBaselineData(HourlyReportingData):
         self.sufficiency_warnings = self._check_data_sufficiency()
 
     def _check_data_sufficiency(self):
-        meter = self.df['observed'].rename('meter_value')
-        temp = self.df['temperature']
+        meter = self.df["observed"].rename("meter_value")
+        temp = self.df["temperature"]
 
         temperature_features = compute_temperature_features(
             meter.index,
@@ -90,19 +101,28 @@ class HourlyBaselineData(HourlyReportingData):
         )
 
         sufficiency_df = merge_features([meter, temperature_features])
-        sufficiency = caltrack_sufficiency_criteria(sufficiency_df, requested_start=None, requested_end=None)
+        sufficiency = caltrack_sufficiency_criteria(
+            sufficiency_df, requested_start=None, requested_end=None
+        )
         return sufficiency.warnings
 
     @classmethod
-    def from_series(cls, meter_data: Union[pd.Series, pd.DataFrame], temperature_data: Union[pd.Series, pd.DataFrame], is_electricity_data: bool):
+    def from_series(
+        cls,
+        meter_data: Union[pd.Series, pd.DataFrame],
+        temperature_data: Union[pd.Series, pd.DataFrame],
+        is_electricity_data: bool,
+    ):
         if isinstance(meter_data, pd.Series):
             meter_data = meter_data.to_frame()
         if isinstance(temperature_data, pd.Series):
             temperature_data = temperature_data.to_frame()
-        meter_data = meter_data.rename(columns={meter_data.columns[0]: 'observed'})
-        temperature_data = temperature_data.rename(columns={temperature_data.columns[0]: 'temperature'})
-        temperature_data.index = temperature_data.index.tz_convert(meter_data.index.tzinfo)
+        meter_data = meter_data.rename(columns={meter_data.columns[0]: "observed"})
+        temperature_data = temperature_data.rename(
+            columns={temperature_data.columns[0]: "temperature"}
+        )
+        temperature_data.index = temperature_data.index.tz_convert(
+            meter_data.index.tzinfo
+        )
         df = pd.concat([meter_data, temperature_data], axis=1).dropna()
         return cls(df, is_electricity_data)
-
-

@@ -20,5 +20,6 @@
 
 import eemeter
 
+
 def test_version():
     assert eemeter.__version__.startswith("4")

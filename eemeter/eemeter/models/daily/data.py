@@ -23,7 +23,7 @@ from eemeter.eemeter.common.data_processor_utilities import (
     sufficiency_criteria_baseline,
     clean_billing_daily_data,
     compute_minimum_granularity,
-    remove_duplicates
+    remove_duplicates,
 )
 from eemeter.eemeter.common.features import compute_temperature_features
 from eemeter.eemeter.common.warnings import EEMeterWarning
@@ -108,20 +108,24 @@ class _DailyData:
         temperature_data.index = temperature_data.index.tz_convert(
             meter_data.index.tzinfo
         )
-        #TODO revisit the following index modifications; there may be a few unintuitive outcomes with offset data
+        # TODO revisit the following index modifications; there may be a few unintuitive outcomes with offset data
         # constrain temperature index to meter index
         if not meter_data.empty:
             meter_index_min = meter_data.index.min().normalize()
             meter_index_max = meter_data.index.max().normalize() + pd.Timedelta(days=1)
             temperature_data = temperature_data[
-                (temperature_data.index >= meter_index_min) & (temperature_data.index < meter_index_max)
+                (temperature_data.index >= meter_index_min)
+                & (temperature_data.index < meter_index_max)
             ]
         # constrain meter index to temperature index
         if not temperature_data.empty:
             temp_index_min = temperature_data.index.min().normalize()
-            temp_index_max = temperature_data.index.max().normalize() + pd.Timedelta(days=1)
+            temp_index_max = temperature_data.index.max().normalize() + pd.Timedelta(
+                days=1
+            )
             meter_data = meter_data[
-                (meter_data.index >= temp_index_min) & (meter_data.index < temp_index_max)
+                (meter_data.index >= temp_index_min)
+                & (meter_data.index < temp_index_max)
             ]
         df = pd.concat([meter_data, temperature_data], axis=1)
         return cls(df, is_electricity_data)
@@ -536,8 +540,8 @@ class DailyReportingData(_DailyData):
         super().__init__(df, is_electricity_data)
 
         # Caltrack 3.5.1.1
-        if 'observed' in self._df.columns and not self._df.observed.dropna().empty:
-            self._df.loc[self._df['temperature'].isna(), 'observed'] = np.nan
+        if "observed" in self._df.columns and not self._df.observed.dropna().empty:
+            self._df.loc[self._df["temperature"].isna(), "observed"] = np.nan
 
     @classmethod
     def from_series(

@@ -19,11 +19,30 @@
 """
 from eemeter.eemeter.samples import load_sample
 from eemeter.eemeter.common.transform import get_baseline_data, get_reporting_data
-from eemeter.eemeter import DailyBaselineData, DailyReportingData, DailyModel, BillingBaselineData, BillingReportingData, BillingModel, HourlyModel, HourlyBaselineData, HourlyReportingData
-from eemeter.eemeter.models.hourly.design_matrices import create_caltrack_hourly_preliminary_design_matrix, create_caltrack_hourly_segmented_design_matrices
+from eemeter.eemeter import (
+    DailyBaselineData,
+    DailyReportingData,
+    DailyModel,
+    BillingBaselineData,
+    BillingReportingData,
+    BillingModel,
+    HourlyModel,
+    HourlyBaselineData,
+    HourlyReportingData,
+)
+from eemeter.eemeter.models.hourly.design_matrices import (
+    create_caltrack_hourly_preliminary_design_matrix,
+    create_caltrack_hourly_segmented_design_matrices,
+)
 from eemeter.eemeter.models.hourly.segmentation import segment_time_series
-from eemeter.eemeter.common.features import fit_temperature_bins, estimate_hour_of_week_occupancy
-from eemeter.eemeter.models.hourly.model import CalTRACKHourlyModelResults, fit_caltrack_hourly_model
+from eemeter.eemeter.common.features import (
+    fit_temperature_bins,
+    estimate_hour_of_week_occupancy,
+)
+from eemeter.eemeter.models.hourly.model import (
+    CalTRACKHourlyModelResults,
+    fit_caltrack_hourly_model,
+)
 from eemeter.eemeter.models.hourly.derivatives import metered_savings
 
 import json
@@ -41,17 +60,23 @@ def test_json_daily():
     baseline_meter_data, warnings = get_baseline_data(
         meter_data, end=blackout_start_date, max_days=365
     )
-    baseline_data = DailyBaselineData.from_series(baseline_meter_data, temperature_data, is_electricity_data=True)
+    baseline_data = DailyBaselineData.from_series(
+        baseline_meter_data, temperature_data, is_electricity_data=True
+    )
     baseline_model = DailyModel().fit(baseline_data, ignore_disqualification=True)
 
     # predict on reporting year and calculate savings
     reporting_meter_data, warnings = get_reporting_data(
         meter_data, start=blackout_end_date, max_days=365
     )
-    #TODO change to Reporting once class is fixed
-    reporting_data = DailyBaselineData.from_series(reporting_meter_data, temperature_data, is_electricity_data=True)
+    # TODO change to Reporting once class is fixed
+    reporting_data = DailyBaselineData.from_series(
+        reporting_meter_data, temperature_data, is_electricity_data=True
+    )
     metered_savings_dataframe = baseline_model.predict(reporting_data)
-    total_metered_savings = (metered_savings_dataframe['observed'] - metered_savings_dataframe['predicted']).sum()
+    total_metered_savings = (
+        metered_savings_dataframe["observed"] - metered_savings_dataframe["predicted"]
+    ).sum()
 
     # serialize, deserialize model
     json_str = baseline_model.to_json()
@@ -59,10 +84,13 @@ def test_json_daily():
 
     # compute metered savings from the loaded model
     prediction_json = loaded_model.predict(reporting_data)
-    total_metered_savings_loaded = (prediction_json['observed'] - prediction_json['predicted']).sum()
+    total_metered_savings_loaded = (
+        prediction_json["observed"] - prediction_json["predicted"]
+    ).sum()
 
     # compare results
     assert total_metered_savings == total_metered_savings_loaded
+
 
 def test_json_billing():
     meter_data, temperature_data, sample_metadata = load_sample(
@@ -76,16 +104,22 @@ def test_json_billing():
     baseline_meter_data, warnings = get_baseline_data(
         meter_data, end=blackout_start_date, max_days=365
     )
-    baseline_data = BillingBaselineData.from_series(baseline_meter_data, temperature_data, is_electricity_data=True)
+    baseline_data = BillingBaselineData.from_series(
+        baseline_meter_data, temperature_data, is_electricity_data=True
+    )
     baseline_model = BillingModel().fit(baseline_data, ignore_disqualification=True)
 
     # predict on reporting year and calculate savings
     reporting_meter_data, warnings = get_reporting_data(
         meter_data, start=blackout_end_date, max_days=365
     )
-    reporting_data = BillingReportingData.from_series(reporting_meter_data, temperature_data, is_electricity_data=True)
+    reporting_data = BillingReportingData.from_series(
+        reporting_meter_data, temperature_data, is_electricity_data=True
+    )
     metered_savings_dataframe = baseline_model.predict(reporting_data)
-    total_metered_savings = (metered_savings_dataframe['observed'] - metered_savings_dataframe['predicted']).sum()
+    total_metered_savings = (
+        metered_savings_dataframe["observed"] - metered_savings_dataframe["predicted"]
+    ).sum()
 
     # serialize, deserialize model
     json_str = baseline_model.to_json()
@@ -93,7 +127,9 @@ def test_json_billing():
 
     # compute metered savings from the loaded model
     prediction_json = loaded_model.predict(reporting_data)
-    total_metered_savings_loaded = (prediction_json['observed'] - prediction_json['predicted']).sum()
+    total_metered_savings_loaded = (
+        prediction_json["observed"] - prediction_json["predicted"]
+    ).sum()
 
     # compare results
     assert total_metered_savings == total_metered_savings_loaded
@@ -111,7 +147,9 @@ def test_json_hourly():
     baseline_meter_data, warnings = get_baseline_data(
         meter_data, end=blackout_start_date, max_days=365
     )
-    baseline = HourlyBaselineData.from_series(baseline_meter_data, temperature_data, is_electricity_data=True)
+    baseline = HourlyBaselineData.from_series(
+        baseline_meter_data, temperature_data, is_electricity_data=True
+    )
 
     # build a CalTRACK hourly model
     baseline_model = HourlyModel().fit(baseline)
@@ -120,7 +158,9 @@ def test_json_hourly():
     reporting_meter_data, warnings = get_reporting_data(
         meter_data, start=blackout_end_date, max_days=365
     )
-    reporting = HourlyReportingData.from_series(reporting_meter_data, temperature_data, is_electricity_data=True)
+    reporting = HourlyReportingData.from_series(
+        reporting_meter_data, temperature_data, is_electricity_data=True
+    )
 
     result1 = baseline_model.predict(reporting)
 
@@ -130,4 +170,4 @@ def test_json_hourly():
 
     result2 = m.predict(reporting)
 
-    assert result1['predicted'].sum() == result2['predicted'].sum()
+    assert result1["predicted"].sum() == result2["predicted"].sum()

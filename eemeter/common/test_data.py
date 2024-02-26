@@ -67,9 +67,11 @@ def load_test_data(data_type: str):
 
     valid_list = [k.value for k in TutorialDataChoice]
     keys = [k.lower() for k in TutorialDataChoice.__members__.keys()]
-    
-    if data_type not in valid_list: 
-        raise ValueError(f"Data type {data_type} not recognized. \nMust be one of {keys}.")
+
+    if data_type not in valid_list:
+        raise ValueError(
+            f"Data type {data_type} not recognized. \nMust be one of {keys}."
+        )
 
     if data_type in [*comparison_group_time_series, *treatment_time_series]:
         return _load_time_series_data(data_type)
@@ -82,8 +84,8 @@ def download_all_test_data():
     """Downloads all the tutorial data to the data directory"""
 
     # get all repo files
-    repo_full_name = 'openeemeter/eemeter'
-    path = 'data'
+    repo_full_name = "openeemeter/eemeter"
+    path = "data"
 
     url = f"https://api.github.com/repos/{repo_full_name}/contents/{path}"
 
@@ -93,7 +95,7 @@ def download_all_test_data():
     r = requests.get(url)
     r.raise_for_status()
 
-    files = [file['name'] for file in r.json() if file['type'] == 'file']
+    files = [file["name"] for file in r.json() if file["type"] == "file"]
 
     # download all repo files
     for file in files:
@@ -103,11 +105,8 @@ def download_all_test_data():
 def _load_time_series_data(data_type):
     if data_type in comparison_group_time_series:
         df = pd.concat(
-            [
-                _load_file("hourly_data_0.parquet"),
-                _load_file("hourly_data_1.parquet")
-            ], 
-            axis=0
+            [_load_file("hourly_data_0.parquet"), _load_file("hourly_data_1.parquet")],
+            axis=0,
         )
 
     elif data_type in treatment_time_series:
@@ -115,9 +114,9 @@ def _load_time_series_data(data_type):
 
     # localize datetime and convert to CST
     df = df.reset_index()
-    df["datetime"] = df["datetime"].dt.tz_localize('UTC')
+    df["datetime"] = df["datetime"].dt.tz_localize("UTC")
     df["datetime"] = df["datetime"] + pd.Timedelta(hours=5)
-    df["datetime"] = df["datetime"].dt.tz_convert('America/Chicago')
+    df["datetime"] = df["datetime"].dt.tz_convert("America/Chicago")
     df = df.set_index(["id", "datetime"])
 
     df_baseline = df[["temperature", "observed_baseline"]]
@@ -154,16 +153,16 @@ def _aggregate_hourly_data(df, agg):
 def _load_other_data(data_type):
     if data_type == TutorialDataChoice.FEATURES:
         df = _load_file("features.csv")
-    
+
     elif data_type == TutorialDataChoice.SEASONAL_HOUR_DAY_WEEK_LOADSHAPE:
         df = _load_file("seasonal_hourly_day_of_week_loadshape.csv")
-    
+
     elif data_type == TutorialDataChoice.SEASONAL_DAY_WEEK_LOADSHAPE:
         df = _load_file("seasonal_day_of_week_loadshape.csv")
-    
+
     elif data_type == TutorialDataChoice.MONTH_LOADSHAPE:
         df = _load_file("month_loadshape.csv")
-        
+
     df = df.set_index("id")
 
     return df
@@ -178,16 +177,16 @@ def _load_file(file):
     if not file.exists():
         # always check for attribution file
         if not attribution_file.exists():
-           _download_repo_data_file(attribution_file)
+            _download_repo_data_file(attribution_file)
 
         _download_repo_data_file(file)
 
     if ext == ".csv":
         df = pd.read_csv(file)
-    
+
     elif ext == ".parquet":
         df = pd.read_parquet(file)
-    
+
     else:
         raise ValueError(f"File type {ext} not recognized.")
 
@@ -195,8 +194,8 @@ def _load_file(file):
 
 
 def _download_repo_data_file(file):
-    repo_full_name = 'openeemeter/eemeter'
-    path = 'data'
+    repo_full_name = "openeemeter/eemeter"
+    path = "data"
 
     url = f"https://raw.githubusercontent.com/{repo_full_name}/{branch}/{path}/{file}"
 
@@ -207,7 +206,7 @@ def _download_repo_data_file(file):
     if not data_dir.exists():
         data_dir.mkdir()
 
-    with open(data_dir / file, 'wb') as f:
+    with open(data_dir / file, "wb") as f:
         f.write(r.content)
 
 

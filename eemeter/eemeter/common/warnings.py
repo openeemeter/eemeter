@@ -60,4 +60,4 @@ class EEMeterWarning(object):
         data = ""
         if self.data:
             data = f"\n{self.data}"
-        logging.getLogger('eemeter').warning(f"{self.description}{data}")
+        logging.getLogger("eemeter").warning(f"{self.description}{data}")

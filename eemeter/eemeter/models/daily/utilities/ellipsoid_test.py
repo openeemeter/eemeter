@@ -27,15 +27,15 @@ from scipy.optimize import minimize_scalar
 def ellipsoid_intersection_test(mu_A, mu_B, cov_A, cov_B):
     """
     Tests whether two ellipsoids intersect or not. The ellipsoids are defined by their mean vectors and covariance matrices.
-    The function uses the K-function to calculate the intersection of the ellipsoids. If the K-function is greater than or equal to 0, 
+    The function uses the K-function to calculate the intersection of the ellipsoids. If the K-function is greater than or equal to 0,
     then the ellipsoids intersect, otherwise they do not.
-    
+
     Parameters:
     mu_A (numpy.ndarray): Mean vector of the first ellipsoid.
     mu_B (numpy.ndarray): Mean vector of the second ellipsoid.
     cov_A (numpy.ndarray): Covariance matrix of the first ellipsoid.
     cov_B (numpy.ndarray): Covariance matrix of the second ellipsoid.
-    
+
     Returns:
     bool: True if the ellipsoids intersect, False otherwise.
     """
@@ -65,8 +65,8 @@ def ellipsoid_intersection_test(mu_A, mu_B, cov_A, cov_B):
 
 def ellipsoid_K_function(ss, lambdas, v_squared):
     """
-    The K-function is a measure of spatial point pattern, often used in spatial statistics 
-    to analyze the clustering or dispersion of points in a dataset. The formula used in this 
+    The K-function is a measure of spatial point pattern, often used in spatial statistics
+    to analyze the clustering or dispersion of points in a dataset. The formula used in this
     code is a specific calculation for an ellipsoid.
 
     Parameters:
@@ -97,7 +97,7 @@ def confidence_ellipse(x, y, var=np.ones([2, 2]) * 1.96):
     list: A list containing the mean, covariance, major and minor axis lengths, and rotation angle of the ellipse.
 
     """
-    
+
     # Applying a median filter to help with outliers
     idx_sorted = np.argsort(x).flatten()
     idx_original = np.argsort(idx_sorted).flatten()

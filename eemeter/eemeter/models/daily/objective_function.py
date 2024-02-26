@@ -158,7 +158,7 @@ def obj_fcn_decorator(
 
     def elastic_net_penalty(X, T_sorted, obs_sorted, weight_sorted, wRMSE):
         """
-        Calculates the elastic net penalty for a given set of inputs. The elastic net is a regularized 
+        Calculates the elastic net penalty for a given set of inputs. The elastic net is a regularized
         regression method that linearly combines the L1 and L2 penalties of the lasso and ridge methods.
 
         Parameters:
