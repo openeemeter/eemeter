@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2023 OpenEEmeter contributors
+   Copyright 2014-2024 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -37,16 +37,14 @@
 
 # -- Project information -----------------------------------------------------
 
-from eemeter import get_version
+import eemeter
 
 project = "eemeter"
-copyright = "Copyright 2014-2023 OpenEEmeter contributors"
+copyright = "Copyright 2014-2024 OpenEEmeter contributors"
 author = "Phil Ngo"
 
-# The short X.Y version
-version = get_version()
 # The full version, including alpha/beta/rc tags
-release = version
+release = eemeter.__version__
 
 
 # -- General configuration ---------------------------------------------------

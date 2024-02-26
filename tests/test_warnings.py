@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2023 OpenEEmeter contributors
+   Copyright 2014-2024 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
    limitations under the License.
 
 """
-from eemeter.warnings import EEMeterWarning
+from eemeter.eemeter.common.warnings import EEMeterWarning
 
 
 def test_eemeter_warning():

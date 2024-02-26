@@ -6,6 +6,13 @@ Development
 
 * Placeholder
 
+4.0.0
+-----
+
+* Update daily model methods, API, and serialization
+* Provide new API for hourly model to match daily syntax and prepare for future additions
+* Add baseline and reporting dataclasses to support compliant initialization of meter and temperature data
+
 3.2.0
 -----
 
