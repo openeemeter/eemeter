@@ -21,7 +21,6 @@ from eemeter.eemeter.samples import load_sample
 from eemeter.eemeter.common.transform import get_baseline_data, get_reporting_data
 from eemeter.eemeter import (
     DailyBaselineData,
-    DailyReportingData,
     DailyModel,
     BillingBaselineData,
     BillingReportingData,
@@ -30,22 +29,7 @@ from eemeter.eemeter import (
     HourlyBaselineData,
     HourlyReportingData,
 )
-from eemeter.eemeter.models.hourly.design_matrices import (
-    create_caltrack_hourly_preliminary_design_matrix,
-    create_caltrack_hourly_segmented_design_matrices,
-)
-from eemeter.eemeter.models.hourly.segmentation import segment_time_series
-from eemeter.eemeter.common.features import (
-    fit_temperature_bins,
-    estimate_hour_of_week_occupancy,
-)
-from eemeter.eemeter.models.hourly.model import (
-    CalTRACKHourlyModelResults,
-    fit_caltrack_hourly_model,
-)
-from eemeter.eemeter.models.hourly.derivatives import metered_savings
 
-import json
 
 
 def test_json_daily():

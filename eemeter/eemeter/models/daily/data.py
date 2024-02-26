@@ -17,22 +17,21 @@
    limitations under the License.
 
 """
-import eemeter.common.const as _const
-from eemeter.eemeter.common.data_processor_utilities import (
-    as_freq,
-    sufficiency_criteria_baseline,
-    clean_billing_daily_data,
-    compute_minimum_granularity,
-    remove_duplicates,
-)
-from eemeter.eemeter.common.features import compute_temperature_features
-from eemeter.eemeter.common.warnings import EEMeterWarning
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
-from datetime import datetime
 
-from typing import Optional, Union
+import eemeter.common.const as _const
+from eemeter.eemeter.common.data_processor_utilities import (
+    as_freq,
+    clean_billing_daily_data,
+    compute_minimum_granularity,
+    remove_duplicates,
+    sufficiency_criteria_baseline,
+)
+from eemeter.eemeter.common.features import compute_temperature_features
+from eemeter.eemeter.common.warnings import EEMeterWarning
 
 
 class _DailyData:

@@ -17,15 +17,11 @@
    limitations under the License.
 
 """
-from collections import namedtuple
 
 import pytz
 
-from eemeter.eemeter.common.transform import (
-    day_counts,
-)
+from eemeter.eemeter.common.transform import day_counts
 from eemeter.eemeter.common.warnings import EEMeterWarning
-
 
 __all__ = (
     "DataSufficiency",

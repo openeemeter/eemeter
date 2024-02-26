@@ -22,7 +22,6 @@ from __future__ import annotations
 
 from enum import Enum
 
-
 default_season_def = {
     "options": ["summer", "shoulder", "winter"],
     "January": "winter",

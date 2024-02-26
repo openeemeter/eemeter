@@ -17,14 +17,13 @@
    limitations under the License.
 
 """
-import numpy as np
-from scipy.optimize import minimize_scalar
-from scipy.interpolate import BSpline
 import numba
+import numpy as np
+from scipy.interpolate import BSpline
+from scipy.optimize import minimize_scalar
 
 from eemeter.common.adaptive_loss_tck import TCK
 from eemeter.common.utils import OoM_numba
-
 
 LOSS_ALPHA_MIN = -100.0
 

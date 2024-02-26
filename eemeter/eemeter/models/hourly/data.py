@@ -17,12 +17,14 @@
    limitations under the License.
 
 """
-import pandas as pd
+from typing import Optional, Union
+
 import numpy as np
-from eemeter.eemeter.common.features import merge_features, compute_temperature_features
-from eemeter.eemeter.models.hourly.usage_per_day import caltrack_sufficiency_criteria
+import pandas as pd
+
 from eemeter.eemeter.common.data_processor_utilities import compute_minimum_granularity
-from typing import Union, Optional
+from eemeter.eemeter.common.features import compute_temperature_features, merge_features
+from eemeter.eemeter.models.hourly.usage_per_day import caltrack_sufficiency_criteria
 
 
 class HourlyReportingData:

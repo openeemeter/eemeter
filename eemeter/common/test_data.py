@@ -18,9 +18,10 @@
 
 """
 
+from pathlib import Path
+
 import pandas as pd
 import requests
-from pathlib import Path
 
 from eemeter.common.const import TutorialDataChoice
 

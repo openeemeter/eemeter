@@ -17,32 +17,26 @@
    limitations under the License.
 
 """
-import numpy as np
-import numba
-
-from eemeter.eemeter.models.daily.base_models.full_model import full_model
-from eemeter.eemeter.models.daily.base_models.hdd_tidd_cdd import full_model_weight
-from eemeter.eemeter.models.daily.parameters import ModelCoefficients
-from eemeter.eemeter.models.daily.utilities.base_model import (
-    linear_fit,
-    get_slope,
-    get_intercept,
-    get_T_bnds,
-)
-
-from eemeter.eemeter.models.daily.utilities.base_model import fix_identical_bnds
-
-from eemeter.eemeter.models.daily.objective_function import obj_fcn_decorator
-
-from eemeter.eemeter.models.daily.parameters import ModelType
+from math import isclose
 from typing import Optional
 
-from math import isclose
 import nlopt
+import numba
+import numpy as np
 
 from eemeter.common.adaptive_loss import adaptive_weights
-
+from eemeter.eemeter.models.daily.base_models.full_model import full_model
+from eemeter.eemeter.models.daily.base_models.hdd_tidd_cdd import full_model_weight
+from eemeter.eemeter.models.daily.objective_function import obj_fcn_decorator
 from eemeter.eemeter.models.daily.optimize import Optimizer, nlopt_algorithms
+from eemeter.eemeter.models.daily.parameters import ModelCoefficients, ModelType
+from eemeter.eemeter.models.daily.utilities.base_model import (
+    fix_identical_bnds,
+    get_intercept,
+    get_slope,
+    get_T_bnds,
+    linear_fit,
+)
 
 
 def fit_c_hdd_tidd(

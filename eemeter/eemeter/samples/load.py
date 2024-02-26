@@ -18,10 +18,10 @@
 
 """
 import json
-from pkg_resources import resource_stream
 
-from dateutil.parser import parse as parse_date
 import pytz
+from dateutil.parser import parse as parse_date
+from pkg_resources import resource_stream
 
 from ..utilities.io import meter_data_from_csv, temperature_data_from_csv
 

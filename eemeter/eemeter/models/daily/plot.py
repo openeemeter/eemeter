@@ -18,20 +18,17 @@
 
 """
 
-import numpy as np
-import pandas as pd
+import colorsys
+from copy import deepcopy as copy
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import colorsys
+import numpy as np
 
-from copy import deepcopy as copy
-
+from eemeter.common.adaptive_loss import IQR_outlier
 from eemeter.eemeter.models.daily.utilities.ellipsoid_test import (
     robust_confidence_ellipse,
 )
-from eemeter.common.adaptive_loss import IQR_outlier
-
 
 fontsize = 14
 mpl.rc("font", family="sans-serif")

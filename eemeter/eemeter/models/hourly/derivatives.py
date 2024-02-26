@@ -20,11 +20,6 @@
 from scipy.stats import t
 
 from eemeter.eemeter.models.daily.model import DailyModel
-from eemeter.eemeter.models.hourly.design_matrices import (
-    create_caltrack_daily_design_matrix,
-    create_caltrack_billing_design_matrix,
-)
-
 
 __all__ = ("metered_savings", "modeled_savings")
 

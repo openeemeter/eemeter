@@ -20,15 +20,13 @@
 import pandas as pd
 
 from eemeter.eemeter.common.features import (
-    compute_time_features,
     compute_temperature_features,
+    compute_time_features,
     compute_usage_per_day_feature,
     merge_features,
 )
-from eemeter.eemeter.models.hourly.segmentation import iterate_segmented_dataset
 from eemeter.eemeter.models.hourly.model import caltrack_hourly_fit_feature_processor
-from pkg_resources import resource_filename
-
+from eemeter.eemeter.models.hourly.segmentation import iterate_segmented_dataset
 
 __all__ = (
     "create_caltrack_hourly_preliminary_design_matrix",

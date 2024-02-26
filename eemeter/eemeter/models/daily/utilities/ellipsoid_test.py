@@ -18,9 +18,8 @@
 
 """
 import numpy as np
-
-from scipy.ndimage import median_filter
 from scipy.linalg import eigh
+from scipy.ndimage import median_filter
 from scipy.optimize import minimize_scalar
 
 

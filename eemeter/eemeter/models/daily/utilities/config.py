@@ -18,9 +18,8 @@
 
 """
 from __future__ import annotations
-from typing import Callable, Any, Dict
 
-import numpy as np
+from typing import Any, Callable, Dict
 
 import attrs
 

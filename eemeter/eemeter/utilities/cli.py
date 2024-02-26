@@ -17,18 +17,13 @@
    limitations under the License.
 
 """
-from pkg_resources import resource_stream
 import json
 
 import click
+from pkg_resources import resource_stream
 
-from eemeter.eemeter.models.daily.model import DailyModel
 from eemeter.eemeter.models.daily.data import DailyBaselineData
-from eemeter.eemeter.common.features import (
-    compute_usage_per_day_feature,
-    compute_temperature_features,
-    merge_features,
-)
+from eemeter.eemeter.models.daily.model import DailyModel
 from eemeter.eemeter.utilities.io import meter_data_from_csv, temperature_data_from_csv
 
 

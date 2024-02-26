@@ -17,13 +17,11 @@
    limitations under the License.
 
 """
-import numpy as np
 import numba
-
-from scipy.stats import linregress, theilslopes
-from scipy.special import lambertw
-
+import numpy as np
 from scipy.optimize import minimize_scalar
+from scipy.special import lambertw
+from scipy.stats import linregress, theilslopes
 
 from eemeter.common.utils import OoM_numba
 

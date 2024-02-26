@@ -19,12 +19,10 @@
 """
 import numpy as np
 import pandas as pd
-import pytest, pdb
 
 from eemeter.eemeter.models.daily.utilities.ellipsoid_test import (
     ellipsoid_intersection_test,
     ellipsoid_K_function,
-    confidence_ellipse,
     robust_confidence_ellipse,
     ellipsoid_split_filter,
 )

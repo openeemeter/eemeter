@@ -17,20 +17,14 @@
    limitations under the License.
 
 """
-import sys
-import platform
-import pathlib
-from copy import deepcopy as copy
 from timeit import default_timer as timer
 
-import numpy as np
-
 import nlopt
+import numpy as np
 from scipy.optimize import minimize as scipy_minimize
 from scipy.optimize import minimize_scalar as scipy_minimize_scalar
 
 from eemeter.eemeter.models.daily.optimize_results import OptimizedResult
-
 
 nlopt_algorithms = {
     "nlopt_DIRECT": nlopt.GN_DIRECT,

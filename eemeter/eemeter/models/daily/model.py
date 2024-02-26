@@ -18,10 +18,23 @@
 
 """
 
+import itertools
+import json
+from typing import Union
+
+import numpy as np
+import pandas as pd
+
+from eemeter.eemeter.common.exceptions import (
+    DataSufficiencyError,
+    DisqualifiedModelError,
+)
+from eemeter.eemeter.common.warnings import EEMeterWarning
 from eemeter.eemeter.models.daily.base_models.full_model import (
     full_model,
     get_full_model_x,
 )
+from eemeter.eemeter.models.daily.data import DailyBaselineData, DailyReportingData
 from eemeter.eemeter.models.daily.fit_base_models import (
     fit_final_model,
     fit_initial_models_from_full_model,
@@ -30,30 +43,15 @@ from eemeter.eemeter.models.daily.parameters import (
     DailyModelParameters,
     DailySubmodelParameters,
 )
+from eemeter.eemeter.models.daily.plot import plot
 from eemeter.eemeter.models.daily.utilities.base_model import get_smooth_coeffs
 from eemeter.eemeter.models.daily.utilities.config import (
-    default_settings,
     caltrack_legacy_settings,
+    default_settings,
     update_daily_settings,
 )
 from eemeter.eemeter.models.daily.utilities.ellipsoid_test import ellipsoid_split_filter
 from eemeter.eemeter.models.daily.utilities.selection_criteria import selection_criteria
-from eemeter.eemeter.models.daily.plot import plot
-from eemeter.eemeter.models.daily.data import DailyBaselineData, DailyReportingData
-from eemeter.eemeter.common.exceptions import (
-    DataSufficiencyError,
-    DisqualifiedModelError,
-)
-from eemeter.eemeter.common.warnings import EEMeterWarning
-
-
-import numpy as np
-import pandas as pd
-
-
-import itertools
-import json
-from typing import Union
 
 
 class DailyModel:
