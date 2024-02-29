@@ -269,15 +269,13 @@ def test_billing_baseline_data_with_monthly_frequencies(get_datetime_index):
         data={"observed": meter_value, "temperature": temperature_mean},
         index=datetime_index,
     )
+    df.index = df.index[:-1].union([df.index[-1] - pd.Timedelta(days=1)])
 
     cls = BillingBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
-    # Because one month is missing
     assert len(cls.df) == NUM_DAYS_IN_YEAR
-    assert round(cls.df.observed.sum(), 2) == round(
-        df[df.index < df.index[-1] - pd.offsets.MonthEnd(1)].observed.sum(), 2
-    )
+    assert round(cls.df.observed.sum(), 2) == round(df.observed.sum(), 2)
     assert len(cls.warnings) == 1
     assert (
         cls.warnings[0].qualified_name
@@ -307,31 +305,23 @@ def test_billing_baseline_data_with_bimonthly_frequencies(get_datetime_index):
         data={"observed": meter_value, "temperature": temperature_mean},
         index=datetime_index,
     )
+    df.index = df.index[:-1].union([df.index[-1] - pd.Timedelta(days=1)])
+    df['observed'][-1] = np.nan
 
     cls = BillingBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
     # Because two months are missing
     assert len(cls.df) == NUM_DAYS_IN_YEAR
-    assert round(cls.df.observed.sum(), 2) == round(
-        df[df.index <= df.index[-1] - pd.offsets.MonthEnd(1)].observed.sum(), 2
-    )
-    assert len(cls.warnings) == 2
-    # final row not nan doesnt affect result, but will be dropped and issues a warning
-    # TODO maybe worth creating a helper function to test the warnings+dq rather than rewriting the comprehension each time
-    assert set([warning.qualified_name for warning in cls.warnings]) == set(
-        [
-            "eemeter.sufficiency_criteria.billing_final_row",
-            "eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency",
-        ]
-    )
+    assert round(cls.df.observed.sum(), 2) == round(df.observed.sum(), 2)
+    assert len(cls.warnings) == 1
+    assert cls.warnings[0].qualified_name == "eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency"
     # DQ because only 6 days worth of temperature data is available
-    assert len(cls.disqualification) == 3
-    assert [dq.qualified_name for dq in cls.disqualification] == [
-        "eemeter.sufficiency_criteria.incorrect_number_of_total_days",
+    assert len(cls.disqualification) == 2
+    assert set([dq.qualified_name for dq in cls.disqualification]) == set([
         "eemeter.sufficiency_criteria.too_many_days_with_missing_data",
         "eemeter.sufficiency_criteria.too_many_days_with_missing_temperature_data",
-    ]
+    ])
 
 
 def test_billing_baseline_data_with_monthly_hourly_frequencies(
@@ -345,14 +335,13 @@ def test_billing_baseline_data_with_monthly_hourly_frequencies(
 
     # Merge 'df' and 'df_meter' in an outer join
     df = df.merge(df_meter, left_index=True, right_index=True, how="outer")
+    df = df[:-1] # when using dataframe input, rows are exact length
 
     cls = BillingBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
-    assert round(cls.df.observed.sum(), 2) == round(
-        df[df.index <= df.index[-1] - pd.offsets.MonthEnd(1)].observed.sum(), 2
-    )
+    assert round(cls.df.observed.sum(), 2) == round(df.observed.sum(), 2)
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
@@ -366,16 +355,14 @@ def test_billing_baseline_data_with_bimonthly_hourly_frequencies(
     # Create a DataFrame with daily frequency
     df_meter = get_meter_data_bimonthly
 
-    # Merge 'df' and 'df_meter' in an outer join
-    df = df.merge(df_meter, left_index=True, right_index=True, how="outer")
+    # Merge 'df' and 'df_meter' in a left join, as df input should not have trailing nan
+    df = df.merge(df_meter, left_index=True, right_index=True, how="left")
 
     cls = BillingBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
-    assert round(cls.df.observed.sum(), 2) == round(
-        df[df.index <= df.index[-1] - pd.offsets.MonthEnd(1)].observed.sum(), 2
-    )
+    assert round(cls.df.observed.sum(), 2) == round(df.observed.sum(), 2)
     assert len(cls.warnings) == 0
     assert len(cls.disqualification) == 0
 
@@ -391,14 +378,13 @@ def test_billing_baseline_data_with_monthly_daily_frequencies(
 
     # Merge 'df' and 'df_meter' in an outer join
     df = df.merge(df_meter, left_index=True, right_index=True, how="outer")
+    df = df[:-1] # when using dataframe input, rows are exact length
 
     cls = BillingBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
-    assert round(cls.df.observed.sum(), 2) == round(
-        df[df.index <= df.index[-1] - pd.offsets.MonthEnd(1)].observed.sum(), 2
-    )
+    assert round(cls.df.observed.sum(), 2) == round(df.observed.sum(), 2)
     assert len(cls.warnings) == 1
     assert (
         cls.warnings[0].qualified_name
@@ -418,15 +404,14 @@ def test_billing_baseline_data_with_bimonthly_daily_frequencies(
 
     # Merge 'df' and 'df_meter' in an outer join
     df = df.merge(df_meter, left_index=True, right_index=True, how="outer")
+    df = df[:-1] # when using dataframe input, rows are exact length
 
     cls = BillingBaselineData(df, is_electricity_data=True)
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
     # assert round(cls.df.observed.sum(), 2) == round(df.observed[:-1].sum(), 2)
-    assert round(cls.df.observed.sum(), 2) == round(
-        df[df.index <= df.index[-1] - pd.offsets.MonthEnd(1)].observed.sum(), 2
-    )
+    assert round(cls.df.observed.sum(), 2) == round(df.observed.sum(), 2)
     assert len(cls.warnings) == 1
     assert (
         cls.warnings[0].qualified_name
@@ -450,16 +435,17 @@ def test_billing_baseline_data_with_specific_hourly_input():
     cls = BillingBaselineData.from_series(meter, temperature, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert len(cls.df) == (meter.index[-1] - meter.index[0]).days + 1 # hourly series does not have trailing nan
     assert round(cls.df.observed.sum(), 2) == round(
-        meter[meter.index <= meter.index[-1] - pd.offsets.MonthEnd(1)].value.sum(), 2
+        meter.value.sum(), 2
     )
     assert len(cls.warnings) == 2
     assert [warning.qualified_name for warning in cls.warnings] == [
         "eemeter.data_quality.utc_index",
         "eemeter.sufficiency_criteria.inferior_model_usage",
     ]
-    assert len(cls.disqualification) == 0
+    assert len(cls.disqualification) == 1
+    assert cls.disqualification[0].qualified_name == "eemeter.sufficiency_criteria.incorrect_number_of_total_days"
 
 
 def test_billing_baseline_data_with_specific_daily_input():
@@ -476,16 +462,17 @@ def test_billing_baseline_data_with_specific_daily_input():
     cls = BillingBaselineData.from_series(meter, temperature, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert len(cls.df) == (meter.index[-1] - meter.index[0]).days + 1  # daily series does not have trailing nan
     assert round(cls.df.observed.sum(), 2) == round(
-        meter[meter.index <= meter.index[-1] - pd.offsets.MonthEnd(1)].value.sum(), 2
+        meter.value.sum(), 2
     )
     assert len(cls.warnings) == 2
     assert [warning.qualified_name for warning in cls.warnings] == [
         "eemeter.data_quality.utc_index",
         "eemeter.sufficiency_criteria.inferior_model_usage",
     ]
-    assert len(cls.disqualification) == 0
+    assert len(cls.disqualification) == 1
+    assert cls.disqualification[0].qualified_name == "eemeter.sufficiency_criteria.incorrect_number_of_total_days"
 
 
 def test_billing_baseline_data_with_specific_missing_daily_input():
@@ -505,16 +492,17 @@ def test_billing_baseline_data_with_specific_missing_daily_input():
     cls = BillingBaselineData.from_series(meter, temperature, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert len(cls.df) == (meter.index[-1] - meter.index[0]).days + 1  # daily series does not have trailing nan
     assert round(cls.df.observed.sum(), 2) == round(
-        meter[meter.index <= meter.index[-1] - pd.offsets.MonthEnd(1)].value.sum(), 2
+        meter.value.sum(), 2
     )
     assert len(cls.warnings) == 2
     assert [warning.qualified_name for warning in cls.warnings] == [
         "eemeter.data_quality.utc_index",
         "eemeter.sufficiency_criteria.inferior_model_usage",
     ]
-    assert len(cls.disqualification) == 0
+    assert len(cls.disqualification) == 1
+    assert cls.disqualification[0].qualified_name == "eemeter.sufficiency_criteria.incorrect_number_of_total_days"
 
 
 def test_billing_baseline_data_with_specific_monthly_input():
@@ -531,10 +519,10 @@ def test_billing_baseline_data_with_specific_monthly_input():
     cls = BillingBaselineData.from_series(meter, temperature, is_electricity_data=True)
 
     assert cls.df is not None
-    assert len(cls.df) == NUM_DAYS_IN_YEAR
+    assert len(cls.df) == (meter.index[-1] - meter.index[0]).days
     assert round(cls.df.observed.sum(), 2) == round(meter.value.sum(), 2)
-    assert len(cls.warnings) == 1
-    assert cls.warnings[0].qualified_name == "eemeter.data_quality.utc_index"
+    assert len(cls.warnings) == 2
+    assert set([warning.qualified_name for warning in cls.warnings]) == set(["eemeter.data_quality.utc_index", "eemeter.sufficiency_criteria.extreme_values_detected"])
     assert len(cls.disqualification) == 0
 
 
