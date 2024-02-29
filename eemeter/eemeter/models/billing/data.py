@@ -235,12 +235,12 @@ class _BillingData(_DailyData):
             temperature_features["n_days_kept"] = 0  # unused
             temperature_features["n_days_dropped"] = 0  # unused
         else:
-            buffer_idx = pd.to_datetime("2090-01-01 00:00:00+00:00").tz_convert(
-                meter_index.tz
-            )
+            if not meter_index.empty:
+                buffer_idx = meter_index.max() + pd.Timedelta(days=1)
+                meter_index = meter_index.union([buffer_idx])
 
             temperature_features = compute_temperature_features(
-                meter_index.union([buffer_idx]),
+                meter_index,
                 temp_series,
                 data_quality=True,
             )
