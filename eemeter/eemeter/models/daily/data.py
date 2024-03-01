@@ -114,23 +114,72 @@ class _DailyData:
             # reporting from_series always passes a full index of nan
             raise ValueError("Meter data cannot by empty.")
 
-        # TODO revisit the following index modifications; there may be a few unintuitive outcomes with offset data
-        # constrain meter index to temperature index
-        temp_index_min = temperature_data.index.min()
-        t_offset = pd.tseries.frequencies.to_offset(temperature_data.index.inferred_freq) or pd.Timedelta(days=1)
-        temp_index_max = temperature_data.index.max() + t_offset
-        # discards first period of meter data if temperature data starts mid-month
-        meter_data = meter_data[
-            (meter_data.index >= temp_index_min) & (meter_data.index < temp_index_max)
-        ]
-        if meter_data.empty:
-            raise ValueError("Meter and temperature data are fully misaligned.")
-
         is_billing_data = False
         if not meter_data.empty:
             is_billing_data = compute_minimum_granularity(
                 meter_data.index, "billing"
             ).startswith("billing")
+
+        # first, trim the data to exclude NaNs on the outer edges of the data
+        last_meter_index = meter_data.last_valid_index()
+        if is_billing_data:
+            # preserve final NaN for billing data only
+            last = meter_data.last_valid_index()
+            if last and last != meter_data.index[-1]:
+                # TODO include warning here for non-NaN final billing row since it will be discarded
+                last_meter_index = meter_data.index[meter_data.index.get_loc(last) + 1]
+        meter_data = meter_data.loc[meter_data.first_valid_index() : last_meter_index]
+        temperature_data = temperature_data.loc[
+            temperature_data.first_valid_index() : temperature_data.last_valid_index()
+        ]
+
+        # TODO consider a refactor of the period offset calculation/slicing.
+        # it seems like a fairly dense block of code for something conceptually simple.
+        # at the very least, try to clarify variable names a bit
+
+        period_diff_first = pd.Timedelta(0)
+        period_diff_last = pd.Timedelta(0)
+        # calculate difference in period length for first and last rows in meter/temp
+        # first/last will generally be the same offset for daily/hourly, but billing can be quite variable
+        # could consider using to_offset(index.inferred_freq) if available,
+        # but the intent here is just to provide a lenient first trim.
+        # checking for consistent frequency is done later during __init__
+        if len(meter_data.index) > 1 and len(temperature_data.index) > 1:
+            period_meter_first = meter_data.index[1] - meter_data.index[0]
+            period_temp_first = temperature_data.index[1] - temperature_data.index[0]
+            period_diff_first = period_meter_first - period_temp_first
+
+            period_meter_last = meter_data.index[-1] - meter_data.index[-2]
+            period_temp_last = temperature_data.index[-1] - temperature_data.index[-2]
+            period_diff_last = period_meter_last - period_temp_last
+
+        # if diff is positive, meter period is longer (lower frequency)
+        zero_offset = pd.Timedelta(0)
+        meter_period_first_longer = period_diff_first > zero_offset
+        meter_period_last_longer = period_diff_last > zero_offset
+
+        # the larger of each period gets one period-length buffer before trimming
+        # to ensure that partial periods are captured in the initial input
+        meter_offset_first = (
+            period_diff_first if meter_period_first_longer else zero_offset
+        )
+        meter_offset_last = (
+            period_diff_last if meter_period_last_longer else zero_offset
+        )
+        # setting temp offsets negative rather than flipping the min/max signs later
+        temp_offset_first = (
+            -period_diff_first if not meter_period_first_longer else zero_offset
+        )
+        temp_offset_last = (
+            -period_diff_last if not meter_period_last_longer else zero_offset
+        )
+
+        # constrain meter index to temperature index
+        temp_index_min = temperature_data.index.min() - meter_offset_first
+        temp_index_max = temperature_data.index.max() + meter_offset_last
+        meter_data = meter_data[temp_index_min:temp_index_max]
+        if meter_data.empty:
+            raise ValueError("Meter and temperature data are fully misaligned.")
 
         # if billing detected, subtract one day from final index since dataframe input assumes final row is part of period
         if is_billing_data:
@@ -144,20 +193,12 @@ class _DailyData:
                 meter_data = meter_data[:-1]
 
         # constrain temperature index to meter index
-        meter_index_min = meter_data.index.min()
-        m_offset = pd.tseries.frequencies.to_offset(meter_data.index.inferred_freq)
-        if not m_offset or m_offset > pd.Timedelta(days=1):
-            m_offset = pd.Timedelta(days=1)
-        meter_index_max = meter_data.index.max() + m_offset
+        meter_index_min = meter_data.index.min() - temp_offset_first
+        meter_index_max = meter_data.index.max() + temp_offset_last
+        temperature_data = temperature_data[meter_index_min:meter_index_max]
+
         if is_billing_data:
-            meter_index_min = meter_index_min.normalize()
-            meter_index_max = meter_index_max.normalize()
-        temperature_data = temperature_data[
-            (temperature_data.index >= meter_index_min)
-            & (temperature_data.index < meter_index_max)
-        ]
-        if is_billing_data:
-            # TODO consider adding warnings here about misaligned data and/or a final period that is not nan
+            # TODO consider adding misaligned data warning here if final row was not already NaN
             meter_data.iloc[-1] = np.nan
 
         df = pd.concat([meter_data, temperature_data], axis=1)
