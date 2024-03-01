@@ -3,13 +3,43 @@ from __future__ import annotations
 import numpy as np
 
 
+def _get_num_cluster_min(
+    data_size: int, 
+    min_cluster_size: int, 
+    num_cluster_bound_lower: int
+):
+    """
+    returns lower bounds using data_size which is number models in cluster
+    """
+
+    linear = False
+
+    # assume we want 8 clusters of min size 15 meters with a pool of 1000 meters
+    base_pool = 1000
+    base_cluster_size = 15
+    base_min_clusters = 8
+
+    if linear:
+        k = (base_cluster_size*base_min_clusters)/base_pool
+        num_cluster_min = k*data_size/min_cluster_size
+    
+    else:
+        k = 30 + 4.58*np.exp(data_size/335)
+        num_cluster_min = k/min_cluster_size
+
+    n = max(int(np.floor(num_cluster_min)), 2)
+    n = min(num_cluster_bound_lower, n)
+
+    return n
+
+
 def _get_num_cluster_max(
     data_size: int, 
     min_cluster_size: int, 
     num_cluster_bound_upper: int
 ):
     """
-    returns bounds using data_size which is number models in cluster
+    returns upper bounds using data_size which is number models in cluster
     """
     n_min = min_cluster_size
 
@@ -42,7 +72,9 @@ def _get_num_cluster_max(
         1 / (1 + np.exp(-(data_size - n_min) / k)) - 0.5
     ) + min_clusters
 
-    return int(np.floor(num_cluster_max))
+    n = max(int(np.floor(num_cluster_max)), 2)
+
+    return n
 
 
 def get_cluster_bounds(
@@ -55,15 +87,19 @@ def get_cluster_bounds(
     function which returns lower and upper bound based off config values and number of data points
     """
 
+    num_cluster_min = _get_num_cluster_min(
+        data_size=data_size,
+        min_cluster_size=min_cluster_size,
+        num_cluster_bound_lower=num_cluster_bound_lower,
+    )
+
     num_cluster_max = _get_num_cluster_max(
         data_size=data_size,
         min_cluster_size=min_cluster_size,
         num_cluster_bound_upper=num_cluster_bound_upper,
     )
 
-    num_cluster_bounds = sorted([num_cluster_bound_lower, num_cluster_max])
-    num_cluster_bounds[0] = max(num_cluster_bounds[0], 2)
-    num_cluster_bounds[1] = max(num_cluster_bounds[1], 2)
+    num_cluster_bounds = sorted([num_cluster_min, num_cluster_max])
 
     if num_cluster_bounds[0] == num_cluster_bounds[1]:
         num_cluster_bounds[1] += 1

@@ -9,7 +9,7 @@ import pydantic
 import gridmeter._stratified_sampling.const as _const
 from gridmeter._utils.base_settings import BaseSettings
 
-from typing import Optional
+from typing import Optional, Literal
 
 
 class StratificationColumnSettings(BaseSettings):
@@ -17,7 +17,7 @@ class StratificationColumnSettings(BaseSettings):
     COLUMN_NAME: str = pydantic.Field()
 
     """fixed number of bins to use for stratification"""
-    N_BINS: int | None = pydantic.Field(
+    N_BINS: Optional[int] = pydantic.Field(
         default=8, 
         ge=2, 
         validate_default=True,
@@ -43,12 +43,39 @@ class StratificationColumnSettings(BaseSettings):
     )
 
     """column requires equivalence when auto-binning"""
-    AUTO_BIN_EQUIVALENCE: bool = pydantic.Field(
-        default=True, 
-    )
+    AUTO_BIN_EQUIVALENCE: Literal[False] = False
+
+
+class DSS_StratificationColumnSettings(StratificationColumnSettings):
+    """fixed number of bins to use for stratification"""
+    N_BINS: Literal[None] = None
+
+    """column requires equivalence when auto-binning"""
+    AUTO_BIN_EQUIVALENCE: Literal[True] = True
 
 
 class Settings(BaseSettings):
+    """
+    MIN_N_SAMPLED_TO_N_TREATMENT_RATIO: int
+        TODO: FILL THIS OUT
+    SEED: int
+        Seed for random number generator
+    """
+
+    MIN_N_TREATMENT_PER_BIN: int = pydantic.Field(
+        default=0, 
+        ge=0, 
+        validate_default=True,
+    )
+
+    SEED: int = pydantic.Field(
+        default=42, 
+        ge=0, 
+        validate_default=True,
+    )
+
+
+class StratifiedSamplingSettings(Settings):
     """
     n_samples_approx: int
         approximate number of total samples from df_pool. It is approximate because
@@ -64,7 +91,7 @@ class Settings(BaseSettings):
         meters as available up to n_samples_approx. If False, it raises an exception
         if there are not enough comparison pool meters to reach n_samples_approx.
     """
-    
+
     N_SAMPLES_APPROX: Optional[int] = pydantic.Field(
         default=None, 
         ge=1, 
@@ -75,42 +102,16 @@ class Settings(BaseSettings):
         default=False, 
     )
 
-    EQUIVALENCE_METHOD: _const.DistanceMetric | None = pydantic.Field(
-        default=None,
-        validate_default=True,
-    )
+    EQUIVALENCE_METHOD: Literal[None] = None
 
-    EQUIVALENCE_QUANTILE: int | None = pydantic.Field(
-        default=None,
-        validate_default=True,
-    )
+    EQUIVALENCE_QUANTILE: Literal[None] = None
 
-    MIN_N_BINS: int | None = pydantic.Field(
-        default=None, 
-        ge=1, 
-        validate_default=True,
-    )
+    MIN_N_BINS: Literal[None] = None
 
-    MAX_N_BINS: int | None = pydantic.Field(
-        default=None, 
-        ge=2, 
-        validate_default=True,
-    )
-
-    MIN_N_TREATMENT_PER_BIN: int = pydantic.Field(
-        default=0, 
-        ge=0, 
-        validate_default=True,
-    )
+    MAX_N_BINS: Literal[None] = None
 
     MIN_N_SAMPLED_TO_N_TREATMENT_RATIO: float = pydantic.Field(
         default=4, 
-        ge=0, 
-        validate_default=True,
-    )
-
-    SEED: int = pydantic.Field(
-        default=42, 
         ge=0, 
         validate_default=True,
     )
@@ -128,7 +129,7 @@ class Settings(BaseSettings):
         if len(self.STRATIFICATION_COLUMN) > 3:
             raise ValueError("A maximum of 3 STRATIFICATION_COLUMN's are allowed")
 
-        settings = []
+        strat_settings = []
         has_dict = False
         for strat_item in self.STRATIFICATION_COLUMN:
             if isinstance(strat_item, dict):
@@ -138,81 +139,103 @@ class Settings(BaseSettings):
             else:
                 strat_class = strat_item
 
-            settings.append(strat_class)
+            strat_settings.append(strat_class)
 
         if has_dict:
-            self.STRATIFICATION_COLUMN = settings
+            self.STRATIFICATION_COLUMN = strat_settings
 
         return self
+
+
+# subclass Settings to change default values
+class DistanceStratifiedSamplingSettings(Settings):
+    """
+    n_samples_approx: int
+        approximate number of total samples from df_pool. It is approximate because
+        there may be some slight discrepencies around the total count to ensure
+        that each bin has the correct percentage of the total.
+    min_n_treatment_per_bin: int
+        Minimum number of treatment samples that must exist in a given bin for 
+        it to be considered a non-outlier bin (only applicable if there are 
+        cols with fixed_width=True)
+    min_n_sampled_to_n_treatment_ratio: int
+    relax_n_samples_approx_constraint: bool
+        If True, treats n_samples_approx as an upper bound, but gets as many comparison group
+        meters as available up to n_samples_approx. If False, it raises an exception
+        if there are not enough comparison pool meters to reach n_samples_approx.
+    """
     
-    """Check values if equivalence method is None"""
+    N_SAMPLES_APPROX: Optional[int] = pydantic.Field(
+        default=5000, 
+        ge=1, 
+        validate_default=True,
+    )
+
+    RELAX_N_SAMPLES_APPROX_CONSTRAINT: bool = pydantic.Field(
+        default=True, 
+    )
+
+    EQUIVALENCE_METHOD: _const.DistanceMetric = pydantic.Field(
+        default=_const.DistanceMetric.CHISQUARE,
+        validate_default=True,
+    )
+
+    EQUIVALENCE_QUANTILE: int = pydantic.Field(
+        default=25,
+        validate_default=True,
+    )
+
+    MIN_N_BINS: int = pydantic.Field(
+        default=1, 
+        ge=1, 
+        validate_default=True,
+    )
+
+    MAX_N_BINS: int = pydantic.Field(
+        default=8, 
+        ge=2, 
+        validate_default=True,
+    )
+
+    MIN_N_SAMPLED_TO_N_TREATMENT_RATIO: float = pydantic.Field(
+        default=0.25, 
+        ge=0, 
+        validate_default=True,
+    )
+
+    STRATIFICATION_COLUMN: list[DSS_StratificationColumnSettings] | list[dict] = pydantic.Field(
+        default=[
+            DSS_StratificationColumnSettings(column_name="summer_usage"),
+            DSS_StratificationColumnSettings(column_name="winter_usage"),
+        ],
+    )
+
+    """set stratification column classes with given dictionaries"""
     @pydantic.model_validator(mode="after")
-    def _check_false_equivalence_keys(self):
-        if self.EQUIVALENCE_METHOD is not None:
-            return self
+    def _set_nested_classes(self):
+        if len(self.STRATIFICATION_COLUMN) > 3:
+            raise ValueError("A maximum of 3 STRATIFICATION_COLUMN's are allowed")
 
-        if self.EQUIVALENCE_QUANTILE is not None:
-            raise ValueError("EQUIVALENCE_QUANTILE must be None if EQUIVALENCE_METHOD is NONE")
+        strat_settings = []
+        has_dict = False
+        for strat_item in self.STRATIFICATION_COLUMN:
+            if isinstance(strat_item, dict):
+                has_dict = True
+                strat_class = DSS_StratificationColumnSettings(**strat_item)
 
-        if self.MIN_N_BINS is not None:
-            raise ValueError("MIN_N_BINS must be None if EQUIVALENCE_METHOD is NONE")
-        
-        if self.MAX_N_BINS is not None:
-            raise ValueError("MAX_N_BINS must be None if EQUIVALENCE_METHOD is NONE")
+            else:
+                strat_class = strat_item
+
+            strat_settings.append(strat_class)
+
+        if has_dict:
+            self.STRATIFICATION_COLUMN = strat_settings
 
         return self
-    
-    """Check values if equivalence method is not None"""
-    @pydantic.model_validator(mode="after")
-    def _check_true_equivalence_keys(self):
-        if self.EQUIVALENCE_METHOD is None:
-            return self
-
-        if self.EQUIVALENCE_QUANTILE is None:
-            raise ValueError("EQUIVALENCE_QUANTILE must not be None if EQUIVALENCE_METHOD is not NONE")
-
-        if self.MIN_N_BINS is None:
-            raise ValueError("MIN_N_BINS must not be None if EQUIVALENCE_METHOD is not NONE")
-        
-        if self.MAX_N_BINS is None:
-            raise ValueError("MAX_N_BINS must not be None if EQUIVALENCE_METHOD is not NONE")
-        
-        for col_settings in self.STRATIFICATION_COLUMN:
-            if col_settings.N_BINS is not None:
-                raise ValueError("N_BINS must be None if EQUIVALENCE_METHOD is not NONE")
-            
-            if not col_settings.AUTO_BIN_EQUIVALENCE:
-                raise ValueError("AUTO_BIN_EQUIVALENCE must not be None if EQUIVALENCE_METHOD is not NONE")
-
-        return self
-
-def stratified_sampling_settings(**kwargs) -> Settings:
-    settings = Settings(**kwargs)
-
-    return settings
-
-
-def distance_stratified_sampling_settings(**kwargs) -> Settings:
-    settings = {
-        "N_SAMPLES_APPROX": 5000,
-        "RELAX_N_SAMPLES_APPROX_CONSTRAINT": True,
-        "EQUIVALENCE_METHOD": _const.DistanceMetric.CHISQUARE,
-        "MIN_N_BINS": 1,
-        "MAX_N_BINS": 8,
-        "EQUIVALENCE_QUANTILE": 25,
-        "MIN_N_SAMPLED_TO_N_TREATMENT_RATIO": 0.25,        
-    }
-
-    settings.update(kwargs)
-
-    settings = Settings(**settings)
-
-    return settings
 
 
 if __name__ == "__main__":
-    # s = Settings()
-    # s = stratified_sampling_settings()
-    s = distance_stratified_sampling_settings()
+    s = StratifiedSamplingSettings()
+    # s = DistanceStratifiedSamplingSettings()
 
     print(s.model_dump_json())

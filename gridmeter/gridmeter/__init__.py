@@ -28,9 +28,8 @@ from gridmeter._individual_meter_matching import IMM_Settings
 
 from gridmeter._stratified_sampling import (
     Stratified_Sampling,
-    SS_Settings,
-    stratified_sampling_settings, 
-    distance_stratified_sampling_settings
+    SS_Settings, 
+    DSS_Settings
 )
 
 from gridmeter._random_sampling import (
