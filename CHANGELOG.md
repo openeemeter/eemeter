@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Correct dataframe input behavior and final row temperature aggregation
 
 4.0.0
 -----
