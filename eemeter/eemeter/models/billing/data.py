@@ -72,8 +72,10 @@ class _BillingData(_DailyData):
         if meter_series.empty:
             return meter_series_full.resample("D").first().to_frame()
 
-        start_date = meter_series_full.index.min().normalize()
-        end_date = meter_series_full.index.max().normalize()
+        start_date = meter_series_full.index.min()
+        end_date = meter_series_full.index.max().replace(
+            hour=meter_series.index[-1].hour
+        )  # assume final period ends on same hour
 
         min_granularity = compute_minimum_granularity(
             meter_series.index, default_granularity="billing_bimonthly"
@@ -83,6 +85,8 @@ class _BillingData(_DailyData):
         if not min_granularity.startswith("billing"):
             # MS is so that the date for Month Start
             meter_series = meter_series.resample("MS").sum(min_count=1)
+            # normalize to midnight since we're picking an arbitrary day to represent period start anyway
+            end_date = end_date.normalize()
             self.warnings.append(
                 EEMeterWarning(
                     qualified_name="eemeter.sufficiency_criteria.inferior_model_usage",
@@ -95,7 +99,7 @@ class _BillingData(_DailyData):
             min_granularity = "billing_monthly"
 
         # Convert all non-zero time datetimes to zero time (i.e., set the time to midnight), for proper join since we only want one reading per day for billing
-        meter_series.index = meter_series.index.normalize()
+        meter_series.index = meter_series.index
 
         # Adjust index to follow final nan convention--without this, final period will be short one day
         meter_series[end_date + pd.Timedelta(days=1)] = np.nan
