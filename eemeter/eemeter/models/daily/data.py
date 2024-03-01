@@ -116,8 +116,9 @@ class _DailyData:
 
         # TODO revisit the following index modifications; there may be a few unintuitive outcomes with offset data
         # constrain meter index to temperature index
-        temp_index_min = temperature_data.index.min().normalize()
-        temp_index_max = temperature_data.index.max().normalize() + pd.Timedelta(days=1)
+        temp_index_min = temperature_data.index.min()
+        t_offset = pd.tseries.frequencies.to_offset(temperature_data.index.inferred_freq) or pd.Timedelta(days=1)
+        temp_index_max = temperature_data.index.max() + t_offset
         # discards first period of meter data if temperature data starts mid-month
         meter_data = meter_data[
             (meter_data.index >= temp_index_min) & (meter_data.index < temp_index_max)
@@ -143,8 +144,14 @@ class _DailyData:
                 meter_data = meter_data[:-1]
 
         # constrain temperature index to meter index
-        meter_index_min = meter_data.index.min().normalize()
-        meter_index_max = meter_data.index.max().normalize() + pd.Timedelta(days=1)
+        meter_index_min = meter_data.index.min()
+        m_offset = pd.tseries.frequencies.to_offset(meter_data.index.inferred_freq)
+        if not m_offset or m_offset > pd.Timedelta(days=1):
+            m_offset = pd.Timedelta(days=1)
+        meter_index_max = meter_data.index.max() + m_offset
+        if is_billing_data:
+            meter_index_min = meter_index_min.normalize()
+            meter_index_max = meter_index_max.normalize()
         temperature_data = temperature_data[
             (temperature_data.index >= meter_index_min)
             & (temperature_data.index < meter_index_max)
@@ -187,8 +194,8 @@ class _DailyData:
         # Dropping the NaNs is beneficial when the meter data is spread over hourly temperature data, causing lots of NaNs
         # But causes problems in detection of frequency when there are genuine missing values. The missing days are accounted for in the sufficiency_criteria_baseline method
         # whereas they should actually be kept.
-        start_date = df.index.min().normalize()
-        end_date = df.index.max().normalize()
+        start_date = df.index.min()
+        end_date = df.index.max()
         min_granularity = compute_minimum_granularity(meter_series.index, "daily")
         if min_granularity.startswith("billing"):
             # TODO : make this a warning instead of an exception
@@ -198,7 +205,6 @@ class _DailyData:
         )
 
         meter_value_df = meter_value_df.rename(columns={"value": "observed"})
-        meter_value_df.index = meter_value_df.index.normalize()
 
         # To account for the above issue, we create an index with all the days and then merge the meter_value_df with it
         # This will ensure that the missing days are kept in the dataframe
