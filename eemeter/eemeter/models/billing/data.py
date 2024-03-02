@@ -77,6 +77,10 @@ class _BillingData(_DailyData):
             hour=meter_series.index[-1].hour
         )  # assume final period ends on same hour
 
+        # ensure we adjust backwards to normalize hour, never adding time
+        if end_date > meter_series_full.index.max():
+            end_date = end_date - pd.Timedelta(days=1)
+
         min_granularity = compute_minimum_granularity(
             meter_series.index, default_granularity="billing_bimonthly"
         )
@@ -98,9 +102,6 @@ class _BillingData(_DailyData):
             )
             min_granularity = "billing_monthly"
 
-        # Convert all non-zero time datetimes to zero time (i.e., set the time to midnight), for proper join since we only want one reading per day for billing
-        meter_series.index = meter_series.index
-
         # Adjust index to follow final nan convention--without this, final period will be short one day
         meter_series[end_date + pd.Timedelta(days=1)] = np.nan
 
@@ -111,10 +112,7 @@ class _BillingData(_DailyData):
 
         # Spread billing data to daily
         meter_value_df = as_freq(meter_value_df["value"], "D").to_frame("value")
-
-        # Adjust index to follow final nan convention--without this, final period will be short one day
         meter_value_df = meter_value_df[:-1]
-
         meter_value_df = meter_value_df.rename(columns={"value": "observed"})
 
         # This will ensure that the missing days are kept in the dataframe
@@ -235,10 +233,13 @@ class _BillingData(_DailyData):
             )
             temperature_features = temperature_features[:-1]
             # Only check for high frequency temperature data if it exists
-            if (
+            # TODO this check causes weird behavior with very sparse temp data.
+            # will still get DQ'd, but final df receives non-nan temperatures
+            median_samples = (
                 temperature_features.temperature_not_null
                 + temperature_features.temperature_null
-            ).median() > 1:
+            ).median()
+            if median_samples > 1:
                 invalid_temperature_rows = (
                     temperature_features.temperature_not_null
                     / (
@@ -246,6 +247,10 @@ class _BillingData(_DailyData):
                         + temperature_features.temperature_null
                     )
                 ) <= 0.5
+                # check against median in case start/end of data does not cover a full period
+                invalid_temperature_rows |= (
+                    temperature_features.temperature_not_null <= median_samples * 0.5
+                )
 
                 if invalid_temperature_rows.any():
                     self.warnings.append(
