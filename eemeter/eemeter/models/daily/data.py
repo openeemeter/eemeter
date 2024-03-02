@@ -158,21 +158,21 @@ class _DailyData:
         meter_period_first_longer = period_diff_first > zero_offset
         meter_period_last_longer = period_diff_last > zero_offset
 
-        # the larger of each period gets one period-length buffer before trimming
-        # to ensure that partial periods are captured in the initial input
+        # large period needs a buffer for the min index, and no buffer for the max index
+        # short period needs a buffer for the max index, and no buffer for the min index
         meter_offset_first = (
             period_diff_first if meter_period_first_longer else zero_offset
         )
         meter_offset_last = (
-            period_diff_last if meter_period_last_longer else zero_offset
+            -period_diff_last if not meter_period_last_longer else zero_offset
         )
-        # setting temp offsets negative rather than flipping the min/max signs later
         temp_offset_first = (
             -period_diff_first if not meter_period_first_longer else zero_offset
         )
-        temp_offset_last = (
-            -period_diff_last if not meter_period_last_longer else zero_offset
-        )
+        temp_offset_last = period_diff_last if meter_period_last_longer else zero_offset
+
+        # if the shorter period ends on an exact index of the longer, we accept it.
+        # the data should be DQ'd later due to insufficiency for the period
 
         # constrain meter index to temperature index
         temp_index_min = temperature_data.index.min() - meter_offset_first
@@ -195,6 +195,9 @@ class _DailyData:
         # constrain temperature index to meter index
         meter_index_min = meter_data.index.min() - temp_offset_first
         meter_index_max = meter_data.index.max() + temp_offset_last
+        if is_billing_data and len(meter_data) > 1:
+            # last billing period is offset by one index
+            meter_index_max = meter_data.index[-2] + temp_offset_last
         temperature_data = temperature_data[meter_index_min:meter_index_max]
 
         if is_billing_data:
@@ -257,6 +260,16 @@ class _DailyData:
             tz=df.index.tz,
         )
         all_days_df = pd.DataFrame(index=all_days_index)
+        # the following drops common days to handle DST issues with pytz.
+        # doesn't seem to be a problem with ZoneInfo, so we can
+        # probably handle this better once 3.8 is EOL and we disallow pytz tzinfo.
+        # TODO regardless, it feels like there should be a better way to match
+        # the indices on date than by comparing strftime in this manner
+        all_days_df = all_days_df[
+            ~all_days_df.index.strftime("%Y%m%d").isin(
+                meter_series.index.strftime("%Y%m%d")
+            )
+        ]
         meter_value_df = meter_value_df.merge(
             all_days_df, left_index=True, right_index=True, how="outer"
         )

@@ -51,15 +51,11 @@ def baseline_data_daily(il_electricity_cdd_hdd_daily):
     baseline_meter_data, warnings = get_baseline_data(
         meter_data, end=blackout_start_date
     )
-    # TODO create a few tests with non-midnight datetimes
-    # baseline_meter_data.index = map(lambda x: x.replace(hour=6), baseline_meter_data.index)
     baseline_data = DailyBaselineData.from_series(
         baseline_meter_data, temperature_data, is_electricity_data=True
     )
 
     return baseline_data
-
-
 @pytest.fixture
 def baseline_model_daily(baseline_data_daily):
     model_results = DailyModel().fit(baseline_data_daily, ignore_disqualification=True)
@@ -106,7 +102,7 @@ def test_metered_savings_cdd_hdd_daily(
     )
     results = baseline_model_daily.predict(reporting_data)
     metered_savings = results["predicted"] - results["observed"]
-    assert round(metered_savings.sum(), 2) == 1642.34
+    assert round(metered_savings.sum(), 2) == 1643.61
 
 
 @pytest.fixture
@@ -156,7 +152,7 @@ def test_metered_savings_cdd_hdd_billing(
     )
     results = baseline_model_billing.predict(reporting_data)
     metered_savings = results["predicted"] - results["observed"]
-    assert round(metered_savings.sum(), 2) == 1607.53
+    assert round(metered_savings.sum(), 2) == 1605.14
 
 
 def test_metered_savings_cdd_hdd_billing_no_reporting_data(
@@ -180,7 +176,7 @@ def test_metered_savings_cdd_hdd_billing_no_reporting_data(
         "model_split",
         "model_type",
     ]
-    assert round(results.predicted.sum(), 2) == 1652.31
+    assert round(results.predicted.sum(), 2) == 1607.1
 
 
 def test_metered_savings_cdd_hdd_billing_single_record_reporting_data(
@@ -267,7 +263,7 @@ def test_metered_savings_cdd_hdd_billing_single_record_baseline_data(
         "model_split",
         "model_type",
     ]
-    assert round(results.predicted.sum() - results.observed.sum(), 2) == 1785.8
+    assert round(results.predicted.sum() - results.observed.sum(), 2) == 1785.84
 
 
 @pytest.fixture
@@ -302,7 +298,7 @@ def test_modeled_savings_cdd_hdd_daily(
     modeled_savings = (
         baseline_model_result["predicted"] - reporting_model_result["predicted"]
     )
-    assert round(modeled_savings.sum(), 2) == 183.03
+    assert round(modeled_savings.sum(), 2) == 177.02
 
 
 # TODO move to dataclass testing
@@ -474,7 +470,7 @@ def test_modeled_savings_cdd_hdd_billing(
         "model_split",
         "model_type",
     ]
-    assert round(results.predicted.sum(), 2) == 8261.98
+    assert round(results.predicted.sum(), 2) == 8245.37
 
 
 @pytest.fixture
@@ -543,7 +539,7 @@ def test_metered_savings_model_single_record(
         "model_split",
         "model_type",
     ]
-    assert round(results.predicted.sum() - results.observed.sum(), 2) == 1447.89
+    assert round(results.predicted.sum() - results.observed.sum(), 2) == 1447.93
 
 
 @pytest.fixture
