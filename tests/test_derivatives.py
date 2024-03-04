@@ -56,8 +56,6 @@ def baseline_data_daily(il_electricity_cdd_hdd_daily):
     )
 
     return baseline_data
-
-
 @pytest.fixture
 def baseline_model_daily(baseline_data_daily):
     model_results = DailyModel().fit(baseline_data_daily, ignore_disqualification=True)
@@ -104,7 +102,7 @@ def test_metered_savings_cdd_hdd_daily(
     )
     results = baseline_model_daily.predict(reporting_data)
     metered_savings = results["predicted"] - results["observed"]
-    assert round(metered_savings.sum(), 2) == 1642.34
+    assert round(metered_savings.sum(), 2) == 1643.61
 
 
 @pytest.fixture
@@ -154,7 +152,7 @@ def test_metered_savings_cdd_hdd_billing(
     )
     results = baseline_model_billing.predict(reporting_data)
     metered_savings = results["predicted"] - results["observed"]
-    assert round(metered_savings.sum(), 2) == 1598.03
+    assert round(metered_savings.sum(), 2) == 1605.14
 
 
 def test_metered_savings_cdd_hdd_billing_no_reporting_data(
@@ -178,7 +176,7 @@ def test_metered_savings_cdd_hdd_billing_no_reporting_data(
         "model_split",
         "model_type",
     ]
-    assert round(results.predicted.sum(), 2) == 1642.6
+    assert round(results.predicted.sum(), 2) == 1607.1
 
 
 def test_metered_savings_cdd_hdd_billing_single_record_reporting_data(
@@ -265,7 +263,7 @@ def test_metered_savings_cdd_hdd_billing_single_record_baseline_data(
         "model_split",
         "model_type",
     ]
-    assert round(results.predicted.sum() - results.observed.sum(), 2) == 1785.81
+    assert round(results.predicted.sum() - results.observed.sum(), 2) == 1785.84
 
 
 @pytest.fixture
@@ -275,38 +273,15 @@ def reporting_meter_data_billing_wrong_timestamp():
 
 
 def test_metered_savings_cdd_hdd_billing_reporting_data_wrong_timestamp(
-    baseline_model_billing,
     reporting_meter_data_billing_wrong_timestamp,
     reporting_temperature_data,
 ):
-    # results, error_bands = metered_savings(
-    #     baseline_model_billing,
-    #     reporting_meter_data_billing_wrong_timestamp,
-    #     reporting_temperature_data,
-    #     billing_data=True,
-    # )
-    results = baseline_model_billing.predict(
+    with pytest.raises(ValueError):
         BillingReportingData.from_series(
             reporting_meter_data_billing_wrong_timestamp,
             reporting_temperature_data,
             is_electricity_data=True,
         )
-    )
-
-    assert list(results.columns) == [
-        "season",
-        "day_of_week",
-        "weekday_weekend",
-        "temperature",
-        "observed",
-        "predicted",
-        "predicted_unc",
-        "heating_load",
-        "cooling_load",
-        "model_split",
-        "model_type",
-    ]
-    assert round(results.predicted.sum(), 2) == 0.0
 
 
 def test_modeled_savings_cdd_hdd_daily(
@@ -323,7 +298,7 @@ def test_modeled_savings_cdd_hdd_daily(
     modeled_savings = (
         baseline_model_result["predicted"] - reporting_model_result["predicted"]
     )
-    assert round(modeled_savings.sum(), 2) == 182.42
+    assert round(modeled_savings.sum(), 2) == 177.02
 
 
 # TODO move to dataclass testing
@@ -495,7 +470,7 @@ def test_modeled_savings_cdd_hdd_billing(
         "model_split",
         "model_type",
     ]
-    assert round(results.predicted.sum(), 2) == 8268.3
+    assert round(results.predicted.sum(), 2) == 8245.37
 
 
 @pytest.fixture
@@ -505,36 +480,15 @@ def reporting_meter_data_billing_not_aligned():
 
 
 def test_metered_savings_not_aligned_reporting_data(
-    baseline_model_billing,
     reporting_meter_data_billing_not_aligned,
     reporting_temperature_data,
 ):
-    # results, error_bands = metered_savings(
-    #     baseline_model_billing,
-    #     reporting_meter_data_billing_not_aligned,
-    #     reporting_temperature_data,
-    #     billing_data=True,
-    # )
-    results = baseline_model_billing.predict(
+    with pytest.raises(ValueError):
         BillingReportingData.from_series(
             reporting_meter_data_billing_not_aligned,
             reporting_temperature_data,
             is_electricity_data=True,
         )
-    )
-    assert list(results.columns) == [
-        "season",
-        "day_of_week",
-        "weekday_weekend",
-        "temperature",
-        "predicted",
-        "predicted_unc",
-        "heating_load",
-        "cooling_load",
-        "model_split",
-        "model_type",
-    ]
-    assert round(results.predicted.sum(), 2) == 0
 
 
 @pytest.fixture
@@ -585,7 +539,7 @@ def test_metered_savings_model_single_record(
         "model_split",
         "model_type",
     ]
-    assert round(results.predicted.sum() - results.observed.sum(), 2) == 1447.88
+    assert round(results.predicted.sum() - results.observed.sum(), 2) == 1447.93
 
 
 @pytest.fixture

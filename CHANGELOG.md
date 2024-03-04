@@ -4,7 +4,10 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Correct dataframe input behavior and final row temperature aggregation
+* Remove unnecessary datetime normalization in order to respect hour of day
+* Convert timestamps in certain warnings to strings to allow serialization
+
 
 4.0.0
 -----

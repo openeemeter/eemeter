@@ -67,38 +67,30 @@ class _BillingData(_DailyData):
         -------
             pd.DataFrame: The cleaned and processed meter value DataFrame.
         """
-        end = df["observed"].index.max()
-        final_value = df["observed"][end]
-        final_nan = np.isnan(final_value) if final_value else False
-        meter_series = df["observed"].dropna()
-
+        meter_series_full = df["observed"]
+        meter_series = meter_series_full.dropna()
         if meter_series.empty:
-            return df["observed"].resample("D").first().to_frame()
-        if final_nan:
-            # preserve end of final billing period
-            meter_series[end] = np.nan
+            return meter_series_full.resample("D").first().to_frame()
+
+        start_date = meter_series_full.index.min()
+        end_date = meter_series_full.index.max().replace(
+            hour=meter_series.index[-1].hour
+        )  # assume final period ends on same hour
+
+        # ensure we adjust backwards to normalize hour, never adding time
+        if end_date > meter_series_full.index.max():
+            end_date = end_date - pd.Timedelta(days=1)
+
         min_granularity = compute_minimum_granularity(
             meter_series.index, default_granularity="billing_bimonthly"
         )
-
-        if min_granularity.startswith("billing") and not final_nan:
-            self.warnings.append(
-                EEMeterWarning(
-                    qualified_name="eemeter.sufficiency_criteria.billing_final_row",
-                    description=(
-                        "The provided billing data included a real-valued final row. This row was only used"
-                        " to denote the end of the final billing period, and can be set to NaN in the future."
-                        " If this was the beginning of a billing period that is intended to be measured, append"
-                        " one more row corresponding with the ending timestamp of that period."
-                    ),
-                    data={},
-                )
-            )
 
         # Ensure higher frequency data is aggregated to the monthly model
         if not min_granularity.startswith("billing"):
             # MS is so that the date for Month Start
             meter_series = meter_series.resample("MS").sum(min_count=1)
+            # normalize to midnight since we're picking an arbitrary day to represent period start anyway
+            end_date = end_date.normalize()
             self.warnings.append(
                 EEMeterWarning(
                     qualified_name="eemeter.sufficiency_criteria.inferior_model_usage",
@@ -110,6 +102,9 @@ class _BillingData(_DailyData):
             )
             min_granularity = "billing_monthly"
 
+        # Adjust index to follow final nan convention--without this, final period will be short one day
+        meter_series[end_date + pd.Timedelta(days=1)] = np.nan
+
         # This checks for offcycle reads. That is a disqualification if the billing cycle is less than 25 days
         meter_value_df = clean_billing_daily_data(
             meter_series.to_frame("value"), min_granularity, self.disqualification
@@ -117,23 +112,15 @@ class _BillingData(_DailyData):
 
         # Spread billing data to daily
         meter_value_df = as_freq(meter_value_df["value"], "D").to_frame("value")
-
+        meter_value_df = meter_value_df[:-1]
         meter_value_df = meter_value_df.rename(columns={"value": "observed"})
-
-        # Drop the NaN at the end
-        if len(meter_value_df) > 0 and np.isnan(meter_value_df.iloc[-1]["observed"]):
-            # TODO need to refactor the clean caltrack data method and remove the nan logic, this breaks when original df has nan in last row
-            meter_value_df = meter_value_df[:-1]
-
-        # Convert all non-zero time datetimes to zero time (i.e., set the time to midnight), for proper join since we only want one reading per day for billing
-        meter_value_df.index = meter_value_df.index.normalize()
 
         # This will ensure that the missing days are kept in the dataframe
         # Create an index with all the days from the start and end date of 'meter_value_df'
         if len(meter_value_df) > 0:
             all_days_index = pd.date_range(
-                start=meter_value_df.index.min(),
-                end=meter_value_df.index.max(),
+                start=start_date,
+                end=end_date,
                 freq="D",
                 tz=df.index.tz,
             )
@@ -235,21 +222,24 @@ class _BillingData(_DailyData):
             temperature_features["n_days_kept"] = 0  # unused
             temperature_features["n_days_dropped"] = 0  # unused
         else:
-            buffer_idx = pd.to_datetime("2090-01-01 00:00:00+00:00").tz_convert(
-                meter_index.tz
-            )
+            if not meter_index.empty:
+                buffer_idx = meter_index.max() + pd.Timedelta(days=1)
+                meter_index = meter_index.union([buffer_idx])
 
             temperature_features = compute_temperature_features(
-                meter_index.union([buffer_idx]),
+                meter_index,
                 temp_series,
                 data_quality=True,
             )
             temperature_features = temperature_features[:-1]
             # Only check for high frequency temperature data if it exists
-            if (
+            # TODO this check causes weird behavior with very sparse temp data.
+            # will still get DQ'd, but final df receives non-nan temperatures
+            median_samples = (
                 temperature_features.temperature_not_null
                 + temperature_features.temperature_null
-            ).median() > 1:
+            ).median()
+            if median_samples > 1:
                 invalid_temperature_rows = (
                     temperature_features.temperature_not_null
                     / (
@@ -257,6 +247,10 @@ class _BillingData(_DailyData):
                         + temperature_features.temperature_null
                     )
                 ) <= 0.5
+                # check against median in case start/end of data does not cover a full period
+                invalid_temperature_rows |= (
+                    temperature_features.temperature_not_null <= median_samples * 0.5
+                )
 
                 if invalid_temperature_rows.any():
                     self.warnings.append(
@@ -265,7 +259,10 @@ class _BillingData(_DailyData):
                             description=(
                                 "More than 50% of the high frequency temperature data is missing."
                             ),
-                            data=(invalid_temperature_rows.index.to_list()),
+                            data=[
+                                timestamp.isoformat()
+                                for timestamp in invalid_temperature_rows.index
+                            ],
                         )
                     )
                     temperature_features.loc[
@@ -427,6 +424,10 @@ class BillingReportingData(_BillingData):
             )
             if tzinfo:
                 meter_data = meter_data.tz_convert(tzinfo)
+        if meter_data.empty:
+            raise ValueError(
+                "Pass meter_data=None to explicitly create a temperature-only reporting data instance."
+            )
         return super().from_series(meter_data, temperature_data, is_electricity_data)
 
     def _check_data_sufficiency(self, sufficiency_df):

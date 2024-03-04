@@ -17,6 +17,9 @@
    limitations under the License.
 
 """
+from datetime import datetime
+
+from eemeter.eemeter.common.transform import get_baseline_data
 from eemeter.eemeter.models.daily.data import DailyBaselineData, DailyReportingData
 from eemeter.eemeter.samples import load_sample
 import numpy as np
@@ -762,3 +765,28 @@ def test_daily_reporting_data_with_missing_daily_frequencies(get_datetime_index)
         disqualification.qualified_name in expected_disqualifications
         for disqualification in cls.disqualification
     )
+
+@pytest.fixture
+def baseline_data_daily_params(il_electricity_cdd_hdd_daily):
+    def _baseline(tz='UTC', hour=0):
+        meter_data = il_electricity_cdd_hdd_daily["meter_data"]
+        temperature_data = il_electricity_cdd_hdd_daily["temperature_data"]
+        blackout_start_date = il_electricity_cdd_hdd_daily["blackout_start_date"]
+        baseline_meter_data, warnings = get_baseline_data(
+            meter_data, end=blackout_start_date
+        )
+        baseline_meter_data.index = map(lambda x: x.replace(hour=x.hour+hour), baseline_meter_data.index)
+        baseline_meter_data.index = baseline_meter_data.index.tz_convert(tz)
+        return baseline_meter_data, temperature_data
+    yield _baseline
+
+@pytest.mark.parametrize(["tz", "hour"], [['US/Pacific', 3],['US/Eastern', 8], ['Europe/London', 13]])
+def test_offset_temperature_aggregations(baseline_data_daily_params, tz, hour):
+    baseline_meter_data, temp_series = baseline_data_daily_params(tz=tz, hour=hour)
+    baseline = DailyBaselineData.from_series(baseline_meter_data, temp_series, is_electricity_data=True)
+    tz = baseline_meter_data.index.tz
+
+    abs_diff = 0
+    for day in baseline.df.index:
+        abs_diff += abs(temp_series[day:day+pd.Timedelta(hours=23)].mean() - baseline.df.temperature.loc[day].squeeze())
+    assert abs_diff < 0.000001
