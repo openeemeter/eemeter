@@ -107,25 +107,103 @@ class _DailyData:
         temperature_data.index = temperature_data.index.tz_convert(
             meter_data.index.tzinfo
         )
-        # TODO revisit the following index modifications; there may be a few unintuitive outcomes with offset data
-        # constrain temperature index to meter index
+
+        if temperature_data.empty:
+            raise ValueError("Temperature data cannot be empty.")
+        if meter_data.empty:
+            # reporting from_series always passes a full index of nan
+            raise ValueError("Meter data cannot by empty.")
+
+        is_billing_data = False
         if not meter_data.empty:
-            meter_index_min = meter_data.index.min().normalize()
-            meter_index_max = meter_data.index.max().normalize() + pd.Timedelta(days=1)
-            temperature_data = temperature_data[
-                (temperature_data.index >= meter_index_min)
-                & (temperature_data.index < meter_index_max)
-            ]
+            is_billing_data = compute_minimum_granularity(
+                meter_data.index, "billing"
+            ).startswith("billing")
+
+        # first, trim the data to exclude NaNs on the outer edges of the data
+        last_meter_index = meter_data.last_valid_index()
+        if is_billing_data:
+            # preserve final NaN for billing data only
+            last = meter_data.last_valid_index()
+            if last and last != meter_data.index[-1]:
+                # TODO include warning here for non-NaN final billing row since it will be discarded
+                last_meter_index = meter_data.index[meter_data.index.get_loc(last) + 1]
+        meter_data = meter_data.loc[meter_data.first_valid_index() : last_meter_index]
+        temperature_data = temperature_data.loc[
+            temperature_data.first_valid_index() : temperature_data.last_valid_index()
+        ]
+
+        # TODO consider a refactor of the period offset calculation/slicing.
+        # it seems like a fairly dense block of code for something conceptually simple.
+        # at the very least, try to clarify variable names a bit
+
+        period_diff_first = pd.Timedelta(0)
+        period_diff_last = pd.Timedelta(0)
+        # calculate difference in period length for first and last rows in meter/temp
+        # first/last will generally be the same offset for daily/hourly, but billing can be quite variable
+        # could consider using to_offset(index.inferred_freq) if available,
+        # but the intent here is just to provide a lenient first trim.
+        # checking for consistent frequency is done later during __init__
+        if len(meter_data.index) > 1 and len(temperature_data.index) > 1:
+            period_meter_first = meter_data.index[1] - meter_data.index[0]
+            period_temp_first = temperature_data.index[1] - temperature_data.index[0]
+            period_diff_first = period_meter_first - period_temp_first
+
+            period_meter_last = meter_data.index[-1] - meter_data.index[-2]
+            period_temp_last = temperature_data.index[-1] - temperature_data.index[-2]
+            period_diff_last = period_meter_last - period_temp_last
+
+        # if diff is positive, meter period is longer (lower frequency)
+        zero_offset = pd.Timedelta(0)
+        meter_period_first_longer = period_diff_first > zero_offset
+        meter_period_last_longer = period_diff_last > zero_offset
+
+        # large period needs a buffer for the min index, and no buffer for the max index
+        # short period needs a buffer for the max index, and no buffer for the min index
+        meter_offset_first = (
+            period_diff_first if meter_period_first_longer else zero_offset
+        )
+        meter_offset_last = (
+            -period_diff_last if not meter_period_last_longer else zero_offset
+        )
+        temp_offset_first = (
+            -period_diff_first if not meter_period_first_longer else zero_offset
+        )
+        temp_offset_last = period_diff_last if meter_period_last_longer else zero_offset
+
+        # if the shorter period ends on an exact index of the longer, we accept it.
+        # the data should be DQ'd later due to insufficiency for the period
+
         # constrain meter index to temperature index
-        if not temperature_data.empty:
-            temp_index_min = temperature_data.index.min().normalize()
-            temp_index_max = temperature_data.index.max().normalize() + pd.Timedelta(
-                days=1
+        temp_index_min = temperature_data.index.min() - meter_offset_first
+        temp_index_max = temperature_data.index.max() + meter_offset_last
+        meter_data = meter_data[temp_index_min:temp_index_max]
+        if meter_data.empty:
+            raise ValueError("Meter and temperature data are fully misaligned.")
+
+        # if billing detected, subtract one day from final index since dataframe input assumes final row is part of period
+        if is_billing_data:
+            new_index = meter_data.index[:-1].union(
+                [(meter_data.index[-1] - pd.Timedelta(days=1))]
             )
-            meter_data = meter_data[
-                (meter_data.index >= temp_index_min)
-                & (meter_data.index < temp_index_max)
-            ]
+            if len(new_index) == len(meter_data.index):
+                meter_data.index = new_index
+            else:
+                # handles the case of a 1 day off-cycle read at end of series
+                meter_data = meter_data[:-1]
+
+        # constrain temperature index to meter index
+        meter_index_min = meter_data.index.min() - temp_offset_first
+        meter_index_max = meter_data.index.max() + temp_offset_last
+        if is_billing_data and len(meter_data) > 1:
+            # last billing period is offset by one index
+            meter_index_max = meter_data.index[-2] + temp_offset_last
+        temperature_data = temperature_data[meter_index_min:meter_index_max]
+
+        if is_billing_data:
+            # TODO consider adding misaligned data warning here if final row was not already NaN
+            meter_data.iloc[-1] = np.nan
+
         df = pd.concat([meter_data, temperature_data], axis=1)
         return cls(df, is_electricity_data)
 
@@ -153,12 +231,15 @@ class _DailyData:
         -------
             pd.DataFrame: The cleaned and processed meter value DataFrame.
         """
-        # Dropping the NaNs is beneficial when the meter data is spread over hourly temperature data, causing lots of NaNs
-        # But causes problems in detection of frequency when there are genuine missing values. The missing days are accounted for in the sufficiency_criteria_baseline method
-        # whereas they should actually be kept.
         meter_series = df["observed"].dropna()
         if meter_series.empty:
             return df["observed"].resample("D").first().to_frame()
+
+        # Dropping the NaNs is beneficial when the meter data is spread over hourly temperature data, causing lots of NaNs
+        # But causes problems in detection of frequency when there are genuine missing values. The missing days are accounted for in the sufficiency_criteria_baseline method
+        # whereas they should actually be kept.
+        start_date = df.index.min()
+        end_date = df.index.max()
         min_granularity = compute_minimum_granularity(meter_series.index, "daily")
         if min_granularity.startswith("billing"):
             # TODO : make this a warning instead of an exception
@@ -166,26 +247,29 @@ class _DailyData:
         meter_value_df = clean_billing_daily_data(
             meter_series, min_granularity, self.warnings
         )
-        # if np.isnan(meter_value_df.iloc[-1]['value']):
-        #     #TODO test behavior here. we might be able to get away with a dropna() if we alter the n_days check, but this is less aggressive
-        #     #TODO need to refactor the clean caltrack data method and remove the nan logic, this breaks when original df has nan in last row
-        #     meter_value_df = meter_value_df[:-1]
 
         meter_value_df = meter_value_df.rename(columns={"value": "observed"})
-        meter_value_df.index = (
-            meter_value_df.index.normalize()
-        )  # in case of daily data where hour is not midnight
 
         # To account for the above issue, we create an index with all the days and then merge the meter_value_df with it
         # This will ensure that the missing days are kept in the dataframe
         # Create an index with all the days from the start and end date of 'meter_value_df'
         all_days_index = pd.date_range(
-            start=meter_value_df.index.min(),
-            end=meter_value_df.index.max(),
+            start=start_date,
+            end=end_date,
             freq="D",
             tz=df.index.tz,
         )
         all_days_df = pd.DataFrame(index=all_days_index)
+        # the following drops common days to handle DST issues with pytz.
+        # doesn't seem to be a problem with ZoneInfo, so we can
+        # probably handle this better once 3.8 is EOL and we disallow pytz tzinfo.
+        # TODO regardless, it feels like there should be a better way to match
+        # the indices on date than by comparing strftime in this manner
+        all_days_df = all_days_df[
+            ~all_days_df.index.strftime("%Y%m%d").isin(
+                meter_series.index.strftime("%Y%m%d")
+            )
+        ]
         meter_value_df = meter_value_df.merge(
             all_days_df, left_index=True, right_index=True, how="outer"
         )
@@ -280,12 +364,11 @@ class _DailyData:
             temperature_features["n_days_dropped"] = 0  # unused
         else:
             # TODO hacky method of avoiding the last index nan convention
-            buffer_idx = pd.to_datetime("2090-01-01 00:00:00+00:00").tz_convert(
-                meter_index.tz
-            )
-
+            if not meter_index.empty:
+                buffer_idx = meter_index.max() + pd.Timedelta(days=1)
+                meter_index = meter_index.union([buffer_idx])
             temperature_features = compute_temperature_features(
-                meter_index.union([buffer_idx]),
+                meter_index,
                 temp_series,
                 data_quality=True,
             )
@@ -312,7 +395,10 @@ class _DailyData:
                             description=(
                                 "More than 50% of the high frequency temperature data is missing."
                             ),
-                            data=(invalid_temperature_rows.index.to_list()),
+                            data=[
+                                timestamp.isoformat()
+                                for timestamp in invalid_temperature_rows.index
+                            ],
                         )
                     )
                     temperature_features.loc[
@@ -386,7 +472,7 @@ class _DailyData:
         expected_columns = [
             "observed",
             "temperature",
-        ]  # TODO will change when extending to report
+        ]
         # TODO maybe check datatypes
         if not set(expected_columns).issubset(set(df.columns)):
             # show the columns that are missing
@@ -585,6 +671,10 @@ class DailyReportingData(_DailyData):
             )
             if tzinfo:
                 meter_data = meter_data.tz_convert(tzinfo)
+        if meter_data.empty:
+            raise ValueError(
+                "Pass meter_data=None rather than an empty series in order to explicitly create a temperature-only reporting data instance."
+            )
         return super().from_series(meter_data, temperature_data, is_electricity_data)
 
     def _check_data_sufficiency(self, sufficiency_df):

@@ -93,7 +93,10 @@ def clean_billing_data(data, source_interval, warnings):
                         description=(
                             "Off-cycle reads found in billing monthly data having a duration of less than 25 days"
                         ),
-                        data=(data[(filter_ > 35) | (filter_ < 25)].index.to_list()),
+                        data=[
+                            timestamp.isoformat()
+                            for timestamp in data[(filter_ > 35) | (filter_ < 25)].index
+                        ],
                     )
                 )
 
@@ -110,7 +113,10 @@ def clean_billing_data(data, source_interval, warnings):
                         description=(
                             "Off-cycle reads found in billing monthly data having a duration of less than 25 days"
                         ),
-                        data=(data[(filter_ > 70) | (filter_ < 25)].index.to_list()),
+                        data=[
+                            timestamp.isoformat()
+                            for timestamp in data[(filter_ > 70) | (filter_ < 25)].index
+                        ],
                     )
                 )
 
@@ -246,23 +252,24 @@ def as_freq(
         spread_factor = target_freq.total_seconds() / timedeltas.total_seconds()
         series_spread = series * spread_factor
         atomic_series = series_spread.asfreq(atomic_freq, method="ffill")
-        resampled = atomic_series.resample(freq).sum()
-        resampled_with_nans = atomic_series.resample(freq).first()
-        n_coverage = atomic_series.resample(freq).count()
+        resampled = atomic_series.resample(freq, origin=series.index[0]).sum()
+        resampled_with_nans = atomic_series.resample(
+            freq, origin=series.index[0]
+        ).first()
+        n_coverage = atomic_series.resample(freq, origin=series.index[0]).count()
         resampled = resampled[resampled_with_nans.notnull()].reindex(resampled.index)
 
     elif series_type == "instantaneous":
-        """TODO ffill on series.asfreq can produce unintuitive results if resampling a sparse matrix.
-        for example, attempting to resample 2 months of hourly data to daily with a month of
-        absent rows (not NaN, but missing from the dataframe) will ffill that month with the previous read.
-
-        a similar effect can happen if you have NaNs at a different frequency appended to the end
-        of a series. this could happen if you concat a monthly series with an hourly one at an offset.
-        the call to asfreq() could erroneously fill in a month of data, followed by NaNs
-        """
+        # ffill on series.asfreq can produce unintuitive results if resampling a sparse matrix.
+        # for example, attempting to resample 2 months of hourly data to daily with a month of
+        # absent rows (not NaN, but missing from the dataframe) will ffill that month with the previous read.
+        #
+        # a similar effect can happen if you have NaNs at a different frequency appended to the end
+        # of a series. this could happen if you concat a monthly series with an hourly one at an offset.
+        # the call to asfreq() could erroneously fill in a month of data, followed by NaNs
         atomic_series = series.asfreq(atomic_freq, method="ffill")
-        resampled = atomic_series.resample(freq).mean()
-        n_coverage = atomic_series.resample(freq).count()
+        resampled = atomic_series.resample(freq, origin=series.index[0]).mean()
+        n_coverage = atomic_series.resample(freq, origin=series.index[0]).count()
 
     # Edit : Added a check so that hourly and daily frequencies don't have a null value at the end
     if freq not in ["H", "D"] and resampled.index[-1] < series.index[-1]:
@@ -298,7 +305,10 @@ def downsample_and_clean_daily_data(dataset, warnings):
                 description=(
                     "More than 50% of the high frequency Meter data is missing."
                 ),
-                data=(dataset[dataset.coverage <= 0.5].index.to_list()),
+                data=[
+                    timestamp.isoformat()
+                    for timestamp in dataset[dataset.coverage <= 0.5].index
+                ],
             )
         )
 
