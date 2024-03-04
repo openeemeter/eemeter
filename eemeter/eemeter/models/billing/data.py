@@ -259,7 +259,10 @@ class _BillingData(_DailyData):
                             description=(
                                 "More than 50% of the high frequency temperature data is missing."
                             ),
-                            data=(invalid_temperature_rows.index.to_list()),
+                            data=[
+                                timestamp.isoformat()
+                                for timestamp in invalid_temperature_rows.index
+                            ],
                         )
                     )
                     temperature_features.loc[
