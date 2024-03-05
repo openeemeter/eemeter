@@ -27,10 +27,10 @@ from eemeter.eemeter.common.data_processor_utilities import (
     as_freq,
     clean_billing_daily_data,
     compute_minimum_granularity,
-    sufficiency_criteria_baseline,
 )
 from eemeter.eemeter.common.features import compute_temperature_features
 from eemeter.eemeter.common.warnings import EEMeterWarning
+from eemeter.eemeter.common.sufficiency_criteria import BillingSufficiencyCriteria
 from eemeter.eemeter.models.daily.data import _DailyData
 
 """TODO there is still a ton of unecessarily duplicated code between billing+daily.
@@ -325,11 +325,19 @@ class BillingBaselineData(_BillingData):
             warnings (list): List of warnings
 
         """
-        _, disqualification, warnings = sufficiency_criteria_baseline(
-            sufficiency_df,
-            is_reporting_data=False,
-            is_electricity_data=self.is_electricity_data,
+        bsc = BillingSufficiencyCriteria(
+            data = sufficiency_df,
+            is_electricity_data = self.is_electricity_data
         )
+        bsc.check_sufficiency_baseline()
+        disqualification = bsc.disqualification
+        warnings = bsc.warnings
+
+        # _, disqualification, warnings = sufficiency_criteria_baseline(
+        #     sufficiency_df,
+        #     is_reporting_data=False,
+        #     is_electricity_data=self.is_electricity_data,
+        # )
         return disqualification, warnings
 
 
@@ -446,9 +454,17 @@ class BillingReportingData(_BillingData):
             warnings (list): List of warnings
 
         """
-        _, disqualification, warnings = sufficiency_criteria_baseline(
-            sufficiency_df,
-            is_reporting_data=True,
-            is_electricity_data=self.is_electricity_data,
+        bsc = BillingSufficiencyCriteria(
+            data = sufficiency_df,
+            is_reporting_data = True
         )
+        bsc.check_sufficiency_reporting()
+        disqualification = bsc.disqualification
+        warnings = bsc.warnings
+
+        # _, disqualification, warnings = sufficiency_criteria_baseline(
+        #     sufficiency_df,
+        #     is_reporting_data=True,
+        #     is_electricity_data=self.is_electricity_data,
+        # )
         return disqualification, warnings
