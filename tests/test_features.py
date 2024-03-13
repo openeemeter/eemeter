@@ -32,7 +32,7 @@ from eemeter.eemeter.common.features import (
     fit_temperature_bins,
     merge_features,
 )
-from eemeter.eemeter.models.hourly.segmentation import segment_time_series
+from eemeter.eemeter.models.hourly_caltrack.segmentation import segment_time_series
 
 
 def test_compute_temperature_features_no_freq_index(

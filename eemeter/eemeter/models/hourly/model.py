@@ -17,613 +17,424 @@
    limitations under the License.
 
 """
+from sklearn.linear_model import ElasticNet
+import numpy as np
 import pandas as pd
-import statsmodels.formula.api as smf
-
-from eemeter.eemeter.common.features import (
-    compute_occupancy_feature,
-    compute_temperature_bin_features,
-    compute_time_features,
-    merge_features,
-)
-from eemeter.eemeter.common.warnings import EEMeterWarning
-from eemeter.eemeter.models.hourly.metrics import ModelMetrics
-from eemeter.eemeter.models.hourly.segmentation import (
-    CalTRACKSegmentModel,
-    SegmentedModel,
-    fit_model_segments,
-)
-
-__all__ = (
-    "CalTRACKHourlyModelResults",
-    "CalTRACKHourlyModel",
-    "caltrack_hourly_fit_feature_processor",
-    "caltrack_hourly_prediction_feature_processor",
-    "fit_caltrack_hourly_model_segment",
-    "fit_caltrack_hourly_model",
-)
+from sklearn.preprocessing import StandardScaler
 
 
-class CalTRACKHourlyModelResults(object):
-    """Contains information about the chosen model.
 
-    Attributes
-    ----------
-    status : :any:`str`
-        A string indicating the status of this result. Possible statuses:
-
-        - ``'NO DATA'``: No baseline data was available.
-        - ``'NO MODEL'``: A complete model could not be constructed.
-        - ``'SUCCESS'``: A model was constructed.
-    method_name : :any:`str`
-        The name of the method used to fit the baseline model.
-    model : :any:`eemeter.CalTRACKHourlyModel` or :any:`None`
-        The selected model, if any.
-    warnings : :any:`list` of :any:`eemeter.EEMeterWarning`
-        A list of any warnings reported during the model selection and fitting
-        process.
-    metadata : :any:`dict`
-        An arbitrary dictionary of metadata to be associated with this result.
-        This can be used, for example, to tag the results with attributes like
-        an ID::
-
-            {
-                'id': 'METER_12345678',
-            }
-
-    settings : :any:`dict`
-        A dictionary of settings used by the method.
-    totals_metrics : :any:`ModelMetrics`
-        A ModelMetrics object, if one is calculated and associated with this
-        model. (This initializes to None.) The ModelMetrics object contains
-        model fit information and descriptive statistics about the underlying data,
-        with that data expressed as period totals.
-    avgs_metrics : :any:`ModelMetrics`
-        A ModelMetrics object, if one is calculated and associated with this
-        model. (This initializes to None.) The ModelMetrics object contains
-        model fit information and descriptive statistics about the underlying data,
-        with that data expressed as daily averages.
-    """
-
+class HourlyModel:
     def __init__(
-        self, status, method_name, model=None, warnings=[], metadata=None, settings=None
+        self,
+        settings=None,
     ):
-        self.status = status
-        self.method_name = method_name
-
-        self.model = model
-
-        self.warnings = warnings
-
-        if metadata is None:
-            metadata = {}
-        self.metadata = metadata
-
-        if settings is None:
-            settings = {}
-        self.settings = settings
-
-        self.totals_metrics = None
-        self.avgs_metrics = None
-
-    def __repr__(self):
-        return "CalTRACKHourlyModelResults(status='{}', method_name='{}')".format(
-            self.status, self.method_name
-        )
-
-    def json(self, with_candidates=False):
-        """Return a JSON-serializable representation of this result.
-
-        The output of this function can be converted to a serialized string
-        with :any:`json.dumps`.
+        """
         """
 
-        def _json_or_none(obj):
-            return None if obj is None else obj.json()
-
-        def _json_or_none_in_dict(obj):
-            return (
-                None
-                if obj is None
-                else {key: _json_or_none(val) for key, val in obj.items()}
-            )
-
-        data = {
-            "status": self.status,
-            "method_name": self.method_name,
-            "model": _json_or_none(self.model),
-            "warnings": [w.json() for w in self.warnings],
-            "metadata": self.metadata,
-            "settings": self.settings,
-            "totals_metrics": _json_or_none_in_dict(self.totals_metrics),
-            "avgs_metrics": _json_or_none_in_dict(self.avgs_metrics),
+        # Initialize settings
+        if settings is None:
+            self.settings = self._default_settings()
+        else:
+            self.settings = settings
+        
+        # Initialize model
+        self._model_initiation()
+        
+        self.error = {
+            "wRMSE": np.nan,
+            "RMSE": np.nan,
+            "MAE": np.nan,
+            "CVRMSE": np.nan,
+            "PNRMSE": np.nan,
         }
-        return data
+
+    def fit(self, baseline_data, ignore_disqualification=False):
+
+        # if not isinstance(baseline_data, DailyBaselineData):
+        #     raise TypeError("baseline_data must be a DailyBaselineData object")
+        # baseline_data.log_warnings()
+        # if baseline_data.disqualification and not ignore_disqualification:
+        #     raise DataSufficiencyError("Can't fit model on disqualified baseline data")
+        # self.baseline_timezone = baseline_data.tz
+        # self.warnings = baseline_data.warnings
+        # self.disqualification = baseline_data.disqualification
+        
+        self._fit(baseline_data)
+
+        # if self.error["CVRMSE"] > self.settings.cvrmse_threshold:
+        #     cvrmse_warning = EEMeterWarning(
+        #         qualified_name="eemeter.model_fit_metrics.cvrmse",
+        #         description=(
+        #             f"Fit model has CVRMSE > {self.settings.cvrmse_threshold}"
+        #         ),
+        #         data={"CVRMSE": self.error["CVRMSE"]},
+        #     )
+        #     cvrmse_warning.warn()
+        #     self.disqualification.append(cvrmse_warning)
+
+        return self
+
+    def _fit(self, meter_data):
+        # Initialize dataframe
+        self.train_status = "fitting"
+        X, y = self._prepare_features(meter_data)
+
+        # Begin fitting
+        self.regressor.fit(X, y)
+        
+        # self._get_error_metrics()      
+
+        # self.params = self._create_params_from_fit_model()
+        self.is_fit = True
+
+        return self
+
+    def predict(
+        self,
+        reporting_data,
+        ignore_disqualification=False,
+    ):
+        """Perform initial sufficiency and typechecks before passing to private predict"""
+        if not self.is_fit:
+            raise RuntimeError("Model must be fit before predictions can be made.")
+
+        # if self.disqualification and not ignore_disqualification:
+        #     raise DisqualifiedModelError(
+        #         "Attempting to predict using disqualified model without setting ignore_disqualification=True"
+        #     )
+
+        # if str(self.baseline_timezone) != str(reporting_data.tz):
+        #     """would be preferable to directly compare, but
+        #     * using str() helps accomodate mixed tzinfo implementations,
+        #     * the likelihood of sub-hour offset inconsistencies being relevant to the daily model is low
+        #     """
+        #     raise ValueError(
+        #         "Reporting data must use the same timezone that the model was initially fit on."
+        #     )
+
+        # if not isinstance(reporting_data, (DailyBaselineData, DailyReportingData)):
+        #     raise TypeError(
+        #         "reporting_data must be a DailyBaselineData or DailyReportingData object"
+        #     )
+
+        return self._predict(reporting_data)
+
+    def _predict(self, df_eval):
+        """
+        Makes model prediction on given temperature data.
+
+        Parameters:
+            df_eval (pandas.DataFrame): The evaluation dataframe.
+
+        Returns:
+            pandas.DataFrame: The evaluation dataframe with model predictions added.
+        """
+        self.train_status = "predicting"
+        X, _ = self._prepare_features(df_eval)
+
+        y_predict_scaled = self.regressor.predict(X)
+        y_predict = self.y_scaler.inverse_transform(y_predict_scaled)
+        y_predict = y_predict.flatten()
+        df_eval["new_model"] = y_predict
+
+        return df_eval
+
+    def to_dict(self):
+        return self.params.model_dump()
+
+    def to_json(self):
+        return json.dumps(self.to_dict())
 
     @classmethod
-    def from_json(cls, data):
-        """Loads a JSON-serializable representation into the model state.
-
-        The input of this function is a dict which can be the result
-        of :any:`json.loads`.
-        """
-
-        # "model" is a CalTRACKHourlyModel that was serialized
-        model = None
-        d = data.get("model")
-        if d:
-            model = CalTRACKHourlyModel.from_json(d)
-
-        c = cls(
-            data.get("status"),
-            data.get("method_name"),
-            model=model,
-            warnings=data.get("warnings"),
-            metadata=data.get("metadata"),
-            settings=data.get("settings"),
+    def from_dict(cls, data):
+        settings = data.get("settings")
+        daily_model = cls(settings=settings)
+        info = data.get("info")
+        daily_model.params = DailyModelParameters(
+            submodels=data.get("submodels"),
+            info=info,
+            settings=settings,
         )
 
-        # Note the metrics do not contain all the data needed
-        # for reconstruction (like the input pandas) ...
-        d = data.get("avgs_metrics")
-        if d:
-            c.avgs_metrics = ModelMetrics.from_json(d)  # pragma: no cover
-        d = data.get("totals_metrics")
-        if d:
-            c.totals_metrics = ModelMetrics.from_json(d)
-        return c
+        def deserialize_warnings(warnings):
+            if not warnings:
+                return []
+            warn_list = []
+            for warning in warnings:
+                warn_list.append(
+                    EEMeterWarning(
+                        qualified_name=warning.get("qualified_name"),
+                        description=warning.get("description"),
+                        data=warning.get("data"),
+                    )
+                )
+            return warn_list
 
-    def predict(self, prediction_index, temperature_data, **kwargs):
-        """Predict over a particular index using temperature data.
+        daily_model.disqualification = deserialize_warnings(
+            info.get("disqualification")
+        )
+        daily_model.warnings = deserialize_warnings(info.get("warnings"))
+        daily_model.baseline_timezone = info.get("baseline_timezone")
+        daily_model.is_fit = True
+        return daily_model
+
+    @classmethod
+    def from_json(cls, str_data):
+        return cls.from_dict(json.loads(str_data))
+
+    def plot(
+        self,
+        df_eval,
+        ax=None,
+        title=None,
+        figsize=None,
+        temp_range=None,
+    ):
+        """Plot a model fit.
 
         Parameters
         ----------
-        prediction_index : :any:`pandas.DatetimeIndex`
-            Time period over which to predict.
-        temperature_data : :any:`pandas.DataFrame`
-            Hourly temperature data to use for prediction. Time period should match
-            the ``prediction_index`` argument.
-        **kwargs
-            Extra keyword arguments to send to self.model.predict
+        ax : :any:`matplotlib.axes.Axes`, optional
+            Existing axes to plot on.
+        title : :any:`str`, optional
+            Chart title.
+        figsize : :any:`tuple`, optional
+            (width, height) of chart.
+        with_candidates : :any:`bool`
+            If True, also plot candidate models.
+        temp_range : :any:`tuple`, optionl
+            Temperature range to plot
 
         Returns
         -------
-        prediction : :any:`pandas.DataFrame`
-            The predicted usage values.
+        ax : :any:`matplotlib.axes.Axes`
+            Matplotlib axes.
         """
-        return self.model.predict(prediction_index, temperature_data, **kwargs)
+        try:
+            from eemeter.eemeter.models.daily.plot import plot
+        except ImportError:  # pragma: no cover
+            raise ImportError("matplotlib is required for plotting.")
 
+        # TODO: pass more kwargs to plotting function
 
-class _PredictionSegmentInfo:
-    """
-    Class to handle the different segment_type parameters
-    that provides the correct values to the CalTrackHourlyModel initialization.
-    """
+        plot(self, self._predict(df_eval.df))
 
-    def __init__(self, segment_type: str):
-        if segment_type not in ["single", "three_month_weighted"]:
-            raise ValueError("segment type must be single or three_month_weighted")
-
-        if segment_type == "single":
-            self.prediction_segment_type = segment_type
-            self.prediction_segment_name_mapping = None
-            return
-
-        if segment_type == "three_month_weighted":
-            self.prediction_segment_name_mapping = {
-                "jan": "dec-jan-feb-weighted",
-                "feb": "jan-feb-mar-weighted",
-                "mar": "feb-mar-apr-weighted",
-                "apr": "mar-apr-may-weighted",
-                "may": "apr-may-jun-weighted",
-                "jun": "may-jun-jul-weighted",
-                "jul": "jun-jul-aug-weighted",
-                "aug": "jul-aug-sep-weighted",
-                "sep": "aug-sep-oct-weighted",
-                "oct": "sep-oct-nov-weighted",
-                "nov": "oct-nov-dec-weighted",
-                "dec": "nov-dec-jan-weighted",
+    def _create_params_from_fit_model(self):
+        submodels = {}
+        for key, submodel in self.model.items():
+            temperature_constraints = {
+                "T_min": submodel.T_min,
+                "T_max": submodel.T_max,
+                "T_min_seg": submodel.T_min_seg,
+                "T_max_seg": submodel.T_max_seg,
             }
-            self.prediction_segment_type = "one_month"
-            return
-
-
-class CalTRACKHourlyModel(SegmentedModel):
-    """An object which holds CalTRACK Hourly model data and metadata, and
-    which can be used for prediction.
-
-    Attributes
-    ----------
-    segment_models : :any:`dict` of `eemeter.CalTRACKSegmentModel`
-        Dictionary of models for each segment, keys are segment names.
-    occupancy_lookup : :any:`pandas.DataFrame`
-        A dataframe with occupancy flags for each hour of the week and each segment.
-        Segment names are columns, occupancy flags are 0 or 1.
-    occupied_temperature_bins : :any:`pandas.DataFrame`
-        A dataframe of bin endpoint flags for each segment. Segment names are columns.
-    unoccupied_temperature_bins : :any:`pandas.DataFrame`
-        Ditto for the unoccupied mode.
-    segment_type : :any:`str`
-        The type of segment used to fit the model
-    """
-
-    def __init__(
-        self,
-        segment_models,
-        occupancy_lookup,
-        occupied_temperature_bins,
-        unoccupied_temperature_bins,
-        segment_type: str,
-    ):
-        self.occupancy_lookup = occupancy_lookup
-        self.occupied_temperature_bins = occupied_temperature_bins
-        self.unoccupied_temperature_bins = unoccupied_temperature_bins
-        self.segment_type = segment_type
-
-        prediction_info = _PredictionSegmentInfo(segment_type=segment_type)
-        super(CalTRACKHourlyModel, self).__init__(
-            segment_models=segment_models,
-            prediction_segment_type=prediction_info.prediction_segment_type,
-            prediction_segment_name_mapping=prediction_info.prediction_segment_name_mapping,
-            prediction_feature_processor=caltrack_hourly_prediction_feature_processor,
-            prediction_feature_processor_kwargs={
-                "occupancy_lookup": self.occupancy_lookup,
-                "occupied_temperature_bins": self.occupied_temperature_bins,
-                "unoccupied_temperature_bins": self.unoccupied_temperature_bins,
+            submodels[key] = DailySubmodelParameters(
+                coefficients=submodel.named_coeffs,
+                temperature_constraints=temperature_constraints,
+                f_unc=submodel.f_unc,
+            )
+        params = DailyModelParameters(
+            submodels=submodels,
+            settings=self.settings.to_dict(),
+            info={
+                "error": self.error,
+                "baseline_timezone": str(self.baseline_timezone),
+                "disqualification": [dq.json() for dq in self.disqualification],
+                "warnings": [warning.json() for warning in self.warnings],
             },
         )
 
-    def json(self):
-        """Return a JSON-serializable representation of this result.
+        return params
 
-        The output of this function can be converted to a serialized string
-        with :any:`json.dumps`.
+    def _prepare_features(self, meter_data):
         """
-        data = super(CalTRACKHourlyModel, self).json()
-        data.update(
-            {
-                "occupancy_lookup": self.occupancy_lookup.to_json(orient="split"),
-                "occupied_temperature_bins": self.occupied_temperature_bins.to_json(
-                    orient="split"
-                ),
-                "unoccupied_temperature_bins": self.unoccupied_temperature_bins.to_json(
-                    orient="split"
-                ),
-                "segment_type": self.segment_type,
-            }
+        Initializes the meter data by performing the following operations:
+        - Renames the 'model' column to 'model_old' if it exists
+        - Converts the index to a DatetimeIndex if it is not already
+        - Adds a 'season' column based on the month of the index using the settings.season dictionary
+        - Adds a 'day_of_week' column based on the day of the week of the index
+        - Removes any rows with NaN values in the 'temperature' or 'observed' columns
+        - Sorts the data by the index
+        - Reorders the columns to have 'season' and 'day_of_week' first, followed by the remaining columns
+
+        Parameters:
+        - meter_data: A pandas DataFrame containing the meter data
+
+        Returns:
+        - A pandas DataFrame containing the initialized meter data
+        """
+        #TODO: @Armin This meter data has weather data and it should be already clean
+        train_features = self.settings["train_features"].copy()
+        window = self.settings["window"]
+        # set temp as the main lag feature
+        if "lagged_features" in self.settings:
+            lagged_features = self.settings["lagged_features"]
+        else:
+            lagged_features = ["temperature"]
+
+        #get categorical features
+        modified_meter_data = self._add_categorical_features(meter_data)
+        # normalize the data
+        modified_meter_data = self._normalize_data(modified_meter_data, train_features)
+
+        X, y = self._get_feature_data(modified_meter_data, train_features, window, lagged_features)
+
+        return X, y
+
+    def _add_categorical_features(self, df):
+        """
+        """
+        # Add season and day of week
+        # There shouldn't be any day_ or month_ columns in the dataframe
+        df["date"] = df.index.date
+        df["day_of_week"] = df.index.dayofweek
+
+        day_cat = [
+                    f"day_{i}" for i in np.arange(7) + 1
+                ]
+        month_cat = [
+            f"month_{i}"
+            for i in np.arange(12) + 1
+            if f"month_{i}"
+        ]
+        self.cat_features = day_cat + month_cat
+
+        days = pd.Categorical(df["day_of_week"], categories=range(1, 8))
+        day_dummies = pd.get_dummies(days, prefix="day")
+        # set the same index for day_dummies as df_t
+        day_dummies.index = df.index
+
+        months = pd.Categorical(df["month"], categories=range(1, 13))
+        month_dummies = pd.get_dummies(months, prefix="month")
+        month_dummies.index = df.index
+
+        df = pd.concat([df, day_dummies, month_dummies], axis=1)
+        return df
+
+    def _normalize_data(self, df, train_features):
+        """
+        """
+        to_be_normalized = train_features.copy()
+        self.norm_features_list = [i+'_norm' for i in train_features]
+
+        if self.train_status == "fitting":
+            scaler = StandardScaler()
+            y_scalar = StandardScaler()
+            scaler.fit(df[to_be_normalized])
+            y_scalar.fit(df["observed"].values.reshape(-1, 1))
+
+            self.scaler = scaler
+            self.y_scaler = y_scalar
+
+        df[self.norm_features_list] = self.scaler.transform(df[to_be_normalized])
+        df["observed_norm"] = self.y_scaler.transform(df["observed"].values.reshape(-1, 1))
+        return df
+
+    def _get_feature_data(self, df, train_features, window, lagged_features):
+        added_features = []
+        for feature in train_features:
+            if feature in lagged_features:
+                for i in range(1, window):
+                    df[f"{feature}_shifted_{i}"] = df[feature].shift(i * 24)
+                    added_features.append(f"{feature}_shifted_{i}")
+
+        new_train_features = self.norm_features_list + added_features
+        if self.settings['supplimental_data']:
+            new_train_features.append('supplimental_data')
+        new_train_features.sort(reverse=True)
+
+        # backfill the shifted features and observed to fill the NaNs in the shifted features
+        df[train_features] = df[new_train_features].fillna(method="bfill")
+        df["observed_norm"] = df["observed_norm"].fillna(method="bfill")
+
+        # exclude the first window days, we need 365 days
+        #TODO: I think this is not necessary
+        df = df.iloc[(window - 1) * 24 :]
+        # get aggregated features with agg function
+        agg_dict = {f: lambda x: list(x) for f in new_train_features}
+
+        # get the features and target for each day
+        ts_feature = np.array(
+            df.groupby("date").agg(agg_dict).values.tolist()
         )
-        return data
+        ts_feature = ts_feature.reshape(
+            ts_feature.shape[0], ts_feature.shape[1] * ts_feature.shape[2]
+        )
 
-    @classmethod
-    def from_json(cls, data):
-        """Loads a JSON-serializable representation into the model state.
+        # get the first categorical features for each day for each sample
+        unique_dummies = df[self.cat_features + ["date"]].groupby("date").first()
 
-        The input of this function is a dict which can be the result
-        of :any:`json.loads`.
+        X = np.concatenate((ts_feature, unique_dummies), axis=1)
+        y = np.array(
+            df.groupby("date")
+            .agg({"observed_norm": lambda x: list(x)})
+            .values.tolist()
+        )
+        y = y.reshape(y.shape[0], y.shape[1] * y.shape[2])
+
+        return X, y
+
+    def _get_error_metrics(self): #TODO: set the error metrics
+        """
+        
         """
 
-        segment_models = [
-            CalTRACKSegmentModel.from_json(s) for s in data.get("segment_models")
-        ]
-
-        occupancy_lookup = pd.read_json(data.get("occupancy_lookup"), orient="split")
-        occupancy_lookup.index = occupancy_lookup.index.astype("category")
-
-        c = cls(
-            segment_models,
-            occupancy_lookup,
-            pd.read_json(data.get("occupied_temperature_bins"), orient="split"),
-            pd.read_json(data.get("unoccupied_temperature_bins"), orient="split"),
-            data.get("segment_type"),
-        )
-
-        return c
+        N = 0
 
 
-def caltrack_hourly_fit_feature_processor(
-    segment_name,
-    segmented_data,
-    occupancy_lookup,
-    occupied_temperature_bins,
-    unoccupied_temperature_bins,
-):
-    """A function that takes in temperature data and returns a dataframe of
-    features suitable for use with :any:`eemeter.fit_caltrack_hourly_model_segment`.
-    Designed for use with :any:`eemeter.iterate_segmented_dataset`.
+        resid = np.hstack(resid)
+        obs = np.hstack(obs)
 
-    Parameters
-    ----------
-    segment_name : :any:`str`
-        The name of the segment.
-    segmented_data : :any:`pandas.DataFrame`
-        Hourly temperature data for the segment.
-    occupancy_lookup : :any:`pandas.DataFrame`
-        A dataframe with occupancy flags for each hour of the week and each segment.
-        Segment names are columns, occupancy flags are 0 or 1.
-    occupied_temperature_bins : :any:`pandas.DataFrame`
-        A dataframe of bin endpoint flags for each segment. Segment names are columns.
-    unoccupied_temperature_bins : :any:`pandas.DataFrame`
-        Ditto for the unoccupied mode.
+        self.error["wRMSE"] = np.sqrt(wSSE / N)
+        self.error["RMSE"] = RMSE = np.mean(resid**2) ** 0.5
+        self.error["MAE"] = np.mean(np.abs(resid))
+        self.error["CVRMSE"] = RMSE / np.mean(obs)
+        self.error["PNRMSE"] = RMSE / np.diff(np.quantile(obs, [0.25, 0.75]))[0]
+    
+    def _model_initiation(self):
+        """
+        Initializes the model by setting the settings and creating the model object.
 
-    Returns
-    -------
-    features : :any:`pandas.DataFrame`
-        A dataframe of features with the following columns:
+        Parameters:
+        - settings: A dictionary containing the settings for the model
 
-        - 'meter_value': the observed meter value
-        - 'hour_of_week': 0-167
-        - 'bin_<0-6>_occupied': temp bin feature, or 0 if unoccupied
-        - 'bin_<0-6>_unoccupied': temp bin feature or 0 in occupied
-        - 'weight': 0.0 or 0.5 or 1.0
-    """
-    # get occupied feature
-    hour_of_week = segmented_data.hour_of_week
-    occupancy = occupancy_lookup[segment_name]
-    occupancy_feature = compute_occupancy_feature(hour_of_week, occupancy)
+        Returns:
+        - None
+        """
 
-    # get temperature bin features
-    temperatures = segmented_data.temperature_mean
-    occupied_bin_endpoints_list = (
-        occupied_temperature_bins[segment_name]
-        .index[occupied_temperature_bins[segment_name]]
-        .tolist()
-    )
-    unoccupied_bin_endpoints_list = (
-        unoccupied_temperature_bins[segment_name]
-        .index[unoccupied_temperature_bins[segment_name]]
-        .tolist()
-    )
-    occupied_temperature_bin_features = compute_temperature_bin_features(
-        segmented_data.temperature_mean, occupied_bin_endpoints_list
-    )
-    occupied_temperature_bin_features[occupancy_feature == 0] = 0
-    occupied_temperature_bin_features.rename(
-        columns={
-            c: "{}_occupied".format(c)
-            for c in occupied_temperature_bin_features.columns
-        },
-        inplace=True,
-    )
-    unoccupied_temperature_bin_features = compute_temperature_bin_features(
-        segmented_data.temperature_mean, unoccupied_bin_endpoints_list
-    )
-    unoccupied_temperature_bin_features[occupancy_feature == 1] = 0
-    unoccupied_temperature_bin_features.rename(
-        columns={
-            c: "{}_unoccupied".format(c)
-            for c in unoccupied_temperature_bin_features.columns
-        },
-        inplace=True,
-    )
+        self.model = ElasticNet
+        self.model_kwarg = self.settings["model_kwarg"]
+        self.regressor = self.model(**self.model_kwarg)
 
-    # combine features
-    return merge_features(
-        [
-            segmented_data[["meter_value", "hour_of_week"]],
-            occupied_temperature_bin_features,
-            unoccupied_temperature_bin_features,
-            segmented_data.weight,
-        ]
-    )
+        self.error = {
+            "wRMSE": np.nan,
+            "RMSE": np.nan,
+            "MAE": np.nan,
+            "CVRMSE": np.nan,
+            "PNRMSE": np.nan,
+        }
+        self.is_fit = False
+        self.train_status = "unfitted"
+        self.cat_features = None
+        self.norm_features_list = None
+        self.scaler = None
+        self.y_scaler = None
 
+    def _default_settings(self):
 
-def caltrack_hourly_prediction_feature_processor(
-    segment_name,
-    segmented_data,
-    occupancy_lookup,
-    occupied_temperature_bins,
-    unoccupied_temperature_bins,
-):
-    """A function that takes in temperature data and returns a dataframe of
-    features suitable for use inside :any:`eemeter.CalTRACKHourlyModel`.
-    Designed for use with :any:`eemeter.iterate_segmented_dataset`.
+        train_features = ['ghi']
+        if 'temperature' not in train_features:
+            train_features.append('temperature')
+        operational_time = False
+        # analytic_features = ['GHI', 'Temperature', 'DHI', 'DNI', 'Relative Humidity', 'Wind Speed', 'Clearsky DHI', 'Clearsky DNI', 'Clearsky GHI', 'Cloud Type']
+        lagged_features = ['temperature'] # 'ghi'
 
-    Parameters
-    ----------
-    segment_name : :any:`str`
-        The name of the segment.
-    segmented_data : :any:`pandas.DataFrame`
-        Hourly temperature data for the segment.
-    occupancy_lookup : :any:`pandas.DataFrame`
-        A dataframe with occupancy flags for each hour of the week and each segment.
-        Segment names are columns, occupancy flags are 0 or 1.
-    occupied_temperature_bins : :any:`pandas.DataFrame`
-        A dataframe of bin endpoint flags for each segment. Segment names are columns.
-    unoccupied_temperature_bins : :any:`pandas.DataFrame`
-        Ditto for the unoccupied mode.
-
-    Returns
-    -------
-    features : :any:`pandas.DataFrame`
-        A dataframe of features with the following columns:
-
-        - 'hour_of_week': 0-167
-        - 'bin_<0-6>_occupied': temp bin feature, or 0 if unoccupied
-        - 'bin_<0-6>_unoccupied': temp bin feature or 0 in occupied
-        - 'weight': 1
-    """
-    # hour of week feature
-    hour_of_week_feature = compute_time_features(
-        segmented_data.index, hour_of_week=True, day_of_week=False, hour_of_day=False
-    )
-
-    # occupancy feature
-    occupancy = occupancy_lookup[segment_name]
-    occupancy_feature = compute_occupancy_feature(
-        hour_of_week_feature.hour_of_week, occupancy
-    )
-
-    # get temperature bin features
-    temperatures = segmented_data
-    occupied_bin_endpoints_list = (
-        occupied_temperature_bins[segment_name]
-        .index[occupied_temperature_bins[segment_name]]
-        .tolist()
-    )
-    unoccupied_bin_endpoints_list = (
-        unoccupied_temperature_bins[segment_name]
-        .index[unoccupied_temperature_bins[segment_name]]
-        .tolist()
-    )
-    occupied_temperature_bin_features = compute_temperature_bin_features(
-        segmented_data.temperature_mean, occupied_bin_endpoints_list
-    )
-    occupied_temperature_bin_features[occupancy_feature == 0] = 0
-    occupied_temperature_bin_features.rename(
-        columns={
-            c: "{}_occupied".format(c)
-            for c in occupied_temperature_bin_features.columns
-        },
-        inplace=True,
-    )
-    unoccupied_temperature_bin_features = compute_temperature_bin_features(
-        segmented_data.temperature_mean, unoccupied_bin_endpoints_list
-    )
-    unoccupied_temperature_bin_features[occupancy_feature == 1] = 0
-    unoccupied_temperature_bin_features.rename(
-        columns={
-            c: "{}_unoccupied".format(c)
-            for c in unoccupied_temperature_bin_features.columns
-        },
-        inplace=True,
-    )
-
-    # combine features
-    return merge_features(
-        [
-            hour_of_week_feature,
-            occupied_temperature_bin_features,
-            unoccupied_temperature_bin_features,
-            segmented_data.weight,
-        ]
-    )
-
-
-def fit_caltrack_hourly_model_segment(segment_name, segment_data):
-    """Fit a model for a single segment.
-
-    Parameters
-    ----------
-    segment_name : :any:`str`
-        The name of the segment.
-    segment_data : :any:`pandas.DataFrame`
-        A design matrix for caltrack hourly, of the form returned by
-        :any:`eemeter.caltrack_hourly_prediction_feature_processor`.
-
-    Returns
-    -------
-    segment_model : :any:`CalTRACKSegmentModel`
-        A model that represents the fitted model.
-    """
-
-    warnings = []
-    if segment_data.dropna().empty:
-        model = None
-        formula = None
-        model_params = None
-        warnings.append(
-            EEMeterWarning(
-                qualified_name="eemeter.fit_caltrack_hourly_model_segment.no_nonnull_data",
-                description="The segment contains either an empty dataset or all NaNs.",
-                data={
-                    "n_rows": segment_data.shape[0],
-                    "n_rows_after_dropna": segment_data.dropna().shape[0],
-                },
-            )
-        )
-
-    else:
-
-        def _get_hourly_model_formula(data):
-            return "meter_value ~ C(hour_of_week) - 1{}".format(
-                "".join(
-                    [" + {}".format(c) for c in data.columns if c.startswith("bin")]
-                )
-            )
-
-        formula = _get_hourly_model_formula(segment_data)
-
-        # remove categories that only have null or missing entries
-        # this ensures that predictions will predict null
-        segment_data["hour_of_week"] = pd.Categorical(
-            segment_data["hour_of_week"],
-            categories=segment_data["hour_of_week"].dropna().unique(),
-            ordered=False,
-        )
-        model = smf.wls(formula=formula, data=segment_data, weights=segment_data.weight)
-        model_params = {coeff: value for coeff, value in model.fit().params.items()}
-
-    segment_model = CalTRACKSegmentModel(
-        segment_name=segment_name,
-        model=model,
-        formula=formula,
-        model_params=model_params,
-        warnings=warnings,
-    )
-    if model:
-        this_segment_data = segment_data[segment_data.weight == 1]
-        predicted_value = pd.Series(model.fit().predict(this_segment_data))
-        segment_model.totals_metrics = ModelMetrics(
-            this_segment_data.meter_value, predicted_value, len(model_params)
-        )
-    else:
-        segment_model.totals_metrics = None
-
-    return segment_model
-
-
-def fit_caltrack_hourly_model(
-    segmented_design_matrices,
-    occupancy_lookup,
-    occupied_temperature_bins,
-    unoccupied_temperature_bins,
-    segment_type: str,
-):
-    """Fit a CalTRACK hourly model
-
-    Parameters
-    ----------
-    segmented_design_matrices : :any:`dict` of :any:`pandas.DataFrame`
-        A dictionary of dataframes of the form returned by
-        :any:`eemeter.create_caltrack_hourly_segmented_design_matrices`
-    occupancy_lookup : :any:`pandas.DataFrame`
-        A dataframe with occupancy flags for each hour of the week and each segment.
-        Segment names are columns, occupancy flags are 0 or 1.
-    occupied_temperature_bins : :any:`pandas.DataFrame`
-        A dataframe of bin endpoint flags for each segment. Segment names are columns.
-    unoccupied_temperature_bins : :any:`pandas.DataFrame`
-        Ditto for the unoccupied mode.
-
-    Returns
-    -------
-    model : :any:`CalTRACKHourlyModelResults`
-        Has a `model.predict` method which take input data and makes a prediction
-        using this model.
-    """
-    segment_models = fit_model_segments(
-        segmented_design_matrices, fit_caltrack_hourly_model_segment
-    )
-    all_warnings = [
-        warning
-        for segment_model in segment_models
-        for warning in segment_model.warnings
-    ]
-
-    model = CalTRACKHourlyModel(
-        segment_models,
-        occupancy_lookup,
-        occupied_temperature_bins,
-        unoccupied_temperature_bins,
-        segment_type,
-    )
-
-    model_results = CalTRACKHourlyModelResults(
-        status="SUCCEEDED",
-        method_name="caltrack_hourly",
-        warnings=all_warnings,
-        model=model,
-    )
-    model_results.totals_metrics = {
-        seg_model.segment_name: seg_model.totals_metrics for seg_model in segment_models
-    }
-    return model_results
+        output = ['start_local', 'temperature', 'ghi', 'clearsky_ghi', 'observed', 'new_model', 'month']
+        model_kwarg = {'alpha': 0.1, 'l1_ratio': 0.1, 'random_state': 1}
+        window = 1
+       
+        settings = {'train_features': train_features, 'model_kwarg': model_kwarg, 'window': window,
+                'lagged_features': lagged_features, 'output': output,  'supplimental_data': operational_time}
+        
+        return settings
