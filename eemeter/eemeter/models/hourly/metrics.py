@@ -57,13 +57,13 @@ def _compute_mape(combined):
 
 
 def _compute_nmae(combined):
-    return (combined["residuals"].astype(float).abs().sum()) / (
-        combined["observed"].sum()
-    )
+    return None if combined["observed"].sum() == 0 else combined["residuals"].astype(float).abs().sum() / 
+      combined["observed"].sum()
 
 
 def _compute_nmbe(combined):
-    return combined["residuals"].astype(float).sum() / combined["observed"].sum()
+    return None if combined["observed"].sum() == 0 else combined["residuals"].astype(float).sum() / 
+      combined["observed"].sum()
 
 
 def _compute_autocorr_resid(combined, autocorr_lags):
