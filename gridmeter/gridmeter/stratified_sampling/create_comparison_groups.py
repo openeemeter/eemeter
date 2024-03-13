@@ -5,12 +5,12 @@ import pandas as pd
 
 from gridmeter._utils.base_comparison_group import Comparison_Group_Algorithm
 
-from gridmeter._stratified_sampling.model import StratifiedSampling
-from gridmeter._stratified_sampling.bins import ModelSamplingException
-from gridmeter._stratified_sampling.diagnostics import StratifiedSamplingDiagnostics
-from gridmeter._stratified_sampling.bin_selection import StratifiedSamplingBinSelector
+from gridmeter.stratified_sampling.model import StratifiedSampling
+from gridmeter.stratified_sampling.bins import ModelSamplingException
+from gridmeter.stratified_sampling.diagnostics import StratifiedSamplingDiagnostics
+from gridmeter.stratified_sampling.bin_selection import StratifiedSamplingBinSelector
 
-from gridmeter._stratified_sampling.settings import Settings
+from gridmeter.stratified_sampling.settings import Settings
 
 
 class Stratified_Sampling(Comparison_Group_Algorithm):

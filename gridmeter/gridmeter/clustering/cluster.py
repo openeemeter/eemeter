@@ -9,7 +9,7 @@ import attrs
 import numpy as np
 import pandas as pd
 
-from gridmeter._clustering import (
+from gridmeter.clustering import (
     transform as _transform,
     treatment_fit as _fit,
     bisect_k_means,
@@ -460,7 +460,7 @@ class ClusterResult:
 
     @classmethod
     def from_cluster_result_and_agg_type(
-        self,
+        cls,
         cluster_result: ClusterResultIntermediate,
         score_elements: list[ClusterScoreElement],
         s: _settings.Settings,
@@ -511,7 +511,7 @@ class ClusterResult:
 
     @classmethod
     def from_comparison_pool_loadshapes_and_settings(
-        self, 
+        cls, 
         df_cp: pd.DataFrame, 
         s: _settings.Settings
     ):

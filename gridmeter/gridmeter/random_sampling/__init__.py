@@ -18,7 +18,5 @@
 
 """
 
-from gridmeter._individual_meter_matching.create_comparison_groups import (
-    Individual_Meter_Matching as IMM,
-)
-from gridmeter._individual_meter_matching.settings import Settings as IMM_Settings
+from gridmeter.random_sampling.create_comparison_groups import Random_Sampling
+from gridmeter.random_sampling.settings import Settings as RS_Settings

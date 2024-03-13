@@ -18,5 +18,5 @@
 
 """
 
-from gridmeter._random_sampling.create_comparison_groups import Random_Sampling
-from gridmeter._random_sampling.settings import Settings as RS_Settings
+from gridmeter.clustering.create_comparison_groups import Clustering
+from gridmeter.clustering.settings import Settings as Clustering_Settings

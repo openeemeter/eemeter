@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pydantic
 
-import gridmeter._clustering.const as _const
+import gridmeter.clustering.const as _const
 from gridmeter._utils.base_settings import BaseSettings
 from gridmeter._utils.adaptive_loss import _LOSS_ALPHA_MIN
 

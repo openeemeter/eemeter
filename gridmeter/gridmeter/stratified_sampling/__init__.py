@@ -18,5 +18,8 @@
 
 """
 
-from gridmeter._clustering.create_comparison_groups import Clustering
-from gridmeter._clustering.settings import Settings as Clustering_Settings
+from gridmeter.stratified_sampling.create_comparison_groups import Stratified_Sampling
+from gridmeter.stratified_sampling.settings import (
+    StratifiedSamplingSettings as SS_Settings, 
+    DistanceStratifiedSamplingSettings as DSS_Settings,
+)

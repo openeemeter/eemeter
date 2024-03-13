@@ -7,7 +7,7 @@ from __future__ import annotations
 import pandas as pd
 
 from gridmeter._utils.base_comparison_group import Comparison_Group_Algorithm
-from gridmeter._clustering import settings as _settings, cluster as _cluster
+from gridmeter.clustering import settings as _settings, cluster as _cluster
 
 
 class Clustering(Comparison_Group_Algorithm):

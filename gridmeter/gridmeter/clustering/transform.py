@@ -13,7 +13,7 @@ import skfda.representation.grid
 import skfda.representation.basis
 import skfda.preprocessing.dim_reduction.feature_extraction
 
-from gridmeter._clustering import settings as _settings
+from gridmeter.clustering import settings as _settings
 
 
 _NORMALIZATION_QUANTILE = 0.1

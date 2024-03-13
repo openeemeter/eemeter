@@ -20,19 +20,19 @@
 
 from gridmeter.__version__ import *
 
-from gridmeter._clustering import Clustering
-from gridmeter._clustering import Clustering_Settings
+from gridmeter.clustering import Clustering
+from gridmeter.clustering import Clustering_Settings
 
-from gridmeter._individual_meter_matching import IMM
-from gridmeter._individual_meter_matching import IMM_Settings
+from gridmeter.individual_meter_matching import IMM
+from gridmeter.individual_meter_matching import IMM_Settings
 
-from gridmeter._stratified_sampling import (
+from gridmeter.stratified_sampling import (
     Stratified_Sampling,
     SS_Settings, 
     DSS_Settings
 )
 
-from gridmeter._random_sampling import (
+from gridmeter.random_sampling import (
     Random_Sampling,
     RS_Settings,
 )

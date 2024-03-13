@@ -15,7 +15,7 @@ from gridmeter._utils import (
     adaptive_loss as _adaptive_loss,
     multiprocessing as _multiprocessing,
 )
-from gridmeter._clustering import settings as _settings
+from gridmeter.clustering import settings as _settings
 
 
 def fit_to_clusters(

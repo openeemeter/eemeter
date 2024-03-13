@@ -18,8 +18,7 @@
 
 """
 
-from gridmeter._stratified_sampling.create_comparison_groups import Stratified_Sampling
-from gridmeter._stratified_sampling.settings import (
-    StratifiedSamplingSettings as SS_Settings, 
-    DistanceStratifiedSamplingSettings as DSS_Settings,
+from gridmeter.individual_meter_matching.create_comparison_groups import (
+    Individual_Meter_Matching as IMM,
 )
+from gridmeter.individual_meter_matching.settings import Settings as IMM_Settings
