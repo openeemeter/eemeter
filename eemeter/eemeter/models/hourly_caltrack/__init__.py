@@ -18,10 +18,11 @@
 
 """
 
-from eemeter.eemeter.models.hourly_caltrack import HourlyModel
+from .data import HourlyBaselineData, HourlyReportingData
+from .wrapper import HourlyModel
 
-
-class Model(HourlyModel):
-    def __init__(self, settings=None):
-        self.segment_type = "single"
-        self.alpha = 0.1
+__all__ = (
+    "HourlyBaselineData",
+    "HourlyReportingData",
+    "HourlyModel",
+)

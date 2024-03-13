@@ -18,6 +18,11 @@
 
 """
 
+from .hourly_caltrack import (
+    HourlyModel as HourlyCaltrackModel,
+    HourlyBaselineData as HourlyCaltrackBaselineData,
+    HourlyReportingData as HourlyCaltrackReportingData,
+)
 from .hourly import *
 from .daily import *
 from .billing import *
