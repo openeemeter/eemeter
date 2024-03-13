@@ -517,7 +517,7 @@ def sufficiency_criteria_baseline(
         fraction_valid_temperature_days = 0
         fraction_valid_days = 0
 
-    MAX_BASELINE_LENGTH = 365
+    MAX_BASELINE_LENGTH = 366 #in case of a leap year
     MIN_BASELINE_LENGTH = ceil(0.9 * MAX_BASELINE_LENGTH)
     if (
         not is_reporting_data
