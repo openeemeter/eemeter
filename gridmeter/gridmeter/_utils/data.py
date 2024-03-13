@@ -1,4 +1,5 @@
 from copy import deepcopy
+from typing import Optional
 
 from gridmeter._utils.data_settings import Data_Settings
 from gridmeter._utils import const as _const
@@ -8,10 +9,10 @@ import numpy as np
 
 class Data:
     def __init__(self, 
-        loadshape_df: pd.DataFrame | None = None, 
-        time_series_df: pd.DataFrame | None = None, 
-        features_df: pd.DataFrame | None = None, 
-        settings: Data_Settings | None = None
+        loadshape_df: Optional[pd.DataFrame]= None, 
+        time_series_df: Optional[pd.DataFrame]= None, 
+        features_df: Optional[pd.DataFrame]= None, 
+        settings: Optional[Data_Settings]= None
     ):
         if settings is None:
             if loadshape_df is None:

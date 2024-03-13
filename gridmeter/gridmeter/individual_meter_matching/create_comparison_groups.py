@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -13,7 +14,7 @@ from gridmeter.individual_meter_matching.distance_calc_selection import (
 
 # TODO: Should treatment, distance, and duplicated be somewhere else?
 class Individual_Meter_Matching(Comparison_Group_Algorithm):
-    def __init__(self, settings: Settings | None = None):
+    def __init__(self, settings: Optional[Settings] = None):
         if settings is None:
             settings = Settings()
         

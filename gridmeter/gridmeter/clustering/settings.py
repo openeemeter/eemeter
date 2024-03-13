@@ -3,6 +3,7 @@ module defines settings to be used for clustering
 """
 
 from __future__ import annotations
+from typing import Optional, Union
 
 import pydantic
 
@@ -46,7 +47,7 @@ class Settings(BaseSettings):
     )
 
     """how to normalize the loadshape before performing fPCA and clustering"""
-    NORMALIZE_METHOD: _const.NormalizeChoice | None = pydantic.Field(
+    NORMALIZE_METHOD: Optional[_const.NormalizeChoice] = pydantic.Field(
         default=_const.NormalizeChoice.MIN_MAX, 
         validate_default=True,
     )
@@ -73,7 +74,7 @@ class Settings(BaseSettings):
     )
 
     """treatment meter match loss type"""
-    TREATMENT_MATCH_LOSS: str | float = pydantic.Field(
+    TREATMENT_MATCH_LOSS: Union[str,float] = pydantic.Field(
         default="MAE", 
         validate_default=True,
     )

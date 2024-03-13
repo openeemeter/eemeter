@@ -3,6 +3,7 @@ main module to import and to expose external api
 """
 
 from __future__ import annotations
+from typing import Optional
 
 import pandas as pd
 
@@ -15,7 +16,7 @@ class Clustering(Comparison_Group_Algorithm):
     comparison_pool_loadshape = None
     treatment_loadshape = None
 
-    def __init__(self, settings: _settings.Settings | None = None):
+    def __init__(self, settings: Optional[_settings.Settings] = None):
         if settings is None:
             settings = _settings.Settings()
 

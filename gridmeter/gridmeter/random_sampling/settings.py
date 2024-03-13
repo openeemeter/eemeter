@@ -3,6 +3,7 @@ module defines settings to be used for random sampling
 """
 
 from __future__ import annotations
+from typing import Optional
 
 import pydantic
 
@@ -13,18 +14,18 @@ class Settings(BaseSettings):
     """Settings for random sampling"""
     
     """number meters to randomly sample from comparison pool"""
-    N_METERS_TOTAL: int | None = pydantic.Field(
+    N_METERS_TOTAL: Optional[int] = pydantic.Field(
         default=None, 
         validate_default=True,
     )
 
     """number of meters to randomly sample per treatment"""
-    N_METERS_PER_TREATMENT: int | None = pydantic.Field(
+    N_METERS_PER_TREATMENT: Optional[int] = pydantic.Field(
         default=4, 
         validate_default=True,
     )
 
-    SEED: int | None = pydantic.Field(
+    SEED: Optional[int] = pydantic.Field(
         default=None, 
         validate_default=True,
     )

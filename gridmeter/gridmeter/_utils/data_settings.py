@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pydantic
 
-from typing import Union
+from typing import Optional,Union
 
 import gridmeter._utils.const as _const
 from gridmeter._utils.base_settings import BaseSettings
@@ -79,19 +79,19 @@ class Weekday_Weekend_Definition(BaseSettings):
 
 class Data_Settings(BaseSettings):
     """aggregation type for the loadshape"""
-    AGG_TYPE: _const.AggType | None = pydantic.Field(
+    AGG_TYPE: Optional[_const.AggType] = pydantic.Field(
         default=_const.AggType.MEAN,
         validate_default=True,
     )
     
     """type of loadshape to be used"""
-    LOADSHAPE_TYPE: _const.LoadshapeType | None = pydantic.Field(
+    LOADSHAPE_TYPE: Optional[_const.LoadshapeType] = pydantic.Field(
         default=_const.LoadshapeType.MODELED, 
         validate_default=True,
     )
 
     """time period to be used for the loadshape"""
-    TIME_PERIOD: _const.TimePeriod | None = pydantic.Field(
+    TIME_PERIOD: Optional[_const.TimePeriod] = pydantic.Field(
         default=_const.TimePeriod.SEASONAL_HOURLY_DAY_OF_WEEK, 
         validate_default=True,
     )
@@ -103,7 +103,7 @@ class Data_Settings(BaseSettings):
     )
 
     """minimum percentage of data required for a meter to be included"""
-    MIN_DATA_PCT_REQUIRED: float | None = pydantic.Field(
+    MIN_DATA_PCT_REQUIRED: Optional[float] = pydantic.Field(
         default=min_data_pct, 
         validate_default=True,
     )

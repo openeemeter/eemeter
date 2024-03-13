@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -9,7 +10,7 @@ from gridmeter.random_sampling.settings import Settings
 
 
 class Random_Sampling(Comparison_Group_Algorithm):
-    def __init__(self, settings: Settings | None = None):
+    def __init__(self, settings: Optional[Settings] = None):
         if settings is None:
             settings = Settings()
         

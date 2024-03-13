@@ -4,6 +4,7 @@ module is responsible for creating clusters
 """
 
 from __future__ import annotations
+from typing import Optional
 
 import attrs
 import numpy as np
@@ -189,7 +190,7 @@ def _create_cluster_dataframe(df_cp: pd.DataFrame, clusters: np.ndarray):
 
 
 def get_all_cluster_results_generator(
-    data: np.ndarray | None,
+    data: Optional[np.ndarray],
     pool_loadshape_transform_result: _transform.InitialPoolLoadshapeTransform,
     cluster_bound_upper: int,
     cluster_bound_lower: int,
@@ -315,7 +316,7 @@ class ClusterScoreElement:
 
 
 def _get_all_cluster_result_generator(
-    data: np.ndarray | None,
+    data: Optional[np.ndarray],
     pool_loadshape_transform_result: _transform.InitialPoolLoadshapeTransform,
     cluster_bound_upper: int,
     cluster_bound_lower: int,

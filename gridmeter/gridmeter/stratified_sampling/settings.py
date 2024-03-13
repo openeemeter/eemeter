@@ -9,7 +9,7 @@ import pydantic
 import gridmeter.stratified_sampling.const as _const
 from gridmeter._utils.base_settings import BaseSettings
 
-from typing import Optional, Literal
+from typing import Optional, Literal, Union
 
 
 class StratificationColumnSettings(BaseSettings):
@@ -116,7 +116,7 @@ class StratifiedSamplingSettings(Settings):
         validate_default=True,
     )
 
-    STRATIFICATION_COLUMN: list[StratificationColumnSettings] | list[dict] = pydantic.Field(
+    STRATIFICATION_COLUMN: Union[list[StratificationColumnSettings], list[dict]] = pydantic.Field(
         default=[
             StratificationColumnSettings(column_name="summer_usage"),
             StratificationColumnSettings(column_name="winter_usage"),
@@ -203,7 +203,7 @@ class DistanceStratifiedSamplingSettings(Settings):
         validate_default=True,
     )
 
-    STRATIFICATION_COLUMN: list[DSS_StratificationColumnSettings] | list[dict] = pydantic.Field(
+    STRATIFICATION_COLUMN: Union[list[DSS_StratificationColumnSettings],list[dict]] = pydantic.Field(
         default=[
             DSS_StratificationColumnSettings(column_name="summer_usage"),
             DSS_StratificationColumnSettings(column_name="winter_usage"),
