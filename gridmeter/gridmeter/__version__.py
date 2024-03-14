@@ -20,7 +20,7 @@
 __title__ = "GRIDmeter™"
 __description__ = "Tools for stratified sampling for comparison groups"
 __url__ = "http://github.com/recurve-methods/comparison_groups"
-__version__ = "1.1.0"
+__version__ = "2.0.0a1"
 __author__ = "Recurve Analytics, Inc"
 __author_email__ = "admin@openee.io"
 __license__ =  "Apache 2.0" 
