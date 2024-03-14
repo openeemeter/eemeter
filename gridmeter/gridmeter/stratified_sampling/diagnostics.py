@@ -21,12 +21,21 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import plotnine
-from plotnine import *
 from itertools import combinations
 from scipy.stats import ttest_ind, ks_2samp
 from scipy.spatial.distance import pdist
 from scipy.stats import chisquare
+import warnings
+
+# Flag to check if plotnine is available
+plotnine_available = True
+
+try:
+    import plotnine
+    from plotnine import *
+except ModuleNotFoundError:
+    plotnine_available = False
+    warnings.warn("Plotnine is not installed. Diagnostic functionality will not be available. Use 'pip install plotnine' to address this.")
 
 
 def t_and_ks_test(x, y, thresh=0.05):
@@ -71,50 +80,53 @@ class DiagnosticPlotter:
             )
             .reset_index()
         )
+        
+        if plotnine_available:
+            plotnine.options.figure_size = (6, 3 * df_quantile.variable.nunique())
 
-        plotnine.options.figure_size = (6, 3 * df_quantile.variable.nunique())
-
-        base_plot = (
-            ggplot(df_quantile, aes(x="quantile", y="value", color="population"))
-            + geom_point()
-            + facet_wrap("~variable", scales="free_y", ncol=1)
-            + theme_bw()
-        )
-
-        df_range = (
-            df_quantile.groupby("variable")
-            .apply(lambda df: pd.Series({"min": df.value.min(), "max": df.value.max()}))
-            .reset_index()
-        )
-
-        df_equiv = df_equiv.merge(df_range)
-        df_equiv["x"] = 0
-        df_equiv["y"] = (df_equiv["max"] - df_equiv["min"]) * 0.95 + df_equiv["min"]
-        df_equiv["y2"] = (df_equiv["max"] - df_equiv["min"]) * 0.8 + df_equiv["min"]
-
-        p = (
-            base_plot
-            + geom_label(
-                aes(label="t_p", fill="t_ok", x="x", y="y"),
-                data=df_equiv,
-                ha="left",
-                va="top",
-                color="black",
-                size=10,
+            base_plot = (
+                ggplot(df_quantile, aes(x="quantile", y="value", color="population"))
+                + geom_point()
+                + facet_wrap("~variable", scales="free_y", ncol=1)
+                + theme_bw()
             )
-            + geom_label(
-                aes(label="ks_p", fill="ks_ok", x="x", y="y2"),
-                data=df_equiv,
-                ha="left",
-                va="top",
-                color="black",
-                size=10,
-            )
-            + scale_fill_manual({True: "lightgreen", False: "orange"}, guide=None)
-            + scale_color_discrete()
-        )
 
-        return p
+            df_range = (
+                df_quantile.groupby("variable")
+                .apply(lambda df: pd.Series({"min": df.value.min(), "max": df.value.max()}))
+                .reset_index()
+            )
+
+            df_equiv = df_equiv.merge(df_range)
+            df_equiv["x"] = 0
+            df_equiv["y"] = (df_equiv["max"] - df_equiv["min"]) * 0.95 + df_equiv["min"]
+            df_equiv["y2"] = (df_equiv["max"] - df_equiv["min"]) * 0.8 + df_equiv["min"]
+
+            p = (
+                base_plot
+                + geom_label(
+                    aes(label="t_p", fill="t_ok", x="x", y="y"),
+                    data=df_equiv,
+                    ha="left",
+                    va="top",
+                    color="black",
+                    size=10,
+                )
+                + geom_label(
+                    aes(label="ks_p", fill="ks_ok", x="x", y="y2"),
+                    data=df_equiv,
+                    ha="left",
+                    va="top",
+                    color="black",
+                    size=10,
+                )
+                + scale_fill_manual({True: "lightgreen", False: "orange"}, guide=None)
+                + scale_color_discrete()
+            )
+
+            return p
+        else:
+            return None
 
     def scatter(self, df, cols=None):
         if cols is None:
@@ -136,30 +148,33 @@ class DiagnosticPlotter:
             .reset_index()
         )
 
-        plotnine.options.figure_size = (12, 5)
-        base_plot = (
-            ggplot(df, aes(x=col_x, y=col_y, color="population"))
-            + geom_point()
-            + facet_wrap("~population", nrow=1)
-            + theme_bw()
-        )
-        outlier_bins = self.data_treatment.outlier_bins
-        outlier_bins = outlier_bins[outlier_bins["outlier"]]["bin"].values
-        df_rects = self.binning.edges_xy(col_x, col_y)
-        df_rects = df_rects[~df_rects["bin"].isin(outlier_bins)]
+        if plotnine_available:
+            plotnine.options.figure_size = (12, 5)
+            base_plot = (
+                ggplot(df, aes(x=col_x, y=col_y, color="population"))
+                + geom_point()
+                + facet_wrap("~population", nrow=1)
+                + theme_bw()
+            )
+            outlier_bins = self.data_treatment.outlier_bins
+            outlier_bins = outlier_bins[outlier_bins["outlier"]]["bin"].values
+            df_rects = self.binning.edges_xy(col_x, col_y)
+            df_rects = df_rects[~df_rects["bin"].isin(outlier_bins)]
 
-        # due to plotnine bug
-        df_rects[col_x] = np.nan
-        df_rects[col_y] = np.nan
-        p = base_plot + geom_rect(
-            aes(xmin="x_min", xmax="x_max", ymin="y_min", ymax="y_max"),
-            data=df_rects,
-            color="black",
-            fill=None,
-            size=0.2,
-        )
+            # due to plotnine bug
+            df_rects[col_x] = np.nan
+            df_rects[col_y] = np.nan
+            p = base_plot + geom_rect(
+                aes(xmin="x_min", xmax="x_max", ymin="y_min", ymax="y_max"),
+                data=df_rects,
+                color="black",
+                fill=None,
+                size=0.2,
+            )
 
-        return p
+            return p
+        else:
+            return None
 
     def histogram(self, df, cols=None):
         if cols is None:
@@ -168,31 +183,33 @@ class DiagnosticPlotter:
         return [self._histogram(df, c) for c in cols]
 
     def _histogram(self, df, col):
+        if plotnine_available:
+            plotnine.options.figure_size = (12, 5)
+            p = (
+                ggplot(df, aes(x=col, fill="population"))
+                + geom_histogram(bins=30)
+                + facet_wrap("~population", nrow=1, scales="free_y")
+                + theme_bw()
+            )
 
-        plotnine.options.figure_size = (12, 5)
-        p = (
-            ggplot(df, aes(x=col, fill="population"))
-            + geom_histogram(bins=30)
-            + facet_wrap("~population", nrow=1, scales="free_y")
-            + theme_bw()
-        )
+            outlier_bins = self.data_treatment.outlier_bins
+            outlier_bins = outlier_bins[outlier_bins["outlier"]]["bin"].values
+            df_rects = self.binning.edges_xy(col, col)
+            df_rects = df_rects[~df_rects["bin"].isin(outlier_bins)]
 
-        outlier_bins = self.data_treatment.outlier_bins
-        outlier_bins = outlier_bins[outlier_bins["outlier"]]["bin"].values
-        df_rects = self.binning.edges_xy(col, col)
-        df_rects = df_rects[~df_rects["bin"].isin(outlier_bins)]
+            # due to plotnine bug
+            df_rects[col] = np.nan
+            p = p + geom_rect(
+                aes(xmin="x_min", xmax="x_max", ymin=-np.inf, ymax=np.inf),
+                data=df_rects,
+                color="black",
+                fill=None,
+                size=0.2,
+            )
 
-        # due to plotnine bug
-        df_rects[col] = np.nan
-        p = p + geom_rect(
-            aes(xmin="x_min", xmax="x_max", ymin=-np.inf, ymax=np.inf),
-            data=df_rects,
-            color="black",
-            fill=None,
-            size=0.2,
-        )
-
-        return p
+            return p
+        else:
+            return None
 
 
 class StratifiedSamplingDiagnostics(DiagnosticPlotter):

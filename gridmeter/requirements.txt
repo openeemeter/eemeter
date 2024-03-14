@@ -1,6 +1,6 @@
 attrs
-click>=7.1.2,<7.2.0
-simplejson==3.16.0
+click
+simplejson
 
 numpy>=1.24.4
 numba
