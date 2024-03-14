@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 OFF_DATAFLOW_REQUIRES = []
 
-INSTALL_REQUIRES = ["pandas>=1.1.0", "plotnine"]
+INSTALL_REQUIRES = []
 EXTRAS_REQUIRE = {"off-dataflow": OFF_DATAFLOW_REQUIRES}
 
 here = os.path.abspath(os.path.dirname(__file__))

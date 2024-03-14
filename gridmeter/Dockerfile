@@ -1,4 +1,4 @@
-FROM python:3.7.4
+FROM python:3.8.12
 
 RUN apt-get update
 RUN apt-get install --yes --no-install-recommends graphviz
