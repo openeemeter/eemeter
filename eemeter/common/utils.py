@@ -200,18 +200,22 @@ MAD_k = 1 / norm_dist.ppf(
 )  # Conversion factor from MAD to std for normal distribution
 
 
-def median_absolute_deviation(x):
+def median_absolute_deviation(x, median=None):
     """
     This function calculates the Median Absolute Deviation (MAD) of a given array.
 
     Parameters:
     x (numpy array): The input array for which the MAD is to be calculated.
+    median (float, optional): The median value. If None, the median is calculated from the input array. Defaults to None.
 
     Returns:
     float: The calculated MAD of the input array.
     """
 
-    mu = np.median(x)
+    mu = median
+    if mu is None:
+        mu = np.median(x)
+        
     sigma = np.median(np.abs(x - mu)) * MAD_k
 
     return sigma
