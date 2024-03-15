@@ -17,30 +17,51 @@
    limitations under the License.
 
 """
-from sklearn.linear_model import ElasticNet
+
 import numpy as np
 import pandas as pd
+
+from sklearn.linear_model import ElasticNet
 from sklearn.preprocessing import StandardScaler
 
+from typing import Optional
+import json
+
+from eemeter.eemeter.models.hourly import settings as _settings
+from eemeter.common.metrics import BaselineMetrics, BaselineMetricsFromDict
 
 
 class HourlyModel:
     def __init__(
         self,
-        settings=None,
+        settings : Optional[_settings.HourlySettings] = None,
     ):
         """
         """
 
         # Initialize settings
         if settings is None:
-            self.settings = self._default_settings()
+            self.settings = _settings.HourlySettings()
         else:
             self.settings = settings
         
         # Initialize model
-        self._model_initiation()
-    
+        self._feature_scaler = StandardScaler()
+        self._y_scaler = StandardScaler()
+
+        self._model = ElasticNet(
+            alpha = self.settings.ALPHA, 
+            l1_ratio = self.settings.L1_RATIO,
+            selection = self.settings.SELECTION,
+            max_iter = self.settings.MAX_ITER,
+            random_state = self.settings.SEED,
+        )
+        
+        self.is_fit = False
+        self.categorical_features = None
+        self.norm_features_list = None
+        self.baseline_metrics = None
+
 
     def fit(self, baseline_data, ignore_disqualification=False):
 
@@ -68,22 +89,26 @@ class HourlyModel:
 
         return self
 
+
     def _fit(self, meter_data):
         # Initialize dataframe
-        self.train_status = "fitting"
         X, y = self._prepare_features(meter_data)
 
-        # Begin fitting
-        self.regressor.fit(X, y)
+        # Fit the model
+        self._model.fit(X, y)
+
+        # Get number of model parameters
+        num_parameters = (np.count_nonzero(self._model.coef_)
+                               + np.count_nonzero(self._model.intercept_))
         
-        self._get_error_metrics(self._predict(meter_data))     
-        if self.settings["save_train_obs"]:# TODO change this to a function
-            self.train_obs = meter_data["observed"].values
-        # self.params = self._create_params_from_fit_model()
+        # Get metrics
+        meter_data = self._predict(meter_data)
+        self.baseline_metrics = BaselineMetrics(df=meter_data, num_model_params=num_parameters)
+
         self.is_fit = True
 
-
         return self
+
 
     def predict(
         self,
@@ -98,7 +123,7 @@ class HourlyModel:
         #     raise DisqualifiedModelError(
         #         "Attempting to predict using disqualified model without setting ignore_disqualification=True"
         #     )
-
+ 
         # if str(self.baseline_timezone) != str(reporting_data.tz):
         #     """would be preferable to directly compare, but
         #     * using str() helps accomodate mixed tzinfo implementations,
@@ -113,7 +138,10 @@ class HourlyModel:
         #         "reporting_data must be a DailyBaselineData or DailyReportingData object"
         #     )
 
-        return self._predict(reporting_data)
+        df_eval = self._predict(reporting_data)
+
+        return df_eval
+
 
     def _predict(self, df_eval):
         """
@@ -125,61 +153,235 @@ class HourlyModel:
         Returns:
             pandas.DataFrame: The evaluation dataframe with model predictions added.
         """
-        self.train_status = "predicting"
         X, _ = self._prepare_features(df_eval)
 
-        y_predict_scaled = self.regressor.predict(X)
-        y_predict = self.y_scaler.inverse_transform(y_predict_scaled)
+        y_predict_scaled = self._model.predict(X)
+        y_predict = self._y_scaler.inverse_transform(y_predict_scaled)
         y_predict = y_predict.flatten()
-        df_eval["new_model"] = y_predict
-
-        self._get_error_metrics(df_eval)     
-
+        df_eval["predicted"] = y_predict
 
         return df_eval
 
+
+    def _prepare_features(self, meter_data):
+        """
+        Initializes the meter data by performing the following operations:
+        - Renames the 'model' column to 'model_old' if it exists
+        - Converts the index to a DatetimeIndex if it is not already
+        - Adds a 'season' column based on the month of the index using the settings.season dictionary
+        - Adds a 'day_of_week' column based on the day of the week of the index
+        - Removes any rows with NaN values in the 'temperature' or 'observed' columns
+        - Sorts the data by the index
+        - Reorders the columns to have 'season' and 'day_of_week' first, followed by the remaining columns
+
+        Parameters:
+        - meter_data: A pandas DataFrame containing the meter data
+
+        Returns:
+        - A pandas DataFrame containing the initialized meter data
+        """
+        #TODO: @Armin This meter data has weather data and it should be already clean
+        train_features = self.settings.TRAIN_FEATURES.copy()
+        lagged_features = self.settings.LAGGED_FEATURES.copy()
+        window = self.settings.WINDOW
+
+        #get categorical features
+        modified_meter_data = self._add_categorical_features(meter_data)
+        # normalize the data
+        modified_meter_data = self._normalize_data(modified_meter_data, train_features)
+
+        X, y = self._get_feature_data(modified_meter_data, train_features, window, lagged_features)
+
+        return X, y
+
+
+    def _add_categorical_features(self, df):
+        """
+        """
+        # Add season and day of week
+        # There shouldn't be any day_ or month_ columns in the dataframe
+        df["date"] = df.index.date
+        df["day_of_week"] = df.index.dayofweek
+
+        day_cat = [
+                    f"day_{i}" for i in np.arange(7) + 1
+                ]
+        month_cat = [
+            f"month_{i}"
+            for i in np.arange(12) + 1
+            if f"month_{i}"
+        ]
+        self.categorical_features = day_cat + month_cat
+
+        days = pd.Categorical(df["day_of_week"], categories=range(1, 8))
+        day_dummies = pd.get_dummies(days, prefix="day")
+        # set the same index for day_dummies as df_t
+        day_dummies.index = df.index
+
+        months = pd.Categorical(df["month"], categories=range(1, 13))
+        month_dummies = pd.get_dummies(months, prefix="month")
+        month_dummies.index = df.index
+
+        df = pd.concat([df, day_dummies, month_dummies], axis=1)
+
+        return df
+
+
+    def _normalize_data(self, df, train_features):
+        """
+        """
+        to_be_normalized = train_features.copy()
+        self.norm_features_list = [i+'_norm' for i in train_features]
+        #TODO: save the name of the columns and train features and categorical columns, scaler for everything
+        #TODO: save all the train errors
+        #TODO: save model and all the potential settings
+
+        if not self.is_fit:
+            self._feature_scaler.fit(df[to_be_normalized])
+            self._y_scaler.fit(df["observed"].values.reshape(-1, 1))
+
+        df[self.norm_features_list] = self._feature_scaler.transform(df[to_be_normalized])
+        df["observed_norm"] = self._y_scaler.transform(df["observed"].values.reshape(-1, 1))
+
+        return df
+
+
+    def _get_feature_data(self, df, train_features, window, lagged_features):
+        added_features = []
+        for feature in train_features:
+            if feature in lagged_features:
+                for i in range(1, window):
+                    df[f"{feature}_shifted_{i}"] = df[feature].shift(i * 24)
+                    added_features.append(f"{feature}_shifted_{i}")
+
+        new_train_features = self.norm_features_list + added_features
+        if self.settings.SUPPLEMENTAL_DATA:
+            new_train_features.append('supplemental_data')
+        new_train_features.sort(reverse=True)
+
+        # backfill the shifted features and observed to fill the NaNs in the shifted features
+        df[train_features] = df[new_train_features].fillna(method="bfill")
+        df["observed_norm"] = df["observed_norm"].fillna(method="bfill")
+
+        # exclude the first window days, we need 365 days
+        #TODO: I think this is not necessary
+        df = df.iloc[(window - 1) * 24 :]
+        # get aggregated features with agg function
+        agg_dict = {f: lambda x: list(x) for f in new_train_features}
+
+        # get the features and target for each day
+        ts_feature = np.array(
+            df.groupby("date").agg(agg_dict).values.tolist()
+        )
+        ts_feature = ts_feature.reshape(
+            ts_feature.shape[0], ts_feature.shape[1] * ts_feature.shape[2]
+        )
+
+        # get the first categorical features for each day for each sample
+        unique_dummies = df[self.categorical_features + ["date"]].groupby("date").first()
+
+        X = np.concatenate((ts_feature, unique_dummies), axis=1)
+        y = np.array(
+            df.groupby("date")
+            .agg({"observed_norm": lambda x: list(x)})
+            .values.tolist()
+        )
+        y = y.reshape(y.shape[0], y.shape[1] * y.shape[2])
+
+        return X, y
+
+
     def to_dict(self):
-        return self.params.model_dump()
+        feature_scaler = {}
+        for i, key in enumerate(self.settings.TRAIN_FEATURES):
+            feature_scaler[key] = [self._feature_scaler.mean_[i], self._feature_scaler.scale_[i]]
+
+        y_scaler = [self._y_scaler.mean_, self._y_scaler.scale_]
+        
+        params = _settings.SerializeModel(
+            SETTINGS = self.settings,
+            COEFFICIENTS = self._model.coef_.tolist(),
+            INTERCEPT = self._model.intercept_.tolist(),
+            FEATURE_SCALER = feature_scaler,
+            CATAGORICAL_SCALER = None,
+            Y_SCALER= y_scaler,
+            BASELINE_METRICS = self.baseline_metrics,
+        )
+
+        return params.model_dump()
+
 
     def to_json(self):
         return json.dumps(self.to_dict())
 
+
     @classmethod
     def from_dict(cls, data):
-        settings = data.get("settings")
-        daily_model = cls(settings=settings)
-        info = data.get("info")
-        daily_model.params = DailyModelParameters(
-            submodels=data.get("submodels"),
-            info=info,
-            settings=settings,
-        )
+        # get settings
+        settings = _settings.HourlySettings(**data.get("SETTINGS"))
 
-        def deserialize_warnings(warnings):
-            if not warnings:
-                return []
-            warn_list = []
-            for warning in warnings:
-                warn_list.append(
-                    EEMeterWarning(
-                        qualified_name=warning.get("qualified_name"),
-                        description=warning.get("description"),
-                        data=warning.get("data"),
-                    )
-                )
-            return warn_list
+        # initialize model class
+        model_cls = cls(settings=settings)
 
-        daily_model.disqualification = deserialize_warnings(
-            info.get("disqualification")
-        )
-        daily_model.warnings = deserialize_warnings(info.get("warnings"))
-        daily_model.baseline_timezone = info.get("baseline_timezone")
-        daily_model.is_fit = True
-        return daily_model
+        features = list(data.get("FEATURE_SCALER").keys())
+
+        # set feature scaler
+        feature_scaler_values= list(data.get("FEATURE_SCALER").values())
+        feature_scaler_mean = [i[0] for i in feature_scaler_values]
+        feature_scaler_scale = [i[1] for i in feature_scaler_values]
+
+        model_cls._feature_scaler.mean_ = np.array(feature_scaler_mean)
+        model_cls._feature_scaler.scale_ = np.array(feature_scaler_scale)
+        
+        # set y scaler
+        y_scaler_values = data.get("Y_SCALER")
+
+        model_cls._y_scaler.mean_ = np.array(y_scaler_values[0])
+        model_cls._y_scaler.scale_ = np.array(y_scaler_values[1])
+
+        # set model
+        model_cls._model.coef_ = np.array(data.get("COEFFICIENTS"))
+        model_cls._model.intercept_ = np.array(data.get("INTERCEPT"))
+
+        model_cls.is_fit = True
+
+        # set baseline metrics
+        model_cls.baseline_metrics = BaselineMetricsFromDict(data.get("BASELINE_METRICS"))
+
+        # info = data.get("info")
+        # model_cls.params = DailyModelParameters(
+        #     submodels=data.get("submodels"),
+        #     info=info,
+        #     settings=settings,
+        # )
+
+        # def deserialize_warnings(warnings):
+        #     if not warnings:
+        #         return []
+        #     warn_list = []
+        #     for warning in warnings:
+        #         warn_list.append(
+        #             EEMeterWarning(
+        #                 qualified_name=warning.get("qualified_name"),
+        #                 description=warning.get("description"),
+        #                 data=warning.get("data"),
+        #             )
+        #         )
+        #     return warn_list
+
+        # model_cls.disqualification = deserialize_warnings(
+        #     info.get("disqualification")
+        # )
+        # model_cls.warnings = deserialize_warnings(info.get("warnings"))
+        # model_cls.baseline_timezone = info.get("baseline_timezone")
+
+        return model_cls
+
 
     @classmethod
     def from_json(cls, str_data):
         return cls.from_dict(json.loads(str_data))
+
 
     def plot(
         self,
@@ -217,228 +419,3 @@ class HourlyModel:
         # TODO: pass more kwargs to plotting function
 
         plot(self, self._predict(df_eval.df))
-
-    def _create_params_from_fit_model(self):
-        submodels = {}
-        for key, submodel in self.model.items():
-            temperature_constraints = {
-                "T_min": submodel.T_min,
-                "T_max": submodel.T_max,
-                "T_min_seg": submodel.T_min_seg,
-                "T_max_seg": submodel.T_max_seg,
-            }
-            submodels[key] = DailySubmodelParameters(
-                coefficients=submodel.named_coeffs,
-                temperature_constraints=temperature_constraints,
-                f_unc=submodel.f_unc,
-            )
-        params = DailyModelParameters(
-            submodels=submodels,
-            settings=self.settings.to_dict(),
-            info={
-                "error": self.error,
-                "baseline_timezone": str(self.baseline_timezone),
-                "disqualification": [dq.json() for dq in self.disqualification],
-                "warnings": [warning.json() for warning in self.warnings],
-            },
-        )
-
-        return params
-
-    def _prepare_features(self, meter_data):
-        """
-        Initializes the meter data by performing the following operations:
-        - Renames the 'model' column to 'model_old' if it exists
-        - Converts the index to a DatetimeIndex if it is not already
-        - Adds a 'season' column based on the month of the index using the settings.season dictionary
-        - Adds a 'day_of_week' column based on the day of the week of the index
-        - Removes any rows with NaN values in the 'temperature' or 'observed' columns
-        - Sorts the data by the index
-        - Reorders the columns to have 'season' and 'day_of_week' first, followed by the remaining columns
-
-        Parameters:
-        - meter_data: A pandas DataFrame containing the meter data
-
-        Returns:
-        - A pandas DataFrame containing the initialized meter data
-        """
-        #TODO: @Armin This meter data has weather data and it should be already clean
-        train_features = self.settings["train_features"].copy()
-        window = self.settings["window"]
-        # set temp as the main lag feature
-        if "lagged_features" in self.settings:
-            lagged_features = self.settings["lagged_features"]
-        else:
-            lagged_features = ["temperature"]
-
-        #get categorical features
-        modified_meter_data = self._add_categorical_features(meter_data)
-        # normalize the data
-        modified_meter_data = self._normalize_data(modified_meter_data, train_features)
-
-        X, y = self._get_feature_data(modified_meter_data, train_features, window, lagged_features)
-
-        return X, y
-
-    def _add_categorical_features(self, df):
-        """
-        """
-        # Add season and day of week
-        # There shouldn't be any day_ or month_ columns in the dataframe
-        df["date"] = df.index.date
-        df["day_of_week"] = df.index.dayofweek
-
-        day_cat = [
-                    f"day_{i}" for i in np.arange(7) + 1
-                ]
-        month_cat = [
-            f"month_{i}"
-            for i in np.arange(12) + 1
-            if f"month_{i}"
-        ]
-        self.cat_features = day_cat + month_cat
-
-        days = pd.Categorical(df["day_of_week"], categories=range(1, 8))
-        day_dummies = pd.get_dummies(days, prefix="day")
-        # set the same index for day_dummies as df_t
-        day_dummies.index = df.index
-
-        months = pd.Categorical(df["month"], categories=range(1, 13))
-        month_dummies = pd.get_dummies(months, prefix="month")
-        month_dummies.index = df.index
-
-        df = pd.concat([df, day_dummies, month_dummies], axis=1)
-        return df
-
-    def _normalize_data(self, df, train_features):
-        """
-        """
-        to_be_normalized = train_features.copy()
-        self.norm_features_list = [i+'_norm' for i in train_features]
-        #TODO: save the name of the columns and train features and categorical columns, scaler for everything
-        #TODO: save all the train errors
-        #TODO: save model and all the potential settings
-
-        if self.train_status == "fitting":
-            scaler = StandardScaler()
-            y_scalar = StandardScaler()
-            scaler.fit(df[to_be_normalized])
-            y_scalar.fit(df["observed"].values.reshape(-1, 1))
-
-            self.scaler = scaler
-            self.y_scaler = y_scalar
-
-        df[self.norm_features_list] = self.scaler.transform(df[to_be_normalized])
-        df["observed_norm"] = self.y_scaler.transform(df["observed"].values.reshape(-1, 1))
-        return df
-
-    def _get_feature_data(self, df, train_features, window, lagged_features):
-        added_features = []
-        for feature in train_features:
-            if feature in lagged_features:
-                for i in range(1, window):
-                    df[f"{feature}_shifted_{i}"] = df[feature].shift(i * 24)
-                    added_features.append(f"{feature}_shifted_{i}")
-
-        new_train_features = self.norm_features_list + added_features
-        if self.settings['supplimental_data']:
-            new_train_features.append('supplimental_data')
-        new_train_features.sort(reverse=True)
-
-        # backfill the shifted features and observed to fill the NaNs in the shifted features
-        df[train_features] = df[new_train_features].fillna(method="bfill")
-        df["observed_norm"] = df["observed_norm"].fillna(method="bfill")
-
-        # exclude the first window days, we need 365 days
-        #TODO: I think this is not necessary
-        df = df.iloc[(window - 1) * 24 :]
-        # get aggregated features with agg function
-        agg_dict = {f: lambda x: list(x) for f in new_train_features}
-
-        # get the features and target for each day
-        ts_feature = np.array(
-            df.groupby("date").agg(agg_dict).values.tolist()
-        )
-        ts_feature = ts_feature.reshape(
-            ts_feature.shape[0], ts_feature.shape[1] * ts_feature.shape[2]
-        )
-
-        # get the first categorical features for each day for each sample
-        unique_dummies = df[self.cat_features + ["date"]].groupby("date").first()
-
-        X = np.concatenate((ts_feature, unique_dummies), axis=1)
-        y = np.array(
-            df.groupby("date")
-            .agg({"observed_norm": lambda x: list(x)})
-            .values.tolist()
-        )
-        y = y.reshape(y.shape[0], y.shape[1] * y.shape[2])
-
-        return X, y
-
-    def _get_error_metrics(self, df): #TODO: set the error metrics
-        """
-        
-        """
-        
-        if self.train_obs is None:
-            self.error["RMSE"] = np.sqrt(np.mean((df["observed"] - df["new_model"])**2))
-            self.error["MAE"] = np.mean(np.abs(df["observed"] - df["new_model"]))
-            self.error["CVRMSE"] = self.error["RMSE"] / np.mean(df["observed"])
-            self.error["PNRMSE"] = self.error["RMSE"] / np.diff(np.quantile(df["observed"], [0.25, 0.75]))[0]
-        else:
-            self.error["RMSE"] = np.sqrt(np.mean((df["observed"] - df["new_model"])**2))
-            self.error["MAE"] = np.mean(np.abs(df["observed"] - df["new_model"]))
-            self.error["CVRMSE"] = self.error["RMSE"] / np.mean(self.train_obs)
-            self.error["PNRMSE"] = self.error["RMSE"] / np.diff(np.quantile(self.train_obs, [0.25, 0.75]))[0]
-
-    
-    def _model_initiation(self):
-        """
-        Initializes the model by setting the settings and creating the model object.
-
-        Parameters:
-        - settings: A dictionary containing the settings for the model
-
-        Returns:
-        - None
-        """
-
-        self.model = ElasticNet
-        self.model_kwarg = self.settings["model_kwarg"]
-        self.regressor = self.model(**self.model_kwarg)
-
-
-        self.error = {
-            "RMSE": np.nan,
-            "MAE": np.nan,
-            "CVRMSE": np.nan,
-            "PNRMSE": np.nan,
-        }
-        self.is_fit = False
-        self.train_status = "unfitted"
-        self.cat_features = None
-        self.norm_features_list = None
-        self.scaler = None
-        self.y_scaler = None
-        self.train_obs = None
-
-    def _default_settings(self):
-
-        train_features = ['ghi']
-        if 'temperature' not in train_features:
-            train_features.append('temperature')
-        operational_time = False
-        # analytic_features = ['GHI', 'Temperature', 'DHI', 'DNI', 'Relative Humidity', 'Wind Speed', 'Clearsky DHI', 'Clearsky DNI', 'Clearsky GHI', 'Cloud Type']
-        lagged_features = ['temperature'] # 'ghi'
-
-        output = ['start_local', 'temperature', 'ghi', 'clearsky_ghi', 'observed', 'new_model', 'month']
-        model_kwarg = {'alpha': 0.1, 'l1_ratio': 0.1, 'random_state': 1}
-        window = 1
-        save_train_obs = True
-       
-        settings = {'train_features': train_features, 'model_kwarg': model_kwarg, 'window': window,
-                'lagged_features': lagged_features, 'output': output,  'supplimental_data': operational_time,
-                'save_train_obs': save_train_obs}
-        
-        return settings

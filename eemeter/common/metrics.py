@@ -1,0 +1,411 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""
+
+   Copyright 2014-2024 OpenEEmeter contributors
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+"""
+
+import numpy as np
+import pandas as pd
+
+import pydantic
+from typing import Optional
+
+from functools import cached_property # TODO: This requires Python 3.8
+
+from eemeter.common.utils import median_absolute_deviation, t_stat
+from eemeter.common.pydantic_utils import PydanticDf, PydanticFromDict
+
+
+def computed_field_cached_property():
+    decs = [pydantic.computed_field, cached_property]
+    def deco(f):
+        for dec in reversed(decs):
+            f = dec(f)
+        return f
+    return deco
+
+
+class ColumnMetrics(pydantic.BaseModel):
+    class Config:
+        arbitrary_types_allowed = True # required for dataframe / series
+
+    series: pd.Series = pydantic.Field(
+        exclude=True
+    )
+
+    @computed_field_cached_property()
+    def sum(self) -> float:
+        return self.series.sum()
+
+    @computed_field_cached_property()
+    def mean(self) -> float:
+        return self.sum / len(self.series)
+    
+    @computed_field_cached_property()
+    def variance(self) -> float:
+        return self.series.var(ddof=0)
+
+    @computed_field_cached_property()
+    def std(self) -> float:
+        return self.variance ** 0.5
+
+    @computed_field_cached_property()
+    def cvstd(self) -> float:
+        return self.std / self.mean
+    
+    @computed_field_cached_property()
+    def sum_squared(self) -> float:
+        return (self.series ** 2).sum()
+
+    @computed_field_cached_property()
+    def median(self) -> float:
+        return self.series.median()
+    
+    @computed_field_cached_property()
+    def MAD_scaled(self) -> float:
+        return median_absolute_deviation(self.series, self.median)
+
+    @computed_field_cached_property()
+    def iqr(self) -> float:
+        return np.diff(np.quantile(self.series, [0.25, 0.75]))[0]
+    
+    @computed_field_cached_property()
+    def skew(self) -> float:
+        return self.series.skew()
+    
+    @computed_field_cached_property()
+    def kurtosis(self) -> float:
+        return self.series.kurtosis()
+
+
+class BaselineMetrics(pydantic.BaseModel):
+    # TODO: Update the doc string
+    """Contains measures of model fit and summary statistics on the input dataframe.
+
+    Parameters
+    ----------
+    observed_input : :any:`pandas.Series`
+        Series with :any:`pandas.DatetimeIndex` with a set of electricity or
+        gas meter values.
+    predicted_input : :any:`pandas.Series`
+        Series with :any:`pandas.DatetimeIndex` with a set of electricity or
+        gas meter values.
+    num_parameters : :any:`int`, optional
+        The number of parameters (excluding the intercept) used in the
+        regression from which the predictions were derived.
+    autocorr_lags : :any:`int`, optional
+        The number of lags to use when calculating the autocorrelation of the
+        residuals.
+    confidence_level : :any:`int`, optional
+        Confidence level used in fractional savings uncertainty computations.
+
+    Attributes
+    ----------
+    observed_length : :any:`int`
+        The length of the observed.
+    predicted_length : :any:`int`
+        The length of the predicted.
+    merged_length : :any:`int`
+        The length of the dataframe resulting from the inner join of the
+        observed and the predicted.
+    observed_mean : :any:`float`
+        The mean of the observed.
+    predicted_mean : :any:`float`
+        The mean of the predicted.
+    observed_skew : :any:`float`
+        The skew of the observed.
+    predicted_skew : :any:`float`
+        The skew of the predicted.
+    observed_kurtosis : :any:`float`
+        The excess kurtosis of the observed.
+    predicted_kurtosis : :any:`float`
+        The excess kurtosis of the predicted.
+    observed_cvstd : :any:`float`
+        The coefficient of standard deviation of the observed.
+    predicted_cvstd : :any:`float`
+        The coefficient of standard deviation of the predicted.
+    r_squared : :any:`float`
+        The r-squared of the model from which the predicted was produced.
+    r_squared_adj : :any:`float`
+        The r-squared of the predicted relative to the
+        observed, adjusted by the number of parameters in the model.
+    cvrmse : :any:`float`
+        The coefficient of variation (root-mean-squared error) of the
+        predicted relative to the observed.
+    cvrmse_adj : :any:`float`
+        The coefficient of variation (root-mean-squared error) of the
+        predicted relative to the observed, adjusted
+        by the number of parameters in the model.
+    mape : :any:`float`
+        The mean absolute percent error of the predicted relative
+        to the observed.
+    mape_no_zeros : :any:`float`
+        The mean absolute percent error of the predicted relative
+        to the observed, with all time periods dropped where the
+        observed was not greater than zero.
+    num_meter_zeros : :any:`int`
+        The number of time periods for which the observed was not
+        greater than zero.
+    nmae : :any:`float`
+        The normalized mean absolute error of the predicted
+        relative to the observed.
+    nmbe : :any:`float`
+        The normalized mean bias error of the predicted relative
+        to the observed.
+    autocorr_resid : :any:`float`
+        The autocorrelation of the residuals (where the residuals equal the
+        predicted minus the observed), measured
+        using a number of lags equal to autocorr_lags.
+    n_prime: :any:`float`
+        The number of baseline inputs corrected for autocorrelation -- used
+        in fractional savings uncertainty computation.
+    single_tailed_confidence_level: :any:`float`
+        The adjusted confidence level for use in single-sided tests.
+    degrees_of_freedom: :any:`float
+        Maxmimum number of independent variables which have the freedom to vary
+    t_stat: :any:`float
+        t-statistic, used for hypothesis testing
+    cvrmse_auto_corr_correction: :any:`float
+        Correctoin factor the apply to cvrmse to account for autocorrelation of inputs.
+    approx_factor_auto_corr_correction: :any:`float
+        Approximation factor used in ashrae 14 guideline for uncertainty computation.
+    fsu_base_term: :any:`float
+        Base term used in fractional savings uncertainty computation.
+
+    """
+
+    class Config:
+        arbitrary_types_allowed = True # required for dataframe / series
+
+    _min_denominator: float = 1E-3
+
+    """Input dataframe to be used for metrics calculations"""
+    df: pd.DataFrame = pydantic.Field(
+        exclude=True
+    )
+
+    """Number of model parameters"""
+    num_model_params: int = pydantic.Field(
+        ge=1,
+        validate_default=True,
+    )
+
+    @cached_property
+    def _df(self) -> pd.DataFrame:
+        _df = self.df[["observed", "predicted"]].copy()
+
+        # Check dataframe
+        expected_columns = {"observed": "float", "predicted": "float"}
+        _df = PydanticDf(df=_df, column_types=expected_columns).df
+
+        # drop non finite values from df
+        _df = _df[np.isfinite(_df["observed"]) & np.isfinite(_df["predicted"])]
+
+        # get residuals
+        _df["residuals"] = _df["observed"] - _df["predicted"]
+
+        return _df
+    
+    @computed_field_cached_property()
+    def n(self) -> float:
+        return len(self._df)
+        
+    @computed_field_cached_property()
+    def n_prime(self) -> float:
+        # lag should be 1 according to https://www.osti.gov/servlets/purl/1366449
+        autocorr = self._df["residuals"].autocorr(lag=1)
+
+        _n_prime = float(self.n * (1 - autocorr) / (1 + autocorr))
+
+        if not np.isfinite(_n_prime):
+            # TODO: Create warning
+            _n_prime = 1
+
+        return _n_prime
+    
+    @computed_field_cached_property()
+    def ddof(self) -> float:
+        _ddof = self.n - self.num_model_params
+
+        if _ddof < 1:
+            # TODO: Create warning
+            _ddof = 1
+
+        return _ddof
+    
+    @computed_field_cached_property()
+    def ddof_autocorr(self) -> float:
+        # TODO: should this be rounded?
+        _ddof_autocorr = self.n_prime - self.num_model_params
+
+        # TODO: what to do if less than 1?
+        if _ddof_autocorr < 1:
+            # TODO: Create warning
+            _ddof_autocorr = 1
+
+        return _ddof_autocorr
+
+    @computed_field_cached_property()
+    def observed(self) -> ColumnMetrics:
+        return ColumnMetrics(series=self._df["observed"])
+    
+    @computed_field_cached_property()
+    def predicted(self) -> ColumnMetrics:
+        return ColumnMetrics(series=self._df["predicted"])
+    
+    @computed_field_cached_property()
+    def residuals(self) -> ColumnMetrics:
+        return ColumnMetrics(series=self._df["residuals"])
+    
+    @computed_field_cached_property()
+    def mae(self) -> float:
+        return self._df["residuals"].abs().mean()
+
+    @computed_field_cached_property()
+    def nmae(self) -> float:
+        return self.mae / self.observed.mean
+    
+    @computed_field_cached_property()
+    def pnmae(self) -> float:
+        return self.mae / self.observed.iqr
+    
+    @computed_field_cached_property()
+    def mbe(self) -> float:
+        return self.residuals.mean
+
+    @computed_field_cached_property()
+    def nmbe(self) -> float:
+        return self.mbe / self.observed.mean
+    
+    @computed_field_cached_property()
+    def pnmbe(self) -> float:
+        return self.mbe / self.observed.iqr
+        
+    @computed_field_cached_property()
+    def sse(self) -> float:
+        return self.residuals.sum_squared
+
+    @computed_field_cached_property()
+    def mse(self) -> float:
+        return self.sse / self.n
+
+    @computed_field_cached_property()
+    def rmse(self) -> float:
+        return self.mse ** 0.5
+
+    @computed_field_cached_property()
+    def rmse_adj(self) -> float:       
+        return (self.sse / self.ddof) ** 0.5
+    
+    @computed_field_cached_property()
+    def rmse_autocorr_adj(self) -> float:
+        return (self.sse / self.ddof_autocorr) ** 0.5
+
+    @computed_field_cached_property()
+    def cvrmse(self) -> float:
+        return self.rmse / self.observed.mean
+
+    @computed_field_cached_property()
+    def cvrmse_adj(self) -> float:
+        return self.rmse_adj / self.observed.mean
+
+    @computed_field_cached_property()
+    def pnrmse(self) -> float:
+        return self.rmse / self.observed.iqr
+    
+    @computed_field_cached_property()
+    def pnrmse_adj(self) -> float:
+        return self.rmse_adj / self.observed.iqr
+
+    @computed_field_cached_property()
+    def r_squared(self) -> float:
+        return self._df[["predicted", "observed"]].corr().iloc[0, 1] ** 2
+
+    @computed_field_cached_property()
+    def r_squared_adj(self) -> float:       
+        n = self.n
+        n_adj = self.ddof
+
+        return 1 - (1 - self.r_squared) * (n - 1) / (n_adj - 1)
+    
+    @computed_field_cached_property()
+    def mape(self) -> float:
+        df = self._df
+        df_no_zeros = df[np.abs(df["observed"]) >= self._min_denominator]
+
+        return (df_no_zeros["residuals"] / df_no_zeros["observed"]).abs().mean()
+    
+
+def BaselineMetricsFromDict(input_dict):
+    for k in ["observed", "predicted", "residuals"]:
+        input_dict[k] = PydanticFromDict(input_dict[k], name="ColumnMetrics")
+
+    return PydanticFromDict(input_dict, name="BaselineMetrics")
+
+
+class ReportingMetrics:
+
+
+    def uncertainty(self, reporting_df, model_type="hourly"):
+        _df = reporting_df.copy()
+
+        if "predicted" not in _df.columns:
+            raise ValueError("predicted column must be present in reporting dataframe")
+        
+        # set predicted columns to float
+        _df["predicted"] = _df["predicted"].astype(float)
+
+        # drop non finite values from df
+        _df = _df[np.isfinite(_df["predicted"])]
+
+        E_model_reporting = _df["predicted"].sum()
+        m = len(_df)
+
+        # t-statistic
+        # TODO: Should this be single-tailed or double-tailed?
+        t = t_stat(1 - self.confidence_level, self.ddof, tail=1)
+
+        # CVRMSE adjusted for autocorrelation
+        cvrmse_auto_corr = self.rmse_autocorr_adj/self.observed_mean
+
+        # part of approximation factor used in ashrae 14 guideline
+        approx_factor = np.sqrt(self.n/(m*self.n_prime)*(1 + (2/self.n_prime)))
+
+        s_unc_base = E_model_reporting*(t*cvrmse_auto_corr*approx_factor)
+
+        if model_type == "hourly":
+            s_unc = 1.26*s_unc_base
+
+        elif model_type == "daily":
+            M = len(_df.index.month.unique())
+            coefs = [-0.00024, 0.03535, 1.00286]
+            s_unc = np.polyval(coefs, M)*s_unc_base
+
+        elif model_type == "billing":
+            M = len(_df.index.month.unique())
+            coefs = [-0.00022, 0.03306, 0.94054]
+            s_unc = np.polyval(coefs, M)*s_unc_base
+
+        else:
+            raise ValueError("model_type must be 'hourly', 'daily', or 'billing'")
+        
+        _df["predicted_unc"] = s_unc**2/m
+        
+        # join unc to reporting_df
+        reporting_df = reporting_df.join(_df["predicted_unc"])
+        
+        return reporting_df
