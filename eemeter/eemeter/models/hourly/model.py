@@ -40,14 +40,7 @@ class HourlyModel:
         
         # Initialize model
         self._model_initiation()
-        
-        self.error = {
-            "wRMSE": np.nan,
-            "RMSE": np.nan,
-            "MAE": np.nan,
-            "CVRMSE": np.nan,
-            "PNRMSE": np.nan,
-        }
+    
 
     def fit(self, baseline_data, ignore_disqualification=False):
 
@@ -83,10 +76,12 @@ class HourlyModel:
         # Begin fitting
         self.regressor.fit(X, y)
         
-        # self._get_error_metrics()      
-
+        self._get_error_metrics(self._predict(meter_data))     
+        if self.settings["save_train_obs"]:# TODO change this to a function
+            self.train_obs = meter_data["observed"].values
         # self.params = self._create_params_from_fit_model()
         self.is_fit = True
+
 
         return self
 
@@ -137,6 +132,9 @@ class HourlyModel:
         y_predict = self.y_scaler.inverse_transform(y_predict_scaled)
         y_predict = y_predict.flatten()
         df_eval["new_model"] = y_predict
+
+        self._get_error_metrics(df_eval)     
+
 
         return df_eval
 
@@ -317,6 +315,9 @@ class HourlyModel:
         """
         to_be_normalized = train_features.copy()
         self.norm_features_list = [i+'_norm' for i in train_features]
+        #TODO: save the name of the columns and train features and categorical columns, scaler for everything
+        #TODO: save all the train errors
+        #TODO: save model and all the potential settings
 
         if self.train_status == "fitting":
             scaler = StandardScaler()
@@ -375,22 +376,22 @@ class HourlyModel:
 
         return X, y
 
-    def _get_error_metrics(self): #TODO: set the error metrics
+    def _get_error_metrics(self, df): #TODO: set the error metrics
         """
         
         """
+        
+        if self.train_obs is None:
+            self.error["RMSE"] = np.sqrt(np.mean((df["observed"] - df["new_model"])**2))
+            self.error["MAE"] = np.mean(np.abs(df["observed"] - df["new_model"]))
+            self.error["CVRMSE"] = self.error["RMSE"] / np.mean(df["observed"])
+            self.error["PNRMSE"] = self.error["RMSE"] / np.diff(np.quantile(df["observed"], [0.25, 0.75]))[0]
+        else:
+            self.error["RMSE"] = np.sqrt(np.mean((df["observed"] - df["new_model"])**2))
+            self.error["MAE"] = np.mean(np.abs(df["observed"] - df["new_model"]))
+            self.error["CVRMSE"] = self.error["RMSE"] / np.mean(self.train_obs)
+            self.error["PNRMSE"] = self.error["RMSE"] / np.diff(np.quantile(self.train_obs, [0.25, 0.75]))[0]
 
-        N = 0
-
-
-        resid = np.hstack(resid)
-        obs = np.hstack(obs)
-
-        self.error["wRMSE"] = np.sqrt(wSSE / N)
-        self.error["RMSE"] = RMSE = np.mean(resid**2) ** 0.5
-        self.error["MAE"] = np.mean(np.abs(resid))
-        self.error["CVRMSE"] = RMSE / np.mean(obs)
-        self.error["PNRMSE"] = RMSE / np.diff(np.quantile(obs, [0.25, 0.75]))[0]
     
     def _model_initiation(self):
         """
@@ -407,8 +408,8 @@ class HourlyModel:
         self.model_kwarg = self.settings["model_kwarg"]
         self.regressor = self.model(**self.model_kwarg)
 
+
         self.error = {
-            "wRMSE": np.nan,
             "RMSE": np.nan,
             "MAE": np.nan,
             "CVRMSE": np.nan,
@@ -420,6 +421,7 @@ class HourlyModel:
         self.norm_features_list = None
         self.scaler = None
         self.y_scaler = None
+        self.train_obs = None
 
     def _default_settings(self):
 
@@ -433,8 +435,10 @@ class HourlyModel:
         output = ['start_local', 'temperature', 'ghi', 'clearsky_ghi', 'observed', 'new_model', 'month']
         model_kwarg = {'alpha': 0.1, 'l1_ratio': 0.1, 'random_state': 1}
         window = 1
+        save_train_obs = True
        
         settings = {'train_features': train_features, 'model_kwarg': model_kwarg, 'window': window,
-                'lagged_features': lagged_features, 'output': output,  'supplimental_data': operational_time}
+                'lagged_features': lagged_features, 'output': output,  'supplimental_data': operational_time,
+                'save_train_obs': save_train_obs}
         
         return settings
