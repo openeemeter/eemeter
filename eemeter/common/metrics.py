@@ -94,7 +94,7 @@ class ColumnMetrics(pydantic.BaseModel):
 
 def _safe_divide(numerator, denominator, min_denominator=1E-3):
     if denominator <= min_denominator and numerator > 10*min_denominator:
-            return None
+        return None
     
     return numerator / denominator
 
@@ -203,6 +203,8 @@ class BaselineMetrics(pydantic.BaseModel):
         exclude=True
     )
 
+    _min_denominator: float = 1E-3
+
     """Number of model parameters"""
     num_model_params: int = pydantic.Field(
         ge=1,
@@ -285,11 +287,11 @@ class BaselineMetrics(pydantic.BaseModel):
 
     @computed_field_cached_property()
     def nmae(self) -> Optional[float]:
-        return _safe_divide(self.mae, self.observed.mean)
+        return _safe_divide(self.mae, self.observed.mean, self._min_denominator)
     
     @computed_field_cached_property()
     def pnmae(self) -> Optional[float]:
-        return _safe_divide(self.mae, self.observed.iqr)
+        return _safe_divide(self.mae, self.observed.iqr, self._min_denominator)
     
     @computed_field_cached_property()
     def mbe(self) -> float:
@@ -297,11 +299,11 @@ class BaselineMetrics(pydantic.BaseModel):
 
     @computed_field_cached_property()
     def nmbe(self) -> Optional[float]:
-        return _safe_divide(self.mbe, self.observed.mean)
+        return _safe_divide(self.mbe, self.observed.mean, self._min_denominator)
     
     @computed_field_cached_property()
     def pnmbe(self) -> Optional[float]:
-        return _safe_divide(self.mbe, self.observed.iqr)
+        return _safe_divide(self.mbe, self.observed.iqr, self._min_denominator)
         
     @computed_field_cached_property()
     def sse(self) -> float:
@@ -325,19 +327,19 @@ class BaselineMetrics(pydantic.BaseModel):
 
     @computed_field_cached_property()
     def cvrmse(self) -> Optional[float]:
-        return _safe_divide(self.rmse, self.observed.mean)
+        return _safe_divide(self.rmse, self.observed.mean, self._min_denominator)
 
     @computed_field_cached_property()
     def cvrmse_adj(self) -> Optional[float]:
-        return _safe_divide(self.rmse_adj, self.observed.mean)
+        return _safe_divide(self.rmse_adj, self.observed.mean, self._min_denominator)
 
     @computed_field_cached_property()
     def pnrmse(self) -> Optional[float]:
-        return _safe_divide(self.rmse, self.observed.iqr)
+        return _safe_divide(self.rmse, self.observed.iqr, self._min_denominator)
     
     @computed_field_cached_property()
     def pnrmse_adj(self) -> Optional[float]:
-        return _safe_divide(self.rmse_adj, self.observed.iqr)
+        return _safe_divide(self.rmse_adj, self.observed.iqr, self._min_denominator)
 
     @computed_field_cached_property()
     def r_squared(self) -> float:
@@ -351,7 +353,7 @@ class BaselineMetrics(pydantic.BaseModel):
         num = (1 - self.r_squared) * (n - 1)
         den =(n_adj - 1)
 
-        return 1 - _safe_divide(num, den)
+        return 1 - _safe_divide(num, den, self._min_denominator)
     
     @computed_field_cached_property()
     def mape(self) -> Optional[float]:
