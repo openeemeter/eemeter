@@ -92,6 +92,13 @@ class ColumnMetrics(pydantic.BaseModel):
         return self.series.kurtosis()
 
 
+def _safe_divide(numerator, denominator, min_denominator=1E-3):
+    if denominator <= min_denominator and numerator > 10*min_denominator:
+            return None
+    
+    return numerator / denominator
+
+
 class BaselineMetrics(pydantic.BaseModel):
     # TODO: Update the doc string
     """Contains measures of model fit and summary statistics on the input dataframe.
@@ -191,8 +198,6 @@ class BaselineMetrics(pydantic.BaseModel):
     class Config:
         arbitrary_types_allowed = True # required for dataframe / series
 
-    _min_denominator: float = 1E-3
-
     """Input dataframe to be used for metrics calculations"""
     df: pd.DataFrame = pydantic.Field(
         exclude=True
@@ -207,6 +212,9 @@ class BaselineMetrics(pydantic.BaseModel):
     @cached_property
     def _df(self) -> pd.DataFrame:
         _df = self.df[["observed", "predicted"]].copy()
+
+        if len(_df) < 1:
+            raise ValueError("Input dataframe must have at least one row")
 
         # Check dataframe
         expected_columns = {"observed": "float", "predicted": "float"}
@@ -276,24 +284,24 @@ class BaselineMetrics(pydantic.BaseModel):
         return self._df["residuals"].abs().mean()
 
     @computed_field_cached_property()
-    def nmae(self) -> float:
-        return self.mae / self.observed.mean
+    def nmae(self) -> Optional[float]:
+        return _safe_divide(self.mae, self.observed.mean)
     
     @computed_field_cached_property()
-    def pnmae(self) -> float:
-        return self.mae / self.observed.iqr
+    def pnmae(self) -> Optional[float]:
+        return _safe_divide(self.mae, self.observed.iqr)
     
     @computed_field_cached_property()
     def mbe(self) -> float:
         return self.residuals.mean
 
     @computed_field_cached_property()
-    def nmbe(self) -> float:
-        return self.mbe / self.observed.mean
+    def nmbe(self) -> Optional[float]:
+        return _safe_divide(self.mbe, self.observed.mean)
     
     @computed_field_cached_property()
-    def pnmbe(self) -> float:
-        return self.mbe / self.observed.iqr
+    def pnmbe(self) -> Optional[float]:
+        return _safe_divide(self.mbe, self.observed.iqr)
         
     @computed_field_cached_property()
     def sse(self) -> float:
@@ -316,36 +324,42 @@ class BaselineMetrics(pydantic.BaseModel):
         return (self.sse / self.ddof_autocorr) ** 0.5
 
     @computed_field_cached_property()
-    def cvrmse(self) -> float:
-        return self.rmse / self.observed.mean
+    def cvrmse(self) -> Optional[float]:
+        return _safe_divide(self.rmse, self.observed.mean)
 
     @computed_field_cached_property()
-    def cvrmse_adj(self) -> float:
-        return self.rmse_adj / self.observed.mean
+    def cvrmse_adj(self) -> Optional[float]:
+        return _safe_divide(self.rmse_adj, self.observed.mean)
 
     @computed_field_cached_property()
-    def pnrmse(self) -> float:
-        return self.rmse / self.observed.iqr
+    def pnrmse(self) -> Optional[float]:
+        return _safe_divide(self.rmse, self.observed.iqr)
     
     @computed_field_cached_property()
-    def pnrmse_adj(self) -> float:
-        return self.rmse_adj / self.observed.iqr
+    def pnrmse_adj(self) -> Optional[float]:
+        return _safe_divide(self.rmse_adj, self.observed.iqr)
 
     @computed_field_cached_property()
     def r_squared(self) -> float:
         return self._df[["predicted", "observed"]].corr().iloc[0, 1] ** 2
 
     @computed_field_cached_property()
-    def r_squared_adj(self) -> float:       
+    def r_squared_adj(self) -> Optional[float]:       
         n = self.n
         n_adj = self.ddof
 
-        return 1 - (1 - self.r_squared) * (n - 1) / (n_adj - 1)
+        num = (1 - self.r_squared) * (n - 1)
+        den =(n_adj - 1)
+
+        return 1 - _safe_divide(num, den)
     
     @computed_field_cached_property()
-    def mape(self) -> float:
+    def mape(self) -> Optional[float]:
         df = self._df
         df_no_zeros = df[np.abs(df["observed"]) >= self._min_denominator]
+
+        if len(df_no_zeros) == 0:
+            return None
 
         return (df_no_zeros["residuals"] / df_no_zeros["observed"]).abs().mean()
     
