@@ -18,21 +18,20 @@ class SelectionChoice(str, Enum):
 class HourlySettings(BaseSettings):
     """train features used within the model"""
     TRAIN_FEATURES: list[str] = pydantic.Field(
-        default=['ghi', 'temperature'], 
-        validate_default=True,
-    )
-
-    """lagged train features used within the model"""
-    LAGGED_FEATURES: list[str] = pydantic.Field(
         default=['temperature'], 
         validate_default=True,
     )
 
-    # TODO: Armin what is this?
+    """lagged train features used within the model"""
+    LAGGED_FEATURES: Optional[list[str]] = pydantic.Field(
+        default=None, 
+        validate_default=True,
+    )
+
     """window"""
-    WINDOW: int = pydantic.Field(
-        default=1,
-        ge=1,
+    WINDOW: Optional[int] = pydantic.Field(
+        default=None,
+        ge=0,                       # TODO: CORRECT THIS BEFORE RELEASE
         validate_default=True,
     )
 
@@ -40,13 +39,6 @@ class HourlySettings(BaseSettings):
     """supplemental data"""
     SUPPLEMENTAL_DATA: bool = pydantic.Field(
         default=False,
-        validate_default=True,
-    )
-
-    # TODO: Armin what is this?
-    """output"""
-    OUTPUT: list[str] = pydantic.Field(
-        default=['start_local', 'temperature', 'ghi', 'clearsky_ghi', 'observed', 'new_model', 'month'], 
         validate_default=True,
     )
 
@@ -89,8 +81,9 @@ class HourlySettings(BaseSettings):
     @pydantic.model_validator(mode="after")
     def _lowercase_features(self):
         self.TRAIN_FEATURES = [s.lower() for s in self.TRAIN_FEATURES]
-        self.LAGGED_FEATURES = [s.lower() for s in self.LAGGED_FEATURES]
-        self.OUTPUT = [s.lower() for s in self.OUTPUT]
+
+        if self.LAGGED_FEATURES is not None:
+            self.LAGGED_FEATURES = [s.lower() for s in self.LAGGED_FEATURES]
 
         return self
 
@@ -99,18 +92,33 @@ class HourlySettings(BaseSettings):
         if "temperature" not in self.TRAIN_FEATURES:
             self.TRAIN_FEATURES.insert(0, "temperature")
 
-        # TODO: Armin, do we always want to include temperature in lagged features?
-        if "temperature" not in self.LAGGED_FEATURES:
-            self.TRAIN_FEATURES.insert(0, "temperature")
+        # Lag features
+        if self.LAGGED_FEATURES is None:
+            if self.WINDOW is not None:
+                raise ValueError("WINDOW is set but LAGGED_FEATURES is not set")
+        else:
+            if len(self.LAGGED_FEATURES) == 0:
+                raise ValueError("LAGGED_FEATURES is empty, set as None to remove lagged features")
+            
+            if self.WINDOW is None:
+                raise ValueError("LAGGED_FEATURES is set but WINDOW is not set")
+            
+            # Check if feature in lagged features but not in train features raise error
+            lag_feature_error = [f for f in self.LAGGED_FEATURES if f not in self.TRAIN_FEATURES]
 
-        # if feature in lagged features but not in train features raise error
-        lag_feature_error = [f for f in self.LAGGED_FEATURES if f not in self.TRAIN_FEATURES]
-
-        if lag_feature_error:
-            raise ValueError(f"Features {lag_feature_error} are in LAGGED_FEATURES but not in TRAIN_FEATURES")
+            if lag_feature_error:
+                raise ValueError(f"Features {lag_feature_error} are in LAGGED_FEATURES but not in TRAIN_FEATURES")
 
         return self
-    
+
+
+class HourlySolarSettings(HourlySettings):
+    """train features used within the model"""
+    TRAIN_FEATURES: list[str] = pydantic.Field(
+        default=['temperature', 'ghi'], 
+        validate_default=True,
+    )
+
 
 class SerializeModel(BaseSettings):
     class Config:
