@@ -31,7 +31,7 @@ class HourlySettings(BaseSettings):
     """window"""
     WINDOW: Optional[int] = pydantic.Field(
         default=None,
-        ge=0,                       # TODO: CORRECT THIS BEFORE RELEASE
+        ge=1,                       # TODO: CORRECT THIS BEFORE RELEASE
         validate_default=True,
     )
 
