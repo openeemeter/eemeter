@@ -48,6 +48,10 @@ class ColumnMetrics(pydantic.BaseModel):
     )
 
     @computed_field_cached_property()
+    def values(self) -> np.ndarray:
+        return self.series.values
+
+    @computed_field_cached_property()
     def sum(self) -> float:
         return self.series.sum()
 
@@ -213,17 +217,18 @@ class BaselineMetrics(pydantic.BaseModel):
 
     @cached_property
     def _df(self) -> pd.DataFrame:
-        _df = self.df[["observed", "predicted"]].copy()
+        #TODO: remove any caltrack value for the actual implementation, this is for testing
+        _df = self.df[["observed", "predicted", "caltrack"]].copy()
 
         if len(_df) < 1:
             raise ValueError("Input dataframe must have at least one row")
 
         # Check dataframe
-        expected_columns = {"observed": "float", "predicted": "float"}
+        expected_columns = {"observed": "float", "predicted": "float",  "caltrack": "float"}
         _df = PydanticDf(df=_df, column_types=expected_columns).df
 
         # drop non finite values from df
-        _df = _df[np.isfinite(_df["observed"]) & np.isfinite(_df["predicted"])]
+        _df = _df[np.isfinite(_df["observed"]) & np.isfinite(_df["predicted"]) & np.isfinite(_df["caltrack"])]
 
         # get residuals
         _df["residuals"] = _df["observed"] - _df["predicted"]
@@ -276,6 +281,11 @@ class BaselineMetrics(pydantic.BaseModel):
     @computed_field_cached_property()
     def predicted(self) -> ColumnMetrics:
         return ColumnMetrics(series=self._df["predicted"])
+
+    @computed_field_cached_property()
+    #TODO: remove this for the actual implementation, this is for testing
+    def caltrack(self) -> ColumnMetrics:
+        return ColumnMetrics(series=self._df["caltrack"])
     
     @computed_field_cached_property()
     def residuals(self) -> ColumnMetrics:

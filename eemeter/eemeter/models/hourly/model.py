@@ -181,8 +181,8 @@ class HourlyModel:
         - A pandas DataFrame containing the initialized meter data
         """
         #TODO: @Armin This meter data has weather data and it should be already clean
-        train_features = self.settings.TRAIN_FEATURES.copy()
-        lagged_features = self.settings.LAGGED_FEATURES.copy()
+        train_features = self.settings.TRAIN_FEATURES
+        lagged_features = self.settings.LAGGED_FEATURES
         window = self.settings.WINDOW
 
         #get categorical features
@@ -248,9 +248,9 @@ class HourlyModel:
 
     def _get_feature_data(self, df, train_features, window, lagged_features):
         added_features = []
-        for feature in train_features:
-            if feature in lagged_features:
-                for i in range(1, window):
+        if lagged_features is not None:
+            for feature in lagged_features:
+                for i in range(1, window + 1):
                     df[f"{feature}_shifted_{i}"] = df[feature].shift(i * 24)
                     added_features.append(f"{feature}_shifted_{i}")
 
@@ -260,12 +260,9 @@ class HourlyModel:
         new_train_features.sort(reverse=True)
 
         # backfill the shifted features and observed to fill the NaNs in the shifted features
-        df[train_features] = df[new_train_features].fillna(method="bfill")
+        df[new_train_features] = df[new_train_features].fillna(method="bfill")
         df["observed_norm"] = df["observed_norm"].fillna(method="bfill")
 
-        # exclude the first window days, we need 365 days
-        #TODO: I think this is not necessary
-        df = df.iloc[(window - 1) * 24 :]
         # get aggregated features with agg function
         agg_dict = {f: lambda x: list(x) for f in new_train_features}
 
