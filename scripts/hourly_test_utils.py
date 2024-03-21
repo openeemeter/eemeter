@@ -5,6 +5,13 @@ import numpy as np
 # import torch
 import os
 from pathlib import Path
+import time as time
+import multiprocessing as mp
+import pickle
+
+from applied_data_science.bigquery.data import Meter_Data
+from eemeter import eemeter as em
+from eemeter.common.metrics import BaselineMetrics as Metrics
 
 def clean_list(lst):
     return [x.lower().replace(" ", "_") for x in lst]
@@ -113,9 +120,12 @@ class NREL_Weather_API:
 
 
 class MCE_Data_Loader_Test:
-    def __init__(self, config):
-        self.config = config
-        self.window = config["window"] # nubmer of lag days 
+    def __init__(self, config=None):
+        if config is not None:
+            self.config = config
+            self.window = config["window"] # nubmer of lag days
+        else:
+            self.window = None
         self.months = [
             "jan",
             "feb",
@@ -130,6 +140,13 @@ class MCE_Data_Loader_Test:
             "nov",
             "dec",
         ]
+        self.non_neccessary_columns = ['jan_train', 'jan_test',
+       'feb_train', 'feb_test', 'mar_train', 'mar_test', 'apr_train',
+       'apr_test', 'may_train', 'may_test', 'jun_train', 'jun_test',
+       'jul_train', 'jul_test', 'aug_train', 'aug_test', 'sep_train',
+       'sep_test', 'oct_train', 'oct_test', 'nov_train', 'nov_test',
+       'dec_train', 'dec_test','fill_flag','global_horizontal_uv_irradiance_(280-400nm)',
+       'global_horizontal_uv_irradiance_(295-385nm)']
 
     def _get_solar_data(self, metadata, years):
         lat = metadata["lat"]
@@ -269,12 +286,18 @@ class MCE_Data_Loader_Test:
                 else:
                     df_t = df_test_temp.copy()
 
+                # set CalTRACK 3.0 hourly output as oeem column
+                df_t["caltrack"] = df_t[f"{month}_{train_test}"]
+
+                # de-select none neccessary columns
+                df_t = df_t.drop(columns=self.non_neccessary_columns)
+
                 # time delta UTC to local
                 td = df_t.index.min() - df_t["start_local"].iloc[0]
 
                 # create new datetimes based on min max of the index
                 new_datetimes = pd.date_range(
-                    start=df_t.index.min() - pd.DateOffset(days=self.window),
+                    start=df_t.index.min(),
                     end=df_t.index.max(),
                     freq="H",
                 )
@@ -295,342 +318,74 @@ class MCE_Data_Loader_Test:
         return sid, df_train, df_test
 
 
+def train_dec(arglist):
+    sid, sd, metadata, data_loader, settings = arglist
 
-def model_training_dec_local(arglst):
     tic = time.time()
-    data_loader, sd, metadata, config, sid = arglst
-    train_datasets, test_datasets, df_trains, df_tests = [[], [], [], []]
+    data_loader = MCE_Data_Loader_Test()
+    sid, df_trains, df_tests = data_loader.get_all_cleaned_data(metadata, sd)
 
-    segment = config['segment']
+    err_type = 'pnrmse'
+    tr_errors = {'new_model': [], 'oeem': []}
+    te_errors = {'new_model': [], 'oeem': []}
+    calc_tic = time.time()
+    for k in range(len(df_trains)):
+        model = em.HourlyModel(settings=settings)
+        model.fit(df_trains[k])
+        tr_errors['new_model'].append(getattr(model.baseline_metrics, err_type))
+        
+        ct_pnrmse = np.sqrt(np.mean((model.baseline_metrics.observed.values -
+                     model.baseline_metrics.caltrack.values)**2))
+        ct_pnrmse = ct_pnrmse / model.baseline_metrics.observed.iqr
+        tr_errors['oeem'].append(ct_pnrmse)
 
-    try:
-        if config["window"] is not None:
-            # get test train data
-            sid, train_datasets, test_datasets, df_trains, df_tests = (
-                data_loader.get_window_test_train(metadata, sd)
-            )
-        else:
-            # get test train data
-            sid, train_datasets, test_datasets, df_trains, df_tests = (
-                data_loader.get_window_to_one(metadata, sd)
-            )
+        new_df = model.predict(df_tests[k])
+        num_model_parameters = model.baseline_metrics.num_model_params
+        tr_metrics = Metrics(df=new_df, num_model_params=num_model_parameters)
+        err = tr_metrics.rmse / model.baseline_metrics.observed.iqr
+        te_errors['new_model'].append(err)
 
-        model_detail = config["model_detail"]
-        status = True
-        model = model_detail["model"]
-        model_settings = model_detail.copy()
-        del model_settings["model"]
-        # let's train the model for each month
-        months = [
-            "jan",
-            "feb",
-            "mar",
-            "apr",
-            "may",
-            "jun",
-            "jul",
-            "aug",
-            "sep",
-            "oct",
-            "nov",
-            "dec",
-        ]
-        calc_tic = time.time()
-        for k in range(len(months)):
-            month = months[k]
+        ct_pnrmse = np.sqrt(np.mean((new_df.observed.values -
+                                      new_df.caltrack.values)**2))
+        ct_pnrmse = ct_pnrmse / model.baseline_metrics.observed.iqr
+        te_errors['oeem'].append(ct_pnrmse)
 
-            if segment == "monthly":
-
-                X_train, y_train, y_scalar = train_datasets["X"][k], train_datasets["y"][k], train_datasets["y_scalar"][k]
-                y_train_pred = np.zeros(y_train.shape)
-
-                X_test, y_test = test_datasets["X"][k], test_datasets["y"][k]
-                y_test_pred = np.zeros(y_test.shape)
-                w_train = train_datasets["w"][k]
-
-                train_segments = pd.DataFrame(train_datasets['X'][k][:][:,-12:])
-                train_grouped= train_segments.groupby(train_segments.columns.tolist())
-
-                test_segments = pd.DataFrame(test_datasets['X'][k][:][:,-12:])
-                test_grouped= test_segments.groupby(test_segments.columns.tolist())
-                for name, group in train_grouped:
-                    lr = model(**model_settings)
-
-                    # start = 2*config['hours_shifted']
-                    X_train_segment = X_train[group.index]
-                    X_test_segment = X_test[test_grouped.get_group(name).index]
-                    if config['window'] is not None:
-                        X_train_segment = X_train_segment[:,0:-12]
-                        X_test_segment = X_test_segment[:,0:-12]
-                    else:
-                        pass
-                        # start, end = -12-24, -24    
-                        # X_train_segment = np.concatenate((X_train_segment[:,:start], X_train_segment[:,end:]), axis=1)
-                        # X_test_segment = np.concatenate((X_test_segment[:,:start], X_test_segment[:,end:]), axis=1)
-
-                    y_train_segment = y_train[group.index]
-
-                    if w_train is None:
-                        lr.fit(X_train_segment, y_train_segment)
-                    else:
-                        lr.fit(X_train_segment, y_train_segment, sample_weight=w_train[group.index])
-                    
-                    y_test_segment = y_test[test_grouped.get_group(name).index]
-
-                    y_train_pred[group.index] = lr.predict(X_train_segment)
-
-                    y_test_pred[test_grouped.get_group(name).index] = lr.predict(X_test_segment)
-            else:
-                lr = model(**model_settings)
-                if config['window'] is None:
-                    X_train, y_train = train_datasets["X"][k], train_datasets["y"][k]
-                else:
-                    X_train, y_train, y_scalar = train_datasets["X"][k], train_datasets["y"][k], train_datasets["y_scalar"][k]
-                X_test, y_test = test_datasets["X"][k], test_datasets["y"][k]
-                w_train = train_datasets["w"][k]
-                
-                if w_train is None:
-                    lr.fit(X_train, y_train)
-                else:
-                    lr.fit(X_train, y_train, sample_weight=w_train)
-
-                y_train_pred = lr.predict(X_train)
-                y_test_pred = lr.predict(X_test)
-                if config['window'] is not None:
-                    y_train_pred = y_scalar.inverse_transform(y_train_pred)
-                    y_test_pred = y_scalar.inverse_transform(y_test_pred)
-
-            y_train_pred = y_train_pred.flatten()
-            y_test_pred = y_test_pred.flatten()
-
-            df_trains[k]["new_model"] = y_train_pred
-            df_tests[k]["new_model"] = y_test_pred
-
-            # make a new column for the oeem model
-            train_model_out_name = f"{month}_train"
-            test_model_out_name = f"{month}_test"
-            df_trains[k]["oeem"] = df_trains[k][train_model_out_name]
-            df_tests[k]["oeem"] = df_tests[k][test_model_out_name]
-
-            df_trains[k] = df_trains[k][config["output"]]
-            df_tests[k] = df_tests[k][config["output"]]
-        tak = time.time()
-        total_time = tak - tic
-        calc_time = tak - calc_tic
-    except:
-        status = False
-        sid = sid
-        df_trains = pd.DataFrame([])
-        df_tests = pd.DataFrame([])
-        total_time = 0
-        calc_time = 0
-
-    return status, sid, total_time, calc_time, df_trains, df_tests
-
-
-def model_training_dec_local_OEEM(arglst):
-    tic = time.time()
-    data_loader, sd, metadata, config, sid = arglst
-    train_datasets, test_datasets, df_trains, df_tests = [[], [], [], []]
-    status = True
-
-    try:
-
-        sid, train_datasets, test_datasets, df_trains, df_tests = (
-            data_loader.get_window_test_train(metadata, sd)
-        )
-
-        # let's train the model for each month
-        months = [
-            "jan",
-            "feb",
-            "mar",
-            "apr",
-            "may",
-            "jun",
-            "jul",
-            "aug",
-            "sep",
-            "oct",
-            "nov",
-            "dec",
-        ]
-        calc_tic = time.time()
-        for k in range(len(months)):
-            month = months[k]
-
-            dftr = df_trains[k].copy()
-            dfts = df_tests[k].copy()
-            dftr.index = dftr.index.tz_localize('UTC').tz_convert('US/Pacific')
-            dfts.index = dfts.index.tz_localize('UTC').tz_convert('US/Pacific')
-
-            baseline_data = HourlyBaselineData.from_series(dftr['observed'], dftr['temperature'], is_electricity_data=True)
-            reporting_data = HourlyReportingData.from_series(dfts['observed'], dfts['temperature'], is_electricity_data=True)
-            
-            model = HourlyModel()
-            
-            y_train_pred = model.fit(baseline_data)
-            y_train_pred = model.predict(baseline_data)['predicted_usage']
-            y_test_pred = model.predict(reporting_data)['predicted_usage']
-
-            y_train_pred = y_train_pred
-            y_test_pred = y_test_pred
-
-            df_trains[k]["new_model"] = y_train_pred.values
-            df_tests[k]["new_model"] = y_test_pred.values
-
-            train_model_out_name = f"{month}_train"
-            test_model_out_name = f"{month}_test"
-            df_trains[k]["oeem"] = df_trains[k][train_model_out_name]
-            df_tests[k]["oeem"] = df_tests[k][test_model_out_name]
-
-            df_trains[k] = df_trains[k][config["output"]]
-            df_tests[k] = df_tests[k][config["output"]]
-
-    except:
-        status = False
-        sid = sid
-        df_trains = pd.DataFrame([])
-        df_tests = pd.DataFrame([])
     tak = time.time()
     total_time = tak - tic
     calc_time = tak - calc_tic
-    return status, sid, total_time, calc_time, df_trains, df_tests
-
-
-class Error_Calc:
-    def __init__(self):
-        self.train_error = {"pnrmse": {}, "cvrmse": {}, "rmse": {}}
-        self.test_error = {"pnrmse": {}, "cvrmse": {}, "rmse": {}}
-
-    def set_iqr(self, observed):
-        self.iqr = observed.quantile(0.75) - observed.quantile(0.25)
-
-    def rmse_calc(self, y_true, y_pred):
-        return np.sqrt(np.mean(np.square(y_true - y_pred)))
-
-    def pnrmse_calc(self, y_true, y_pred, iqr):
-        return self.rmse_calc(y_true, y_pred) / iqr
-
-    def cvrmse_calc(self, y_true, y_pred):
-        return self.rmse_calc(y_true, y_pred) / np.mean(y_true)
-
-    def calculate_total_error(self, df_trains, df_tests):
-        for i in range(len(df_trains)):
-            df_train = df_trains[i]
-            df_test = df_tests[i]
-            iq3 = df_train["observed"].quantile(0.75)
-            iq1 = df_train["observed"].quantile(0.25)
-            iqr = iq3 - iq1
-
-            for model in ["oeem", "new_model"]:
-                if model not in self.test_error["pnrmse"]:
-                    self.test_error["pnrmse"][model] = []
-                    self.test_error["cvrmse"][model] = []
-                    self.test_error["rmse"][model] = []
-
-                    self.train_error["pnrmse"][model] = []
-                    self.train_error["cvrmse"][model] = []
-                    self.train_error["rmse"][model] = []
-
-                self.test_error["pnrmse"][model].append(
-                    self.pnrmse_calc(df_test["observed"], df_test[model], iqr)
-                )
-                self.test_error["cvrmse"][model].append(
-                    self.cvrmse_calc(df_test["observed"], df_test[model])
-                )
-                self.test_error["rmse"][model].append(
-                    self.rmse_calc(df_test["observed"], df_test[model])
-                )
-
-                self.train_error["pnrmse"][model].append(
-                    self.pnrmse_calc(df_train["observed"], df_train[model], iqr)
-                )
-                self.train_error["cvrmse"][model].append(
-                    self.cvrmse_calc(df_train["observed"], df_train[model])
-                )
-                self.train_error["rmse"][model].append(
-                    self.rmse_calc(df_train["observed"], df_train[model])
-                )
-
-        # change to dataframe
-        for key in self.test_error:
-            self.test_error[key] = pd.DataFrame(self.test_error[key])
-            self.train_error[key] = pd.DataFrame(self.train_error[key])
-
-
-def cal_error_decor(res):
-    error_calc = Error_Calc()
-    status, id, total_time, calc_time, df_trains, df_tests = res
-    error_calc.calculate_total_error(df_trains, df_tests)
-    te_er = {}
-    tr_er = {}
-    for key in error_calc.test_error:
-        te_er[key + "_mean"] = error_calc.test_error[key].mean(axis=0)
-        te_er[key + "_std"] = error_calc.test_error[key].std(axis=0)
-        tr_er[key + "_mean"] = error_calc.train_error[key].mean(axis=0)
-        tr_er[key + "_std"] = error_calc.train_error[key].std(axis=0)
-    te_er = pd.DataFrame(te_er).transpose()
-    tr_er = pd.DataFrame(tr_er).transpose()
-    return status, id, total_time, calc_time, tr_er, te_er
-
-
-class Population_Error_Calc:
-    def __init__(self, results):
-        self.results = results
-        self.error_calc()
-        self.get_error()
-
-    def error_calc(self):
-        with mp.Pool(processes=mp.cpu_count() - 1) as pool:
-            self.error_calcs = pool.map(cal_error_decor, self.results)
-
-    def get_error(self):
-        oeem = {"train": pd.DataFrame(), "test": pd.DataFrame()}
-        new_model = {"train": pd.DataFrame(), "test": pd.DataFrame()}
-        total_time_sum = 0
-        calc_time_sum = 0
-        for i in range(len(self.error_calcs)):
-            for model in ["oeem", "new_model"]:
-                status, id, total_time, calc_time, tr_er, te_er = self.error_calcs[i]
-                if status:
-                    temp_tr = pd.DataFrame(
-                        [tr_er[model].values], columns=tr_er[model].index
-                    )
-                    temp_te = pd.DataFrame(
-                        [te_er[model].values], columns=te_er[model].index
-                    )
-                    if model == "oeem":
-                        oeem["train"] = pd.concat(
-                            [oeem["train"], temp_tr], ignore_index=True
-                        )
-                        oeem["test"] = pd.concat(
-                            [oeem["test"], temp_te], ignore_index=True
-                        )
-                    elif model == "new_model":
-                        new_model["train"] = pd.concat(
-                            [new_model["train"], temp_tr], ignore_index=True
-                        )
-                        new_model["test"] = pd.concat(
-                            [new_model["test"], temp_te], ignore_index=True
-                        )
-                        total_time_sum += total_time
-                        calc_time_sum += calc_time
-        self.errors = {"oeem": oeem, "new_model": new_model}
-        self.total_time = total_time_sum
-        self.calc_time = calc_time_sum
+    return sid, total_time, calc_time, tr_errors, te_errors
 
 
 class Population_Run:
-    def __init__(self, model_mode="new_model"):
+    def __init__(self, settings, data):
         self.results = None
-        self.model_mode = model_mode
-
-    def set_data(self, data):
+        self.settings = settings
         self.data = data
+    
+    def _error_calc(self):
+        tr_nm_err = []
+        te_nm_err = []
+        tr_ct_err = []
+        te_ct_err = []
+        for res in self.results:
+            tr_nm_err.append(np.mean(res[3]['new_model']))
+            te_nm_err.append(np.mean(res[4]['new_model']))
 
-    def run(self, config):
-        self.config = config
+            tr_ct_err.append(np.mean(res[3]['oeem']))
+            te_ct_err.append(np.mean(res[4]['oeem']))
+        
+        return {
+            'train': {
+                'new_model': tr_nm_err,
+                'oeem': tr_ct_err
+            },
+            'test': {
+                'new_model': te_nm_err,
+                'oeem': te_ct_err
+            }
+        }
+
+    def run(self):
         # get data
         meta = self.data.df["meta"]
         subsample_df = self.data.df["meter"]
@@ -642,24 +397,14 @@ class Population_Run:
             lon = meta.loc[meta.index == sid].iloc[0]["station_longitude"]
             sd = subsample_df.loc[sid].copy()
             metadata = {"lat": lat, "lon": lon, "sid": sid}
-            data_loader = MCE_Data_Loader(self.config)
-            arglist.append([data_loader, sd, metadata, self.config, sid])
+            data_loader = MCE_Data_Loader_Test()
+            arglist.append([sid, sd, metadata, data_loader, self.settings])
 
-        # run the model
-        if self.model_mode == "oeem":
-            with mp.Pool(processes=mp.cpu_count() - 1) as pool:
-                self.results = pool.map(model_training_dec_local_OEEM, arglist)
-                print("oeem")
-        elif self.model_mode == "new_model":
-            with mp.Pool(processes=mp.cpu_count() - 1) as pool:
-                self.results = pool.map(model_training_dec_local, arglist)
-        else:
-            print("model mode not recognized")
+        
+        with mp.Pool(processes=mp.cpu_count() - 1) as pool:
+            self.results = pool.map(train_dec, arglist)
 
-        PEC = Population_Error_Calc(self.results)
-        self.errors = PEC.errors
-        self.total_time = PEC.total_time
-        self.calc_time = PEC.calc_time
+        self.errors = self._error_calc()
 
     def save_errors(self, path):
         # save the error to pkl
