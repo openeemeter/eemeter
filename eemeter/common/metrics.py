@@ -23,6 +23,7 @@ import pandas as pd
 
 import pydantic
 from typing import Optional
+from enum import Enum
 
 from functools import cached_property # TODO: This requires Python 3.8
 
@@ -334,12 +335,20 @@ class BaselineMetrics(pydantic.BaseModel):
         return _safe_divide(self.rmse_adj, self.observed.mean, self._min_denominator)
 
     @computed_field_cached_property()
+    def cvrmse_autocorr_adj(self) -> Optional[float]:
+        return _safe_divide(self.rmse_autocorr_adj, self.observed.mean, self._min_denominator)
+
+    @computed_field_cached_property()
     def pnrmse(self) -> Optional[float]:
         return _safe_divide(self.rmse, self.observed.iqr, self._min_denominator)
     
     @computed_field_cached_property()
     def pnrmse_adj(self) -> Optional[float]:
         return _safe_divide(self.rmse_adj, self.observed.iqr, self._min_denominator)
+    
+    @computed_field_cached_property()
+    def pnrmse_autocorr_adj(self) -> Optional[float]:
+        return _safe_divide(self.rmse_autocorr_adj, self.observed.iqr, self._min_denominator)
 
     @computed_field_cached_property()
     def r_squared(self) -> float:
@@ -373,55 +382,126 @@ def BaselineMetricsFromDict(input_dict):
     return PydanticFromDict(input_dict, name="BaselineMetrics")
 
 
-class ReportingMetrics:
+class ModelChoice(str, Enum):
+    HOURLY = "hourly"
+    HOURLYSOLAR = "hourly"
+    DAILY = "daily"
+    BILLING = "billing"
 
 
-    def uncertainty(self, reporting_df, model_type="hourly"):
-        _df = reporting_df.copy()
+class ReportingMetrics(pydantic.BaseModel):
+    class Config:
+        arbitrary_types_allowed = True # required for dataframe / series
 
-        if "predicted" not in _df.columns:
-            raise ValueError("predicted column must be present in reporting dataframe")
-        
-        # set predicted columns to float
-        _df["predicted"] = _df["predicted"].astype(float)
+    baseline_metrics: BaselineMetrics = pydantic.Field(
+        exclude=True
+    )
+
+    """Reporting dataframe to be used for metrics calculations"""
+    reporting_df: pd.DataFrame = pydantic.Field(
+        exclude=True
+    )
+
+    """Model type to use for uncertainty calculations"""
+    model_type: ModelChoice = pydantic.Field(
+        exclude=False
+    )
+
+    """Confidence level used in uncertainty calculations"""
+    confidence_level: float = pydantic.Field(
+        ge=0.0,
+        le=1.0,
+        default=0.90,
+        validate_default=True,
+    )
+
+    """Number of tails to use in uncertainty calculations"""
+    t_tail: int = pydantic.Field(
+        ge=1,
+        le=2,
+        default=2, # ASHRAE 14 uses 2 tail
+        validate_default=True,
+    )
+
+    @property
+    def _baseline(self) -> BaselineMetrics:
+        return self.baseline_metrics
+
+    @cached_property
+    def _df(self) -> pd.DataFrame:
+        _df = self.reporting_df[["observed", "predicted"]].copy()
+
+        if len(_df) < 1:
+            raise ValueError("Input dataframe must have at least one row")
+
+        # Check dataframe
+        expected_columns = {"observed": "float", "predicted": "float"}
+        _df = PydanticDf(df=_df, column_types=expected_columns).df
 
         # drop non finite values from df
-        _df = _df[np.isfinite(_df["predicted"])]
+        _df = _df[np.isfinite(_df["observed"]) & np.isfinite(_df["predicted"])]
 
-        E_model_reporting = _df["predicted"].sum()
-        m = len(_df)
+        # # get residuals
+        # _df["residuals"] = _df["observed"] - _df["predicted"]
 
-        # t-statistic
-        # TODO: Should this be single-tailed or double-tailed?
-        t = t_stat(1 - self.confidence_level, self.ddof, tail=1)
+        return _df
+    
+    @computed_field_cached_property()
+    def n(self) -> float:
+        return len(self._df)
 
-        # CVRMSE adjusted for autocorrelation
-        cvrmse_auto_corr = self.rmse_autocorr_adj/self.observed_mean
+    @computed_field_cached_property()
+    def observed_sum(self) -> float:
+        return self._df["observed"].sum()
+    
+    @computed_field_cached_property()
+    def predicted_sum(self) -> float:
+        return self._df["predicted"].sum()
+    
+    @computed_field_cached_property()
+    def t_stat(self) -> float:
+        return t_stat(1 - self.confidence_level, self._baseline.ddof, tail=self.t_tail)
+    
+    @computed_field_cached_property()
+    def savings(self) -> float:
+        return self.predicted_sum - self.observed_sum
+
+    @computed_field_cached_property()
+    def total_savings_uncertainty(self) -> float:
+        E_reporting = self.predicted_sum
+        n = self._baseline.n
+        n_prime = self._baseline.n_prime
+        m = self.n
+        t = self.t_stat
+        cvrmse_autocorr_adj = self._baseline.cvrmse_autocorr_adj
 
         # part of approximation factor used in ashrae 14 guideline
-        approx_factor = np.sqrt(self.n/(m*self.n_prime)*(1 + (2/self.n_prime)))
+        approx_factor = np.sqrt(n/(m*n_prime)*(1 + (2/n_prime)))
 
-        s_unc_base = E_model_reporting*(t*cvrmse_auto_corr*approx_factor)
+        s_unc_base = E_reporting*(t*cvrmse_autocorr_adj*approx_factor)
 
-        if model_type == "hourly":
+        if self.model_type == "hourly":
             s_unc = 1.26*s_unc_base
 
-        elif model_type == "daily":
-            M = len(_df.index.month.unique())
-            coefs = [-0.00024, 0.03535, 1.00286]
-            s_unc = np.polyval(coefs, M)*s_unc_base
+        elif self.model_type in ["daily", "billing"]:
+            M = len(self._df.index.month.unique())
 
-        elif model_type == "billing":
-            M = len(_df.index.month.unique())
-            coefs = [-0.00022, 0.03306, 0.94054]
+            if self.model_type == "daily":
+                coefs = [-0.00024, 0.03535, 1.00286]
+            else:
+                coefs = [-0.00022, 0.03306, 0.94054]
+
             s_unc = np.polyval(coefs, M)*s_unc_base
 
         else:
             raise ValueError("model_type must be 'hourly', 'daily', or 'billing'")
         
-        _df["predicted_unc"] = s_unc**2/m
-        
-        # join unc to reporting_df
-        reporting_df = reporting_df.join(_df["predicted_unc"])
-        
-        return reporting_df
+        return s_unc
+
+    @computed_field_cached_property()
+    def fsu(self) -> float:
+        return self.total_savings_uncertainty / self.savings
+    
+    @computed_field_cached_property()
+    def predicted_data_point_unc(self) -> float:
+        return self.total_savings_uncertainty / np.sqrt(self.n)
