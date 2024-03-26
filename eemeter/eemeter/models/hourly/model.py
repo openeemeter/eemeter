@@ -201,6 +201,7 @@ class HourlyModel:
         # Add season and day of week
         # There shouldn't be any day_ or month_ columns in the dataframe
         df["date"] = df.index.date
+        df["month"] = df.index.month
         df["day_of_week"] = df.index.dayofweek
 
         day_cat = [
@@ -260,8 +261,8 @@ class HourlyModel:
         new_train_features.sort(reverse=True)
 
         # backfill the shifted features and observed to fill the NaNs in the shifted features
-        df[new_train_features] = df[new_train_features].fillna(method="bfill")
-        df["observed_norm"] = df["observed_norm"].fillna(method="bfill")
+        df[new_train_features] = df[new_train_features].bfill()
+        df["observed_norm"] = df["observed_norm"].bfill()
 
         # get aggregated features with agg function
         agg_dict = {f: lambda x: list(x) for f in new_train_features}
@@ -416,3 +417,38 @@ class HourlyModel:
         # TODO: pass more kwargs to plotting function
 
         plot(self, self._predict(df_eval.df))
+
+
+class HourlyModelTest(HourlyModel):
+    def __init__(
+        self,
+        settings : Optional[_settings.HourlySettings] = None,
+    ):
+        """
+        """
+        super().__init__(settings=settings)
+    
+    def fit(self, X, y):
+        return self._fit(X, y)
+    
+    def predict(self, X, y_scaler):
+        return self._predict(X, y_scaler)
+
+    def _fit(self, X, y):
+        
+        # Fit the model
+        self._model.fit(X, y)
+        self.num_model_params = (np.count_nonzero(self._model.coef_)
+                                 + np.count_nonzero(self._model.intercept_))
+
+        self.is_fit = True
+
+        return self
+
+    def _predict(self, X, y_scaler):
+
+        y_predict_scaled = self._model.predict(X)
+        y_predict = y_scaler.inverse_transform(y_predict_scaled)
+        y_predict = y_predict.flatten()
+
+        return y_predict

@@ -20,11 +20,12 @@
 
 from .settings import HourlySettings as HourlySettings
 # from .data import HourlyBaselineData, HourlyReportingData
-from .model import HourlyModel
+from .model import HourlyModel, HourlyModelTest
 
 __all__ = (
     "HourlySettings",
     # "HourlyBaselineData",
     # "HourlyReportingData",
     "HourlyModel",
+    "HourlyModelTest" #TODO: remove this after testing
 )

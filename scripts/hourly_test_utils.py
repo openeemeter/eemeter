@@ -1,4 +1,3 @@
-
 import pandas as pd
 import numpy as np
 
@@ -11,7 +10,8 @@ import pickle
 
 from applied_data_science.bigquery.data import Meter_Data
 from eemeter import eemeter as em
-from eemeter.common.metrics import BaselineMetrics as Metrics
+from eemeter.common.metrics import BaselineTestingMetrics as Metrics
+from sklearn.preprocessing import StandardScaler
 
 def clean_list(lst):
     return [x.lower().replace(" ", "_") for x in lst]
@@ -37,7 +37,6 @@ class NREL_Weather_API:
 
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
-
         self.cache.mkdir(parents=True, exist_ok=True)
 
     def get_data(self, lat, lon, years=[2017, 2020]):
@@ -120,10 +119,12 @@ class NREL_Weather_API:
 
 
 class MCE_Data_Loader_Test:
-    def __init__(self, config=None):
-        if config is not None:
-            self.config = config
-            self.window = config["window"] # nubmer of lag days
+    def __init__(self, settings=None):
+        if settings is not None:
+            self.settings = settings
+            self.window = settings.WINDOW
+            self.train_features = settings.TRAIN_FEATURES
+            self.lagged_features = settings.LAGGED_FEATURES
         else:
             self.window = None
         self.months = [
@@ -317,6 +318,167 @@ class MCE_Data_Loader_Test:
 
         return sid, df_train, df_test
 
+    def get_all_cleaned_data_new(self, metadata, df):
+
+        sid = metadata["sid"]
+
+        # Get weather station data
+        df = self._get_df_old(metadata, df, T_type="NOAA")
+
+        train_datasets = {"X": [], "y": [], "y_scalar": []}
+        test_datasets = {"X": [], "y": []}
+        df_train = []
+        df_test = []
+        for month in self.months:
+
+            # select the days that have data for the month
+            idx_train = np.argwhere(np.isfinite(df[f"{month}_train"].values)).flatten()
+
+            idx_finite = np.argwhere(
+                np.isfinite(df.iloc[idx_train]["observed"].values)
+            ).flatten()
+            if len(idx_finite) == 0:
+                continue
+
+            idx_train = idx_train[idx_finite]
+
+            idx_test = np.argwhere(np.isfinite(df[f"{month}_test"].values)).flatten()
+
+            idx_finite = np.argwhere(
+                np.isfinite(df.iloc[idx_test]["observed"].values)
+            ).flatten()
+            if len(idx_finite) == 0:
+                continue
+
+            idx_test = idx_test[idx_finite]
+
+            df_train_temp = df.iloc[idx_train]
+            df_train_temp = df_train_temp.groupby("date").filter(
+                lambda x: len(x) == 24
+            )  # This will drop the last day if it is not 24 hours
+            df_test_temp = df.iloc[idx_test]
+            df_test_temp = df_test_temp.groupby("date").filter(
+                lambda x: len(x) == 24
+            )  # This will drop the last day if it is not 24 hours
+
+            # group by date and get all the values of train_features as a 2d array both for train and test
+            scaler = StandardScaler()
+            y_scaler = StandardScaler()
+            for train_test in ["train", "test"]:
+                if train_test == "train":
+                    df_t = df_train_temp.copy()
+                else:
+                    df_t = df_test_temp.copy()
+
+                # set CalTRACK 3.0 hourly output as oeem column
+                df_t["caltrack"] = df_t[f"{month}_{train_test}"]
+
+                # de-select none neccessary columns
+                df_t = df_t.drop(columns=self.non_neccessary_columns)
+
+                # time delta UTC to local
+                td = df_t.index.min() - df_t["start_local"].iloc[0]
+
+                # create new datetimes based on min max of the index
+                new_datetimes = pd.date_range(
+                    start=df_t.index.min(),
+                    end=df_t.index.max(),
+                    freq="H",
+                )
+
+                # Reindex and backfill to add those missing days in the dataset
+                df_t = df_t.reindex(new_datetimes)
+                df_t["start_local"] = df_t.index - td
+                # backfill the missing values of all columns except the date and categorical features
+                df_t = df_t.bfill()
+
+                df_t["date"] = df_t.index.date
+                df_t["month"] = df_t.index.month
+                df_t["day_of_week"] = df_t.index.dayofweek
+
+                day_cat = [
+                            f"day_{i}" for i in np.arange(7) + 1
+                        ]
+                month_cat = [
+                    f"month_{i}"
+                    for i in np.arange(12) + 1
+                    if f"month_{i}"
+                ]
+                self.categorical_features = day_cat + month_cat
+
+                days = pd.Categorical(df_t["day_of_week"], categories=range(1, 8))
+                day_dummies = pd.get_dummies(days, prefix="day")
+                # set the same index for day_dummies as df_t
+                day_dummies.index = df_t.index
+
+                months = pd.Categorical(df_t["month"], categories=range(1, 13))
+                month_dummies = pd.get_dummies(months, prefix="month")
+                month_dummies.index = df_t.index
+
+                df_t = pd.concat([df_t, day_dummies, month_dummies], axis=1)
+
+                to_be_normalized = self.train_features.copy()
+                self.norm_features_list = [i+'_norm' for i in self.train_features]
+                #TODO: save the name of the columns and train features and categorical columns, scaler for everything
+                #TODO: save all the train errors
+                #TODO: save model and all the potential settings
+
+                if train_test == "train":
+                    scaler.fit(df_t[to_be_normalized])
+                    y_scaler.fit(df_t["observed"].values.reshape(-1, 1))
+
+                df_t[self.norm_features_list] = scaler.transform(df_t[to_be_normalized])
+                df_t["observed_norm"] = y_scaler.transform(df_t["observed"].values.reshape(-1, 1))
+
+                added_features = []
+                if self.lagged_features is not None:
+                    for feature in self.lagged_features:
+                        for i in range(1, self.window + 1):
+                            df_t[f"{feature}_shifted_{i}"] = df_t[feature].shift(i * 24)
+                            added_features.append(f"{feature}_shifted_{i}")
+
+                new_train_features = self.norm_features_list + added_features
+
+                new_train_features.sort(reverse=True)
+
+                # backfill the shifted features and observed to fill the NaNs in the shifted features
+                df_t[new_train_features] = df_t[new_train_features].bfill()
+                df_t["observed_norm"] = df_t["observed_norm"].bfill()
+
+                # get aggregated features with agg function
+                agg_dict = {f: lambda x: list(x) for f in new_train_features}
+
+                # get the features and target for each day
+                ts_feature = np.array(
+                    df_t.groupby("date").agg(agg_dict).values.tolist()
+                )
+                ts_feature = ts_feature.reshape(
+                    ts_feature.shape[0], ts_feature.shape[1] * ts_feature.shape[2]
+                )
+
+                # get the first categorical features for each day for each sample
+                unique_dummies = df_t[self.categorical_features + ["date"]].groupby("date").first()
+
+                X = np.concatenate((ts_feature, unique_dummies), axis=1)
+                y = np.array(
+                    df_t.groupby("date")
+                    .agg({"observed_norm": lambda x: list(x)})
+                    .values.tolist()
+                )
+                y = y.reshape(y.shape[0], y.shape[1] * y.shape[2])
+
+                if train_test == "train":
+                    df_train.append(df_t)
+                    train_datasets["X"].append(X)
+                    train_datasets["y"].append(y)
+                    train_datasets["y_scalar"].append(y_scaler)
+                else:
+                    df_test.append(df_t)
+                    test_datasets["X"].append(X)
+                    test_datasets["y"].append(y)
+                    
+        return sid, train_datasets, test_datasets, df_train, df_test
+
 
 def train_dec(arglist):
     sid, sd, metadata, data_loader, settings = arglist
@@ -324,36 +486,106 @@ def train_dec(arglist):
     tic = time.time()
     data_loader = MCE_Data_Loader_Test()
     sid, df_trains, df_tests = data_loader.get_all_cleaned_data(metadata, sd)
-
-    err_type = 'pnrmse'
-    tr_errors = {'new_model': [], 'oeem': []}
-    te_errors = {'new_model': [], 'oeem': []}
+    load_data_tac = time.time()
+    errors = {'train': {
+        'new_model': [],
+        'oeem': []
+    }, 'test': {
+        'new_model': [],
+        'oeem': []
+    }} 
     calc_tic = time.time()
+    avg_fit_time =0
     for k in range(len(df_trains)):
+        tic2 = time.time()
         model = em.HourlyModel(settings=settings)
         model.fit(df_trains[k])
-        tr_errors['new_model'].append(getattr(model.baseline_metrics, err_type))
-        
-        ct_pnrmse = np.sqrt(np.mean((model.baseline_metrics.observed.values -
-                     model.baseline_metrics.caltrack.values)**2))
-        ct_pnrmse = ct_pnrmse / model.baseline_metrics.observed.iqr
-        tr_errors['oeem'].append(ct_pnrmse)
-
-        new_df = model.predict(df_tests[k])
+        tak2 = time.time()
+        avg_fit_time += tak2 - tic2
         num_model_parameters = model.baseline_metrics.num_model_params
-        tr_metrics = Metrics(df=new_df, num_model_params=num_model_parameters)
-        err = tr_metrics.rmse / model.baseline_metrics.observed.iqr
-        te_errors['new_model'].append(err)
+        iqr = model.baseline_metrics.observed.iqr
 
-        ct_pnrmse = np.sqrt(np.mean((new_df.observed.values -
-                                      new_df.caltrack.values)**2))
-        ct_pnrmse = ct_pnrmse / model.baseline_metrics.observed.iqr
-        te_errors['oeem'].append(ct_pnrmse)
+        for train_test in ['train', 'test']:
+            if train_test == 'train':
+                new_df = df_trains[k].copy()
+            else:
+                new_df = df_tests[k].copy()
+          
+            new_df = model.predict(new_df)
+            
+            metrics = Metrics(df=new_df, num_model_params=num_model_parameters)
+            obs = metrics.observed
+            ct = metrics.caltrack
+                        
+            err = metrics.rmse / iqr
+            errors[train_test]['new_model'].append(err)
 
+            ct_pnrmse = np.sqrt(np.mean((obs.values - ct.values)**2))
+            ct_pnrmse = ct_pnrmse / iqr
+            errors[train_test]['oeem'].append(ct_pnrmse)
+
+    avg_fit_time = avg_fit_time / len(df_trains)
+    load_data_time = load_data_tac - tic
     tak = time.time()
     total_time = tak - tic
     calc_time = tak - calc_tic
-    return sid, total_time, calc_time, tr_errors, te_errors
+    return sid, total_time, calc_time, errors, avg_fit_time, load_data_time
+
+
+def train_dec_new(arglist):
+    sid, sd, metadata, data_loader, settings = arglist
+
+    tic = time.time()
+    data_loader = MCE_Data_Loader_Test(settings)
+    sid, train_datasets, test_datasets, df_trains, df_tests = data_loader.get_all_cleaned_data_new(metadata, sd)
+    load_data_tac = time.time()
+    errors = {'train': {
+        'new_model': [],
+        'oeem': []
+    }, 'test': {
+        'new_model': [],
+        'oeem': []
+    }} 
+    calc_tic = time.time()
+    avg_fit_time =0
+    for k in range(len(df_trains)):
+        tic2 = time.time()
+        model = em.HourlyModelTest(settings=settings)
+        X_train, y_train, y_scaler = train_datasets["X"][k], train_datasets["y"][k], train_datasets["y_scalar"][k]
+        X_test, y_test = test_datasets["X"][k], test_datasets["y"][k]
+        model.fit(X_train, y_train)
+        
+        tak2 = time.time()
+        avg_fit_time += tak2 - tic2
+        iqr = df_trains[k]["observed"].quantile(0.75) - df_trains[k]["observed"].quantile(0.25)
+
+        for train_test in ['train', 'test']:
+            if train_test == 'train':
+                y_pred = model.predict(X_train, y_scaler)
+                df_trains[k]["predicted"] = y_pred
+                new_df = df_trains[k].copy()
+            else:
+                y_pred = model.predict(X_test, y_scaler)
+                df_tests[k]["predicted"] = y_pred
+                new_df = df_tests[k].copy()
+          
+            metrics = Metrics(df=new_df, num_model_params=model.num_model_params)
+            obs = metrics.observed
+            ct = metrics.caltrack
+                        
+            err = metrics.rmse / iqr
+            errors[train_test]['new_model'].append(err)
+
+            ct_pnrmse = np.sqrt(np.mean((obs.values - ct.values)**2))
+            ct_pnrmse = ct_pnrmse / iqr
+            errors[train_test]['oeem'].append(ct_pnrmse)
+
+    avg_fit_time = avg_fit_time / len(df_trains)
+    load_data_time = load_data_tac - tic
+    tak = time.time()
+    total_time = tak - tic
+    calc_time = tak - calc_tic
+    return sid, total_time, calc_time, errors, avg_fit_time, load_data_time
 
 
 class Population_Run:
@@ -368,11 +600,11 @@ class Population_Run:
         tr_ct_err = []
         te_ct_err = []
         for res in self.results:
-            tr_nm_err.append(np.mean(res[3]['new_model']))
-            te_nm_err.append(np.mean(res[4]['new_model']))
+            tr_nm_err.append(np.mean(res[3]['train']['new_model']))
+            te_nm_err.append(np.mean(res[3]['test']['new_model']))
 
-            tr_ct_err.append(np.mean(res[3]['oeem']))
-            te_ct_err.append(np.mean(res[4]['oeem']))
+            tr_ct_err.append(np.mean(res[3]['train']['oeem']))
+            te_ct_err.append(np.mean(res[3]['test']['oeem']))
         
         return {
             'train': {
@@ -402,7 +634,7 @@ class Population_Run:
 
         
         with mp.Pool(processes=mp.cpu_count() - 1) as pool:
-            self.results = pool.map(train_dec, arglist)
+            self.results = pool.map(train_dec_new, arglist) #TODO: change this to train_dec
 
         self.errors = self._error_calc()
 
