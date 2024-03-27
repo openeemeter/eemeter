@@ -10,7 +10,7 @@ import pickle
 
 from applied_data_science.bigquery.data import Meter_Data
 from eemeter import eemeter as em
-from eemeter.common.metrics import BaselineTestingMetrics as Metrics
+from eemeter.common.metrics import BaselineMetrics as Metrics
 from sklearn.preprocessing import StandardScaler
 
 def clean_list(lst):
@@ -480,6 +480,175 @@ class MCE_Data_Loader_Test:
         return sid, train_datasets, test_datasets, df_train, df_test
 
 
+def save_features(arglist):
+    sid, solar_meter, subsample_num, sd, metadata, settings = arglist
+    main_path = f"/app/.recurve_cache/mce_3_yr_precovid/MCE_features"
+    main_path = f"{main_path}/{solar_meter}/{subsample_num}"
+    # check if the path exists
+    if not os.path.exists(main_path):
+        os.makedirs(main_path)
+        print(f"Created path: {main_path}")
+
+    data_loader = MCE_Data_Loader_Test(settings)
+    sid, train_datasets, test_datasets, df_trains, df_tests = data_loader.get_all_cleaned_data_new(metadata, sd)
+    for k in range(len(df_trains)):
+        X_train, y_train, y_scaler = train_datasets["X"][k], train_datasets["y"][k], train_datasets["y_scalar"][k]
+        train_observed = df_trains[k]["observed"].values
+        X_test, y_test = test_datasets["X"][k], test_datasets["y"][k]
+        test_observed = df_tests[k]["observed"].values
+        iqr = df_trains[k]["observed"].quantile(0.75) - df_trains[k]["observed"].quantile(0.25)
+        data_details = {
+            "sid": sid,
+            "solar_meter": solar_meter,
+            "subsample_num": subsample_num,
+            "k-fold": k
+        }
+        # save all the above to a pickle file
+        save_dict = {
+            "X_train": X_train,
+            "y_train": y_train,
+            "y_scaler": y_scaler,
+            "train_observed": train_observed,
+            "X_test": X_test,
+            "y_test": y_test,
+            "test_observed": test_observed,
+            "iqr": iqr,
+            'data_details': data_details
+        }
+        path = f"{main_path}/{sid}_{k}.pkl"
+        # check if the file exists
+        if not os.path.exists(path):        
+            with open(path, "wb") as f:
+                pickle.dump(save_dict, f)
+
+def get_features(data_arglist):
+    sid, kfold, solar_meter, subsample_num = data_arglist
+    main_path = f"/app/.recurve_cache/mce_3_yr_precovid/MCE_features"
+    main_path = f"{main_path}/{solar_meter}/{subsample_num}"
+    path = f"{main_path}/{sid}_{kfold}.pkl"
+    status = True
+    try:
+        with open(path, "rb") as f:
+            data = pickle.load(f)
+    except:
+        status = False
+        data = None    
+    return status, path, sid, kfold, solar_meter, subsample_num, data
+
+def train_dec_from_loaded(arglist):
+    status, path, sid, kfold, solar_meter, subsample_num, data, settings = arglist
+    #load the data
+    tic = time.time()
+    if not status:
+        print(f"Data for {path} not found")
+        return sid, None, None, None, None
+    else:
+        load_data_time = time.time() - tic
+        
+        X_train, y_train, y_scaler = data["X_train"], data["y_train"], data["y_scaler"]
+        train_observed = data["train_observed"]
+        X_test, y_test = data["X_test"], data["y_test"]
+        test_observed = data["test_observed"]
+        iqr = data["iqr"]
+
+        errors = {'train': [], 'test': []}
+
+        calc_tic = time.time()
+        model = em.HourlyModelTest(settings=settings)
+        model.fit(X_train, y_train)
+        fit_time = time.time() - calc_tic
+        
+        train_y_pred = model.predict(X_train, y_scaler)
+        test_y_pred = model.predict(X_test, y_scaler)
+        
+        # df_train = pd.DataFrame()
+        # df_train['observed'] = train_observed
+        # df_train['predicted'] = train_y_pred
+
+        # df_test = pd.DataFrame()
+        # df_test['observed'] = test_observed
+        # df_test['predicted'] = test_y_pred
+
+        # train_metric = Metrics(df=df_train, num_model_params=model.num_model_params)
+        # test_metric = Metrics(df=df_test, num_model_params=model.num_model_params)      
+
+        train_rmse = np.sqrt(np.mean((train_observed - train_y_pred)**2))
+        train_pnrmse = train_rmse / iqr
+        errors['train'].append(train_pnrmse)
+
+        test_rmse = np.sqrt(np.mean((test_observed - test_y_pred)**2))
+        test_pnrmse = test_rmse / iqr
+        errors['test'].append(test_pnrmse)
+
+        total_time = time.time() - tic
+
+        id_details = {
+            "sid": sid,
+            "solar_meter": solar_meter,
+            "subsample_num": subsample_num,
+            "kfold": kfold
+        }
+        time_details = {
+            "load_data_time": load_data_time,
+            "fit_time": fit_time,
+            "total_time": total_time
+        }
+    return id_details, time_details, errors
+
+class Population_Run_Features:
+    def __init__(self, **kwargs):
+        self.dataset = 'mce_3_yr_precovid'
+        self.cache_dir = Path("/app/.recurve_cache/").resolve()
+        self.main_folder = "MCE_features"
+        self.files_path = []
+        self.results = None
+        self.arglist = None
+        subsamples, solar_meters, settings = kwargs["subsamples"], kwargs["solar_meters"], kwargs["settings"]
+        self.subsamples = subsamples
+        self.solar_meters = solar_meters
+        self.n_kfold = 12
+        self.settings = settings
+    
+    def _get_files_list(self):
+        self.files_path = []
+        # get the unique ids
+        for subsample_num in self.subsamples:
+            for solar_meter in self.solar_meters:
+                #make the path considering boolian and integer values for subsample_num and solar_meter
+                path = self.cache_dir / self.dataset / self.main_folder / str(solar_meter) / str(subsample_num)
+                if not path.exists():
+                    raise ValueError(f"Path {path} does not exist")
+                else:
+                    #files path
+                    files = list(path.glob("*.pkl"))
+                    self.files_path.extend(files)                 
+
+    def _create_arglist(self):
+        self.arglist = []
+        for file in self.files_path:
+            sid = file.stem.rsplit('_', 1)[0]
+            kfold = file.stem.split('_')[-1]
+            kfold = int(kfold)
+            solar_meter, subsample_num = file.parts[-3:-1]
+            self.arglist.append((sid, kfold, solar_meter, subsample_num))
+
+    def _load_data(self):
+        self._get_files_list()
+        self._create_arglist()
+        with mp.Pool(processes=mp.cpu_count() - 1) as pool:
+            self.arglist = pool.map(get_features, self.arglist)
+        
+        self.arglist = [(*d, self.settings) for d in self.arglist]
+
+    def run(self):
+        self._load_data()
+        self.results = []
+        # add setting to all the all_data_res
+        with mp.Pool(processes=mp.cpu_count() - 1) as pool:
+            self.results = pool.map(train_dec_from_loaded, self.arglist)
+
+
+
 def train_dec(arglist):
     sid, sd, metadata, data_loader, settings = arglist
 
@@ -534,7 +703,6 @@ def train_dec(arglist):
 
 def train_dec_new(arglist):
     sid, sd, metadata, data_loader, settings = arglist
-
     tic = time.time()
     data_loader = MCE_Data_Loader_Test(settings)
     sid, train_datasets, test_datasets, df_trains, df_tests = data_loader.get_all_cleaned_data_new(metadata, sd)
@@ -586,7 +754,6 @@ def train_dec_new(arglist):
     total_time = tak - tic
     calc_time = tak - calc_tic
     return sid, total_time, calc_time, errors, avg_fit_time, load_data_time
-
 
 class Population_Run:
     def __init__(self, settings, data):
