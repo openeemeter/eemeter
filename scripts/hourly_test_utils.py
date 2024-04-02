@@ -608,6 +608,9 @@ class Population_Run_Features:
         self.solar_meters = solar_meters
         self.n_kfold = 12
         self.settings = settings
+        self.mp = kwargs["mp"]
+        self.max_id = kwargs["max_id"]
+        self.data_loaded = False
     
     def _get_files_list(self):
         self.files_path = []
@@ -639,14 +642,18 @@ class Population_Run_Features:
             self.arglist = pool.map(get_features, self.arglist)
         
         self.arglist = [(*d, self.settings) for d in self.arglist]
-
+        self.data_loaded = True
     def run(self):
-        self._load_data()
+        if not self.data_loaded:
+            self._load_data()
         self.results = []
-        # add setting to all the all_data_res
-        with mp.Pool(processes=mp.cpu_count() - 1) as pool:
-            self.results = pool.map(train_dec_from_loaded, self.arglist)
-
+        if self.mp:
+            # add setting to all the all_data_res
+            with mp.Pool(processes=mp.cpu_count() - 1) as pool:
+                self.results = pool.map(train_dec_from_loaded, self.arglist[0:self.max_id])
+        else:
+            for arg in self.arglist[0:self.max_id]:
+                self.results.append(train_dec_from_loaded(arg))
 
 
 def train_dec(arglist):
@@ -699,7 +706,6 @@ def train_dec(arglist):
     total_time = tak - tic
     calc_time = tak - calc_tic
     return sid, total_time, calc_time, errors, avg_fit_time, load_data_time
-
 
 def train_dec_new(arglist):
     sid, sd, metadata, data_loader, settings = arglist
