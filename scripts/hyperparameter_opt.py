@@ -37,33 +37,30 @@ mp_meter = True
 df_cache_dir = Path("/app/.recurve_cache/caltrack_2_1").resolve()
 data_cache_dir = Path("/app/.recurve_cache/data").resolve()
 
-# x0 = [0.01, 0.75, 0.8, 2.1]
-x0 = [0.001, 1.0, 0.240, 2.061]
+x0 = [0.1, 0.1]
 
 bnds = [
-    [  1E-4,   1 ],    # alpha:   regularization alpha
-    [   0.7,   1 ],    # beta:    regularization % lasso
-    [  0.01,   5 ],    # omega:   selection criteria multiplier
-    [     1,   5 ],    # eta:     selection criteria power
+    [  -10,   10 ],    # alpha:   regularization alpha
+    [   1E-4,   1 ],    # l1_ratio:    regularization l1_ratio
 ]
 
 # Optimization settings
 opt_options = {
-    # "global": {"algorithm": "RBFOpt", 
-    #            "stop_criteria_type": 'Iteration Maximum', 
-    #            "stop_criteria_val": 1000, 
-    #            "initial_step": 0.01, # percentage},
-    #            "xtol_rel": 1E-5,
-    #            "ftol_rel": 1E-5,
-    #            "initial_pop_multiplier": 2,
-    # },
-    "local":  {"algorithm": "nlopt_SBPLX", 
+    "global": {"algorithm": "RBFOpt", 
                "stop_criteria_type": 'Iteration Maximum', 
                "stop_criteria_val": 1000, 
-               "initial_step": 0.15, # percentage},
+               "initial_step": 0.01, # percentage},
                "xtol_rel": 1E-5,
                "ftol_rel": 1E-5,
+               "initial_pop_multiplier": 2,
     },
+    # "local":  {"algorithm": "nlopt_SBPLX", 
+    #            "stop_criteria_type": 'Iteration Maximum', 
+    #            "stop_criteria_val": 1000, 
+    #            "initial_step": 0.15, # percentage},
+    #            "xtol_rel": 1E-5,
+    #            "ftol_rel": 1E-5,
+    # },
 }
 
 # CalTrack 2.1 SSE
