@@ -443,8 +443,8 @@ class ReportingMetrics(pydantic.BaseModel):
         exclude=True
     )
 
-    """Model type to use for uncertainty calculations"""
-    model_type: ModelChoice = pydantic.Field(
+    """Data frequency of the model for use in uncertainty calculations"""
+    data_frequency: ModelChoice = pydantic.Field(
         exclude=False
     )
 
@@ -521,13 +521,13 @@ class ReportingMetrics(pydantic.BaseModel):
 
         s_unc_base = E_reporting*(t*cvrmse_autocorr_adj*approx_factor)
 
-        if self.model_type == "hourly":
+        if self.data_frequency == "hourly":
             s_unc = 1.26*s_unc_base
 
-        elif self.model_type in ["daily", "billing"]:
+        elif self.data_frequency in ["daily", "billing"]:
             M = len(self._df.index.month.unique())
 
-            if self.model_type == "daily":
+            if self.data_frequency == "daily":
                 coefs = [-0.00024, 0.03535, 1.00286]
             else:
                 coefs = [-0.00022, 0.03306, 0.94054]
