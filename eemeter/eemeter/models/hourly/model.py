@@ -30,6 +30,9 @@ import json
 from eemeter.eemeter.models.hourly import settings as _settings
 from eemeter.common.metrics import BaselineMetrics, BaselineMetricsFromDict
 
+from data import HourlyData #TODO: import from eemeter.data
+
+
 
 class HourlyModel:
     def __init__(
@@ -90,12 +93,14 @@ class HourlyModel:
         return self
 
 
-    def _fit(self, meter_data):
+    def _fit(self, Meter_Data):
         # Initialize dataframe
-        meter_data, _ = self._prepare_dataframe(meter_data)
+        # meter_data, _ = self._prepare_dataframe(meter_data)
+        meter_df = Meter_Data.df.copy()
+
 
         # Prepare feature arrays/matrices
-        X, y = self._prepare_features(meter_data)
+        X, y = self._prepare_features(meter_df)
 
         # Fit the model
         self._model.fit(X, y)
@@ -105,8 +110,8 @@ class HourlyModel:
                                + np.count_nonzero(self._model.intercept_))
         
         # Get metrics
-        meter_data = self._predict(meter_data)
-        self.baseline_metrics = BaselineMetrics(df=meter_data, num_model_params=num_parameters)
+        meter_df = self._predict(Meter_Data)
+        self.baseline_metrics = BaselineMetrics(df=meter_df, num_model_params=num_parameters)
 
         self.is_fit = True
 
@@ -146,7 +151,7 @@ class HourlyModel:
         return df_eval
 
 
-    def _predict(self, df_eval):
+    def _predict(self, Eval_Data):
         """
         Makes model prediction on given temperature data.
 
@@ -157,12 +162,12 @@ class HourlyModel:
             pandas.DataFrame: The evaluation dataframe with model predictions added.
         """
 
-        # get list of columns to keep in output
+        df_eval = Eval_Data.df.copy()
+        datetime_original = Eval_Data.datetime_original
+        # # get list of columns to keep in output
         columns = df_eval.columns.tolist()
         if "datetime" in columns:
             columns.remove("datetime") # index in output, not column
-
-        df_eval, datetime_original = self._prepare_dataframe(df_eval)
 
         X, _ = self._prepare_features(df_eval)
 
@@ -174,91 +179,13 @@ class HourlyModel:
         # make predicted nan if interpolated is True
         df_eval.loc[df_eval["interpolated"], "predicted"] = np.nan
 
-        # remove columns not in original columns and predicted
+        # # remove columns not in original columns and predicted
         df_eval = df_eval[[*columns, "predicted"]]
 
         # reset index to original datetime index
         df_eval = df_eval.loc[datetime_original]
 
         return df_eval
-
-
-    def _prepare_dataframe(self, df):
-        def get_contiguous_datetime(df):
-            # get earliest datetime and latest datetime
-            # make earliest start at 0 and latest end at 23, this ensures full days
-            earliest_datetime = df["datetime"].min().replace(hour=0, minute=0, second=0, microsecond=0)
-            latest_datetime = df["datetime"].max().replace(hour=23, minute=0, second=0, microsecond=0)
-
-            # create a new index with all the hours between the earliest and latest datetime
-            complete_dt = pd.date_range(start=earliest_datetime, end=latest_datetime, freq='H').to_frame(index=False, name="datetime")
-
-            # merge meter data with complete_dt
-            df = complete_dt.merge(df, on="datetime", how="left")
-
-            return df
-
-        def remove_duplicate_datetime(df):
-            if "observed" in df.columns:
-                # find duplicate datetime values and remove if nan
-                duplicate_dt_mask = df.duplicated(subset="datetime", keep=False)
-                observed_nan_mask = df['observed'].isna()
-                df = df[~(duplicate_dt_mask & observed_nan_mask)]
-
-                # if duplicated and observed is not nan, keep the largest abs(value)
-                df["abs_observed"] = df["observed"].abs()
-                df = df.sort_values(by=["datetime", "abs_observed"], ascending=[True, False])
-                df = df.drop_duplicates(subset="datetime", keep="first")
-                df = df.drop(columns=["abs_observed"])
-
-            else:
-                # TODO what if there is no observed column? Could have dup datetime with different temperatures
-                df = df.drop_duplicates(subset="datetime", keep="first")
-
-            return df
-        
-        def interpolate(df):
-            # TODO: We need to think about this interpolation step more. Maybe do custom based on datetime, (temp if observed), and surrounding weeks?
-            df['temperature'] = df['temperature'].interpolate()
-
-            if "observed" in df.columns:
-                df['observed'] = df['observed'].interpolate()
-
-            return df
-
-        # if index is a datetime index name it datetime
-        if isinstance(df.index, pd.DatetimeIndex):
-            df.index.name = "datetime"
-
-        # reset index to ensure datetime is not the index
-        df = df.reset_index()
-        
-        # drop index column if it exists
-        if "index" in df.columns:
-            df = df.drop(columns=["index"])
-
-        # get original datetimes
-        datetime = df["datetime"]
-
-        # fill in missing datetimes
-        df = get_contiguous_datetime(df)
-
-        # remove duplicate datetime values
-        df = remove_duplicate_datetime(df)
-
-        # make column of interpolated boolean if any observed or temperature is nan
-        if "observed" not in df.columns:
-            df['interpolated'] = df['temperature'].isna()
-        else:
-            df['interpolated'] = df['temperature'].isna() | df['observed'].isna()
-
-        # interpolate temperature and observed values
-        df = interpolate(df)
-
-        # set datetime as index
-        df = df.set_index("datetime")
-
-        return df, datetime
 
 
     def _prepare_features(self, meter_data):
@@ -289,7 +216,7 @@ class HourlyModel:
         # normalize the data
         modified_meter_data = self._normalize_data(modified_meter_data, train_features)
 
-        X, y = self._get_feature_data(modified_meter_data, train_features, window, lagged_features)
+        X, y = self._get_feature_data(modified_meter_data, window, lagged_features)
 
         return X, y
 
@@ -297,7 +224,7 @@ class HourlyModel:
     def _add_categorical_features(self, df):
         """
         """
-        # Add season and day of week
+        # Add date, month and day of week
         # There shouldn't be any day_ or month_ columns in the dataframe
         df["date"] = df.index.date
         df["month"] = df.index.month
@@ -346,7 +273,7 @@ class HourlyModel:
         return df
 
 
-    def _get_feature_data(self, df, train_features, window, lagged_features):
+    def _get_feature_data(self, df, window, lagged_features):
         added_features = []
         if lagged_features is not None:
             for feature in lagged_features:
@@ -355,8 +282,9 @@ class HourlyModel:
                     added_features.append(f"{feature}_shifted_{i}")
 
         new_train_features = self.norm_features_list + added_features
-        if self.settings.SUPPLEMENTAL_DATA:
-            new_train_features.append('supplemental_data')
+        if self.settings.SUPPLEMENTAL_DATA is not None:
+            for sup in self.settings.SUPPLEMENTAL_DATA:
+                new_train_features.append(sup)
         new_train_features.sort(reverse=True)
 
         # backfill the shifted features and observed to fill the NaNs in the shifted features
