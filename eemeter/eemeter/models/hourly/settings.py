@@ -37,8 +37,8 @@ class HourlySettings(BaseSettings):
 
     # TODO: Armin is this always true/false or can it be a list[string]?
     """supplemental data"""
-    SUPPLEMENTAL_DATA: bool = pydantic.Field(
-        default=False,
+    SUPPLEMENTAL_DATA: Optional[list[str]] = pydantic.Field(
+        default=None,
         validate_default=True,
     )
 

@@ -521,7 +521,7 @@ def save_features(arglist):
             with open(path, "wb") as f:
                 pickle.dump(save_dict, f)
 
-def get_features(data_arglist):
+def get_saved_features(data_arglist):
     sid, kfold, solar_meter, subsample_num = data_arglist
     main_path = f"/app/.recurve_cache/mce_3_yr_precovid/MCE_features"
     main_path = f"{main_path}/{solar_meter}/{subsample_num}"
@@ -639,10 +639,11 @@ class Population_Run_Features:
         self._get_files_list()
         self._create_arglist()
         with mp.Pool(processes=mp.cpu_count() - 1) as pool:
-            self.arglist = pool.map(get_features, self.arglist)
+            self.arglist = pool.map(get_saved_features, self.arglist)
         
         self.arglist = [(*d, self.settings) for d in self.arglist]
         self.data_loaded = True
+        
     def run(self):
         if not self.data_loaded:
             self._load_data()
