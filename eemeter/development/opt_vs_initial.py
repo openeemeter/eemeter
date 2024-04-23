@@ -10,10 +10,11 @@ import numpy as np
 import time
 import pickle
 
-from hourly_test_utils import *
 from applied_data_science.bigquery.data import Meter_Data
 from eemeter import eemeter as em
 from eemeter.common.metrics import BaselineTestingMetrics as Metrics
+
+from eemeter.development.hourly_test_utils import *
 
 import multiprocessing as mp
 
