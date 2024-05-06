@@ -803,3 +803,15 @@ def test_non_ns_datetime_index():
 
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
+
+def test_offset_aggregations_hourly(il_electricity_cdd_hdd_hourly):
+    meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
+    temperature_data = il_electricity_cdd_hdd_hourly["temperature_data"]
+    blackout_start_date = il_electricity_cdd_hdd_hourly["blackout_start_date"]
+    baseline_meter_data, warnings = get_baseline_data(
+        meter_data, end=blackout_start_date
+    )
+    baseline_meter_data = baseline_meter_data.iloc[3:]  # begin from 3AM UTC
+    baseline = DailyBaselineData.from_series(baseline_meter_data, temperature_data, is_electricity_data=True)
+    assert baseline is not None
+    assert len(baseline.df) == NUM_DAYS_IN_YEAR
