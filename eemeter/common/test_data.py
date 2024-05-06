@@ -30,8 +30,7 @@ current_dir = Path(__file__).resolve().parent
 data_dir = current_dir.parents[1] / "data"
 
 # Set download branch
-## TODO: THIS BRANCH MUST BE UPDATED TO THE CURRENT BRANCH
-branch = "feature/caltrack-2.1-daily"
+branch = "master"
 
 
 comparison_group_time_series = [
