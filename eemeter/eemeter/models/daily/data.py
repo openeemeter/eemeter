@@ -507,6 +507,13 @@ class _DailyData:
             )
         self.tz = df.index.tz
 
+        # prevent later issues when merging on generated datetimes, which default to ns precision
+        # there is almost certainly a smoother way to accomplish this conversion, but this works
+        if df.index.dtype.unit != "ns":
+            utc_index = df.index.tz_convert("UTC")
+            ns_index = utc_index.astype("datetime64[ns, UTC]")
+            df.index = ns_index.tz_convert(self.tz)
+
         # Convert electricity data having 0 meter values to NaNs
         if self.is_electricity_data:
             df.loc[df["observed"] == 0, "observed"] = np.nan
