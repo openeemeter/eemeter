@@ -790,3 +790,16 @@ def test_offset_temperature_aggregations(baseline_data_daily_params, tz, hour):
     for day in baseline.df.index:
         abs_diff += abs(temp_series[day:day+pd.Timedelta(hours=23)].mean() - baseline.df.temperature.loc[day].squeeze())
     assert abs_diff < 0.000001
+
+def test_non_ns_datetime_index():
+    meter, temperature, _ = load_sample("il-electricity-cdd-hdd-hourly")
+    meter = meter[meter.index.year == 2017]
+    temperature = temperature[temperature.index.year == 2017]
+
+    # convert to microseconds
+    meter.index = meter.index.astype("datetime64[us, UTC]")
+    temperature.index = temperature.index.astype("datetime64[us, UTC]")
+    cls = DailyBaselineData.from_series(meter, temperature, is_electricity_data=True)
+
+    assert cls.df is not None
+    assert len(cls.df) == NUM_DAYS_IN_YEAR
