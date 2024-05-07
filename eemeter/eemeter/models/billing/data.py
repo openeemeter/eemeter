@@ -29,6 +29,7 @@ from eemeter.eemeter.common.data_processor_utilities import (
     compute_minimum_granularity,
 )
 from eemeter.eemeter.common.features import compute_temperature_features
+from eemeter.eemeter.common.pydantic_utils import PydanticDf
 from eemeter.eemeter.common.warnings import EEMeterWarning
 from eemeter.eemeter.common.sufficiency_criteria import BillingSufficiencyCriteria
 from eemeter.eemeter.models.daily.data import _DailyData
@@ -315,16 +316,19 @@ class BillingBaselineData(_BillingData):
         """
         Private method which checks the sufficiency of the data for billing baseline calculations using the predefined OpenEEMeter sufficiency criteria.
 
-        Args:
+        Parameters
+        ----------
             sufficiency_df (pandas.DataFrame): DataFrame containing the data for sufficiency check. Should have features such as -
             temperature_null: number of temperature null periods in each aggregation step
             temperature_not_null: number of temperature non null periods in each aggregation step
 
-        Returns:
+        Returns
+        -------
             disqualification (List): List of disqualifications
             warnings (list): List of warnings
 
         """
+        sufficiency_df = PydanticDf(df = sufficiency_df, column_types={'observed' : 'float', 'temperature' : 'float'})
         bsc = BillingSufficiencyCriteria(
             data = sufficiency_df,
             is_electricity_data = self.is_electricity_data
@@ -333,11 +337,6 @@ class BillingBaselineData(_BillingData):
         disqualification = bsc.disqualification
         warnings = bsc.warnings
 
-        # _, disqualification, warnings = sufficiency_criteria_baseline(
-        #     sufficiency_df,
-        #     is_reporting_data=False,
-        #     is_electricity_data=self.is_electricity_data,
-        # )
         return disqualification, warnings
 
 
@@ -454,6 +453,7 @@ class BillingReportingData(_BillingData):
             warnings (list): List of warnings
 
         """
+        sufficiency_df = PydanticDf(df = sufficiency_df, column_types={'temperature' : 'float'})
         bsc = BillingSufficiencyCriteria(
             data = sufficiency_df,
             is_reporting_data = True
@@ -462,9 +462,4 @@ class BillingReportingData(_BillingData):
         disqualification = bsc.disqualification
         warnings = bsc.warnings
 
-        # _, disqualification, warnings = sufficiency_criteria_baseline(
-        #     sufficiency_df,
-        #     is_reporting_data=True,
-        #     is_electricity_data=self.is_electricity_data,
-        # )
         return disqualification, warnings

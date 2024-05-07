@@ -30,6 +30,7 @@ from eemeter.eemeter.common.data_processor_utilities import (
     remove_duplicates
 )
 from eemeter.eemeter.common.features import compute_temperature_features
+from eemeter.eemeter.common.pydantic_utils import PydanticDf
 from eemeter.eemeter.common.warnings import EEMeterWarning
 from eemeter.eemeter.common.sufficiency_criteria import DailySufficiencyCriteria
 
@@ -560,17 +561,20 @@ class DailyBaselineData(_DailyData):
         """
         Private method which checks the sufficiency of the data for daily baseline calculations using the predefined OpenEEMeter sufficiency criteria.
 
-        Args:
+        Parameters
+        ----------
             sufficiency_df (pandas.DataFrame): DataFrame containing the data for sufficiency check. Should have features such as -
             temperature_null: number of temperature null periods in each aggregation step
             temperature_not_null: number of temperature non null periods in each aggregation step
 
-        Returns:
+        Returns
+        -------
             disqualification (List): List of disqualifications
             warnings (list): List of warnings
 
         """
         # 90% coverage per period only required for billing models
+        sufficiency_df = PydanticDf(df = sufficiency_df, column_types={'observed' : 'float', 'temperature' : 'float'})
         dsc = DailySufficiencyCriteria(
             data = sufficiency_df,
             is_electricity_data = self.is_electricity_data
@@ -696,6 +700,7 @@ class DailyReportingData(_DailyData):
 
         """
         # 90% coverage per period only required for billing models
+        sufficiency_df = PydanticDf(df = sufficiency_df, column_types={'temperature' : 'float'})
         dsc = DailySufficiencyCriteria(
             data = sufficiency_df,
             is_reporting_data = True
