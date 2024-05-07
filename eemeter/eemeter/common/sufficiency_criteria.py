@@ -19,35 +19,42 @@
 """
 from math import ceil
 
-import dataclasses
 import numpy as np
 import pandas as pd
 import pytz
 
-from eemeter.eemeter.common.warnings import EEMeterWarning
 from eemeter.eemeter.common.data_processor_utilities import day_counts
+from eemeter.eemeter.common.warnings import EEMeterWarning
+from eemeter.eemeter.common.pydantic_utils import PydanticDf
 
 
-@dataclasses.dataclass
-class SufficiencyCriteria:
-    data: pd.DataFrame
-    requested_start: pd.Timestamp = None
-    requested_end: pd.Timestamp = None
+from pydantic.dataclasses import dataclass, Field
+from pydantic import BaseModel
+from typing import Optional, List
+
+
+class SufficiencyCriteria(BaseModel):
+    class Config:
+        arbitrary_types_allowed = True
+
+    data: PydanticDf
+    requested_start: Optional[pd.Timestamp] = None
+    requested_end: Optional[pd.Timestamp] = None
     num_days: int = 365
     min_fraction_daily_coverage: float = 0.9
     min_fraction_hourly_temperature_coverage_per_period: float = 0.9
     is_reporting_data: bool = False
     is_electricity_data: bool = True
-    disqualification: list = dataclasses.field(default_factory=list)
-    warnings: list = dataclasses.field(default_factory=list)
-    n_days_total: int = None
+    disqualification: List[EEMeterWarning] = Field(default_factory= list)
+    warnings: List[EEMeterWarning] = Field(default_factory= list)
+    n_days_total: Optional[int] = None
 
     def __post_init__(self):
         self._compute_n_days_total()
         self._compute_valid_meter_temperature_days()
 
     def _check_no_data(self):
-        if self.data.dropna().empty:
+        if self.data.df.dropna().empty:
             self.disqualification.append(
                 EEMeterWarning(
                     qualified_name="eemeter.sufficiency_criteria.no_data",
@@ -59,7 +66,7 @@ class SufficiencyCriteria:
         return True
 
     def _check_n_days_end_gap(self):
-        data_end = self.data.dropna().index.max()
+        data_end = self.data.df.dropna().index.max()
 
         if self.requested_end is not None:
             # check for gap at end
@@ -86,7 +93,7 @@ class SufficiencyCriteria:
         n_days_end_gap = 0
 
     def _check_n_days_start_gap(self):
-        data_start = self.data.dropna().index.min()
+        data_start = self.data.df.dropna().index.min()
 
         if self.requested_start is not None:
             # check for gap at beginning
@@ -114,7 +121,7 @@ class SufficiencyCriteria:
 
     def _check_negative_meter_values(self):
         if not self.is_reporting_data and not self.is_electricity_data:
-            n_negative_meter_values = self.data.observed[self.data.observed < 0].shape[
+            n_negative_meter_values = self.data.df.observed[self.data.df.observed < 0].shape[
                 0
             ]
 
@@ -131,8 +138,8 @@ class SufficiencyCriteria:
                 )
 
     def _compute_n_days_total(self):
-        data_end = self.data.dropna().index.max()
-        data_start = self.data.dropna().index.min()
+        data_end = self.data.df.dropna().index.max()
+        data_start = self.data.df.dropna().index.min()
         n_days_data = (
             data_end - data_start
         ).days + 1  # TODO confirm. no longer using last row nan
@@ -179,10 +186,10 @@ class SufficiencyCriteria:
 
     def _compute_valid_meter_temperature_days(self):
         if not self.is_reporting_data:
-            valid_meter_value_rows = self.data.observed.notnull()
+            valid_meter_value_rows = self.data.df.observed.notnull()
         valid_temperature_rows = (
-            self.data.temperature_not_null
-            / (self.data.temperature_not_null + self.data.temperature_null)
+            self.data.df.temperature_not_null
+            / (self.data.df.temperature_not_null + self.data.df.temperature_null)
         ) > self.min_fraction_hourly_temperature_coverage_per_period
 
         if not self.is_reporting_data:
@@ -191,7 +198,7 @@ class SufficiencyCriteria:
             valid_rows = valid_temperature_rows
 
         # get number of days per period - for daily this should be a series of ones
-        row_day_counts = day_counts(self.data.index)
+        row_day_counts = day_counts(self.data.df.index)
 
         # apply masks, giving total
         if not self.is_reporting_data:
@@ -203,7 +210,6 @@ class SufficiencyCriteria:
 
         self.n_valid_days = n_valid_days
         self.n_valid_temperature_days = n_valid_temperature_days
-
 
     def _check_valid_days_percentage(self):
 
@@ -240,7 +246,6 @@ class SufficiencyCriteria:
                 )
         else:
             fraction_valid_meter_value_days = 0
-
 
         if (
             not self.is_reporting_data
@@ -288,8 +293,8 @@ class SufficiencyCriteria:
 
     def _check_monthly_temperature_values_percentage(self):
         non_null_temp_percentage_per_month = (
-            self.data["temperature"]
-            .groupby(self.data.index.month)
+            self.data.df["temperature"]
+            .groupby(self.data.df.index.month)
             .apply(lambda x: x.notna().mean())
         )
         if (
@@ -314,15 +319,15 @@ class SufficiencyCriteria:
 
     def _check_extreme_values(self):
         if not self.is_reporting_data:
-            median = self.data.observed.median()
-            upper_quantile = self.data.observed.quantile(0.75)
-            lower_quantile = self.data.observed.quantile(0.25)
+            median = self.data.df.observed.median()
+            upper_quantile = self.data.df.observed.quantile(0.75)
+            lower_quantile = self.data.df.observed.quantile(0.25)
             iqr = upper_quantile - lower_quantile
             extreme_value_limit = median + (3 * iqr)
-            n_extreme_values = self.data.observed[
-                self.data.observed > extreme_value_limit
+            n_extreme_values = self.data.df.observed[
+                self.data.df.observed > extreme_value_limit
             ].shape[0]
-            max_value = float(self.data.observed.max())
+            max_value = float(self.data.df.observed.max())
 
             if n_extreme_values > 0:
                 # CalTRACK 2.3.6
@@ -381,36 +386,38 @@ class SufficiencyCriteria:
             temperature_features = temperature_features.drop(columns=["coverage"])
 
     def _check_high_frequency_meter_values(self):
-        if not self.data[self.data.coverage <= 0.5].empty:
+        if not self.data.df[self.data.df.coverage <= 0.5].empty:
             self.warnings.append(
                 EEMeterWarning(
                     qualified_name="eemeter.sufficiency_criteria.missing_high_frequency_meter_data",
                     description=(
                         "More than 50% of the high frequency Meter data is missing."
                     ),
-                    data=(self.data[self.data.coverage <= 0.5].index.to_list()),
+                    data=(self.data.df[self.data.df.coverage <= 0.5].index.to_list()),
                 )
             )
 
         # CalTRACK 2.2.2.1 - interpolate with average of non-null values
-        self.data.value[self.data.coverage > 0.5] = (
-            self.data[self.data.coverage > 0.5].value
-            / self.data[self.data.coverage > 0.5].coverage
+        self.data.df.value[self.data.df.coverage > 0.5] = (
+            self.data.df[self.data.df.coverage > 0.5].value
+            / self.data.df[self.data.df.coverage > 0.5].coverage
         )
 
     def check_sufficiency_baseline(self):
-        raise NotImplementedError("Use Hourly / Daily / Billing SufficiencyCriteria class for concrete implementation")
+        raise NotImplementedError(
+            "Use Hourly / Daily / Billing SufficiencyCriteria class for concrete implementation"
+        )
 
     def check_sufficiency_reporting(self):
-        raise NotImplementedError("Use Hourly / Daily / Billing SufficiencyCriteria class for concrete implementation")
+        raise NotImplementedError(
+            "Use Hourly / Daily / Billing SufficiencyCriteria class for concrete implementation"
+        )
 
 
 class HourlySufficiencyCriteria(SufficiencyCriteria):
     """
-        Sufficiency Criteria class for hourly models
+    Sufficiency Criteria class for hourly models
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
     def _check_baseline_length_hourly_model(self):
         # TODO : Implement this
@@ -419,8 +426,8 @@ class HourlySufficiencyCriteria(SufficiencyCriteria):
     def _check_monthly_meter_readings_percentage(self):
         if not self.is_reporting_data:
             non_null_meter_percentage_per_month = (
-                self.data["observed"]
-                .groupby(self.data.index.month)
+                self.data.df["observed"]
+                .groupby(self.data.df.index.month)
                 .apply(lambda x: x.notna().mean())
             )
             if (
@@ -441,7 +448,7 @@ class HourlySufficiencyCriteria(SufficiencyCriteria):
     def _check_hourly_consecutive_temperature_data(self):
         # TODO : Check implementation wrt Caltrack 2.2.4.1
         # Resample to hourly by taking the first non NaN value
-        hourly_data = self.data['temperature'].resample('H').first()
+        hourly_data = self.data.df["temperature"].resample("H").first()
         mask = hourly_data.isna().any(axis=1)
         grouped = mask.groupby((mask != mask.shift()).cumsum())
         max_consecutive_nans = grouped.sum().max()
@@ -449,8 +456,10 @@ class HourlySufficiencyCriteria(SufficiencyCriteria):
             self.disqualification.append(
                 EEMeterWarning(
                     qualified_name="eemeter.sufficiency_criteria.too_many_consecutive_hours_temperature_data_missing",
-                    description=("More than 6 hours of consecutive hourly data is missing."),
-                    data={'Max_consecutive_hours_missing': int(max_consecutive_nans)},
+                    description=(
+                        "More than 6 hours of consecutive hourly data is missing."
+                    ),
+                    data={"Max_consecutive_hours_missing": int(max_consecutive_nans)},
                 )
             )
 
@@ -469,7 +478,6 @@ class HourlySufficiencyCriteria(SufficiencyCriteria):
         self._check_high_frequency_temperature_values()
         self._check_hourly_consecutive_temperature_data()
 
-
     def check_sufficiency_reporting(self):
         self._check_no_data()
         self._check_valid_days_percentage()
@@ -477,14 +485,14 @@ class HourlySufficiencyCriteria(SufficiencyCriteria):
         self._check_monthly_temperature_values_percentage()
         # self._check_high_frequency_temperature_values()
 
-    
+
 class DailySufficiencyCriteria(SufficiencyCriteria):
     """
-        Sufficiency Criteria class for daily models
+    Sufficiency Criteria class for daily models
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
+    class Config:
+        arbitrary_types_allowed = True
+        
     def check_sufficiency_baseline(self):
         self._check_no_data()
         self._check_negative_meter_values()
@@ -508,13 +516,11 @@ class DailySufficiencyCriteria(SufficiencyCriteria):
 
 class BillingSufficiencyCriteria(SufficiencyCriteria):
     """
-        Sufficiency Criteria class for billing models - monthly / bimonthly
+    Sufficiency Criteria class for billing models - monthly / bimonthly
     """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
     def _check_meter_data_billing_monthly(self):
-        if self.data["value"].dropna().empty:
+        if self.data.df["value"].dropna().empty:
             return
 
         diff = list((data.index[1:] - data.index[:-1]).days)
@@ -538,7 +544,7 @@ class BillingSufficiencyCriteria(SufficiencyCriteria):
             )
 
     def _check_meter_data_billing_bimonthly(self):
-        if self.data["value"].dropna().empty:
+        if self.data.df["value"].dropna().empty:
             return
 
         diff = list((data.index[1:] - data.index[:-1]).days)
@@ -588,7 +594,7 @@ class BillingSufficiencyCriteria(SufficiencyCriteria):
         """
         add_estimated = []
         remove_estimated_fixed_rows = []
-        data = self.data
+        data = self.data.df
         if "estimated" in data.columns:
             data["unestimated_value"] = (
                 data[:-1].value[(data[:-1].estimated == False)].reindex(data.index)
