@@ -288,8 +288,9 @@ def as_freq(
         # TODO : hacky fix to account all occurences of last hour not being counted due to the NaN appended above.
         # Due to above issue number of median granularity periods would end up being 1 rather than the entire 720(24 * 30), thus squashing the
         # reported value to 1/720th the actual. Set it back to 1 like the other usual periods. Might break if the last period is uneven.
-        if resampled.coverage[-1] > 1:
-            resampled.coverage[-1] = 1
+        if resampled.coverage.iloc[-1] > 1:
+            #resampled.coverage[-1] = 1
+            resampled.loc[resampled.index[-1], 'coverage'] = 1
         return resampled
     else:
         return resampled
@@ -313,9 +314,8 @@ def downsample_and_clean_daily_data(dataset, warnings):
         )
 
     # CalTRACK 2.2.2.1 - interpolate with average of non-null values
-    dataset.value[dataset.coverage > 0.5] = (
-        dataset[dataset.coverage > 0.5].value / dataset[dataset.coverage > 0.5].coverage
-    )
+    dataset.loc[dataset.coverage > 0.5, 'value'] = (
+            dataset.loc[dataset.coverage > 0.5, 'value'] / dataset.loc[dataset.coverage > 0.5, 'coverage'])
 
     return dataset[dataset.coverage > 0.5].reindex(dataset.index)[["value"]]
 
@@ -527,7 +527,7 @@ def sufficiency_criteria_baseline(
         fraction_valid_temperature_days = 0
         fraction_valid_days = 0
 
-    MAX_BASELINE_LENGTH = 365
+    MAX_BASELINE_LENGTH = 366 #in case of a leap year
     MIN_BASELINE_LENGTH = ceil(0.9 * MAX_BASELINE_LENGTH)
     if (
         not is_reporting_data
