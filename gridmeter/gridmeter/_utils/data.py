@@ -7,12 +7,23 @@ import pandas as pd
 import numpy as np
 
 
+def is_datetime(x: pd.Series) -> bool:
+    is_dt = [
+        pd.api.types.is_datetime64_any_dtype(x),
+        # pd.api.types.is_datetime64_ns_dtype(x),
+        # pd.api.types.is_datetime64_dtype(x),
+        # isinstance(x.dtype, pd.DatetimeTZDtype)
+    ]
+
+    return any(is_dt)
+
+
 class Data:
     def __init__(self, 
-        loadshape_df: Optional[pd.DataFrame]= None, 
-        time_series_df: Optional[pd.DataFrame]= None, 
-        features_df: Optional[pd.DataFrame]= None, 
-        settings: Optional[Data_Settings]= None
+        loadshape_df: Optional[pd.DataFrame] = None, 
+        time_series_df: Optional[pd.DataFrame] = None, 
+        features_df: Optional[pd.DataFrame] = None, 
+        settings: Optional[Data_Settings] = None
     ):
         if settings is None:
             if loadshape_df is None:
@@ -380,8 +391,8 @@ class Data:
             raise ValueError(f"Missing columns in time_series_df: {missing_columns}")
 
         # Check that the datetime column is actually of type datetime
-        if base_df["datetime"].dtypes in _const.datetime_types:
-            base_df["datetime"] = pd.to_datetime(base_df["datetime"], utc=True)
+        if is_datetime(base_df["datetime"]):
+            base_df["datetime"] = pd.to_datetime(base_df["datetime"], utc=True) #TODO: should this be utc=True? should this be applied to all datetime types?
         else:
             raise ValueError("The 'datetime' column must be of datetime type")
 
