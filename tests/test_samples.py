@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2023 OpenEEmeter contributors
+   Copyright 2014-2024 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import datetime
 import pytest
 import pytz
 
-from eemeter import samples, load_sample
+from eemeter.eemeter.samples import samples, load_sample
 
 
 def test_samples():

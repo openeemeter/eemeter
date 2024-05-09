@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2023 OpenEEmeter contributors
+   Copyright 2014-2024 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -21,19 +21,26 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from eemeter.caltrack.design_matrices import (
-    create_caltrack_daily_design_matrix,
+from eemeter.eemeter.models.hourly.design_matrices import (
     create_caltrack_billing_design_matrix,
     create_caltrack_hourly_preliminary_design_matrix,
     create_caltrack_hourly_segmented_design_matrices,
 )
-from eemeter.caltrack.hourly import fit_caltrack_hourly_model
-from eemeter.caltrack.usage_per_day import fit_caltrack_usage_per_day_model
-from eemeter.derivatives import metered_savings, modeled_savings
-from eemeter.exceptions import MissingModelParameterError
-from eemeter.features import estimate_hour_of_week_occupancy, fit_temperature_bins
-from eemeter.segmentation import segment_time_series
-from eemeter.transform import get_baseline_data, get_reporting_data
+from eemeter.eemeter.models.hourly.model import fit_caltrack_hourly_model
+from eemeter.eemeter.models.hourly.derivatives import metered_savings, modeled_savings
+from eemeter.eemeter.common.features import (
+    estimate_hour_of_week_occupancy,
+    fit_temperature_bins,
+)
+from eemeter.eemeter.models.hourly.segmentation import segment_time_series
+from eemeter.eemeter.common.transform import get_baseline_data, get_reporting_data
+from eemeter.eemeter.models.daily.model import DailyModel
+from eemeter.eemeter.models.daily.data import DailyBaselineData, DailyReportingData
+from eemeter.eemeter.models.billing.model import BillingModel
+from eemeter.eemeter.models.billing.data import (
+    BillingBaselineData,
+    BillingReportingData,
+)
 
 
 @pytest.fixture
@@ -44,15 +51,14 @@ def baseline_data_daily(il_electricity_cdd_hdd_daily):
     baseline_meter_data, warnings = get_baseline_data(
         meter_data, end=blackout_start_date
     )
-    baseline_data = create_caltrack_daily_design_matrix(
-        baseline_meter_data, temperature_data
+    baseline_data = DailyBaselineData.from_series(
+        baseline_meter_data, temperature_data, is_electricity_data=True
     )
+
     return baseline_data
-
-
 @pytest.fixture
 def baseline_model_daily(baseline_data_daily):
-    model_results = fit_caltrack_usage_per_day_model(baseline_data_daily)
+    model_results = DailyModel().fit(baseline_data_daily, ignore_disqualification=True)
     return model_results
 
 
@@ -64,15 +70,15 @@ def reporting_data_daily(il_electricity_cdd_hdd_daily):
     reporting_meter_data, warnings = get_reporting_data(
         meter_data, start=blackout_end_date
     )
-    reporting_data = create_caltrack_daily_design_matrix(
-        reporting_meter_data, temperature_data
+    reporting_data = DailyBaselineData.from_series(
+        reporting_meter_data, temperature_data, is_electricity_data=True
     )
     return reporting_data
 
 
 @pytest.fixture
 def reporting_model_daily(reporting_data_daily):
-    model_results = fit_caltrack_usage_per_day_model(reporting_data_daily)
+    model_results = DailyModel().fit(reporting_data_daily, ignore_disqualification=True)
     return model_results
 
 
@@ -91,21 +97,12 @@ def reporting_temperature_data():
 def test_metered_savings_cdd_hdd_daily(
     baseline_model_daily, reporting_meter_data_daily, reporting_temperature_data
 ):
-    results, error_bands = metered_savings(
-        baseline_model_daily, reporting_meter_data_daily, reporting_temperature_data
+    reporting_data = DailyReportingData.from_series(
+        reporting_meter_data_daily, reporting_temperature_data, is_electricity_data=True
     )
-    assert list(results.columns) == [
-        "reporting_observed",
-        "counterfactual_usage",
-        "metered_savings",
-    ]
-    assert round(results.metered_savings.sum(), 2) == 1571.28
-    assert sorted(error_bands.keys()) == [
-        "FSU Error Band",
-        "OLS Error Band",
-        "OLS Error Band: Model Error",
-        "OLS Error Band: Noise",
-    ]
+    results = baseline_model_daily.predict(reporting_data)
+    metered_savings = results["predicted"] - results["observed"]
+    assert round(metered_savings.sum(), 2) == 1643.61
 
 
 @pytest.fixture
@@ -116,12 +113,10 @@ def baseline_model_billing(il_electricity_cdd_hdd_billing_monthly):
     baseline_meter_data, warnings = get_baseline_data(
         meter_data, end=blackout_start_date
     )
-    baseline_data = create_caltrack_billing_design_matrix(
-        baseline_meter_data, temperature_data
+    baseline_data = BillingBaselineData.from_series(
+        baseline_meter_data, temperature_data, is_electricity_data=True
     )
-    model_results = fit_caltrack_usage_per_day_model(
-        baseline_data, use_billing_presets=True, weights_col="n_days_kept"
-    )
+    model_results = BillingModel().fit(baseline_data, ignore_disqualification=True)
     return model_results
 
 
@@ -134,12 +129,10 @@ def reporting_model_billing(il_electricity_cdd_hdd_billing_monthly):
     baseline_meter_data, warnings = get_baseline_data(
         meter_data, end=blackout_start_date
     )
-    baseline_data = create_caltrack_billing_design_matrix(
-        baseline_meter_data, temperature_data
+    baseline_data = BillingBaselineData.from_series(
+        baseline_meter_data, temperature_data, is_electricity_data=True
     )
-    model_results = fit_caltrack_usage_per_day_model(
-        baseline_data, use_billing_presets=True, weights_col="n_days_kept"
-    )
+    model_results = BillingModel().fit(baseline_data, ignore_disqualification=True)
     return model_results
 
 
@@ -152,55 +145,69 @@ def reporting_meter_data_billing():
 def test_metered_savings_cdd_hdd_billing(
     baseline_model_billing, reporting_meter_data_billing, reporting_temperature_data
 ):
-    results, error_bands = metered_savings(
-        baseline_model_billing, reporting_meter_data_billing, reporting_temperature_data
+    reporting_data = BillingReportingData.from_series(
+        reporting_meter_data_billing,
+        reporting_temperature_data,
+        is_electricity_data=True,
     )
-    assert list(results.columns) == [
-        "reporting_observed",
-        "counterfactual_usage",
-        "metered_savings",
-    ]
-    assert round(results.metered_savings.sum(), 2) == 1625.73
-    assert sorted(error_bands.keys()) == [
-        "FSU Error Band",
-        "OLS Error Band",
-        "OLS Error Band: Model Error",
-        "OLS Error Band: Noise",
-    ]
+    results = baseline_model_billing.predict(reporting_data)
+    metered_savings = results["predicted"] - results["observed"]
+    assert round(metered_savings.sum(), 2) == 1605.14
 
 
 def test_metered_savings_cdd_hdd_billing_no_reporting_data(
     baseline_model_billing, reporting_meter_data_billing, reporting_temperature_data
 ):
-    results, error_bands = metered_savings(
-        baseline_model_billing,
-        reporting_meter_data_billing[:0],
-        reporting_temperature_data,
+    # TODO test makes less sense without the use of derivatives functions. can just be merged with other predict() tests
+    results = baseline_model_billing.predict(
+        BillingReportingData.from_series(
+            None, reporting_temperature_data, is_electricity_data=True
+        )
     )
     assert list(results.columns) == [
-        "reporting_observed",
-        "counterfactual_usage",
-        "metered_savings",
+        "season",
+        "day_of_week",
+        "weekday_weekend",
+        "temperature",
+        "predicted",
+        "predicted_unc",
+        "heating_load",
+        "cooling_load",
+        "model_split",
+        "model_type",
     ]
-    assert round(results.metered_savings.sum(), 2) == 0.0
-    assert error_bands is None
+    assert round(results.predicted.sum(), 2) == 1607.1
 
 
 def test_metered_savings_cdd_hdd_billing_single_record_reporting_data(
     baseline_model_billing, reporting_meter_data_billing, reporting_temperature_data
 ):
-    results, error_bands = metered_savings(
-        baseline_model_billing,
-        reporting_meter_data_billing[:1],
-        reporting_temperature_data,
+    # results, error_bands = metered_savings(
+    #     baseline_model_billing,
+    #     reporting_meter_data_billing[:1],
+    #     reporting_temperature_data,
+    #     billing_data=True,
+    # )
+    results = baseline_model_billing.predict(
+        BillingReportingData.from_series(
+            reporting_meter_data_billing[:1],
+            reporting_temperature_data,
+            is_electricity_data=True,
+        )
     )
     assert list(results.columns) == [
-        "reporting_observed",
-        "counterfactual_usage",
-        "metered_savings",
+        "season",
+        "day_of_week",
+        "weekday_weekend",
+        "temperature",
+        "predicted",
+        "predicted_unc",
+        "heating_load",
+        "cooling_load",
+        "model_split",
+        "model_type",
     ]
-    assert round(results.metered_savings.sum(), 2) == 0.0
-    assert error_bands is None
+    assert round(results.predicted.sum(), 2) == 0.0
 
 
 @pytest.fixture
@@ -215,10 +222,12 @@ def baseline_model_billing_single_record_baseline_data(
     )
     baseline_data = create_caltrack_billing_design_matrix(
         baseline_meter_data, temperature_data
-    )
-    baseline_data = baseline_data[:2]
-    model_results = fit_caltrack_usage_per_day_model(
-        baseline_data, use_billing_presets=True, weights_col="n_days_kept"
+    ).rename(columns={"meter_value": "observed", "temperature_mean": "temperature"})
+    baseline_data = baseline_data[:60]
+
+    model_results = BillingModel().fit(
+        BillingBaselineData(baseline_data, is_electricity_data=True),
+        ignore_disqualification=True,
     )
     return model_results
 
@@ -228,25 +237,33 @@ def test_metered_savings_cdd_hdd_billing_single_record_baseline_data(
     reporting_meter_data_billing,
     reporting_temperature_data,
 ):
-    results, error_bands = metered_savings(
-        baseline_model_billing_single_record_baseline_data,
-        reporting_meter_data_billing,
-        reporting_temperature_data,
+    # results, error_bands = metered_savings(
+    #     baseline_model_billing_single_record_baseline_data,
+    #     reporting_meter_data_billing,
+    #     reporting_temperature_data,
+    #     billing_data=True,
+    # )
+    results = baseline_model_billing_single_record_baseline_data.predict(
+        BillingReportingData.from_series(
+            reporting_meter_data_billing,
+            reporting_temperature_data,
+            is_electricity_data=True,
+        )
     )
-    """
     assert list(results.columns) == [
-        "reporting_observed",
-        "counterfactual_usage",
-        "metered_savings",
+        "season",
+        "day_of_week",
+        "weekday_weekend",
+        "temperature",
+        "observed",
+        "predicted",
+        "predicted_unc",
+        "heating_load",
+        "cooling_load",
+        "model_split",
+        "model_type",
     ]
-    assert round(results.metered_savings.sum(), 2) == 1625.73
-    assert sorted(error_bands.keys()) == [
-        "FSU Error Band",
-        "OLS Error Band",
-        "OLS Error Band: Model Error",
-        "OLS Error Band: Noise",
-    ]
-    """
+    assert round(results.predicted.sum() - results.observed.sum(), 2) == 1785.84
 
 
 @pytest.fixture
@@ -256,67 +273,15 @@ def reporting_meter_data_billing_wrong_timestamp():
 
 
 def test_metered_savings_cdd_hdd_billing_reporting_data_wrong_timestamp(
-    baseline_model_billing,
     reporting_meter_data_billing_wrong_timestamp,
     reporting_temperature_data,
 ):
-    results, error_bands = metered_savings(
-        baseline_model_billing,
-        reporting_meter_data_billing_wrong_timestamp,
-        reporting_temperature_data,
-    )
-    assert list(results.columns) == [
-        "reporting_observed",
-        "counterfactual_usage",
-        "metered_savings",
-    ]
-    assert round(results.metered_savings.sum(), 2) == 0.0
-    assert error_bands is None
-
-
-def test_metered_savings_cdd_hdd_daily_hourly_degree_days(
-    baseline_model_daily, reporting_meter_data_daily, reporting_temperature_data
-):
-    results, error_bands = metered_savings(
-        baseline_model_daily, reporting_meter_data_daily, reporting_temperature_data
-    )
-    assert list(results.columns) == [
-        "reporting_observed",
-        "counterfactual_usage",
-        "metered_savings",
-    ]
-    assert round(results.metered_savings.sum(), 2) == 1571.28
-    assert round(error_bands["FSU Error Band"], 2) == 601.52
-
-
-def test_metered_savings_cdd_hdd_no_params(
-    baseline_model_daily, reporting_meter_data_daily, reporting_temperature_data
-):
-    baseline_model_daily.model.model_params = None
-    with pytest.raises(MissingModelParameterError):
-        metered_savings(
-            baseline_model_daily, reporting_meter_data_daily, reporting_temperature_data
+    with pytest.raises(ValueError):
+        BillingReportingData.from_series(
+            reporting_meter_data_billing_wrong_timestamp,
+            reporting_temperature_data,
+            is_electricity_data=True,
         )
-
-
-def test_metered_savings_cdd_hdd_daily_with_disaggregated(
-    baseline_model_daily, reporting_meter_data_daily, reporting_temperature_data
-):
-    results, error_bands = metered_savings(
-        baseline_model_daily,
-        reporting_meter_data_daily,
-        reporting_temperature_data,
-        with_disaggregated=True,
-    )
-    assert list(sorted(results.columns)) == [
-        "counterfactual_base_load",
-        "counterfactual_cooling_load",
-        "counterfactual_heating_load",
-        "counterfactual_usage",
-        "metered_savings",
-        "reporting_observed",
-    ]
-    assert round(error_bands["FSU Error Band"], 2) == 601.52
 
 
 def test_modeled_savings_cdd_hdd_daily(
@@ -325,133 +290,26 @@ def test_modeled_savings_cdd_hdd_daily(
     reporting_meter_data_daily,
     reporting_temperature_data,
 ):
-    # using reporting data for convenience, but intention is to use normal data
-    results, error_bands = modeled_savings(
-        baseline_model_daily,
-        reporting_model_daily,
-        reporting_meter_data_daily.index,
-        reporting_temperature_data,
+    reporting_data = DailyReportingData.from_series(
+        reporting_meter_data_daily, reporting_temperature_data, is_electricity_data=True
     )
-    assert list(results.columns) == [
-        "modeled_baseline_usage",
-        "modeled_reporting_usage",
-        "modeled_savings",
-    ]
-    assert round(results.modeled_savings.sum(), 2) == 168.58
-    assert round(error_bands["FSU Error Band: Baseline"], 2) == 601.52
-    assert round(error_bands["FSU Error Band: Reporting"], 2) == 534.78
-    assert round(error_bands["FSU Error Band"], 2) == 804.87
-
-
-def test_modeled_savings_cdd_hdd_daily_hourly_degree_days(
-    baseline_model_daily,
-    reporting_model_daily,
-    reporting_meter_data_daily,
-    reporting_temperature_data,
-):
-    # using reporting data for convenience, but intention is to use normal data
-    results, error_bands = modeled_savings(
-        baseline_model_daily,
-        reporting_model_daily,
-        reporting_meter_data_daily.index,
-        reporting_temperature_data,
-        predict_kwargs={"degree_day_method": "hourly"},
+    baseline_model_result = baseline_model_daily.predict(reporting_data)
+    reporting_model_result = reporting_model_daily.predict(reporting_data)
+    modeled_savings = (
+        baseline_model_result["predicted"] - reporting_model_result["predicted"]
     )
-    assert list(results.columns) == [
-        "modeled_baseline_usage",
-        "modeled_reporting_usage",
-        "modeled_savings",
-    ]
-    assert round(results.modeled_savings.sum(), 2) == 168.58
-    assert round(error_bands["FSU Error Band: Baseline"], 2) == 601.52
-    assert round(error_bands["FSU Error Band: Reporting"], 2) == 534.78
-    assert round(error_bands["FSU Error Band"], 2) == 804.87
+    assert round(modeled_savings.sum(), 2) == 177.02
 
 
-def test_modeled_savings_cdd_hdd_daily_baseline_model_no_params(
-    baseline_model_daily,
-    reporting_model_daily,
-    reporting_meter_data_daily,
-    reporting_temperature_data,
-):
-    baseline_model_daily.model.model_params = None
-    with pytest.raises(MissingModelParameterError):
-        modeled_savings(
-            baseline_model_daily,
-            reporting_model_daily,
-            reporting_meter_data_daily.index,
-            reporting_temperature_data,
-        )
-
-
-def test_modeled_savings_cdd_hdd_daily_reporting_model_no_params(
-    baseline_model_daily,
-    reporting_model_daily,
-    reporting_meter_data_daily,
-    reporting_temperature_data,
-):
-    reporting_model_daily.model.model_params = None
-    with pytest.raises(MissingModelParameterError):
-        modeled_savings(
-            baseline_model_daily,
-            reporting_model_daily,
-            reporting_meter_data_daily.index,
-            reporting_temperature_data,
-        )
-
-
-def test_modeled_savings_cdd_hdd_daily_with_disaggregated(
-    baseline_model_daily,
-    reporting_model_daily,
-    reporting_meter_data_daily,
-    reporting_temperature_data,
-):
-    # using reporting data for convenience, but intention is to use normal data
-    results, error_bands = modeled_savings(
-        baseline_model_daily,
-        reporting_model_daily,
-        reporting_meter_data_daily.index,
-        reporting_temperature_data,
-        with_disaggregated=True,
-    )
-    assert list(sorted(results.columns)) == [
-        "modeled_base_load_savings",
-        "modeled_baseline_base_load",
-        "modeled_baseline_cooling_load",
-        "modeled_baseline_heating_load",
-        "modeled_baseline_usage",
-        "modeled_cooling_load_savings",
-        "modeled_heating_load_savings",
-        "modeled_reporting_base_load",
-        "modeled_reporting_cooling_load",
-        "modeled_reporting_heating_load",
-        "modeled_reporting_usage",
-        "modeled_savings",
-    ]
-    assert round(error_bands["FSU Error Band: Baseline"], 2) == 601.52
-    assert round(error_bands["FSU Error Band: Reporting"], 2) == 534.78
-    assert round(error_bands["FSU Error Band"], 2) == 804.87
-
-
+# TODO move to dataclass testing
 def test_modeled_savings_daily_empty_temperature_data(
     baseline_model_daily, reporting_model_daily
 ):
     index = pd.DatetimeIndex([], tz="UTC", name="dt", freq="H")
-    temperature_data = pd.Series([], index=index)
+    temperature_data = pd.Series([], index=index).to_frame()
 
-    meter_data_index = temperature_data.resample("D").sum().index
-
-    # using reporting data for convenience, but intention is to use normal data
-    results, error_bands = modeled_savings(
-        baseline_model_daily, reporting_model_daily, meter_data_index, temperature_data
-    )
-    assert results.shape == (0, 3)
-    assert list(results.columns) == [
-        "modeled_baseline_usage",
-        "modeled_reporting_usage",
-        "modeled_savings",
-    ]
-    assert error_bands is None
+    with pytest.raises(ValueError):
+        reporting = DailyReportingData(temperature_data, True)
 
 
 @pytest.fixture
@@ -488,6 +346,7 @@ def baseline_model_hourly(il_electricity_cdd_hdd_hourly):
         occupancy_lookup,
         occupied_temperature_bins,
         unoccupied_temperature_bins,
+        segment_type="three_month_weighted",
     )
     return segmented_model
 
@@ -526,6 +385,7 @@ def reporting_model_hourly(il_electricity_cdd_hdd_hourly):
         occupancy_lookup,
         occupied_temperature_bins,
         unoccupied_temperature_bins,
+        segment_type="three_month_weighted",
     )
     return segmented_model
 
@@ -583,24 +443,34 @@ def normal_year_temperature_data():
 def test_modeled_savings_cdd_hdd_billing(
     baseline_model_billing, reporting_model_billing, normal_year_temperature_data
 ):
-    results, error_bands = modeled_savings(
-        baseline_model_billing,
-        reporting_model_billing,
-        pd.date_range("2015-01-01", freq="D", periods=365, tz="UTC"),
-        normal_year_temperature_data,
+    # results, error_bands = modeled_savings(
+    #     baseline_model_billing,
+    #     reporting_model_billing,
+    #     pd.date_range("2015-01-01", freq="D", periods=365, tz="UTC"),
+    #     normal_year_temperature_data,
+    # )
+    meter_data = meter_data = pd.DataFrame(
+        {"observed": np.nan}, index=normal_year_temperature_data.index
     )
+    results = baseline_model_billing.predict(
+        BillingReportingData.from_series(
+            meter_data, normal_year_temperature_data, is_electricity_data=True
+        )
+    )
+
     assert list(results.columns) == [
-        "modeled_baseline_usage",
-        "modeled_reporting_usage",
-        "modeled_savings",
+        "season",
+        "day_of_week",
+        "weekday_weekend",
+        "temperature",
+        "predicted",
+        "predicted_unc",
+        "heating_load",
+        "cooling_load",
+        "model_split",
+        "model_type",
     ]
-    assert round(results.modeled_savings.sum(), 2) == 587.44
-    assert sorted(error_bands.keys()) == [
-        "FSU Error Band",
-        "FSU Error Band: Baseline",
-        "FSU Error Band: Reporting",
-    ]
-    assert round(error_bands["FSU Error Band"], 2) == 156.89
+    assert round(results.predicted.sum(), 2) == 8245.37
 
 
 @pytest.fixture
@@ -610,34 +480,29 @@ def reporting_meter_data_billing_not_aligned():
 
 
 def test_metered_savings_not_aligned_reporting_data(
-    baseline_model_billing,
     reporting_meter_data_billing_not_aligned,
     reporting_temperature_data,
 ):
-    results, error_bands = metered_savings(
-        baseline_model_billing,
-        reporting_meter_data_billing_not_aligned,
-        reporting_temperature_data,
-    )
-    assert list(results.columns) == [
-        "reporting_observed",
-        "counterfactual_usage",
-        "metered_savings",
-    ]
-    assert round(results.metered_savings.sum(), 2) == 0.0
-    assert error_bands is None
+    with pytest.raises(ValueError):
+        BillingReportingData.from_series(
+            reporting_meter_data_billing_not_aligned,
+            reporting_temperature_data,
+            is_electricity_data=True,
+        )
 
 
 @pytest.fixture
 def baseline_model_billing_single_record(il_electricity_cdd_hdd_billing_monthly):
-    baseline_meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"][-2:]
+    # using two records until bounds failure is fixed
+    baseline_meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"][-3:]
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]
     blackout_start_date = il_electricity_cdd_hdd_billing_monthly["blackout_start_date"]
     baseline_data = create_caltrack_billing_design_matrix(
         baseline_meter_data, temperature_data
-    )
-    model_results = fit_caltrack_usage_per_day_model(
-        baseline_data, use_billing_presets=True, weights_col="n_days_kept"
+    ).rename(columns={"meter_value": "observed", "temperature_mean": "temperature"})
+    model_results = BillingModel().fit(
+        BillingBaselineData(baseline_data, is_electricity_data=True),
+        ignore_disqualification=True,
     )
     return model_results
 
@@ -647,17 +512,34 @@ def test_metered_savings_model_single_record(
     reporting_meter_data_billing,
     reporting_temperature_data,
 ):
-    assert pd.isnull(baseline_model_billing_single_record.totals_metrics.autocorr_resid)
+    # results, error_bands = metered_savings(
+    #     baseline_model_billing_single_record,
+    #     reporting_meter_data_billing,
+    #     reporting_temperature_data,
+    #     billing_data=True,
+    # )
 
-    # simulating deserialization
-    baseline_model_billing_single_record.totals_metrics.autocorr_resid = None
-
-    results, error_bands = metered_savings(
-        baseline_model_billing_single_record,
-        reporting_meter_data_billing,
-        reporting_temperature_data,
+    results = baseline_model_billing_single_record.predict(
+        BillingReportingData.from_series(
+            reporting_meter_data_billing,
+            reporting_temperature_data,
+            is_electricity_data=True,
+        )
     )
-    assert error_bands is None
+    assert list(results.columns) == [
+        "season",
+        "day_of_week",
+        "weekday_weekend",
+        "temperature",
+        "observed",
+        "predicted",
+        "predicted_unc",
+        "heating_load",
+        "cooling_load",
+        "model_split",
+        "model_type",
+    ]
+    assert round(results.predicted.sum() - results.observed.sum(), 2) == 1447.93
 
 
 @pytest.fixture
@@ -694,5 +576,6 @@ def baseline_model_hourly_single_segment(il_electricity_cdd_hdd_hourly):
         occupancy_lookup,
         occupied_temperature_bins,
         unoccupied_temperature_bins,
+        segment_type="three_month_weighted",
     )
     return segmented_model

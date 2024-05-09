@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2023 OpenEEmeter contributors
+   Copyright 2014-2024 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -18,27 +18,17 @@
 
 """
 
-import logging
+import logging as _logging
 
 from .__version__ import __title__, __description__, __url__, __version__
 from .__version__ import __author__, __author_email__, __license__
 from .__version__ import __copyright__
-from .caltrack import *
-from .derivatives import *
-from .exceptions import *
-from .features import *
-from .io import *
-from .metrics import *
-from .samples.load import *
-from .segmentation import *
-from .transform import *
-from .visualization import *
-from .warnings import *
 
-
-def get_version():
-    return __version__
-
+from .common import *
+from . import (
+    eemeter,
+    drmeter,
+)
 
 # Set default logging handler to avoid "No handler found" warnings.
-logging.getLogger(__name__).addHandler(logging.NullHandler())
+_logging.getLogger(__name__).addHandler(_logging.NullHandler())

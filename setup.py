@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2023 OpenEEmeter contributors
+   Copyright 2014-2024 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -30,7 +30,17 @@ from shutil import rmtree
 from setuptools import find_packages, setup, Command
 
 NAME = "eemeter"
-REQUIRED = ["click", "pandas>=1.0.0", "statsmodels", "scipy"]
+REQUIRED = [
+    "click",
+    "pandas>=1.0.0",
+    "statsmodels",
+    "scipy",
+    "numba",
+    "nlopt",
+    "pydantic>=2.0",
+    "attrs",
+    "requests",
+]
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -87,7 +97,7 @@ setup(
     author_email=about["__author_email__"],
     url=about["__url__"],
     packages=find_packages(exclude=("tests",)),
-    entry_points={"console_scripts": ["eemeter=eemeter.cli:cli"]},
+    entry_points={"console_scripts": ["eemeter=eemeter.eemeter.utilities.cli:cli"]},
     install_requires=REQUIRED,
     include_package_data=True,
     license=about["__license__"],
@@ -95,9 +105,11 @@ setup(
         "License :: OSI Approved :: Apache Software License",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
     ],
     # $ setup.py publish support.
     cmdclass={"upload": UploadCommand},
