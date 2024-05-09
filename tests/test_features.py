@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2023 OpenEEmeter contributors
+   Copyright 2014-2024 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -17,12 +17,11 @@
    limitations under the License.
 
 """
-from datetime import datetime
 import numpy as np
 import pandas as pd
 import pytest
 
-from eemeter.features import (
+from eemeter.eemeter.common.features import (
     compute_occupancy_feature,
     compute_temperature_features,
     compute_temperature_bin_features,
@@ -33,7 +32,7 @@ from eemeter.features import (
     fit_temperature_bins,
     merge_features,
 )
-from eemeter.segmentation import segment_time_series
+from eemeter.eemeter.models.hourly.segmentation import segment_time_series
 
 
 def test_compute_temperature_features_no_freq_index(

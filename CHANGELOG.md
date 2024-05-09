@@ -4,6 +4,33 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+4.0.1
+-----
+
+* Correct dataframe input behavior and final row temperature aggregation
+* Remove unnecessary datetime normalization in order to respect hour of day
+* Convert timestamps in certain warnings to strings to allow serialization
+* Allow configuration of segment_type in HourlyModel wrapper
+
+
+4.0.0
+-----
+
+* Update daily model methods, API, and serialization
+* Provide new API for hourly model to match daily syntax and prepare for future additions
+* Add baseline and reporting dataclasses to support compliant initialization of meter and temperature data
+
+3.2.0
+-----
+
+* Addition of modules and amendments in support of international facility for EEMeter, including principally:
+* Addition of quickstart.py; updating setup.py and __init__/py accordingly.
+* Inclusion of temperature conversion amendments to design_matrices; features; and derivatives.
+* Addition of new tests and samples.
+* Amendments to tutorial.ipynb.
+* Addition of eemeter international.ipynb.
 * Change .iteritems() to .items() in accordance with pandas>=2.0.0
 * .get_loc(x, method=...) to .get_indexer([x],method=...)[0] in accordance with pandas>=2.0.0
 * Updated mean() to mean(numeric_only=True) in accordance to pandas>=2.0.0
@@ -15,21 +42,8 @@ Development
 * Update pytests to account for changes in newer pandas where categorical variables are no longer included in `df.sum().sum()`.
 * Clarify the functioning of start, end and max_days parameters to `get_reporting_data()` and `get_baseline_data()`.
 
-
-* 3.1.2
------
-
-* Addition of modules and amendments in support of international facility for EEMeter, including principally:
-* Addition of quickstart.py; updating setup.py and __init__/py accordingly.
-* Inclusion of temperature conversion amendments to design_matrices; features; and derivatives.
-* Addition of new tests and samples.
-* Amendments to tutorial.ipynb.
-* Addition of eemeter international.ipynb.
-
-
 3.1.1
 -----
-
 
 * Update observed_mean calculation to account for solar (negative usage) to provide
 sensible cvrmse calculations.

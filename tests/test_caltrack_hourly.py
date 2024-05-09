@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2023 OpenEEmeter contributors
+   Copyright 2014-2024 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -22,17 +22,14 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from eemeter.caltrack.hourly import (
+from eemeter.eemeter.models.hourly.model import (
     caltrack_hourly_fit_feature_processor,
     caltrack_hourly_prediction_feature_processor,
     fit_caltrack_hourly_model_segment,
     fit_caltrack_hourly_model,
 )
-from eemeter.features import (
+from eemeter.eemeter.common.features import (
     compute_time_features,
-    compute_temperature_features,
-    compute_usage_per_day_feature,
-    merge_features,
 )
 
 
@@ -174,18 +171,21 @@ def temps():
     return temps
 
 
+@pytest.mark.parametrize("segment_type", ["three_month_weighted"])
 def test_fit_caltrack_hourly_model(
     segmented_design_matrices,
     occupancy_lookup,
     occupied_temperature_bins,
     unoccupied_temperature_bins,
     temps,
+    segment_type,
 ):
     segmented_model_results = fit_caltrack_hourly_model(
         segmented_design_matrices,
         occupancy_lookup,
         occupied_temperature_bins,
         unoccupied_temperature_bins,
+        segment_type=segment_type,
     )
 
     assert segmented_model_results.model.segment_models is not None
@@ -193,18 +193,21 @@ def test_fit_caltrack_hourly_model(
     prediction = segmented_model_results.predict(temps.index, temps).result
 
 
+@pytest.mark.parametrize("segment_type", ["single", "three_month_weighted"])
 def test_serialize_caltrack_hourly_model(
     segmented_design_matrices,
     occupancy_lookup,
     occupied_temperature_bins,
     unoccupied_temperature_bins,
     temps,
+    segment_type,
 ):
     segmented_model = fit_caltrack_hourly_model(
         segmented_design_matrices,
         occupancy_lookup,
         occupied_temperature_bins,
         unoccupied_temperature_bins,
+        segment_type=segment_type,
     )
     assert json.dumps(segmented_model.json())
 
@@ -275,18 +278,21 @@ def segmented_design_matrices_nans(
     }
 
 
+@pytest.mark.parametrize("segment_type", ["three_month_weighted"])
 def test_fit_caltrack_hourly_model_nans_less_than_week_predict(
     segmented_design_matrices_nans,
     occupancy_lookup_nans,
     temperature_bins_nans,
     temps_extended,
     temps,
+    segment_type,
 ):
     segmented_model_results = fit_caltrack_hourly_model(
         segmented_design_matrices_nans,
         occupancy_lookup_nans,
         temperature_bins_nans,
         temperature_bins_nans,
+        segment_type=segment_type,
     )
 
     assert segmented_model_results.model.segment_models is not None
@@ -373,17 +379,20 @@ def temps_extended():
     return temps
 
 
+@pytest.mark.parametrize("segment_type", ["three_month_weighted"])
 def test_fit_caltrack_hourly_model_nans_less_than_week_fit(
     segmented_design_matrices_nans_less_than_week,
     occupancy_lookup_nans_less_than_week,
     temperature_bins_nans_less_than_week,
     temps_extended,
+    segment_type,
 ):
     segmented_model_results = fit_caltrack_hourly_model(
         segmented_design_matrices_nans_less_than_week,
         occupancy_lookup_nans_less_than_week,
         temperature_bins_nans_less_than_week,
         temperature_bins_nans_less_than_week,
+        segment_type=segment_type,
     )
 
     assert segmented_model_results.model.segment_models is not None
@@ -412,18 +421,21 @@ def segmented_design_matrices_empty_models(
     }
 
 
+@pytest.mark.parametrize("segment_type", ["three_month_weighted"])
 def test_predict_caltrack_hourly_model_empty_models(
     temps,
     segmented_design_matrices_empty_models,
     occupancy_lookup,
     occupied_temperature_bins,
     unoccupied_temperature_bins,
+    segment_type,
 ):
     segmented_model_results = fit_caltrack_hourly_model(
         segmented_design_matrices_empty_models,
         occupancy_lookup,
         occupied_temperature_bins,
         unoccupied_temperature_bins,
+        segment_type=segment_type,
     )
 
     assert segmented_model_results.model.segment_models is not None
