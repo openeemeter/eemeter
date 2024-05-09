@@ -6,6 +6,22 @@ Development
 
 * Placeholder
 
+4.0.1
+-----
+
+* Correct dataframe input behavior and final row temperature aggregation
+* Remove unnecessary datetime normalization in order to respect hour of day
+* Convert timestamps in certain warnings to strings to allow serialization
+* Allow configuration of segment_type in HourlyModel wrapper
+
+
+4.0.0
+-----
+
+* Update daily model methods, API, and serialization
+* Provide new API for hourly model to match daily syntax and prepare for future additions
+* Add baseline and reporting dataclasses to support compliant initialization of meter and temperature data
+
 3.2.0
 -----
 
