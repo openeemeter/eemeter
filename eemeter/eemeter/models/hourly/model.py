@@ -177,7 +177,7 @@ class HourlyModel:
         df_eval["predicted"] = y_predict
 
         # make predicted nan if interpolated is True
-        df_eval.loc[df_eval["interpolated"], "predicted"] = np.nan
+        # df_eval.loc[df_eval["interpolated"], "predicted"] = np.nan #TODO: check if this is necessary
 
         # # remove columns not in original columns and predicted
         df_eval = df_eval[[*columns, "predicted"]]
@@ -216,7 +216,7 @@ class HourlyModel:
         # normalize the data
         modified_meter_data = self._normalize_data(modified_meter_data, train_features)
 
-        X, y = self._get_feature_data(modified_meter_data, window, lagged_features)
+        X, y = self._get_feature_data(modified_meter_data)
 
         return X, y
 
@@ -273,23 +273,27 @@ class HourlyModel:
         return df
 
 
-    def _get_feature_data(self, df, window, lagged_features):
-        added_features = []
-        if lagged_features is not None:
-            for feature in lagged_features:
-                for i in range(1, window + 1):
-                    df[f"{feature}_shifted_{i}"] = df[feature].shift(i * 24)
-                    added_features.append(f"{feature}_shifted_{i}")
+    def _get_feature_data(self, df): #TODO: ask Travis about window and lagged features
 
-        new_train_features = self.norm_features_list + added_features
+        new_train_features = self.norm_features_list.copy()
         if self.settings.SUPPLEMENTAL_DATA is not None:
-            for sup in self.settings.SUPPLEMENTAL_DATA:
-                new_train_features.append(sup)
-        new_train_features.sort(reverse=True)
+            if 'TS_SUPPLEMENTAL' in self.settings.SUPPLEMENTAL_DATA:
+                if self.settings.SUPPLEMENTAL_DATA['TS_SUPPLEMENTAL'] is not None:
+                    for sup in self.settings.SUPPLEMENTAL_DATA['TS_SUPPLEMENTAL']:
+                        new_train_features.append(sup)
+            if 'CATEGORICAL_SUPPLEMENTAL' in self.settings.SUPPLEMENTAL_DATA:
+                if 'PV_INSTALLATION_DATE' in self.settings.SUPPLEMENTAL_DATA['CATEGORICAL_SUPPLEMENTAL']:
+                    self.pv_intervention_date = self.settings.SUPPLEMENTAL_DATA['CATEGORICAL_SUPPLEMENTAL']['PV_INSTALLATION_DATE']
+                    self.pv_intervention_date = pd.to_datetime(self.pv_intervention_date )
+                    df['has_pv'] = False
+                    df.loc[df['date'] >= self.pv_intervention_date.date(), 'has_pv'] = True
+                    self.categorical_features.append('has_pv')
 
-        # backfill the shifted features and observed to fill the NaNs in the shifted features
-        df[new_train_features] = df[new_train_features].bfill()
-        df["observed_norm"] = df["observed_norm"].bfill()
+
+                # for sup in self.settings.SUPPLEMENTAL_DATA['categorical_supplemental']: TODO: should we add more genral entry?
+                #     self.categorical_features.append(sup)
+
+        new_train_features.sort(reverse=True)
 
         # get aggregated features with agg function
         agg_dict = {f: lambda x: list(x) for f in new_train_features}
@@ -315,6 +319,50 @@ class HourlyModel:
         y = y.reshape(y.shape[0], y.shape[1] * y.shape[2])
 
         return X, y
+
+
+    def _get_feature_data_deprecated(self, df, window, lagged_features):
+            added_features = []
+            if lagged_features is not None:
+                for feature in lagged_features:
+                    for i in range(1, window + 1):
+                        df[f"{feature}_shifted_{i}"] = df[feature].shift(i * 24)
+                        added_features.append(f"{feature}_shifted_{i}")
+
+            new_train_features = self.norm_features_list + added_features
+            if self.settings.SUPPLEMENTAL_DATA is not None:
+                for sup in self.settings.SUPPLEMENTAL_DATA:
+                    new_train_features.append(sup)
+            new_train_features.sort(reverse=True)
+
+            # backfill the shifted features and observed to fill the NaNs in the shifted features
+            df[new_train_features] = df[new_train_features].bfill()
+            df["observed_norm"] = df["observed_norm"].bfill()
+
+            # get aggregated features with agg function
+            agg_dict = {f: lambda x: list(x) for f in new_train_features}
+
+            # get the features and target for each day
+            ts_feature = np.array(
+                df.groupby("date").agg(agg_dict).values.tolist()
+            )
+            
+            ts_feature = ts_feature.reshape(
+                ts_feature.shape[0], ts_feature.shape[1] * ts_feature.shape[2]
+            )
+
+            # get the first categorical features for each day for each sample
+            unique_dummies = df[self.categorical_features + ["date"]].groupby("date").first()
+
+            X = np.concatenate((ts_feature, unique_dummies), axis=1)
+            y = np.array(
+                df.groupby("date")
+                .agg({"observed_norm": lambda x: list(x)})
+                .values.tolist()
+            )
+            y = y.reshape(y.shape[0], y.shape[1] * y.shape[2])
+
+            return X, y
 
 
     def to_dict(self):
