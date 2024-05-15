@@ -357,6 +357,8 @@ class HourlyData:
         self.missing_values_amount = {}
         self.too_many_missing_data = False
 
+        if self.df.empty:
+            raise ValueError("df cannot be empty")
         self._prepare_dataframe()
 
     def _prepare_dataframe(self):

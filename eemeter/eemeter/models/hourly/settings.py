@@ -21,13 +21,13 @@ class HourlySettings(BaseSettings):
         default=['temperature'], 
         validate_default=True,
     )
-
+    #TODO: remove this
     """lagged train features used within the model"""
     LAGGED_FEATURES: Optional[list[str]] = pydantic.Field(
         default=None, 
         validate_default=True,
     )
-
+    #TODO: remove this
     """window"""
     WINDOW: Optional[int] = pydantic.Field(
         default=None,
@@ -35,9 +35,8 @@ class HourlySettings(BaseSettings):
         validate_default=True,
     )
 
-    # TODO: Armin is this always true/false or can it be a list[string]?
     """supplemental data"""
-    SUPPLEMENTAL_DATA: Optional[list[str]] = pydantic.Field(
+    SUPPLEMENTAL_DATA: Optional[dict] = pydantic.Field(
         default=None,
         validate_default=True,
     )
