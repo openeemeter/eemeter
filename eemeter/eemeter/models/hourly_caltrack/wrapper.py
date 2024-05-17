@@ -64,9 +64,7 @@ class IntermediateModelVariables:
 
 class HourlyModel:
     def __init__(self, settings=None):
-        if settings is None:
-            settings = {}
-        self.segment_type = settings.get("segment_type", "three_month_weighted")
+        self.segment_type = "three_month_weighted"
         self.alpha = 0.1
 
     def fit(self, data):
