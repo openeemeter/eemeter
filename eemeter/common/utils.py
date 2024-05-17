@@ -23,6 +23,8 @@ from numba.extending import overload
 from scipy.stats import norm as norm_dist
 from scipy.stats import t as t_dist
 
+from pandas.api.types import is_datetime64_any_dtype as is_pd_datetime
+
 MIN_POS_SYSTEM_VALUE = (np.finfo(float).tiny * (1e20)) ** (1 / 2)
 MAX_POS_SYSTEM_VALUE = (np.finfo(float).max * (1e-20)) ** (1 / 2)
 LN_MIN_POS_SYSTEM_VALUE = np.log(MIN_POS_SYSTEM_VALUE)
@@ -195,11 +197,8 @@ def unc_factor(n, interval="PI", alpha=0.10):
         return t_stat(alpha, n) * (1 + 1 / np.sqrt(n))
 
 
-MAD_k = 1 / norm_dist.ppf(
-    0.75
-)  # Conversion factor from MAD to std for normal distribution
-
-
+# Conversion factor from MAD to std for normal distribution
+MAD_k = 1 / norm_dist.ppf(0.75) 
 def median_absolute_deviation(x, median=None):
     """
     This function calculates the Median Absolute Deviation (MAD) of a given array.
