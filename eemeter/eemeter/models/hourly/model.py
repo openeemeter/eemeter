@@ -267,7 +267,9 @@ class HourlyModel:
             self._feature_scaler.fit(df[to_be_normalized])
             self._y_scaler.fit(df["observed"].values.reshape(-1, 1))
 
-        df[self.norm_features_list] = self._feature_scaler.transform(df[to_be_normalized])
+        # df[self.norm_features_list] = self._feature_scaler.transform(df[to_be_normalized])
+        normalized_df = pd.DataFrame(self._feature_scaler.transform(df[to_be_normalized]), index=df.index, columns=self.norm_features_list)
+        df = pd.concat([df, normalized_df], axis=1)
         df["observed_norm"] = self._y_scaler.transform(df["observed"].values.reshape(-1, 1))
 
         return df
