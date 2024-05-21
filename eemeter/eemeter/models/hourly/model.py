@@ -30,7 +30,7 @@ import json
 from eemeter.eemeter.models.hourly import settings as _settings
 from eemeter.common.metrics import BaselineMetrics, BaselineMetricsFromDict
 
-from eemeter.development.data import HourlyData #TODO: import from eemeter.data
+# from eemeter.development.data import HourlyData #TODO: import from eemeter.data
 
 
 
