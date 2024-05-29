@@ -13,6 +13,8 @@ Development
 * Force index to use nanosecond precision
 * Compute coverage using same offset as initial reads to fix issues when downsampling hourly data
 * Update test data location
+* Fix bug in daily plotting to remove NaN values if input
+* Refactor sufficiency criteria to be more explicit and easier to manage
 
 4.0.1
 -----
