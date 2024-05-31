@@ -43,14 +43,14 @@ class HourlySettings(BaseSettings):
 
     """ElasticNet alpha parameter"""
     ALPHA: float = pydantic.Field(
-        default=0.1,
+        default=0.0326,
         ge=0,
         validate_default=True,
     )
 
     """ElasticNet l1_ratio parameter"""
     L1_RATIO: float = pydantic.Field(
-        default=0.1,
+        default=0.6289,
         ge=0,
         le=1,
         validate_default=True,
@@ -117,6 +117,23 @@ class HourlySolarSettings(HourlySettings):
         default=['temperature', 'ghi'], 
         validate_default=True,
     )
+
+    """ElasticNet alpha parameter"""
+    ALPHA: float = pydantic.Field(
+        default=0.0373,
+        ge=0,
+        validate_default=True,
+    )
+
+    """ElasticNet l1_ratio parameter"""
+    L1_RATIO: float = pydantic.Field(
+        default=0.4784,
+        ge=0,
+        le=1,
+        validate_default=True,
+    )
+
+
 
 
 class SerializeModel(BaseSettings):
