@@ -33,7 +33,6 @@ from eemeter.common.metrics import BaselineMetrics, BaselineMetricsFromDict
 # from eemeter.development.data import HourlyData #TODO: import from eemeter.data
 
 
-
 class HourlyModel:
     def __init__(
         self,
@@ -283,13 +282,11 @@ class HourlyModel:
                 if self.settings.SUPPLEMENTAL_DATA['TS_SUPPLEMENTAL'] is not None:
                     for sup in self.settings.SUPPLEMENTAL_DATA['TS_SUPPLEMENTAL']:
                         new_train_features.append(sup)
+                        
             if 'CATEGORICAL_SUPPLEMENTAL' in self.settings.SUPPLEMENTAL_DATA:
-                if 'PV_INSTALLATION_DATE' in self.settings.SUPPLEMENTAL_DATA['CATEGORICAL_SUPPLEMENTAL']:
-                    self.pv_intervention_date = self.settings.SUPPLEMENTAL_DATA['CATEGORICAL_SUPPLEMENTAL']['PV_INSTALLATION_DATE']
-                    self.pv_intervention_date = pd.to_datetime(self.pv_intervention_date )
-                    df['has_pv'] = False
-                    df.loc[df['date'] >= self.pv_intervention_date.date(), 'has_pv'] = True
-                    self.categorical_features.append('has_pv')
+                if self.settings.SUPPLEMENTAL_DATA['CATEGORICAL_SUPPLEMENTAL'] is not None:
+                    for sup in self.settings.SUPPLEMENTAL_DATA['CATEGORICAL_SUPPLEMENTAL']:
+                        self.categorical_features.append(sup)      
 
 
                 # for sup in self.settings.SUPPLEMENTAL_DATA['categorical_supplemental']: TODO: should we add more genral entry?
@@ -495,38 +492,3 @@ class HourlyModel:
         # TODO: pass more kwargs to plotting function
 
         plot(self, self._predict(df_eval.df))
-
-
-class HourlyModelTest(HourlyModel):
-    def __init__(
-        self,
-        settings : Optional[_settings.HourlySettings] = None,
-    ):
-        """
-        """
-        super().__init__(settings=settings)
-    
-    def fit(self, X, y):
-        return self._fit(X, y)
-    
-    def predict(self, X, y_scaler):
-        return self._predict(X, y_scaler)
-
-    def _fit(self, X, y):
-        
-        # Fit the model
-        self._model.fit(X, y)
-        self.num_model_params = (np.count_nonzero(self._model.coef_)
-                                 + np.count_nonzero(self._model.intercept_))
-
-        self.is_fit = True
-
-        return self
-
-    def _predict(self, X, y_scaler):
-
-        y_predict_scaled = self._model.predict(X)
-        y_predict = y_scaler.inverse_transform(y_predict_scaled)
-        y_predict = y_predict.flatten()
-
-        return y_predict
