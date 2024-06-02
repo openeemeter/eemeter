@@ -134,6 +134,8 @@ class HourlySolarSettings(HourlySettings):
     )
 
 
+class HourlyNonSolarSettings(HourlySettings):
+    pass
 
 
 class SerializeModel(BaseSettings):

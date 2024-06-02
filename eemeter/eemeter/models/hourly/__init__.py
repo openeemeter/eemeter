@@ -18,14 +18,15 @@
 
 """
 
-from .settings import HourlySettings as HourlySettings
+from .settings import HourlyNonSolarSettings, HourlySolarSettings
 # from .data import HourlyBaselineData, HourlyReportingData
-from .model import HourlyModel, HourlyModelTest
+from .model import HourlyModel
 
 __all__ = (
-    "HourlySettings",
+    "HourlyNonSolarSettings",
+    "HourlySolarSettings",
     # "HourlyBaselineData",
     # "HourlyReportingData",
     "HourlyModel",
-    "HourlyModelTest" #TODO: remove this after testing
+
 )
