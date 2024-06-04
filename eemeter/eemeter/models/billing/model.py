@@ -22,7 +22,10 @@ from typing import Union
 import numpy as np
 import pandas as pd
 
-from eemeter.eemeter.common.exceptions import DataSufficiencyError
+from eemeter.eemeter.common.exceptions import (
+    DataSufficiencyError,
+    DisqualifiedModelError,
+)
 from eemeter.eemeter.common.warnings import EEMeterWarning
 from eemeter.eemeter.models.billing.data import (
     BillingBaselineData,
@@ -66,9 +69,15 @@ class BillingModel(DailyModel):
         self,
         reporting_data: Union[BillingBaselineData, BillingReportingData],
         aggregation=None,
+        ignore_disqualification=False,
     ):
         if not self.is_fitted:
             raise RuntimeError("Model must be fit before predictions can be made.")
+        
+        if self.disqualification and not ignore_disqualification:
+            raise DisqualifiedModelError(
+                "Attempting to predict using disqualified model without setting ignore_disqualification=True"
+            )
 
         if not isinstance(reporting_data, (BillingBaselineData, BillingReportingData)):
             raise TypeError(
