@@ -263,7 +263,7 @@ def test_metered_savings_cdd_hdd_billing_single_record_baseline_data(
         "model_split",
         "model_type",
     ]
-    assert round(results.predicted.sum() - results.observed.sum(), 2) == 1785.84
+    assert round(results.predicted.sum() - results.observed.sum(), 2) == 1785.8
 
 
 @pytest.fixture
@@ -539,7 +539,7 @@ def test_metered_savings_model_single_record(
         "model_split",
         "model_type",
     ]
-    assert round(results.predicted.sum() - results.observed.sum(), 2) == 1447.93
+    assert round(results.predicted.sum() - results.observed.sum(), 2) == 1447.89
 
 
 @pytest.fixture

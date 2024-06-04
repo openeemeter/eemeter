@@ -173,7 +173,7 @@ class DailyModel:
 
     def _fit(self, meter_data):
         # Initialize dataframe
-        self.df_meter = self._initialize_data(meter_data)
+        self.df_meter, _ = self._initialize_data(meter_data)
 
         # Begin fitting
         self.combinations = self._combinations()
@@ -232,7 +232,7 @@ class DailyModel:
 
         return self._predict(reporting_data.df)
 
-    def _predict(self, df_eval):
+    def _predict(self, df_eval, mask_observed_with_missing_temperature=True):
         """
         Makes model prediction on given temperature data.
 
@@ -247,8 +247,7 @@ class DailyModel:
             df_eval = df_eval.to_frame("temperature")
 
         # initialize data to input dataframe
-        initial_index = df_eval.index
-        df_eval = self._initialize_data(df_eval)
+        df_eval, dropped_rows = self._initialize_data(df_eval)
 
         df_all_models = []
         for component_key in self.params.submodels.keys():
@@ -277,9 +276,15 @@ class DailyModel:
             df_all_models.append(df_model)
 
         df_model_prediction = pd.concat(df_all_models, axis=0)
-        df_eval = df_eval.join(df_model_prediction).reindex(initial_index)
+        df_eval = df_eval.join(df_model_prediction)
 
-        return df_eval
+        # 3.5.1.1. If a day is missing a temperature value, the corresponding consumption value for that day should be masked.
+        if mask_observed_with_missing_temperature:
+            dropped_rows[dropped_rows['temperature'].isna()]['observed'] = np.nan
+
+        df_eval = pd.concat([df_eval, dropped_rows])
+
+        return df_eval.sort_index()
 
     def to_dict(self):
         return self.params.model_dump()
@@ -418,6 +423,7 @@ class DailyModel:
 
         Returns:
         - A pandas DataFrame containing the initialized meter data
+        - A pandas DataFrame containing rows which were dropped due to NaN in either column
         """
 
         if "predicted" in meter_data.columns:
@@ -445,14 +451,17 @@ class DailyModel:
         meter_data = meter_data.sort_index()
         meter_data = meter_data[["season", "day_of_week", *cols]]
 
+        dropped_rows = meter_data.copy()
         meter_data = meter_data.dropna()
         if meter_data.empty:
             # return early to avoid np.isfinite exception
-            return meter_data
+            return meter_data, dropped_rows
         meter_data = meter_data[np.isfinite(meter_data["temperature"])]
         if "observed" in cols:
             meter_data = meter_data[np.isfinite(meter_data["observed"])]
-        return meter_data
+
+        dropped_rows = dropped_rows.loc[~dropped_rows.index.isin(meter_data.index)]
+        return meter_data, dropped_rows
 
     def _combinations(self):
         """
