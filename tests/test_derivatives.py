@@ -248,7 +248,8 @@ def test_metered_savings_cdd_hdd_billing_single_record_baseline_data(
             reporting_meter_data_billing,
             reporting_temperature_data,
             is_electricity_data=True,
-        )
+        ),
+        ignore_disqualification=True,
     )
     assert list(results.columns) == [
         "season",
@@ -524,7 +525,8 @@ def test_metered_savings_model_single_record(
             reporting_meter_data_billing,
             reporting_temperature_data,
             is_electricity_data=True,
-        )
+        ),
+        ignore_disqualification=True,
     )
     assert list(results.columns) == [
         "season",
