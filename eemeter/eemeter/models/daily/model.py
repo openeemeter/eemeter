@@ -331,7 +331,7 @@ class DailyModel:
 
     @classmethod
     def from_2_0_dict(cls, data):
-        daily_model = cls(model="2.0")
+        daily_model = cls(model="legacy")
         daily_model.params = DailyModelParameters.from_2_0_params(data)
         daily_model.warnings = []
         daily_model.disqualification = []
@@ -341,7 +341,7 @@ class DailyModel:
 
     @classmethod
     def from_2_0_json(cls, str_data):
-        cls.from_2_0_dict(json.loads(str_data))
+        return cls.from_2_0_dict(json.loads(str_data))
 
     def plot(
         self,
