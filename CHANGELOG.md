@@ -6,9 +6,15 @@ Development
 
 * Placeholder
 
-4.0.2
+4.0.3
 -----
 
+
+* Move masking behavior for rows with missing temperature from reporting dataclass to prediction output
+* Add disqualification check to billing model predict()
+
+4.0.2
+-----
 
 * Force index to use nanosecond precision
 * Compute coverage using same offset as initial reads to fix issues when downsampling hourly data
