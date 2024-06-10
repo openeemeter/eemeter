@@ -356,6 +356,9 @@ class Data:
             .drop(columns="index", axis=1, errors="ignore")
         )
 
+        # sort by id
+        df = df.sort_index()
+
         return df
 
 

@@ -26,6 +26,9 @@ from gridmeter.clustering import Clustering_Settings
 from gridmeter.individual_meter_matching import IMM
 from gridmeter.individual_meter_matching import IMM_Settings
 
+from gridmeter.individual_meter_matching import Old_IMM
+from gridmeter.individual_meter_matching import Old_IMM_Settings
+
 from gridmeter.stratified_sampling import (
     Stratified_Sampling,
     SS_Settings, 

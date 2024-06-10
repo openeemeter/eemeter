@@ -24,9 +24,36 @@ from scipy.spatial.distance import cdist
 from gridmeter._utils.misc import chunks
 
 
+def cp_chunks(lst, n):
+    for i in range(0, len(lst), n):
+        yield lst[i : i + n]
+
+
+def _distances(ls_t, ls_cp, dist_metric, n_meters_per_chunk):
+    # calculate distances in chunks
+    n_chunk = len(ls_cp)
+    if n_meters_per_chunk < n_chunk:
+        n_chunk = n_meters_per_chunk
+
+    dist = []
+    for ls_cp_chunk in cp_chunks(ls_cp, n_meters_per_chunk):
+        chunked_dist = cdist(ls_t, ls_cp_chunk, metric=dist_metric)
+
+        dist.append(chunked_dist)
+
+    dist = np.hstack(dist)
+
+    return dist
+
+
+
+
 def calculate_distances(
     ls_t, ls_cp, dist_metric, n_matches_per_treatment, n_meters_per_chunk
 ):
+    if n_matches_per_treatment is None:
+        n_matches_per_treatment = len(ls_cp)
+
     n_chunk_smallest = n_smallest = n_matches_per_treatment
     if n_smallest is None or n_smallest > ls_cp.shape[0]:
         n_smallest = ls_cp.shape[0]
@@ -42,9 +69,7 @@ def calculate_distances(
 
         if n_chunk_smallest < chunked_dist.shape[1]:
             # slice smallest n values
-            idx = np.argpartition(chunked_dist, n_chunk_smallest, axis=1)[
-                :, :n_chunk_smallest
-            ]
+            idx = np.argpartition(chunked_dist, n_chunk_smallest, axis=1)[:, :n_chunk_smallest]
         else:
             idx = np.argsort(chunked_dist, axis=1).flatten()
 

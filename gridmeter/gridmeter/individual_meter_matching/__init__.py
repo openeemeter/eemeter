@@ -20,5 +20,9 @@
 
 from gridmeter.individual_meter_matching.create_comparison_groups import (
     Individual_Meter_Matching as IMM,
+    Old_Individual_Meter_Matching as Old_IMM,
 )
-from gridmeter.individual_meter_matching.settings import Settings as IMM_Settings
+from gridmeter.individual_meter_matching.settings import (
+    Settings as IMM_Settings,
+    Old_Settings as Old_IMM_Settings,
+)

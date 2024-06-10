@@ -35,6 +35,43 @@ class Settings(BaseSettings):
         validate_default=True,
     )
     
+    """allow duplicate matches in comparison group"""
+    ALLOW_DUPLICATE_MATCHES: bool = pydantic.Field(
+        default=False, 
+        validate_default=True,
+    )
+    
+    """The maximum distance that a comparison group match can have with a given
+       treatment meter. These meters are filtered out after all matching has completed."""
+    MAX_DISTANCE_THRESHOLD: Optional[float] = pydantic.Field(
+        default=None, 
+        validate_default=True,
+    )
+
+
+class Old_Settings(BaseSettings):
+    """Settings for individual meter matching"""
+
+    """distance metric to determine best comparison pool matches"""
+    DISTANCE_METRIC: _const.DistanceMetric = pydantic.Field(
+        default=_const.DistanceMetric.EUCLIDEAN, 
+        validate_default=True,
+    )
+    
+    """number of comparison pool matches to each treatment meter"""
+    N_MATCHES_PER_TREATMENT: int = pydantic.Field(
+        default=4, 
+        ge=1, 
+        validate_default=True,
+    )
+    
+    """number of treatments to be calculated per chunk to prevent memory issues"""
+    N_TREATMENTS_PER_CHUNK: int = pydantic.Field(
+        default=10000, 
+        ge=1, 
+        validate_default=True,
+    )
+    
     """number of iterations to check for duplicate matches to comparison pool meters and remove them"""
     N_DUPLICATE_CHECK: int = pydantic.Field(
         default=10, 
