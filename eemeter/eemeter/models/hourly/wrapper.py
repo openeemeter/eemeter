@@ -226,6 +226,23 @@ class HourlyModel:
     def from_json(cls, str_data):
         return cls.from_dict(json.loads(str_data))
 
+    @classmethod
+    def from_2_0_dict(cls, data):
+        """fill default metrics and uncertainty variables to allow deserializing legacy models with new wrapper"""
+        monthly_unc_vars = {
+            "mean_baseline_usage": 0,
+            "n": 0,
+            "n_prime": 1,
+            "MSE": 0
+        }
+        model_dict = dict(data)
+        model_dict['model']['unc_vars'] = {str(month): monthly_unc_vars for month in range(1, 13)}
+        return cls.from_dict(model_dict)
+
+    @classmethod
+    def from_2_0_json(cls, str_data):
+        return cls.from_2_0_dict(json.loads(str_data))
+
     def plot(
         self,
         ax=None,
