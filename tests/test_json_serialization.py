@@ -158,7 +158,7 @@ def test_json_hourly():
     assert result1["predicted"].sum() == result2["predicted"].sum()
 
 
-def test_legacy_deserialization():
+def test_legacy_deserialization_daily():
     legacy_model_dict = {
         "model_type": "hdd_only",
         "formula": "meter_value ~ hdd_46",
@@ -188,3 +188,29 @@ def test_legacy_deserialization():
     ).sum()
 
     assert round(total_metered_savings, 2) == -3772.7
+
+
+def test_legacy_deserialization_hourly(request):
+    with open(request.fspath.dirname + "/legacy_hourly.json", "r") as f:
+        legacy_str = f.read()
+    baseline_model = HourlyModel.from_2_0_json(legacy_str)
+
+    
+    meter_data, temperature_data, sample_metadata = load_sample(
+        "il-electricity-cdd-hdd-hourly"
+    )
+    blackout_end_date = sample_metadata["blackout_end_date"]
+
+    reporting_meter_data, warnings = get_reporting_data(
+        meter_data, start=blackout_end_date, max_days=365
+    )
+    reporting = HourlyReportingData.from_series(
+        reporting_meter_data, temperature_data, is_electricity_data=True
+    )
+
+    metered_savings_dataframe = baseline_model.predict(reporting)
+    total_metered_savings = (
+        metered_savings_dataframe["observed"] - metered_savings_dataframe["predicted"]
+    ).sum()
+
+    assert round(total_metered_savings, 2) == -52893.66
