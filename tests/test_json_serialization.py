@@ -195,7 +195,6 @@ def test_legacy_deserialization_hourly(request):
         legacy_str = f.read()
     baseline_model = HourlyModel.from_2_0_json(legacy_str)
 
-    
     meter_data, temperature_data, sample_metadata = load_sample(
         "il-electricity-cdd-hdd-hourly"
     )
