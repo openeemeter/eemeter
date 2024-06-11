@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+4.0.4
+-----
+
 * Add support for deserializing legacy hourly models
 * Fix legacy daily model deserialization
 
