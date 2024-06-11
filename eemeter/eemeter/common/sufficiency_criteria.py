@@ -156,8 +156,6 @@ class SufficiencyCriteria:
         self.n_days_total = n_days_total
 
     def _check_baseline_length_daily_billing_model(self):
-        
-
         MAX_BASELINE_LENGTH = 365
         MIN_BASELINE_LENGTH = ceil(0.9 * MAX_BASELINE_LENGTH)
         if (
@@ -204,14 +202,11 @@ class SufficiencyCriteria:
         self.n_valid_days = n_valid_days
         self.n_valid_temperature_days = n_valid_temperature_days
 
-
     def _check_valid_days_percentage(self):
-
         if self.n_days_total > 0:
             fraction_valid_days = self.n_valid_days / float(self.n_days_total)
         else:
             fraction_valid_days = 0
-        
 
         if fraction_valid_days < self.min_fraction_daily_coverage:
             self.disqualification.append(
@@ -232,7 +227,6 @@ class SufficiencyCriteria:
             )
 
     def _check_valid_meter_readings_percentage(self):
-
         if self.n_days_total > 0:
             if not self.is_reporting_data:
                 fraction_valid_meter_value_days = self.n_valid_meter_value_days / float(
@@ -240,7 +234,6 @@ class SufficiencyCriteria:
                 )
         else:
             fraction_valid_meter_value_days = 0
-
 
         if (
             not self.is_reporting_data
@@ -261,7 +254,6 @@ class SufficiencyCriteria:
             )
 
     def _check_valid_temperature_values_percentage(self):
-
         if self.n_days_total > 0:
             fraction_valid_temperature_days = self.n_valid_temperature_days / float(
                 self.n_days_total
@@ -399,16 +391,21 @@ class SufficiencyCriteria:
         )
 
     def check_sufficiency_baseline(self):
-        raise NotImplementedError("Use Hourly / Daily / Billing SufficiencyCriteria class for concrete implementation")
+        raise NotImplementedError(
+            "Use Hourly / Daily / Billing SufficiencyCriteria class for concrete implementation"
+        )
 
     def check_sufficiency_reporting(self):
-        raise NotImplementedError("Use Hourly / Daily / Billing SufficiencyCriteria class for concrete implementation")
+        raise NotImplementedError(
+            "Use Hourly / Daily / Billing SufficiencyCriteria class for concrete implementation"
+        )
 
 
 class HourlySufficiencyCriteria(SufficiencyCriteria):
     """
-        Sufficiency Criteria class for hourly models
+    Sufficiency Criteria class for hourly models
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -441,7 +438,7 @@ class HourlySufficiencyCriteria(SufficiencyCriteria):
     def _check_hourly_consecutive_temperature_data(self):
         # TODO : Check implementation wrt Caltrack 2.2.4.1
         # Resample to hourly by taking the first non NaN value
-        hourly_data = self.data['temperature'].resample('H').first()
+        hourly_data = self.data["temperature"].resample("H").first()
         mask = hourly_data.isna().any(axis=1)
         grouped = mask.groupby((mask != mask.shift()).cumsum())
         max_consecutive_nans = grouped.sum().max()
@@ -449,8 +446,10 @@ class HourlySufficiencyCriteria(SufficiencyCriteria):
             self.disqualification.append(
                 EEMeterWarning(
                     qualified_name="eemeter.sufficiency_criteria.too_many_consecutive_hours_temperature_data_missing",
-                    description=("More than 6 hours of consecutive hourly data is missing."),
-                    data={'Max_consecutive_hours_missing': int(max_consecutive_nans)},
+                    description=(
+                        "More than 6 hours of consecutive hourly data is missing."
+                    ),
+                    data={"Max_consecutive_hours_missing": int(max_consecutive_nans)},
                 )
             )
 
@@ -469,7 +468,6 @@ class HourlySufficiencyCriteria(SufficiencyCriteria):
         self._check_high_frequency_temperature_values()
         self._check_hourly_consecutive_temperature_data()
 
-
     def check_sufficiency_reporting(self):
         self._check_no_data()
         self._check_valid_days_percentage()
@@ -477,11 +475,12 @@ class HourlySufficiencyCriteria(SufficiencyCriteria):
         self._check_monthly_temperature_values_percentage()
         # self._check_high_frequency_temperature_values()
 
-    
+
 class DailySufficiencyCriteria(SufficiencyCriteria):
     """
-        Sufficiency Criteria class for daily models
+    Sufficiency Criteria class for daily models
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -508,8 +507,9 @@ class DailySufficiencyCriteria(SufficiencyCriteria):
 
 class BillingSufficiencyCriteria(SufficiencyCriteria):
     """
-        Sufficiency Criteria class for billing models - monthly / bimonthly
+    Sufficiency Criteria class for billing models - monthly / bimonthly
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
