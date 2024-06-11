@@ -56,6 +56,8 @@ def baseline_data_daily(il_electricity_cdd_hdd_daily):
     )
 
     return baseline_data
+
+
 @pytest.fixture
 def baseline_model_daily(baseline_data_daily):
     model_results = DailyModel().fit(baseline_data_daily, ignore_disqualification=True)

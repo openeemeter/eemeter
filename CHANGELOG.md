@@ -4,11 +4,11 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Add support for deserializing legacy hourly models
+* Fix legacy daily model deserialization
 
 4.0.3
 -----
-
 
 * Move masking behavior for rows with missing temperature from reporting dataclass to prediction output
 * Add disqualification check to billing model predict()

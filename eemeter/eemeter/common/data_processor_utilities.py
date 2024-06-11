@@ -281,7 +281,12 @@ def as_freq(
             .mean()
         )
     if include_coverage:
-        n_total = resampled.resample(atomic_freq).count().resample(freq, origin=resampled.index[0]).count()
+        n_total = (
+            resampled.resample(atomic_freq)
+            .count()
+            .resample(freq, origin=resampled.index[0])
+            .count()
+        )
         resampled = resampled.to_frame("value")
         resampled["coverage"] = n_coverage / n_total
 

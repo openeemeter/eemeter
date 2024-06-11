@@ -766,30 +766,43 @@ def test_daily_reporting_data_with_missing_daily_frequencies(get_datetime_index)
         for disqualification in cls.disqualification
     )
 
+
 @pytest.fixture
 def baseline_data_daily_params(il_electricity_cdd_hdd_daily):
-    def _baseline(tz='UTC', hour=0):
+    def _baseline(tz="UTC", hour=0):
         meter_data = il_electricity_cdd_hdd_daily["meter_data"]
         temperature_data = il_electricity_cdd_hdd_daily["temperature_data"]
         blackout_start_date = il_electricity_cdd_hdd_daily["blackout_start_date"]
         baseline_meter_data, warnings = get_baseline_data(
             meter_data, end=blackout_start_date
         )
-        baseline_meter_data.index = map(lambda x: x.replace(hour=x.hour+hour), baseline_meter_data.index)
+        baseline_meter_data.index = map(
+            lambda x: x.replace(hour=x.hour + hour), baseline_meter_data.index
+        )
         baseline_meter_data.index = baseline_meter_data.index.tz_convert(tz)
         return baseline_meter_data, temperature_data
+
     yield _baseline
 
-@pytest.mark.parametrize(["tz", "hour"], [['US/Pacific', 3],['US/Eastern', 8], ['Europe/London', 13]])
+
+@pytest.mark.parametrize(
+    ["tz", "hour"], [["US/Pacific", 3], ["US/Eastern", 8], ["Europe/London", 13]]
+)
 def test_offset_temperature_aggregations(baseline_data_daily_params, tz, hour):
     baseline_meter_data, temp_series = baseline_data_daily_params(tz=tz, hour=hour)
-    baseline = DailyBaselineData.from_series(baseline_meter_data, temp_series, is_electricity_data=True)
+    baseline = DailyBaselineData.from_series(
+        baseline_meter_data, temp_series, is_electricity_data=True
+    )
     tz = baseline_meter_data.index.tz
 
     abs_diff = 0
     for day in baseline.df.index:
-        abs_diff += abs(temp_series[day:day+pd.Timedelta(hours=23)].mean() - baseline.df.temperature.loc[day].squeeze())
+        abs_diff += abs(
+            temp_series[day : day + pd.Timedelta(hours=23)].mean()
+            - baseline.df.temperature.loc[day].squeeze()
+        )
     assert abs_diff < 0.000001
+
 
 def test_non_ns_datetime_index():
     meter, temperature, _ = load_sample("il-electricity-cdd-hdd-hourly")
@@ -804,6 +817,7 @@ def test_non_ns_datetime_index():
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
 
+
 def test_offset_aggregations_hourly(il_electricity_cdd_hdd_hourly):
     meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
     temperature_data = il_electricity_cdd_hdd_hourly["temperature_data"]
@@ -812,6 +826,8 @@ def test_offset_aggregations_hourly(il_electricity_cdd_hdd_hourly):
         meter_data, end=blackout_start_date
     )
     baseline_meter_data = baseline_meter_data.iloc[3:]  # begin from 3AM UTC
-    baseline = DailyBaselineData.from_series(baseline_meter_data, temperature_data, is_electricity_data=True)
+    baseline = DailyBaselineData.from_series(
+        baseline_meter_data, temperature_data, is_electricity_data=True
+    )
     assert baseline is not None
     assert len(baseline.df) == NUM_DAYS_IN_YEAR

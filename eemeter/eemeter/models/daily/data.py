@@ -27,7 +27,7 @@ from eemeter.eemeter.common.data_processor_utilities import (
     as_freq,
     clean_billing_daily_data,
     compute_minimum_granularity,
-    remove_duplicates
+    remove_duplicates,
 )
 from eemeter.eemeter.common.features import compute_temperature_features
 from eemeter.eemeter.common.warnings import EEMeterWarning
@@ -579,8 +579,7 @@ class DailyBaselineData(_DailyData):
         """
         # 90% coverage per period only required for billing models
         dsc = DailySufficiencyCriteria(
-            data = sufficiency_df,
-            is_electricity_data = self.is_electricity_data
+            data=sufficiency_df, is_electricity_data=self.is_electricity_data
         )
         dsc.check_sufficiency_baseline()
         disqualification = dsc.disqualification
@@ -699,10 +698,7 @@ class DailyReportingData(_DailyData):
 
         """
         # 90% coverage per period only required for billing models
-        dsc = DailySufficiencyCriteria(
-            data = sufficiency_df,
-            is_reporting_data = True
-        )
+        dsc = DailySufficiencyCriteria(data=sufficiency_df, is_reporting_data=True)
         dsc.check_sufficiency_reporting()
         disqualification = dsc.disqualification
         warnings = dsc.warnings
