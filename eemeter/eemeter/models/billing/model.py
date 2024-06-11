@@ -73,7 +73,7 @@ class BillingModel(DailyModel):
     ):
         if not self.is_fitted:
             raise RuntimeError("Model must be fit before predictions can be made.")
-        
+
         if self.disqualification and not ignore_disqualification:
             raise DisqualifiedModelError(
                 "Attempting to predict using disqualified model without setting ignore_disqualification=True"
