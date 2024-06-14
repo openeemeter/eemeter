@@ -6,13 +6,10 @@ import pandas as pd
 
 from gridmeter._utils.base_comparison_group import Comparison_Group_Algorithm
 
-from gridmeter.individual_meter_matching.settings import (
-    Settings,
-    Old_Settings,
-)
+from gridmeter.individual_meter_matching.settings import Settings
 from gridmeter.individual_meter_matching.distance_calc_selection import (
     DistanceMatching,
-    OldDistanceMatching,
+    DistanceMatchingLegacy,
 )
 
 
@@ -38,6 +35,9 @@ class Individual_Meter_Matching(Comparison_Group_Algorithm):
         # sort by id and weight
         # clusters = clusters.sort_values(by=["id", "weight"], ascending=[True, False])
 
+        # add duplicated column
+        clusters["duplicated"] = clusters.duplicated(subset="id", keep=False)
+
         clusters = clusters.set_index("id")
 
         # reorder columns
@@ -57,7 +57,10 @@ class Individual_Meter_Matching(Comparison_Group_Algorithm):
     
 
     def get_comparison_group(self, treatment_data, comparison_pool_data, weights=None):
-        distance_matching = DistanceMatching(self.settings)
+        if self.settings.SELECTION_METHOD == "legacy":
+            distance_matching = DistanceMatchingLegacy(self.settings)
+        else:
+            distance_matching = DistanceMatching(self.settings)
 
         self.treatment_data = treatment_data
         self.comparison_pool_data = comparison_pool_data
@@ -89,41 +92,3 @@ class Individual_Meter_Matching(Comparison_Group_Algorithm):
     def add_treatment_meters(self, treatment_data):
         # need some code to make life easier when adding treatment meters. Need to recalculate duplicate weights and unc_multiplier
         pass
-
-
-class Old_Individual_Meter_Matching(Individual_Meter_Matching):
-    def __init__(self, settings: Optional[Old_Settings] = None):
-        if settings is None:
-            settings = Old_Settings()
-        
-        self.settings = settings
-    
-
-    def get_comparison_group(self, treatment_data, comparison_pool_data, weights=None):
-        distance_matching = OldDistanceMatching(self.settings)
-
-        self.treatment_data = treatment_data
-        self.comparison_pool_data = comparison_pool_data
-
-        self.treatment_ids = treatment_data.ids
-        self.treatment_loadshape = treatment_data.loadshape
-        self.comparison_pool_loadshape = comparison_pool_data.loadshape
-        self.ls_weights = self._validate_ls_weights(weights)
-
-        # Get clusters
-        df_raw = distance_matching.get_comparison_group(
-            self.treatment_loadshape, 
-            self.comparison_pool_loadshape, 
-            weights=self.ls_weights
-        )
-
-        clusters = self._create_clusters_df(df_raw)
-
-        # Create treatment_weights
-        treatment_weights = self._create_treatment_weights_df(self.treatment_ids)
-
-        # Assign dfs to self
-        self.clusters = clusters
-        self.treatment_weights = treatment_weights
-
-        return clusters, treatment_weights

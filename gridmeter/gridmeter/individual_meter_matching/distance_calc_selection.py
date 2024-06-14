@@ -18,17 +18,20 @@
 
 """
 
+from gridmeter.individual_meter_matching import highs_settings as _highs_settings
 import numpy as np
 import pandas as pd
+
+from scipy import sparse
+from qpsolvers import solve_ls
+
 from scipy.spatial.distance import cdist
+from scipy.optimize import linear_sum_assignment
 
-from gridmeter.individual_meter_matching.settings import (
-    Settings,
-    Old_Settings
-)
-
+from gridmeter.individual_meter_matching.settings import Settings
 
 __all__ = ("DistanceMatching",)
+
 
 
 def cp_chunks(lst, n):
@@ -60,6 +63,51 @@ def _distances(ls_t, ls_cp, weights=None, dist_metric="euclidean", n_meters_per_
     return dist
 
 
+def highs_fit_comparison_group_loadshape(t_ls, cp_ls, coef_sum=1, solver="highs", settings=None, verbose=False):
+    if settings is None:
+        if coef_sum == 1:
+            settings = _highs_settings.HiGHS_Settings(
+                PRIMAL_FEASIBILITY_TOLERANCE=1E-4, 
+                DUAL_FEASIBILITY_TOLERANCE=1E-4, 
+            )
+        else:
+            settings = _highs_settings.HiGHS_Settings(
+                PRIMAL_FEASIBILITY_TOLERANCE=1, 
+                DUAL_FEASIBILITY_TOLERANCE=1, 
+            )
+        settings = {k.lower(): v for k, v in dict(settings).items()}
+
+    if coef_sum == 1:
+        _MIN_X = 1E-6
+    else:
+        _MIN_X = 5E-3
+    
+    num_pool_meters = cp_ls.shape[0]
+
+    R = sparse.csc_matrix(cp_ls.T)
+
+    h = np.zeros(num_pool_meters)
+    eye = sparse.eye(num_pool_meters, format="csc")
+    A = sparse.csc_matrix(np.ones(num_pool_meters))
+    b = np.array([coef_sum])
+
+    lb = np.zeros(num_pool_meters)
+    ub = np.ones(num_pool_meters)
+
+    x_opt = solve_ls(R, t_ls, G=-eye, h=h, A=A, b=b, lb=lb, ub=ub, solver=solver, verbose=verbose, **settings)
+
+    x_opt[x_opt < 0] = 0
+    x_opt[x_opt > 1] = 1
+    x_opt[np.abs(x_opt) < _MIN_X] = 0
+    x_opt *= coef_sum/x_opt.sum()
+
+    return x_opt
+
+
+class DistanceMatchingError(Exception):
+    pass
+
+
 class DistanceMatching:
     """
     Parameters
@@ -68,7 +116,7 @@ class DistanceMatching:
         A dataframe representing treatment group meters, indexed by id, with each column being a data point in a usage pattern.
     comparison_pool: pd.DataFrame
         A dataframe representing comparison pool meters, indexed by id, with each column being a data point in a usage pattern.
-    weights: list
+    weights: list | 1D np.array
         A list of floats (must be of length of the treatment group columns) to scale the usage patterns in order to ensure that certain components of usage have higher weights towards matching than others.
     n_treatments_per_chunk: int
         Due to local memory limitations, treatment meters can be chunked so that the cdist calculation can happen in memory. 10,000 meters appear to be sufficient for most memory constraints.
@@ -91,8 +139,9 @@ class DistanceMatching:
         if self.dist_metric == "manhattan":
             self.dist_metric = "cityblock"
 
-    def _closest_idx_duplicates_allowed(self, distances):
-        n_match = self.settings.N_MATCHES_PER_TREATMENT
+    def _closest_idx_duplicates_allowed(self, distances, n_match=None):
+        if n_match is None:
+            n_match = self.settings.N_MATCHES_PER_TREATMENT
 
         if n_match > distances.shape[1]:
             n_match = distances.shape[1]
@@ -103,50 +152,54 @@ class DistanceMatching:
 
         return cg_idx
 
+    def _closest_idx_duplicates_not_allowed(self, ls_t, ls_cp, distances):
+        n_match = self.settings.N_MATCHES_PER_TREATMENT
+        selection_method = self.settings.SELECTION_METHOD
 
-    def _closest_idx_duplicates_prohibitted(self, distances, prioritize_meter=True):
-        n_matches_per_treatment = self.settings.N_MATCHES_PER_TREATMENT
+        n_treatment = ls_t.shape[0]
+        n_pool = ls_cp.shape[0]
 
-        if n_matches_per_treatment*distances.shape[0] > distances.shape[1]:
-            # TODO: Caleb what should we do here?
-            raise Exception("Number of matches per treatment exceeds number of comparison meters")
+        if n_match*n_treatment > n_pool:
+            n_match = int(n_pool / n_treatment)
 
-        # sort distances by row and get the indices of the sorted distances
-        sorted_dist_idx = np.argsort(distances, axis=1)
+        if n_match == 0:
+            raise DistanceMatchingError(f"Not enough treatment pool meters {n_pool} to match with {n_treatment} treatment meters without duplicates")
+        
+        if selection_method == "minimize_meter_distance":
+            # normalize distances by min distance of each row
+            # min_dist = np.take_along_axis(distances, self._closest_idx_duplicates_allowed(distances, n_match=1), axis=1)
+            # distances = distances / min_dist
 
-        # remove duplicates starting from the from the largest and closest so those get priority
-        cg_idx = [[] for _ in range(sorted_dist_idx.shape[0])]
-        cg_idx_all = []
-        if prioritize_meter:
-            for i in range(sorted_dist_idx.shape[0]):
-                for j in range(sorted_dist_idx.shape[1]):
-                    if len(cg_idx[i]) == n_matches_per_treatment:
-                        break
+            # duplicate rows n_match times
+            distances = np.repeat(distances, n_match, axis=0)
+            t_idx = np.repeat(np.arange(distances.shape[0]), n_match)
 
-                    elif sorted_dist_idx[i, j] not in cg_idx_all:
-                        cg_idx[i].append(sorted_dist_idx[i, j])
-                        cg_idx_all.append(sorted_dist_idx[i, j])
+            row_idx, col_idx = linear_sum_assignment(distances)
+
+            cg_idx = [[] for _ in range(distances.shape[0])]
+            for i, cp_idx in zip(row_idx, col_idx):
+                cg_idx[t_idx[i]].append(cp_idx)
+
+        elif selection_method == "minimize_loadshape_distance":
+            coef_sum = n_match*len(ls_t)
+            ls_t_mean = np.mean(ls_t.values, axis=0)*coef_sum
+
+            x_opt = highs_fit_comparison_group_loadshape(
+                ls_t_mean, ls_cp.values, coef_sum=coef_sum, solver="highs", settings=None, verbose=False
+            )
+
+            # argsort x_opt
+            x_opt_idx = np.argsort(x_opt)[::-1][:coef_sum]
+
+            # reshape distances to be ls_t.shape[0] x n_match
+            cg_idx = np.reshape(x_opt_idx, (ls_t.shape[0], n_match))
 
         else:
-            # iterating on j means each meter gets their closest meter as first priority 
-            # before the largest gets its second closest
-            for j in range(sorted_dist_idx.shape[1]):
-                # if length of all rows is n_matches_per_treatment then break early
-                if all([len(cg_idx[i]) == n_matches_per_treatment for i in range(len(cg_idx))]):
-                    break
+            raise DistanceMatchingError(f"Invalid selection method: {selection_method}")
 
-                for i in range(sorted_dist_idx.shape[0]):
-                    # if row is complete then continue
-                    if len(cg_idx[i]) == n_matches_per_treatment:
-                        continue
-
-                    elif sorted_dist_idx[i, j] not in cg_idx_all:
-                        cg_idx[i].append(sorted_dist_idx[i, j])
-                        cg_idx_all.append(sorted_dist_idx[i, j])
-
-        return np.array(cg_idx)
-
-
+        return cg_idx
+    
+    
     def get_comparison_group(
         self,
         treatment_group,
@@ -156,22 +209,17 @@ class DistanceMatching:
         ls_t = treatment_group
         ls_cp = comparison_pool
 
-        n_meters_per_chunk = self.settings.N_TREATMENTS_PER_CHUNK
+        n_match = self.settings.N_MATCHES_PER_TREATMENT
         max_distance_threshold = self.settings.MAX_DISTANCE_THRESHOLD
-        
+        n_meters_per_chunk = self.settings.N_TREATMENTS_PER_CHUNK
+
+        # TODO: if matching loadshapes, this isn't necessary
+        distances = _distances(ls_t, ls_cp, weights, self.dist_metric, n_meters_per_chunk)
+
         if self.settings.ALLOW_DUPLICATE_MATCHES:
-            distances = _distances(ls_t, ls_cp, weights, self.dist_metric, n_meters_per_chunk)
-            cg_idx = self._closest_idx_duplicates_allowed(distances)
-
+            cg_idx = self._closest_idx_duplicates_allowed(distances, n_match=n_match)
         else:
-            ## sort t_df so that when we replace we do so with priority given to smallest meters
-            ls_t_ss = np.mean(np.abs(ls_t.values), axis=1)
-            sort_idx = np.argsort(ls_t_ss)
-
-            ls_t = ls_t.iloc[sort_idx]
-
-            distances = _distances(ls_t, ls_cp, weights, self.dist_metric, n_meters_per_chunk)
-            cg_idx = self._closest_idx_duplicates_prohibitted(distances, prioritize_meter=True)
+            cg_idx = self._closest_idx_duplicates_not_allowed(ls_t, ls_cp, distances)
 
         data = []
         for t_idx in range(ls_t.shape[0]):
@@ -193,7 +241,7 @@ class DistanceMatching:
         return df
 
 
-class OldDistanceMatching:
+class DistanceMatchingLegacy:
     """
     Parameters
     ----------
@@ -212,8 +260,8 @@ class OldDistanceMatching:
         settings=None,
     ):
         if settings is None:
-            self.settings = Old_Settings()
-        elif isinstance(settings, Old_Settings):
+            self.settings = Settings()
+        elif isinstance(settings, Settings):
             self.settings = settings
         else:
             raise Exception(
@@ -337,6 +385,12 @@ class OldDistanceMatching:
         # chunk the treatment group due to memory constraints
         n_treatments_per_chunk = settings.N_TREATMENTS_PER_CHUNK
 
+        # set n_duplicate_check to be size of comparison pool
+        if not settings.ALLOW_DUPLICATE_MATCHES:
+            n_duplicate_check = len(comparison_pool)
+        else:
+            n_duplicate_check = 0
+
         # if you're using weights make sure to normalize the data first
         if weights:
             treatment_group = treatment_group * weights
@@ -366,10 +420,12 @@ class OldDistanceMatching:
                 ]
                 if dist_df.empty:
                     continue
-                new_df = self._get_best_match(dist_df, settings.N_DUPLICATE_CHECK)
+                new_df = self._get_best_match(dist_df, n_duplicate_check)
 
-                # TODO: deprecation warning: Don't do this for empty dataframes
-                comparison_group = pd.concat([comparison_group, new_df])
+                if comparison_group.empty:
+                    comparison_group = new_df
+                else:
+                    comparison_group = pd.concat([comparison_group, new_df])
 
         # rename columns and reindex to get original ids back
         comparison_group = comparison_group.reset_index().rename(
@@ -386,6 +442,11 @@ class OldDistanceMatching:
             comparison_group = comparison_group[
                 comparison_group["distance"] < settings.MAX_DISTANCE_THRESHOLD
             ]
+
+        # if any duplicated, remove the duplicate with the smallest distance
+        if not settings.ALLOW_DUPLICATE_MATCHES and comparison_group["duplicated"].any():
+            comparison_group = comparison_group.sort_values("distance")
+            comparison_group = comparison_group[~comparison_group.duplicated(subset="treatment", keep="first")]
 
         return comparison_group
 

@@ -20,14 +20,8 @@
 
 from gridmeter.__version__ import *
 
-from gridmeter.clustering import Clustering
-from gridmeter.clustering import Clustering_Settings
-
-from gridmeter.individual_meter_matching import IMM
-from gridmeter.individual_meter_matching import IMM_Settings
-
-from gridmeter.individual_meter_matching import Old_IMM
-from gridmeter.individual_meter_matching import Old_IMM_Settings
+from gridmeter.clustering import *
+from gridmeter.individual_meter_matching import *
 
 from gridmeter.stratified_sampling import (
     Stratified_Sampling,

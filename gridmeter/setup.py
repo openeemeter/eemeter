@@ -23,6 +23,7 @@ INSTALL_REQUIRES = [
     "scikit-learn>=1.3.0",
     "fdasrsf>=2.4.1,<=2.5.2", # library broken on higher versions. Issue tracked here https://github.com/jdtuck/fdasrsf_python/issues/41
     "scikit-fda",
+    "qpsolvers[highs]>=4.3.2",
     "pydantic>=2.0.0",
     "eval_type_backport",
 ]
