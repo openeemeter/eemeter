@@ -77,6 +77,22 @@ class Comparison_Group_Algorithm:
         ls.columns = [int(col) - 1 for col in ls.columns]
 
         return ls
+    
+    def _validate_ls_weights(self, weights):
+        if weights is None:
+            return
+        
+        # if weights are all the same then return
+        if len(set(weights)) == 1:
+            return
+
+        if len(weights) != len(self.treatment_loadshape.iloc[0].values):
+            raise ValueError("weights must be the same length as the number of columns in the treatment group and comparison pool")
+        
+        # normalize weights to 1
+        weights = np.array(weights) / np.sum(weights)
+
+        return weights
 
     def plot_loadshapes(self, id=None):
         ls = self.get_loadshapes(id=id)
