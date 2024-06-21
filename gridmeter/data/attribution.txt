@@ -1,8 +1,0 @@
-This data is derived from NREL's ComStock datasets (2023/comstock_amy2018_release_2)
-
-The ComStock database, part of the Open Energy Data Initiative, carries with it a Creative Commons Attribution 3.0 United States License 
-
-Data includes information from the ComStock™ dataset developed by the National Renewable Energy Laboratory (NREL) with funding from the U.S. Department of Energy (DOE).
-
-Citation:
-Parker, Andrew, et al. 2023. ComStock Reference Documentation. Golden, CO: National Renewable Energy Laboratory. NREL/TP-5500-83819. https://www.nrel.gov/docs/fy23osti/83819.pdf

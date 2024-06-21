@@ -1,2 +1,0 @@
-sphinxcontrib-spelling==4.2.1
-nbsphinx==0.4.2
