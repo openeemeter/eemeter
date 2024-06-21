@@ -1,4 +1,4 @@
-from gridmeter.distance_calc_selection import DistanceMatching
+from eemeter.gridmeter.individual_meter_matching.distance_calc_selection import DistanceMatching
 import pandas as pd
 import random
 

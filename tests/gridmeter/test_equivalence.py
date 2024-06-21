@@ -1,6 +1,6 @@
 import pandas as pd
 
-from gridmeter.equivalence import *
+from eemeter.gridmeter.stratified_sampling.equivalence import *
 
 import pytest
 import numpy as np
