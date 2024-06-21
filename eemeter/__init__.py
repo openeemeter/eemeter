@@ -28,6 +28,7 @@ from .common import *
 from . import (
     eemeter,
     drmeter,
+    gridmeter,
 )
 
 # Set default logging handler to avoid "No handler found" warnings.

@@ -18,5 +18,5 @@
 
 """
 
-from gridmeter.random_sampling.create_comparison_groups import Random_Sampling
-from gridmeter.random_sampling.settings import Settings as RS_Settings
+from eemeter.gridmeter.random_sampling.create_comparison_groups import Random_Sampling
+from eemeter.gridmeter.random_sampling.settings import Settings as RS_Settings

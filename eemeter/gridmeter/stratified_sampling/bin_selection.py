@@ -84,7 +84,7 @@ class StratifiedSamplingBinSelector(object):
 
         Attributes
         ==========
-        model: gridmeter.StratifiedSampling
+        model: eemeter.gridmeter.StratifiedSampling
             Model with stratification columns added.
         df_treatment: pandas.DataFrame
             dataframe to use for constructing the stratified sampling bins.

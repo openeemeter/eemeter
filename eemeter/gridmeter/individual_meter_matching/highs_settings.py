@@ -7,7 +7,7 @@ from __future__ import annotations
 import numpy as np
 import pydantic
 
-from gridmeter._utils.base_settings import BaseSettings
+from eemeter.gridmeter._utils.base_settings import BaseSettings
 
 from typing import Optional, Literal
 

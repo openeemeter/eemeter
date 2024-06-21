@@ -18,5 +18,5 @@
 
 """
 
-from gridmeter.individual_meter_matching.create_comparison_groups import Individual_Meter_Matching as IMM
-from gridmeter.individual_meter_matching.settings import Settings as IMM_Settings
+from eemeter.gridmeter.individual_meter_matching.create_comparison_groups import Individual_Meter_Matching as IMM
+from eemeter.gridmeter.individual_meter_matching.settings import Settings as IMM_Settings

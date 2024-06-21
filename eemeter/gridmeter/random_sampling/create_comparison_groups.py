@@ -4,9 +4,9 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from gridmeter._utils.base_comparison_group import Comparison_Group_Algorithm
+from eemeter.gridmeter._utils.base_comparison_group import Comparison_Group_Algorithm
 
-from gridmeter.random_sampling.settings import Settings
+from eemeter.gridmeter.random_sampling.settings import Settings
 
 
 class Random_Sampling(Comparison_Group_Algorithm):

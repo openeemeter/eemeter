@@ -18,23 +18,23 @@
 
 """
 
-from gridmeter.__version__ import *
+from eemeter.gridmeter.__version__ import *
 
-from gridmeter.clustering import *
-from gridmeter.individual_meter_matching import *
+from eemeter.gridmeter.clustering import *
+from eemeter.gridmeter.individual_meter_matching import *
 
-from gridmeter.stratified_sampling import (
+from eemeter.gridmeter.stratified_sampling import (
     Stratified_Sampling,
     SS_Settings, 
     DSS_Settings
 )
 
-from gridmeter.random_sampling import (
+from eemeter.gridmeter.random_sampling import (
     Random_Sampling,
     RS_Settings,
 )
 
-from gridmeter._utils import (
+from eemeter.gridmeter._utils import (
     Data,
     Data_Settings,
     load_tutorial_data,

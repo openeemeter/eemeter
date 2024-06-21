@@ -18,7 +18,7 @@
 
 """
 
-from gridmeter._utils.data import Data
-from gridmeter._utils.data_settings import Data_Settings
+from eemeter.gridmeter._utils.data import Data
+from eemeter.gridmeter._utils.data_settings import Data_Settings
 
-from gridmeter._utils.tutorial_data import load_tutorial_data
+from eemeter.gridmeter._utils.tutorial_data import load_tutorial_data

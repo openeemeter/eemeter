@@ -23,7 +23,7 @@ from pathlib import Path
 
 # Define the current directory
 current_dir = Path(__file__).parent
-data_dir = current_dir.parents[1] / "data"
+data_dir = current_dir.parents[2] / "data"
 
 def load_tutorial_data(data_type: str):
     data_type = data_type.lower()

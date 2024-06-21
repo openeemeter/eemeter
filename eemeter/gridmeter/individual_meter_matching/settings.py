@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import pydantic
 
-import gridmeter._utils.const as _const
-from gridmeter._utils.base_settings import BaseSettings
+import eemeter.gridmeter._utils.const as _const
+from eemeter.gridmeter._utils.base_settings import BaseSettings
 
 from enum import Enum
 from typing import Optional

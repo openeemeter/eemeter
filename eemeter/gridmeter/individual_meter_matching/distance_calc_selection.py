@@ -18,7 +18,7 @@
 
 """
 
-from gridmeter.individual_meter_matching import highs_settings as _highs_settings
+from eemeter.gridmeter.individual_meter_matching import highs_settings as _highs_settings
 import numpy as np
 import pandas as pd
 
@@ -28,7 +28,7 @@ from qpsolvers import solve_ls
 from scipy.spatial.distance import cdist
 from scipy.optimize import linear_sum_assignment
 
-from gridmeter.individual_meter_matching.settings import Settings
+from eemeter.gridmeter.individual_meter_matching.settings import Settings
 
 __all__ = ("DistanceMatching",)
 

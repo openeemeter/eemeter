@@ -11,11 +11,11 @@ import scipy.spatial.distance
 import numpy as np
 import pandas as pd
 
-from gridmeter._utils import (
+from eemeter.gridmeter._utils import (
     adaptive_loss as _adaptive_loss,
     multiprocessing as _multiprocessing,
 )
-from gridmeter.clustering import settings as _settings
+from eemeter.gridmeter.clustering import settings as _settings
 
 
 def fit_to_clusters(
