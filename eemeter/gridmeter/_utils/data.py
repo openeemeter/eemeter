@@ -1,8 +1,8 @@
 from copy import deepcopy
 from typing import Optional
 
-from gridmeter._utils.data_settings import Data_Settings
-from gridmeter._utils import const as _const
+from eemeter.gridmeter._utils.data_settings import Data_Settings
+from eemeter.gridmeter._utils import const as _const
 import pandas as pd
 import numpy as np
 

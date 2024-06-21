@@ -7,7 +7,7 @@ from typing import Optional
 
 import pydantic
 
-from gridmeter._utils.base_settings import BaseSettings
+from eemeter.gridmeter._utils.base_settings import BaseSettings
 
 
 class Settings(BaseSettings):

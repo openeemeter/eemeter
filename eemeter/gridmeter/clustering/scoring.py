@@ -11,7 +11,7 @@ import sklearn.metrics
 import sklearn.cluster
 import numpy as np
 
-from gridmeter.clustering import (
+from eemeter.gridmeter.clustering import (
     const as _const,
     settings as _settings,
 )

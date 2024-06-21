@@ -7,8 +7,8 @@ from typing import Optional
 
 import pandas as pd
 
-from gridmeter._utils.base_comparison_group import Comparison_Group_Algorithm
-from gridmeter.clustering import settings as _settings, cluster as _cluster
+from eemeter.gridmeter._utils.base_comparison_group import Comparison_Group_Algorithm
+from eemeter.gridmeter.clustering import settings as _settings, cluster as _cluster
 
 
 class Clustering(Comparison_Group_Algorithm):

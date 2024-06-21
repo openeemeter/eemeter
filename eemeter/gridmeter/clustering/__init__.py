@@ -18,5 +18,5 @@
 
 """
 
-from gridmeter.clustering.create_comparison_groups import Clustering
-from gridmeter.clustering.settings import Settings as Clustering_Settings
+from eemeter.gridmeter.clustering.create_comparison_groups import Clustering
+from eemeter.gridmeter.clustering.settings import Settings as Clustering_Settings

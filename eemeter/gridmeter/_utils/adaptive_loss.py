@@ -6,8 +6,8 @@ from scipy.optimize import minimize_scalar
 from scipy.interpolate import BSpline
 import numba
 
-from gridmeter._utils.adaptive_loss_tck import tck
-from gridmeter._utils.misc import OoM_numba
+from eemeter.gridmeter._utils.adaptive_loss_tck import tck
+from eemeter.gridmeter._utils.misc import OoM_numba
 
 
 numba_cache = True

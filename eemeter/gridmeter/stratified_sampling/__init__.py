@@ -18,8 +18,8 @@
 
 """
 
-from gridmeter.stratified_sampling.create_comparison_groups import Stratified_Sampling
-from gridmeter.stratified_sampling.settings import (
+from eemeter.gridmeter.stratified_sampling.create_comparison_groups import Stratified_Sampling
+from eemeter.gridmeter.stratified_sampling.settings import (
     StratifiedSamplingSettings as SS_Settings, 
     DistanceStratifiedSamplingSettings as DSS_Settings,
 )

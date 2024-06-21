@@ -10,7 +10,7 @@ import attrs
 import numpy as np
 import pandas as pd
 
-from gridmeter.clustering import (
+from eemeter.gridmeter.clustering import (
     transform as _transform,
     treatment_fit as _fit,
     bisect_k_means,

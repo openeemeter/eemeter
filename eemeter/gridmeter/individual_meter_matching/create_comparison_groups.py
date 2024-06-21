@@ -4,10 +4,10 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 
-from gridmeter._utils.base_comparison_group import Comparison_Group_Algorithm
+from eemeter.gridmeter._utils.base_comparison_group import Comparison_Group_Algorithm
 
-from gridmeter.individual_meter_matching.settings import Settings
-from gridmeter.individual_meter_matching.distance_calc_selection import (
+from eemeter.gridmeter.individual_meter_matching.settings import Settings
+from eemeter.gridmeter.individual_meter_matching.distance_calc_selection import (
     DistanceMatching,
     DistanceMatchingLegacy,
 )

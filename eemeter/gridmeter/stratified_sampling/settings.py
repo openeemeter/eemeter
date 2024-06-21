@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import pydantic
 
-import gridmeter.stratified_sampling.const as _const
-from gridmeter._utils.base_settings import BaseSettings
+import eemeter.gridmeter.stratified_sampling.const as _const
+from eemeter.gridmeter._utils.base_settings import BaseSettings
 
 from typing import Optional, Literal, Union
 
