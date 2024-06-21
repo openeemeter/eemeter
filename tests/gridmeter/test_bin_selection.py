@@ -18,9 +18,9 @@
 
 """
 
-from gridmeter.model import StratifiedSampling, BinnedData
-from gridmeter.bin_selection import StratifiedSamplingBinSelector
-from gridmeter.bins import ModelSamplingException
+from eemeter.gridmeter.stratified_sampling.model import StratifiedSampling, BinnedData
+from eemeter.gridmeter.stratified_sampling.bin_selection import StratifiedSamplingBinSelector
+from eemeter.gridmeter.stratified_sampling.bins import ModelSamplingException
 import pytest
 
 

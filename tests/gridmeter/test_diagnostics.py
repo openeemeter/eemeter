@@ -22,7 +22,7 @@ import pandas as pd
 
 import pytest
 
-from gridmeter.model import StratifiedSampling
+from eemeter.gridmeter.stratified_sampling.model import StratifiedSampling
 
 
 @pytest.fixture

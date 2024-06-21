@@ -18,7 +18,7 @@
 
 """
 
-from gridmeter.bins import Bin, MultiBin, BinnedData, Binning
+from eemeter.gridmeter.stratified_sampling.bins import Bin, MultiBin, BinnedData, Binning
 import pandas as pd
 
 

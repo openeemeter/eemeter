@@ -22,8 +22,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from gridmeter.model import StratifiedSampling, BinnedData
-from gridmeter.bins import ModelSamplingException
+from eemeter.gridmeter.stratified_sampling.model import StratifiedSampling, BinnedData
+from eemeter.gridmeter.stratified_sampling.bins import ModelSamplingException
 
 
 def test_stratified_sampling_fit_and_sample():
