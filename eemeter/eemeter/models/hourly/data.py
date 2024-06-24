@@ -1,706 +1,451 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-"""
-
-   Copyright 2014-2024 OpenEEmeter contributors
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-"""
-from typing import Optional, Union
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-import eemeter.common.const as _const
-from eemeter.eemeter.common.data_processor_utilities import (
-    as_freq,
-    clean_billing_daily_data,
-    compute_minimum_granularity,
-    remove_duplicates,
-    sufficiency_criteria_baseline,
-)
-from eemeter.eemeter.common.features import compute_temperature_features
-from eemeter.eemeter.common.warnings import EEMeterWarning
+from scipy.interpolate import RBFInterpolator
 
 
-## TODO: Copied from daily, need to fix for Hourly
+class NREL_Weather_API:  # TODO: reload data for all years
+    api_key = "---"  # get your own key from https://developer.nrel.gov/signup/  #Required
+    name = "---"  # required
+    email = "---"  # required
+    interval = "60"  # required
 
+    attributes = "ghi,dhi,dni,wind_speed,air_temperature,cloud_type,dew_point,clearsky_dhi,clearsky_dni,clearsky_ghi"  # not required
+    leap_year = "false"  # not required
+    utc = "false"  # not required
+    reason_for_use = "---"  # not required
+    your_affiliation = "---"  # not required
+    mailing_list = "false"  # not required
 
-class _DailyData:
-    """Private base class for daily baseline and reporting data.
+    # cache = Path("/app/.recurve_cache/data/MCE/MCE_weather_stations")
+    cache = Path("/app/.recurve_cache/data/MCE/Weather_stations")
 
-    Will raise exception during data sufficiency check if instantiated
-    """
+    use_cache = True
 
-    def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
-        self._df = None
-        self.warnings = []
-        self.disqualification = []
-        self.is_electricity_data = is_electricity_data
-        self.tz = None
+    round_minutes_method = "floor"  # [None, floor, ceil, round]
 
-        # TODO re-examine dq/warning pattern. keep consistent between
-        # either implicitly setting as side effects, or returning and assigning outside
-        self._df, temp_coverage = self._set_data(df)
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+        self.cache.mkdir(parents=True, exist_ok=True)
 
-        sufficiency_df = self._df.merge(
-            temp_coverage, left_index=True, right_index=True, how="left"
-        )
-        disqualification, warnings = self._check_data_sufficiency(sufficiency_df)
+    def get_data(self, lat, lon, years=[2017, 2021]):
+        data_path = self.cache / f"{lat}_{lon}.pkl"
+        if data_path.exists() and self.use_cache:
+            df = pd.read_pickle(data_path)
 
-        self.disqualification += disqualification
-        self.warnings += warnings
-        self.log_warnings()
-
-    @property
-    def df(self):
-        """
-        Get the corrected input data stored in the class. The actual dataframe is immutable, this returns a copy.
-
-        Returns
-        -------
-            pandas.DataFrame or None: A copy of the DataFrame if it exists, otherwise None.
-        """
-        if self._df is None:
-            return None
         else:
-            return self._df.copy()
+            years = list(range(min(years), max(years) + 1))
 
-    @classmethod
-    def from_series(
-        cls,
-        meter_data: Union[pd.Series, pd.DataFrame],
-        temperature_data: Union[pd.Series, pd.DataFrame],
-        is_electricity_data,
-    ):
-        """
-        Create an instance of the Data class from meter data and temperature data.
+            df = self.query_API(lat, lon, years)
 
-        Parameters
-        ----------
+            df.columns = [x.lower().replace(" ", "_") for x in df.columns]
 
-        - meter_data (pd.Series or pd.DataFrame): The meter data.
-        - temperature_data (pd.Series or pd.DataFrame): The temperature data.
-        - is_electricity_data: A flag indicating whether the data represents electricity data. This is required as electricity data with 0 values are converted to NaNs.
+            if self.round_minutes_method == "floor":
+                df["datetime"] = df["datetime"].dt.floor("H")
+            elif self.round_minutes_method == "ceil":
+                df["datetime"] = df["datetime"].dt.ceil("H")
+            elif self.round_minutes_method == "round":
+                df["datetime"] = df["datetime"].dt.round("H")
 
-        Returns
-        -------
+            df = df.set_index("datetime")
 
-        - Data: An instance of the Data class with the dataframe populated with the corrected data, alongwith warnings and disqualifications based on the input.
-        """
-        if isinstance(meter_data, pd.Series):
-            meter_data = meter_data.to_frame()
-        if isinstance(temperature_data, pd.Series):
-            temperature_data = temperature_data.to_frame()
-        meter_data = meter_data.rename(columns={meter_data.columns[0]: "observed"})
-        temperature_data = temperature_data.rename(
-            columns={temperature_data.columns[0]: "temperature"}
-        )
-        temperature_data.index = temperature_data.index.tz_convert(
-            meter_data.index.tzinfo
-        )
-
-        if temperature_data.empty:
-            raise ValueError("Temperature data cannot be empty.")
-        if meter_data.empty:
-            # reporting from_series always passes a full index of nan
-            raise ValueError("Meter data cannot by empty.")
-
-        is_billing_data = False
-        if not meter_data.empty:
-            is_billing_data = compute_minimum_granularity(
-                meter_data.index, "billing"
-            ).startswith("billing")
-
-        # first, trim the data to exclude NaNs on the outer edges of the data
-        last_meter_index = meter_data.last_valid_index()
-        if is_billing_data:
-            # preserve final NaN for billing data only
-            last = meter_data.last_valid_index()
-            if last and last != meter_data.index[-1]:
-                # TODO include warning here for non-NaN final billing row since it will be discarded
-                last_meter_index = meter_data.index[meter_data.index.get_loc(last) + 1]
-        meter_data = meter_data.loc[meter_data.first_valid_index() : last_meter_index]
-        temperature_data = temperature_data.loc[
-            temperature_data.first_valid_index() : temperature_data.last_valid_index()
-        ]
-
-        # TODO consider a refactor of the period offset calculation/slicing.
-        # it seems like a fairly dense block of code for something conceptually simple.
-        # at the very least, try to clarify variable names a bit
-
-        period_diff_first = pd.Timedelta(0)
-        period_diff_last = pd.Timedelta(0)
-        # calculate difference in period length for first and last rows in meter/temp
-        # first/last will generally be the same offset for daily/hourly, but billing can be quite variable
-        # could consider using to_offset(index.inferred_freq) if available,
-        # but the intent here is just to provide a lenient first trim.
-        # checking for consistent frequency is done later during __init__
-        if len(meter_data.index) > 1 and len(temperature_data.index) > 1:
-            period_meter_first = meter_data.index[1] - meter_data.index[0]
-            period_temp_first = temperature_data.index[1] - temperature_data.index[0]
-            period_diff_first = period_meter_first - period_temp_first
-
-            period_meter_last = meter_data.index[-1] - meter_data.index[-2]
-            period_temp_last = temperature_data.index[-1] - temperature_data.index[-2]
-            period_diff_last = period_meter_last - period_temp_last
-
-        # if diff is positive, meter period is longer (lower frequency)
-        zero_offset = pd.Timedelta(0)
-        meter_period_first_longer = period_diff_first > zero_offset
-        meter_period_last_longer = period_diff_last > zero_offset
-
-        # large period needs a buffer for the min index, and no buffer for the max index
-        # short period needs a buffer for the max index, and no buffer for the min index
-        meter_offset_first = (
-            period_diff_first if meter_period_first_longer else zero_offset
-        )
-        meter_offset_last = (
-            -period_diff_last if not meter_period_last_longer else zero_offset
-        )
-        temp_offset_first = (
-            -period_diff_first if not meter_period_first_longer else zero_offset
-        )
-        temp_offset_last = period_diff_last if meter_period_last_longer else zero_offset
-
-        # if the shorter period ends on an exact index of the longer, we accept it.
-        # the data should be DQ'd later due to insufficiency for the period
-
-        # constrain meter index to temperature index
-        temp_index_min = temperature_data.index.min() - meter_offset_first
-        temp_index_max = temperature_data.index.max() + meter_offset_last
-        meter_data = meter_data[temp_index_min:temp_index_max]
-        if meter_data.empty:
-            raise ValueError("Meter and temperature data are fully misaligned.")
-
-        # if billing detected, subtract one day from final index since dataframe input assumes final row is part of period
-        if is_billing_data:
-            new_index = meter_data.index[:-1].union(
-                [(meter_data.index[-1] - pd.Timedelta(days=1))]
-            )
-            if len(new_index) == len(meter_data.index):
-                meter_data.index = new_index
-            else:
-                # handles the case of a 1 day off-cycle read at end of series
-                meter_data = meter_data[:-1]
-
-        # constrain temperature index to meter index
-        meter_index_min = meter_data.index.min() - temp_offset_first
-        meter_index_max = meter_data.index.max() + temp_offset_last
-        if is_billing_data and len(meter_data) > 1:
-            # last billing period is offset by one index
-            meter_index_max = meter_data.index[-2] + temp_offset_last
-        temperature_data = temperature_data[meter_index_min:meter_index_max]
-
-        if is_billing_data:
-            # TODO consider adding misaligned data warning here if final row was not already NaN
-            meter_data.iloc[-1] = np.nan
-
-        df = pd.concat([meter_data, temperature_data], axis=1)
-        return cls(df, is_electricity_data)
-
-    def log_warnings(self):
-        """
-        Logs the warnings and disqualifications associated with the data.
-
-        """
-        for warning in self.warnings + self.disqualification:
-            warning.warn()
-
-    def _compute_meter_value_df(self, df: pd.DataFrame):
-        """
-        Computes the meter value DataFrame by cleaning and processing the observed meter data.
-        1. The minimum granularity is computed from the non null rows.
-        2. The meter data is cleaned and downsampled/upsampled into the correct frequency using clean_billing_daily_data()
-        3. Add missing days as NaN by merging with a full year daily index.
-
-        Parameters
-        ----------
-
-            df (pd.DataFrame): The DataFrame containing the observed meter data.
-
-        Returns
-        -------
-            pd.DataFrame: The cleaned and processed meter value DataFrame.
-        """
-        meter_series = df["observed"].dropna()
-        if meter_series.empty:
-            return df["observed"].resample("D").first().to_frame()
-
-        # Dropping the NaNs is beneficial when the meter data is spread over hourly temperature data, causing lots of NaNs
-        # But causes problems in detection of frequency when there are genuine missing values. The missing days are accounted for in the sufficiency_criteria_baseline method
-        # whereas they should actually be kept.
-        start_date = df.index.min()
-        end_date = df.index.max()
-        min_granularity = compute_minimum_granularity(meter_series.index, "daily")
-        if min_granularity.startswith("billing"):
-            # TODO : make this a warning instead of an exception
-            raise ValueError("Billing data is not allowed in the daily model")
-        meter_value_df = clean_billing_daily_data(
-            meter_series, min_granularity, self.warnings
-        )
-
-        meter_value_df = meter_value_df.rename(columns={"value": "observed"})
-
-        # To account for the above issue, we create an index with all the days and then merge the meter_value_df with it
-        # This will ensure that the missing days are kept in the dataframe
-        # Create an index with all the days from the start and end date of 'meter_value_df'
-        all_days_index = pd.date_range(
-            start=start_date,
-            end=end_date,
-            freq="D",
-            tz=df.index.tz,
-        )
-        all_days_df = pd.DataFrame(index=all_days_index)
-        # the following drops common days to handle DST issues with pytz.
-        # doesn't seem to be a problem with ZoneInfo, so we can
-        # probably handle this better once 3.8 is EOL and we disallow pytz tzinfo.
-        # TODO regardless, it feels like there should be a better way to match
-        # the indices on date than by comparing strftime in this manner
-        all_days_df = all_days_df[
-            ~all_days_df.index.strftime("%Y%m%d").isin(
-                meter_series.index.strftime("%Y%m%d")
-            )
-        ]
-        meter_value_df = meter_value_df.merge(
-            all_days_df, left_index=True, right_index=True, how="outer"
-        )
-
-        return meter_value_df
-
-    def _compute_temperature_features(
-        self, df: pd.DataFrame, meter_index: pd.DatetimeIndex
-    ):
-        """
-        Compute temperature features for the given DataFrame and meter index.
-        1. The frequency of the temperature data is inferred and set to hourly if not already. If frequency is not inferred or its lower than hourly, a warning is added.
-        2. The temperature data is downsampled/upsampled into the daily frequency using as_freq()
-        3. High frequency temperature data is checked for missing values and a warning is added if more than 50% of the data is missing, and those rows are set to NaN.
-        4. If frequency was already hourly, compute_temperature_features() is used to recompute the temperature to match with the meter index.
-
-        Parameters
-        ----------
-
-            df (pd.DataFrame): The DataFrame containing temperature data.
-            meter_index (pd.DatetimeIndex): The meter index.
-
-        Returns
-        -------
-
-            pd.Series: The computed temperature values.
-            pd.DataFrame: The computed temperature features.
-        """
-        temp_series = df["temperature"]
-        temp_series.index.freq = temp_series.index.inferred_freq
-        if temp_series.index.freq != "H":
-            if temp_series.index.freq is None or temp_series.index.freq > pd.Timedelta(
-                hours=1
-            ):
-                # Add warning for frequencies longer than 1 hour
-                self.warnings.append(
-                    EEMeterWarning(
-                        qualified_name="eemeter.sufficiency_criteria.unable_to_confirm_daily_temperature_sufficiency",
-                        description=(
-                            "Cannot confirm that pre-aggregated temperature data had sufficient hours kept"
-                        ),
-                        data={},
-                    )
-                )
-            if temp_series.index.freq != "D":
-                # Downsample / Upsample the temperature data to daily
-                temperature_features = as_freq(
-                    temp_series, "D", series_type="instantaneous", include_coverage=True
-                )
-                # If high frequency data check for 50% data coverage in rollup
-                if len(temperature_features[temperature_features.coverage <= 0.5]) > 0:
-                    self.warnings.append(
-                        EEMeterWarning(
-                            qualified_name="eemeter.sufficiency_criteria.missing_high_frequency_temperature_data",
-                            description=(
-                                "More than 50% of the high frequency Temperature data is missing."
-                            ),
-                            data={
-                                "high_frequency_data_missing_count": len(
-                                    temperature_features[
-                                        temperature_features.coverage <= 0.5
-                                    ].index.to_list()
-                                )
-                            },
-                        )
-                    )
-
-                # Set missing high frequency data to NaN
-                temperature_features.value[temperature_features.coverage > 0.5] = (
-                    temperature_features[temperature_features.coverage > 0.5].value
-                    / temperature_features[temperature_features.coverage > 0.5].coverage
-                )
-
-                temperature_features = (
-                    temperature_features[temperature_features.coverage > 0.5]
-                    .reindex(temperature_features.index)[["value"]]
-                    .rename(columns={"value": "temperature_mean"})
-                )
-
-                if "coverage" in temperature_features.columns:
-                    temperature_features = temperature_features.drop(
-                        columns=["coverage"]
-                    )
-            else:
-                temperature_features = temp_series.to_frame(name="temperature_mean")
-
-            temperature_features["temperature_null"] = temp_series.isnull().astype(int)
-            temperature_features["temperature_not_null"] = temp_series.notnull().astype(
-                int
-            )
-            temperature_features["n_days_kept"] = 0  # unused
-            temperature_features["n_days_dropped"] = 0  # unused
-        else:
-            # TODO hacky method of avoiding the last index nan convention
-            if not meter_index.empty:
-                buffer_idx = meter_index.max() + pd.Timedelta(days=1)
-                meter_index = meter_index.union([buffer_idx])
-            temperature_features = compute_temperature_features(
-                meter_index,
-                temp_series,
-                data_quality=True,
-            )
-            temperature_features = temperature_features[:-1]
-
-            # Only check for high frequency temperature data if it exists
-            if (
-                temperature_features.temperature_not_null
-                + temperature_features.temperature_null
-            ).median() > 1:
-                invalid_temperature_rows = (
-                    temperature_features.temperature_not_null
-                    / (
-                        temperature_features.temperature_not_null
-                        + temperature_features.temperature_null
-                    )
-                ) <= 0.5
-
-                # Set high frequency temperature data with more than 50% data missing as NaN
-                if invalid_temperature_rows.any():
-                    self.warnings.append(
-                        EEMeterWarning(
-                            qualified_name="eemeter.sufficiency_criteria.missing_high_frequency_temperature_data",
-                            description=(
-                                "More than 50% of the high frequency temperature data is missing."
-                            ),
-                            data=[
-                                timestamp.isoformat()
-                                for timestamp in invalid_temperature_rows.index
-                            ],
-                        )
-                    )
-                    temperature_features.loc[
-                        invalid_temperature_rows, "temperature_mean"
-                    ] = np.nan
-
-        temp = temperature_features["temperature_mean"].rename("temperature")
-        features = temperature_features.drop(columns=["temperature_mean"])
-        return temp, features
-
-    def _merge_meter_temp(self, meter, temp):
-        """
-        Merge the meter and temperature dataframes and reorder the columns to have the order -
-            [season, weekday_weekend, temperature, observed (if present)]
-
-        Parameters
-        ----------
-            meter (pd.DataFrame): The meter dataframe.
-            temp (pd.DataFrame): The temperature dataframe.
-
-        Returns
-        -------
-            pd.DataFrame: The merged and transformed dataframe.
-        """
-        df = meter.merge(
-            temp, left_index=True, right_index=True, how="left"
-        ).tz_convert(meter.index.tz)
-        if df["observed"].dropna().empty:
-            df = df.drop(columns=["observed"])
-
-        # Add Season and Weekday_weekend
-        df["season"] = df.index.month_name().map(_const.default_season_def)
-        df["weekday_weekend"] = df.index.day_name().map(
-            _const.default_weekday_weekend_def
-        )
-
-        # Reorder the columns Create a list of columns
-        columns = ["season", "weekday_weekend", "temperature"]
-        if "observed" in df.columns:
-            columns.append("observed")
-        df = df[columns]
+            if self.use_cache:
+                df.to_pickle(data_path)
 
         return df
 
-    def _check_data_sufficiency(self, sufficiency_df):
-        raise NotImplementedError(
-            "Can't instantiate class _DailyData, use DailyBaselineData or DailyReportingData."
-        )
+    def query_API(self, lat, lon, years):
+        leap_year = self.leap_year
+        interval = self.interval
+        utc = self.utc
+        api_key = self.api_key
+        name = self.name
+        email = self.email
 
-    def _set_data(self, data: pd.DataFrame):
-        """Process data input for the Daily Model Baseline Class
-        Datetime has to be either index or a separate column in the dataframe.
-        Electricity data with 0 meter values are converted to NaNs.
+        year_df = []
+        for year in years:
+            year = str(year)
 
-        Parameters
-        ----------
-        data : pd.DataFrame
-            Required columns - datetime, observed, temperature
+            url = self._generate_url(
+                lat, lon, year, leap_year, interval, utc, api_key, name, email
+            )
+            df = pd.read_csv(url, skiprows=2)
 
-            observed
-
-        Returns
-        -------
-        processed_data : pd.DataFrame
-            Dataframe appended with the correct season and day of week.
-        """
-
-        # Copy the input dataframe so that the original is not modified
-        df = data.copy()
-
-        expected_columns = [
-            "observed",
-            "temperature",
-        ]
-        # TODO maybe check datatypes
-        if not set(expected_columns).issubset(set(df.columns)):
-            # show the columns that are missing
-
-            raise ValueError(
-                "Data is missing required columns: {}".format(
-                    set(expected_columns) - set(df.columns)
-                )
+            # Set the time index in the pandas dataframe:
+            # set datetime using the year, month, day, and hour
+            df["datetime"] = pd.to_datetime(
+                df[["Year", "Month", "Day", "Hour", "Minute"]]
             )
 
-        # Check that the datetime index is timezone aware timestamp
-        if not isinstance(df.index, pd.DatetimeIndex) and "datetime" not in df.columns:
-            raise ValueError("Index is not datetime and datetime not provided")
+            df = df.drop(columns=["Year", "Month", "Day", "Hour", "Minute"])
+            df = df.dropna()
 
-        elif "datetime" in df.columns:
-            if df["datetime"].dt.tz is None:
-                raise ValueError("Datatime is missing timezone information")
-            df["datetime"] = pd.to_datetime(df["datetime"])
-            df.set_index("datetime", inplace=True)
+            year_df.append(df)
 
-        elif df.index.tz is None:
-            raise ValueError("Datatime is missing timezone information")
-        elif str(df.index.tz) == "UTC":
-            self.warnings.append(
-                EEMeterWarning(
-                    qualified_name="eemeter.data_quality.utc_index",
-                    description=(
-                        "Datetime index is in UTC. Use tz_localize() with the local timezone to ensure correct aggregations"
-                    ),
-                    data={},
-                )
-            )
-        self.tz = df.index.tz
+        # merge the dataframes for different years
+        df = pd.concat(year_df, axis=0)
 
-        # Convert electricity data having 0 meter values to NaNs
-        if self.is_electricity_data:
-            df.loc[df["observed"] == 0, "observed"] = np.nan
+        return df
 
-        # Caltrack 2.3.2 - Drop duplicates
-        df = remove_duplicates(df)
-
-        meter = self._compute_meter_value_df(df)
-        temp, temp_coverage = self._compute_temperature_features(df, meter.index)
-        final_df = self._merge_meter_temp(meter, temp)
-        return final_df, temp_coverage
-
-
-class DailyBaselineData(_DailyData):
-    """
-    Data class to represent Daily Baseline Data. Only baseline data should go into the dataframe input, no blackout data should be input.
-    Checks sufficiency for the data provided as input depending on OpenEEMeter specifications and populates disqualifications and warnings based on it.
-
-    Parameters
-    ----------
-
-    1. data : A dataframe having a datetime index or a datetime column with the timezone also being set.
-        It also requires 2 more columns - 'observed' for meter data, and 'temperature' for temperature data.
-        The temperature column should have values in Fahrenheit. Please convert your temperatures accordingly.
-
-    2. is_electricity_data : boolean flag to ascertain if this is electricity data or not. Electricity data values of 0 are set to NaN.
-
-    Returns
-    -------
-
-    An instance of the DailyBaselineData class.
-
-    Public Attributes
-    -----------------
-
-    1. df : Immutable dataframe that contains the meter and temperature values for the baseline data period.
-    2. disqualification : Serious issues with the data that can degrade the quality of the model. If you want to go ahead with building the model while ignoring them,
-                            set the ignore_disqualification = True flag in the model. By default disqualifications are not ignored.
-    3. warnings : Issues with the data, but not that will severely reduce the quality of the model built.
-
-    Public Methods
-    --------------
-
-    1. from_series: Public method that can can handle two separate series (meter and temperature) and join them to create a single dataframe.
-                    The temperature column should have values in Fahrenheit.
-
-    2. log_warnings: View the disqualifications and warnings associated with the current data input provided.
-    """
-
-    def _check_data_sufficiency(self, sufficiency_df):
-        """
-        Private method which checks the sufficiency of the data for daily baseline calculations using the predefined OpenEEMeter sufficiency criteria.
-
-        Args:
-            sufficiency_df (pandas.DataFrame): DataFrame containing the data for sufficiency check. Should have features such as -
-            temperature_null: number of temperature null periods in each aggregation step
-            temperature_not_null: number of temperature non null periods in each aggregation step
-
-        Returns:
-            disqualification (List): List of disqualifications
-            warnings (list): List of warnings
-
-        """
-        # 90% coverage per period only required for billing models
-        _, disqualification, warnings = sufficiency_criteria_baseline(
-            sufficiency_df,
-            min_fraction_hourly_temperature_coverage_per_period=0.5,
-            is_reporting_data=False,
-            is_electricity_data=self.is_electricity_data,
-        )
-        return disqualification, warnings
-
-
-class DailyReportingData(_DailyData):
-    """
-    Data class to represent Daily Reporting Data. Only reporting data should go into the dataframe input, no blackout data should be input.
-    Checks sufficiency for the data provided as input depending on OpenEEMeter specifications and populates disqualifications and warnings based on it.
-    Meter data input is optional for the reporting class.
-
-    Parameters
-    ----------
-
-    1. data : A dataframe having a datetime index or a datetime column with the timezone also being set.
-        It also requires 1 more column - 'temperature' for temperature data. Adding a column for 'observed', i.e. meter data is optional.
-        The temperature column should have values in Fahrenheit. Please convert your temperatures accordingly.
-
-    2. is_electricity_data : boolean flag to ascertain if this is electricity data or not. Electricity data values of 0 are set to NaN.
-
-    Returns
-    -------
-
-    An instance of the DailyBaselineData class.
-
-    Public Attributes
-    -----------------
-
-    1. df : Immutable dataframe that contains the meter and temperature values for the baseline data period.
-    2. disqualification : Serious issues with the data that can degrade the quality of the model. If you want to go ahead with building the model while ignoring them,
-                            set the ignore_disqualification = True flag in the model. By default disqualifications are not ignored.
-    3. warnings : Issues with the data, but not that will severely reduce the quality of the model built.
-
-    Public Methods
-    --------------
-
-    1. from_series: Public method that can can handle two separate series (meter and temperature) and join them to create a single dataframe.
-                    The temperature column should have values in Fahrenheit.
-
-    2. log_warnings: View the disqualifications and warnings associated with the current data input provided.
-    """
-
-    def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
-        df = df.copy()
-        if "observed" not in df.columns:
-            df["observed"] = np.nan
-
-        super().__init__(df, is_electricity_data)
-
-        # Caltrack 3.5.1.1
-        if "observed" in self._df.columns and not self._df.observed.dropna().empty:
-            self._df.loc[self._df["temperature"].isna(), "observed"] = np.nan
-
-    @classmethod
-    def from_series(
-        cls,
-        meter_data: Optional[Union[pd.Series, pd.DataFrame]],
-        temperature_data: Union[pd.Series, pd.DataFrame],
-        is_electricity_data: Optional[bool] = None,
-        tzinfo=None,
+    def _generate_url(
+        self, lat, lon, year, leap_year, interval, utc, api_key, name, email
     ):
-        """
-        Create a DailyReportingData instance from meter data and temperature data.
+        query = f"?wkt=POINT({lon}%20{lat})&names={year}&interval={interval}&api_key={api_key}&full_name={name}&email={email}&utc={utc}"
 
-        Parameters
-        ----------
+        if year == "2021":
+            # details: https://developer.nrel.gov/docs/solar/nsrdb/psm3-2-2-download/
+            url = f"https://developer.nrel.gov/api/nsrdb/v2/solar/psm3-2-2-download.csv{query}"
 
-        - meter_data: pd.Series or pd.DataFrame (Optional attribute)
-            The meter data to be used for the DailyReportingData instance.
-        - temperature_data: pd.Series or pd.DataFrame (Required)
-            The temperature data to be used for the DailyReportingData instance.
-        - is_electricity_data: bool (Optional)
-            Flag indicating whether the meter data represents electricity data.
-        - tzinfo: tz (optional)
-            Timezone information to be used for the meter data.
+        elif year in [str(i) for i in range(1998, 2021)]:
+            # details: https://developer.nrel.gov/docs/solar/nsrdb/psm3-download/
+            url = f"https://developer.nrel.gov/api/nsrdb/v2/solar/psm3-download.csv{query}"
 
-        Returns
-        -------
+        else:
+            print("Year must be between 1998 and 2021")
+            url = None
 
-        - DailyReportingData
-            A newly created DailyReportingData instance.
-        """
-        if tzinfo and meter_data is not None:
-            raise ValueError(
-                "When passing meter data to DailyReportingData, convert its DatetimeIndex to local timezone first; `tzinfo` param should only be used in the absence of reporting meter data."
-            )
-        if is_electricity_data is None and meter_data is not None:
-            raise ValueError(
-                "Must specify is_electricity_data when passing meter data."
-            )
-        if meter_data is None:
-            meter_data = pd.DataFrame(
-                {"observed": np.nan}, index=temperature_data.index
-            )
-            if tzinfo:
-                meter_data = meter_data.tz_convert(tzinfo)
-        if meter_data.empty:
-            raise ValueError(
-                "Pass meter_data=None rather than an empty series in order to explicitly create a temperature-only reporting data instance."
-            )
-        return super().from_series(meter_data, temperature_data, is_electricity_data)
+        return url
 
-    def _check_data_sufficiency(self, sufficiency_df):
-        """
-        Private method which checks the sufficiency of the data for daily reporting calculations using the predefined OpenEEMeter sufficiency criteria.
 
-        Parameters
-        ----------
-        1. sufficiency_df (pandas.DataFrame): DataFrame containing the data for sufficiency check. Should have features such as -
-            - temperature_null: number of temperature null periods in each aggregation step
-            - temperature_not_null: number of temperature non null periods in each aggregation step
+class Interpolator:
+    def __init__(self, **kwargs):
+        super().__init__()
+        if "n_cor_idx" in kwargs:
+            self.n_cor_idx = kwargs["n_cor_idx"]
+        else:
+            self.n_cor_idx = 6
+        self.lags = 24 * 7 * 2 + 1  # TODO: make this a parameter
 
-        Returns
-        -------
-            disqualification (List): List of disqualifications
-            warnings (list): List of warnings
+    def interpolate(self, df, columns=["temperature", "observed"]):
+        self.df = df
+        self.columns = columns
+        for col in columns:
+            if f"interpolated_{col}" in self.df.columns:
+                self.df = self.df.drop(columns=[f"interpolated_{col}"])
+            self.df[f"interpolated_{col}"] = False
+        # Main method to perform the interpolation
+        for col in self.columns: #TODO: bad meters should be removed by now
+            if col == 'observed':
+                missing_frac = self.df[col].isna().sum() / len(self.df)
+                self.n_cor_idx = int(np.max([6, np.round((4.012*np.log(missing_frac) + 24.38)/2, 0)*2]))
+            else:
+                self.n_cor_idx = 6
+            self._col_interpolation(col)
 
-        """
-        # 90% coverage per period only required for billing models
-        _, disqualification, warnings = sufficiency_criteria_baseline(
-            sufficiency_df,
-            min_fraction_hourly_temperature_coverage_per_period=0.5,
-            is_reporting_data=True,
-            is_electricity_data=self.is_electricity_data,
+        # for those datetime that we still haven't interpolated (for the columns), we will interpolate them with pd.interpolate
+        for col in self.columns:
+            na_datetime = self.df.loc[self.df[col].isna()].index
+            if len(na_datetime) > 0:
+                # interpolate the missing values
+                self.df[col] = self.df[col].interpolate(method="time")
+            # check if we still have missing values
+            still_na_datetime = self.df.loc[self.df[col].isna()].index
+            if len(still_na_datetime) > 0:
+                self.df[col] = self.df[col].fillna(method="ffill")
+                self.df[col] = self.df[col].fillna(method="bfill")
+
+            #TODO: we can check if we have similar values multiple times back to back, if yes, raise a warning
+            self.df.loc[self.df.index.isin(na_datetime), f"interpolated_{col}"] = True
+
+        return self.df
+
+    def _col_interpolation(self, col):
+        helper_df = self.df.copy()
+        # Calculate the correlation of col with its lags and leads
+        results = {
+            i: helper_df[col].autocorr(lag=i) for i in range(-self.lags, self.lags)
+        }
+        results = pd.DataFrame(
+            results.values(), index=results.keys(), columns=["autocorr"]
         )
-        return disqualification, warnings
+        # remove zero
+        results = results[results.index != 0]
+        results = results.sort_values(by="autocorr", ascending=False).head(
+            self.n_cor_idx
+        )
+
+        # interpolate and update the values
+        check = True
+        while check:
+            helper_columns = []
+            for shift in results.index:
+                if shift < 0:
+                    shift_type = "lag"
+                else:
+                    shift_type = "lead"
+
+                self.df[f"{col}_{shift_type}_{shift}"] = self.df[f"{col}"].shift(-shift)
+                helper_columns.append(f"{col}_{shift_type}_{shift}")
+
+            nan_idx_before_interp = self.df.index[self.df[f"{col}"].isna()]
+            # fill the missing values with the mean of the selected lag lead
+            self.df.loc[nan_idx_before_interp, f"{col}"] = self.df.loc[
+                nan_idx_before_interp, helper_columns
+            ].mean(axis=1)
+            # check if we still have missing values
+            nan_idx_after_interp = self.df.index[self.df[f"{col}"].isna()]
+
+            interpolated_datetime_local = nan_idx_before_interp.difference(
+                nan_idx_after_interp
+            )
+            # print("interpolated with model: ", interpolated_datetime_local.shape)
+
+            self.df[f"interpolated_{col}"].loc[
+                self.df.index.isin(interpolated_datetime_local)
+            ] = True
+
+            if interpolated_datetime_local.shape[0] == 0:
+                check = False
+
+        nan_idx = self.df.index[self.df[f"{col}"].isna()]
+        # check if we still have missing values
+        if self.df[f"{col}"].isna().sum() > 0:  # TODO: make this more robust
+            self.df[f"{col}"] = self.df[f"{col}"].interpolate(
+                method="time", limit_direction="both"
+            )
+
+        self.df.loc[nan_idx, f"interpolated_{col}"] = True
+        self.df.drop(columns=helper_columns, inplace=True)
+
+
+class HourlyData:
+    max_missing_hours_pct = 10
+
+    def __init__(self, df: pd.DataFrame, **kwargs: dict):  # consider solar data
+        """ """
+        if not isinstance(df, pd.DataFrame):
+            raise TypeError("df must be a pandas DataFrame")
+        if df is None:
+            raise ValueError("df cannot be None")
+        if not isinstance(kwargs, dict):
+            raise TypeError("kwargs must be a dictionary")
+
+        self.to_be_interpolated_columns = []
+        self.interp = None
+        self.outputs = []
+
+        self.df = df
+        self.kwargs = kwargs
+        if "outputs" in self.kwargs:
+            self.outputs = kwargs["outputs"].copy()
+        else:
+            self.outputs = ["temperature", "observed"]
+
+        self.missing_values_amount = {}
+        self.too_many_missing_data = False
+
+        if self.df.empty:
+            raise ValueError("df cannot be empty")
+        self._prepare_dataframe()
+
+    def _prepare_dataframe(self):
+        def check_datetime(df):
+            # get all the columns with datetime type #TODO: check if this is the best way to do this
+            datetime_columns = df.select_dtypes(include=[np.datetime64]).columns
+            # check if datetime is in the columns
+            if "datetime" in df.columns:
+                pass
+            elif "datetime" in df.index.names or "start_local" in df.index.names:
+                df["datetime"] = df.index
+                df = df.reset_index(drop=True)
+            elif "start_local" in df.columns:
+                df["datetime"] = df["start_local"]
+                df = df.drop(columns=["start_local"])
+            elif len(datetime_columns) > 0:
+                df["datetime"] = df[datetime_columns[0]]
+                df = df.drop(columns=[datetime_columns[0]])
+            else:
+                raise ValueError("datetime column not found")
+
+            # reset index to ensure datetime is not the index
+            df = df.reset_index()
+            return df
+
+        def get_contiguous_datetime(df):
+            # get earliest datetime and latest datetime
+            # make earliest start at 0 and latest end at 23, this ensures full days
+            earliest_datetime = (
+                df["datetime"].min().replace(hour=0, minute=0, second=0, microsecond=0)
+            )
+            latest_datetime = (
+                df["datetime"].max().replace(hour=23, minute=0, second=0, microsecond=0)
+            )
+
+            # create a new index with all the hours between the earliest and latest datetime
+            complete_dt = pd.date_range(
+                start=earliest_datetime, end=latest_datetime, freq="H"
+            ).to_frame(index=False, name="datetime")
+
+            # merge meter data with complete_dt
+            df = complete_dt.merge(df, on="datetime", how="left")
+            df["date"] = df["datetime"].dt.date
+            df["hour_of_day"] = df["datetime"].dt.hour
+
+            return df
+
+        def remove_duplicate_datetime(df):
+
+            duplicate_dt_mask = df[df.index.duplicated()].index.copy()
+            # find index to keep
+            index_to_keep = df.index.difference(duplicate_dt_mask)
+            temp_df = df.loc[duplicate_dt_mask, :]
+            # groupby index and select the first value with the actual value
+            temp_df = temp_df.groupby(temp_df.index).apply(
+                lambda x: x["observed"].sort_values().iloc[0]
+            )
+            # merge with the original data
+            df = pd.concat([df.loc[index_to_keep, :], temp_df], axis=0).sort_index()
+
+            return df
+
+        # check if datetime is in the columns
+        self.df = check_datetime(self.df)
+
+        # save the original datetime column
+        self.datetime_original = self.df["datetime"]
+
+        # fill in missing datetimes
+        self.df = get_contiguous_datetime(self.df)
+
+        self.df.set_index("datetime", inplace=True)
+
+        # remove duplicate datetime values
+        self.df = remove_duplicate_datetime(self.df)
+
+        # self.df.set_index("datetime", inplace=True)
+
+        if "metadata" in self.kwargs:
+            if ("solar" in self.kwargs) & (not self.df.columns.isin(["ghi"]).any()):
+                # add solar data
+                lat_exists = "station_latitude" in self.kwargs["metadata"]
+                lon_exists = "station_longitude" in self.kwargs["metadata"]
+                if lat_exists and lon_exists:
+                    self.station_latitude = self.kwargs["metadata"]["station_latitude"]
+                    self.station_longitude = self.kwargs["metadata"][
+                        "station_longitude"
+                    ]
+
+                else:  # TODO: add eeweather to get the station_latitude and station_longitude
+                    # if just have lat and lon of the meter
+                    raise ValueError(
+                        "station_latitude and station_longitude are not in metadata"
+                    )
+
+                self._add_solar_data()
+
+                # add pv_start
+                if "pv_start" in self.kwargs["metadata"]:
+                    self.pv_start = self.kwargs["metadata"]["pv_start"]
+                    if self.pv_start is not None:
+                        self.pv_start = pd.to_datetime(self.pv_start).date()
+
+                    self._add_pv_start_date(self.pv_start)
+
+        self.df = self._interpolate()
+        self.df = self.df[self.outputs]
+        # remove any duplicated columns
+        self.df = self.df.loc[
+            :, ~self.df.columns.duplicated()
+        ]  # TODO: check why we even get these duplicates
+
+    def _interpolate(self):
+        # make column of interpolated boolean if any observed or temperature is nan
+        # check if in each row of the columns in output has nan values, the interpolated column will be true
+        if "to_be_interpolated_columns" in self.kwargs:
+            self.to_be_interpolated_columns = self.kwargs[
+                "to_be_interpolated_columns"
+            ].copy()
+            self.outputs += [f"{col}" for col in self.to_be_interpolated_columns]
+        else:
+            self.to_be_interpolated_columns = ["temperature", "observed"]
+
+        for col in self.outputs:
+            if col not in self.to_be_interpolated_columns: #TODO: this might be diffrent for supplemental data
+                self.to_be_interpolated_columns += [col]
+
+        # #TODO: remove this in the actual implementation, this is just for CalTRACK testing
+        # if 'model' in self.outputs:
+        #     self.to_be_interpolated_columns += ['model']
+
+        for col in self.to_be_interpolated_columns:
+            if f"interpolated_{col}" in self.df.columns:
+                continue
+            self.outputs += [f"interpolated_{col}"]
+
+        # check how many nans are in the columns
+        nan_numbers_cols = self.df[self.to_be_interpolated_columns].isna().sum()
+        # if the number of nan is more than max_missing_hours_pct, then we we flag them
+        #TODO: this should be as a part of disqualification and warning/error logs
+        for col in self.to_be_interpolated_columns:
+            if nan_numbers_cols[col] > len(self.df) * self.max_missing_hours_pct / 100:
+                if not self.too_many_missing_data:
+                    self.too_many_missing_data = True
+                self.missing_values_amount[col] = nan_numbers_cols[col]
+
+        # we can add kwargs to the interpolation class like: inter_kwargs = {"n_cor_idx": self.kwargs["n_cor_idx"]}
+        self.interp = Interpolator()
+
+        self.df = self.interp.interpolate(
+            df=self.df, columns=self.to_be_interpolated_columns
+        )
+        return self.df
+
+    def _get_location_solar_data(self):
+        # get unique years from sdf from 'start' column
+        # years = np.unique(self.df.index.year)
+        years = [2017, 2021]  # TODO: get all years saved them then call as needed
+
+        lat = self.station_latitude
+        lon = self.station_longitude
+
+        nrel_weather = NREL_Weather_API(use_cache=True)
+        solar_df = nrel_weather.get_data(lat, lon, years)
+        # change the temperature column name
+        solar_df = solar_df.rename(columns={"temperature": "temp_NRSDB"})
+
+        # convert to kWh
+        for feature in [
+            "ghi",
+            "dni",
+            "dhi",
+            "clearsky_dhi",
+            "clearsky_dni",
+            "clearsky_ghi",
+        ]:
+            if feature in solar_df.columns:
+                solar_df[feature] /= 1000
+
+        return solar_df
+
+    def _add_solar_data(
+        self, T_type="NOAA"
+    ):  # TODO: should we consider NRSDB temp at all?
+        # get solar data
+        sdf = self._get_location_solar_data()
+
+        # assign temperature column
+        if T_type == "NOAA":
+            pass
+        elif T_type == "NRSDB":
+            self.df["temperature"] = self.df["temp_NRSDB"]
+        else:
+            raise ValueError("T_type must be either NOAA or NRSDB")
+
+        self.sdf = sdf.drop(columns=["temp_NRSDB"])
+
+        # merge site data with solar data on index
+        self.df = self.df.merge(sdf, left_index=True, right_index=True, how="left")
+
+    def _add_pv_start_date(self, pv_start, model_type="TS"):
+        if pv_start is None:
+            pv_start = self.df.index.date.min()
+
+        if "ts" in model_type.lower() or "time" in model_type.lower():
+            self.df["has_pv"] = 0
+            self.df.loc[self.df["date"] >= pv_start, "has_pv"] = 1
+
+        else:
+            self.df["has_pv"] = False
+            self.df.loc[self.df["date"] >= pv_start, "has_pv"] = True
