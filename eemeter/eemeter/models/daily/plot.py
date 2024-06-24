@@ -188,4 +188,4 @@ def plot(
     # if title is not None:
     #     ax.set_title(title)
 
-    # return ax
+    return ax

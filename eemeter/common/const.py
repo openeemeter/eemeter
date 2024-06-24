@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from enum import Enum
 
+
 default_season_def = {
     "options": ["summer", "shoulder", "winter"],
     "January": "winter",
@@ -48,12 +49,6 @@ default_weekday_weekend_def = {
     "Friday": "weekday",
     "Saturday": "weekend",
     "Sunday": "weekend",
-}
-
-
-column_names = {
-    "METER": "meter_value",
-    "TEMPERATURE": "temperature_mean",
 }
 
 

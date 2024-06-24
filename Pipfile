@@ -4,16 +4,16 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+attrs = "*"
 click = "*"
 matplotlib = "*"
-statsmodels = "*"
-scipy = "*"
-pandas = ">=1.0.0"
-attrs = "*"
-numpy = "*"
 numba = "*"
 nlopt = "*"
+numpy = "*"
+pandas = ">=1.0.0"
 pydantic = ">=2.0"
+scipy = "*"
+statsmodels = "*"
 
 [dev-packages]
 sqlalchemy = "*"
