@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional
 
 from eemeter.common.base_settings import BaseSettings
 from eemeter.common.metrics import BaselineMetrics
+# from eemeter.common.const import CountryCode
 
 
 class SelectionChoice(str, Enum):
@@ -32,6 +33,11 @@ class HourlySettings(BaseSettings):
     WINDOW: Optional[int] = pydantic.Field(
         default=None,
         ge=1,                       # TODO: CORRECT THIS BEFORE RELEASE
+        validate_default=True,
+    )
+
+    INCLUDE_SEASONS_CATAGORY: bool = pydantic.Field(
+        default=False,
         validate_default=True,
     )
 

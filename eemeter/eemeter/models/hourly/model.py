@@ -27,6 +27,7 @@ from sklearn.preprocessing import StandardScaler
 from typing import Optional
 import json
 
+import eemeter.common.const as _const
 from eemeter.eemeter.models.hourly import settings as _settings
 from eemeter.common.metrics import BaselineMetrics, BaselineMetricsFromDict
 
@@ -97,22 +98,20 @@ class HourlyModel:
         # meter_data, _ = self._prepare_dataframe(meter_data)
         meter_df = Meter_Data.df.copy()
 
-
         # Prepare feature arrays/matrices
         X, y = self._prepare_features(meter_df)
 
         # Fit the model
         self._model.fit(X, y)
+        self.is_fit = True
 
         # Get number of model parameters
-        num_parameters = (np.count_nonzero(self._model.coef_)
-                               + np.count_nonzero(self._model.intercept_))
+        num_parameters = (np.count_nonzero(self._model.coef_) + 
+                          np.count_nonzero(self._model.intercept_))
         
         # Get metrics
         meter_df = self._predict(Meter_Data)
         self.baseline_metrics = BaselineMetrics(df=meter_df, num_model_params=num_parameters)
-
-        self.is_fit = True
 
         return self
 
@@ -205,14 +204,15 @@ class HourlyModel:
         - A pandas DataFrame containing the initialized meter data
         """
         #TODO: @Armin This meter data has weather data and it should be already clean
-        train_features = self.settings.TRAIN_FEATURES
-        lagged_features = self.settings.LAGGED_FEATURES
-        window = self.settings.WINDOW
-
+        
         # get categorical features
         modified_meter_data = self._add_categorical_features(meter_data)
 
         # normalize the data
+        train_features = self.settings.TRAIN_FEATURES
+        lagged_features = self.settings.LAGGED_FEATURES
+        window = self.settings.WINDOW
+
         modified_meter_data = self._normalize_data(modified_meter_data, train_features)
 
         X, y = self._get_feature_data(modified_meter_data)
@@ -226,29 +226,46 @@ class HourlyModel:
         # Add date, month and day of week
         # There shouldn't be any day_ or month_ columns in the dataframe
         df["date"] = df.index.date
+
+        self.categorical_features = []
+        df_dummies = [df]
+
+        if self.settings.INCLUDE_SEASONS_CATAGORY:
+            df["season"] = df.index.month_name().map(_const.default_season_def) # update in settings if good enough to keep
+
+            # make seasons catagorical #TODO if keeping this make it more general
+            season_cat = [f"season_{i}" for i in np.arange(len(_const.default_season_def["options"])) + 1]
+            self.categorical_features.extend(season_cat)
+
+            seasons = pd.Categorical(df["season"], categories=range(1, 4))
+            season_dummies = pd.get_dummies(seasons, prefix="season")
+            season_dummies.index = df.index
+            df_dummies.append(season_dummies)
+
+        # add month catagory
         df["month"] = df.index.month
-        df["day_of_week"] = df.index.dayofweek
 
-        day_cat = [
-                    f"day_{i}" for i in np.arange(7) + 1
-                ]
-        month_cat = [
-            f"month_{i}"
-            for i in np.arange(12) + 1
-            if f"month_{i}"
-        ]
-        self.categorical_features = day_cat + month_cat
-
-        days = pd.Categorical(df["day_of_week"], categories=range(1, 8))
-        day_dummies = pd.get_dummies(days, prefix="day")
-        # set the same index for day_dummies as df_t
-        day_dummies.index = df.index
+        month_cat = [f"month_{i}" for i in np.arange(12) + 1 if f"month_{i}"]
+        self.categorical_features.extend(month_cat)
 
         months = pd.Categorical(df["month"], categories=range(1, 13))
         month_dummies = pd.get_dummies(months, prefix="month")
         month_dummies.index = df.index
+        df_dummies.append(month_dummies)
 
-        df = pd.concat([df, day_dummies, month_dummies], axis=1)
+        # add day catagory
+        df["day_of_week"] = df.index.dayofweek
+
+        day_cat = [f"day_{i}" for i in np.arange(7) + 1]
+        self.categorical_features.extend(day_cat)
+
+        days = pd.Categorical(df["day_of_week"], categories=range(1, 8))
+        day_dummies = pd.get_dummies(days, prefix="day")
+        day_dummies.index = df.index
+        df_dummies.append(day_dummies)
+
+        # concat all the dummies with the original dataframe
+        df = pd.concat(df_dummies, axis=1)
 
         return df
 
