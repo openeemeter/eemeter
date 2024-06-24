@@ -32,6 +32,8 @@ from eemeter.eemeter.models.hourly import settings as _settings
 from eemeter.common.metrics import BaselineMetrics, BaselineMetricsFromDict
 
 # from eemeter.development.data import HourlyData #TODO: import from eemeter.data
+# from data import HourlyData
+from eemeter.eemeter.models.hourly.data import HourlyData
 
 
 class HourlyModel:
@@ -68,8 +70,8 @@ class HourlyModel:
 
     def fit(self, baseline_data, ignore_disqualification=False):
 
-        # if not isinstance(baseline_data, DailyBaselineData):
-        #     raise TypeError("baseline_data must be a DailyBaselineData object")
+        if not isinstance(baseline_data, HourlyData):
+            raise TypeError("baseline_data must be a HourlyData object")
         # baseline_data.log_warnings()
         # if baseline_data.disqualification and not ignore_disqualification:
         #     raise DataSufficiencyError("Can't fit model on disqualified baseline data")
@@ -124,6 +126,9 @@ class HourlyModel:
         """Perform initial sufficiency and typechecks before passing to private predict"""
         if not self.is_fit:
             raise RuntimeError("Model must be fit before predictions can be made.")
+        
+        if not isinstance(reporting_data, HourlyData):
+            raise TypeError("reporting_data must be a HourlyData object")
 
         # if self.disqualification and not ignore_disqualification:
         #     raise DisqualifiedModelError(
