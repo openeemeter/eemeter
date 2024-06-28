@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2024 OpenEEmeter contributors
+   Copyright 2020 GRIDmeter™ contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -17,12 +17,3 @@
    limitations under the License.
 
 """
-
-from .data import DailyBaselineData, DailyReportingData
-from .model import DailyModel
-
-__all__ = (
-    "DailyBaselineData",
-    "DailyReportingData",
-    "DailyModel",
-)

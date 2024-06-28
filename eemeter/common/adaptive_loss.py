@@ -29,8 +29,12 @@ LOSS_ALPHA_MIN = -100.0
 
 
 @numba.jit(nopython=True, cache=True)
-def weighted_quantile(
-    values, quantiles, weights=None, values_presorted=False, old_style=False
+def _weighted_quantile(
+    values, 
+    quantiles, 
+    weights=None, 
+    values_presorted=False, 
+    old_style=False,
 ):
     """https://stackoverflow.com/questions/21844024/weighted-percentile-using-numpy
     Very close to numpy.percentile, but supports weights.
@@ -51,9 +55,9 @@ def weighted_quantile(
     else:
         weights = weights[finite_idx]
 
-    assert np.all(quantiles >= 0) and np.all(
-        quantiles <= 1
-    ), "quantiles should be in [0, 1]"
+    for q in quantiles:
+        if not 0 <= q <= 1:
+            raise ValueError("quantiles should be in [0, 1]")
 
     if not values_presorted:
         sorter = np.argsort(values)
@@ -68,6 +72,35 @@ def weighted_quantile(
         res /= np.sum(weights)
 
     return np.interp(quantiles, res, values)
+
+
+def weighted_quantile(
+    values, 
+    quantiles, 
+    weights=None, 
+    values_presorted=False, 
+    old_style=False,
+):
+    values = np.array(values
+                      )
+    quantiles = np.array(quantiles)
+    if quantiles.ndim == 0:
+        quantiles = np.array([quantiles])
+
+    if weights is not None:
+        weights = np.array(weights)
+        if weights.ndim == 0:
+            weights = np.array([weights])
+
+    res = _weighted_quantile(
+        values, 
+        quantiles, 
+        weights, 
+        values_presorted, 
+        old_style
+    )
+
+    return res
 
 
 def remove_outliers(data, weights=None, sigma_threshold=3, quantile=0.25):
@@ -86,7 +119,7 @@ def IQR_outlier(data, weights=None, sigma_threshold=3, quantile=0.25):
     if weights is None:
         q13 = np.nanquantile(data[np.isfinite(data)], [quantile, 1 - quantile])
     else:  # weighted_quantile could be used always, don't know speed
-        q13 = weighted_quantile(
+        q13 = _weighted_quantile(
             data[np.isfinite(data)], np.array([quantile, 1 - quantile]), weights=weights
         )
 
@@ -526,35 +559,54 @@ def adaptive_loss_fcn(x, mu=0, c=1, alpha="adaptive", replace_nonfinite=True):
 
 # Assumes that x has not been standardized
 def adaptive_weights(
-    x, alpha="adaptive", sigma=3, quantile=0.25, min_weight=0.00, replace_nonfinite=True
+    x, 
+    mu=None, 
+    sigma=None, 
+    stdev_threshold=3, 
+    quantile=0.25, 
+    alpha="adaptive", 
+    min_weight=0.00, 
+    replace_nonfinite=True
 ):
     """
     This function calculates the adaptive weights for a given data set.
 
     Parameters:
     x (numpy.array): The input data.
+    mu (float, optional): The mean value for standardization. Default is None.
+    sigma (float, optional): The standard deviation for standardization. Default is None.
     alpha (str or float, optional): The alpha value for the adaptive loss function. Default is "adaptive".
-    sigma (float, optional): The sigma threshold for outlier removal. Default is 3.
+    stdev_thresh (float, optional): The standard deviation threshold for outlier removal. Default is 3.
     quantile (float, optional): The quantile for outlier removal. Default is 0.25.
     min_weight (float, optional): The minimum weight. Default is 0.00.
     replace_nonfinite (bool, optional): Whether to replace non-finite values. Default is True.
 
     Returns:
-    tuple: A tuple containing the generalized loss weights, C value, and alpha value.
+    tuple: A tuple containing the generalized loss weights, sigma, and alpha values.
     """
 
-    x_no_outlier, _ = remove_outliers(x, sigma_threshold=sigma, quantile=0.25)
+    if mu is None:
+        x_no_outlier, _ = remove_outliers(x, sigma_threshold=stdev_threshold, quantile=0.25)
 
-    # TODO: Should x be abs or not?
-    # mu = np.median(np.abs(x_no_outlier))
-    mu = np.median(x_no_outlier)
+        # TODO: Should x be abs or not?
+        # mu = np.median(np.abs(x_no_outlier))
+        mu = np.median(x_no_outlier)
+    
+    if sigma is None:
+        sigma = get_C(x, mu, stdev_threshold, quantile)
 
-    C = get_C(x, mu, sigma, quantile)
-    x = (x - mu) / C
+    mu = np.array(mu)
+    sigma = np.array(sigma)
+
+    # replace any sigma == 0 with next smallest value in array
+    sigma[sigma == 0] = np.min(np.abs(sigma[sigma != 0]))
+
+    if np.all(mu != 0) or np.all(sigma != 1):
+        x = (x - mu) / sigma # standardized
 
     if alpha == "adaptive":
         _, alpha = adaptive_loss_fcn(
             x, alpha=alpha, replace_nonfinite=replace_nonfinite
         )
 
-    return generalized_loss_weights(x, a=alpha, min_weight=min_weight), C, alpha
+    return generalized_loss_weights(x, a=alpha, min_weight=min_weight), sigma, alpha

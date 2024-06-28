@@ -195,11 +195,7 @@ def unc_factor(n, interval="PI", alpha=0.10):
         return t_stat(alpha, n) * (1 + 1 / np.sqrt(n))
 
 
-MAD_k = 1 / norm_dist.ppf(
-    0.75
-)  # Conversion factor from MAD to std for normal distribution
-
-
+MAD_k = 1 / norm_dist.ppf(0.75)  # Conversion factor from MAD to std for normal distribution
 def median_absolute_deviation(x):
     """
     This function calculates the Median Absolute Deviation (MAD) of a given array.
