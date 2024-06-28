@@ -24,7 +24,7 @@ import nlopt
 import numba
 import numpy as np
 
-from eemeter.common.adaptive_loss import adaptive_weights
+from eemeter.common.stats.adaptive_loss import adaptive_weights
 from eemeter.eemeter.models.daily.base_models.full_model import full_model
 from eemeter.eemeter.models.daily.base_models.hdd_tidd_cdd import full_model_weight
 from eemeter.eemeter.models.daily.objective_function import obj_fcn_decorator

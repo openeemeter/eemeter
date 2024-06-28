@@ -21,7 +21,7 @@ from copy import deepcopy as copy
 
 import numpy as np
 
-from eemeter.common.utils import unc_factor
+from eemeter.common.stats.basic import unc_factor
 from eemeter.eemeter.models.daily.base_models.full_model import (
     full_model,
     get_full_model_x,

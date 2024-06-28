@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2020 GRIDmeter™ contributors
+   Copyright 2014-2024 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -17,8 +17,6 @@
    limitations under the License.
 
 """
-
-from eemeter.gridmeter.__version__ import *
 
 from eemeter.gridmeter.clustering import *
 from eemeter.gridmeter.individual_meter_matching import *

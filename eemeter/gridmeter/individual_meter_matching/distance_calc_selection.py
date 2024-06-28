@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2020 GRIDmeter™ contributors
+   Copyright 2014-2024 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -22,11 +22,10 @@ from eemeter.gridmeter.individual_meter_matching import highs_settings as _highs
 import numpy as np
 import pandas as pd
 
-from scipy import sparse
-from qpsolvers import solve_ls
-
 from scipy.spatial.distance import cdist
 from scipy.optimize import linear_sum_assignment
+from scipy import sparse
+from qpsolvers import solve_ls
 
 from eemeter.gridmeter.individual_meter_matching.settings import Settings
 

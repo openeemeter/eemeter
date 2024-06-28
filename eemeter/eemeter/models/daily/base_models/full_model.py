@@ -20,7 +20,7 @@
 import numba
 import numpy as np
 
-from eemeter.common.adaptive_loss import adaptive_weights
+from eemeter.common.stats.adaptive_loss import adaptive_weights
 from eemeter.common.utils import LN_MAX_POS_SYSTEM_VALUE, LN_MIN_POS_SYSTEM_VALUE
 
 

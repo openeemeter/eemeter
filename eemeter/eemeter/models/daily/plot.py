@@ -25,7 +25,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
-from eemeter.common.adaptive_loss import IQR_outlier
+from eemeter.common.stats.outliers import IQR_outlier
 from eemeter.eemeter.models.daily.utilities.ellipsoid_test import (
     robust_confidence_ellipse,
 )
