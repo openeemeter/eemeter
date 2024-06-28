@@ -18,8 +18,13 @@
 
 """
 
-from eemeter.gridmeter.stratified_sampling.create_comparison_groups import Stratified_Sampling
-from eemeter.gridmeter.stratified_sampling.settings import (
-    StratifiedSamplingSettings as SS_Settings, 
-    DistanceStratifiedSamplingSettings as DSS_Settings,
-)
+from scipy.stats import yeojohnson
+
+from eemeter.common.stats.distribution_transform import robust_standardize
+
+
+def scipy_YJ_transform(x, robust_type="huber_m_estimate"):
+    x_std, _ = yeojohnson(x, lmbda=None)
+    x_std = robust_standardize(x_std, robust_type)
+
+    return x_std

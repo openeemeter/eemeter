@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2020 GRIDmeter™ contributors
+   Copyright 2014-2024 OpenEEmeter contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -17,11 +17,12 @@
    limitations under the License.
 
 """
-__title__ = "GRIDmeter™"
-__description__ = "Tools for stratified sampling for comparison groups"
-__url__ = "http://github.com/recurve-methods/comparison_groups"
-__version__ = "2.0.0a1"
-__author__ = "Recurve Analytics, Inc"
-__author_email__ = "admin@openee.io"
-__license__ =  "Apache 2.0" 
-__copyright__ = "Copyright 2020 Recurve Analytics, Inc."
+
+from eemeter.common.stats.distribution_transform.mu_sigma import robust_mu_sigma
+
+
+def robust_standardize(x, robust_type="huber_m_estimate", **kwargs):
+    mu, sigma = robust_mu_sigma(x, robust_type, **kwargs)
+    x_std = (x - mu)/sigma
+
+    return x_std

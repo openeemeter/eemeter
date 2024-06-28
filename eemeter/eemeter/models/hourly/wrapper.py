@@ -22,7 +22,7 @@ import json
 import numpy as np
 import pandas as pd
 
-from eemeter.common.utils import t_stat
+from eemeter.common.stats.basic import t_stat
 from eemeter.eemeter.common.features import (
     estimate_hour_of_week_occupancy,
     fit_temperature_bins,

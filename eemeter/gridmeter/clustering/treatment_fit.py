@@ -1,9 +1,29 @@
-"""
-functions for dealing with fitting to clusters
-"""
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 from __future__ import annotations
 
+"""
+
+   Copyright 2014-2024 OpenEEmeter contributors
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+
+"""
+
+"""
+functions for dealing with fitting to clusters
+"""
 
 import scipy.optimize
 import scipy.spatial.distance
@@ -11,10 +31,8 @@ import scipy.spatial.distance
 import numpy as np
 import pandas as pd
 
-from eemeter.gridmeter._utils import (
-    adaptive_loss as _adaptive_loss,
-    multiprocessing as _multiprocessing,
-)
+from eemeter.common.stats.adaptive_loss import adaptive_weights
+from eemeter.gridmeter._utils import multiprocessing as _multiprocessing
 from eemeter.gridmeter.clustering import settings as _settings
 
 
@@ -49,12 +67,10 @@ def fit_to_clusters(
                 wSSE = np.sum(resid**2)
 
             else:
-                weight, _, _ = _adaptive_loss.adaptive_weights(
+                weight, _, _ = adaptive_weights(
                     x=resid,
                     alpha=_ALPHA,
                     sigma=_SIGMA, 
-                    agg_type=_AGG_TYPE,
-
                 ) # type: ignore
 
                 wSSE = np.sum(weight * resid**2)

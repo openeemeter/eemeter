@@ -21,7 +21,7 @@
 import numpy as np
 
 from eemeter.common.utils import OoM
-from eemeter.common.utils import fast_std as stdev
+from eemeter.common.stats.basic import fast_std as stdev
 
 
 def get_idx(A, B):

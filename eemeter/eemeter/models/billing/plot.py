@@ -24,7 +24,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 
-from eemeter.common.adaptive_loss import IQR_outlier
+from eemeter.common.stats.outliers import IQR_outlier
 
 fontsize = 14
 mpl.rc("font", family="sans-serif")
