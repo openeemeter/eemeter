@@ -356,7 +356,7 @@ class DailyModelParameters(BaseModel):
             model_type=model_type,
             intercept=params.get("intercept"),
             hdd_bp=params.get("heating_balance_point"),
-            hdd_beta=params.get("beta_hdd"),
+            hdd_beta=-params.get("beta_hdd"), # note the sign change. legacy model beta was always positive
             cdd_bp=params.get("cooling_balance_point"),
             cdd_beta=params.get("beta_cdd"),
         )

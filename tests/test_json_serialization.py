@@ -187,7 +187,7 @@ def test_legacy_deserialization_daily():
         metered_savings_dataframe["observed"] - metered_savings_dataframe["predicted"]
     ).sum()
 
-    assert round(total_metered_savings, 2) == -3772.7
+    assert round(total_metered_savings, 2) == 891.2
 
 
 def test_legacy_deserialization_hourly(request):
