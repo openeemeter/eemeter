@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+4.0.5
+-----
+
 * Flip sign of heating slope when deserializing legacy models
 
 4.0.4
