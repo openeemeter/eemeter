@@ -352,11 +352,17 @@ class DailyModelParameters(BaseModel):
         else:
             raise ValueError(f"Unknown model type: {model_2_0}")
         params = data["model_params"]
+
+        hdd_beta = params.get("beta_hdd")
+        if model_type == ModelType.HDD_TIDD:
+            # sign is reversed for heating-only model
+            hdd_beta *= -1
+
         daily_coeffs = ModelCoefficients(
             model_type=model_type,
             intercept=params.get("intercept"),
             hdd_bp=params.get("heating_balance_point"),
-            hdd_beta=params.get("beta_hdd"),
+            hdd_beta=hdd_beta,
             cdd_bp=params.get("cooling_balance_point"),
             cdd_beta=params.get("beta_cdd"),
         )
