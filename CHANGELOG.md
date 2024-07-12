@@ -4,6 +4,12 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+4.0.5
+-----
+
+
 * Flip slope when deserializing legacy hdd_only models
 
 4.0.4
