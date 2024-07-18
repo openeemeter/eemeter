@@ -36,6 +36,22 @@ class HourlySettings(BaseSettings):
         validate_default=True,
     )
 
+    N_BINS: Optional[int] = pydantic.Field(
+        default=5,
+        ge=1,                       
+        validate_default=True,
+    )
+
+    INCLUDE_TEMP_BINS_CATAGORY: bool = pydantic.Field(
+        default=True,
+        validate_default=True,
+    )
+
+    SAME_SIZE_BIN: bool = pydantic.Field(
+        default=True,
+        validate_default=True,
+    )
+    
     INCLUDE_SEASONS_CATAGORY: bool = pydantic.Field(
         default=False,
         validate_default=True,
