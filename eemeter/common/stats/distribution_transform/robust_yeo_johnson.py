@@ -238,7 +238,7 @@ def normal_transformation(
     return xt, lam
 
 
-def robust_YJ_transform(x, Q_perc=0.25, c=0.5, outlier_alpha=0.005, c_huber=1.5, robust_type="huber_m_estimate"):
+def robust_YJ(x, Q_perc=0.25, c=0.5, outlier_alpha=0.005, c_huber=1.5, robust_type="iqr"):
     if np.all(x == x[0]): # if all values are the same, do not transform, return
         return np.zeros_like(x)
 

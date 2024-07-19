@@ -32,7 +32,7 @@ import numpy as np
 import pandas as pd
 
 from eemeter.common.stats.adaptive_loss import adaptive_weights
-from eemeter.gridmeter._utils import multiprocessing as _multiprocessing
+from eemeter.common.utils import _execute_with_mp
 from eemeter.gridmeter.clustering import settings as _settings
 
 
@@ -139,7 +139,7 @@ def _match_treatment_to_cluster(
 
         args_list.append([t_id_ls, cp_ls, x0, s])
 
-    coeffs = _multiprocessing._execute_with_mp(
+    coeffs = _execute_with_mp(
         fit_to_clusters_dec, 
         args_list, 
         use_mp=s.USE_MULTIPROCESSING

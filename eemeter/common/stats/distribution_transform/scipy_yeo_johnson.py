@@ -23,7 +23,7 @@ from scipy.stats import yeojohnson
 from eemeter.common.stats.distribution_transform import robust_standardize
 
 
-def scipy_YJ_transform(x, robust_type="huber_m_estimate"):
+def scipy_YJ(x, robust_type="iqr"):
     x_std, _ = yeojohnson(x, lmbda=None)
     x_std = robust_standardize(x_std, robust_type)
 

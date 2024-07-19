@@ -20,7 +20,15 @@
 
 from __future__ import annotations
 
+import numpy as np
 from enum import Enum
+
+
+MIN_POS_SYSTEM_VALUE = (np.finfo(float).tiny * (1e20)) ** (1 / 2)
+MAX_POS_SYSTEM_VALUE = (np.finfo(float).max * (1e-20)) ** (1 / 2)
+LN_MIN_POS_SYSTEM_VALUE = np.log(MIN_POS_SYSTEM_VALUE)
+LN_MAX_POS_SYSTEM_VALUE = np.log(MAX_POS_SYSTEM_VALUE)
+
 
 default_season_def = {
     "options": ["summer", "shoulder", "winter"],
@@ -48,12 +56,6 @@ default_weekday_weekend_def = {
     "Friday": "weekday",
     "Saturday": "weekend",
     "Sunday": "weekend",
-}
-
-
-column_names = {
-    "METER": "meter_value",
-    "TEMPERATURE": "temperature_mean",
 }
 
 

@@ -25,7 +25,7 @@ import pydantic
 
 import eemeter.gridmeter.clustering.const as _const
 from eemeter.gridmeter._utils.base_settings import BaseSettings
-from eemeter.common.stats.adaptive_loss import LOSS_ALPHA_MIN as _LOSS_ALPHA_MIN
+from eemeter.common.stats.adaptive_loss import _LOSS_ALPHA_MIN
 
 
 class Settings(BaseSettings):

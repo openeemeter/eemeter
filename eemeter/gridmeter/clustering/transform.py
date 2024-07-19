@@ -29,10 +29,9 @@ for clustering transforms and the transform logic itself
 import numpy as np
 import pandas as pd
 
-import skfda
-import skfda.representation.grid
-import skfda.representation.basis
-import skfda.preprocessing.dim_reduction.feature_extraction
+from skfda.representation.grid import FDataGrid as _FDataGrid
+from skfda.representation.basis import Fourier as _Fourier
+from skfda.preprocessing.dim_reduction.feature_extraction import FPCA as _FPCA
 
 from eemeter.gridmeter.clustering import settings as _settings
 
@@ -126,11 +125,11 @@ def _fpca_base(
     n_max = int(n_max)
 
     # get maximum principle components
-    fd = skfda.representation.grid.FDataGrid(grid_points=x, data_matrix=y)
-    basis_fcn = skfda.representation.basis.Fourier
+    fd = _FDataGrid(grid_points=x, data_matrix=y)
+    basis_fcn = _Fourier
 
     basis_fd = fd.to_basis(basis_fcn(n_basis=n_max + 4))
-    fpca = skfda.preprocessing.dim_reduction.feature_extraction.FPCA(
+    fpca = _FPCA(
         n_components=n_max, components_basis=basis_fcn(n_basis=n_max + 4)
     )
     fpca.fit(basis_fd)
@@ -139,7 +138,7 @@ def _fpca_base(
     n = int(np.argmin(var_ratio < 0.0) + 1)
 
     basis_fd = fd.to_basis(basis_fcn(n_basis=n + 4))
-    fpca = skfda.preprocessing.dim_reduction.feature_extraction.FPCA(
+    fpca = _FPCA(
         n_components=n, components_basis=basis_fcn(n_basis=n + 4)
     )
     fpca.fit(basis_fd)

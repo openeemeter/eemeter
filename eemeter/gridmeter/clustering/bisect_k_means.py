@@ -22,24 +22,25 @@ from __future__ import annotations
 
 from copy import deepcopy as copy
 
-import sklearn.metrics
-import sklearn.cluster
-import numpy as np
-
-
 import numpy as np
 import scipy.sparse as sp
 
-
-import sklearn.cluster._bisect_k_means
-from sklearn.cluster._kmeans import _kmeans_single_elkan  # type: ignore
-from sklearn.cluster._kmeans import _kmeans_single_lloyd  # type: ignore
-from sklearn.cluster._k_means_common import _inertia_dense  # type: ignore
-from sklearn.cluster._k_means_common import _inertia_sparse  # type: ignore
+from sklearn.cluster import BisectingKMeans as _sklearn_BisectingKMeans
+from sklearn.cluster import _bisect_k_means
+from sklearn.cluster._kmeans import (
+    _kmeans_single_elkan,
+    _kmeans_single_lloyd,
+) # type: ignore
+from sklearn.cluster._k_means_common import (
+    _inertia_dense,
+    _inertia_sparse,
+) # type: ignore
 from sklearn.utils.extmath import row_norms
-from sklearn.utils._openmp_helpers import _openmp_effective_n_threads
-from sklearn.utils.validation import _check_sample_weight  # type: ignore
-from sklearn.utils.validation import check_random_state
+from sklearn.utils.validation import (
+    _check_sample_weight,
+    check_random_state,
+) # type: ignore
+# from sklearn.utils._openmp_helpers import _openmp_effective_n_threads
 
 import logging
 
@@ -47,7 +48,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
-class BisectingKMeans(sklearn.cluster.BisectingKMeans):
+class BisectingKMeans(_sklearn_BisectingKMeans):
     """
     Override of sklearn class which simply saves the labels
     of all intermediate cluster steps.
@@ -120,7 +121,7 @@ class BisectingKMeans(sklearn.cluster.BisectingKMeans):
             X -= self._X_mean
 
         # Initialize the hierarchical clusters tree
-        self._bisecting_tree = sklearn.cluster._bisect_k_means._BisectingTree(
+        self._bisecting_tree = _bisect_k_means._BisectingTree(
             indices=np.arange(X.shape[0]),
             center=X.mean(axis=0),
             score=0,
