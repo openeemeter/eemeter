@@ -61,11 +61,11 @@ class HourlyModel:
             l1_ratio = self.settings.L1_RATIO,
             selection = self.settings.SELECTION,
             max_iter = self.settings.MAX_ITER,
-            random_state = self.settings.SEED,
+            random_state = self.settings._SEED,
         )
         
-        self.n_bins = self.settings.N_BINS
-        self.same_size_bin = self.settings.SAME_SIZE_BIN            
+        self.n_bins = self.settings.TEMPERATURE_BIN_COUNT
+        self.same_size_bin = self.settings.TEMPERATURE_BIN_SAME_SIZE            
 
         self.is_fit = False
         self.categorical_features = None
@@ -280,7 +280,7 @@ class HourlyModel:
         df = pd.merge(df, day_dummies, on='datetime', how='left')
 
         # add mean daily temperature catagory
-        if self.settings.INCLUDE_TEMP_BINS_CATAGORY: #TODO: we need to take care of empty bins, if there is any.
+        if self.settings.INCLUDE_TEMPERATURE_BINS: #TODO: we need to take care of empty bins, if there is any.
             indct_temp = df.groupby('date')["temperature"].mean()
             df = pd.merge(df, indct_temp, on='date', how='left').rename(columns={'temperature_x': 'temperature', 'temperature_y': 'indct_temp'}).set_index(df.index)
             #same size bin cut
@@ -339,7 +339,6 @@ class HourlyModel:
 
 
     def _get_feature_data(self, df): #TODO: ask Travis about window and lagged features
-
         self.new_train_features = self.norm_features_list.copy()
         if self.settings.SUPPLEMENTAL_DATA is not None:
             if 'TS_SUPPLEMENTAL' in self.settings.SUPPLEMENTAL_DATA:

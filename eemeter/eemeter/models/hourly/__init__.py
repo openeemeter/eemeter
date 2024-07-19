@@ -22,6 +22,7 @@ from .settings import HourlySettings, HourlyNonSolarSettings, HourlySolarSetting
 # from .data import HourlyBaselineData, HourlyReportingData
 from .data import HourlyData
 from .model import HourlyModel
+from .clustering_model import ClusteringHourlyModel
 
 __all__ = (
     "HourlyNonSolarSettings",
@@ -30,5 +31,6 @@ __all__ = (
     "HourlyData",
     # "HourlyReportingData",
     "HourlyModel",
+    "ClusteringHourlyModel",
 
 )

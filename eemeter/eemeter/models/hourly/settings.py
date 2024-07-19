@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import numpy as np
+
 import pydantic
 
 from enum import Enum
@@ -22,38 +24,20 @@ class HourlySettings(BaseSettings):
         default=['temperature'], 
         validate_default=True,
     )
-    #TODO: remove this
-    """lagged train features used within the model"""
-    LAGGED_FEATURES: Optional[list[str]] = pydantic.Field(
-        default=None, 
-        validate_default=True,
-    )
-    #TODO: remove this
-    """window"""
-    WINDOW: Optional[int] = pydantic.Field(
-        default=None,
-        ge=1,                       # TODO: CORRECT THIS BEFORE RELEASE
-        validate_default=True,
-    )
 
-    N_BINS: Optional[int] = pydantic.Field(
+    TEMPERATURE_BIN_COUNT: Optional[int] = pydantic.Field(
         default=5,
         ge=1,                       
         validate_default=True,
     )
 
-    INCLUDE_TEMP_BINS_CATAGORY: bool = pydantic.Field(
+    INCLUDE_TEMPERATURE_BINS: bool = pydantic.Field(
         default=True,
         validate_default=True,
     )
 
-    SAME_SIZE_BIN: bool = pydantic.Field(
+    TEMPERATURE_BIN_SAME_SIZE: bool = pydantic.Field(
         default=True,
-        validate_default=True,
-    )
-    
-    INCLUDE_SEASONS_CATAGORY: bool = pydantic.Field(
-        default=False,
         validate_default=True,
     )
 
@@ -91,45 +75,34 @@ class HourlySettings(BaseSettings):
         validate_default=True,
     )
 
-    """ElasticNet random_state parameter"""
+    """seed for any random state assignment (ElasticNet, Clustering)"""
     SEED: Optional[int] = pydantic.Field(
         default=None,
         ge=0,
         validate_default=True,
     )
 
-
     @pydantic.model_validator(mode="after")
     def _lowercase_features(self):
         self.TRAIN_FEATURES = [s.lower() for s in self.TRAIN_FEATURES]
 
-        if self.LAGGED_FEATURES is not None:
-            self.LAGGED_FEATURES = [s.lower() for s in self.LAGGED_FEATURES]
-
         return self
+
 
     @pydantic.model_validator(mode="after")
     def _check_features(self):
         if "temperature" not in self.TRAIN_FEATURES:
             self.TRAIN_FEATURES.insert(0, "temperature")
 
-        # Lag features
-        if self.LAGGED_FEATURES is None:
-            if self.WINDOW is not None:
-                raise ValueError("WINDOW is set but LAGGED_FEATURES is not set")
+        return self
+
+    @pydantic.model_validator(mode="after")
+    def _check_seed(self):
+        if self.SEED is None:
+            self._SEED = np.random.randint(0, 2**32 - 1)
         else:
-            if len(self.LAGGED_FEATURES) == 0:
-                raise ValueError("LAGGED_FEATURES is empty, set as None to remove lagged features")
-            
-            if self.WINDOW is None:
-                raise ValueError("LAGGED_FEATURES is set but WINDOW is not set")
-            
-            # Check if feature in lagged features but not in train features raise error
-            lag_feature_error = [f for f in self.LAGGED_FEATURES if f not in self.TRAIN_FEATURES]
-
-            if lag_feature_error:
-                raise ValueError(f"Features {lag_feature_error} are in LAGGED_FEATURES but not in TRAIN_FEATURES")
-
+            self._SEED = self.SEED
+        
         return self
 
 
