@@ -22,8 +22,7 @@ from __future__ import annotations
 
 import sys
 
-import sklearn.metrics
-import sklearn.cluster
+import sklearn.metrics as _metrics
 import numpy as np
 
 from eemeter.gridmeter.clustering import (
@@ -150,7 +149,7 @@ def score_clusters(
         try:
             # if sample size is a number then it randomly samples within the group, None looks at all
             # if using silhouette score for large datasets, might want to specify sample_size
-            score = float(sklearn.metrics.silhouette_score(
+            score = float(_metrics.silhouette_score(
                         data_non_outlier,
                         labels_non_outlier,
                         metric=dist_metric,
@@ -164,7 +163,7 @@ def score_clusters(
     elif score_choice == _const.ScoreChoice.SILHOUETTE_MEDIAN:
         try:
             # if this is too computationally intensive, could sample clusters instead
-            score_all = -10 * sklearn.metrics.silhouette_samples(
+            score_all = -10 * _metrics.silhouette_samples(
                 data_non_outlier, 
                 labels_non_outlier, 
                 metric=dist_metric
@@ -176,14 +175,14 @@ def score_clusters(
 
     elif score_choice in [_const.ScoreChoice.VARIANCE_RATIO, _const.ScoreChoice.CALINSKI_HARABASZ]:
         try:
-            score = -1*sklearn.metrics.calinski_harabasz_score(data_non_outlier, labels_non_outlier)   
+            score = -1*_metrics.calinski_harabasz_score(data_non_outlier, labels_non_outlier)   
         except Exception:
             score = get_max_score_from_system_size()
             score_error = True
 
     elif score_choice == _const.ScoreChoice.DAVIES_BOULDIN:
         try:
-            score = float(sklearn.metrics.davies_bouldin_score(data_non_outlier, labels_non_outlier))
+            score = float(_metrics.davies_bouldin_score(data_non_outlier, labels_non_outlier))
         except Exception:
             score = get_max_score_from_system_size()
             score_error = True

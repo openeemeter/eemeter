@@ -21,7 +21,7 @@
 from eemeter.common.stats.distribution_transform.mu_sigma import robust_mu_sigma
 
 
-def robust_standardize(x, robust_type="huber_m_estimate", **kwargs):
+def robust_standardize(x, robust_type="iqr", **kwargs):
     mu, sigma = robust_mu_sigma(x, robust_type, **kwargs)
     x_std = (x - mu)/sigma
 

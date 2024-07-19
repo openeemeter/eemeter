@@ -84,7 +84,7 @@ def unc_factor(n, interval="PI", alpha=0.10):
         return t_stat(alpha, n) * (1 + 1 / np.sqrt(n))
 
 
-def median_absolute_deviation(x):
+def median_absolute_deviation(x, mu=None, weights=None):
     """
     This function calculates the Median Absolute Deviation (MAD) of a given array.
 
@@ -95,8 +95,10 @@ def median_absolute_deviation(x):
     float: The calculated MAD of the input array.
     """
 
-    mu = np.median(x)
-    sigma = np.median(np.abs(x - mu)) * MAD_k
+    if mu is None:
+        mu = np.median(x)
+
+    sigma = weighted_quantile(np.abs(x - mu), 0.5, weights=weights)*MAD_k
 
     return sigma
 
@@ -183,21 +185,22 @@ def _weighted_quantile(
         with numpy.quantile.
     :return: numpy.array with computed quantiles.
     """
+    for q in quantiles:
+        if not 0 <= q <= 1:
+            raise ValueError("quantiles should be in [0, 1]")
+        
     finite_idx = np.where(np.isfinite(values))
     values = values[finite_idx]
-    if weights is None or len(weights) == 0:
+
+    if weights is None: # or (weights.size == 0):
         weights = np.ones_like(values)
     else:
         weights = weights[finite_idx]
 
-    for q in quantiles:
-        if not 0 <= q <= 1:
-            raise ValueError("quantiles should be in [0, 1]")
-
     if not values_presorted:
-        sorter = np.argsort(values)
-        values = values[sorter]
-        weights = weights[sorter]
+        sorted_idx = np.argsort(values)
+        values = values[sorted_idx]
+        weights = weights[sorted_idx]
 
     res = np.cumsum(weights) - 0.5 * weights
     if old_style:  # To be convenient with numpy.quantile
@@ -219,15 +222,24 @@ def weighted_quantile(
     values = to_np_array(values)
     quantiles = to_np_array(quantiles)
 
-    if weights is not None:
+    if weights is None:
+        weights = np.ones_like(values)
+    else:
         weights = to_np_array(weights)
 
-    res = _weighted_quantile(
-        values, 
-        quantiles, 
-        weights, 
-        values_presorted, 
-        old_style
-    )
+    try:
+        res = _weighted_quantile(
+            values, 
+            quantiles, 
+            weights, 
+            values_presorted, 
+            old_style
+        )
+    except:
+        print(values)
+        print(quantiles)
+        print(weights)
+
+        raise Exception("Error in weighted_quantile")
 
     return res

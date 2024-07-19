@@ -31,7 +31,7 @@ from eemeter.common.stats.outliers import (
 )
 
 
-LOSS_ALPHA_MIN = -100.0
+_LOSS_ALPHA_MIN = -100.0
 
 
 @numba.jit(nopython=True, cache=True)
@@ -193,7 +193,7 @@ def rolling_C(T, resid, mu, sigma=3, quantile=0.25, window=0.2, step=1.0):
 
 
 @numba.jit(nopython=True, error_model="numpy", cache=True)
-def generalized_loss_fcn(x, a=2, a_min=LOSS_ALPHA_MIN):
+def generalized_loss_fcn(x, a=2, a_min=_LOSS_ALPHA_MIN):
     """
     This function calculates the generalized loss function based on the given parameters.
 
@@ -263,7 +263,7 @@ def generalized_loss_derivative(x, c=1, a=2):
         dloss_dx = 2 * x / (x**2 + 2 * c**2)
     elif a == -2.0:  # Cauchy/Lorentzian loss
         dloss_dx = 16 * c**2 * x / (4 * c**2 + x**2) ** 2
-    elif a <= LOSS_ALPHA_MIN:  # at -infinity, Welsch/Leclerc loss
+    elif a <= _LOSS_ALPHA_MIN:  # at -infinity, Welsch/Leclerc loss
         dloss_dx = x / c**2 * np.exp(-0.5 * (x / c) ** 2)
     else:
         dloss_dx = x / c**2 * ((x / c) ** 2 / np.abs(a - 2) + 1)
@@ -295,7 +295,7 @@ def generalized_loss_weights(x: np.ndarray, a: float = 2, min_weight: float = 0.
             w[i] = 1
         elif a == 0:
             w[i] = 1 / (0.5 * xi**2 + 1)
-        elif a <= LOSS_ALPHA_MIN:
+        elif a <= _LOSS_ALPHA_MIN:
             w[i] = np.exp(-0.5 * xi**2)
         else:
             w[i] = (xi**2 / np.abs(a - 2) + 1) ** (0.5 * a - 1)
@@ -352,7 +352,7 @@ def penalized_loss_fcn(x, a=2, use_penalty=True):
 
     if use_penalty:
         penalty = ln_Z(
-            a, LOSS_ALPHA_MIN
+            a, _LOSS_ALPHA_MIN
         )  # approximate partition function for C=1, tau=10
         loss += penalty
 
@@ -396,7 +396,7 @@ def alpha_scaled(s, a_max=2):
         s_max = 1 - 2 / (1 + 10**a)
         s = (1 - 2 / (1 + 10 ** (a * s**b))) / s_max
 
-        alpha = LOSS_ALPHA_MIN + (2 - LOSS_ALPHA_MIN) * s
+        alpha = _LOSS_ALPHA_MIN + (2 - _LOSS_ALPHA_MIN) * s
 
     else:
         x0 = 1

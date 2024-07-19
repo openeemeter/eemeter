@@ -27,6 +27,7 @@ from functools import cached_property
 
 from eemeter import eemeter as em
 from eemeter.common.utils import unc_factor
+from eemeter.common.utils import sigmoid
 import gridmeter as gm
 
 
@@ -93,33 +94,6 @@ def get_comparison_groups(df_t, df_cp, agg, cg_type="cluster", multiprocessing=T
         raise ValueError("cg_type must be either 'cluster' or 'imm'")
 
 
-# https://stackoverflow.com/questions/51976461/optimal-way-of-defining-a-numerically-stable-sigmoid-function-for-a-list-in-pyth
-def sigmoid(x, k, x_0):
-    def _positive_sigmoid(x):
-        return 1 / (1 + np.exp(-x))
-
-    def _negative_sigmoid(x):
-        # Cache exp so you won't have to calculate it twice
-        exp = np.exp(x)
-
-        return exp / (exp + 1)
-
-    x = (x - x_0) / k
-
-    positive = x >= 0
-    # Boolean array inversion is faster than another comparison
-    negative = ~positive
-
-    # empty contains junk hence will be faster to allocate
-    # Zeros has to zero-out the array after allocation, no need for that
-    # See comment to the answer when it comes to dtype
-    result = np.empty_like(x, dtype=float)
-    result[positive] = _positive_sigmoid(x[positive])
-    result[negative] = _negative_sigmoid(x[negative])
-
-    return result
-
-
 def add_datetime_loadshape_mapping_col(df, data_settings):
     # get mapping between datetime and loadshape
     if data_settings.TIME_PERIOD != 'seasonal_hourly_day_of_week':
@@ -144,7 +118,7 @@ def add_datetime_loadshape_mapping_col(df, data_settings):
 
     return df
 
-
+# TODO: need to cap IMM size if doing this for memory reasons
 class Savings:
     def __init__(self, df_t, df_cp, df_cluster_id, df_t_coeffs, agg_type="mean", reject_outliers=False, scale_diff=True):
         self.df_t = df_t
@@ -338,13 +312,13 @@ class Savings:
         # df["scale"] = (df["abs_%did"] + df["observed_t"])/df["modeled_t"]
 
         scale = (
-            ((df["modeled_t"] - df["observed_t"])*sigmoid(np.abs(df["modeled_t"]), k, m_0) + df["observed_t"]) / 
-            ((df["modeled_cg"] - df["observed_cg"])*sigmoid(np.abs(df["modeled_cg"]), k, m_0) + df["observed_cg"])
+            ((df["modeled_t"] - df["observed_t"])*sigmoid(np.abs(df["modeled_t"]), m_0, k) + df["observed_t"]) / 
+            ((df["modeled_cg"] - df["observed_cg"])*sigmoid(np.abs(df["modeled_cg"]), m_0, k) + df["observed_cg"])
         )
 
         # scale = (
-        #     (df["diff_t"]*sigmoid(np.abs(df["modeled_t"]), k, m_0) + df["observed_t"]) / 
-        #     (df["diff_cg"]*sigmoid(np.abs(df["modeled_cg"]), k, m_0) + df["observed_cg"])
+        #     (df["diff_t"]*sigmoid(np.abs(df["modeled_t"]), m_0, k) + df["observed_t"]) / 
+        #     (df["diff_cg"]*sigmoid(np.abs(df["modeled_cg"]), m_0, k) + df["observed_cg"])
         # )
 
         res = df["diff_t"] - df["diff_cg"]*np.abs(scale)

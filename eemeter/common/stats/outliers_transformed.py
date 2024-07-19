@@ -19,27 +19,31 @@
 """
 
 from eemeter.common.stats.distribution_transform import (
-    bisymlog_transform,
-    scipy_YJ_transform,
-    robust_YJ_transform,
+    bisymlog,
+    scipy_YJ,
+    robust_YJ,
     robust_standardize,
 )
-from eemeter.common.stats.outliers import remove_outliers
+from eemeter.common.stats.outliers import remove_outliers as basic_remove_outliers
 
 
 def remove_outliers(x, weights=None, sigma_threshold=3, quantile=0.25, transform=None):
-    if transform == None:
+    if transform is None:
         xt = x
     elif transform == "standardize":
         xt = robust_standardize(x)
     elif transform == "bisymlog":
-        xt = bisymlog_transform(x)
+        xt = bisymlog(x)
     elif transform == "scipy_YJ":
-        xt = scipy_YJ_transform(x)
+        xt = scipy_YJ(x)
     elif transform == "robust_YJ":
-        xt = robust_YJ_transform(x)
+        xt = robust_YJ(x)
 
-    _, idx_no_outliers = remove_outliers(xt, weights, sigma_threshold, quantile)
+    _, idx_no_outliers = basic_remove_outliers(xt, weights, sigma_threshold, quantile)
+
+    if len(idx_no_outliers) == 0:
+        return x, []
+    
     x_no_outliers = x[idx_no_outliers]
 
     return x_no_outliers, idx_no_outliers

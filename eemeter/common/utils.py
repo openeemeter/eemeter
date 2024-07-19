@@ -18,15 +18,10 @@
 
 """
 
+import multiprocessing as mp
 import numba
 import numpy as np
 from numba.extending import overload
-
-
-MIN_POS_SYSTEM_VALUE = (np.finfo(float).tiny * (1e20)) ** (1 / 2)
-MAX_POS_SYSTEM_VALUE = (np.finfo(float).max * (1e-20)) ** (1 / 2)
-LN_MIN_POS_SYSTEM_VALUE = np.log(MIN_POS_SYSTEM_VALUE)
-LN_MAX_POS_SYSTEM_VALUE = np.log(MAX_POS_SYSTEM_VALUE)
 
 
 @overload(np.clip)
@@ -176,3 +171,59 @@ def RoundToSigFigs(x, p):
     x_positive = np.where(np.isfinite(x) & (x != 0), np.abs(x), 10 ** (p - 1))
     mags = 10 ** (p - 1 - OoM(x_positive))
     return np.round(x * mags) / mags
+
+
+def sigmoid(x, x0=0, k=1):
+    # https://stackoverflow.com/questions/51976461/optimal-way-of-defining-a-numerically-stable-sigmoid-function-for-a-list-in-pyth
+    
+    def _positive_sigmoid(x):
+        return 1 / (1 + np.exp(-x))
+
+    def _negative_sigmoid(x):
+        # Cache exp so you won't have to calculate it twice
+        exp = np.exp(x)
+
+        return exp / (exp + 1)
+
+    x = (x - x0) / k
+
+    positive = x >= 0
+    # Boolean array inversion is faster than another comparison
+    negative = ~positive
+
+    # empty contains junk hence will be faster to allocate
+    # Zeros has to zero-out the array after allocation, no need for that
+    # See comment to the answer when it comes to dtype
+    res = np.empty_like(x, dtype=float)
+    res[positive] = _positive_sigmoid(x[positive])
+    res[negative] = _negative_sigmoid(x[negative])
+
+    return res
+
+
+def _execute_with_mp(fcn, args_list, use_mp=True):
+    """Runs a function with multiprocessing if use_mp is True, otherwise runs
+    the function without multiprocessing.
+
+    Args:
+        fcn (function): The function to run.
+        args_list (iterable): The list of arguments to pass to the function.
+        use_mp (bool): Whether to use multiprocessing.
+
+    Returns:
+        The result of the function.
+    """
+
+    if len(args_list) == 1:
+        use_mp = False
+
+    if use_mp:
+        with mp.Pool(processes=mp.cpu_count()) as mp_pool:
+            result = mp_pool.map(fcn, args_list)
+
+    else:
+        result = []
+        for args in args_list:
+            result.append(fcn(args))
+
+    return result

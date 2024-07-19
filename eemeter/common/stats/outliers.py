@@ -54,8 +54,29 @@ def _IQR_outlier(data, weights=None, sigma_threshold=3, quantile=0.25):
 
 
 def remove_outliers(x, weights=None, sigma_threshold=3, quantile=0.25):
-    outlier_bnds = _IQR_outlier(x, weights, sigma_threshold, quantile)
-    idx_no_outliers = np.argwhere((x >= outlier_bnds[0]) & (x <= outlier_bnds[1])).flatten()
+    # if all values are the same return back all indices
+    if len(np.unique(x)) == 1:
+        return x, np.arange(len(x))
+
+    # prevent x_no_outliers from being empty
+    for sigma_added in range(10):
+        outlier_bnds = _IQR_outlier(x, weights, sigma_threshold + sigma_added, quantile)
+        idx_no_outliers = np.argwhere((x >= outlier_bnds[0]) & (x <= outlier_bnds[1])).flatten()
+
+        if idx_no_outliers.size > 0:
+            break
+
+    # if idx_no_outliers is empty, keep the closest meter to the outlier bounds
+    if len(idx_no_outliers) == 0:
+        # distance between x and outlier bounds
+        dist = -np.minimum(x - outlier_bnds[0], outlier_bnds[1] - x)
+
+        # sort by distance
+        # idx_no_outliers = np.argsort(dist)
+
+        # select closest
+        idx_no_outliers = np.array([np.argmin(dist)])
+
     x_no_outliers = x[idx_no_outliers]
 
     return x_no_outliers, idx_no_outliers
