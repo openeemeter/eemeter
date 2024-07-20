@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import copy
 
 from scipy.interpolate import RBFInterpolator
 
@@ -227,9 +228,9 @@ class HourlyData:
         self.outputs = []
 
         self.df = df
-        self.kwargs = kwargs
+        self.kwargs = copy.deepcopy(kwargs)
         if "outputs" in self.kwargs:
-            self.outputs = kwargs["outputs"].copy()
+            self.outputs = copy.deepcopy(self.kwargs["outputs"])
         else:
             self.outputs = ["temperature", "observed"]
 
@@ -335,15 +336,16 @@ class HourlyData:
 
                 self._add_solar_data()
 
-                # add pv_start
-                if "pv_start" in self.kwargs["metadata"]:
-                    self.pv_start = self.kwargs["metadata"]["pv_start"]
-                    if self.pv_start is not None:
-                        self.pv_start = pd.to_datetime(self.pv_start).date()
-
-                    self._add_pv_start_date(self.pv_start)
-
         self.df = self._interpolate()
+        # add pv start date here to avoid interpolating the pv start date
+        if "metadata" in self.kwargs:
+            if "pv_start" in self.kwargs["metadata"]:
+                self.pv_start = self.kwargs["metadata"]["pv_start"]
+                if self.pv_start is not None:
+                    self.pv_start = pd.to_datetime(self.pv_start).date()
+
+                self._add_pv_start_date(self.pv_start)
+
         self.df = self.df[self.outputs]
         # remove any duplicated columns
         self.df = self.df.loc[
@@ -357,13 +359,13 @@ class HourlyData:
             self.to_be_interpolated_columns = self.kwargs[
                 "to_be_interpolated_columns"
             ].copy()
-            self.outputs += [f"{col}" for col in self.to_be_interpolated_columns]
+            self.outputs += [f"{col}" for col in self.to_be_interpolated_columns if col not in self.outputs]
         else:
             self.to_be_interpolated_columns = ["temperature", "observed"]
 
-        for col in self.outputs:
-            if col not in self.to_be_interpolated_columns: #TODO: this might be diffrent for supplemental data
-                self.to_be_interpolated_columns += [col]
+        # for col in self.outputs:
+        #     if col not in self.to_be_interpolated_columns: #TODO: this might be diffrent for supplemental data
+        #         self.to_be_interpolated_columns += [col]
 
         # #TODO: remove this in the actual implementation, this is just for CalTRACK testing
         # if 'model' in self.outputs:
