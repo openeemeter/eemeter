@@ -46,20 +46,20 @@ class ClusteringHourlyModel(HourlyModel):
                 # temp_bins.append(np.inf)
                 res, temp_bins= pd.cut(df['daily_temp'], bins=temp_bins, retbins=True, labels=False)
                 df['daily_temp_bins_cat'] = res
-                self.indct_temp_bins = temp_bins
+                self.daily_temp_bins = temp_bins
 
             elif self.fit_pred_status == 'predicting':
-                res = pd.cut(df['daily_temp'], bins=self.indct_temp_bins, labels=False)
+                res = pd.cut(df['daily_temp'], bins=self.daily_temp_bins, labels=False)
                 df['daily_temp_bins_cat'] = res
 
 
             bin_dummies = pd.get_dummies(
-                pd.Categorical(df['daily_temp_bins_cat'], categories=range(len(self.indct_temp_bins )-1)),
+                pd.Categorical(df['daily_temp_bins_cat'], categories=range(len(self.daily_temp_bins )-1)),
                 prefix='daily_temp'
                 )
             bin_dummies.index = df.index
 
-            temp_cat = [f'daily_temp_{i}' for i in range(len(self.indct_temp_bins)-1)]
+            temp_cat = [f'daily_temp_{i}' for i in range(len(self.daily_temp_bins)-1)]
             self.categorical_features.extend(temp_cat)
             df = pd.merge(df, bin_dummies, how='left', left_index=True, right_index=True)
 
@@ -76,9 +76,9 @@ class ClusteringHourlyModel(HourlyModel):
 
         if self.fit_pred_status == 'fitting':
             fit_df_grouped = df.groupby(['month', 'day_of_week', 'hour'])['observed'].mean().reset_index()
-            self.fit_grouped = fit_df_grouped.groupby(['month', 'day_of_week'])['observed'].apply(list)
+            fit_grouped = fit_df_grouped.groupby(['month', 'day_of_week'])['observed'].apply(list)
 
-            X = np.array(self.fit_grouped.tolist())
+            X = np.array(fit_grouped.tolist())
 
             max_clusters = 6 # TODO: add to settings with valid entries
             metric = 'euclidean' # TODO: add to settings with valid entries
@@ -106,7 +106,8 @@ class ClusteringHourlyModel(HourlyModel):
             self.clusters = HoF["clusters"]
             self.centroids = HoF["centroids"]
 
-            df['cluster'] = df.apply(lambda x: self.clusters[self.fit_grouped.index.get_loc((x['month'], x['day_of_week']))], axis=1) #TODO: important: what if we didn't have one month in the baseline
+            self.fit_df_grouped_index = fit_grouped.index
+            df['cluster'] = df.apply(lambda x: self.clusters[self.fit_df_grouped_index.get_loc((x['month'], x['day_of_week']))], axis=1) #TODO: important: what if we didn't have one month in the baseline
 
         elif self.fit_pred_status == 'predicting':
             pred_df_grouped = df.groupby(['month', 'day_of_week', 'hour'])['observed'].mean().reset_index()
@@ -116,14 +117,14 @@ class ClusteringHourlyModel(HourlyModel):
             try:
                 df['cluster'] = df.apply(lambda x: self.clusters[pred_grouped.index.get_loc((x['month'], x['day_of_week']))], axis=1) #TODO: important: what if we didn't have one month in the baseline
             except:
-                unique_pairs = self.fit_grouped.index.unique()
+                unique_pairs = self.fit_df_grouped_index.unique()
                 unique_pairs = [f"{month}-{day}" for month, day in unique_pairs]
                 df['month_day_pair'] = df['month'].astype(str) + '-' + df['day_of_week'].astype(str)
                 filtered_df = df[df['month_day_pair'].isin(unique_pairs)]
                 filtered_df = filtered_df.drop(columns=['month_day_pair'])
                 df['cluster'] = None
 
-                df.loc[filtered_df.index, 'cluster'] = filtered_df.apply(lambda x: self.clusters[self.fit_grouped.index.get_loc((x['month'], x['day_of_week']))], axis=1)
+                df.loc[filtered_df.index, 'cluster'] = filtered_df.apply(lambda x: self.clusters[self.fit_df_grouped_index.get_loc((x['month'], x['day_of_week']))], axis=1)
                 # for the rest of the df, for each day compare the observed with the cluster centroids and assign the cluster with the smallest distance
                 not_seen = df[df['cluster'].isna()]
                 not_seen_grouped = not_seen.groupby(['month', 'day_of_week', 'hour'])['observed'].mean().reset_index()

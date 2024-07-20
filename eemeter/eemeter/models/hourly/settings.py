@@ -41,6 +41,12 @@ class HourlySettings(BaseSettings):
         validate_default=True,
     )
 
+    MAX_CLUSTER_NUMBER: Optional[int] = pydantic.Field(
+        default=10,
+        ge=2,
+        validate_default=True,
+    )
+
     """supplemental data"""
     SUPPLEMENTAL_DATA: Optional[dict] = pydantic.Field(
         default=None,
