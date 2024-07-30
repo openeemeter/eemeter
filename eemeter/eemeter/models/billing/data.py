@@ -17,7 +17,9 @@
    limitations under the License.
 
 """
-from typing import Optional, Union
+from __future__ import annotations
+
+import datetime
 
 import numpy as np
 import pandas as pd
@@ -276,39 +278,24 @@ class _BillingData(_DailyData):
 
 class BillingBaselineData(_BillingData):
     """
-    Data class to represent Billing Baseline Data. Only baseline data should go into the dataframe input, no blackout data should be input.
+    Data class to represent Billing Baseline Data.
+
+    Only baseline data should go into the dataframe input, no blackout data should be input.
     Checks sufficiency for the data provided as input depending on OpenEEMeter specifications and populates disqualifications and warnings based on it.
+
     Billing data should have an extra month's data appended at the to denote end of period. (Do not append NaN, any other value would work.)
 
-    Parameters
-    ----------
+    Args:
+        df (DataFrame): A dataframe having a datetime index or a datetime column with the timezone also being set.
+            It also requires 2 more columns - 'observed' for meter data, and 'temperature' for temperature data.
+            The temperature column should have values in Fahrenheit. Please convert your temperatures accordingly.
 
-    1. data : A dataframe having a datetime index or a datetime column with the timezone also being set.
-        It also requires 2 more columns - 'observed' for meter data, and 'temperature' for temperature data.
-        The temperature column should have values in Fahrenheit. Please convert your temperatures accordingly.
+        is_electricity_data (bool): Flag to ascertain if this is electricity data or not. Electricity data values of 0 are set to NaN.
 
-    2. is_electricity_data : boolean flag to ascertain if this is electricity data or not. Electricity data values of 0 are set to NaN.
-
-    Returns
-    -------
-
-    An instance of the BillingBaselineData class.
-
-    Public Attributes
-    -----------------
-
-    1. df : Immutable dataframe that contains the meter and temperature values for the baseline data period.
-    2. disqualification : Serious issues with the data that can degrade the quality of the model. If you want to go ahead with building the model while ignoring them,
-                            set the ignore_disqualification = True flag in the model. By default disqualifications are not ignored.
-    3. warnings : Issues with the data, but not that will severely reduce the quality of the model built.
-
-    Public Methods
-    --------------
-
-    1. from_series: Public method that can can handle two separate series (meter and temperature) and join them to create a single dataframe.
-                    The temperature column should have values in Fahrenheit.
-
-    2. log_warnings: View the disqualifications and warnings associated with the current data input provided.
+    Attributes:
+        df (DataFrame): Immutable dataframe that contains the meter and temperature values for the baseline data period.
+        disqualification (list[EEMeterWarning]): A list of serious issues with the data that can degrade the quality of the model. If you want to go ahead with building the model while ignoring them, set the ignore_disqualification = True flag in the model. By default disqualifications are not ignored.
+        warnings (list[EEMeterWarning]): A list of ssues with the data, but none that will severely reduce the quality of the model built.
     """
 
     def _check_data_sufficiency(self, sufficiency_df):
@@ -341,40 +328,24 @@ class BillingBaselineData(_BillingData):
 
 
 class BillingReportingData(_BillingData):
-    """
-    Data class to represent Billing Reporting Data. Only reporting data should go into the dataframe input, no blackout data should be input.
+    """Data class to represent Billing Reporting Data.
+
+    Only reporting data should go into the dataframe input, no blackout data should be input.
     Checks sufficiency for the data provided as input depending on OpenEEMeter specifications and populates disqualifications and warnings based on it.
+
     Meter data input is optional for the reporting class.
 
-    Parameters
-    ----------
+    Args:
+        df (DataFrame): A dataframe having a datetime index or a datetime column with the timezone also being set.
+            It also requires 2 more columns - 'observed' for meter data, and 'temperature' for temperature data.
+            The temperature column should have values in Fahrenheit. Please convert your temperatures accordingly.
 
-    1. data : A dataframe having a datetime index or a datetime column with the timezone also being set.
-        It also requires 1 more column - 'temperature' for temperature data. Adding a column for 'observed', i.e. meter data is optional.
-        The temperature column should have values in Fahrenheit. Please convert your temperatures accordingly.
+        is_electricity_data (bool): Flag to ascertain if this is electricity data or not. Electricity data values of 0 are set to NaN.
 
-    2. is_electricity_data : boolean flag to ascertain if this is electricity data or not. Electricity data values of 0 are set to NaN.
-
-    Returns
-    -------
-
-    An instance of the DailyBaselineData class.
-
-    Public Attributes
-    -----------------
-
-    1. df : Immutable dataframe that contains the meter and temperature values for the baseline data period.
-    2. disqualification : Serious issues with the data that can degrade the quality of the model. If you want to go ahead with building the model while ignoring them,
-                            set the ignore_disqualification = True flag in the model. By default disqualifications are not ignored.
-    3. warnings : Issues with the data, but not that will severely reduce the quality of the model built.
-
-    Public Methods
-    --------------
-
-    1. from_series: Public method that can can handle two separate series (meter and temperature) and join them to create a single dataframe.
-                    The temperature column should have values in Fahrenheit.
-
-    2. log_warnings: View the disqualifications and warnings associated with the current data input provided.
+    Attributes:
+        df (DataFrame): Immutable dataframe that contains the meter and temperature values for the baseline data period.
+        disqualification (list[EEMeterWarning]): A list of serious issues with the data that can degrade the quality of the model. If you want to go ahead with building the model while ignoring them, set the ignore_disqualification = True flag in the model. By default disqualifications are not ignored.
+        warnings (list[EEMeterWarning]): A list of ssues with the data, but none that will severely reduce the quality of the model built.
     """
 
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
@@ -387,31 +358,21 @@ class BillingReportingData(_BillingData):
     @classmethod
     def from_series(
         cls,
-        meter_data: Optional[Union[pd.Series, pd.DataFrame]],
-        temperature_data: Union[pd.Series, pd.DataFrame],
-        is_electricity_data: Optional[bool] = None,
-        tzinfo=None,
+        meter_data: pd.Series | pd.DataFrame | None,
+        temperature_data: pd.Series | pd.DataFrame,
+        is_electricity_data: bool,
+        tzinfo: datetime.tzinfo | None = None,
     ):
-        """
-        Create a BillingReportingData instance from meter data and temperature data.
+        """Create a BillingReportingData instance from meter data and temperature data.
 
-        Parameters
-        ----------
+        Args:
+            meter_data: The meter data to be used for the BillingReportingData instance.
+            temperature_data: The temperature data to be used for the BillingReportingData instance.
+            is_electricity_data: Flag indicating whether the meter data represents electricity data.
+            tzinfo: Timezone information to be used for the meter data.
 
-        - meter_data: pd.Series or pd.DataFrame (Optional attribute)
-            The meter data to be used for the BillingReportingData instance.
-        - temperature_data: pd.Series or pd.DataFrame (Required)
-            The temperature data to be used for the BillingReportingData instance.
-        - is_electricity_data: bool (Optional)
-            Flag indicating whether the meter data represents electricity data.
-        - tzinfo: tz (optional)
-            Timezone information to be used for the meter data.
-
-        Returns
-        -------
-
-        - BillingReportingData
-            A newly created BillingReportingData instance.
+        Returns:
+            An instance of the Data class.
         """
         if tzinfo and meter_data is not None:
             raise ValueError(

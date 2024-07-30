@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
+"""A module housing Daily Model classes and functions.
 
    Copyright 2014-2024 OpenEEmeter contributors
 

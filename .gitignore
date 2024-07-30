@@ -6,6 +6,7 @@ _build
 build/
 dist/
 prof/
+venv/
 
 .ipynb_checkpoints/
 

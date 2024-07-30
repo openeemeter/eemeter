@@ -17,7 +17,9 @@
    limitations under the License.
 
 """
-from typing import Optional, Union
+from __future__ import annotations
+
+import datetime
 
 import numpy as np
 import pandas as pd
@@ -38,6 +40,10 @@ class _DailyData:
     """Private base class for daily baseline and reporting data.
 
     Will raise exception during data sufficiency check if instantiated
+
+    Args:
+        df (pd.DataFrame): The DataFrame containing the observed meter data.
+        is_electricity_data (bool): A flag indicating whether the data represents electricity data. This is required as electricity data with 0 values are converted to NaNs.
     """
 
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
@@ -61,14 +67,9 @@ class _DailyData:
         self.log_warnings()
 
     @property
-    def df(self):
-        """
-        Get the corrected input data stored in the class. The actual dataframe is immutable, this returns a copy.
+    def df(self) -> pd.DataFrame | None:
+        """Get the corrected input data stored in the class. The actual dataframe is immutable, this returns a copy."""
 
-        Returns
-        -------
-            pandas.DataFrame or None: A copy of the DataFrame if it exists, otherwise None.
-        """
         if self._df is None:
             return None
         else:
@@ -77,24 +78,21 @@ class _DailyData:
     @classmethod
     def from_series(
         cls,
-        meter_data: Union[pd.Series, pd.DataFrame],
-        temperature_data: Union[pd.Series, pd.DataFrame],
-        is_electricity_data,
+        meter_data: pd.Series | pd.DataFrame,
+        temperature_data: pd.Series | pd.DataFrame,
+        is_electricity_data: bool,
     ):
-        """
-        Create an instance of the Data class from meter data and temperature data.
+        """Create an instance of the Data class from meter data and temperature data.
 
-        Parameters
-        ----------
+        Public method that can can handle two separate series (meter and temperature) and join them to create a single dataframe. The temperature column should have values in Fahrenheit.
 
-        - meter_data (pd.Series or pd.DataFrame): The meter data.
-        - temperature_data (pd.Series or pd.DataFrame): The temperature data.
-        - is_electricity_data: A flag indicating whether the data represents electricity data. This is required as electricity data with 0 values are converted to NaNs.
+        Args:
+            meter_data: The meter data.
+            temperature_data: The temperature data.
+            is_electricity_data: A flag indicating whether the data represents electricity data. This is required as electricity data with 0 values are converted to NaNs.
 
-        Returns
-        -------
-
-        - Data: An instance of the Data class with the dataframe populated with the corrected data, alongwith warnings and disqualifications based on the input.
+        Returns:
+            An instance of the Data class with the dataframe populated with the corrected data, along with warnings and disqualifications based on the input.
         """
         if isinstance(meter_data, pd.Series):
             meter_data = meter_data.to_frame()
@@ -207,10 +205,13 @@ class _DailyData:
         df = pd.concat([meter_data, temperature_data], axis=1)
         return cls(df, is_electricity_data)
 
-    def log_warnings(self):
-        """
-        Logs the warnings and disqualifications associated with the data.
+    def log_warnings(self) -> None:
+        """Logs the warnings and disqualifications associated with the data.
 
+        View the disqualifications and warnings associated with the current data input provided.
+
+        Returns:
+            None
         """
         for warning in self.warnings + self.disqualification:
             warning.warn()
@@ -528,39 +529,23 @@ class _DailyData:
 
 
 class DailyBaselineData(_DailyData):
-    """
-    Data class to represent Daily Baseline Data. Only baseline data should go into the dataframe input, no blackout data should be input.
+    """Data class to represent Daily Baseline Data.
+
+    Only baseline data should go into the dataframe input, no blackout data should be input.
     Checks sufficiency for the data provided as input depending on OpenEEMeter specifications and populates disqualifications and warnings based on it.
 
-    Parameters
-    ----------
+    Args:
+        df (DataFrame): A dataframe having a datetime index or a datetime column with the timezone also being set.
+            It also requires 2 more columns - 'observed' for meter data, and 'temperature' for temperature data.
+            The temperature column should have values in Fahrenheit. Please convert your temperatures accordingly.
 
-    1. data : A dataframe having a datetime index or a datetime column with the timezone also being set.
-        It also requires 2 more columns - 'observed' for meter data, and 'temperature' for temperature data.
-        The temperature column should have values in Fahrenheit. Please convert your temperatures accordingly.
+        is_electricity_data (bool): Flag to ascertain if this is electricity data or not. Electricity data values of 0 are set to NaN.
 
-    2. is_electricity_data : boolean flag to ascertain if this is electricity data or not. Electricity data values of 0 are set to NaN.
+    Attributes:
+        df (DataFrame): Immutable dataframe that contains the meter and temperature values for the baseline data period.
+        disqualification (list[EEMeterWarning]): A list of serious issues with the data that can degrade the quality of the model. If you want to go ahead with building the model while ignoring them, set the ignore_disqualification = True flag in the model. By default disqualifications are not ignored.
+        warnings (list[EEMeterWarning]): A list of ssues with the data, but none that will severely reduce the quality of the model built.
 
-    Returns
-    -------
-
-    An instance of the DailyBaselineData class.
-
-    Public Attributes
-    -----------------
-
-    1. df : Immutable dataframe that contains the meter and temperature values for the baseline data period.
-    2. disqualification : Serious issues with the data that can degrade the quality of the model. If you want to go ahead with building the model while ignoring them,
-                            set the ignore_disqualification = True flag in the model. By default disqualifications are not ignored.
-    3. warnings : Issues with the data, but not that will severely reduce the quality of the model built.
-
-    Public Methods
-    --------------
-
-    1. from_series: Public method that can can handle two separate series (meter and temperature) and join them to create a single dataframe.
-                    The temperature column should have values in Fahrenheit.
-
-    2. log_warnings: View the disqualifications and warnings associated with the current data input provided.
     """
 
     def _check_data_sufficiency(self, sufficiency_df):
@@ -589,40 +574,24 @@ class DailyBaselineData(_DailyData):
 
 
 class DailyReportingData(_DailyData):
-    """
-    Data class to represent Daily Reporting Data. Only reporting data should go into the dataframe input, no blackout data should be input.
+    """Data class to represent Daily Reporting Data.
+
+    Only reporting data should go into the dataframe input, no blackout data should be input.
     Checks sufficiency for the data provided as input depending on OpenEEMeter specifications and populates disqualifications and warnings based on it.
+
     Meter data input is optional for the reporting class.
 
-    Parameters
-    ----------
+    Args:
+        df (DataFrame): A dataframe having a datetime index or a datetime column with the timezone also being set.
+            It also requires 2 more columns - 'observed' for meter data, and 'temperature' for temperature data.
+            The temperature column should have values in Fahrenheit. Please convert your temperatures accordingly.
 
-    1. data : A dataframe having a datetime index or a datetime column with the timezone also being set.
-        It also requires 1 more column - 'temperature' for temperature data. Adding a column for 'observed', i.e. meter data is optional.
-        The temperature column should have values in Fahrenheit. Please convert your temperatures accordingly.
+        is_electricity_data (bool): Flag to ascertain if this is electricity data or not. Electricity data values of 0 are set to NaN.
 
-    2. is_electricity_data : boolean flag to ascertain if this is electricity data or not. Electricity data values of 0 are set to NaN.
-
-    Returns
-    -------
-
-    An instance of the DailyBaselineData class.
-
-    Public Attributes
-    -----------------
-
-    1. df : Immutable dataframe that contains the meter and temperature values for the baseline data period.
-    2. disqualification : Serious issues with the data that can degrade the quality of the model. If you want to go ahead with building the model while ignoring them,
-                            set the ignore_disqualification = True flag in the model. By default disqualifications are not ignored.
-    3. warnings : Issues with the data, but not that will severely reduce the quality of the model built.
-
-    Public Methods
-    --------------
-
-    1. from_series: Public method that can can handle two separate series (meter and temperature) and join them to create a single dataframe.
-                    The temperature column should have values in Fahrenheit.
-
-    2. log_warnings: View the disqualifications and warnings associated with the current data input provided.
+    Attributes:
+        df (DataFrame): Immutable dataframe that contains the meter and temperature values for the baseline data period.
+        disqualification (list[EEMeterWarning]): A list of serious issues with the data that can degrade the quality of the model. If you want to go ahead with building the model while ignoring them, set the ignore_disqualification = True flag in the model. By default disqualifications are not ignored.
+        warnings (list[EEMeterWarning]): A list of ssues with the data, but none that will severely reduce the quality of the model built.
     """
 
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
@@ -635,31 +604,21 @@ class DailyReportingData(_DailyData):
     @classmethod
     def from_series(
         cls,
-        meter_data: Optional[Union[pd.Series, pd.DataFrame]],
-        temperature_data: Union[pd.Series, pd.DataFrame],
-        is_electricity_data: Optional[bool] = None,
-        tzinfo=None,
-    ):
-        """
-        Create a DailyReportingData instance from meter data and temperature data.
+        meter_data: pd.Series | pd.DataFrame | None,
+        temperature_data: pd.Series | pd.DataFrame,
+        is_electricity_data: bool,
+        tzinfo: datetime.tzinfo | None = None,
+    ) -> DailyReportingData:
+        """Create an instance of the Data class from meter data and temperature data.
 
-        Parameters
-        ----------
+        Args:
+            meter_data: The meter data to be used for the DailyReportingData instance.
+            temperature_data: The temperature data to be used for the DailyReportingData instance.
+            is_electricity_data: Flag indicating whether the meter data represents electricity data.
+            tzinfo: Timezone information to be used for the meter data.
 
-        - meter_data: pd.Series or pd.DataFrame (Optional attribute)
-            The meter data to be used for the DailyReportingData instance.
-        - temperature_data: pd.Series or pd.DataFrame (Required)
-            The temperature data to be used for the DailyReportingData instance.
-        - is_electricity_data: bool (Optional)
-            Flag indicating whether the meter data represents electricity data.
-        - tzinfo: tz (optional)
-            Timezone information to be used for the meter data.
-
-        Returns
-        -------
-
-        - DailyReportingData
-            A newly created DailyReportingData instance.
+        Returns:
+            An instance of the Data class.
         """
         if tzinfo and meter_data is not None:
             raise ValueError(
