@@ -1,0 +1,1 @@
+from docs folder to start server: `mkdocs serve -a localhost:8001 -w ..` 

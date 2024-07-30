@@ -1,0 +1,73 @@
+site_name: OpenEEmeter
+
+docs_dir: "source"
+extra_css:
+  - "css/custom.css"
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [..]
+          options:
+            show_bases: false
+            show_root_heading: true
+            show_root_toc_entry: false
+            show_if_no_docstring: true
+            inherited_members: true
+            members_order: source
+            merge_init_into_class: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            show_docstring_modules: false
+
+nav:
+  - Home: index.md
+  - Reference - Code API: 
+    - eemeter Modules: 
+      - Daily Model: reference/eemeter/daily_model.md
+      - Billing Model: reference/eemeter/billing_model.md
+      - Daily Model Settings: reference/eemeter/daily_model_settings.md
+      - Hourly Model: reference/eemeter/hourly_model.md
+      - Utilities: reference/eemeter/utilities.md
+    
+  - About: about.md
+
+theme:
+  name: "material"
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  
+  language: en
+
+  palette:
+    - scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+    - scheme: default
+      primary: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - admonition
+  - toc:
+      permalink: true

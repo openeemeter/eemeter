@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
+"""A module for assiting with input/output operations.
 
    Copyright 2014-2024 OpenEEmeter contributors
 
@@ -17,8 +17,24 @@
    limitations under the License.
 
 """
+
+from __future__ import annotations
+
+import datetime
+
 import numpy as np
 import pandas as pd
+from pandas._typing import (
+    CompressionOptions,
+    CSVEngine,
+    DtypeArg,
+    DtypeBackend,
+    FilePath,
+    IndexLabel,
+    ReadCsvBuffer,
+    StorageOptions,
+    WriteBuffer,
+)
 
 __all__ = (
     "meter_data_from_csv",
@@ -31,40 +47,32 @@ __all__ = (
 
 
 def meter_data_from_csv(
-    filepath_or_buffer,
-    tz=None,
-    start_col="start",
-    value_col="value",
-    gzipped=False,
-    freq=None,
-    **kwargs
-):
-    """Load meter data from a CSV file.
+    filepath_or_buffer: str | FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str],
+    tz: str | datetime.tzinfo | None = None,
+    start_col: str = "start",
+    value_col: str = "value",
+    gzipped: bool = False,
+    freq: str | None = None,
+    **kwargs,
+) -> pd.DataFrame:
+    """Load meter data from a CSV file and convert to a dataframe.
 
-    Default format::
-
+    Note: This is an example of the default csv structure assumed.
+        ```python
         start,value
         2017-01-01T00:00:00+00:00,0.31
         2017-01-02T00:00:00+00:00,0.4
         2017-01-03T00:00:00+00:00,0.58
+        ```
 
-    Parameters
-    ----------
-    filepath_or_buffer : :any:`str` or file-handle
-        File path or object.
-    tz : :any:`str`, optional
-        E.g., ``'UTC'`` or ``'US/Pacific'``
-    start_col : :any:`str`, optional, default ``'start'``
-        Date period start column.
-    value_col : :any:`str`, optional, default ``'value'``
-        Value column, can be in any unit.
-    gzipped : :any:`bool`, optional
-        Whether file is gzipped.
-    freq : :any:`str`, optional
-        If given, apply frequency to data using :any:`pandas.DataFrame.resample`.
-    **kwargs
-        Extra keyword arguments to pass to :any:`pandas.read_csv`, such as
-        ``sep='|'``.
+    Args:
+        filepath_or_buffer: File path or object.
+        tz: Timezone represented in the meter data. Ex: `UTC` or `US/Pacific`
+        start_col: Date period start column.
+        value_col: Value column, can be in any unit.
+        gzipped: Whether file is gzipped.
+        freq: If given, apply frequency to data using `pandas.DataFrame.resample`. One of `['hourly', 'daily']`.
+        **kwargs: Extra keyword arguments to pass to `pandas.read_csv`, such as `sep='|'`.
     """
 
     read_csv_kwargs = {
@@ -99,40 +107,32 @@ def meter_data_from_csv(
 
 
 def temperature_data_from_csv(
-    filepath_or_buffer,
-    tz=None,
-    date_col="dt",
-    temp_col="tempF",
-    gzipped=False,
-    freq=None,
-    **kwargs
+    filepath_or_buffer: str | FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str],
+    tz: str | datetime.tzinfo | None = None,
+    date_col: str = "dt",
+    temp_col: str = "tempF",
+    gzipped: bool = False,
+    freq: str | None = None,
+    **kwargs,
 ):
-    """Load temperature data from a CSV file.
+    """Load meter data from a CSV file and convert to a dataframe. Farenheit is assumed for building models.
 
-    Default format::
-
+    Note: This is an example of the default csv structure assumed.
+        ```python
         dt,tempF
         2017-01-01T00:00:00+00:00,21
         2017-01-01T01:00:00+00:00,22.5
         2017-01-01T02:00:00+00:00,23.5
+        ```
 
-    Parameters
-    ----------
-    filepath_or_buffer : :any:`str` or file-handle
-        File path or object.
-    tz : :any:`str`, optional
-        E.g., ``'UTC'`` or ``'US/Pacific'``
-    date_col : :any:`str`, optional, default ``'dt'``
-        Date period start column.
-    temp_col : :any:`str`, optional, default ``'tempF'``
-        Temperature column.
-    gzipped : :any:`bool`, optional
-        Whether file is gzipped.
-    freq : :any:`str`, optional
-        If given, apply frequency to data using :any:`pandas.Series.resample`.
-    **kwargs
-        Extra keyword arguments to pass to :any:`pandas.read_csv`, such as
-        ``sep='|'``.
+    Args:
+        filepath_or_buffer: File path or object.
+        tz: Timezone represented in the meter data. Ex: `UTC` or `US/Pacific`
+        date_col: Date period start column.
+        temp_col: Temperature column.
+        gzipped: Whether file is gzipped.
+        freq: If given, apply frequency to data using `pandas.DataFrame.resample`. One of `['hourly', 'daily']`.
+        **kwargs: Extra keyword arguments to pass to `pandas.read_csv`, such as `sep='|'`.
     """
     read_csv_kwargs = {
         "usecols": [date_col, temp_col],
@@ -163,40 +163,34 @@ def temperature_data_from_csv(
     return df[temp_col]
 
 
-def meter_data_from_json(data, orient="list"):
-    """Load meter data from json.
+def meter_data_from_json(data: list, orient: str = "list") -> pd.DataFrame:
+    """Load meter data from a list of dictionary objects or a list of lists.
 
-    Default format::
+    Args:
+        data: A list of meter data, with each row representing a single record.
+        orient: Format of `data` parameter. Must be one of `['list', 'records']`.
+            `'list'` is a list of lists, with the first element as start date and the second element as meter usage. `'records'` is a list of dicts.
 
+    Note: This is an example of the default `list` structure.
+        ```python
         [
             ['2017-01-01T00:00:00+00:00', 3.5],
             ['2017-02-01T00:00:00+00:00', 0.4],
             ['2017-03-01T00:00:00+00:00', 0.46],
         ]
+        ```
 
-    records format::
-
+    Note: This is an example of the `records` structure.
+        ```python
         [
             {'start': '2017-01-01T00:00:00+00:00', 'value': 3.5},
             {'start': '2017-02-01T00:00:00+00:00', 'value': 0.4},
             {'start': '2017-03-01T00:00:00+00:00', 'value': 0.46},
         ]
+        ```
 
-    Parameters
-    ----------
-    data : :any:`list`
-        A list of meter data, with each row representing a single record.
-    orient: :any: `str`
-        Format of `data` parameter:
-            - `list` (a list of lists, with the first element as start date)
-            - `records` (a list of dicts)
-
-    Returns
-    -------
-    df : :any:`pandas.DataFrame`
-        DataFrame with a single column (``'value'``) and a
-        :any:`pandas.DatetimeIndex`. A second column (``'estimated'``)
-        may also be included if the input data contained an estimated boolean flag.
+    Returns:
+        DataFrame with a single column (``'value'``) and a `pandas.DatetimeIndex`. A second column (``'estimated'``) may also be included if the input data contained an estimated boolean flag.
     """
 
     def _empty_meter_data_dataframe():
@@ -241,28 +235,28 @@ def meter_data_from_json(data, orient="list"):
         raise ValueError("orientation not recognized.")
 
 
-def temperature_data_from_json(data, orient="list"):
-    """Load temperature data from json. (Must be given in degrees
-    Fahrenheit).
+def temperature_data_from_json(data: list, orient: str = "list") -> pd.Series:
+    """Load temperature data from json to a Series. Farenheit is assumed for building models.
 
-    Default format::
+    Args:
+        data: A list of temperature data, with each row representing a single record.
+        orient: Format of `data` parameter. Must be `'list'`.
+            `'list'` is a list of lists, with the first element as start date and the second element as temperature.
 
+    Note: This is an example of the default `list` structure.
+        ```python
         [
             ['2017-01-01T00:00:00+00:00', 3.5],
             ['2017-01-01T01:00:00+00:00', 5.4],
             ['2017-01-01T02:00:00+00:00', 7.4],
         ]
+        ```
 
-    Parameters
-    ----------
-    data : :any:`list`
-        List elements are each a rows of data.
+    Returns:
+        DataFrame with a single column (``'tempF'``) and a `pandas.DatetimeIndex`.
 
-    Returns
-    -------
-    series : :any:`pandas.Series`
-        DataFrame with a single column (``'tempF'``) and a
-        :any:`pandas.DatetimeIndex`.
+    Raises:
+        ValueError: If `orient` is not `'list'`.
     """
     if orient == "list":
         df = pd.DataFrame(data, columns=["dt", "tempF"])
@@ -273,34 +267,35 @@ def temperature_data_from_json(data, orient="list"):
         raise ValueError("orientation not recognized.")
 
 
-def meter_data_to_csv(meter_data, path_or_buf):
-    """Write meter data to CSV. See also :any:`pandas.DataFrame.to_csv`.
+def meter_data_to_csv(
+    meter_data: pd.DataFrame | pd.Series,
+    path_or_buf: str | FilePath | WriteBuffer[bytes] | WriteBuffer[str],
+) -> None:
+    """Write meter data from a DataFrame or Series to a CSV. See also `pandas.DataFrame.to_csv`.
 
-    Parameters
-    ----------
-    meter_data : :any:`pandas.DataFrame`
-        Meter data DataFrame with ``'value'`` column and
-        :any:`pandas.DatetimeIndex`.
-    path_or_buf : :any:`str` or file handle, default None
-        File path or object, if None is provided the result is returned as a string.
+    Args:
+        meter_data: DataFrame or Series with a ``'value'`` column and a `pandas.DatetimeIndex`.
+        path_or_buf: Path or file handle.
     """
     if meter_data.index.name is None:
         meter_data.index.name = "start"
+
     return meter_data.to_csv(path_or_buf, index=True)
 
 
-def temperature_data_to_csv(temperature_data, path_or_buf):
+def temperature_data_to_csv(
+    temperature_data: pd.Series,
+    path_or_buf: str | FilePath | WriteBuffer[bytes] | WriteBuffer[str],
+) -> None:
     """Write temperature data to CSV. See also :any:`pandas.DataFrame.to_csv`.
 
-    Parameters
-    ----------
-    temperature_data : :any:`pandas.Series`
-        Temperature data series with :any:`pandas.DatetimeIndex`.
-    path_or_buf : :any:`str` or file handle, default None
-        File path or object, if None is provided the result is returned as a string.
+    Args:
+        temperature_data: Temperature data series with :any:`pandas.DatetimeIndex`.
+        path_or_buf: Path or file handle.
     """
     if temperature_data.index.name is None:
         temperature_data.index.name = "dt"
     if temperature_data.name is None:
         temperature_data.name = "temperature"
+
     return temperature_data.to_frame().to_csv(path_or_buf, index=True)
