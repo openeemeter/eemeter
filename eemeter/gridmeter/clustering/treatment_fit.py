@@ -111,19 +111,47 @@ def fit_to_clusters(
 
     return x
 
+
 def fit_to_clusters_dec(args_list):
     return fit_to_clusters(*args_list)
 
 
-# TODO: this is not a fast way to do this, could be parallelized
+class ClusterTreatmentMatchError(Exception):
+    pass
+
+
 def _match_treatment_to_cluster(
     df_ls_t: pd.DataFrame, 
     df_ls_cluster: pd.Series, 
     s: _settings.Settings
 ):
+    # Create null dataframe
+    coeffs = np.empty((df_ls_t.shape[0], df_ls_cluster.shape[0]))
+    t_ids = df_ls_t.index
+    columns = [f"pct_cluster_{int(n)}" for n in df_ls_cluster.index]
+    df_t_coeffs = pd.DataFrame(coeffs, index=t_ids, columns=columns)
 
+    # error checking going into cdist
+    if df_ls_t.shape[0] == 0:
+        raise ClusterTreatmentMatchError("No valid treatment loadshapes")
+    
+    if df_ls_cluster.shape[0] == 0:
+        raise ClusterTreatmentMatchError("No valid cluster loadshapes")
+    
+    if df_ls_t.shape[1] != df_ls_cluster.shape[1]:
+        shape_str = f"Treatment[{df_ls_t.shape[1]}] != Cluster[{df_ls_cluster.shape[1]}]"
+        raise ClusterTreatmentMatchError(f"Treatment and cluster loadshapes have different lengths: {shape_str}")
+
+    # identify invalid rows
+    idx_invalid = df_ls_t.isnull().any(axis=1) | ~np.isfinite(df_ls_t).any(axis=1)
+    idx_valid = ~idx_invalid
+
+    # convert to numpy
     t_ls = df_ls_t.to_numpy()
     cp_ls = df_ls_cluster.to_numpy()
+
+    # filter to valid rows
+    t_ls = t_ls[idx_valid, :]
 
     # Get percent from each cluster
     distances = scipy.spatial.distance.cdist(t_ls, cp_ls, metric="euclidean")  # type: ignore
@@ -147,9 +175,7 @@ def _match_treatment_to_cluster(
 
     coeffs = np.vstack(coeffs)
 
-    # Create dataframe
-    t_ids = df_ls_t.index
-    columns = [f"pct_cluster_{int(n)}" for n in df_ls_cluster.index]
-    df_t_coeffs = pd.DataFrame(coeffs, index=t_ids, columns=columns)
+    # only update valid rows
+    df_t_coeffs.loc[idx_valid, :] = coeffs
 
     return df_t_coeffs
