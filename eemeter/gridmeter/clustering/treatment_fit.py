@@ -42,8 +42,6 @@ def fit_to_clusters(
     x0, 
     s: _settings.Settings,
 ):
-    # _AGG_TYPE = 'mean' # overwrite to force agg_type to be mean
-    _AGG_TYPE = s.AGG_TYPE
     _ALPHA = s._TREATMENT_MATCH_LOSS_ALPHA
     _SIGMA = 2.698  # 1.5 IQR
     _MIN_PCT_CLUSTER = 1E-6
@@ -175,7 +173,8 @@ def _match_treatment_to_cluster(
 
     coeffs = np.vstack(coeffs)
 
-    # only update valid rows
+    # only update rows
+    df_t_coeffs.loc[idx_invalid, :] = np.nan
     df_t_coeffs.loc[idx_valid, :] = coeffs
 
     return df_t_coeffs
