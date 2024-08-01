@@ -606,7 +606,7 @@ class DailyReportingData(_DailyData):
         cls,
         meter_data: pd.Series | pd.DataFrame | None,
         temperature_data: pd.Series | pd.DataFrame,
-        is_electricity_data: bool,
+        is_electricity_data: bool | None = None,
         tzinfo: datetime.tzinfo | None = None,
     ) -> DailyReportingData:
         """Create an instance of the Data class from meter data and temperature data.
@@ -634,6 +634,10 @@ class DailyReportingData(_DailyData):
             )
             if tzinfo:
                 meter_data = meter_data.tz_convert(tzinfo)
+
+            # If is_electricity_data is not specified, set it to True for proper functioning in the parent class. If it hits this point it's all NaNs anyway.
+            if is_electricity_data is None:
+                is_electricity_data = True
         if meter_data.empty:
             raise ValueError(
                 "Pass meter_data=None rather than an empty series in order to explicitly create a temperature-only reporting data instance."
