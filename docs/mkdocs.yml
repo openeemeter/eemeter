@@ -28,6 +28,7 @@ nav:
     - General Concepts: learn/index.md
     - EEmeter:
       - Daily / Billing Model: learn/daily_billing_model.md
+      - Hourly Model: learn/hourly_model.md
 
   - Reference - Code API: 
     - eemeter Modules: 
