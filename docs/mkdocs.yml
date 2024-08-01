@@ -1,4 +1,4 @@
-site_name: OpenEEmeter
+site_name: EEmeter
 
 docs_dir: "source"
 extra_css:
@@ -23,7 +23,12 @@ plugins:
             show_docstring_modules: false
 
 nav:
-  - Home: index.md
+  - EEmeter: index.md
+  - Learn:
+    - General Concepts: learn/index.md
+    - EEmeter:
+      - Daily / Billing Model: learn/daily_billing_model.md
+
   - Reference - Code API: 
     - eemeter Modules: 
       - Daily Model: reference/eemeter/daily_model.md
@@ -32,10 +37,10 @@ nav:
       - Hourly Model: reference/eemeter/hourly_model.md
       - Utilities: reference/eemeter/utilities.md
     
-  - About: about.md
 
 theme:
   name: "material"
+  logo: "images/logo.png"
   features:
     - navigation.tabs
     - navigation.sections
@@ -47,13 +52,13 @@ theme:
 
   palette:
     - scheme: slate
-      primary: indigo
+      primary: light blue
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
 
     - scheme: default
-      primary: cyan
+      primary: light blue
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
@@ -65,9 +70,18 @@ markdown_extensions:
       pygments_lang_class: true
   - pymdownx.details
   - pymdownx.superfences
-  - pymdownx.highlight
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.arithmatex:
+      generic: 
+  - footnotes
+  - attr_list
   - pymdownx.inlinehilite
+  - pymdownx.snippets
   - pymdownx.keys
   - admonition
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - toc:
       permalink: true
