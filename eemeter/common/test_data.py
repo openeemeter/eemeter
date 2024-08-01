@@ -56,6 +56,8 @@ def load_test_data(data_type: str):
             - "seasonal_day_of_week_loadshape"
             - "month_loadshape"
             - "hourly_data"
+            - "daily_treatment_data"
+            - "monthly_treatment_data"
 
     Returns:
         (dataframe): Returns a dataframe
@@ -124,6 +126,10 @@ def _load_time_series_data(data_type):
 
     df_reporting = df[["temperature", "observed_reporting"]]
     df_reporting = df_reporting.rename(columns={"observed_reporting": "observed"})
+
+    df_reporting = df_reporting.reset_index()
+    df_reporting["datetime"] = df_reporting["datetime"] + pd.Timedelta(days=365)
+    df_reporting = df_reporting.set_index(["id", "datetime"])
 
     if "daily" in data_type:
         df_baseline = _aggregate_hourly_data(df_baseline, "D")
