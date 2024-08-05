@@ -4,7 +4,9 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Update docs.
+* Update typehints on core daily and utility functions.
+* Minor change to loading test data to ensure the reporting period is a year ahead of the baseline period.
 
 4.0.5
 -----

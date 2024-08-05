@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""
+"""A module housing Billing Model classes and functions.
 
    Copyright 2014-2024 OpenEEmeter contributors
 
@@ -17,7 +17,7 @@
    limitations under the License.
 
 """
-from typing import Union
+from __future__ import annotations
 
 import numpy as np
 import pandas as pd
@@ -35,12 +35,47 @@ from eemeter.eemeter.models.daily.model import DailyModel
 
 
 class BillingModel(DailyModel):
-    """wrapper for DailyModel using billing presets"""
+    """A class to fit a model to the input meter data.
+
+    BillingModel is a wrapper for the DailyModel class using billing presets.
+
+    Attributes:
+        settings (dict): A dictionary of settings.
+        seasonal_options (list): A list of seasonal options (su: Summer, sh: Shoulder, wi: Winter).
+            Elements in the list are seasons separated by '_' that represent a model split.
+            For example, a list of ['su_sh', 'wi'] represents two splits: summer/shoulder and winter.
+        day_options (list): A list of day options.
+        combo_dictionary (dict): A dictionary of combinations.
+        df_meter (pandas.DataFrame): A dataframe of meter data.
+        error (dict): A dictionary of error metrics.
+        combinations (list): A list of combinations.
+        components (list): A list of components.
+        fit_components (list): A list of fit components.
+        wRMSE_base (float): The mean bias error for no splits.
+        best_combination (list): The best combination of splits.
+        model (sklearn.pipeline.Pipeline): The final fitted model.
+        id (str): The index of the meter data.
+    """
 
     def __init__(self, settings=None):
         super().__init__(model="legacy", settings=settings)
 
-    def fit(self, baseline_data: BillingBaselineData, ignore_disqualification=False):
+    def fit(
+        self, baseline_data: BillingBaselineData, ignore_disqualification: bool = False
+    ) -> BillingModel:
+        """Fit the model using baseline data.
+
+        Args:
+            baseline_data: BillingBaselineData object.
+            ignore_disqualification: Whether to ignore disqualification errors / warnings.
+
+        Returns:
+            The fitted model.
+
+        Raises:
+            TypeError: If baseline_data is not a BillingBaselineData object.
+            DataSufficiencyError: If the model can't be fit on disqualified baseline data.
+        """
         # TODO there's a fair bit of duplicated code between this and daily fit(), refactor
         if not isinstance(baseline_data, BillingBaselineData):
             raise TypeError("baseline_data must be a BillingBaselineData object")
@@ -67,10 +102,26 @@ class BillingModel(DailyModel):
 
     def predict(
         self,
-        reporting_data: Union[BillingBaselineData, BillingReportingData],
-        aggregation=None,
-        ignore_disqualification=False,
-    ):
+        reporting_data: BillingBaselineData | BillingReportingData,
+        aggregation: str | None = None,
+        ignore_disqualification: bool = False,
+    ) -> pd.DataFrame:
+        """Predicts the energy consumption using the fitted model.
+
+        Args:
+            reporting_data: The data used for prediction.
+            aggregation: The aggregation level for the prediction. One of [None, 'none', 'monthly', 'bimonthly'].
+            ignore_disqualification: Whether to ignore model disqualification. Defaults to False.
+
+        Returns:
+            Dataframe with input data along with predicted energy consumption.
+
+        Raises:
+            RuntimeError: If the model is not fitted.
+            DisqualifiedModelError: If the model is disqualified and ignore_disqualification is False.
+            TypeError: If the reporting data is not of type BillingBaselineData or BillingReportingData.
+            ValueError: If the aggregation is not one of [None, 'none', 'monthly', 'bimonthly'].
+        """
         if not self.is_fitted:
             raise RuntimeError("Model must be fit before predictions can be made.")
 
@@ -132,31 +183,13 @@ class BillingModel(DailyModel):
     def plot(
         self,
         df_eval,
-        ax=None,
-        title=None,
-        figsize=None,
-        temp_range=None,
-        aggregation=None,
+        aggregation: str | None = None,
     ):
-        """Plot a model fit.
+        """Plot a model fit with baseline or reporting data. Requires matplotlib to use.
 
-        Parameters
-        ----------
-        ax : :any:`matplotlib.axes.Axes`, optional
-            Existing axes to plot on.
-        title : :any:`str`, optional
-            Chart title.
-        figsize : :any:`tuple`, optional
-            (width, height) of chart.
-        with_candidates : :any:`bool`
-            If True, also plot candidate models.
-        temp_range : :any:`tuple`, optionl
-            Temperature range to plot
-
-        Returns
-        -------
-        ax : :any:`matplotlib.axes.Axes`
-            Matplotlib axes.
+        Args:
+            df_eval: The baseline or reporting data object to plot.
+            aggregation: The aggregation level for the prediction. One of [None, 'none', 'monthly', 'bimonthly'].
         """
         try:
             from eemeter.eemeter.models.billing.plot import plot
@@ -167,7 +200,13 @@ class BillingModel(DailyModel):
 
         plot(self, self.predict(df_eval, aggregation=aggregation))
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
+        """Returns a dictionary of model parameters.
+
+        Returns:
+            Model parameters.
+        """
         model_dict = super().to_dict()
         model_dict["settings"]["developer_mode"] = True
+
         return model_dict

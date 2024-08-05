@@ -1,6 +1,0 @@
-Matplotlib
-cdd
-gzipped
-hdd
-metadata
-serializable

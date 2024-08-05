@@ -17,6 +17,7 @@
    limitations under the License.
 
 """
+from __future__ import annotations
 
 import itertools
 import json
@@ -54,58 +55,42 @@ from eemeter.eemeter.models.daily.utilities.selection_criteria import selection_
 
 
 class DailyModel:
+    """
+    A class to fit a model to the input meter data.
+
+    Attributes:
+        settings (dict): A dictionary of settings.
+        seasonal_options (list): A list of seasonal options (su: Summer, sh: Shoulder, wi: Winter).
+            Elements in the list are seasons separated by '_' that represent a model split.
+            For example, a list of ['su_sh', 'wi'] represents two splits: summer/shoulder and winter.
+        day_options (list): A list of day options.
+        combo_dictionary (dict): A dictionary of combinations.
+        df_meter (pandas.DataFrame): A dataframe of meter data.
+        error (dict): A dictionary of error metrics.
+        combinations (list): A list of combinations.
+        components (list): A list of components.
+        fit_components (list): A list of fit components.
+        wRMSE_base (float): The mean bias error for no splits.
+        best_combination (list): The best combination of splits.
+        model (sklearn.pipeline.Pipeline): The final fitted model.
+        id (str): The index of the meter data.
+    """
+
     def __init__(
         self,
-        model="current",
-        settings=None,
-        verbose=False,
+        model: str = "current",
+        settings: dict | None = None,
+        verbose: bool = False,
     ):
         """
-        A class to fit a model to the input meter data.
-
-        Parameters:
-        -----------
-        meter_data : pandas.DataFrame
-            A dataframe containing meter data.
-        model : str, optional
-            The model to use. Default is 'current'.
-        settings : dict, optional
-            DailySettings to be changed. Default is None.
-        verbose : bool, optional
-            Whether to print verbose output. Default is False.
-
-        Attributes:
-        -----------
-        settings : dict
-            A dictionary of settings.
-        seasonal_options : list
-            A list of seasonal options.
-        day_options : list
-            A list of day options.
-        combo_dictionary : dict
-            A dictionary of combinations.
-        df_meter : pandas.DataFrame
-            A dataframe of meter data.
-        error : dict
-            A dictionary of error metrics.
-        combinations : list
-            A list of combinations.
-        components : list
-            A list of components.
-        fit_components : list
-            A list of fit components.
-        wRMSE_base : float
-            The mean bias error for no splits.
-        best_combination : list
-            The best combination of splits.
-        model : sklearn.pipeline.Pipeline
-            The final fitted model.
-        id : str
-            The index of the meter data.
+        Args:
+            model: The model to use (either 'current' or 'legacy').
+            settings: DailySettings to be changed.
+            verbose: Whether to print verbose output.
         """
 
         # Initialize settings
-        # Note: Model designates the base settings, it can be 'default' or 'legacy'
+        # Note: Model designates the base settings, it can be 'current' or 'legacy'
         #       Settings is to be a dictionary of settings to be changed
 
         if settings is None:
@@ -149,7 +134,22 @@ class DailyModel:
             "PNRMSE": np.nan,
         }
 
-    def fit(self, baseline_data: DailyBaselineData, ignore_disqualification=False):
+    def fit(
+        self, baseline_data: DailyBaselineData, ignore_disqualification: bool = False
+    ) -> DailyModel:
+        """Fit the model using baseline data.
+
+        Args:
+            baseline_data: DailyBaselineData object.
+            ignore_disqualification: Whether to ignore disqualification errors / warnings.
+
+        Returns:
+            The fitted model.
+
+        Raises:
+            TypeError: If baseline_data is not a DailyBaselineData object.
+            DataSufficiencyError: If the model can't be fit on disqualified baseline data.
+        """
         if not isinstance(baseline_data, DailyBaselineData):
             raise TypeError("baseline_data must be a DailyBaselineData object")
         baseline_data.log_warnings()
@@ -192,11 +192,11 @@ class DailyModel:
         wRMSE, RMSE, MAE, CVRMSE, PNRMSE = self._get_error_metrics(
             self.best_combination
         )
-        self.error["wRMSE"] = wRMSE
-        self.error["RMSE"] = RMSE
-        self.error["MAE"] = MAE
-        self.error["CVRMSE"] = CVRMSE
-        self.error["PNRMSE"] = PNRMSE
+        self.error["wRMSE"] = float(wRMSE)
+        self.error["RMSE"] = float(RMSE)
+        self.error["MAE"] = float(MAE)
+        self.error["CVRMSE"] = float(CVRMSE)
+        self.error["PNRMSE"] = float(PNRMSE)
 
         self.params = self._create_params_from_fit_model()
         self.is_fitted = True
@@ -206,8 +206,22 @@ class DailyModel:
         self,
         reporting_data: Union[DailyBaselineData, DailyReportingData],
         ignore_disqualification=False,
-    ):
-        """Perform initial sufficiency and typechecks before passing to private predict"""
+    ) -> pd.DataFrame:
+        """Predicts the energy consumption using the fitted model.
+
+        Args:
+            reporting_data (Union[DailyBaselineData, DailyReportingData]): The data used for prediction.
+            ignore_disqualification (bool, optional): Whether to ignore model disqualification. Defaults to False.
+
+        Returns:
+            Dataframe with input data along with predicted energy consumption.
+
+        Raises:
+            RuntimeError: If the model is not fitted.
+            DisqualifiedModelError: If the model is disqualified and ignore_disqualification is False.
+            ValueError: If the reporting data has a different timezone than the model.
+            TypeError: If the reporting data is not of type DailyBaselineData or DailyReportingData.
+        """
         if not self.is_fitted:
             raise RuntimeError("Model must be fit before predictions can be made.")
 
@@ -286,14 +300,33 @@ class DailyModel:
 
         return df_eval.sort_index()
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
+        """Returns a dictionary of model parameters.
+
+        Returns:
+            Model parameters.
+        """
         return self.params.model_dump()
 
-    def to_json(self):
+    def to_json(self) -> str:
+        """Returns a JSON string of model parameters.
+
+        Returns:
+            Model parameters.
+        """
         return json.dumps(self.to_dict())
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> DailyModel:
+        """Create a instance of the class from a dictionary (such as one produced from the to_dict method).
+
+        Args:
+            data (dict): The dictionary containing the model data.
+
+        Returns:
+            An instance of the class.
+
+        """
         settings = data.get("settings")
         daily_model = cls(settings=settings)
         info = data.get("info")
@@ -326,11 +359,29 @@ class DailyModel:
         return daily_model
 
     @classmethod
-    def from_json(cls, str_data):
+    def from_json(cls, str_data: str) -> DailyModel:
+        """Create an instance of the class from a JSON string.
+
+        Args:
+            str_data: The JSON string representing the object.
+
+        Returns:
+            An instance of the class.
+
+        """
         return cls.from_dict(json.loads(str_data))
 
     @classmethod
-    def from_2_0_dict(cls, data):
+    def from_2_0_dict(cls, data) -> DailyModel:
+        """Create an instance of the class from a legacy (2.0) model dictionary.
+
+        Args:
+            data (dict): A dictionary containing the necessary data (legacy 2.0) to create a DailyModel instance.
+
+        Returns:
+            An instance of the class.
+
+        """
         daily_model = cls(model="legacy")
         daily_model.params = DailyModelParameters.from_2_0_params(data)
         daily_model.warnings = []
@@ -340,36 +391,26 @@ class DailyModel:
         return daily_model
 
     @classmethod
-    def from_2_0_json(cls, str_data):
+    def from_2_0_json(cls, str_data: str) -> DailyModel:
+        """Create an instance of the class from a legacy (2.0) JSON string.
+
+        Args:
+            str_data: The JSON string.
+
+        Returns:
+            An instance of the class.
+
+        """
         return cls.from_2_0_dict(json.loads(str_data))
 
     def plot(
         self,
-        df_eval,
-        ax=None,
-        title=None,
-        figsize=None,
-        temp_range=None,
-    ):
-        """Plot a model fit.
+        df_eval: DailyBaselineData | DailyReportingData,
+    ) -> None:
+        """Plot a model fit with baseline or reporting data. Requires matplotlib to use.
 
-        Parameters
-        ----------
-        ax : :any:`matplotlib.axes.Axes`, optional
-            Existing axes to plot on.
-        title : :any:`str`, optional
-            Chart title.
-        figsize : :any:`tuple`, optional
-            (width, height) of chart.
-        with_candidates : :any:`bool`
-            If True, also plot candidate models.
-        temp_range : :any:`tuple`, optionl
-            Temperature range to plot
-
-        Returns
-        -------
-        ax : :any:`matplotlib.axes.Axes`
-            Matplotlib axes.
+        Args:
+            df_eval: The baseline or reporting data object to plot.
         """
         try:
             from eemeter.eemeter.models.daily.plot import plot
