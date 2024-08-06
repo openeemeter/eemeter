@@ -18,13 +18,72 @@
 
 """
 
+import numpy as np
+
+from scipy.optimize import minimize_scalar
 from scipy.stats import yeojohnson
+from statsmodels.stats.stattools import robust_skewness as robust_skew
 
 from eemeter.common.stats.distribution_transform import robust_standardize
 
 
-def scipy_YJ(x, robust_type="iqr"):
+def scipy_YJ(x, robust_type="huber_m_estimate"):
     x_std, _ = yeojohnson(x, lmbda=None)
     x_std = robust_standardize(x_std, robust_type)
 
     return x_std
+
+
+def obj_fcn_dec(x):
+    def obj_fcn(X):
+        xt = yeojohnson(x, lmbda=X)
+
+        n = 1 # [0: standard_skew, 1: quartile skew, 2: mean-median difference, standardized by abs deviation, 3: mean-median diff, standardized by std dev]
+        abs_skew = np.abs(robust_skew(xt))[n]
+
+        return abs_skew
+    return obj_fcn
+
+
+def robust_scipy_YJ(x, robust_type="huber_m_estimate", method="trim", **kwargs):
+    idx_finite = np.argwhere(np.isfinite(x)).flatten()
+
+    if len(idx_finite) < 3:
+        return x
+
+    # pre standardize x
+    # x_finite = x[idx_finite]
+    x_finite = robust_standardize(x[idx_finite], robust_type)
+
+    if method == "trim":
+        trim_quantile = 0.1
+        if "trim_quantile" in kwargs:
+            trim_quantile = kwargs["trim_quantile"]
+
+        x_bnds = np.quantile(x_finite, [trim_quantile, 1 - trim_quantile])
+
+        # get idx of x that is within the bounds
+        idx_trim = np.argwhere((x_finite >= x_bnds[0]) & (x_finite <= x_bnds[1])).flatten()
+
+        if len(idx_trim) >= 3:
+            _, lmbda = yeojohnson(x_finite[idx_trim], lmbda=None)
+        else:
+            lmbda = None
+
+    elif method == "skew":
+        bnds = [-1, 1]
+
+        obj_fcn = obj_fcn_dec(x_finite)
+        res = minimize_scalar(obj_fcn, bracket=bnds, method='brent')
+        lmbda = res.x
+
+    if lmbda is not None:
+        try:
+            x[idx_finite] = yeojohnson(x_finite, lmbda=lmbda)
+        except:
+            pass # if yeojohnson fails, return x as is
+    
+    # post standardize x
+    x[idx_finite] = robust_standardize(x[idx_finite], robust_type)
+
+    return x

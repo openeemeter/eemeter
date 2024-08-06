@@ -58,20 +58,49 @@ def adaptive_weighted_mu_sigma(x, use_mean=False, rel_err=1E-4, abs_err=1E-4):
     return mu, sigma
 
 
+def ransac_mu_sigma(x, n_iter=100, n_sample=100, seed=None):
+    mu = np.median(x)
+    sigma = median_absolute_deviation(x, mu=mu)
+
+    for _ in range(n_iter):
+        np.random.seed(seed)
+        idx = np.random.choice(x.size, n_sample)
+        x_sample = x[idx]
+
+        mu_sample = np.median(x_sample)
+        sigma_sample = median_absolute_deviation(x_sample, mu=mu_sample)
+
+        if sigma_sample < sigma:
+            mu = mu_sample
+            sigma = sigma_sample
+
+    return mu, sigma
+
+
 def robust_mu_sigma(x, robust_type="huber_m_estimate", **kwargs):
+    if (len(x) <= 3) and (robust_type != "iqr"):
+        robust_type = "iqr"
+
     if robust_type == "iqr":
         mu = weighted_quantile(x, 0.5)
         sigma = weighted_quantile(np.abs(x - mu), 0.5)*MAD_k
 
-    elif robust_type == "adaptive_weighted":
+    elif robust_type == "huber_m_estimate":
+        try:
+            if "maxiter" not in kwargs:
+                kwargs["maxiter"] = 50
+
+            # raise RuntimeWarning to error
+            with np.seterr(all='raise'):
+                mu, sigma = huber_m_estimate(**kwargs)(x)
+
+        except Exception as e:
+            mu, sigma = robust_mu_sigma(x, robust_type="iqr")
+
+    elif robust_type == "adaptive_weighted": # slow
         mu, sigma = adaptive_weighted_mu_sigma(x, **kwargs)
 
-    elif robust_type == "huber_m_estimate":
-        if "maxiter" not in kwargs:
-            kwargs["maxiter"] = 50
-
-        mu, sigma = huber_m_estimate(**kwargs)(x)
-
-    # TODO: RANSAC version?
+    elif robust_type == "ransac":
+        mu, sigma = ransac_mu_sigma(x, **kwargs)
 
     return mu, sigma

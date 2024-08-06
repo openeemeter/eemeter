@@ -484,6 +484,35 @@ class Data:
         return loadshape_df
 
 
+    def _trim_data(self) -> None:
+        """
+        Trim the loadshape and features dataframes to the maximum size allowed by the settings.
+        """
+
+        max_size = self._settings.MAX_POOL_SIZE
+
+        ids = self.ids
+        excluded_ids = []
+        if len(ids) > max_size:
+            # randomly select ids to remove
+            excluded_ids = np.random.choice(ids, len(ids) - max_size, replace=False)
+
+            # add excluded ids to excluded_ids dataframe
+            excluded_ids_df = pd.DataFrame({"id": excluded_ids})
+            excluded_ids_df["reason"] = "randomly selected to reduce pool size"
+            self._excluded_ids = pd.concat([self._excluded_ids, excluded_ids_df])
+
+        if (self._loadshape is not None) and (len(excluded_ids) > 0):
+            self._loadshape = self._loadshape[
+                ~self._loadshape.index.isin(self._excluded_ids["id"])
+            ]
+
+        if (self._features is not None) and (len(excluded_ids) > 0):
+            self._features = self._features[
+                ~self._features.index.isin(self._excluded_ids["id"])
+            ]
+
+
     def _set_data(
         self, loadshape_df=None, time_series_df=None, features_df=None
     ) -> None:
@@ -537,12 +566,11 @@ class Data:
             features_df = self._validate_format_features(features_df)
 
         if loadshape_df is not None:
-            # drop any ids that are in the excluded_ids list
-
             # If loadshape still has id as one of its columns, set it as index
             if 'id' in loadshape_df.columns:
                 loadshape_df.set_index('id', inplace=True)
 
+            # drop any ids that are in the excluded_ids list
             loadshape_df = loadshape_df[
                 ~loadshape_df.index.isin(self._excluded_ids["id"])
             ]
@@ -551,6 +579,9 @@ class Data:
         if features_df is not None:
             self._features = features_df if not features_df.empty else None
         self._loadshape = loadshape_df if not loadshape_df.empty else None
+
+        # filter pool to max size
+        self._trim_data()
 
         return self
 
