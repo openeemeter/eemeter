@@ -18,6 +18,9 @@
 
 """
 
+import gc
+import sys
+import psutil
 import multiprocessing as mp
 import numba
 import numpy as np
@@ -201,6 +204,31 @@ def sigmoid(x, x0=0, k=1):
     return res
 
 
+def get_obj_size(obj):
+    marked = {id(obj)}
+    obj_q = [obj]
+    sz = 0
+
+    while obj_q:
+        sz += sum(map(sys.getsizeof, obj_q))
+
+        # Lookup all the object referred to by the object in obj_q.
+        # See: https://docs.python.org/3.7/library/gc.html#gc.get_referents
+        all_refr = ((id(o), o) for o in gc.get_referents(*obj_q))
+
+        # Filter object that are already marked.
+        # Using dict notation will prevent repeated objects.
+        new_refr = {o_id: o for o_id, o in all_refr if o_id not in marked and not isinstance(o, type)}
+
+        # The new obj_q will be the ones that were not marked,
+        # and we will update marked with their ids so we will
+        # not traverse them again.
+        obj_q = new_refr.values()
+        marked.update(new_refr.keys())
+
+    return sz
+
+
 def _execute_with_mp(fcn, args_list, use_mp=True):
     """Runs a function with multiprocessing if use_mp is True, otherwise runs
     the function without multiprocessing.
@@ -218,8 +246,21 @@ def _execute_with_mp(fcn, args_list, use_mp=True):
         use_mp = False
 
     if use_mp:
+        # get memory size of args_list in gb
+        args_list_size = get_obj_size(args_list) / (1024.0 ** 3)
+
+        # get amount of memory available in gb
+        memory_available = psutil.virtual_memory().available / (1024.0 ** 3)
+
+        print("args_list_size: ", args_list_size)
+        print("memory_available: ", memory_available)
+        
+        # if args_list is too large, use imap
         with mp.Pool(processes=mp.cpu_count()) as mp_pool:
-            result = mp_pool.map(fcn, args_list)
+            if args_list_size * 2 > memory_available:
+                result = list(mp_pool.imap(fcn, args_list))
+            else:
+                result = mp_pool.map(fcn, args_list)
 
     else:
         result = []

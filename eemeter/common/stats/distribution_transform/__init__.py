@@ -20,13 +20,14 @@
 
 from .standardize import robust_standardize
 from .bisymlog import bisymlog
-from .scipy_yeo_johnson import scipy_YJ
-from .robust_yeo_johnson import robust_YJ
+from .scipy_yeo_johnson import scipy_YJ, robust_scipy_YJ
+from .raymaekers_robust_yeo_johnson import raymaekers_robust_YJ
 
 
 __all__ = (
     "robust_standardize",
     "bisymlog",
     "scipy_YJ",
-    "robust_YJ",
+    "robust_scipy_YJ"
+    "raymaekers_robust_YJ",
 )

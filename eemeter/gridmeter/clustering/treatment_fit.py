@@ -40,8 +40,11 @@ def fit_to_clusters(
     t_ls, 
     cp_ls, 
     x0, 
-    s: _settings.Settings,
+    settings_json,
 ):
+    # instantiate settings from settings_json
+    s = _settings.Settings.model_validate_json(settings_json)
+
     _ALPHA = s._TREATMENT_MATCH_LOSS_ALPHA
     _SIGMA = 2.698  # 1.5 IQR
     _MIN_PCT_CLUSTER = 1E-6
@@ -163,7 +166,7 @@ def _match_treatment_to_cluster(
         t_id_ls = t_ls[n, :]
         x0 = distances_norm[n, :]
 
-        args_list.append([t_id_ls, cp_ls, x0, s])
+        args_list.append([t_id_ls, cp_ls, x0, s.model_dump_json()])
 
     coeffs = _execute_with_mp(
         fit_to_clusters_dec, 

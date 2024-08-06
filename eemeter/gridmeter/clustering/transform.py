@@ -44,6 +44,7 @@ def _normalize_single_loadshape(ls_arr: np.ndarray):
     applies the min and max normalization logic to a dataframe which contains the transformed
     loadshape
     """
+    ls_arr = np.array(ls_arr)
     ls_arr_transposed = ls_arr.T
     a, b = [0, 1]  # range to normalize to
 
@@ -80,7 +81,7 @@ def _normalize_df_loadshapes(df: pd.DataFrame, s: _settings.Settings):
     # df_transformed = pd.concat(df_list).to_frame(name="ls")  # type: ignore
 
     if s.NORMALIZE_METHOD == "min_max":
-        df = df.apply(_normalize_single_loadshape, axis=1)
+        df = df.apply(_normalize_single_loadshape, result_type='broadcast', axis=1)
 
     return df
 

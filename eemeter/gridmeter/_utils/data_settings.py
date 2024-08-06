@@ -94,6 +94,13 @@ class Weekday_Weekend_Definition(BaseSettings):
     
 
 class Data_Settings(BaseSettings):
+    """maximum number of meters to be used in the comparison pool"""
+    MAX_POOL_SIZE: int = pydantic.Field(
+        default=10000,
+        ge=1,
+        validate_default=True,
+    )
+
     """aggregation type for the loadshape"""
     AGG_TYPE: Optional[_const.AggType] = pydantic.Field(
         default=_const.AggType.MEAN,

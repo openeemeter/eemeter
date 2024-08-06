@@ -29,13 +29,6 @@ from typing import Any
 class BaseSettings(pydantic.BaseModel):
     """Base settings class for gridmeter"""
 
-    """maximum number of meters to be used in the comparison pool"""
-    # MAX_COMPARISON_POOL_SIZE: int = pydantic.Field(
-    #     default=10000,
-    #     ge=1,
-    #     validate_default=True,
-    # )
-
     """Make all property keys case insensitive"""
     @pydantic.model_validator(mode="before")
     def __uppercase_property_keys__(cls, values: Any) -> Any:

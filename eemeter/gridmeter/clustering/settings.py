@@ -29,13 +29,6 @@ from eemeter.common.stats.adaptive_loss import _LOSS_ALPHA_MIN
 
 
 class Settings(BaseSettings):
-    """maximum number of meters to be used in the comparison pool"""
-    MAX_COMPARISON_POOL_SIZE: int = pydantic.Field(
-        default=10000,
-        ge=1,
-        validate_default=True,
-    )
-
     """scoring choice to determine best cluster composition to use"""
     SCORE_CHOICE: _const.ScoreChoice = pydantic.Field(
         default=_const.ScoreChoice.VARIANCE_RATIO, 

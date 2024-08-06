@@ -36,7 +36,7 @@ class Comparison_Group_Algorithm:
 
     clusters = None
     treatment_weights = None
-   
+    
 
     def _get_treatment_loadshape(self, id):
         ls = self.treatment_loadshape.loc[id]

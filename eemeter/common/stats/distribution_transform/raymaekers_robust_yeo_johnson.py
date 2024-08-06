@@ -19,6 +19,8 @@
 """
 
 import numpy as np
+import numba
+from numba import float64, boolean
 
 from scipy.stats import norm
 from scipy.optimize import minimize_scalar
@@ -33,10 +35,17 @@ from eemeter.common.stats.adaptive_loss import adaptive_loss_fcn
 # Work based on RayMaekers 2021 paper titled "Transforming variables to central normality"
 # https://doi.org/10.1007/s10994-021-05960-5
 
-# TODO: interesting article: https://link.springer.com/article/10.1007/s10260-022-00640-7
+# TODO: interesting article: https://link.springer.com/article/10.1007/s10260-022-00640-7#Sec17
+#                            https://github.com/UniprJRC/FSDA/tree/master/toolbox/regression
+#                            https://github.com/UniprJRC/FSDA/blob/master/toolbox/regression/FSRfan.m
+#                            https://github.com/UniprJRC/FSDA/blob/master/toolbox/regression/fanBIC.m
+
+_NO_DERIV = False
+_DERIV = True
 
 
-def _yeo_johnson_base(x, lam, deriv=False):
+@numba.jit((float64)(float64, float64, boolean), nopython=True, error_model="numpy", cache=True)
+def _yeo_johnson_base(x, lam, deriv):
     if not deriv:
         if   (lam != 0) and (x >= 0):
             return ((1 + x)**lam - 1)/lam
@@ -46,6 +55,8 @@ def _yeo_johnson_base(x, lam, deriv=False):
             return -((1 - x)**(2 - lam) - 1)/(2 - lam)
         elif (lam == 2) and (x < 0):
             return -np.log(1 - x)
+        else:
+            return np.nan
 
     else:
         if   (lam != 0) and (x >= 0):
@@ -56,52 +67,53 @@ def _yeo_johnson_base(x, lam, deriv=False):
             return (1 - x)**(1 - lam)
         elif (lam == 2) and (x < 0):
             return 1/(1 - x)
+        else:
+            return np.nan
 
 
-def _box_cox_base(x, lam, deriv=False):
+@numba.jit((float64)(float64, float64, boolean), nopython=True, error_model="numpy", cache=True)
+def _box_cox_base(x, lam, deriv):
     if not deriv:
         if   (lam != 0):
             return (x**lam - 1)/lam
         elif (lam == 0):
             return np.log(x)
+        else:
+            return np.nan
 
     else:
         if   (lam != 0):
             return x**(lam - 1)
         elif (lam == 0):
             return 1/x
+        else:
+            return np.nan
 
 
-def rectified_transform(x, lam, Q=None, Q_perc=0.25, tr_type="Yeo-Johnson"):
+@numba.jit(nopython=True, error_model="numpy", cache=True)
+def rectified_transform(x, lam, Q, tr_type="Yeo-Johnson"):
     if tr_type == "Yeo-Johnson":
         tr = _yeo_johnson_base
     elif tr_type == "Box-Cox":
         tr = _box_cox_base
 
-    if Q is None and Q_perc is not None:
-        [q1, q3] = np.quantile(x, [Q_perc, 1 - Q_perc])
-          
-    elif Q is not None:
-        [q1, q3] = Q
+    [q1, q3] = Q
 
     h = np.empty_like(x)
-    for i in range(len(x)):
-        if Q is None:
-            h[i] = tr(x[i], lam)
+    for i, xi in enumerate(x):
+        if (q1 <= xi) and (xi < q3):
+            h[i] = tr(xi, lam, _NO_DERIV)
 
-        else:
-            if (q1 <= x[i]) and (x[i] < q3):
-                h[i] = tr(x[i], lam)
+        elif q3 < xi:
+            h[i] = tr(q3, lam, _NO_DERIV) + (xi - q3)*tr(q3, lam, _DERIV)
 
-            elif q3 < x[i]:
-                h[i] = tr(q3, lam) + (x[i] - q3)*tr(q3, lam, deriv=True)
-
-            elif x[i] < q1:
-                h[i] = tr(q1, lam) + (x[i] - q1)*tr(q1, lam, deriv=True)
+        elif xi < q1:
+            h[i] = tr(q1, lam, _NO_DERIV) + (xi - q1)*tr(q1, lam, _DERIV)
 
     return h
 
 
+@numba.jit(nopython=True, error_model="numpy", cache=True)
 def unrectified_transform(x, lam, tr_type="Yeo-Johnson"):
     if tr_type == "Yeo-Johnson":
         tr = _yeo_johnson_base
@@ -109,8 +121,8 @@ def unrectified_transform(x, lam, tr_type="Yeo-Johnson"):
         tr = _box_cox_base
 
     h = np.empty_like(x)
-    for i in range(len(x)):
-        h[i] = tr(x[i], lam)
+    for i, xi in enumerate(x):
+        h[i] = tr(xi, lam, _NO_DERIV)
 
     return h
 
@@ -125,6 +137,13 @@ def loss_fcn(x, mu=0, c=1, loss_type="adaptive"):
 
     else:
         raise NotImplementedError(f"loss_type: {loss_type} not implemented")
+
+
+def _robust_standardize(x, robust_type, c_huber):
+    if robust_type == "huber_m_estimate":
+        return robust_standardize(x, robust_type=robust_type, c=c_huber, tol=1e-08)
+    else:
+        return robust_standardize(x, robust_type=robust_type)
 
 
 def initial_lam_obj_fcn_dec(x, Q, transform_type="Yeo-Johnson", c=0.5, robust_type="huber_m_estimate", c_huber=1.5):
@@ -155,12 +174,7 @@ def lam_obj_fcn_dec(
     outlier_alpha=0.005, 
 ):
     h_0 = unrectified_transform(x, lam_0, tr_type=transform_type)
-    if robust_type == "huber_m_estimate":
-        mu, sigma = robust_mu_sigma(x, robust_type, c=c_huber, tol=1e-08)
-    else:
-        mu, sigma = robust_mu_sigma(x, robust_type)
-
-    h_0_standardized = np.abs((h_0 - mu)/sigma)
+    h_0_standardized = np.abs(_robust_standardize(h_0, robust_type, c_huber))
 
     phi = norm.ppf(1 - outlier_alpha)
 
@@ -188,7 +202,6 @@ def lam_obj_fcn_dec(
 
 def normal_transformation(
     x, 
-    Q=None, 
     Q_perc=0.25, 
     transform_type="Yeo-Johnson", 
     c=0.5,
@@ -198,47 +211,43 @@ def normal_transformation(
     pre_standardize=True,
     post_standardize=True,
     ):
+
     # bounds = np.array([-1, 3]) + np.array([-10, 10])
-    bracket = np.array([-1, 1, 3])
+    # bracket = np.array([-1, 1, 3])
+    lmbda_bnds = np.array([-10, 10])
 
     if pre_standardize:
         if transform_type == "Yeo-Johnson":
-            mu, sigma = adaptive_weighted_mu_sigma(x, use_mean=False, rel_err=1E-4, abs_err=1E-4)
-            x = (x - mu)/sigma
-
+            x = _robust_standardize(x, robust_type, c_huber)
         elif transform_type == "Box-Cox":
-            x = np.log(x)
-            mu, sigma = adaptive_weighted_mu_sigma(x, use_mean=False, rel_err=1E-4, abs_err=1E-4)
-            x = np.exp((x - mu)/sigma)
+            x = np.exp(_robust_standardize(np.log(x), robust_type, c_huber))
 
     x = np.sort(x)
-    
     Q = np.quantile(x, [Q_perc, 1 - Q_perc])
+    for n in range(3):
+        if n == 0:
+            lam_loss_0 = initial_lam_obj_fcn_dec(x, Q, transform_type, c, robust_type, c_huber)
+            # res = minimize_scalar(lam_loss_0, bounds=lmbda_bnds, method="bounded")
+            res = minimize_scalar(lam_loss_0, bracket=lmbda_bnds, method="brent")
+            lam = res.x
 
-    lam_loss_0 = initial_lam_obj_fcn_dec(x, Q, transform_type, c, robust_type, c_huber)
-    # res = minimize_scalar(lam_loss_0, bounds=bounds, method="bounded")
-    res = minimize_scalar(lam_loss_0, bracket=bracket[[0, 1]], method="brent")
-    lam = res.x
+        else:
+            lam_loss = lam_obj_fcn_dec(x, lam, transform_type, robust_type, c_huber, outlier_alpha=outlier_alpha)
+            # res = minimize_scalar(lam_loss, bounds=lmbda_bnds, method="bounded")
+            res = minimize_scalar(lam_loss, bracket=lmbda_bnds, method="brent")
+            lam = res.x
 
-    for _ in range(2):
-        lam_loss = lam_obj_fcn_dec(x, lam, transform_type, robust_type, c_huber, outlier_alpha=outlier_alpha)
-
-        # res = minimize_scalar(lam_loss, bounds=bounds, method="bounded")
-        res = minimize_scalar(lam_loss, bracket=bracket[[0, 1]], method="brent")
-        lam = res.x
-
-    xt = rectified_transform(x, lam, Q=None, tr_type=transform_type)
+    xt = rectified_transform(x, lam, Q=Q, tr_type=transform_type)
 
     if post_standardize:
-        if robust_type == "huber_m_estimate":
-            xt = robust_standardize(xt, robust_type=robust_type, c=c_huber, tol=1e-08)
-        else:
-            xt = robust_standardize(xt, robust_type=robust_type)
+        xt = _robust_standardize(xt, robust_type, c_huber)
 
     return xt, lam
 
 
-def robust_YJ(x, Q_perc=0.25, c=0.5, outlier_alpha=0.005, c_huber=1.5, robust_type="iqr"):
+def raymaekers_robust_YJ(x, Q_perc=0.25, c=0.5, outlier_alpha=0.005, c_huber=1.5, robust_type="huber_m_estimate"):
+    # outlier_alpha should be between 0.005 and 0.025 (0.005 is higher efficiency, less robust)
+
     if np.all(x == x[0]): # if all values are the same, do not transform, return
         return np.zeros_like(x)
 

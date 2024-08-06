@@ -23,6 +23,7 @@ import numpy as np
 
 from scipy.optimize import minimize_scalar
 from scipy.stats import skew
+from statsmodels.stats.stattools import robust_skewness as robust_skew
 
 from eemeter.common.stats.distribution_transform.standardize import robust_standardize
 from eemeter.common.stats.outliers import IQR_outlier
@@ -38,7 +39,9 @@ def bisymlog(x, rescale_quantile=None):
         xt_outliers = IQR_outlier(xt, sigma_threshold=3, quantile=0.05)
         xt = xt[(xt_outliers[0] < xt) & (xt < xt_outliers[1])]
 
-        return np.abs(skew(xt))
+        abs_skew = np.abs(skew(xt))
+
+        return abs_skew
 
     bnds = [-14, 6]
 
