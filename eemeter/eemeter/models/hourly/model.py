@@ -241,18 +241,6 @@ class HourlyModel:
         self.categorical_features = []
         df_dummies = [df]
 
-        if self.settings.INCLUDE_SEASONS_CATAGORY:
-            df["season"] = df.index.month_name().map(_const.default_season_def) # update in settings if good enough to keep
-
-            # make seasons catagorical #TODO if keeping this make it more general
-            season_cat = [f"season_{i}" for i in np.arange(len(_const.default_season_def["options"])) + 1]
-            self.categorical_features.extend(season_cat)
-
-            seasons = pd.Categorical(df["season"], categories=range(1, 4))
-            season_dummies = pd.get_dummies(seasons, prefix="season")
-            season_dummies.index = df.index
-            df_dummies.append(season_dummies)
-
         # add month catagory
         df["month"] = df.index.month
 
