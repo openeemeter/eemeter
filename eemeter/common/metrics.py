@@ -28,7 +28,7 @@ from enum import Enum
 from functools import cached_property # TODO: This requires Python 3.8
 
 from eemeter.common.utils import median_absolute_deviation, t_stat
-from eemeter.common.pydantic_utils import PydanticDf, PydanticFromDict
+from eemeter.common.pydantic_utils import ArbitraryPydanticModel, PydanticDf, PydanticFromDict
 
 
 def computed_field_cached_property():
@@ -40,10 +40,7 @@ def computed_field_cached_property():
     return deco
 
 
-class ColumnMetrics(pydantic.BaseModel):
-    class Config:
-        arbitrary_types_allowed = True # required for dataframe / series
-
+class ColumnMetrics(ArbitraryPydanticModel):
     series: pd.Series = pydantic.Field(
         exclude=True
     )
@@ -100,7 +97,7 @@ def _safe_divide(numerator, denominator, min_denominator=1E-3):
     return numerator / denominator
 
 
-class BaselineMetrics(pydantic.BaseModel):
+class BaselineMetrics(ArbitraryPydanticModel):
     # TODO: Update the doc string
     """Contains measures of model fit and summary statistics on the input dataframe.
 
@@ -195,9 +192,6 @@ class BaselineMetrics(pydantic.BaseModel):
         Base term used in fractional savings uncertainty computation.
 
     """
-
-    class Config:
-        arbitrary_types_allowed = True # required for dataframe / series
 
     """Input dataframe to be used for metrics calculations"""
     df: pd.DataFrame = pydantic.Field(
@@ -374,47 +368,6 @@ class BaselineMetrics(pydantic.BaseModel):
 
         return (df_no_zeros["residuals"] / df_no_zeros["observed"]).abs().mean()
     
-
-# Delete these later
-class ColumnTestingMetrics(ColumnMetrics):
-    @cached_property
-    def values(self) -> np.ndarray:
-        return self.series.values
-
-
-class BaselineTestingMetrics(BaselineMetrics):
-    @cached_property
-    def _df(self) -> pd.DataFrame:
-        #TODO: remove any caltrack value for the actual implementation, this is for testing
-        _df = self.df[["observed", "predicted", "caltrack"]].copy()
-
-        if len(_df) < 1:
-            raise ValueError("Input dataframe must have at least one row")
-
-        # Check dataframe
-        expected_columns = {"observed": "float", "predicted": "float",  "caltrack": "float"}
-        _df = PydanticDf(df=_df, column_types=expected_columns).df
-
-        # drop non finite values from df
-        _df = _df[np.isfinite(_df["observed"]) & np.isfinite(_df["predicted"]) & np.isfinite(_df["caltrack"])]
-
-        # get residuals
-        _df["residuals"] = _df["observed"] - _df["predicted"]
-
-        return _df
-
-    @computed_field_cached_property()
-    def observed(self) -> ColumnTestingMetrics:
-        return ColumnTestingMetrics(series=self._df["observed"])
-    
-    @computed_field_cached_property()
-    def predicted(self) -> ColumnTestingMetrics:
-        return ColumnTestingMetrics(series=self._df["predicted"])
-
-    @computed_field_cached_property()
-    def caltrack(self) -> ColumnTestingMetrics:
-        return ColumnTestingMetrics(series=self._df["caltrack"])
-
 
 def BaselineMetricsFromDict(input_dict):
     for k in ["observed", "predicted", "residuals"]:
