@@ -50,7 +50,12 @@ class PydanticDf(pydantic.BaseModel):
                         self.df[col] = self.df[col].astype(col_type)
                     else:
                         raise ValueError(f"Expected column {col} to be of type {col_type} but got {self.df[col].dtype}")
-                    
+
+
+class ArbitraryPydanticModel(pydantic.BaseModel):
+    class Config:
+        arbitrary_types_allowed = True # required for dataframe / series
+
 
 def PydanticFromDict(input_dict, name="PydanticModel"):
     """Creates a Pydantic model from a dictionary.
@@ -62,7 +67,11 @@ def PydanticFromDict(input_dict, name="PydanticModel"):
     Returns:
         Pydantic.BaseModel: Instantiated Pydantic model from input dictionary.
     """
-    
-    model = pydantic.create_model(name, **{name: (type(value), ...) for name, value in input_dict.items()})
+
+    model = pydantic.create_model(
+        name, 
+        **{name: (type(value), ...) for name, value in input_dict.items()},
+        __base__=ArbitraryPydanticModel,
+    )
 
     return model(**input_dict)

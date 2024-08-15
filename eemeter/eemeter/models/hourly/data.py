@@ -305,7 +305,7 @@ class HourlyData:
         self.df = check_datetime(self.df)
 
         # save the original datetime column
-        self.datetime_original = self.df["datetime"]
+        self.datetime_original = copy.deepcopy(self.df["datetime"])
 
         # fill in missing datetimes
         self.df = get_contiguous_datetime(self.df)

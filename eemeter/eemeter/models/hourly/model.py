@@ -21,13 +21,16 @@
 import numpy as np
 import pandas as pd
 
+from scipy.spatial.distance import cdist
+
 from sklearn.linear_model import ElasticNet
 from sklearn.preprocessing import StandardScaler
+
+from tslearn.clustering import TimeSeriesKMeans, silhouette_score
 
 from typing import Optional
 import json
 
-import eemeter.common.const as _const
 from eemeter.eemeter.models.hourly import settings as _settings
 from eemeter.common.metrics import BaselineMetrics, BaselineMetricsFromDict
 
@@ -37,6 +40,13 @@ from eemeter.eemeter.models.hourly.data import HourlyData
 
 
 class HourlyModel:
+    # set priority columns for sorting
+    # this is critical for ensuring predict column order matches fit column order
+    _priority_cols = {
+        "ts": ["temperature", "ghi"],
+        "cat": ["temporal_cluster", "daily_temp"],
+    }
+
     def __init__(
         self,
         settings : Optional[_settings.HourlySettings] = None,
@@ -50,8 +60,6 @@ class HourlyModel:
         else:
             self.settings = settings
 
-        # self.settings.INCLUDE_MAX_TEMP_CATAGORY = True
-
         # Initialize model
         self._feature_scaler = StandardScaler()
         self._y_scaler = StandardScaler()
@@ -64,19 +72,20 @@ class HourlyModel:
             random_state = self.settings._SEED,
         )
         
-        self.n_bins = self.settings.TEMPERATURE_BIN_COUNT
-        self.same_size_bin = self.settings.TEMPERATURE_BIN_SAME_SIZE            
+        self._T_bin_edges = None
+        self._df_temporal_clusters = None
+        self._ts_features = self.settings.TRAIN_FEATURES.copy()
+        self._categorical_features = None
+        self._ts_feature_norm = None
 
         self.is_fit = False
-        self.categorical_features = None
-        self.norm_features_list = None
         self.baseline_metrics = None
 
 
     def fit(self, baseline_data, ignore_disqualification=False):
 
-        if not isinstance(baseline_data, HourlyData):
-            raise TypeError("baseline_data must be a HourlyData object")
+        # if not isinstance(baseline_data, HourlyData):
+        #     raise TypeError("baseline_data must be a HourlyData object")
         # baseline_data.log_warnings()
         # if baseline_data.disqualification and not ignore_disqualification:
         #     raise DataSufficiencyError("Can't fit model on disqualified baseline data")
@@ -102,24 +111,33 @@ class HourlyModel:
 
     def _fit(self, Meter_Data):
         # Initialize dataframe
-        # meter_data, _ = self._prepare_dataframe(meter_data)
-        meter_df = Meter_Data.df.copy()
+        self.is_fit = False
 
-        self.fit_pred_status = 'fitting'
+        # TODO: should we profile later to check if this copy is necessary?
+        df_meter = Meter_Data.df.copy()
+
         # Prepare feature arrays/matrices
-        X, y = self._prepare_features(meter_df)
+        X_fit, X_predict, y_fit = self._prepare_features(df_meter)
 
-        # Fit the model
-        self._model.fit(X, y)
+        # fit the model
+        self._model.fit(X_fit, y_fit)
         self.is_fit = True
 
-        # Get number of model parameters
+        # get number of model parameters
         num_parameters = (np.count_nonzero(self._model.coef_) + 
                           np.count_nonzero(self._model.intercept_))
-        
-        # Get metrics #TODO: is this necessary? if yes let's do it for prediction as well
-        meter_df = self._predict(Meter_Data)
-        self.baseline_metrics = BaselineMetrics(df=meter_df, num_model_params=num_parameters)
+
+        # get model prediction of baseline
+        df_meter = self._predict(Meter_Data, X=X_predict)
+
+        # calculate baseline metrics on non-interpolated data
+        cols = [col for col in df_meter.columns if col.startswith("interpolated_")]
+        interpolated = df_meter[cols].any(axis=1)
+
+        self.baseline_metrics = BaselineMetrics(
+            df=df_meter.loc[~interpolated], 
+            num_model_params=num_parameters
+        )
 
         return self
 
@@ -133,8 +151,8 @@ class HourlyModel:
         if not self.is_fit:
             raise RuntimeError("Model must be fit before predictions can be made.")
         
-        if not isinstance(reporting_data, HourlyData):
-            raise TypeError("reporting_data must be a HourlyData object")
+        # if not isinstance(reporting_data, HourlyData):
+        #     raise TypeError("reporting_data must be a HourlyData object")
 
         # if self.disqualification and not ignore_disqualification:
         #     raise DisqualifiedModelError(
@@ -159,7 +177,7 @@ class HourlyModel:
         return df_eval
 
 
-    def _predict(self, Eval_Data):
+    def _predict(self, Eval_Data, X=None):
         """
         Makes model prediction on given temperature data.
 
@@ -169,7 +187,7 @@ class HourlyModel:
         Returns:
             pandas.DataFrame: The evaluation dataframe with model predictions added.
         """
-        self.fit_pred_status = 'predicting'
+        # TODO: same as fit, is copy necessary?
         df_eval = Eval_Data.df.copy()
         datetime_original = Eval_Data.datetime_original
         # # get list of columns to keep in output
@@ -177,22 +195,19 @@ class HourlyModel:
         if "datetime" in columns:
             columns.remove("datetime") # index in output, not column
 
-        
-        X, _ = self._prepare_features(df_eval)
+        if X is None:
+            _, X, _ = self._prepare_features(df_eval)
 
         y_predict_scaled = self._model.predict(X)
         y_predict = self._y_scaler.inverse_transform(y_predict_scaled)
         y_predict = y_predict.flatten()
         df_eval["predicted"] = y_predict
 
-        # make predicted nan if interpolated is True
-        # df_eval.loc[df_eval["interpolated"], "predicted"] = np.nan #TODO: check if this is necessary
-
         # # remove columns not in original columns and predicted
         df_eval = df_eval[[*columns, "predicted"]]
 
-        # reset index to original datetime index
-        df_eval = df_eval.loc[datetime_original]
+        # reindex to original datetime index
+        df_eval = df_eval.reindex(datetime_original)
 
         return df_eval
 
@@ -214,139 +229,305 @@ class HourlyModel:
         Returns:
         - A pandas DataFrame containing the initialized meter data
         """
-        #TODO: @Armin This meter data has weather data and it should be already clean
+        meter_data = self._add_categorical_features(meter_data)
+        if self.settings.SUPPLEMENTAL_DATA is not None:
+            self._add_supplemental_features(meter_data)
+
+        self._sort_features()
+
+        meter_data = self._daily_sufficiency(meter_data)
+        meter_data = self._normalize_features(meter_data)
+
+        X_predict, _ = self._get_feature_matrices(meter_data)
+
+        if not self.is_fit:
+            # remove insufficient days from fit data
+            meter_data = meter_data[meter_data["include_date"]]
+            X_fit, y_fit = self._get_feature_matrices(meter_data)
+       
+        else:
+            X_fit, y_fit = None, None
+
+        return X_fit, X_predict, y_fit
+
+
+    def _add_temperature_bins(self, df):
+        #TODO: do we need to do something about empty bins in prediction? I think not but maybe
+
+        bin_method = self.settings.TEMPERATURE_BINNING_METHOD
+        bin_count = self.settings.TEMPERATURE_BIN_COUNT
         
-        # get categorical features
-        modified_meter_data = self._add_categorical_features(meter_data)
+        # add daily average temperature to df
+        daily_temp = df.groupby('date')["temperature"].mean()
+        daily_temp.name = 'daily_temp'
 
-        # normalize the data
-        # train_features = self.settings.TRAIN_FEATURES
-        # lagged_features = self.settings.LAGGED_FEATURES
-        # window = self.settings.WINDOW
+        df = pd.merge(df, daily_temp, on='date', how='left')
 
-        modified_meter_data = self._normalize_data(modified_meter_data, self.settings.TRAIN_FEATURES)
+        # add temperature bins based on daily average temperature
+        if not self.is_fit:
+            if bin_method == "equal_bin_width":
+                T_bins, T_bin_edges= pd.cut(df['daily_temp'], bins=bin_count, retbins=True, labels=False)
+            elif bin_method == "equal_sample_count":
+                T_bins, T_bin_edges= pd.qcut(df['daily_temp'], q=bin_count, retbins=True, labels=False)
+            else:
+                raise ValueError("Invalid temperature binning method")
 
-        X, y = self._get_feature_data(modified_meter_data)
+            # set the first and last bin to -inf and inf
+            T_bin_edges[0] = -np.inf
+            T_bin_edges[-1] = np.inf
 
-        return X, y
+            # store bin edges for prediction
+            self._T_bin_edges = T_bin_edges
+
+        else:
+            T_bins = pd.cut(df['daily_temp'], bins=self._T_bin_edges, labels=False)
+        
+        df['daily_temp_bin'] = T_bins
+
+        # Create dummy variables for temperature bins
+        bin_dummies = pd.get_dummies(
+            pd.Categorical(df['daily_temp_bin'], 
+                           categories=range(len(self._T_bin_edges) - 1)),
+            prefix='daily_temp'
+            )
+        bin_dummies.index = df.index
+
+        col_names = bin_dummies.columns.tolist()
+        df = pd.merge(df, bin_dummies, how='left', left_index=True, right_index=True)
+
+        return df, col_names
 
 
     def _add_categorical_features(self, df):
-        """
-        """
-        # Add date, month and day of week
-        # There shouldn't be any day_ or month_ columns in the dataframe
-        df["date"] = df.index.date
+        def set_initial_temporal_clusters(df):
+            fit_df_grouped = df.groupby(['month', 'day_of_week', 'hour'])['observed'].mean().reset_index()
+            fit_grouped = fit_df_grouped.groupby(['month', 'day_of_week'])['observed'].apply(np.array)
 
-        self.categorical_features = []
-        df_dummies = [df]
+            # convert fit_grouped to 2D numpy array
+            X = np.stack(fit_grouped.values, axis=0)
 
-        # add month catagory
-        df["month"] = df.index.month
-
-        month_cat = [f"month_{i}" for i in np.arange(12) + 1 if f"month_{i}"]
-        self.categorical_features.extend(month_cat)
-
-        months = pd.Categorical(df["month"], categories=range(1, 13))
-        month_dummies = pd.get_dummies(months, prefix="month")
-        month_dummies.index = df.index
-        self.month_dummies = month_dummies
-        # df_dummies.append(month_dummies)
-        df = pd.merge(df, month_dummies, on='datetime', how='left')
-
-
-        # add day catagory
-        df["day_of_week"] = df.index.dayofweek
-
-        day_cat = [f"day_{i}" for i in np.arange(7) + 1]
-        self.categorical_features.extend(day_cat)
-
-        days = pd.Categorical(df["day_of_week"], categories=range(1, 8))
-        day_dummies = pd.get_dummies(days, prefix="day")
-        day_dummies.index = df.index
-        # df_dummies.append(day_dummies)
-        df = pd.merge(df, day_dummies, on='datetime', how='left')
-
-        # add mean daily temperature catagory
-        if self.settings.INCLUDE_TEMPERATURE_BINS: #TODO: we need to take care of empty bins, if there is any.
-            indct_temp = df.groupby('date')["temperature"].mean()
-            df = pd.merge(df, indct_temp, on='date', how='left').rename(columns={'temperature_x': 'temperature', 'temperature_y': 'indct_temp'}).set_index(df.index)
-            #same size bin cut
-            if self.fit_pred_status == 'fitting':
-                if not self.same_size_bin :
-                    res, temp_bins= pd.qcut(df['indct_temp'], q=self.n_bins, retbins=True, labels=False)
-                else:
-                    res, temp_bins= pd.cut(df['indct_temp'], bins=self.n_bins, retbins=True, labels=False)
-                temp_bins = list(temp_bins)
-                temp_bins[0] = -np.inf
-                temp_bins[-1] = np.inf
-                # temp_bins.insert(0, -np.inf)
-                # temp_bins.append(np.inf)
-                res, temp_bins= pd.cut(df['indct_temp'], bins=temp_bins, retbins=True, labels=False)
-                df['indct_temp_bins_cat'] = res
-                self.indct_temp_bins = temp_bins
-
-                bin_dummies = pd.get_dummies(
-                    pd.Categorical(df['indct_temp_bins_cat'], categories=range(len(self.indct_temp_bins )-1)),
-                    prefix='indct_temp'
+            HoF = {"score": -np.inf, "clusters": None}
+            for n_cluster in range(2, self.settings.MAX_TEMPORAL_CLUSTER_COUNT + 1):
+                km = TimeSeriesKMeans(
+                    n_clusters=n_cluster,
+                    n_init=self.settings.TEMPORAL_CLUSTER_N_INIT,
+                    metric=self.settings.TEMPORAL_CLUSTER_METRIC, 
+                    random_state=self.settings._SEED,
                 )
+                labels = km.fit_predict(X)
+                score = silhouette_score(X, labels)
 
-            elif self.fit_pred_status == 'predicting':
-                res = pd.cut(df['indct_temp'], bins=self.indct_temp_bins, labels=False)
-                df['indct_temp_bins_cat'] = res
-                bin_dummies = pd.get_dummies(
-                    pd.Categorical(df['indct_temp_bins_cat'], categories=range(len(self.indct_temp_bins )-1)),
-                    prefix='indct_temp'
-                    )
+                if score > HoF["score"]:
+                    HoF["score"] = score
+                    # HoF["n_cluster"] = n_cluster
+                    # HoF["km"] = km
+                    HoF["clusters"] = labels
+                    # HoF["centroids"] = km.cluster_centers_
 
-            temp_cat = [f"indct_temp_{i}" for i in range(len(self.indct_temp_bins)-1)]
-            self.categorical_features.extend(temp_cat)
-            df = pd.merge(df, bin_dummies, on=df.index, how='left').set_index(df.index)
+            df_temporal_clusters = pd.DataFrame(
+                HoF["clusters"].astype(int),
+                columns=["temporal_cluster"],
+                index=fit_grouped.index
+            )
+
+            return df_temporal_clusters
+
+        def correct_missing_temporal_clusters(df):
+            # check and match any missing temporal combinations
+
+            # get all unique combinations of month and day_of_week in df
+            df_temporal = df[['month', 'day_of_week']].drop_duplicates()
+            df_temporal = df_temporal.sort_values(["month", "day_of_week"])
+            df_temporal_index = df_temporal.set_index(['month', 'day_of_week']).index
+
+            # reindex self.df_temporal_clusters to df_temporal_index
+            df_temporal_clusters = self._df_temporal_clusters.reindex(df_temporal_index)
+
+            # get index of any nan values in df_temporal_clusters
+            missing_combinations = df_temporal_clusters[df_temporal_clusters['temporal_cluster'].isna()].index
+            if not missing_combinations.empty:
+                # TODO: this assumes that observed has values in df and not all null
+                if "observed" in df.columns:
+                    # filter df to only include missing combinations
+                    df_missing = df[df.set_index(['month', 'day_of_week']).index.isin(missing_combinations)]
+
+                    df_missing_grouped = df_missing.groupby(['month', 'day_of_week', 'hour'])['observed'].mean().reset_index()
+                    df_missing_grouped = df_missing_grouped.groupby(['month', 'day_of_week'])['observed'].apply(np.array)
+
+                    # convert fit_grouped to 2D numpy array
+                    X = np.stack(df_missing_grouped.values, axis=0)
+
+                    # calculate average observed for known clusters
+                    # join df_temporal_clusters to df on month and day_of_week
+                    df = pd.merge(df, df_temporal_clusters, how='left', left_on=['month', 'day_of_week'], right_index=True)
+
+                    df_known = df[~df.set_index(['month', 'day_of_week']).index.isin(missing_combinations)]
+
+                    df_known_groupby = df_known.groupby(['month', 'day_of_week', 'hour'])['observed']
+                    df_known_mean = df_known_groupby.mean().reset_index()
+                    df_known_mean = df_known_mean.groupby(['month', 'day_of_week'])['observed'].apply(np.array)
+
+                    # get temporal clusters df_known 
+                    temporal_clusters = df_known.groupby(['month', 'day_of_week'])['temporal_cluster'].first()
+                    temporal_clusters = temporal_clusters.reindex(df_known_mean.index)
+
+                    X_known = np.stack(df_known_mean.values, axis=0)
+
+                    # get smallest distance between X and X_known
+                    dist = cdist(X, X_known, metric="euclidean")
+                    min_dist_idx = np.argmin(dist, axis=1)
+
+                    # set labels to minimum distance of known clusters
+                    labels = temporal_clusters.iloc[min_dist_idx].values
+                    df_temporal_clusters.loc[missing_combinations, 'temporal_cluster'] = labels
+
+                    self._df_temporal_clusters = df_temporal_clusters
+
+                else:
+                    # TODO: There's better ways of handling this
+                    # unstack and fill missing days in each month
+                    # assuming months more important than days
+                    df_temporal_clusters = df_temporal_clusters.unstack()
+
+                    # fill missing days in each month
+                    df_temporal_clusters = df_temporal_clusters.ffill(axis=1)
+                    df_temporal_clusters = df_temporal_clusters.bfill(axis=1)
+
+                    # fill missing months if any remaining empty
+                    df_temporal_clusters = df_temporal_clusters.ffill(axis=0)
+                    df_temporal_clusters = df_temporal_clusters.bfill(axis=0)
+
+                    df_temporal_clusters = df_temporal_clusters.stack()
+
+            return df_temporal_clusters
+        
+        # assign basic temporal features
+        df["date"] = df.index.date
+        df["month"] = df.index.month
+        df["day_of_week"] = df.index.dayofweek
+        df["hour"] = df.index.hour
+
+        # assign temporal clusters
+        if not self.is_fit:
+            self._df_temporal_clusters = set_initial_temporal_clusters(df)
+        else:
+            self._df_temporal_clusters = correct_missing_temporal_clusters(df)
+
+        # join df_temporal_clusters to df
+        df = pd.merge(df, self._df_temporal_clusters, how='left', left_on=['month', 'day_of_week'], right_index=True)
+        n_clusters = self._df_temporal_clusters["temporal_cluster"].nunique()
+
+        cluster_dummies = pd.get_dummies(
+            pd.Categorical(df['temporal_cluster'], categories=range(n_clusters)),
+            prefix='temporal_cluster'
+        )
+        cluster_dummies.index = df.index
+
+        cluster_cat = [f"temporal_cluster_{i}" for i in range(n_clusters)]
+        self._categorical_features = cluster_cat
+
+        df = pd.merge(df, cluster_dummies, how='left', left_index=True, right_index=True)
+
+        if self.settings.INCLUDE_TEMPERATURE_BINS:
+            df, temp_bin_cols = self._add_temperature_bins(df)
+            self._categorical_features.extend(temp_bin_cols)
+
         return df
 
 
-    def _normalize_data(self, df, train_features):
-        """
-        """
-        to_be_normalized = train_features.copy()
-        self.norm_features_list = [i+'_norm' for i in train_features]
-        #TODO: save the name of the columns and train features and categorical columns, scaler for everything
-        #TODO: save all the train errors
-        #TODO: save model and all the potential settings
+    def _add_supplemental_features(self, df):
+        # TODO: should either do upper or lower on all strs
+        if 'TS_SUPPLEMENTAL' in self.settings.SUPPLEMENTAL_DATA:
+            if self.settings.SUPPLEMENTAL_DATA['TS_SUPPLEMENTAL'] is not None:
+                for col in self.settings.SUPPLEMENTAL_DATA['TS_SUPPLEMENTAL']:
+                    if (col in df.columns) and (col not in self._ts_features):
+                        self._ts_features.append(col)
+                    
+        if 'CATEGORICAL_SUPPLEMENTAL' in self.settings.SUPPLEMENTAL_DATA:
+            if self.settings.SUPPLEMENTAL_DATA['CATEGORICAL_SUPPLEMENTAL'] is not None:
+                for col in self.settings.SUPPLEMENTAL_DATA['CATEGORICAL_SUPPLEMENTAL']:
+                    if ((col in df.columns) 
+                        and (col not in self._ts_features) 
+                        and (col not in self._categorical_features)):
 
+                        self._categorical_features.append(col)
+            
+    
+    def _sort_features(self):
+        # sort time series features
+        def key_fcn(x):
+            if x in self._priority_cols["ts"]:
+                return False, self._priority_cols["ts"].index(x)
+            else:
+                return True, x
+            
+        self._ts_features = sorted(self._ts_features, key=key_fcn)
+
+        # sort categorical features
+        sorted_cat_cols = []
+        for col in self._priority_cols["cat"]:
+            cat_cols = [c for c in self._categorical_features if c.startswith(col)]
+            sorted_cat_cols.extend(sorted(cat_cols))
+
+        # get all columns in self._categorical_feature not in sorted_cat_cols
+        cat_cols = [c for c in self._categorical_features if c not in sorted_cat_cols]
+        if cat_cols:
+            sorted_cat_cols.extend(sorted(cat_cols))
+        
+        self._categorical_features = sorted_cat_cols
+
+
+    def _daily_sufficiency(self, df):
+        # remove days with insufficient data
+        min_hours = self.settings.MIN_DAILY_TRAINING_HOURS
+        
+        if min_hours > 0:
+            # find any rows with interpolated data
+            cols = [col for col in df.columns if col.startswith("interpolated_")]
+            df["interpolated"] = df[cols].any(axis=1)
+
+            # count number of non interpolated hours per day
+            daily_hours = 24 - df.groupby("date")["interpolated"].sum()
+            sufficient_days = daily_hours[daily_hours >= min_hours].index
+
+            # set "include_day" column to True if day has sufficient hours
+            df["include_date"] = df["date"].isin(sufficient_days)
+
+        else:
+            df["include_date"] = True
+
+        return df
+    
+    
+    def _normalize_features(self, df):
+        """
+        """
+        train_features = self._ts_features
+        self._ts_feature_norm = [i+'_norm' for i in train_features]
+
+        # need to set scaler if not fit
         if not self.is_fit:
-            self._feature_scaler.fit(df[to_be_normalized])
+            self._feature_scaler.fit(df[train_features])
             self._y_scaler.fit(df["observed"].values.reshape(-1, 1))
 
-        # df[self.norm_features_list] = self._feature_scaler.transform(df[to_be_normalized])
-        normalized_df = pd.DataFrame(self._feature_scaler.transform(df[to_be_normalized]), index=df.index, columns=self.norm_features_list)
+        data_transformed = self._feature_scaler.transform(df[train_features])
+        normalized_df = pd.DataFrame(
+            data_transformed, 
+            index=df.index, 
+            columns=self._ts_feature_norm
+        )
+
         df = pd.concat([df, normalized_df], axis=1)
-        df["observed_norm"] = self._y_scaler.transform(df["observed"].values.reshape(-1, 1))
+
+        if "observed" in df.columns:
+            df["observed_norm"] = self._y_scaler.transform(df["observed"].values.reshape(-1, 1))
 
         return df
 
 
-    def _get_feature_data(self, df): #TODO: ask Travis about window and lagged features
-        self.new_train_features = self.norm_features_list.copy()
-        if self.settings.SUPPLEMENTAL_DATA is not None:
-            if 'TS_SUPPLEMENTAL' in self.settings.SUPPLEMENTAL_DATA:
-                if self.settings.SUPPLEMENTAL_DATA['TS_SUPPLEMENTAL'] is not None:
-                    for sup in self.settings.SUPPLEMENTAL_DATA['TS_SUPPLEMENTAL']:
-                        self.new_train_features.append(sup)
-                        
-            if 'CATEGORICAL_SUPPLEMENTAL' in self.settings.SUPPLEMENTAL_DATA:
-                if self.settings.SUPPLEMENTAL_DATA['CATEGORICAL_SUPPLEMENTAL'] is not None:
-                    for sup in self.settings.SUPPLEMENTAL_DATA['CATEGORICAL_SUPPLEMENTAL']:
-                        self.categorical_features.append(sup)      
-
-
-                # for sup in self.settings.SUPPLEMENTAL_DATA['categorical_supplemental']: TODO: should we add more genral entry?
-                #     self.categorical_features.append(sup)
-
-        self.new_train_features.sort(reverse=True)
-
+    def _get_feature_matrices(self, df):
         # get aggregated features with agg function
-        agg_dict = {f: lambda x: list(x) for f in self.new_train_features}
+        agg_dict = {f: lambda x: list(x) for f in self._ts_feature_norm}
 
         # get the features and target for each day
         ts_feature = np.array(
@@ -358,33 +539,44 @@ class HourlyModel:
         )
 
         # get the first categorical features for each day for each sample
-        unique_dummies = df[self.categorical_features + ["date"]].groupby("date").first()
+        unique_dummies = df[self._categorical_features + ["date"]].groupby("date").first()
 
         X = np.concatenate((ts_feature, unique_dummies), axis=1)
-        y = np.array(
-            df.groupby("date")
-            .agg({"observed_norm": lambda x: list(x)})
-            .values.tolist()
-        )
-        y = y.reshape(y.shape[0], y.shape[1] * y.shape[2])
+
+        if not self.is_fit:
+            y = np.array(
+                df.groupby("date")
+                .agg({"observed_norm": lambda x: list(x)})
+                .values.tolist()
+            )
+            y = y.reshape(y.shape[0], y.shape[1] * y.shape[2])
+
+        else:
+            y = None
 
         return X, y
 
 
     def to_dict(self):
         feature_scaler = {}
-        for i, key in enumerate(self.settings.TRAIN_FEATURES):
+        for i, key in enumerate(self._ts_features):
             feature_scaler[key] = [self._feature_scaler.mean_[i], self._feature_scaler.scale_[i]]
 
+        # convert self._df_temporal_clusters to list of lists
+        df_temporal_clusters = self._df_temporal_clusters.reset_index().values.tolist()
         y_scaler = [self._y_scaler.mean_, self._y_scaler.scale_]
         
         params = _settings.SerializeModel(
             SETTINGS = self.settings,
+            TEMPORAL_CLUSTERS = df_temporal_clusters,
+            TEMPERATURE_BIN_EDGES = self._T_bin_edges,
+            TS_FEATURES = self._ts_features,
+            CATEGORICAL_FEATURES = self._categorical_features,
             COEFFICIENTS = self._model.coef_.tolist(),
             INTERCEPT = self._model.intercept_.tolist(),
             FEATURE_SCALER = feature_scaler,
             CATAGORICAL_SCALER = None,
-            Y_SCALER= y_scaler,
+            Y_SCALER = y_scaler,
             BASELINE_METRICS = self.baseline_metrics,
         )
 
@@ -403,7 +595,16 @@ class HourlyModel:
         # initialize model class
         model_cls = cls(settings=settings)
 
-        features = list(data.get("FEATURE_SCALER").keys())
+        df_temporal_clusters = pd.DataFrame(
+            data.get("TEMPORAL_CLUSTERS"), 
+            columns=["month", "day_of_week", "temporal_cluster"]
+        ).set_index(["month", "day_of_week"])
+
+        model_cls._df_temporal_clusters = df_temporal_clusters
+        model_cls._T_bin_edges = np.array(data.get("TEMPERATURE_BIN_EDGES"))
+
+        model_cls._ts_features = data.get("TS_FEATURES")
+        model_cls._categorical_features = data.get("CATEGORICAL_FEATURES")
 
         # set feature scaler
         feature_scaler_values= list(data.get("FEATURE_SCALER").values())

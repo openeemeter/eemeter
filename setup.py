@@ -37,6 +37,7 @@ REQUIRED = [
     "scipy",
     "numba",
     "nlopt",
+    "tslearn",
     "pydantic>=2.0",
     "attrs",
     "requests",
