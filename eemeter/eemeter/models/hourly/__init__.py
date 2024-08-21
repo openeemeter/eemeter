@@ -25,7 +25,7 @@ from .model import HourlyModel
 
 __all__ = (
     "HourlyNonSolarSettings",
-    "HourlyNonSolarSettingsV2"
+    "HourlyNonSolarSettingsV2",
     "HourlySolarSettings",
     "HourlySettings",
     "HourlyData",
