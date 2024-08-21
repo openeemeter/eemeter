@@ -18,6 +18,8 @@
 
 """
 
+from __future__ import annotations
+
 import numpy as np
 import pandas as pd
 
@@ -28,7 +30,6 @@ from sklearn.preprocessing import StandardScaler
 
 from tslearn.clustering import TimeSeriesKMeans, silhouette_score
 
-from typing import Optional
 import json
 
 from eemeter.eemeter.models.hourly import settings as _settings
@@ -39,6 +40,7 @@ from eemeter.common.metrics import BaselineMetrics, BaselineMetricsFromDict
 from eemeter.eemeter.models.hourly.data import HourlyData
 
 
+# TODO: need to make explicit solar/nonsolar versions and set settings requirements/defaults appropriately
 class HourlyModel:
     # set priority columns for sorting
     # this is critical for ensuring predict column order matches fit column order
@@ -49,14 +51,14 @@ class HourlyModel:
 
     def __init__(
         self,
-        settings : Optional[_settings.HourlySettings] = None,
+        settings : _settings.HourlyNonSolarSettings | _settings.HourlySolarSettings | None = None,
     ):
         """
         """
 
         # Initialize settings
         if settings is None:
-            self.settings = _settings.HourlySettings()
+            self.settings = _settings.HourlyNonSolarSettings()
         else:
             self.settings = settings
 
@@ -74,7 +76,7 @@ class HourlyModel:
         
         self._T_bin_edges = None
         self._df_temporal_clusters = None
-        self._ts_features = self.settings.TRAIN_FEATURES.copy()
+        self._ts_features = self.settings._TRAIN_FEATURES.copy()
         self._categorical_features = None
         self._ts_feature_norm = None
 
@@ -590,7 +592,7 @@ class HourlyModel:
     @classmethod
     def from_dict(cls, data):
         # get settings
-        settings = _settings.HourlySettings(**data.get("SETTINGS"))
+        settings = _settings.BaseHourlySettings(**data.get("SETTINGS"))
 
         # initialize model class
         model_cls = cls(settings=settings)

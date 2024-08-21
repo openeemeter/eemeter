@@ -6,7 +6,6 @@ import pandas as pd
 import pydantic
 
 from enum import Enum
-from typing import Any, Dict, Optional
 
 from eemeter.common.base_settings import BaseSettings
 from eemeter.common.metrics import BaselineMetrics
@@ -30,14 +29,11 @@ class ClusteringMetric(str, Enum):
 
 
 # analytic_features = ['GHI', 'Temperature', 'DHI', 'DNI', 'Relative Humidity', 'Wind Speed', 'Clearsky DHI', 'Clearsky DNI', 'Clearsky GHI', 'Cloud Type']
-class HourlySettings(BaseSettings):
-    class Config:
-        frozen = False # freeze the settings
-
+class BaseHourlySettings(BaseSettings):
     """train features used within the model"""
     TRAIN_FEATURES: list[str] = pydantic.Field(
         default=['temperature'], 
-        validate_default=True,
+        frozen=True,
     )
 
     """minimum number of training hours per day below which a day is excluded"""
@@ -45,59 +41,50 @@ class HourlySettings(BaseSettings):
         default=12,
         ge=0,
         le=24,
-        validate_default=True,
     )
 
     """include temperature bins"""
     INCLUDE_TEMPERATURE_BINS: bool = pydantic.Field(
         default=True,
-        validate_default=True,
     )
 
     """how to bin temperature data"""
     TEMPERATURE_BINNING_METHOD: BinningChoice | None = pydantic.Field(
         default=BinningChoice.EQUAL_BIN_WIDTH,
-        validate_default=True,
     )
 
     """number of temperature bins"""
     TEMPERATURE_BIN_COUNT: int | None = pydantic.Field(
         default=6,
         ge=1,                       
-        validate_default=True,
     )
 
     """number of clusters to use for temporal clustering (day, month)"""
     MAX_TEMPORAL_CLUSTER_COUNT: int | None = pydantic.Field(
         default=6,
         ge=2,
-        validate_default=True,
     )
 
     """metric to use for temporal clustering"""
     TEMPORAL_CLUSTER_METRIC: ClusteringMetric = pydantic.Field(
         default=ClusteringMetric.EUCLIDEAN,
-        validate_default=True,
     )
 
     """number of times to run k-means clustering"""
     TEMPORAL_CLUSTER_N_INIT: int = pydantic.Field(
         default=5,
         ge=1,
-        validate_default=True,
     )
 
     """supplemental data"""
     SUPPLEMENTAL_DATA: dict | None = pydantic.Field(
         default=None,
-        validate_default=True,
     )
 
     """ElasticNet alpha parameter"""
     ALPHA: float = pydantic.Field(
         default=0.012896,
         ge=0,
-        validate_default=True,
     )
 
     """ElasticNet l1_ratio parameter"""
@@ -105,13 +92,11 @@ class HourlySettings(BaseSettings):
         default=0.032904,
         ge=0,
         le=1,
-        validate_default=True,
     )
 
     """ElasticNet selection parameter"""
     SELECTION: SelectionChoice = pydantic.Field(
         default=SelectionChoice.CYCLIC,
-        validate_default=True,
     )
 
     """ElasticNet max_iter parameter"""
@@ -119,21 +104,13 @@ class HourlySettings(BaseSettings):
         default=1000,
         ge=1,
         le=2**32 - 1,
-        validate_default=True,
     )
 
     """seed for any random state assignment (ElasticNet, Clustering)"""
     SEED: int | None = pydantic.Field(
         default=None,
         ge=0,
-        validate_default=True,
     )
-
-    @pydantic.model_validator(mode="after")
-    def _lowercase_features(self):
-        self.TRAIN_FEATURES = [s.lower() for s in self.TRAIN_FEATURES]
-
-        return self
     
 
     @pydantic.model_validator(mode="after")
@@ -158,13 +135,6 @@ class HourlySettings(BaseSettings):
 
 
     @pydantic.model_validator(mode="after")
-    def _check_features(self):
-        if "temperature" not in self.TRAIN_FEATURES:
-            self.TRAIN_FEATURES.insert(0, "temperature")
-
-        return self
-
-    @pydantic.model_validator(mode="after")
     def _check_seed(self):
         if self.SEED is None:
             self._SEED = np.random.randint(0, 2**32 - 1)
@@ -173,32 +143,23 @@ class HourlySettings(BaseSettings):
         
         return self
 
-    # @pydantic.model_validator(mode="after")
-    # def _freeze_settings(self):
-    #     self.model_config["frozen"] = True
 
-    #     return self
-
-
-class HourlySolarSettings(HourlySettings):
+class HourlySolarSettings(BaseHourlySettings):
     """train features used within the model"""
     TRAIN_FEATURES: list[str] = pydantic.Field(
         default=['temperature', 'ghi'], 
-        validate_default=True,
     )
 
     """number of temperature bins"""
     TEMPERATURE_BIN_COUNT: int | None = pydantic.Field(
         default=6,
         ge=1,                       
-        validate_default=True,
     )
 
     """ElasticNet alpha parameter"""
     ALPHA: float = pydantic.Field(
         default=0.011572,
         ge=0,
-        validate_default=True,
     )
 
     """ElasticNet l1_ratio parameter"""
@@ -206,69 +167,77 @@ class HourlySolarSettings(HourlySettings):
         default=0.139316,
         ge=0,
         le=1,
-        validate_default=True,
     )
 
 
-class HourlyNonSolarSettings(HourlySettings):
+    @pydantic.model_validator(mode="after")
+    def _check_features(self):
+        # make all features lowercase
+        self._TRAIN_FEATURES = [s.lower() for s in self.TRAIN_FEATURES]
+
+        for feature in ["temperature", "ghi"]:
+            if feature not in self._TRAIN_FEATURES:
+                self._TRAIN_FEATURES.insert(0, feature)
+
+        self._TRAIN_FEATURES = sorted(self._TRAIN_FEATURES, key=lambda x: x not in ["temperature", "ghi"])
+
+        return self
+
+
+class HourlyNonSolarSettings(BaseHourlySettings):
     """number of temperature bins"""
     TEMPERATURE_BIN_COUNT: int | None = pydantic.Field(
-        default=10, # 6
+        default=10,
         ge=1,                       
-        validate_default=True,
     )
 
     """ElasticNet alpha parameter"""
     ALPHA: float = pydantic.Field(
-        default=0.002800, # 0.010206
+        default=0.002800,
         ge=0,
-        validate_default=True,
     )
 
     """ElasticNet l1_ratio parameter"""
     L1_RATIO: float = pydantic.Field(
-        default=0.983800, # 0.241955
+        default=0.983800,
         ge=0,
         le=1,
-        validate_default=True,
     )
 
 
-class HourlyNonSolarSettingsV2(HourlySettings):
-    """number of temperature bins"""
-    TEMPERATURE_BIN_COUNT: int | None = pydantic.Field(
-        default=6,
-        ge=1,                       
-        validate_default=True,
-    )
+    @pydantic.model_validator(mode="after")
+    def _check_features(self):
+        # make all features lowercase
+        self._TRAIN_FEATURES = [s.lower() for s in self.TRAIN_FEATURES]
 
-    """ElasticNet alpha parameter"""
-    ALPHA: float = pydantic.Field(
-        default=0.010206,
-        ge=0,
-        validate_default=True,
-    )
+        if "temperature" not in self._TRAIN_FEATURES:
+            self._TRAIN_FEATURES.insert(0, "temperature")
 
-    """ElasticNet l1_ratio parameter"""
-    L1_RATIO: float = pydantic.Field(
-        default=0.241955,
-        ge=0,
-        le=1,
-        validate_default=True,
-    )
+        return self
+
+
+def HourlyNonSolarSettingsV2(**kwargs):
+    input_kwargs = {
+        "TEMPERATURE_BIN_COUNT": 6, 
+        "ALPHA": 0.010206, 
+        "L1_RATIO": 0.241955
+    }
+    input_kwargs.update(kwargs)
+
+    return HourlyNonSolarSettings(**input_kwargs)
 
 
 class SerializeModel(BaseSettings):
     class Config:
         arbitrary_types_allowed = True
 
-    SETTINGS: HourlySettings | None = None
+    SETTINGS: BaseHourlySettings | None = None
     TEMPORAL_CLUSTERS: list[list[int]] | None = None
     TEMPERATURE_BIN_EDGES: list[float] | None = None
     TS_FEATURES: list[str] | None = None
     CATEGORICAL_FEATURES: list[str] | None = None
-    FEATURE_SCALER: Dict[str, list[float]] | None = None
-    CATAGORICAL_SCALER: Dict[str, list[float]] | None = None
+    FEATURE_SCALER: dict[str, list[float]] | None = None
+    CATAGORICAL_SCALER: dict[str, list[float]] | None = None
     Y_SCALER: list[float] | None = None
     COEFFICIENTS: list[list[float]] | None = None
     INTERCEPT: list[float] | None = None

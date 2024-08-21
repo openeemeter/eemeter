@@ -42,7 +42,8 @@ def computed_field_cached_property():
 
 class ColumnMetrics(ArbitraryPydanticModel):
     series: pd.Series = pydantic.Field(
-        exclude=True
+        exclude=True,
+        repr=False,
     )
 
     @computed_field_cached_property()
@@ -195,7 +196,8 @@ class BaselineMetrics(ArbitraryPydanticModel):
 
     """Input dataframe to be used for metrics calculations"""
     df: pd.DataFrame = pydantic.Field(
-        exclude=True
+        exclude=True,
+        repr=False,
     )
 
     _min_denominator: float = 1E-3

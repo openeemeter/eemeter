@@ -26,6 +26,9 @@ from typing import Any
 
 
 class BaseSettings(pydantic.BaseModel):
+    class Config:
+        frozen = True
+    
     """Make all property keys case insensitive"""
     @pydantic.model_validator(mode="before")
     def __uppercase_property_keys__(cls, values: Any) -> Any:
