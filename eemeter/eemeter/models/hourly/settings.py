@@ -187,31 +187,71 @@ class HourlySolarSettings(HourlySettings):
         validate_default=True,
     )
 
-
-class HourlyNonSolarSettings(HourlySettings):
-    """how to bin temperature data"""
-    TEMPERATURE_BINNING_METHOD: BinningChoice | None = pydantic.Field(
-        default=BinningChoice.EQUAL_BIN_WIDTH,
-        validate_default=True,
-    )
-
     """number of temperature bins"""
     TEMPERATURE_BIN_COUNT: int | None = pydantic.Field(
-        default=10,
+        default=6,
         ge=1,                       
         validate_default=True,
     )
 
     """ElasticNet alpha parameter"""
     ALPHA: float = pydantic.Field(
-        default=0.002825,
+        default=0.011572,
         ge=0,
         validate_default=True,
     )
 
     """ElasticNet l1_ratio parameter"""
     L1_RATIO: float = pydantic.Field(
-        default=0.983888,
+        default=0.139316,
+        ge=0,
+        le=1,
+        validate_default=True,
+    )
+
+
+class HourlyNonSolarSettings(HourlySettings):
+    """number of temperature bins"""
+    TEMPERATURE_BIN_COUNT: int | None = pydantic.Field(
+        default=10, # 6
+        ge=1,                       
+        validate_default=True,
+    )
+
+    """ElasticNet alpha parameter"""
+    ALPHA: float = pydantic.Field(
+        default=0.002800, # 0.010206
+        ge=0,
+        validate_default=True,
+    )
+
+    """ElasticNet l1_ratio parameter"""
+    L1_RATIO: float = pydantic.Field(
+        default=0.983800, # 0.241955
+        ge=0,
+        le=1,
+        validate_default=True,
+    )
+
+
+class HourlyNonSolarSettingsV2(HourlySettings):
+    """number of temperature bins"""
+    TEMPERATURE_BIN_COUNT: int | None = pydantic.Field(
+        default=6,
+        ge=1,                       
+        validate_default=True,
+    )
+
+    """ElasticNet alpha parameter"""
+    ALPHA: float = pydantic.Field(
+        default=0.010206,
+        ge=0,
+        validate_default=True,
+    )
+
+    """ElasticNet l1_ratio parameter"""
+    L1_RATIO: float = pydantic.Field(
+        default=0.241955,
         ge=0,
         le=1,
         validate_default=True,
