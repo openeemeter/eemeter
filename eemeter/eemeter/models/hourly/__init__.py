@@ -19,15 +19,14 @@
 """
 
 from .settings import HourlyNonSolarSettings, HourlySolarSettings, HourlyNonSolarSettingsV2
-# from .data import HourlyBaselineData, HourlyReportingData
-from .data import HourlyData
+from .data import HourlyBaselineData, HourlyReportingData
 from .model import HourlyModel
 
 __all__ = (
     "HourlyNonSolarSettings",
     "HourlyNonSolarSettingsV2",
     "HourlySolarSettings",
-    "HourlyData",
-    # "HourlyReportingData",
+    "HourlyBaselineData",
+    "HourlyReportingData",
     "HourlyModel",
 )
