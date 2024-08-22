@@ -37,7 +37,6 @@ from eemeter.common.metrics import BaselineMetrics, BaselineMetricsFromDict
 
 # from eemeter.development.data import HourlyData #TODO: import from eemeter.data
 # from data import HourlyData
-from eemeter.eemeter.models.hourly.data import HourlyData
 
 
 # TODO: need to make explicit solar/nonsolar versions and set settings requirements/defaults appropriately
@@ -179,7 +178,7 @@ class HourlyModel:
         return df_eval
 
 
-    def _predict(self, Eval_Data, X=None):
+    def _predict(self, eval_data, X=None):
         """
         Makes model prediction on given temperature data.
 
@@ -190,8 +189,8 @@ class HourlyModel:
             pandas.DataFrame: The evaluation dataframe with model predictions added.
         """
         # TODO: same as fit, is copy necessary?
-        df_eval = Eval_Data.df.copy()
-        datetime_original = Eval_Data.datetime_original
+        df_eval = eval_data.df.copy()
+        datetime_original = eval_data.df.index
         # # get list of columns to keep in output
         columns = df_eval.columns.tolist()
         if "datetime" in columns:
