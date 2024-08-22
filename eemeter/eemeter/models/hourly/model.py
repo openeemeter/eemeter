@@ -177,7 +177,8 @@ class HourlyModel:
 
         return df_eval
 
-
+    # TODO: check if this works on incomplete day (23 hr)
+    # if not, add nonsense to missing hours, predict, remove nonsense
     def _predict(self, eval_data, X=None):
         """
         Makes model prediction on given temperature data.
@@ -486,6 +487,9 @@ class HourlyModel:
             # find any rows with interpolated data
             cols = [col for col in df.columns if col.startswith("interpolated_")]
             df["interpolated"] = df[cols].any(axis=1)
+
+            # if row contains any null values, set interpolated to True
+            df["interpolated"] = df["interpolated"] | df.isnull().any(axis=1)
 
             # count number of non interpolated hours per day
             daily_hours = 24 - df.groupby("date")["interpolated"].sum()
