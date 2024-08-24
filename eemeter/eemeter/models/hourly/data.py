@@ -35,7 +35,6 @@ from scipy.interpolate import RBFInterpolator
 #TODO move to settings/const
 _MAX_MISSING_HOURS_PCT = 10
 
-#TODO remove / move to eeweather. also, scrub this from commit history prior to final merge and rotate key
 class NREL_Weather_API:  # TODO: reload data for all years
     api_key = "---"  # get your own key from https://developer.nrel.gov/signup/  #Required
     name = "---"  # required
