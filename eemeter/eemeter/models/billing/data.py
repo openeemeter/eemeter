@@ -326,8 +326,7 @@ class BillingBaselineData(_BillingData):
 
         """
         bsc = BillingSufficiencyCriteria(
-            data = sufficiency_df,
-            is_electricity_data = self.is_electricity_data
+            data=sufficiency_df, is_electricity_data=self.is_electricity_data
         )
         bsc.check_sufficiency_baseline()
         disqualification = bsc.disqualification
@@ -454,10 +453,7 @@ class BillingReportingData(_BillingData):
             warnings (list): List of warnings
 
         """
-        bsc = BillingSufficiencyCriteria(
-            data = sufficiency_df,
-            is_reporting_data = True
-        )
+        bsc = BillingSufficiencyCriteria(data=sufficiency_df, is_reporting_data=True)
         bsc.check_sufficiency_reporting()
         disqualification = bsc.disqualification
         warnings = bsc.warnings

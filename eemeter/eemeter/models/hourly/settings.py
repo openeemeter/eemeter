@@ -9,6 +9,7 @@ from enum import Enum
 
 from eemeter.common.base_settings import BaseSettings
 from eemeter.common.metrics import BaselineMetrics
+
 # from eemeter.common.const import CountryCode
 
 
@@ -31,8 +32,9 @@ class ClusteringMetric(str, Enum):
 # analytic_features = ['GHI', 'Temperature', 'DHI', 'DNI', 'Relative Humidity', 'Wind Speed', 'Clearsky DHI', 'Clearsky DNI', 'Clearsky GHI', 'Cloud Type']
 class BaseHourlySettings(BaseSettings):
     """train features used within the model"""
+
     TRAIN_FEATURES: list[str] = pydantic.Field(
-        default=['temperature'], 
+        default=["temperature"],
         frozen=True,
     )
 
@@ -56,7 +58,7 @@ class BaseHourlySettings(BaseSettings):
     """number of temperature bins"""
     TEMPERATURE_BIN_COUNT: int | None = pydantic.Field(
         default=6,
-        ge=1,                       
+        ge=1,
     )
 
     """number of clusters to use for temporal clustering (day, month)"""
@@ -111,28 +113,34 @@ class BaseHourlySettings(BaseSettings):
         default=None,
         ge=0,
     )
-    
 
     @pydantic.model_validator(mode="after")
     def _check_temperature_bins(self):
         # check that temperature binning method is set based on include temperature bins
         if self.INCLUDE_TEMPERATURE_BINS:
             if self.TEMPERATURE_BINNING_METHOD is None:
-                raise ValueError("'TEMPERATURE_BINNING_METHOD' must be specified if 'INCLUDE_TEMPERATURE_BINS' is True.")
+                raise ValueError(
+                    "'TEMPERATURE_BINNING_METHOD' must be specified if 'INCLUDE_TEMPERATURE_BINS' is True."
+                )
         else:
             if self.TEMPERATURE_BINNING_METHOD is not None:
-                raise ValueError("'TEMPERATURE_BINNING_METHOD' must be None if 'INCLUDE_TEMPERATURE_BINS' is False.")
+                raise ValueError(
+                    "'TEMPERATURE_BINNING_METHOD' must be None if 'INCLUDE_TEMPERATURE_BINS' is False."
+                )
 
         # check that temperature bin count is set based on binning method
         if self.TEMPERATURE_BINNING_METHOD is None:
             if self.TEMPERATURE_BIN_COUNT is not None:
-                raise ValueError("'TEMPERATURE_BIN_COUNT' must be None if 'TEMPERATURE_BINNING_METHOD' is None.")
+                raise ValueError(
+                    "'TEMPERATURE_BIN_COUNT' must be None if 'TEMPERATURE_BINNING_METHOD' is None."
+                )
         else:
             if self.TEMPERATURE_BIN_COUNT is None:
-                raise ValueError("'TEMPERATURE_BIN_COUNT' must be specified if 'TEMPERATURE_BINNING_METHOD' is not None.")
+                raise ValueError(
+                    "'TEMPERATURE_BIN_COUNT' must be specified if 'TEMPERATURE_BINNING_METHOD' is not None."
+                )
 
         return self
-
 
     @pydantic.model_validator(mode="after")
     def _check_seed(self):
@@ -140,20 +148,21 @@ class BaseHourlySettings(BaseSettings):
             self._SEED = np.random.randint(0, 2**32 - 1)
         else:
             self._SEED = self.SEED
-        
+
         return self
 
 
 class HourlySolarSettings(BaseHourlySettings):
     """train features used within the model"""
+
     TRAIN_FEATURES: list[str] = pydantic.Field(
-        default=['temperature', 'ghi'], 
+        default=["temperature", "ghi"],
     )
 
     """number of temperature bins"""
     TEMPERATURE_BIN_COUNT: int | None = pydantic.Field(
         default=6,
-        ge=1,                       
+        ge=1,
     )
 
     """ElasticNet alpha parameter"""
@@ -169,7 +178,6 @@ class HourlySolarSettings(BaseHourlySettings):
         le=1,
     )
 
-
     @pydantic.model_validator(mode="after")
     def _check_features(self):
         # make all features lowercase
@@ -179,16 +187,19 @@ class HourlySolarSettings(BaseHourlySettings):
             if feature not in self._TRAIN_FEATURES:
                 self._TRAIN_FEATURES.insert(0, feature)
 
-        self._TRAIN_FEATURES = sorted(self._TRAIN_FEATURES, key=lambda x: x not in ["temperature", "ghi"])
+        self._TRAIN_FEATURES = sorted(
+            self._TRAIN_FEATURES, key=lambda x: x not in ["temperature", "ghi"]
+        )
 
         return self
 
 
 class HourlyNonSolarSettings(BaseHourlySettings):
     """number of temperature bins"""
+
     TEMPERATURE_BIN_COUNT: int | None = pydantic.Field(
         default=10,
-        ge=1,                       
+        ge=1,
     )
 
     """ElasticNet alpha parameter"""
@@ -204,7 +215,6 @@ class HourlyNonSolarSettings(BaseHourlySettings):
         le=1,
     )
 
-
     @pydantic.model_validator(mode="after")
     def _check_features(self):
         # make all features lowercase
@@ -217,11 +227,7 @@ class HourlyNonSolarSettings(BaseHourlySettings):
 
 
 def HourlyNonSolarSettingsV2(**kwargs):
-    input_kwargs = {
-        "TEMPERATURE_BIN_COUNT": 6, 
-        "ALPHA": 0.010206, 
-        "L1_RATIO": 0.241955
-    }
+    input_kwargs = {"TEMPERATURE_BIN_COUNT": 6, "ALPHA": 0.010206, "L1_RATIO": 0.241955}
     input_kwargs.update(kwargs)
 
     return HourlyNonSolarSettings(**input_kwargs)

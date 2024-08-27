@@ -27,10 +27,12 @@ import pytest
 
 _TEST_METER = 110596
 
+
 @pytest.fixture
 def hourly_data():
     baseline, reporting = load_test_data("hourly_treatment_data")
     return baseline.loc[_TEST_METER], reporting.loc[_TEST_METER]
+
 
 def test_one(hourly_data):
     baseline, reporting = hourly_data
@@ -39,7 +41,7 @@ def test_one(hourly_data):
     hm = HourlyModel().fit(baseline_data)
     hm.predict(reporting_data)
 
-    
+
 """TEST CASES
 TODO get a couple example meters with GHI, potentially some supplemental features?
     * at least one solar and one non-solar

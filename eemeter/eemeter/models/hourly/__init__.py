@@ -18,7 +18,11 @@
 
 """
 
-from .settings import HourlyNonSolarSettings, HourlySolarSettings, HourlyNonSolarSettingsV2
+from .settings import (
+    HourlyNonSolarSettings,
+    HourlySolarSettings,
+    HourlyNonSolarSettingsV2,
+)
 from .data import HourlyBaselineData, HourlyReportingData
 from .model import HourlyModel
 
