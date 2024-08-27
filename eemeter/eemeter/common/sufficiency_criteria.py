@@ -204,7 +204,6 @@ class SufficiencyCriteria:
         self.n_valid_temperature_days = n_valid_temperature_days
 
     def _check_valid_days_percentage(self):
-
         if self.n_days_total > 0:
             fraction_valid_days = self.n_valid_days / float(self.n_days_total)
         else:
@@ -229,7 +228,6 @@ class SufficiencyCriteria:
             )
 
     def _check_valid_meter_readings_percentage(self):
-
         if self.n_days_total > 0:
             if not self.is_reporting_data:
                 fraction_valid_meter_value_days = self.n_valid_meter_value_days / float(
@@ -257,7 +255,6 @@ class SufficiencyCriteria:
             )
 
     def _check_valid_temperature_values_percentage(self):
-
         if self.n_days_total > 0:
             fraction_valid_temperature_days = self.n_valid_temperature_days / float(
                 self.n_days_total

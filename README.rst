@@ -27,26 +27,28 @@ EEmeter: tools for calculating metered energy savings
 
 ---------------
 
-**EEmeter** — an open source toolkit for implementing and developing standard
-methods for calculating normalized metered energy consumption (NMEC) and
-avoided energy use.
+**EEmeter** — an open source python library for creating standardized models for 
+predicting energy usage. These models are often used to calculate energy savings 
+post demand side intervention (such as energy efficiency projects or demand 
+response events).
 
 Background - why use the EEMeter library
 ----------------------------------------
 
-At time of writing (Sept 2018), the OpenEEmeter, as implemented in the eemeter
-package and sibling `eeweather package <http://eeweather.openee.io>`_, contains the
-most complete open source implementation of the
-`CalTRACK Methods <https://caltrack.org/>`_, which
-specify a family of ways to calculate and aggregate estimates avoided energy
-use at a single meter particularly suitable for use in pay-for-performance
-(P4P) programs.
+OpenEEmeter, as implemented in the eemeter package and sibling 
+`eeweather package <http://eeweather.openee.io>`_ builds upon the foundation of the 
+`CalTRACK Methods <https://caltrack.org/>`_ to provide free, open-source modeling tools
+to anyone seeking to model energy building usage. Eemeter models have been developed to
+meet or exceed the predictive capability of the CalTRACK models. These models adhere to 
+a statistical approach, as opposed to an engineering approach, so that these models 
+can be efficiently run on millions of meters at a time, while still providing 
+accurate predictions. 
 
-The eemeter package contains a toolkit written in the python langage which may
-help in implementing a CalTRACK compliant analysis.
-
-It contains a modular set of of functions, parameters, and classes which can be
-configured to run the CalTRACK methods and close variants.
+Using default settings in eemeter will provide accurate and stable model predictions 
+suitable for savings measurements from demand side interventions. Settings can be 
+modified for research and development purposes, although the outputs of such models 
+may no longer be an officially recognized measurement as these models have been
+verified by the OpenEEmeter Working Group.
 
 .. note::
 
@@ -74,21 +76,29 @@ EEmeter is a python package and can be installed with pip.
 Features
 --------
 
-- Reference implementation of standard methods
+- Models:
 
-  - CalTRACK Daily Method
-  - CalTRACK Monthly Billing Method
-  - CalTRACK Hourly Method
+  - Energy Efficiency Daily Model
+  - Energy Efficiency Billing (Monthly) Model
+  - Energy Efficiency Hourly Model
+  - Demand Response Hourly Model
 
 - Flexible sources of temperature data. See `EEweather <https://eeweather.openee.io>`_.
-- Candidate model selection
 - Data sufficiency checking
 - Model serialization
 - First-class warnings reporting
 - Pandas dataframe support
 - Visualization tools
 
-Roadmap for 2020 development
+Documentation
+-------------
+
+Documenation for this library can be found `here <https://openeemeter.github.io/eemeter/>`_.
+Additionally, within the repository, the scripts directory contains Jupyter Notebooks, which
+function as interactive examples.
+
+
+Roadmap for 2024 development
 ----------------------------
 
 The OpenEEmeter project growth goals for the year fall into two categories:
@@ -98,7 +108,7 @@ The OpenEEmeter project growth goals for the year fall into two categories:
    as easy as possible to use.
 
 Community goals
-~~~~~~~~~~~~~~~
+---------------
 
 1. Develop project documentation and tutorials
 
@@ -117,27 +127,19 @@ process.
 Technical goals
 ~~~~~~~~~~~~~~~
 
-1. Implement new CalTRACK recommendations
+1. Implement new OpenEEmeter models
 
-The CalTRACK process continues to improve the underlying methods used in the
-OpenEEmeter. Our primary technical goal is to keep up with these changes and continue
-to be a resource for testing and experimentation during the CalTRACK methods setting
-process.
+The OpenEEmeter Working Group continues to improve the underlying models in 
+OpenEEmeter. We seek to continue to implement these models in a safe, tested manner
+so that these models may continue to be used within engineering pipelines effectively.
 
-2. Hourly model visualizations
-
-The hourly methods implemented in the OpenEEMeter library are not yet packaged with
-high quality visualizations like the daily and billing methods are. As we build and
-package new visualizations with the library, more users will be able to understand,
-deploy, and contribute to the hourly methods.
-
-3. Weather normal and unusual scenarios
+2. Weather normal and unusual scenarios
 
 The EEweather package, which supports the OpenEEmeter, comes packaged with publicly
 available weather normal scenarios, but one feature that could help make that easier
 would be to package methods for creating custom weather year scenarios.
 
-4. Greater weather coverage
+3. Greater weather coverage
 
 The weather station coverage in the EEweather package includes full coverage of US and
 Australia, but with some technical work, it could be expanded to include greater, or

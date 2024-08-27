@@ -6,6 +6,41 @@ Development
 
 * Placeholder
 
+4.0.6
+-----
+
+
+* Update docs.
+* Update typehints on core daily and utility functions.
+* Minor change to loading test data to ensure the reporting period is a year ahead of the baseline period.
+
+4.0.5
+-----
+
+
+* Flip slope when deserializing legacy hdd_only models
+
+4.0.4
+-----
+
+* Add support for deserializing legacy hourly models
+* Fix legacy daily model deserialization
+
+4.0.3
+-----
+
+* Move masking behavior for rows with missing temperature from reporting dataclass to prediction output
+* Add disqualification check to billing model predict()
+
+4.0.2
+-----
+
+* Force index to use nanosecond precision
+* Compute coverage using same offset as initial reads to fix issues when downsampling hourly data
+* Update test data location
+* Fix bug in daily plotting to remove NaN values if input
+* Refactor sufficiency criteria to be more explicit and easier to manage
+
 4.0.1
 -----
 
