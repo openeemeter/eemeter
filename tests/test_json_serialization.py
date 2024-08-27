@@ -193,7 +193,7 @@ def test_legacy_deserialization_daily():
 def test_legacy_deserialization_hourly(request):
     with open(request.fspath.dirname + "/legacy_hourly.json", "r") as f:
         legacy_str = f.read()
-    baseline_model = HourlyModel.from_2_0_json(legacy_str)
+    baseline_model = HourlyCaltrackModel.from_2_0_json(legacy_str)
 
     meter_data, temperature_data, sample_metadata = load_sample(
         "il-electricity-cdd-hdd-hourly"
@@ -203,7 +203,7 @@ def test_legacy_deserialization_hourly(request):
     reporting_meter_data, warnings = get_reporting_data(
         meter_data, start=blackout_end_date, max_days=365
     )
-    reporting = HourlyReportingData.from_series(
+    reporting = HourlyCaltrackReportingData.from_series(
         reporting_meter_data, temperature_data, is_electricity_data=True
     )
 
