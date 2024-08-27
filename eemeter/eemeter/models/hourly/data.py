@@ -355,14 +355,6 @@ class _HourlyData:
         # merge meter data with complete_dt
         df = df.reindex(complete_dt)
 
-        #TODO solve daylight savings properly
-        # we want to add an extra hour index into 23 hour days, and find the mean of any duplicate local hours
-        # this might work better in the model fit step, as the index is converted to a RangeIndex anyway
-        # for now, dropping both dates
-        counts = df.groupby(df.index.normalize()).count()
-        counts = counts[counts["observed"] == 24]
-        df = df[df.index.normalize().isin(counts.index)]            
-
         df["date"] = df.index.date
         df["hour_of_day"] = df.index.hour
 

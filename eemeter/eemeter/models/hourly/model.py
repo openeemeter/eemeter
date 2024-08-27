@@ -231,6 +231,7 @@ class HourlyModel:
         Returns:
         - A pandas DataFrame containing the initialized meter data
         """
+        dst_indices = _get_dst_indices(meter_data)
         meter_data = self._add_categorical_features(meter_data)
         if self.settings.SUPPLEMENTAL_DATA is not None:
             self._add_supplemental_features(meter_data)
@@ -240,12 +241,12 @@ class HourlyModel:
         meter_data = self._daily_sufficiency(meter_data)
         meter_data = self._normalize_features(meter_data)
 
-        X_predict, _ = self._get_feature_matrices(meter_data)
+        X_predict, _ = self._get_feature_matrices(meter_data, dst_indices)
 
         if not self.is_fit:
             # remove insufficient days from fit data
             meter_data = meter_data[meter_data["include_date"]]
-            X_fit, y_fit = self._get_feature_matrices(meter_data)
+            X_fit, y_fit = self._get_feature_matrices(meter_data, dst_indices)
        
         else:
             X_fit, y_fit = None, None
@@ -530,14 +531,27 @@ class HourlyModel:
         return df
 
 
-    def _get_feature_matrices(self, df):
+    def _get_feature_matrices(self, df, dst_indices):
         # get aggregated features with agg function
         agg_dict = {f: lambda x: list(x) for f in self._ts_feature_norm}
 
+        def correct_dst(agg):
+            """interpolate or average hours to account for DST. modifies in place"""
+            interp, mean = dst_indices
+            for date, hour in interp:
+                for feature in agg[date]:
+                    interpolated = (feature[hour-1] + feature[hour]) / 2
+                    feature.insert(hour, interpolated)
+            for date, hour in mean:
+                for feature in agg[date]:
+                    mean = (feature[hour+1] + feature.pop(hour)) / 2
+                    feature[hour] = mean
+
+        agg_x = df.groupby("date").agg(agg_dict).values.tolist()
+        correct_dst(agg_x)
+
         # get the features and target for each day
-        ts_feature = np.array(
-            df.groupby("date").agg(agg_dict).values.tolist()
-        )
+        ts_feature = np.array(agg_x)
         
         ts_feature = ts_feature.reshape(
             ts_feature.shape[0], ts_feature.shape[1] * ts_feature.shape[2]
@@ -549,11 +563,9 @@ class HourlyModel:
         X = np.concatenate((ts_feature, unique_dummies), axis=1)
 
         if not self.is_fit:
-            y = np.array(
-                df.groupby("date")
-                .agg({"observed_norm": lambda x: list(x)})
-                .values.tolist()
-            )
+            agg_y = df.groupby("date").agg({"observed_norm": lambda x: list(x)}).values.tolist()
+            correct_dst(agg_y)
+            y = np.array(agg_y)
             y = y.reshape(y.shape[0], y.shape[1] * y.shape[2])
 
         else:
@@ -705,3 +717,39 @@ class HourlyModel:
         # TODO: pass more kwargs to plotting function
 
         plot(self, self._predict(df_eval.df))
+
+
+def _get_dst_indices(df):
+    """
+    given a datetime-indexed dataframe,
+    return the indices which need to be interpolated and averaged
+    in order to ensure exact 24 hour slots
+    """
+    #TODO test on baselines that begin/end on DST change
+    counts = df.groupby(df.index.date).count()
+    interp = counts[counts["observed"] == 23]
+    mean = counts[counts["observed"] == 25]
+
+    interp_idx = []
+    for idx in interp.index:
+        month = df.loc[idx.isoformat()]
+        date_idx = counts.index.get_loc(idx)
+        missing_hour = set(range(24)) - set(month.index.hour)
+        if len(missing_hour) != 1:
+            raise ValueError("too many missing hours")
+        hour = missing_hour.pop()
+        interp_idx.append((date_idx, hour))
+
+    mean_idx = []
+    for idx in mean.index:
+        date_idx = counts.index.get_loc(idx)
+        month = df.loc[idx.isoformat()]    
+        seen = set()
+        for i in month.index:
+            if i.hour in seen:
+                hour = i.hour
+                break
+            seen.add(i.hour)
+        mean_idx.append((date_idx, hour))
+    
+    return interp_idx, mean_idx
