@@ -33,6 +33,7 @@ from tslearn.clustering import TimeSeriesKMeans, silhouette_score
 import json
 
 from eemeter.eemeter.models.hourly import settings as _settings
+from eemeter.eemeter.models.hourly import HourlyBaselineData, HourlyReportingData
 from eemeter.common.metrics import BaselineMetrics, BaselineMetricsFromDict
 
 
@@ -81,29 +82,10 @@ class HourlyModel:
         self.baseline_metrics = None
 
     def fit(self, baseline_data, ignore_disqualification=False):
-
-        # if not isinstance(baseline_data, HourlyData):
-        #     raise TypeError("baseline_data must be a HourlyData object")
-        # baseline_data.log_warnings()
-        # if baseline_data.disqualification and not ignore_disqualification:
-        #     raise DataSufficiencyError("Can't fit model on disqualified baseline data")
-        # self.baseline_timezone = baseline_data.tz
-        # self.warnings = baseline_data.warnings
-        # self.disqualification = baseline_data.disqualification
-
+        if not isinstance(baseline_data, HourlyBaselineData):
+            raise TypeError("baseline_data must be a DailyBaselineData object")
+        # TODO check DQ, log warnings
         self._fit(baseline_data)
-
-        # if self.error["CVRMSE"] > self.settings.cvrmse_threshold:
-        #     cvrmse_warning = EEMeterWarning(
-        #         qualified_name="eemeter.model_fit_metrics.cvrmse",
-        #         description=(
-        #             f"Fit model has CVRMSE > {self.settings.cvrmse_threshold}"
-        #         ),
-        #         data={"CVRMSE": self.error["CVRMSE"]},
-        #     )
-        #     cvrmse_warning.warn()
-        #     self.disqualification.append(cvrmse_warning)
-
         return self
 
     def _fit(self, meter_data):
@@ -147,33 +129,17 @@ class HourlyModel:
         if not self.is_fit:
             raise RuntimeError("Model must be fit before predictions can be made.")
 
-        # if not isinstance(reporting_data, HourlyData):
-        #     raise TypeError("reporting_data must be a HourlyData object")
+        # TODO check DQ, log warnings
 
-        # if self.disqualification and not ignore_disqualification:
-        #     raise DisqualifiedModelError(
-        #         "Attempting to predict using disqualified model without setting ignore_disqualification=True"
-        #     )
+        if not isinstance(reporting_data, (HourlyBaselineData, HourlyReportingData)):
+            raise TypeError(
+                "reporting_data must be a DailyBaselineData or DailyReportingData object"
+            )
 
-        # if str(self.baseline_timezone) != str(reporting_data.tz):
-        #     """would be preferable to directly compare, but
-        #     * using str() helps accomodate mixed tzinfo implementations,
-        #     * the likelihood of sub-hour offset inconsistencies being relevant to the daily model is low
-        #     """
-        #     raise ValueError(
-        #         "Reporting data must use the same timezone that the model was initially fit on."
-        #     )
-
-        # if not isinstance(reporting_data, (DailyBaselineData, DailyReportingData)):
-        #     raise TypeError(
-        #         "reporting_data must be a DailyBaselineData or DailyReportingData object"
-        #     )
         df_eval = self._predict(reporting_data)
 
         return df_eval
 
-    # TODO: check if this works on incomplete day (23 hr)
-    # if not, add nonsense to missing hours, predict, remove nonsense
     def _predict(self, eval_data, X=None):
         """
         Makes model prediction on given temperature data.
@@ -579,7 +545,9 @@ class HourlyModel:
                 for feature_idx, feature in enumerate(agg[date]):
                     if hour == 0:
                         # there are a handful of countries that use 0:00 as the DST transition
-                        interpolated = (agg[date - 1][feature_idx][-1] + feature[hour]) / 2
+                        interpolated = (
+                            agg[date - 1][feature_idx][-1] + feature[hour]
+                        ) / 2
                     else:
                         interpolated = (feature[hour - 1] + feature[hour]) / 2
                     feature.insert(hour, interpolated)
@@ -695,33 +663,6 @@ class HourlyModel:
             data.get("BASELINE_METRICS")
         )
 
-        # info = data.get("info")
-        # model_cls.params = DailyModelParameters(
-        #     submodels=data.get("submodels"),
-        #     info=info,
-        #     settings=settings,
-        # )
-
-        # def deserialize_warnings(warnings):
-        #     if not warnings:
-        #         return []
-        #     warn_list = []
-        #     for warning in warnings:
-        #         warn_list.append(
-        #             EEMeterWarning(
-        #                 qualified_name=warning.get("qualified_name"),
-        #                 description=warning.get("description"),
-        #                 data=warning.get("data"),
-        #             )
-        #         )
-        #     return warn_list
-
-        # model_cls.disqualification = deserialize_warnings(
-        #     info.get("disqualification")
-        # )
-        # model_cls.warnings = deserialize_warnings(info.get("warnings"))
-        # model_cls.baseline_timezone = info.get("baseline_timezone")
-
         return model_cls
 
     @classmethod
@@ -756,14 +697,7 @@ class HourlyModel:
         ax : :any:`matplotlib.axes.Axes`
             Matplotlib axes.
         """
-        try:
-            from eemeter.eemeter.models.daily.plot import plot
-        except ImportError:  # pragma: no cover
-            raise ImportError("matplotlib is required for plotting.")
-
-        # TODO: pass more kwargs to plotting function
-
-        plot(self, self._predict(df_eval.df))
+        raise NotImplementedError
 
 
 def _get_dst_indices(df):
