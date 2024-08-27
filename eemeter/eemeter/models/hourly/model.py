@@ -35,9 +35,6 @@ import json
 from eemeter.eemeter.models.hourly import settings as _settings
 from eemeter.common.metrics import BaselineMetrics, BaselineMetricsFromDict
 
-# from eemeter.development.data import HourlyData #TODO: import from eemeter.data
-# from data import HourlyData
-
 
 # TODO: need to make explicit solar/nonsolar versions and set settings requirements/defaults appropriately
 class HourlyModel:
@@ -110,12 +107,12 @@ class HourlyModel:
         return self
 
 
-    def _fit(self, Meter_Data):
+    def _fit(self, meter_data):
         # Initialize dataframe
         self.is_fit = False
 
         # TODO: should we profile later to check if this copy is necessary?
-        df_meter = Meter_Data.df.copy()
+        df_meter = meter_data.df.copy()
 
         # Prepare feature arrays/matrices
         X_fit, X_predict, y_fit = self._prepare_features(df_meter)
@@ -129,7 +126,7 @@ class HourlyModel:
                           np.count_nonzero(self._model.intercept_))
 
         # get model prediction of baseline
-        df_meter = self._predict(Meter_Data, X=X_predict)
+        df_meter = self._predict(meter_data, X=X_predict)
 
         # calculate baseline metrics on non-interpolated data
         cols = [col for col in df_meter.columns if col.startswith("interpolated_")]

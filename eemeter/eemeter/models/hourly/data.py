@@ -301,34 +301,7 @@ class _HourlyData:
         temperature_data: Union[pd.Series, pd.DataFrame],
         is_electricity_data,
     ):
-        # TODO extract common transformations from this and Daily, call as functions
-        if isinstance(meter_data, pd.Series):
-            meter_data = meter_data.to_frame()
-        if isinstance(temperature_data, pd.Series):
-            temperature_data = temperature_data.to_frame()
-        meter_data = meter_data.rename(columns={meter_data.columns[0]: "observed"})
-        temperature_data = temperature_data.rename(
-            columns={temperature_data.columns[0]: "temperature"}
-        )
-        temperature_data.index = temperature_data.index.tz_convert(
-            meter_data.index.tzinfo
-        )
-
-        if temperature_data.empty:
-            raise ValueError("Temperature data cannot be empty.")
-        if meter_data.empty:
-            # reporting from_series always passes a full index of nan
-            raise ValueError("Meter data cannot by empty.")
-
-        computed_granularity = compute_minimum_granularity(meter_data.index)
-        if not computed_granularity == "hourly":
-            #TODO might just be a DQ rather than explicit exception
-            raise ValueError(
-                f"Detected granularity of meter data is {computed_granularity}, can't instantiate hourly dataclass"
-            )
-
-        #TODO trim series similar to daily dataclass
-
+        raise NotImplementedError("Unimplemented until full release--use regular constructor with complete hourly dataframe.")
         
     def log_warnings(self):
         """
@@ -422,29 +395,6 @@ class _HourlyData:
             df.loc[df["date"] >= self.pv_start, "has_pv"] = True
         return df
 
-            
-    #TODO unneeded with hourly df input, just interpolate
-    def _compute_meter_value_df(self, df: pd.DataFrame):
-        meter_series = df["observed"].dropna()
-        if meter_series.empty:
-            return df["observed"].resample("H").first().to_frame()
-        #TODO interpolate
-        meter_series.index.freq = meter_series.index.inferred_freq
-        return meter_series.to_frame("observed")
-
-    #TODO unneeded with hourly df input
-    def _compute_temperature_features(
-        self, df: pd.DataFrame, meter_index: pd.DatetimeIndex
-    ):
-        temp = df['temperature']
-        temp.index.freq = temp.index.inferred_freq
-        temperature_features = compute_temperature_features(
-            meter_index,
-            temp,
-            data_quality=True,
-        )
-        return temp, temperature_features
-
     def _merge_meter_temp(self, meter, temp):
         df = meter.merge(
             temp, left_index=True, right_index=True, how="left"
@@ -510,9 +460,6 @@ class _HourlyData:
         # Caltrack 2.3.2 - Drop duplicates
         df = remove_duplicates(df)
 
-        #meter = self._compute_meter_value_df(df)
-        #temp, temp_coverage = self._compute_temperature_features(df, meter.index)
-        #final_df = self._merge_meter_temp(meter, temp)
         df = self._get_contiguous_datetime(df)
         df = self._interpolate(df)
         df = self._add_pv_start_date(df)
@@ -548,6 +495,3 @@ class HourlyReportingData(_HourlyData):
         warnings = hsc.warnings
 
         return disqualification, warnings
-
-    #TODO override from_series
-    # do any rollups in from_series -- assume all hourly for normal df input
