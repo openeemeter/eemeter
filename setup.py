@@ -41,6 +41,8 @@ REQUIRED = [
     "pydantic>=2.0",
     "attrs",
     "requests",
+    "pyarrow",
+    "numpy<2",
 ]
 
 here = os.path.abspath(os.path.dirname(__file__))
