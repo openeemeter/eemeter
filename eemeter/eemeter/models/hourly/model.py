@@ -576,8 +576,12 @@ class HourlyModel:
             """interpolate or average hours to account for DST. modifies in place"""
             interp, mean = dst_indices
             for date, hour in interp:
-                for feature in agg[date]:
-                    interpolated = (feature[hour - 1] + feature[hour]) / 2
+                for feature_idx, feature in enumerate(agg[date]):
+                    if hour == 0:
+                        # there are a handful of countries that use 0:00 as the DST transition
+                        interpolated = (agg[date - 1][feature_idx][-1] + feature[hour]) / 2
+                    else:
+                        interpolated = (feature[hour - 1] + feature[hour]) / 2
                     feature.insert(hour, interpolated)
             for date, hour in mean:
                 for feature in agg[date]:
