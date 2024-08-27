@@ -25,9 +25,9 @@ from eemeter.eemeter import (
     BillingBaselineData,
     BillingReportingData,
     BillingModel,
-    HourlyModel,
-    HourlyBaselineData,
-    HourlyReportingData,
+    HourlyCaltrackModel,
+    HourlyCaltrackBaselineData,
+    HourlyCaltrackReportingData,
 )
 
 
@@ -119,7 +119,7 @@ def test_json_billing():
     assert total_metered_savings == total_metered_savings_loaded
 
 
-def test_json_hourly():
+def test_json_caltrack_hourly():
     meter_data, temperature_data, sample_metadata = load_sample(
         "il-electricity-cdd-hdd-hourly"
     )
@@ -131,18 +131,18 @@ def test_json_hourly():
     baseline_meter_data, warnings = get_baseline_data(
         meter_data, end=blackout_start_date, max_days=365
     )
-    baseline = HourlyBaselineData.from_series(
+    baseline = HourlyCaltrackBaselineData.from_series(
         baseline_meter_data, temperature_data, is_electricity_data=True
     )
 
     # build a CalTRACK hourly model
-    baseline_model = HourlyModel().fit(baseline)
+    baseline_model = HourlyCaltrackModel().fit(baseline)
 
     # get a year of reporting period data
     reporting_meter_data, warnings = get_reporting_data(
         meter_data, start=blackout_end_date, max_days=365
     )
-    reporting = HourlyReportingData.from_series(
+    reporting = HourlyCaltrackReportingData.from_series(
         reporting_meter_data, temperature_data, is_electricity_data=True
     )
 
@@ -150,7 +150,7 @@ def test_json_hourly():
 
     # serialize, deserialize
     json_str = baseline_model.to_json()
-    m = HourlyModel.from_json(json_str)
+    m = HourlyCaltrackModel.from_json(json_str)
 
     result2 = m.predict(reporting)
 
