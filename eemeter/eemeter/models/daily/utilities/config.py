@@ -353,8 +353,42 @@ def is_weekday_validator(
 
 @attrs.define(kw_only=True)
 class DailySettings:
-    """
-    Create settings for calculating the daily model
+    """Settings for creating the daily model.
+
+    These settings should be converted to a dictionary before being passed to the DailyModel class.
+    Be advised that any changes to the default settings deviates from OpenEEmeter standard methods and should be used with caution.
+
+    Attributes:
+        developer_mode (bool): Allows changing of developer settings
+        algorithm_choice (str): Optimization algorithm choice. Developer mode only.
+        initial_guess_algorithm_choice (str): Initial guess optimization algorithm choice. Developer mode only.
+        full_model (str): The largest model allowed. Developer mode only.
+        smoothed_model (bool): Allow smoothed models.
+        allow_separate_summer (bool): Allow summer to be modeled separately.
+        allow_separate_shoulder (bool): Allow shoulder to be modeled separately.
+        allow_separate_winter (bool): Allow winter to be modeled separately.
+        allow_separate_weekday_weekend (bool): Allow weekdays and weekends to be modeled separately.
+        reduce_splits_by_gaussian (bool): Reduces splits by fitting with multivariate Gaussians and testing for overlap.
+        reduce_splits_num_std (list[float]): Number of standard deviations to use with Gaussians.
+        alpha_minimum (float): Alpha where adaptive robust loss function is Welsch loss.
+        alpha_selection (float): Specified alpha to evaluate which is the best model type.
+        alpha_final_type (str): When to use 'alpha_final: 'all': on every model, 'last': on final model, 'None': don't use.
+        alpha_final (float | str | None): Specified alpha or 'adaptive' for adaptive loss in model evaluation.
+        final_bounds_scalar (float | None): Scalar for calculating bounds of 'alpha_final'.
+        regularization_alpha (float): Alpha for elastic net regularization.
+        regularization_percent_lasso (float): Percent lasso vs (1 - perc) ridge regularization.
+        segment_minimum_count (int): Minimum number of data points for HDD/CDD.
+        maximum_slope_OoM_scaler (float): Scaler for initial slope to calculate bounds based on order of magnitude.
+        initial_smoothing_parameter (float | None): Initial guess for the smoothing parameter.
+        initial_step_percentage (float | None): Initial step-size for relevant algorithms.
+        split_selection_criteria (str): What selection criteria is used to select data splits of models.
+        split_selection_penalty_multiplier (float): Penalty multiplier for split selection criteria.
+        split_selection_penalty_power (float): What power should the penalty of the selection criteria be raised to.
+        season (Dict[int, str]): Dictionary of months and their associated season (January is 1).
+        is_weekday (Dict[int, bool]): Dictionary of days (1 = Monday) and if that day is a weekday (True/False).
+        uncertainty_alpha (float): Significance level used for uncertainty calculations (0 < float < 1).
+        cvrmse_threshold (float): Threshold for the CVRMSE to disqualify a model.
+
     """
 
     developer_mode: bool = attrs.field(
@@ -497,7 +531,7 @@ class DailySettings:
             attrs.validators.in_(get_pub_class_attrib_values(AlphaFinalType))
         ),
         metadata={
-            _KEY_DESCR: "when to use 'alpha_final: 'all': on every model, 'last': on final model, None: don't use"
+            _KEY_DESCR: "when to use 'alpha_final: 'all': on every model, 'last': on final model, 'None': don't use"
         },
         on_setattr=attrs.setters.frozen,
         default="last",
@@ -696,7 +730,12 @@ class DailySettings:
         default=1.0,
     )
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
+        """Converts an instance of the class into a python dictionary.
+
+        Returns:
+            A dictionary of the class instance.
+        """
         keys = []
         config = {}
         for key in dir(self):
