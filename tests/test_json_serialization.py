@@ -31,7 +31,6 @@ from eemeter.eemeter import (
 )
 
 
-
 def test_json_daily():
     meter_data, temperature_data, sample_metadata = load_sample(
         "il-electricity-cdd-hdd-daily"

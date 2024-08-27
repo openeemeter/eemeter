@@ -27,7 +27,10 @@ from eemeter.eemeter.models.hourly_caltrack.design_matrices import (
     create_caltrack_hourly_segmented_design_matrices,
 )
 from eemeter.eemeter.models.hourly_caltrack.model import fit_caltrack_hourly_model
-from eemeter.eemeter.models.hourly_caltrack.derivatives import metered_savings, modeled_savings
+from eemeter.eemeter.models.hourly_caltrack.derivatives import (
+    metered_savings,
+    modeled_savings,
+)
 from eemeter.eemeter.common.features import (
     estimate_hour_of_week_occupancy,
     fit_temperature_bins,
@@ -56,6 +59,8 @@ def baseline_data_daily(il_electricity_cdd_hdd_daily):
     )
 
     return baseline_data
+
+
 @pytest.fixture
 def baseline_model_daily(baseline_data_daily):
     model_results = DailyModel().fit(baseline_data_daily, ignore_disqualification=True)

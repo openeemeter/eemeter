@@ -22,7 +22,10 @@ from pathlib import Path
 import copy
 from typing import Optional, Union
 
-from eemeter.eemeter.common.data_processor_utilities import compute_minimum_granularity, remove_duplicates
+from eemeter.eemeter.common.data_processor_utilities import (
+    compute_minimum_granularity,
+    remove_duplicates,
+)
 from eemeter.eemeter.common.features import compute_temperature_features
 from eemeter.eemeter.common.sufficiency_criteria import HourlySufficiencyCriteria
 from eemeter.eemeter.common.warnings import EEMeterWarning
@@ -32,11 +35,14 @@ import pandas as pd
 from scipy.interpolate import RBFInterpolator
 
 
-#TODO move to settings/const
+# TODO move to settings/const
 _MAX_MISSING_HOURS_PCT = 10
 
+
 class NREL_Weather_API:  # TODO: reload data for all years
-    api_key = "---"  # get your own key from https://developer.nrel.gov/signup/  #Required
+    api_key = (
+        "---"  # get your own key from https://developer.nrel.gov/signup/  #Required
+    )
     name = "---"  # required
     email = "---"  # required
     interval = "60"  # required
@@ -155,10 +161,14 @@ class Interpolator:
                 self.df = self.df.drop(columns=[f"interpolated_{col}"])
             self.df[f"interpolated_{col}"] = False
         # Main method to perform the interpolation
-        for col in self.columns: #TODO: bad meters should be removed by now
-            if col == 'observed':
+        for col in self.columns:  # TODO: bad meters should be removed by now
+            if col == "observed":
                 missing_frac = self.df[col].isna().sum() / len(self.df)
-                self.n_cor_idx = int(np.max([6, np.round((4.012*np.log(missing_frac) + 24.38)/2, 0)*2]))
+                self.n_cor_idx = int(
+                    np.max(
+                        [6, np.round((4.012 * np.log(missing_frac) + 24.38) / 2, 0) * 2]
+                    )
+                )
             else:
                 self.n_cor_idx = 6
             self._col_interpolation(col)
@@ -175,7 +185,7 @@ class Interpolator:
                 self.df[col] = self.df[col].fillna(method="ffill")
                 self.df[col] = self.df[col].fillna(method="bfill")
 
-            #TODO: we can check if we have similar values multiple times back to back, if yes, raise a warning
+            # TODO: we can check if we have similar values multiple times back to back, if yes, raise a warning
             self.df.loc[self.df.index.isin(na_datetime), f"interpolated_{col}"] = True
 
         return self.df
@@ -241,11 +251,11 @@ class Interpolator:
 
 class _HourlyData:
     """Private base class for hourly baseline and reporting data
-    
+
     Will raise exception during data sufficiency check if instantiated
     """
 
-    #TODO do we need to specify elec? consider a default true? how common are hourly gas meters
+    # TODO do we need to specify elec? consider a default true? how common are hourly gas meters
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool, **kwargs: dict):
         self._df = None
         self.warnings = []
@@ -253,7 +263,7 @@ class _HourlyData:
         self.is_electricity_data = is_electricity_data
         self.tz = None
 
-        #TODO copied from HourlyData
+        # TODO copied from HourlyData
         self.to_be_interpolated_columns = []
         self.interp = None
         self.outputs = []
@@ -275,7 +285,7 @@ class _HourlyData:
         # )
         # disqualification, warnings = self._check_data_sufficiency(sufficiency_df)
         disqualification, warnings = [], []
-        
+
         self.disqualification += disqualification
         self.warnings += warnings
         self.log_warnings()
@@ -301,8 +311,10 @@ class _HourlyData:
         temperature_data: Union[pd.Series, pd.DataFrame],
         is_electricity_data,
     ):
-        raise NotImplementedError("Unimplemented until full release--use regular constructor with complete hourly dataframe.")
-        
+        raise NotImplementedError(
+            "Unimplemented until full release--use regular constructor with complete hourly dataframe."
+        )
+
     def log_warnings(self):
         """
         Logs the warnings and disqualifications associated with the data.
@@ -313,11 +325,11 @@ class _HourlyData:
     def _get_contiguous_datetime(self, df):
         # get earliest datetime and latest datetime
         # make earliest start at 0 and latest end at 23, this ensures full days
-        earliest_datetime = (
-            df.index.min().replace(hour=0, minute=0, second=0, microsecond=0)
+        earliest_datetime = df.index.min().replace(
+            hour=0, minute=0, second=0, microsecond=0
         )
-        latest_datetime = (
-            df.index.max().replace(hour=23, minute=0, second=0, microsecond=0)
+        latest_datetime = df.index.max().replace(
+            hour=23, minute=0, second=0, microsecond=0
         )
 
         # create a new index with all the hours between the earliest and latest datetime
@@ -333,7 +345,7 @@ class _HourlyData:
 
         return df
 
-    #TODO move to common/transforms rather than operating on self
+    # TODO move to common/transforms rather than operating on self
     def _interpolate(self, df):
         # make column of interpolated boolean if any observed or temperature is nan
         # check if in each row of the columns in output has nan values, the interpolated column will be true
@@ -341,7 +353,11 @@ class _HourlyData:
             self.to_be_interpolated_columns = self.kwargs[
                 "to_be_interpolated_columns"
             ].copy()
-            self.outputs += [f"{col}" for col in self.to_be_interpolated_columns if col not in self.outputs]
+            self.outputs += [
+                f"{col}"
+                for col in self.to_be_interpolated_columns
+                if col not in self.outputs
+            ]
         else:
             self.to_be_interpolated_columns = ["temperature", "observed"]
 
@@ -361,7 +377,7 @@ class _HourlyData:
         # check how many nans are in the columns
         nan_numbers_cols = df[self.to_be_interpolated_columns].isna().sum()
         # if the number of nan is more than max_missing_hours_pct, then we we flag them
-        #TODO: this should be as a part of disqualification and warning/error logs
+        # TODO: this should be as a part of disqualification and warning/error logs
         for col in self.to_be_interpolated_columns:
             if nan_numbers_cols[col] > len(df) * _MAX_MISSING_HOURS_PCT / 100:
                 if not self.too_many_missing_data:
@@ -371,9 +387,7 @@ class _HourlyData:
         # we can add kwargs to the interpolation class like: inter_kwargs = {"n_cor_idx": self.kwargs["n_cor_idx"]}
         self.interp = Interpolator()
 
-        df = self.interp.interpolate(
-            df=df, columns=self.to_be_interpolated_columns
-        )
+        df = self.interp.interpolate(df=df, columns=self.to_be_interpolated_columns)
         return df
 
     def _add_pv_start_date(self, df, model_type="TS"):
@@ -411,7 +425,7 @@ class _HourlyData:
         expected_columns = [
             "observed",
             "temperature",
-            #"ghi",
+            # "ghi",
         ]
         # TODO maybe check datatypes
         if not set(expected_columns).issubset(set(df.columns)):

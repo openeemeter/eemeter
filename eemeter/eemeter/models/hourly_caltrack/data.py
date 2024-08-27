@@ -24,7 +24,9 @@ import pandas as pd
 
 from eemeter.eemeter.common.data_processor_utilities import compute_minimum_granularity
 from eemeter.eemeter.common.features import compute_temperature_features, merge_features
-from eemeter.eemeter.models.hourly_caltrack.usage_per_day import caltrack_sufficiency_criteria
+from eemeter.eemeter.models.hourly_caltrack.usage_per_day import (
+    caltrack_sufficiency_criteria,
+)
 
 
 class HourlyReportingData:

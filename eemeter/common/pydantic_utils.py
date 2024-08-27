@@ -24,6 +24,7 @@ import pydantic
 
 from typing import Any, Optional
 
+
 class PydanticDf(pydantic.BaseModel):
     class Config:
         arbitrary_types_allowed = True
@@ -38,23 +39,29 @@ class PydanticDf(pydantic.BaseModel):
         if self.column_types is not None:
             expected_columns = list(self.column_types.keys())
             if not set(self.df.columns) == set(expected_columns):
-                raise ValueError(f"Expected columns {expected_columns} but got {self.df.columns}")
+                raise ValueError(
+                    f"Expected columns {expected_columns} but got {self.df.columns}"
+                )
 
             for col, col_type in self.column_types.items():
-                if col_type is None or col_type is Any: 
+                if col_type is None or col_type is Any:
                     continue
 
                 if self.df[col].dtype != col_type:
                     # attempt to coerce numeric columns
-                    if np.issubdtype(col_type, np.number) and np.issubdtype(self.df[col].dtype, np.number):
+                    if np.issubdtype(col_type, np.number) and np.issubdtype(
+                        self.df[col].dtype, np.number
+                    ):
                         self.df[col] = self.df[col].astype(col_type)
                     else:
-                        raise ValueError(f"Expected column {col} to be of type {col_type} but got {self.df[col].dtype}")
+                        raise ValueError(
+                            f"Expected column {col} to be of type {col_type} but got {self.df[col].dtype}"
+                        )
 
 
 class ArbitraryPydanticModel(pydantic.BaseModel):
     class Config:
-        arbitrary_types_allowed = True # required for dataframe / series
+        arbitrary_types_allowed = True  # required for dataframe / series
 
 
 def PydanticFromDict(input_dict, name="PydanticModel"):
@@ -69,7 +76,7 @@ def PydanticFromDict(input_dict, name="PydanticModel"):
     """
 
     model = pydantic.create_model(
-        name, 
+        name,
         **{name: (type(value), ...) for name, value in input_dict.items()},
         __base__=ArbitraryPydanticModel,
     )
