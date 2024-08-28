@@ -6,6 +6,7 @@ import pandas as pd
 import pydantic
 
 from enum import Enum
+from typing import Optional
 
 from eemeter.common.base_settings import BaseSettings
 from eemeter.common.metrics import BaselineMetrics
@@ -51,18 +52,18 @@ class BaseHourlySettings(BaseSettings):
     )
 
     """how to bin temperature data"""
-    TEMPERATURE_BINNING_METHOD: BinningChoice | None = pydantic.Field(
+    TEMPERATURE_BINNING_METHOD: Optional[BinningChoice] = pydantic.Field(
         default=BinningChoice.EQUAL_BIN_WIDTH,
     )
 
     """number of temperature bins"""
-    TEMPERATURE_BIN_COUNT: int | None = pydantic.Field(
+    TEMPERATURE_BIN_COUNT: Optional[int] = pydantic.Field(
         default=6,
         ge=1,
     )
 
     """number of clusters to use for temporal clustering (day, month)"""
-    MAX_TEMPORAL_CLUSTER_COUNT: int | None = pydantic.Field(
+    MAX_TEMPORAL_CLUSTER_COUNT: Optional[int] = pydantic.Field(
         default=6,
         ge=2,
     )
@@ -79,7 +80,7 @@ class BaseHourlySettings(BaseSettings):
     )
 
     """supplemental data"""
-    SUPPLEMENTAL_DATA: dict | None = pydantic.Field(
+    SUPPLEMENTAL_DATA: Optional[dict] = pydantic.Field(
         default=None,
     )
 
@@ -109,7 +110,7 @@ class BaseHourlySettings(BaseSettings):
     )
 
     """seed for any random state assignment (ElasticNet, Clustering)"""
-    SEED: int | None = pydantic.Field(
+    SEED: Optional[int] = pydantic.Field(
         default=None,
         ge=0,
     )
@@ -160,7 +161,7 @@ class HourlySolarSettings(BaseHourlySettings):
     )
 
     """number of temperature bins"""
-    TEMPERATURE_BIN_COUNT: int | None = pydantic.Field(
+    TEMPERATURE_BIN_COUNT: Optional[int] = pydantic.Field(
         default=6,
         ge=1,
     )
@@ -197,7 +198,7 @@ class HourlySolarSettings(BaseHourlySettings):
 class HourlyNonSolarSettings(BaseHourlySettings):
     """number of temperature bins"""
 
-    TEMPERATURE_BIN_COUNT: int | None = pydantic.Field(
+    TEMPERATURE_BIN_COUNT: Optional[int] = pydantic.Field(
         default=10,
         ge=1,
     )
@@ -237,14 +238,14 @@ class SerializeModel(BaseSettings):
     class Config:
         arbitrary_types_allowed = True
 
-    SETTINGS: BaseHourlySettings | None = None
-    TEMPORAL_CLUSTERS: list[list[int]] | None = None
-    TEMPERATURE_BIN_EDGES: list[float] | None = None
-    TS_FEATURES: list[str] | None = None
-    CATEGORICAL_FEATURES: list[str] | None = None
-    FEATURE_SCALER: dict[str, list[float]] | None = None
-    CATAGORICAL_SCALER: dict[str, list[float]] | None = None
-    Y_SCALER: list[float] | None = None
-    COEFFICIENTS: list[list[float]] | None = None
-    INTERCEPT: list[float] | None = None
-    BASELINE_METRICS: BaselineMetrics | None = None
+    SETTINGS: Optional[BaseHourlySettings] = None
+    TEMPORAL_CLUSTERS: Optional[list[list[int]]] = None
+    TEMPERATURE_BIN_EDGES: Optional[list] = None
+    TS_FEATURES: Optional[list] = None
+    CATEGORICAL_FEATURES: Optional[list] = None
+    FEATURE_SCALER: Optional[dict[str, list[float]]] = None
+    CATAGORICAL_SCALER: Optional[dict[str, list[float]]] = None
+    Y_SCALER: Optional[list[float]] = None
+    COEFFICIENTS: Optional[list[list[float]]] = None
+    INTERCEPT: Optional[list[float]] = None
+    BASELINE_METRICS: Optional[BaselineMetrics] = None
