@@ -157,7 +157,7 @@ class _BillingData(_DailyData):
         """
         temp_series = df["temperature"]
         temp_series.index.freq = temp_series.index.inferred_freq
-        if temp_series.index.freq != "H":
+        if temp_series.index.freq != "h":
             if (
                 temp_series.index.freq is None
                 or isinstance(temp_series.index.freq, MonthEnd)

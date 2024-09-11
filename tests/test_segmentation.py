@@ -32,7 +32,7 @@ from eemeter.eemeter.models.hourly.segmentation import (
 
 @pytest.fixture
 def index_8760():
-    return pd.date_range("2017-01-01", periods=365 * 24, freq="H", tz="UTC")
+    return pd.date_range("2017-01-01", periods=365 * 24, freq="h", tz="UTC")
 
 
 def test_segment_time_series_invalid_type(index_8760):
@@ -118,7 +118,7 @@ def test_segment_time_series_drop_zero_weight_segments(index_8760):
 
 @pytest.fixture
 def dataset():
-    index = pd.date_range("2017-01-01", periods=1000, freq="H", tz="UTC")
+    index = pd.date_range("2017-01-01", periods=1000, freq="h", tz="UTC")
     return pd.DataFrame({"a": 1, "b": 2}, index=index, columns=["a", "b"])
 
 
@@ -199,7 +199,7 @@ def test_segment_model():
         model_params={"C(hour_of_week)[1]": 1, "a": 1},
         warnings=None,
     )
-    index = pd.date_range("2017-01-01", periods=2, freq="H", tz="UTC")
+    index = pd.date_range("2017-01-01", periods=2, freq="h", tz="UTC")
     data = pd.DataFrame({"a": [1, 1], "hour_of_week": [1, 1]}, index=index)
     prediction = segment_model.predict(data)
     assert prediction.sum() == 4
@@ -229,7 +229,7 @@ def test_segmented_model():
     )
 
     # make this cover jan and feb but only supply jan model
-    index = pd.date_range("2017-01-01", periods=24 * 50, freq="H", tz="UTC")
+    index = pd.date_range("2017-01-01", periods=24 * 50, freq="h", tz="UTC")
     temps = pd.Series(np.linspace(0, 100, 24 * 50), index=index)
     prediction = segmented_model.predict(temps.index, temps).result.predicted_usage
     assert prediction.sum() == 1488.0

@@ -830,7 +830,7 @@ def add_freq(idx, freq=None):
     return idx
 
 
-def trim(*args, freq="H", tz="UTC"):
+def trim(*args, freq="h", tz="UTC"):
     """A helper function which trims a given number of time series dataframes so that they all correspond to the same
     time periods. Typically used to ensure that both gas, electricity, and temperature datasets cover the same time
     period. Trim undertakes the following steps:
@@ -947,7 +947,7 @@ def format_energy_data_for_caltrack(*args, method="hourly", tz="UTC"):
     """
 
     if method == "hourly":
-        freq = "H"
+        freq = "h"
     elif method == "daily":
         freq = "D"
     elif method == "billing":
