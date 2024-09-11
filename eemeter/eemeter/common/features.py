@@ -394,7 +394,7 @@ def compute_temperature_features(
             " temperature_data.tz_localize(...)."
         )
 
-    if meter_data_index.freq is None and meter_data_index.inferred_freq == "h":
+    if meter_data_index.freq is None and meter_data_index.inferred_freq in ["H", "h"]:
         raise ValueError(
             "If you have hourly data explicitly set the frequency"
             " of the dataframe by setting"
