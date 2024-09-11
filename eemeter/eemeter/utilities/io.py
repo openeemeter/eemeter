@@ -99,7 +99,7 @@ def meter_data_from_csv(
         df = df.tz_convert(tz)
 
     if freq == "hourly":
-        df = df.resample("H").sum(min_count=1)
+        df = df.resample("h").sum(min_count=1)
     elif freq == "daily":
         df = df.resample("D").sum(min_count=1)
 
@@ -158,7 +158,7 @@ def temperature_data_from_csv(
         df = df.tz_convert(tz)
 
     if freq == "hourly":
-        df = df.resample("H").sum(min_count=1)
+        df = df.resample("h").sum(min_count=1)
 
     return df[temp_col]
 
