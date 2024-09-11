@@ -52,12 +52,12 @@ class HourlyReportingData:
             )
         else:
             # TODO : Add the high frequency check for meter data
-            meter = meter.resample("H").sum(min_count=1)
-            meter.index.freq = "H"
+            meter = meter.resample("h").sum(min_count=1)
+            meter.index.freq = "h"
 
         # TODO : Add the high frequency check for temperature data and add NaNs
-        temp = temp.resample("H").mean()
-        temp.index.freq = "H"
+        temp = temp.resample("h").mean()
+        temp.index.freq = "h"
 
         return merge_features([meter, temp], keep_partial_nan_rows=True)
 

@@ -139,9 +139,9 @@ def compute_time_features(index, hour_of_week=True, day_of_week=True, hour_of_da
         - day_of_week : Label for day of week, 0-6, 0 is Monday.
         - hour_of_day : Label for hour of day, 0-23, 0 is 12-1am.
     """
-    if index.freq != "H":
+    if index.freq != "h":
         raise ValueError(
-            "index must have hourly frequency (freq='H')."
+            "index must have hourly frequency (freq='h')."
             " Found: {}".format(index.freq)
         )
 
@@ -350,7 +350,7 @@ def compute_temperature_features(
         A :any:`pandas.DatetimeIndex` corresponding to the index over which
         to compute temperature features.
     temperature_data : :any:`pandas.Series`
-        Series with :any:`pandas.DatetimeIndex` with hourly (``'H'``) frequency
+        Series with :any:`pandas.DatetimeIndex` with hourly (``'h'``) frequency
         and a set of temperature values.
     cooling_balance_points : :any:`list` of :any:`int` or :any:`float`, optional
         List of cooling balance points for which to create cooling degree days.
@@ -382,9 +382,9 @@ def compute_temperature_features(
     data : :any:`pandas.DataFrame`
         A dataset with the specified parameters.
     """
-    if temperature_data.index.freq != "H":
+    if temperature_data.index.freq != "h":
         raise ValueError(
-            "temperature_data.index must have hourly frequency (freq='H')."
+            "temperature_data.index must have hourly frequency (freq='h')."
             " Found: {}".format(temperature_data.index.freq)
         )
 
@@ -394,12 +394,12 @@ def compute_temperature_features(
             " temperature_data.tz_localize(...)."
         )
 
-    if meter_data_index.freq is None and meter_data_index.inferred_freq == "H":
+    if meter_data_index.freq is None and meter_data_index.inferred_freq == "h":
         raise ValueError(
             "If you have hourly data explicitly set the frequency"
             " of the dataframe by setting"
             "``meter_data_index.freq ="
-            " pd.tseries.frequencies.to_offset('H')."
+            " pd.tseries.frequencies.to_offset('h')."
         )
 
     if not meter_data_index.tz:
@@ -434,7 +434,7 @@ def compute_temperature_features(
         if degree_day_method == "hourly":
             pass
         elif degree_day_method == "daily":
-            if meter_data_index.freq == "H":
+            if meter_data_index.freq == "h":
                 raise ValueError(
                     "degree_day_method='daily' must be used with"
                     " daily meter data. Found: 'hourly'".format(degree_day_method)
@@ -742,7 +742,7 @@ def fit_temperature_bins(
         unoccupied_segmented_bins = {}
         segmented_datasets = iterate_segmented_dataset(data, segmentation)
         for segment_name, segmented_data in segmented_datasets:
-            hourly_segmented_data = segmented_data.resample("H").mean(numeric_only=True)
+            hourly_segmented_data = segmented_data.resample("h").mean(numeric_only=True)
             time_features = compute_time_features(
                 hourly_segmented_data.index,
                 hour_of_week=True,
