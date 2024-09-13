@@ -477,6 +477,7 @@ class _HourlyData:
         df = self._get_contiguous_datetime(df)
         df = self._interpolate(df)
         df = self._add_pv_start_date(df)
+
         return df
 
 
@@ -493,12 +494,12 @@ class HourlyBaselineData(_HourlyData):
 
 
 class HourlyReportingData(_HourlyData):
-    def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
+    def __init__(self, df: pd.DataFrame, is_electricity_data: bool, **kwargs: dict):
         df = df.copy()
         if "observed" not in df.columns:
             df["observed"] = np.nan
 
-        super().__init__(df, is_electricity_data)
+        super().__init__(df, is_electricity_data, **kwargs)
 
     def _check_data_sufficiency(self, sufficiency_df):
         hsc = HourlySufficiencyCriteria(

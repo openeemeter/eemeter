@@ -72,9 +72,7 @@ class HourlyTestModel(HourlyModel):
     def _add_temperature_bins(self, df):
         # TODO: do we need to do something about empty bins in prediction? I think not but maybe
 
-        bin_method = self.settings.TEMPERATURE_BINNING_METHOD
-        bin_count = self.settings.TEMPERATURE_BIN_COUNT
-        bin_width = self.settings.TEMPERATURE_BIN_WIDTH
+        settings = self.settings.TEMPERATURE_BIN
 
         # add daily average temperature to df
         daily_temp = df.groupby("date")["temperature"].mean()
@@ -84,15 +82,17 @@ class HourlyTestModel(HourlyModel):
 
         # add temperature bins based on daily average temperature
         if not self.is_fit:
-            if bin_method == "equal_sample_count":
+            if settings.METHOD == "equal_sample_count":
                 T_bins, T_bin_edges = pd.qcut(
-                    df["daily_temp"], q=bin_count, retbins=True, labels=False
+                    df["daily_temp"], q=settings.N_BINS, retbins=True, labels=False
                 )
-            elif bin_method == "equal_bin_width":
+            elif settings.METHOD == "equal_bin_width":
                 T_bins, T_bin_edges = pd.cut(
-                    df["daily_temp"], bins=bin_count, retbins=True, labels=False
+                    df["daily_temp"], bins=settings.N_BINS, retbins=True, labels=False
                 )
-            elif bin_method == "set_bin_width":
+            elif settings.METHOD == "set_bin_width":
+                bin_width = settings.BIN_WIDTH
+
                 # get smallest and largest temperature
                 min_temp = np.floor(df["daily_temp"].min()/5)*5
                 max_temp = np.ceil(df["daily_temp"].max()/5)*5
@@ -134,6 +134,8 @@ class HourlyTestModel(HourlyModel):
     def _add_temperature_bin_ts(self, df):
         extra_first_last = False
 
+        settings = self.settings.TEMPERATURE_BIN
+
         # TODO: if this permanent then it should not create, erase, make anew
         self._ts_feature_norm.remove("temperature_norm")
 
@@ -150,7 +152,7 @@ class HourlyTestModel(HourlyModel):
 
                 # TODO: if this is permanent then it should be a function, not this mess
                 if extra_first_last and (interaction_col == "daily_temp_"):
-                    k = self.settings.EDGE_TEMPERATURE_BIN_RATE
+                    k = settings.EDGE_BIN_RATE
                     # if first or last column, add additional column
                     # testing exp, previously squaring worked well
                     if col == cols[0]:
