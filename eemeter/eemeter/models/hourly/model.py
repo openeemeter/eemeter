@@ -226,8 +226,7 @@ class HourlyModel:
     def _add_temperature_bins(self, df):
         # TODO: do we need to do something about empty bins in prediction? I think not but maybe
 
-        bin_method = self.settings.TEMPERATURE_BINNING_METHOD
-        bin_count = self.settings.TEMPERATURE_BIN_COUNT
+        settings = self.settings.TEMPERATURE_BIN
 
         # add daily average temperature to df
         daily_temp = df.groupby("date")["temperature"].mean()
@@ -237,13 +236,13 @@ class HourlyModel:
 
         # add temperature bins based on daily average temperature
         if not self.is_fit:
-            if bin_method == "equal_bin_width":
+            if settings.METHOD == "equal_bin_width":
                 T_bins, T_bin_edges = pd.cut(
-                    df["daily_temp"], bins=bin_count, retbins=True, labels=False
+                    df["daily_temp"], bins=settings.N_BINS, retbins=True, labels=False
                 )
-            elif bin_method == "equal_sample_count":
+            elif settings.METHOD == "equal_sample_count":
                 T_bins, T_bin_edges = pd.qcut(
-                    df["daily_temp"], q=bin_count, retbins=True, labels=False
+                    df["daily_temp"], q=settings.N_BINS, retbins=True, labels=False
                 )
             else:
                 raise ValueError("Invalid temperature binning method")
@@ -288,16 +287,25 @@ class HourlyModel:
             # convert fit_grouped to 2D numpy array
             X = np.stack(fit_grouped.values, axis=0)
 
+            settings = self.settings.TEMPORAL_CLUSTER
             HoF = {"score": -np.inf, "clusters": None}
-            for n_cluster in range(2, self.settings.MAX_TEMPORAL_CLUSTER_COUNT + 1):
+            for n_cluster in range(2, settings.MAX_CLUSTER_COUNT + 1):
                 km = TimeSeriesKMeans(
-                    n_clusters=n_cluster,
-                    n_init=self.settings.TEMPORAL_CLUSTER_N_INIT,
-                    metric=self.settings.TEMPORAL_CLUSTER_METRIC,
-                    random_state=self.settings._SEED,
+                    n_clusters          = n_cluster,
+                    max_iter            = settings.MAX_ITER,
+                    tol                 = settings.TOL,
+                    n_init              = settings.N_INIT,
+                    metric              = settings.METRIC,
+                    max_iter_barycenter = settings.MAX_ITER_BARYCENTER,
+                    init                = settings.INIT_METHOD,
+                    random_state        = settings._SEED,
                 )
                 labels = km.fit_predict(X)
-                score = silhouette_score(X, labels)
+                score = silhouette_score(X, labels,
+                    metric = settings.METRIC,
+                    sample_size = settings.SCORE_SAMPLE_SIZE,
+                    random_state = settings._SEED,
+                )
 
                 if score > HoF["score"]:
                     HoF["score"] = score
@@ -448,7 +456,7 @@ class HourlyModel:
             df, cluster_dummies, how="left", left_index=True, right_index=True
         )
 
-        if self.settings.INCLUDE_TEMPERATURE_BINS:
+        if self.settings.TEMPERATURE_BIN is not None:
             df, temp_bin_cols = self._add_temperature_bins(df)
             self._categorical_features.extend(temp_bin_cols)
 

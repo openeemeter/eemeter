@@ -6,7 +6,7 @@ import pandas as pd
 import pydantic
 
 from enum import Enum
-from typing import Optional
+from typing import Optional, TypeVar
 
 from eemeter.common.base_settings import BaseSettings
 from eemeter.common.metrics import BaselineMetrics
@@ -31,7 +31,114 @@ class ClusteringMetric(str, Enum):
     SOFTDTW = "softdtw"
 
 
-class BaseElasticNetSettings(BaseSettings):
+class TemperatureBinSettings(BaseSettings):
+    """how to bin temperature data"""
+    METHOD: BinningChoice = pydantic.Field(
+        default=BinningChoice.SET_BIN_WIDTH,
+    )
+
+    """number of temperature bins"""
+    N_BINS: Optional[int] = pydantic.Field(
+        default=None,
+        ge=1,
+    )
+
+    """temperature bin width in fahrenheit"""
+    BIN_WIDTH: Optional[float] = pydantic.Field(
+        default=15,
+        ge=1,
+    )
+
+    """rate for edge temperature bins"""
+    EDGE_BIN_RATE: Optional[float] = pydantic.Field(
+        default=1.5,
+        gt=1,
+    )
+
+    @pydantic.model_validator(mode="after")
+    def _check_temperature_bins(self):
+        # check that temperature bin count is set based on binning method
+        if self.METHOD is None:
+            if self.N_BINS is not None:
+                raise ValueError(
+                    "'N_BINS' must be None if 'METHOD' is None."
+                )
+            if self.BIN_WIDTH is not None:
+                raise ValueError(
+                    "'N_BINS' must be None if 'METHOD' is None."
+                )
+        else:
+            if self.METHOD == BinningChoice.SET_BIN_WIDTH:
+                if self.BIN_WIDTH is None:
+                    raise ValueError(
+                        "'N_BINS' must be specified if 'METHOD' is 'SET_BIN_WIDTH'."
+                    )
+                if self.N_BINS is not None:
+                    raise ValueError(
+                        "'N_BINS' must be None if 'METHOD' is 'SET_BIN_WIDTH'."
+                    )
+            else:
+                if self.N_BINS is None:
+                    raise ValueError(
+                        "'N_BINS' must be specified if 'METHOD' is not None."
+                    )
+                if self.BIN_WIDTH is not None:
+                    raise ValueError(
+                        "'N_BINS' must be None if 'METHOD' is not None."
+                    )
+
+        return self
+
+
+class TimeSeriesKMeansSettings(BaseSettings):
+    """maximum number of clusters to use for temporal clustering"""
+    MAX_CLUSTER_COUNT: int = pydantic.Field(
+        default=6,
+        ge=2,
+    )
+
+    """maximum number of iterations for k-means clustering for a single run"""
+    MAX_ITER: int = pydantic.Field(
+        default=50,
+        ge=1,
+    )
+
+    """inertia variation threshold"""
+    TOL: float = pydantic.Field(
+        default=1e-6,
+        gt=0,
+    )
+
+    """number of times to run k-means clustering"""
+    N_INIT: int = pydantic.Field(
+        default=5,
+        ge=1,
+    )
+
+    """metric to use for cluster assignment and barycenter computation"""
+    METRIC: ClusteringMetric = pydantic.Field(
+        default=ClusteringMetric.EUCLIDEAN,
+    )
+
+    """maximum number of iterations for barycenter computation"""
+    MAX_ITER_BARYCENTER: int = pydantic.Field(
+        default=100,
+        ge=1,
+    )
+
+    """initialization method for k-means clustering"""
+    INIT_METHOD: str = pydantic.Field(
+        default="k-means++",
+    )
+
+    """sample size for calculating silhouette score of clustering"""
+    SCORE_SAMPLE_SIZE: Optional[int] = pydantic.Field(
+        default=None,
+        gt=1,
+    )
+
+
+class ElasticNetSettings(BaseSettings):
     """ElasticNet alpha parameter"""
     ALPHA: float = pydantic.Field(
         default=0.01,
@@ -79,7 +186,7 @@ class BaseElasticNetSettings(BaseSettings):
     )
 
 
-class SolarElasticNetSettings(BaseElasticNetSettings):
+class SolarElasticNetSettings(ElasticNetSettings):
     """ElasticNet alpha parameter"""
     ALPHA: float = pydantic.Field(
         default=0.011572,
@@ -94,7 +201,7 @@ class SolarElasticNetSettings(BaseElasticNetSettings):
     )
 
 
-class NonSolarElasticNetSettings(BaseElasticNetSettings):
+class NonSolarElasticNetSettings(ElasticNetSettings):
     """ElasticNet alpha parameter"""
     ALPHA: float = pydantic.Field(
         default=0.002800,
@@ -125,49 +232,14 @@ class BaseHourlySettings(BaseSettings):
         le=24,
     )
 
-    """include temperature bins"""
-    INCLUDE_TEMPERATURE_BINS: bool = pydantic.Field(
-        default=True,
+    """temperature bin settings"""
+    TEMPERATURE_BIN: Optional[TemperatureBinSettings] = pydantic.Field(
+        default_factory=TemperatureBinSettings,
     )
 
-    """how to bin temperature data"""
-    TEMPERATURE_BINNING_METHOD: Optional[BinningChoice] = pydantic.Field(
-        default=BinningChoice.EQUAL_BIN_WIDTH,
-    )
-
-    """number of temperature bins"""
-    TEMPERATURE_BIN_COUNT: Optional[int] = pydantic.Field(
-        default=6,
-        ge=1,
-    )
-
-    """temperature bin width in fahrenheit"""
-    TEMPERATURE_BIN_WIDTH: Optional[float] = pydantic.Field(
-        default=None,
-        ge=1,
-    )
-
-    
-    EDGE_TEMPERATURE_BIN_RATE: Optional[float] = pydantic.Field(
-        default=1.5,
-        gt=1,
-    )
-
-    """number of clusters to use for temporal clustering (day, month)"""
-    MAX_TEMPORAL_CLUSTER_COUNT: Optional[int] = pydantic.Field(
-        default=6,
-        ge=2,
-    )
-
-    """metric to use for temporal clustering"""
-    TEMPORAL_CLUSTER_METRIC: ClusteringMetric = pydantic.Field(
-        default=ClusteringMetric.EUCLIDEAN,
-    )
-
-    """number of times to run k-means clustering"""
-    TEMPORAL_CLUSTER_N_INIT: int = pydantic.Field(
-        default=5,
-        ge=1,
+    """settings for temporal clustering"""
+    TEMPORAL_CLUSTER: TimeSeriesKMeansSettings = pydantic.Field(
+        default_factory=TimeSeriesKMeansSettings,
     )
 
     """supplemental data"""
@@ -176,8 +248,8 @@ class BaseHourlySettings(BaseSettings):
     )
 
     """ElasticNet settings"""
-    ELASTICNET: BaseElasticNetSettings = pydantic.Field(
-        default_factory=BaseElasticNetSettings,
+    ELASTICNET: ElasticNetSettings = pydantic.Field(
+        default_factory=ElasticNetSettings,
     )
 
     """seed for any random state assignment (ElasticNet, Clustering)"""
@@ -185,53 +257,6 @@ class BaseHourlySettings(BaseSettings):
         default=None,
         ge=0,
     )
-
-
-    @pydantic.model_validator(mode="after")
-    def _check_temperature_bins(self):
-        # check that temperature binning method is set based on include temperature bins
-        if self.INCLUDE_TEMPERATURE_BINS:
-            if self.TEMPERATURE_BINNING_METHOD is None:
-                raise ValueError(
-                    "'TEMPERATURE_BINNING_METHOD' must be specified if 'INCLUDE_TEMPERATURE_BINS' is True."
-                )
-        else:
-            if self.TEMPERATURE_BINNING_METHOD is not None:
-                raise ValueError(
-                    "'TEMPERATURE_BINNING_METHOD' must be None if 'INCLUDE_TEMPERATURE_BINS' is False."
-                )
-
-        # check that temperature bin count is set based on binning method
-        if self.TEMPERATURE_BINNING_METHOD is None:
-            if self.TEMPERATURE_BIN_COUNT is not None:
-                raise ValueError(
-                    "'TEMPERATURE_BIN_COUNT' must be None if 'TEMPERATURE_BINNING_METHOD' is None."
-                )
-            if self.TEMPERATURE_BIN_WIDTH is not None:
-                raise ValueError(
-                    "'TEMPERATURE_BIN_WIDTH' must be None if 'TEMPERATURE_BINNING_METHOD' is None."
-                )
-        else:
-            if self.TEMPERATURE_BINNING_METHOD == BinningChoice.SET_BIN_WIDTH:
-                if self.TEMPERATURE_BIN_WIDTH is None:
-                    raise ValueError(
-                        "'TEMPERATURE_BIN_WIDTH' must be specified if 'TEMPERATURE_BINNING_METHOD' is 'SET_BIN_WIDTH'."
-                    )
-                if self.TEMPERATURE_BIN_COUNT is not None:
-                    raise ValueError(
-                        "'TEMPERATURE_BIN_COUNT' must be None if 'TEMPERATURE_BINNING_METHOD' is 'SET_BIN_WIDTH'."
-                    )
-            else:
-                if self.TEMPERATURE_BIN_COUNT is None:
-                    raise ValueError(
-                        "'TEMPERATURE_BIN_COUNT' must be specified if 'TEMPERATURE_BINNING_METHOD' is not None."
-                    )
-                if self.TEMPERATURE_BIN_WIDTH is not None:
-                    raise ValueError(
-                        "'TEMPERATURE_BIN_WIDTH' must be None if 'TEMPERATURE_BINNING_METHOD' is not None."
-                    )
-
-        return self
 
     @pydantic.model_validator(mode="after")
     def _check_seed(self):
@@ -241,6 +266,7 @@ class BaseHourlySettings(BaseSettings):
             self._SEED = self.SEED
 
         self.ELASTICNET._SEED = self._SEED
+        self.TEMPORAL_CLUSTER._SEED = self._SEED
 
         return self
 
@@ -253,10 +279,10 @@ class HourlySolarSettings(BaseHourlySettings):
     )
 
     """number of temperature bins"""
-    TEMPERATURE_BIN_COUNT: Optional[int] = pydantic.Field(
-        default=6,
-        ge=1,
-    )
+    # TEMPERATURE_BIN_COUNT: Optional[int] = pydantic.Field(
+    #     default=6,
+    #     ge=1,
+    # )
 
     """ElasticNet settings"""
     ELASTICNET: SolarElasticNetSettings = pydantic.Field(
@@ -281,11 +307,10 @@ class HourlySolarSettings(BaseHourlySettings):
 
 class HourlyNonSolarSettings(BaseHourlySettings):
     """number of temperature bins"""
-
-    TEMPERATURE_BIN_COUNT: Optional[int] = pydantic.Field(
-        default=10,
-        ge=1,
-    )
+    # TEMPERATURE_BIN_COUNT: Optional[int] = pydantic.Field(
+    #     default=10,
+    #     ge=1,
+    # )
 
     """ElasticNet settings"""
     ELASTICNET: NonSolarElasticNetSettings = pydantic.Field(
@@ -304,17 +329,18 @@ class HourlyNonSolarSettings(BaseHourlySettings):
 
 
 def HourlyNonSolarSettingsV2(**kwargs):
-    input_kwargs = {"TEMPERATURE_BIN_COUNT": 6, "ALPHA": 0.010206, "L1_RATIO": 0.241955}
+    input_kwargs = {"ALPHA": 0.010206, "L1_RATIO": 0.241955}
     input_kwargs.update(kwargs)
 
     return HourlyNonSolarSettings(**input_kwargs)
 
 
+HourlySettings = TypeVar('HourlySettings', bound=BaseHourlySettings)
 class SerializeModel(BaseSettings):
     class Config:
         arbitrary_types_allowed = True
 
-    SETTINGS: Optional[BaseHourlySettings] = None
+    SETTINGS: Optional[HourlySettings] = None
     TEMPORAL_CLUSTERS: Optional[list[list[int]]] = None
     TEMPERATURE_BIN_EDGES: Optional[list] = None
     TS_FEATURES: Optional[list] = None
