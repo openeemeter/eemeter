@@ -37,6 +37,8 @@ from eemeter.eemeter.models.hourly import HourlyBaselineData, HourlyReportingDat
 from eemeter.common.metrics import BaselineMetrics, BaselineMetricsFromDict
 
 
+
+
 # TODO: need to make explicit solar/nonsolar versions and set settings requirements/defaults appropriately
 class HourlyModel:
     # set priority columns for sorting
@@ -45,6 +47,11 @@ class HourlyModel:
         "ts": ["temperature", "ghi"],
         "cat": ["temporal_cluster", "daily_temp"],
     }
+
+    """Note:
+        Despite the temporal clusters, we can view all models created as a subset of the same full model.
+        The temporal clusters would simply have the same coefficients within the same days/month combinations.
+    """
 
     def __init__(
         self,
@@ -65,11 +72,14 @@ class HourlyModel:
         self._y_scaler = StandardScaler()
 
         self._model = ElasticNet(
-            alpha=self.settings.ALPHA,
-            l1_ratio=self.settings.L1_RATIO,
-            selection=self.settings.SELECTION,
-            max_iter=self.settings.MAX_ITER,
-            random_state=self.settings._SEED,
+            alpha=self.settings.ELASTICNET.ALPHA,
+            l1_ratio=self.settings.ELASTICNET.L1_RATIO,
+            fit_intercept=self.settings.ELASTICNET.FIT_INTERCEPT,
+            precompute=self.settings.ELASTICNET.PRECOMPUTE,
+            max_iter=self.settings.ELASTICNET.MAX_ITER,
+            tol=self.settings.ELASTICNET.TOL,
+            selection=self.settings.ELASTICNET.SELECTION,
+            random_state=self.settings.ELASTICNET._SEED,
         )
 
         self._T_bin_edges = None
@@ -622,7 +632,12 @@ class HourlyModel:
     @classmethod
     def from_dict(cls, data):
         # get settings
-        settings = _settings.BaseHourlySettings(**data.get("SETTINGS"))
+        train_features = data.get("SETTINGS").get("TRAIN_FEATURES")
+
+        if "ghi" in train_features:
+            settings = _settings.HourlySolarSettings(**data.get("SETTINGS"))
+        else:
+            settings = _settings.HourlyNonSolarSettings(**data.get("SETTINGS"))
 
         # initialize model class
         model_cls = cls(settings=settings)

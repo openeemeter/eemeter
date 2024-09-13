@@ -20,14 +20,93 @@ class SelectionChoice(str, Enum):
 
 
 class BinningChoice(str, Enum):
-    EQUAL_BIN_WIDTH = "equal_bin_width"
     EQUAL_SAMPLE_COUNT = "equal_sample_count"
+    EQUAL_BIN_WIDTH = "equal_bin_width"
+    SET_BIN_WIDTH = "set_bin_width"
 
 
 class ClusteringMetric(str, Enum):
     EUCLIDEAN = "euclidean"
     DTW = "dtw"
     SOFTDTW = "softdtw"
+
+
+class BaseElasticNetSettings(BaseSettings):
+    """ElasticNet alpha parameter"""
+    ALPHA: float = pydantic.Field(
+        default=0.01,
+        ge=0,
+    )
+
+    """ElasticNet l1_ratio parameter"""
+    L1_RATIO: float = pydantic.Field(
+        default=0.5,
+        ge=0,
+        le=1,
+    )
+
+    """ElasticNet fit_intercept parameter"""
+    FIT_INTERCEPT: bool = pydantic.Field(
+        default=True,
+    )
+
+    """ElasticNet parameter to precompute Gram matrix"""
+    PRECOMPUTE: bool = pydantic.Field(
+        default=False,
+    )
+
+    """ElasticNet max_iter parameter"""
+    MAX_ITER: int = pydantic.Field(
+        default=1000,
+        ge=1,
+        le=2**32 - 1,
+    )
+
+    """ElasticNet copy_X parameter"""
+    COPY_X: bool = pydantic.Field(
+        default=True,
+    )
+
+    """ElasticNet tol parameter"""
+    TOL: float = pydantic.Field(
+        default=1e-4,
+        gt=0,
+    )
+
+    """ElasticNet selection parameter"""
+    SELECTION: SelectionChoice = pydantic.Field(
+        default=SelectionChoice.CYCLIC,
+    )
+
+
+class SolarElasticNetSettings(BaseElasticNetSettings):
+    """ElasticNet alpha parameter"""
+    ALPHA: float = pydantic.Field(
+        default=0.011572,
+        ge=0,
+    )
+
+    """ElasticNet l1_ratio parameter"""
+    L1_RATIO: float = pydantic.Field(
+        default=0.139316,
+        ge=0,
+        le=1,
+    )
+
+
+class NonSolarElasticNetSettings(BaseElasticNetSettings):
+    """ElasticNet alpha parameter"""
+    ALPHA: float = pydantic.Field(
+        default=0.002800,
+        ge=0,
+    )
+
+    """ElasticNet l1_ratio parameter"""
+    L1_RATIO: float = pydantic.Field(
+        default=0.983800,
+        ge=0,
+        le=1,
+    )
 
 
 # analytic_features = ['GHI', 'Temperature', 'DHI', 'DNI', 'Relative Humidity', 'Wind Speed', 'Clearsky DHI', 'Clearsky DNI', 'Clearsky GHI', 'Cloud Type']
@@ -62,6 +141,18 @@ class BaseHourlySettings(BaseSettings):
         ge=1,
     )
 
+    """temperature bin width in fahrenheit"""
+    TEMPERATURE_BIN_WIDTH: Optional[float] = pydantic.Field(
+        default=None,
+        ge=1,
+    )
+
+    
+    EDGE_TEMPERATURE_BIN_RATE: Optional[float] = pydantic.Field(
+        default=1.5,
+        gt=1,
+    )
+
     """number of clusters to use for temporal clustering (day, month)"""
     MAX_TEMPORAL_CLUSTER_COUNT: Optional[int] = pydantic.Field(
         default=6,
@@ -84,29 +175,9 @@ class BaseHourlySettings(BaseSettings):
         default=None,
     )
 
-    """ElasticNet alpha parameter"""
-    ALPHA: float = pydantic.Field(
-        default=0.012896,
-        ge=0,
-    )
-
-    """ElasticNet l1_ratio parameter"""
-    L1_RATIO: float = pydantic.Field(
-        default=0.032904,
-        ge=0,
-        le=1,
-    )
-
-    """ElasticNet selection parameter"""
-    SELECTION: SelectionChoice = pydantic.Field(
-        default=SelectionChoice.CYCLIC,
-    )
-
-    """ElasticNet max_iter parameter"""
-    MAX_ITER: int = pydantic.Field(
-        default=1000,
-        ge=1,
-        le=2**32 - 1,
+    """ElasticNet settings"""
+    ELASTICNET: BaseElasticNetSettings = pydantic.Field(
+        default_factory=BaseElasticNetSettings,
     )
 
     """seed for any random state assignment (ElasticNet, Clustering)"""
@@ -114,6 +185,7 @@ class BaseHourlySettings(BaseSettings):
         default=None,
         ge=0,
     )
+
 
     @pydantic.model_validator(mode="after")
     def _check_temperature_bins(self):
@@ -135,11 +207,29 @@ class BaseHourlySettings(BaseSettings):
                 raise ValueError(
                     "'TEMPERATURE_BIN_COUNT' must be None if 'TEMPERATURE_BINNING_METHOD' is None."
                 )
-        else:
-            if self.TEMPERATURE_BIN_COUNT is None:
+            if self.TEMPERATURE_BIN_WIDTH is not None:
                 raise ValueError(
-                    "'TEMPERATURE_BIN_COUNT' must be specified if 'TEMPERATURE_BINNING_METHOD' is not None."
+                    "'TEMPERATURE_BIN_WIDTH' must be None if 'TEMPERATURE_BINNING_METHOD' is None."
                 )
+        else:
+            if self.TEMPERATURE_BINNING_METHOD == BinningChoice.SET_BIN_WIDTH:
+                if self.TEMPERATURE_BIN_WIDTH is None:
+                    raise ValueError(
+                        "'TEMPERATURE_BIN_WIDTH' must be specified if 'TEMPERATURE_BINNING_METHOD' is 'SET_BIN_WIDTH'."
+                    )
+                if self.TEMPERATURE_BIN_COUNT is not None:
+                    raise ValueError(
+                        "'TEMPERATURE_BIN_COUNT' must be None if 'TEMPERATURE_BINNING_METHOD' is 'SET_BIN_WIDTH'."
+                    )
+            else:
+                if self.TEMPERATURE_BIN_COUNT is None:
+                    raise ValueError(
+                        "'TEMPERATURE_BIN_COUNT' must be specified if 'TEMPERATURE_BINNING_METHOD' is not None."
+                    )
+                if self.TEMPERATURE_BIN_WIDTH is not None:
+                    raise ValueError(
+                        "'TEMPERATURE_BIN_WIDTH' must be None if 'TEMPERATURE_BINNING_METHOD' is not None."
+                    )
 
         return self
 
@@ -149,6 +239,8 @@ class BaseHourlySettings(BaseSettings):
             self._SEED = np.random.randint(0, 2**32 - 1)
         else:
             self._SEED = self.SEED
+
+        self.ELASTICNET._SEED = self._SEED
 
         return self
 
@@ -166,17 +258,9 @@ class HourlySolarSettings(BaseHourlySettings):
         ge=1,
     )
 
-    """ElasticNet alpha parameter"""
-    ALPHA: float = pydantic.Field(
-        default=0.011572,
-        ge=0,
-    )
-
-    """ElasticNet l1_ratio parameter"""
-    L1_RATIO: float = pydantic.Field(
-        default=0.139316,
-        ge=0,
-        le=1,
+    """ElasticNet settings"""
+    ELASTICNET: SolarElasticNetSettings = pydantic.Field(
+        default_factory=SolarElasticNetSettings,
     )
 
     @pydantic.model_validator(mode="after")
@@ -203,17 +287,9 @@ class HourlyNonSolarSettings(BaseHourlySettings):
         ge=1,
     )
 
-    """ElasticNet alpha parameter"""
-    ALPHA: float = pydantic.Field(
-        default=0.002800,
-        ge=0,
-    )
-
-    """ElasticNet l1_ratio parameter"""
-    L1_RATIO: float = pydantic.Field(
-        default=0.983800,
-        ge=0,
-        le=1,
+    """ElasticNet settings"""
+    ELASTICNET: NonSolarElasticNetSettings = pydantic.Field(
+        default_factory=NonSolarElasticNetSettings,
     )
 
     @pydantic.model_validator(mode="after")
