@@ -51,7 +51,7 @@ class TemperatureBinSettings(BaseSettings):
 
     """rate for edge temperature bins"""
     EDGE_BIN_RATE: Optional[float] = pydantic.Field(
-        default=1.5,
+        default=None,
         gt=1,
     )
 
@@ -93,8 +93,9 @@ class TemperatureBinSettings(BaseSettings):
 class TimeSeriesKMeansSettings(BaseSettings):
     """maximum number of clusters to use for temporal clustering"""
     MAX_CLUSTER_COUNT: int = pydantic.Field(
-        default=6,
+        default=24,
         ge=2,
+        le=7*12, # 7 days * 12 months for year of data
     )
 
     """maximum number of iterations for k-means clustering for a single run"""
@@ -105,7 +106,7 @@ class TimeSeriesKMeansSettings(BaseSettings):
 
     """inertia variation threshold"""
     TOL: float = pydantic.Field(
-        default=1e-6,
+        default=1e-3,
         gt=0,
     )
 
