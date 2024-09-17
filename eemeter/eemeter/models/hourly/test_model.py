@@ -69,68 +69,6 @@ class HourlyTestModel(HourlyModel):
         return X_fit, X_predict, y_fit
     
 
-    def _add_temperature_bins(self, df):
-        # TODO: do we need to do something about empty bins in prediction? I think not but maybe
-
-        settings = self.settings.TEMPERATURE_BIN
-
-        # add daily average temperature to df
-        daily_temp = df.groupby("date")["temperature"].mean()
-        daily_temp.name = "daily_temp"
-
-        df = pd.merge(df, daily_temp, on="date", how="left")
-
-        # add temperature bins based on daily average temperature
-        if not self.is_fit:
-            if settings.METHOD == "equal_sample_count":
-                T_bins, T_bin_edges = pd.qcut(
-                    df["daily_temp"], q=settings.N_BINS, retbins=True, labels=False
-                )
-            elif settings.METHOD == "equal_bin_width":
-                T_bins, T_bin_edges = pd.cut(
-                    df["daily_temp"], bins=settings.N_BINS, retbins=True, labels=False
-                )
-            elif settings.METHOD == "set_bin_width":
-                bin_width = settings.BIN_WIDTH
-
-                # get smallest and largest temperature
-                min_temp = np.floor(df["daily_temp"].min()/5)*5
-                max_temp = np.ceil(df["daily_temp"].max()/5)*5
-
-                # create bins with set width
-                T_bin_edges = np.arange(min_temp, max_temp + bin_width, bin_width)
-                T_bins = pd.cut(df["daily_temp"], bins=T_bin_edges, labels=False)
-                
-            else:
-                raise ValueError("Invalid temperature binning method")
-
-            # set the first and last bin to -inf and inf
-            T_bin_edges[0] = -np.inf
-            T_bin_edges[-1] = np.inf
-
-            # store bin edges for prediction
-            self._T_bin_edges = T_bin_edges
-
-        else:
-            T_bins = pd.cut(df["daily_temp"], bins=self._T_bin_edges, labels=False)
-
-        df["daily_temp_bin"] = T_bins
-
-        # Create dummy variables for temperature bins
-        bin_dummies = pd.get_dummies(
-            pd.Categorical(
-                df["daily_temp_bin"], categories=range(len(self._T_bin_edges) - 1)
-            ),
-            prefix="daily_temp",
-        )
-        bin_dummies.index = df.index
-
-        col_names = bin_dummies.columns.tolist()
-        df = pd.merge(df, bin_dummies, how="left", left_index=True, right_index=True)
-
-        return df, col_names
-    
-
     def _add_temperature_bin_ts(self, df):
         extra_first_last = False
 
