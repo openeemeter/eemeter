@@ -60,6 +60,8 @@ TODO get a couple example meters with GHI, potentially some supplemental feature
 * test against supplemental data logic -> should require a flag in model to fit
 * all 0s in meter data -> leads to full nan
 * test valid interpolations
+* test with various days removed due to interpolation during fit()
+    * include day where timezone shifts in either direction
 * test edge case, nearly valid, but not allowed interpolations (7 consecutive hours, etc)
     * should still happen to allow model fit, but add (and test for) DQ
 * test a few DQs - baseline length, etc
