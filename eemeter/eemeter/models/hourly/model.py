@@ -207,6 +207,7 @@ class HourlyModel:
         - A pandas DataFrame containing the initialized meter data
         """
         dst_indices = _get_dst_indices(meter_data)
+        initial_index = meter_data.index
         meter_data = self._add_categorical_features(meter_data)
         if self.settings.SUPPLEMENTAL_DATA is not None:
             self._add_supplemental_features(meter_data)
@@ -219,8 +220,17 @@ class HourlyModel:
         X_predict, _ = self._get_feature_matrices(meter_data, dst_indices)
 
         if not self.is_fit:
+            meter_data = meter_data.set_index(initial_index)
             # remove insufficient days from fit data
             meter_data = meter_data[meter_data["include_date"]]
+
+            # recalculate DST indices with removed days
+            dst_indices = _get_dst_indices(meter_data)
+
+            # index shouldn't matter since it's being aggregated on date col inside _get_feature_matrices,
+            # but just keeping the input consistent with initial call
+            meter_data = meter_data.reset_index()
+
             X_fit, y_fit = self._get_feature_matrices(meter_data, dst_indices)
 
         else:
@@ -521,6 +531,7 @@ class HourlyModel:
 
         self._categorical_features = sorted_cat_cols
 
+    # TODO rename to avoid confusion with data sufficiency
     def _daily_sufficiency(self, df):
         # remove days with insufficient data
         min_hours = self.settings.MIN_DAILY_TRAINING_HOURS
