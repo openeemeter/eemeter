@@ -167,6 +167,7 @@ class HourlyModel:
         """
         # TODO: same as fit, is copy necessary?
         df_eval = eval_data.df.copy()
+        dst_indices = _get_dst_indices(df_eval)
         datetime_original = eval_data.df.index
         # # get list of columns to keep in output
         columns = df_eval.columns.tolist()
@@ -179,6 +180,9 @@ class HourlyModel:
         y_predict_scaled = self._model.predict(X)
         y_predict = self._y_scaler.inverse_transform(y_predict_scaled)
         y_predict = y_predict.flatten()
+
+        y_predict = _transform_dst(y_predict, dst_indices)
+
         df_eval["predicted"] = y_predict
 
         # # remove columns not in original columns and predicted
@@ -785,3 +789,54 @@ def _get_dst_indices(df):
         mean_idx.append((date_idx, hour))
 
     return interp_idx, mean_idx
+
+
+def _transform_dst(prediction, dst_indices):
+    interp, mean = dst_indices
+
+    START_END = 0
+    REMOVE = 1
+    INTERPOLATE = 2
+
+    # get concrete indices
+    remove_idx = [(REMOVE, date * 24 + hour) for date, hour in interp]
+    interp_idx = [(INTERPOLATE, date * 24 + hour + 1) for date, hour in mean]
+
+    # these values will be inserted for the 25th hour
+    interpolated_vals = []
+    for _, idx in interp_idx:
+        interpolated = (prediction[idx - 1] + prediction[idx]) / 2
+        interpolated_vals.append(interpolated)
+    interpolation = iter(interpolated_vals)
+
+    # sort "operations" by index (can't assume a strict back-and-forth ordering)
+    ops = sorted(remove_idx + interp_idx, key=lambda t: t[1])
+
+    # create fenceposts where slices end
+    pairs = list(zip([(START_END, 0)] + ops, ops + [(START_END, None)]))
+    slices = []
+    for start, end in pairs:
+        start_i = start[1]
+        end_i = end[1]
+        if start[0] == REMOVE:
+            start_i += 1
+        if start[0] == INTERPOLATE:
+            slices.append([next(interpolation)])
+        slices.append(prediction[slice(start_i, end_i)])
+    return np.concatenate(slices)
+
+    ## the block above is equivalent to:
+    # shift = 0
+    # for op in ops:
+    #     if op[0] == REMOVE:
+    #         # delete artificial DST hour
+    #         idx = op[1] + shift
+    #         prediction = np.delete(prediction, idx)
+    #         shift -= 1
+    #     if op[0] == INTERPOLATE:
+    #         # interpolate missing DST hour
+    #         idx = op[1] + shift
+    #         interp = (prediction[idx - 1] + prediction[idx]) / 2
+    #         prediction = np.insert(prediction, idx, interp)
+    #         shift += 1
+    # return prediction
