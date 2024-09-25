@@ -23,6 +23,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
+from eemeter.common.metrics import BaselineMetrics
 from eemeter.eemeter.models.hourly.model import HourlyModel, _get_dst_indices
 
 
@@ -54,7 +55,7 @@ class HourlyTestModel(HourlyModel):
 
         meter_data = self._daily_sufficiency(meter_data)
         meter_data = self._normalize_features(meter_data)
-        meter_data = self._add_temperature_bin_ts(meter_data)
+        meter_data = self._add_temperature_bin_masked_ts(meter_data)
 
         X_predict, _ = self._get_feature_matrices(meter_data, dst_indices)
 
@@ -69,9 +70,7 @@ class HourlyTestModel(HourlyModel):
         return X_fit, X_predict, y_fit
     
 
-    def _add_temperature_bin_ts(self, df):
-        extra_first_last = False
-
+    def _add_temperature_bin_masked_ts(self, df):
         settings = self.settings.TEMPERATURE_BIN
 
         # TODO: if this permanent then it should not create, erase, make anew
@@ -89,7 +88,7 @@ class HourlyTestModel(HourlyModel):
                 self._ts_feature_norm.append(ts_col)
 
                 # TODO: if this is permanent then it should be a function, not this mess
-                if extra_first_last and (interaction_col == "daily_temp_"):
+                if (settings.EDGE_BIN_RATE is not None) and (interaction_col == "daily_temp_"):
                     k = settings.EDGE_BIN_RATE
                     # if first or last column, add additional column
                     # testing exp, previously squaring worked well
