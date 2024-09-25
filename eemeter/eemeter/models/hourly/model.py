@@ -213,8 +213,7 @@ class HourlyModel:
         dst_indices = _get_dst_indices(meter_data)
         initial_index = meter_data.index
         meter_data = self._add_categorical_features(meter_data)
-        if self.settings.SUPPLEMENTAL_DATA is not None:
-            self._add_supplemental_features(meter_data)
+        self._add_supplemental_features(meter_data)
 
         self._ts_features, self._categorical_features = self._sort_features(
             self._ts_features, 
@@ -508,22 +507,19 @@ class HourlyModel:
 
     def _add_supplemental_features(self, df):
         # TODO: should either do upper or lower on all strs
-        if "TS_SUPPLEMENTAL" in self.settings.SUPPLEMENTAL_DATA:
-            if self.settings.SUPPLEMENTAL_DATA["TS_SUPPLEMENTAL"] is not None:
-                for col in self.settings.SUPPLEMENTAL_DATA["TS_SUPPLEMENTAL"]:
-                    if (col in df.columns) and (col not in self._ts_features):
-                        self._ts_features.append(col)
+        if self.settings.SUPPLEMENTAL_TIME_SERIES_COLUMNS is not None:
+            for col in self.settings.SUPPLEMENTAL_TIME_SERIES_COLUMNS:
+                if (col in df.columns) and (col not in self._ts_features):
+                    self._ts_features.append(col)
 
-        if "CATEGORICAL_SUPPLEMENTAL" in self.settings.SUPPLEMENTAL_DATA:
-            if self.settings.SUPPLEMENTAL_DATA["CATEGORICAL_SUPPLEMENTAL"] is not None:
-                for col in self.settings.SUPPLEMENTAL_DATA["CATEGORICAL_SUPPLEMENTAL"]:
-                    if (
-                        (col in df.columns)
-                        and (col not in self._ts_features)
-                        and (col not in self._categorical_features)
-                    ):
-
-                        self._categorical_features.append(col)
+        if self.settings.SUPPLEMENTAL_CATEGORICAL_COLUMNS is not None:
+            for col in self.settings.SUPPLEMENTAL_CATEGORICAL_COLUMNS:
+                if (
+                    (col in df.columns)
+                    and (col not in self._ts_features)
+                    and (col not in self._categorical_features)
+                ):
+                    self._categorical_features.append(col)
 
     def _sort_features(self, ts_features=None, cat_features=None):
         features = {"ts": ts_features, "cat": cat_features}
