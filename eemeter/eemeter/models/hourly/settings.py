@@ -243,8 +243,13 @@ class BaseHourlySettings(BaseSettings):
         default_factory=TimeSeriesKMeansSettings,
     )
 
-    """supplemental data"""
-    SUPPLEMENTAL_DATA: Optional[dict] = pydantic.Field(
+    """supplemental time series column names"""
+    SUPPLEMENTAL_TIME_SERIES_COLUMNS: Optional[list] = pydantic.Field(
+        default=None,
+    )
+
+    """supplemental categorical column names"""
+    SUPPLEMENTAL_CATEGORICAL_COLUMNS: Optional[list] = pydantic.Field(
         default=None,
     )
 
