@@ -144,6 +144,7 @@ class NREL_Weather_API:  # TODO: reload data for all years
         return url
 
 
+# TODO: change into function in the future
 class Interpolator:
     def __init__(self, **kwargs):
         super().__init__()
@@ -151,15 +152,27 @@ class Interpolator:
             self.n_cor_idx = kwargs["n_cor_idx"]
         else:
             self.n_cor_idx = 6
-        self.lags = 24 * 7 * 2 + 1  # TODO: make this a parameter
 
-    def interpolate(self, df, columns=["temperature", "observed"]):
+        self.lags = 24 * 7 * 2 + 1  # TODO: make this a parameter
+        self.columns = ["temperature", "ghi", "observed"]
+
+    def interpolate(self, df, columns=None):
         self.df = df
-        self.columns = columns
+
+        if columns is not None:
+            self.columns = columns 
+
+        # check if the columns are in the dataframe and modify columns appropriately
+        for col in columns:
+            if col not in self.df.columns:
+                self.columns.remove(col)
+
         for col in columns:
             if f"interpolated_{col}" in self.df.columns:
                 self.df = self.df.drop(columns=[f"interpolated_{col}"])
             self.df[f"interpolated_{col}"] = False
+
+
         # Main method to perform the interpolation
         for col in self.columns:  # TODO: bad meters should be removed by now
             if col == "observed":
