@@ -49,7 +49,7 @@ class HourlyModel:
     # set priority columns for sorting
     # this is critical for ensuring predict column order matches fit column order
     _priority_cols = {
-        "ts": ["temperature", "ghi"],
+        "ts": ["temporal_cluster", "daily_temp", "temperature", "ghi"],
         "cat": ["temporal_cluster", "daily_temp"],
     }
 
@@ -216,11 +216,24 @@ class HourlyModel:
         if self.settings.SUPPLEMENTAL_DATA is not None:
             self._add_supplemental_features(meter_data)
 
-        self._sort_features()
+        self._ts_features, self._categorical_features = self._sort_features(
+            self._ts_features, 
+            self._categorical_features
+        )
 
         meter_data = self._daily_sufficiency(meter_data)
         meter_data = self._normalize_features(meter_data)
+        meter_data = self._add_temperature_bin_masked_ts(meter_data)
 
+        # save actual df used for later inspection
+        self._ts_feature_norm, _ = self._sort_features(self._ts_feature_norm)
+        selected_features = self._ts_feature_norm + self._categorical_features
+        if "observed_norm" in meter_data.columns:
+            selected_features += ["observed_norm"]
+        self._processed_meter_data_full = meter_data
+        self._processed_meter_data = self._processed_meter_data_full[selected_features]
+
+        # get feature matrices
         X_predict, _ = self._get_feature_matrices(meter_data, dst_indices)
 
         if not self.is_fit:
@@ -512,28 +525,27 @@ class HourlyModel:
 
                         self._categorical_features.append(col)
 
-    def _sort_features(self):
-        # sort time series features
-        def key_fcn(x):
-            if x in self._priority_cols["ts"]:
-                return False, self._priority_cols["ts"].index(x)
-            else:
-                return True, x
+    def _sort_features(self, ts_features=None, cat_features=None):
+        features = {"ts": ts_features, "cat": cat_features}
 
-        self._ts_features = sorted(self._ts_features, key=key_fcn)
+        # sort features
+        for _type in ["ts", "cat"]:
+            feat = features[_type]
 
-        # sort categorical features
-        sorted_cat_cols = []
-        for col in self._priority_cols["cat"]:
-            cat_cols = [c for c in self._categorical_features if c.startswith(col)]
-            sorted_cat_cols.extend(sorted(cat_cols))
+            if feat is not None:
+                sorted_cols = []
+                for col in self._priority_cols[_type]:
+                    cat_cols = [c for c in feat if c.startswith(col)]
+                    sorted_cols.extend(sorted(cat_cols))
 
-        # get all columns in self._categorical_feature not in sorted_cat_cols
-        cat_cols = [c for c in self._categorical_features if c not in sorted_cat_cols]
-        if cat_cols:
-            sorted_cat_cols.extend(sorted(cat_cols))
+                # get all columns in self._categorical_feature not in sorted_cat_cols
+                leftover_cols = [c for c in feat if c not in sorted_cols]
+                if leftover_cols:
+                    sorted_cols.extend(sorted(leftover_cols))
 
-        self._categorical_features = sorted_cat_cols
+                features[_type] = sorted_cols
+
+        return features["ts"], features["cat"]
 
     # TODO rename to avoid confusion with data sufficiency
     def _daily_sufficiency(self, df):
@@ -581,6 +593,69 @@ class HourlyModel:
             df["observed_norm"] = self._y_scaler.transform(
                 df["observed"].values.reshape(-1, 1)
             )
+
+        return df
+
+    def _add_temperature_bin_masked_ts(self, df):
+        settings = self.settings.TEMPERATURE_BIN
+
+        # TODO: if this permanent then it should not create, erase, make anew
+        self._ts_feature_norm.remove("temperature_norm")
+
+        # get all the daily_temp columns
+        # get list of columns beginning with "daily_temp_" and ending in a number
+        for interaction_col in ["daily_temp_", "temporal_cluster_"]:
+            cols = [col for col in df.columns if col.startswith(interaction_col) and col[-1].isdigit()]
+            for col in cols:
+                # splits temperature_norm into unique columns if that daily_temp column is True
+                ts_col = f"{col}_ts"
+                df[ts_col] = df["temperature_norm"] * df[col]
+
+                self._ts_feature_norm.append(ts_col)
+
+                # TODO: if this is permanent then it should be a function, not this mess
+                if (settings.EDGE_BIN_RATE is not None) and (interaction_col == "daily_temp_"):
+                    k = settings.EDGE_BIN_RATE
+                    # if first or last column, add additional column
+                    # testing exp, previously squaring worked well
+                    if col == cols[0]:
+                        # get indices where df[col] is True
+                        idx = df.index[df[col]].values
+                        temp_norm = df["temperature_norm"].values[idx]
+
+                        # set neg rate exponential
+                        name = f"daily_temp_0_neg_exp_ts"
+                        df[name] = 0.0
+
+                        df[name].iloc[idx] = 1/10*np.exp(-1/k*temp_norm)
+                        self._ts_feature_norm.append(name)
+
+                        # set pos rate exponential
+                        name = f"daily_temp_0_pos_exp_ts"
+                        df[name] = 0.0
+                        
+                        df[name].iloc[idx] = 1/10*np.exp(1/k*temp_norm)
+                        self._ts_feature_norm.append(name)
+
+                    elif col == cols[-1]:
+                        idx = df.index[df[col]].values
+                        temp_norm = df["temperature_norm"].values[idx]
+
+                        # set neg rate exponential
+                        i = col.replace("daily_temp_", "")
+                        name = f"daily_temp_{i}_neg_exp_ts"
+                        df[name] = 0.0
+
+                        df[name].iloc[idx] = 1/10*np.exp(-1/k*temp_norm)
+                        self._ts_feature_norm.append(name)
+
+                        # set pos rate exponential
+                        i = col.replace("daily_temp_", "")
+                        name = f"daily_temp_{i}_pos_exp_ts"
+                        df[name] = 0.0
+
+                        df[name].iloc[idx] = 1/10*np.exp(1/k*temp_norm)
+                        self._ts_feature_norm.append(name)
 
         return df
 
