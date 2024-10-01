@@ -45,7 +45,7 @@ class TemperatureBinSettings(BaseSettings):
 
     """temperature bin width in fahrenheit"""
     BIN_WIDTH: Optional[float] = pydantic.Field(
-        default=15,
+        default=18,
         ge=1,
     )
 
@@ -142,13 +142,13 @@ class TimeSeriesKMeansSettings(BaseSettings):
 class ElasticNetSettings(BaseSettings):
     """ElasticNet alpha parameter"""
     ALPHA: float = pydantic.Field(
-        default=0.01,
+        default=0.041,
         ge=0,
     )
 
     """ElasticNet l1_ratio parameter"""
     L1_RATIO: float = pydantic.Field(
-        default=0.5,
+        default=0.55,
         ge=0,
         le=1,
     )
@@ -184,36 +184,6 @@ class ElasticNetSettings(BaseSettings):
     """ElasticNet selection parameter"""
     SELECTION: SelectionChoice = pydantic.Field(
         default=SelectionChoice.CYCLIC,
-    )
-
-
-class SolarElasticNetSettings(ElasticNetSettings):
-    """ElasticNet alpha parameter"""
-    ALPHA: float = pydantic.Field(
-        default=0.011572,
-        ge=0,
-    )
-
-    """ElasticNet l1_ratio parameter"""
-    L1_RATIO: float = pydantic.Field(
-        default=0.139316,
-        ge=0,
-        le=1,
-    )
-
-
-class NonSolarElasticNetSettings(ElasticNetSettings):
-    """ElasticNet alpha parameter"""
-    ALPHA: float = pydantic.Field(
-        default=0.002800,
-        ge=0,
-    )
-
-    """ElasticNet l1_ratio parameter"""
-    L1_RATIO: float = pydantic.Field(
-        default=0.983800,
-        ge=0,
-        le=1,
     )
 
 
@@ -284,17 +254,6 @@ class HourlySolarSettings(BaseHourlySettings):
         default=["temperature", "ghi"],
     )
 
-    """number of temperature bins"""
-    # TEMPERATURE_BIN_COUNT: Optional[int] = pydantic.Field(
-    #     default=6,
-    #     ge=1,
-    # )
-
-    """ElasticNet settings"""
-    ELASTICNET: SolarElasticNetSettings = pydantic.Field(
-        default_factory=SolarElasticNetSettings,
-    )
-
     @pydantic.model_validator(mode="after")
     def _check_features(self):
         # make all features lowercase
@@ -318,11 +277,6 @@ class HourlyNonSolarSettings(BaseHourlySettings):
     #     ge=1,
     # )
 
-    """ElasticNet settings"""
-    ELASTICNET: NonSolarElasticNetSettings = pydantic.Field(
-        default_factory=NonSolarElasticNetSettings,
-    )
-
     @pydantic.model_validator(mode="after")
     def _check_features(self):
         # make all features lowercase
@@ -332,13 +286,6 @@ class HourlyNonSolarSettings(BaseHourlySettings):
             self._TRAIN_FEATURES.insert(0, "temperature")
 
         return self
-
-
-def HourlyNonSolarSettingsV2(**kwargs):
-    input_kwargs = {"ALPHA": 0.010206, "L1_RATIO": 0.241955}
-    input_kwargs.update(kwargs)
-
-    return HourlyNonSolarSettings(**input_kwargs)
 
 
 HourlySettings = TypeVar('HourlySettings', bound=BaseHourlySettings)
