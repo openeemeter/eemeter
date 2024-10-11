@@ -26,13 +26,13 @@ from eemeter.eemeter.common.data_processor_utilities import (
     compute_minimum_granularity,
     remove_duplicates,
 )
+from eemeter.common.hourly_interpolation import interpolate
 from eemeter.eemeter.common.features import compute_temperature_features
 from eemeter.eemeter.common.sufficiency_criteria import HourlySufficiencyCriteria
 from eemeter.eemeter.common.warnings import EEMeterWarning
 
 import numpy as np
 import pandas as pd
-from scipy.interpolate import RBFInterpolator
 
 
 # TODO move to settings/const
@@ -142,124 +142,6 @@ class NREL_Weather_API:  # TODO: reload data for all years
             url = None
 
         return url
-
-
-# TODO: change into function in the future
-class Interpolator:
-    def __init__(self, **kwargs):
-        super().__init__()
-        if "n_cor_idx" in kwargs:
-            self.n_cor_idx = kwargs["n_cor_idx"]
-        else:
-            self.n_cor_idx = 6
-
-        self.lags = 24 * 7 * 2 + 1  # TODO: make this a parameter
-        self.columns = ["temperature", "ghi", "observed"]
-
-    def interpolate(self, df, columns=None):
-        self.df = df
-
-        if columns is not None:
-            self.columns = columns 
-
-        # check if the columns are in the dataframe and modify columns appropriately
-        for col in columns:
-            if col not in self.df.columns:
-                self.columns.remove(col)
-
-        for col in columns:
-            if f"interpolated_{col}" in self.df.columns:
-                self.df = self.df.drop(columns=[f"interpolated_{col}"])
-            self.df[f"interpolated_{col}"] = False
-
-
-        # Main method to perform the interpolation
-        for col in self.columns:  # TODO: bad meters should be removed by now
-            if col == "observed":
-                missing_frac = self.df[col].isna().sum() / len(self.df)
-                self.n_cor_idx = int(
-                    np.max(
-                        [6, np.round((4.012 * np.log(missing_frac) + 24.38) / 2, 0) * 2]
-                    )
-                )
-            else:
-                self.n_cor_idx = 6
-            self._col_interpolation(col)
-
-        # for those datetime that we still haven't interpolated (for the columns), we will interpolate them with pd.interpolate
-        for col in self.columns:
-            na_datetime = self.df.loc[self.df[col].isna()].index
-            if len(na_datetime) > 0:
-                # interpolate the missing values
-                self.df[col] = self.df[col].interpolate(method="time")
-            # check if we still have missing values
-            still_na_datetime = self.df.loc[self.df[col].isna()].index
-            if len(still_na_datetime) > 0:
-                self.df[col] = self.df[col].fillna(method="ffill")
-                self.df[col] = self.df[col].fillna(method="bfill")
-
-            # TODO: we can check if we have similar values multiple times back to back, if yes, raise a warning
-            self.df.loc[self.df.index.isin(na_datetime), f"interpolated_{col}"] = True
-
-        return self.df
-
-    def _col_interpolation(self, col):
-        helper_df = self.df.copy()
-        # Calculate the correlation of col with its lags and leads
-        results = {
-            i: helper_df[col].autocorr(lag=i) for i in range(-self.lags, self.lags)
-        }
-        results = pd.DataFrame(
-            results.values(), index=results.keys(), columns=["autocorr"]
-        )
-        # remove zero
-        results = results[results.index != 0]
-        results = results.sort_values(by="autocorr", ascending=False).head(
-            self.n_cor_idx
-        )
-
-        # interpolate and update the values
-        check = True
-        while check:
-            helper_columns = []
-            for shift in results.index:
-                if shift < 0:
-                    shift_type = "lag"
-                else:
-                    shift_type = "lead"
-
-                self.df[f"{col}_{shift_type}_{shift}"] = self.df[f"{col}"].shift(-shift)
-                helper_columns.append(f"{col}_{shift_type}_{shift}")
-
-            nan_idx_before_interp = self.df.index[self.df[f"{col}"].isna()]
-            # fill the missing values with the mean of the selected lag lead
-            self.df.loc[nan_idx_before_interp, f"{col}"] = self.df.loc[
-                nan_idx_before_interp, helper_columns
-            ].mean(axis=1)
-            # check if we still have missing values
-            nan_idx_after_interp = self.df.index[self.df[f"{col}"].isna()]
-
-            interpolated_datetime_local = nan_idx_before_interp.difference(
-                nan_idx_after_interp
-            )
-            # print("interpolated with model: ", interpolated_datetime_local.shape)
-
-            self.df[f"interpolated_{col}"].loc[
-                self.df.index.isin(interpolated_datetime_local)
-            ] = True
-
-            if interpolated_datetime_local.shape[0] == 0:
-                check = False
-
-        nan_idx = self.df.index[self.df[f"{col}"].isna()]
-        # check if we still have missing values
-        if self.df[f"{col}"].isna().sum() > 0:  # TODO: make this more robust
-            self.df[f"{col}"] = self.df[f"{col}"].interpolate(
-                method="time", limit_direction="both"
-            )
-
-        self.df.loc[nan_idx, f"interpolated_{col}"] = True
-        self.df.drop(columns=helper_columns, inplace=True)
 
 
 class _HourlyData:
@@ -398,9 +280,8 @@ class _HourlyData:
                 self.missing_values_amount[col] = nan_numbers_cols[col]
 
         # we can add kwargs to the interpolation class like: inter_kwargs = {"n_cor_idx": self.kwargs["n_cor_idx"]}
-        self.interp = Interpolator()
+        df = interpolate(df, columns=self.to_be_interpolated_columns)
 
-        df = self.interp.interpolate(df=df, columns=self.to_be_interpolated_columns)
         return df
 
     def _add_pv_start_date(self, df, model_type="TS"):
