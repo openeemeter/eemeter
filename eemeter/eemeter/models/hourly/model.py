@@ -31,7 +31,7 @@ import pandas as pd
 from scipy.spatial.distance import cdist
 
 from sklearn.linear_model import ElasticNet
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, RobustScaler
 
 from tslearn.clustering import TimeSeriesKMeans, silhouette_score
 
@@ -73,8 +73,14 @@ class HourlyModel:
             self.settings = settings
 
         # Initialize model
-        self._feature_scaler = StandardScaler()
-        self._y_scaler = StandardScaler()
+        if self.settings.SCALING_METHOD == _settings.ScalingChoice.STANDARDSCALER:
+            self._feature_scaler = StandardScaler()
+            self._y_scaler = StandardScaler()
+        elif self.settings.SCALING_METHOD == _settings.ScalingChoice.ROBUSTSCALER:
+            self._feature_scaler = RobustScaler(unit_variance=True)
+            self._y_scaler = RobustScaler(unit_variance=True)
+
+        self._T_edge_bin_coeffs = None    # TODO: this needs to be exported in serialization
 
         self._model = ElasticNet(
             alpha=self.settings.ELASTICNET.ALPHA,
@@ -88,6 +94,7 @@ class HourlyModel:
         )
 
         self._T_bin_edges = None
+        self._T_edge_bin_rate = None
         self._df_temporal_clusters = None
         self._ts_features = self.settings._TRAIN_FEATURES.copy()
         self._categorical_features = None
@@ -256,7 +263,6 @@ class HourlyModel:
 
     def _add_temperature_bins(self, df):
         # TODO: do we need to do something about empty bins in prediction? I think not but maybe
-
         settings = self.settings.TEMPERATURE_BIN
 
         # add daily average temperature to df
@@ -268,23 +274,44 @@ class HourlyModel:
         # add temperature bins based on daily average temperature
         if not self.is_fit:
             if settings.METHOD == "equal_sample_count":
-                T_bins, T_bin_edges = pd.qcut(
-                    df["daily_temp"], q=settings.N_BINS, retbins=True, labels=False
-                )
+                T_bin_edges = pd.qcut(df["daily_temp"], q=settings.N_BINS, labels=False)
+
             elif settings.METHOD == "equal_bin_width":
-                T_bins, T_bin_edges = pd.cut(
-                    df["daily_temp"], bins=settings.N_BINS, retbins=True, labels=False
-                )
+                T_bin_edges = pd.cut(df["daily_temp"], bins=settings.N_BINS, labels=False)
+
             elif settings.METHOD == "set_bin_width":
                 bin_width = settings.BIN_WIDTH
 
-                # get smallest and largest temperature to nearest 5 degrees Fahrenheit
-                min_temp = np.floor(df["daily_temp"].min()/5)*5
-                max_temp = np.ceil(df["daily_temp"].max()/5)*5
+                min_temp = np.floor(df["daily_temp"].min())
+                max_temp = np.ceil(df["daily_temp"].max())
 
-                # create bins with set width
-                T_bin_edges = np.arange(min_temp, max_temp + bin_width, bin_width)
-                T_bins = pd.cut(df["daily_temp"], bins=T_bin_edges, labels=False)
+                if not settings.INCLUDE_EDGE_BINS:
+                    step_num = np.round((max_temp - min_temp) / bin_width).astype(int) + 1
+
+                    # T_bin_edges = np.arange(min_temp, max_temp + bin_width, bin_width)
+                    T_bin_edges = np.linspace(min_temp, max_temp, step_num)
+
+                else:
+                    set_edge_bin_width = False
+                    if set_edge_bin_width:
+                        edge_bin_width = bin_width*1/2
+
+                        bin_range = [min_temp + edge_bin_width, max_temp - edge_bin_width]
+
+                    else:
+                        edge_bin_count = settings.EDGE_BIN_DAYS
+
+                        # get 5th smallest and 5th largest temperatures
+                        sorted_temp = np.sort(df["daily_temp"].unique())
+                        min_temp_reg_bin = np.ceil(sorted_temp[edge_bin_count])
+                        max_temp_reg_bin = np.floor(sorted_temp[-edge_bin_count])
+
+                        bin_range = [min_temp_reg_bin, max_temp_reg_bin]
+
+                    step_num = np.round((bin_range[1] - bin_range[0]) / bin_width).astype(int) + 1
+
+                    # create bins with set width
+                    T_bin_edges = np.array([min_temp, *np.linspace(*bin_range, step_num), max_temp])
                 
             else:
                 raise ValueError("Invalid temperature binning method")
@@ -296,8 +323,7 @@ class HourlyModel:
             # store bin edges for prediction
             self._T_bin_edges = T_bin_edges
 
-        else:
-            T_bins = pd.cut(df["daily_temp"], bins=self._T_bin_edges, labels=False)
+        T_bins = pd.cut(df["daily_temp"], bins=self._T_bin_edges, labels=False)
 
         df["daily_temp_bin"] = T_bins
 
@@ -319,7 +345,7 @@ class HourlyModel:
     def _add_categorical_features(self, df):
         def set_initial_temporal_clusters(df):
             fit_df_grouped = (
-                df.groupby(["month", "day_of_week", "hour"])["observed"]
+                df.groupby(["month", "day_of_week", "hour_of_day"])["observed"]
                 .mean()
                 .reset_index()
             )
@@ -391,7 +417,7 @@ class HourlyModel:
                     ]
 
                     df_missing_grouped = (
-                        df_missing.groupby(["month", "day_of_week", "hour"])["observed"]
+                        df_missing.groupby(["month", "day_of_week", "hour_of_day"])["observed"]
                         .mean()
                         .reset_index()
                     )
@@ -419,7 +445,7 @@ class HourlyModel:
                     ]
 
                     df_known_groupby = df_known.groupby(
-                        ["month", "day_of_week", "hour"]
+                        ["month", "day_of_week", "hour_of_day"]
                     )["observed"]
                     df_known_mean = df_known_groupby.mean().reset_index()
                     df_known_mean = df_known_mean.groupby(["month", "day_of_week"])[
@@ -468,7 +494,7 @@ class HourlyModel:
         df["date"] = df.index.date
         df["month"] = df.index.month
         df["day_of_week"] = df.index.dayofweek
-        df["hour"] = df.index.hour
+        df["hour_of_day"] = df.index.hour
 
         # assign temporal clusters
         if not self.is_fit:
@@ -595,6 +621,28 @@ class HourlyModel:
     def _add_temperature_bin_masked_ts(self, df):
         settings = self.settings.TEMPERATURE_BIN
 
+        def get_k(int_col, a, b):
+            k = []
+            for hour in range(24):
+                df_hour = df[df["hour_of_day"] == hour]
+                df_hour = df_hour.sort_values(by=int_col)
+                
+                x_data = a*df_hour[int_col].values + b
+                y_data = df_hour["observed"].values
+                
+                # Fit the model using robust least squares
+                try:
+                    params = fit_exp_growth_decay(x_data, y_data, k_only=True, is_x_sorted=True)
+                    # save k for each hour
+                    k.append(params[2])
+                except:
+                    pass
+
+            k = np.abs(np.array(k))
+            k = np.mean(k[k < 5])
+
+            return k
+
         # TODO: if this permanent then it should not create, erase, make anew
         self._ts_feature_norm.remove("temperature_norm")
 
@@ -609,49 +657,68 @@ class HourlyModel:
 
                 self._ts_feature_norm.append(ts_col)
 
-                # TODO: if this is permanent then it should be a function, not this mess
-                if (settings.EDGE_BIN_RATE is not None) and (interaction_col == "daily_temp_"):
-                    k = settings.EDGE_BIN_RATE
+        # TODO: if this is permanent then it should be a function, not this mess
+        if settings.INCLUDE_EDGE_BINS:
+            if self._T_edge_bin_coeffs is None:
+                self._T_edge_bin_coeffs = {}
+
+            cols = [col for col in df.columns if col.startswith("daily_temp_") and col[-1].isdigit()]
+            cols = [0, int(cols[-1].replace("daily_temp_", ""))]
+            
+            for n in cols:
+                base_col = f"daily_temp_{n}"
+                int_col = f"{base_col}_ts"
+                T_col = f"{base_col}_T"
+
+                # get k for exponential growth/decay
+                if not self.is_fit:
+                    # determine temperature conversion for bin
+                    range_offset = settings.EDGE_BIN_TEMPERATURE_RANGE_OFFSET
+                    T_range = [df[int_col].min() - range_offset, df[int_col].max() + range_offset]
+                    new_range = [-3, 3]
+
+                    T_a = (new_range[1] - new_range[0])/(T_range[1] - T_range[0])
+                    T_b = new_range[1] - T_a*T_range[1]
+
+                    # The best rate for exponential
+                    if settings.EDGE_BIN_RATE == "heuristic":
+                        k = get_k(int_col, T_a, T_b)
+                    else:
+                        k = settings.EDGE_BIN_RATE
+
+                    # get A for exponential
+                    A = 1/(np.exp(1/k*new_range[1]) - 1)
+
+                    self._T_edge_bin_coeffs[n] = {
+                        "T_a": T_a,
+                        "T_b": T_b,
+                        "k": k,
+                        "A": A,
+                    }
+
+                T_a = self._T_edge_bin_coeffs[n]["T_a"]
+                T_b = self._T_edge_bin_coeffs[n]["T_b"]
+                k = self._T_edge_bin_coeffs[n]["k"]
+                A = self._T_edge_bin_coeffs[n]["A"]
+
+                df[T_col] = 0
+                df.loc[df[base_col], T_col] = T_a*df[int_col] + T_b # doing this multiple times in get_k and here
+
+                for pos_neg in ["pos", "neg"]:
                     # if first or last column, add additional column
                     # testing exp, previously squaring worked well
-                    if col == cols[0]:
-                        # get indices where df[col] is True
-                        idx = df.index[df[col]].values
-                        temp_norm = df["temperature_norm"].values[idx]
 
-                        # set neg rate exponential
-                        name = f"daily_temp_0_neg_exp_ts"
-                        df[name] = 0.0
+                    s = 1
+                    if "neg" in pos_neg:
+                        s = -1
 
-                        df[name].iloc[idx] = 1/10*np.exp(-1/k*temp_norm)
-                        self._ts_feature_norm.append(name)
+                    # set rate exponential
+                    ts_col = f"{base_col}_{pos_neg}_exp_ts"
 
-                        # set pos rate exponential
-                        name = f"daily_temp_0_pos_exp_ts"
-                        df[name] = 0.0
-                        
-                        df[name].iloc[idx] = 1/10*np.exp(1/k*temp_norm)
-                        self._ts_feature_norm.append(name)
+                    df[ts_col] = 0
+                    df.loc[df[base_col], ts_col] = A*np.exp(s/k*df[T_col]) - A
 
-                    elif col == cols[-1]:
-                        idx = df.index[df[col]].values
-                        temp_norm = df["temperature_norm"].values[idx]
-
-                        # set neg rate exponential
-                        i = col.replace("daily_temp_", "")
-                        name = f"daily_temp_{i}_neg_exp_ts"
-                        df[name] = 0.0
-
-                        df[name].iloc[idx] = 1/10*np.exp(-1/k*temp_norm)
-                        self._ts_feature_norm.append(name)
-
-                        # set pos rate exponential
-                        i = col.replace("daily_temp_", "")
-                        name = f"daily_temp_{i}_pos_exp_ts"
-                        df[name] = 0.0
-
-                        df[name].iloc[idx] = 1/10*np.exp(1/k*temp_norm)
-                        self._ts_feature_norm.append(name)
+                    self._ts_feature_norm.append(ts_col)
 
         return df
 
@@ -711,16 +778,27 @@ class HourlyModel:
 
     def to_dict(self):
         feature_scaler = {}
-        for i, key in enumerate(self._ts_features):
-            feature_scaler[key] = [
-                self._feature_scaler.mean_[i],
-                self._feature_scaler.scale_[i],
-            ]
+        if self.settings.SCALING_METHOD == _settings.ScalingChoice.STANDARDSCALER:
+            for i, key in enumerate(self._ts_features):
+                feature_scaler[key] = [
+                    self._feature_scaler.mean_[i],
+                    self._feature_scaler.scale_[i],
+                ]
+
+            y_scaler = [self._y_scaler.mean_, self._y_scaler.scale_]
+            
+        elif self.settings.SCALING_METHOD == _settings.ScalingChoice.ROBUSTSCALER:
+            for i, key in enumerate(self._ts_features):
+                feature_scaler[key] = [
+                    self._feature_scaler.center_[i],
+                    self._feature_scaler.scale_[i],
+                ]
+
+            y_scaler = [self._y_scaler.center_, self._y_scaler.scale_]
 
         # convert self._df_temporal_clusters to list of lists
         df_temporal_clusters = self._df_temporal_clusters.reset_index().values.tolist()
-        y_scaler = [self._y_scaler.mean_, self._y_scaler.scale_]
-
+        
         params = _settings.SerializeModel(
             SETTINGS=self.settings,
             TEMPORAL_CLUSTERS=df_temporal_clusters,
@@ -764,20 +842,27 @@ class HourlyModel:
         model_cls._ts_features = data.get("TS_FEATURES")
         model_cls._categorical_features = data.get("CATEGORICAL_FEATURES")
 
-        # set feature scaler
+        # set scalers
         feature_scaler_values = list(data.get("FEATURE_SCALER").values())
-        feature_scaler_mean = [i[0] for i in feature_scaler_values]
+        feature_scaler_loc = [i[0] for i in feature_scaler_values]
         feature_scaler_scale = [i[1] for i in feature_scaler_values]
 
-        model_cls._feature_scaler.mean_ = np.array(feature_scaler_mean)
-        model_cls._feature_scaler.scale_ = np.array(feature_scaler_scale)
-
-        # set y scaler
         y_scaler_values = data.get("Y_SCALER")
 
-        model_cls._y_scaler.mean_ = np.array(y_scaler_values[0])
-        model_cls._y_scaler.scale_ = np.array(y_scaler_values[1])
+        if settings.SCALING_METHOD == _settings.ScalingChoice.STANDARDSCALER:
+            model_cls._feature_scaler.mean_ = np.array(feature_scaler_loc)
+            model_cls._feature_scaler.scale_ = np.array(feature_scaler_scale)
 
+            model_cls._y_scaler.mean_ = np.array(y_scaler_values[0])
+            model_cls._y_scaler.scale_ = np.array(y_scaler_values[1])
+
+        elif settings.SCALING_METHOD == _settings.ScalingChoice.ROBUSTSCALER:
+            model_cls._feature_scaler.center_ = np.array(feature_scaler_loc)
+            model_cls._feature_scaler.scale_ = np.array(feature_scaler_scale)
+
+            model_cls._y_scaler.center_ = np.array(y_scaler_values[0])
+            model_cls._y_scaler.scale_ = np.array(y_scaler_values[1])
+        
         # set model
         model_cls._model.coef_ = np.array(data.get("COEFFICIENTS"))
         model_cls._model.intercept_ = np.array(data.get("INTERCEPT"))
@@ -824,6 +909,59 @@ class HourlyModel:
             Matplotlib axes.
         """
         raise NotImplementedError
+
+
+def fit_exp_growth_decay(x, y, k_only=True, is_x_sorted=False):
+    # Courtsey: https://math.stackexchange.com/questions/1337601/fit-exponential-with-constant
+    #           https://www.scribd.com/doc/14674814/Regressions-et-equations-integrales
+    #           Jean Jacquelin
+
+    # fitting function is actual b*exp(c*x) + a
+
+    # sort x in order
+    x = np.array(x)
+    y = np.array(y)
+    n = len(x)
+
+    if not is_x_sorted:
+        sort_idx = np.argsort(x)
+        x = x[sort_idx]
+        y = y[sort_idx]
+
+    s = [0]
+    for i in range(1, len(x)):
+        s.append(s[i-1] + 0.5*(y[i] + y[i-1])*(x[i] - x[i-1]))
+
+    s = np.array(s)
+    
+    x_diff_sq = np.sum((x - x[0])**2)
+    xs_diff = np.sum(s*(x - x[0]))
+    s_sq = np.sum(s**2)
+    xy_diff = np.sum((x - x[0])*(y - y[0]))
+    ys_diff = np.sum(s*(y - y[0]))
+
+    A = np.array([[x_diff_sq, xs_diff], [xs_diff, s_sq]])
+    b = np.array([xy_diff, ys_diff])
+
+    _, c = np.linalg.solve(A, b)
+    k = 1/c
+
+    if k_only:
+        a, b = None, None
+    else:
+        theta_i = np.exp(c*x)
+
+        theta = np.sum(theta_i)
+        theta_sq = np.sum(theta_i**2)
+        y_sum = np.sum(y)
+        y_theta = np.sum(y*theta_i)
+
+        A = np.array([[n, theta], [theta, theta_sq]])
+        b = np.array([y_sum, y_theta])
+
+        a, b = np.linalg.solve(A, b)
+
+    return a, b, k
 
 
 def _get_dst_indices(df):

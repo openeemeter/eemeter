@@ -6,7 +6,7 @@ import pandas as pd
 import pydantic
 
 from enum import Enum
-from typing import Optional, TypeVar
+from typing import Optional, Literal, Union, TypeVar
 
 from eemeter.common.base_settings import BaseSettings
 from eemeter.common.metrics import BaselineMetrics
@@ -17,6 +17,11 @@ from eemeter.common.metrics import BaselineMetrics
 class SelectionChoice(str, Enum):
     CYCLIC = "cyclic"
     RANDOM = "random"
+
+
+class ScalingChoice(str, Enum):
+    ROBUSTSCALER = "robustscaler"
+    STANDARDSCALER = "standardscaler"
 
 
 class BinningChoice(str, Enum):
@@ -49,11 +54,28 @@ class TemperatureBinSettings(BaseSettings):
         ge=1,
     )
 
-    """rate for edge temperature bins"""
-    EDGE_BIN_RATE: Optional[float] = pydantic.Field(
-        default=None,
-        gt=1,
+    """use edge bins bool"""
+    INCLUDE_EDGE_BINS: bool = pydantic.Field(
+        default=True,
     )
+
+    """rate for edge temperature bins"""
+    EDGE_BIN_RATE: Optional[Union[float, Literal["heuristic"]]] = pydantic.Field(
+        default="heuristic",
+    )
+
+    """number of days in edge bins"""
+    EDGE_BIN_DAYS: Optional[int] = pydantic.Field(
+        default=21,
+        ge=5,
+    )
+
+    """offset normalized temperature range for edge bins (keeps exp from blowing up)"""
+    EDGE_BIN_TEMPERATURE_RANGE_OFFSET: Optional[float] = pydantic.Field(
+        default=0.5,
+        ge=0,
+    )
+
 
     @pydantic.model_validator(mode="after")
     def _check_temperature_bins(self):
@@ -73,6 +95,12 @@ class TemperatureBinSettings(BaseSettings):
                     raise ValueError(
                         "'N_BINS' must be specified if 'METHOD' is 'SET_BIN_WIDTH'."
                     )
+                elif isinstance(self.BIN_WIDTH, float):
+                    if self.BIN_WIDTH <= 0:
+                        raise ValueError(
+                            "'BIN_WIDTH' must be greater than 0."
+                        )
+                    
                 if self.N_BINS is not None:
                     raise ValueError(
                         "'N_BINS' must be None if 'METHOD' is 'SET_BIN_WIDTH'."
@@ -88,6 +116,37 @@ class TemperatureBinSettings(BaseSettings):
                     )
 
         return self
+
+    @pydantic.model_validator(mode="after")
+    def _check_edge_bins(self):
+        if self.METHOD != BinningChoice.SET_BIN_WIDTH:
+            if self.INCLUDE_EDGE_BINS:
+                raise ValueError(
+                    "'INCLUDE_EDGE_BINS' must be False if 'METHOD' is not 'SET_BIN_WIDTH'."
+                )
+            
+        if self.INCLUDE_EDGE_BINS:
+            if self.EDGE_BIN_RATE is None:
+                raise ValueError(
+                    "'EDGE_BIN_RATE' must be specified if 'INCLUDE_EDGE_BINS' is True."
+                )
+            if self.EDGE_BIN_DAYS is None:
+                raise ValueError(
+                    "'EDGE_BIN_DAYS' must be specified if 'INCLUDE_EDGE_BINS' is True."
+                )
+
+        else:
+            if self.EDGE_BIN_RATE is not None:
+                raise ValueError(
+                    "'EDGE_BIN_RATE' must be None if 'INCLUDE_EDGE_BINS' is False."
+                )
+            if self.EDGE_BIN_DAYS is not None:
+                raise ValueError(
+                    "'EDGE_BIN_DAYS' must be None if 'INCLUDE_EDGE_BINS' is False."
+                )
+
+        return self
+
 
 
 class TimeSeriesKMeansSettings(BaseSettings):
@@ -226,6 +285,11 @@ class BaseHourlySettings(BaseSettings):
     """ElasticNet settings"""
     ELASTICNET: ElasticNetSettings = pydantic.Field(
         default_factory=ElasticNetSettings,
+    )
+
+    """Feature scaling method"""
+    SCALING_METHOD: ScalingChoice = pydantic.Field(
+        default=ScalingChoice.STANDARDSCALER,
     )
 
     """seed for any random state assignment (ElasticNet, Clustering)"""
