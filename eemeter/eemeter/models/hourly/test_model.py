@@ -35,6 +35,13 @@ from tslearn.clustering import TimeSeriesKMeans, silhouette_score
 from eemeter.eemeter.models.hourly.model import HourlyModel
 from eemeter.eemeter.models.hourly import settings as _settings
 
+from eemeter.common.clustering import (
+    transform as _transform,
+    bisect_k_means as _bisect_k_means,
+    scoring as _scoring,
+)
+from pydantic import BaseModel
+
 
 class TestHourlyModel(HourlyModel):
     def _add_categorical_features(self, df):
@@ -52,34 +59,32 @@ class TestHourlyModel(HourlyModel):
             X = np.stack(fit_grouped.values, axis=0)
 
             settings = self.settings.TEMPORAL_CLUSTER
-            HoF = {"score": -np.inf, "clusters": None}
-            for n_cluster in range(2, settings.MAX_CLUSTER_COUNT + 1):
-                km = TimeSeriesKMeans(
-                    n_clusters          = n_cluster,
-                    max_iter            = settings.MAX_ITER,
-                    tol                 = settings.TOL,
-                    n_init              = settings.N_INIT,
-                    metric              = settings.METRIC,
-                    max_iter_barycenter = settings.MAX_ITER_BARYCENTER,
-                    init                = settings.INIT_METHOD,
-                    random_state        = settings._SEED,
-                )
-                labels = km.fit_predict(X)
-                score = silhouette_score(X, labels,
-                    metric = settings.METRIC,
-                    sample_size = settings.SCORE_SAMPLE_SIZE,
-                    random_state = settings._SEED,
-                )
+            min_var_ratio = 0.95
+            recluster_count = 10
+            n_cluster_lower = 2
+            n_cluster_upper = 24
+            min_cluster_size = 1
+            score_choice = "variance_ratio" # "silhouette", "variance_ratio", "silhouette_median", "davies-bouldin"
+            dist_metric = "euclidean"
+            max_non_outlier_cluster_count = 200
 
-                if score > HoF["score"]:
-                    HoF["score"] = score
-                    # HoF["n_cluster"] = n_cluster
-                    # HoF["km"] = km
-                    HoF["clusters"] = labels
-                    # HoF["centroids"] = km.cluster_centers_
+            seed = 42
+
+            labels = cluster_temporal_features(
+                pd.DataFrame(X), 
+                min_var_ratio, 
+                recluster_count, 
+                n_cluster_lower, 
+                n_cluster_upper, 
+                score_choice, 
+                dist_metric, 
+                min_cluster_size, 
+                max_non_outlier_cluster_count, 
+                seed
+            )
 
             df_temporal_clusters = pd.DataFrame(
-                HoF["clusters"].astype(int),
+                labels,
                 columns=["temporal_cluster"],
                 index=fit_grouped.index,
             )
@@ -225,3 +230,78 @@ class TestHourlyModel(HourlyModel):
             self._categorical_features.extend(temp_bin_cols)
 
         return df
+    
+
+class _LabelResult(BaseModel):
+    """
+    contains metrics about a cluster label returned from sklearn
+    """
+    class Config:
+        arbitrary_types_allowed = True
+
+    labels: np.ndarray
+    score: float
+    score_unable_to_be_calculated: bool
+    n_clusters: int
+
+
+def cluster_temporal_features(
+    df: pd.DataFrame,
+    min_var_ratio: float,
+    recluster_count: int,
+    n_cluster_lower: int,
+    n_cluster_upper: int,
+    score_choice: str,
+    dist_metric: str,
+    min_cluster_size: int,
+    max_non_outlier_cluster_count: int,
+    seed: int,
+):
+    """
+    clusters the temporal features of the dataframe
+    """
+    # get the functional principal component analysis of the load
+    df_fpca, err = _transform._get_fpca_from_loadshape(df, min_var_ratio)
+
+    results = []
+    for i in range(recluster_count):
+        algo = _bisect_k_means.BisectingKMeans(
+            n_clusters=n_cluster_upper,
+            init="k-means++",  # does not benefit from k-means++ like other k-means
+            n_init=5,  # default is 1
+            random_state=seed + i,  # can be set to None or seed_num
+            algorithm="elkan",  # ['lloyd', 'elkan']
+            bisecting_strategy="largest_cluster",  # ['biggest_inertia', 'largest_cluster']
+        )
+        algo.fit(df_fpca)
+        labels_dict = algo.labels_full
+
+        for n_cluster, labels in labels_dict.items():
+            score, score_unable_to_be_calculated = _scoring.score_clusters(
+                df_fpca.values,
+                labels,
+                n_cluster_lower,
+                score_choice,
+                dist_metric,
+                min_cluster_size,
+                max_non_outlier_cluster_count,
+            )
+
+            label_res = _LabelResult(
+                labels=labels,
+                score=score,
+                score_unable_to_be_calculated=score_unable_to_be_calculated,
+                n_clusters=n_cluster,
+            )
+            results.append(label_res)
+
+    # get the results index with the smallest score
+    HoF = None
+    for result in results:
+        if result.score_unable_to_be_calculated:
+            continue
+
+        if HoF is None or result.score < HoF.score:
+            HoF = result
+
+    return HoF.labels
