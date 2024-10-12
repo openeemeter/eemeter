@@ -22,9 +22,14 @@ import numba
 import numpy as np
 import numpy.ma as ma
 
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
+from sklearn.linear_model import BayesianRidge
+
 from scipy.interpolate import RBFInterpolator
 
 from copy import deepcopy as copy
+
 
 def autocorr_fcn(x, lags, exclude_0=True):
     '''manualy compute, non partial'''
@@ -80,6 +85,43 @@ def autocorr_fcn3(x, lags):
     corr=corr/var/n
 
     return corr[:len(lags)]
+
+# unused
+def multiple_imputation(df, columns=None, **kwargs):
+    # get indices of missing values
+    missing_idx = df[columns].isna().any(axis=1)
+
+    df_imputed = df[columns].reset_index()
+    # convert datetime to hours since earliest datetime
+    df_imputed["datetime_elapsed"] = (df_imputed["datetime"] - df_imputed["datetime"].min()).dt.total_seconds() / 3600
+    df_imputed["hour_of_day"] = df_imputed["datetime"].dt.hour
+    df_imputed["day_of_week"] = df_imputed["datetime"].dt.dayofweek
+    df_imputed["month"] = df_imputed["datetime"].dt.month
+    df_imputed = df_imputed.set_index("datetime")
+
+    settings_dict = {
+        "estimator": BayesianRidge(), # can use SVR, BayesianRidge, etc.
+        "max_iter": 10,
+        "random_state": None
+    }
+    settings_dict.update(kwargs)
+
+    imputer = IterativeImputer(**settings_dict)
+    imputer.fit(df_imputed)
+    df_imputed[:] = imputer.transform(df_imputed)
+
+    # add df_imputed back to df
+    df.loc[missing_idx, columns] = df_imputed.loc[missing_idx, columns]
+
+    # add additional columns to indicate which values were imputed
+    for col in columns:
+        interp_bool_col = f"interpolated_{col}"
+
+        df[interp_bool_col] = False
+        df.loc[missing_idx, interp_bool_col] = True
+
+    return df
+
 
 # @numba.njit
 def shift_array(arr, num, fill_value=np.nan):
@@ -137,7 +179,7 @@ def _interpolate_col(x, lags=337):
         num_rows = x.shape[0]
         num_cols = len(autocorr_idx)
 
-        autocorr_helpers = np.zeros((num_rows, num_cols))
+        autocorr_helpers = np.empty((num_rows, num_cols))
         for i in range(num_cols):
             shift = int(autocorr_idx[i])
             autocorr_helpers[:, i] = shift_array(x.values, shift)

@@ -33,6 +33,8 @@ from scipy.spatial.distance import cdist
 from sklearn.linear_model import ElasticNet
 from sklearn.preprocessing import StandardScaler, RobustScaler
 
+from timeit import default_timer as timer
+
 from tslearn.clustering import TimeSeriesKMeans, silhouette_score
 
 import json
@@ -341,7 +343,6 @@ class HourlyModel:
 
         return df, col_names
     
-
     def _add_categorical_features(self, df):
         def set_initial_temporal_clusters(df):
             fit_df_grouped = (
