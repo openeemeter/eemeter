@@ -35,6 +35,22 @@ class ClusteringMetric(str, Enum):
     DTW = "dtw"
     SOFTDTW = "softdtw"
 
+class ClusterScoringMetric(str, Enum):
+    SILHOUETTE = "silhouette"
+    SILHOUETTE_MEDIAN = "silhouette_median"
+    VARIANCE_RATIO = "variance_ratio"
+    DAVIES_BOULDIN = "davies-bouldin"
+
+class DistanceMetric(str, Enum):
+    """
+    what distance method to use
+    """
+
+    EUCLIDEAN = "euclidean"
+    SEUCLIDEAN = "seuclidean"
+    MANHATTAN = "manhattan"
+    COSINE = "cosine"
+
 
 class TemperatureBinSettings(BaseSettings):
     """how to bin temperature data"""
@@ -147,6 +163,48 @@ class TemperatureBinSettings(BaseSettings):
 
         return self
 
+
+class TemporalClusteringSettings(BaseSettings):
+    """minimum variance ratio for fpca clustering"""
+    FPCA_MIN_VARIANCE_RATIO: float = pydantic.Field(
+        default=0.95,
+        ge=0.5,
+        le=1,
+    )
+
+    """number of times to recluster"""
+    RECLUSTER_COUNT: int = pydantic.Field(
+        default=10,
+        ge=1,
+    )
+
+    """lower bound for number of clusters"""
+    N_CLUSTER_LOWER: int = pydantic.Field(
+        default=2,
+        ge=2,
+    )
+
+    """upper bound for number of clusters"""
+    N_CLUSTER_UPPER: int = pydantic.Field(
+        default=24,
+        ge=2,
+    )
+
+    """minimum cluster size"""
+    MIN_CLUSTER_SIZE: int = pydantic.Field(
+        default=1,
+        ge=1,
+    )
+
+    """scoring method for clustering"""
+    SCORE_METRIC: ClusterScoringMetric = pydantic.Field(
+        default=ClusterScoringMetric.VARIANCE_RATIO,
+    )
+
+    """distance metric for clustering"""
+    DISTANCE_METRIC: DistanceMetric = pydantic.Field(
+        default=DistanceMetric.EUCLIDEAN,
+    )
 
 
 class TimeSeriesKMeansSettings(BaseSettings):
@@ -268,8 +326,11 @@ class BaseHourlySettings(BaseSettings):
     )
 
     """settings for temporal clustering"""
-    TEMPORAL_CLUSTER: TimeSeriesKMeansSettings = pydantic.Field(
-        default_factory=TimeSeriesKMeansSettings,
+    # TEMPORAL_CLUSTER: TimeSeriesKMeansSettings = pydantic.Field(   # TODO: if switching methodologies, delete this
+    #     default_factory=TimeSeriesKMeansSettings,
+    # )
+    TEMPORAL_CLUSTER: TemporalClusteringSettings = pydantic.Field(
+        default_factory=TemporalClusteringSettings,
     )
 
     """supplemental time series column names"""
