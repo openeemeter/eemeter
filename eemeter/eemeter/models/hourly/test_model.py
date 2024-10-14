@@ -59,28 +59,17 @@ class TestHourlyModel(HourlyModel):
             X = np.stack(fit_grouped.values, axis=0)
 
             settings = self.settings.TEMPORAL_CLUSTER
-            min_var_ratio = 0.95
-            recluster_count = 10
-            n_cluster_lower = 2
-            n_cluster_upper = 24
-            min_cluster_size = 1
-            score_choice = "variance_ratio" # "silhouette", "variance_ratio", "silhouette_median", "davies-bouldin"
-            dist_metric = "euclidean"
-            max_non_outlier_cluster_count = 200
-
-            seed = 42
-
             labels = cluster_temporal_features(
                 pd.DataFrame(X), 
-                min_var_ratio, 
-                recluster_count, 
-                n_cluster_lower, 
-                n_cluster_upper, 
-                score_choice, 
-                dist_metric, 
-                min_cluster_size, 
-                max_non_outlier_cluster_count, 
-                seed
+                settings.FPCA_MIN_VARIANCE_RATIO, 
+                settings.RECLUSTER_COUNT, 
+                settings.N_CLUSTER_LOWER, 
+                settings.N_CLUSTER_UPPER, 
+                settings.SCORE_METRIC, 
+                settings.DISTANCE_METRIC, 
+                settings.MIN_CLUSTER_SIZE, 
+                200, 
+                settings._SEED
             )
 
             df_temporal_clusters = pd.DataFrame(
