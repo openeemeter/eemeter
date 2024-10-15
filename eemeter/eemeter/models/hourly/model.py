@@ -28,6 +28,9 @@ os.environ['OPENBLAS_NUM_THREADS'] = "1"
 import numpy as np
 import pandas as pd
 
+import sklearn
+sklearn.set_config(assume_finite=True, skip_parameter_validation=True) # Faster, we do checking
+
 from scipy.spatial.distance import cdist
 
 from sklearn.linear_model import ElasticNet
