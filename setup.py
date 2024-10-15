@@ -32,17 +32,20 @@ from setuptools import find_packages, setup, Command
 NAME = "eemeter"
 REQUIRED = [
     "click",
-    "pandas>=1.0.0",
+    "pandas>=1.1.0",
     "statsmodels",
-    "scipy",
+    "scipy>=1.10.1",
     "numba",
     "nlopt",
-    "tslearn",
     "pydantic>=2.0",
     "attrs",
     "requests",
-    "pyarrow",
-    "numpy<2",
+    "pyarrow",    # why?
+    "numpy>=1.24.4,<2",    # why less than 2?
+    "scikit-learn>=1.3.0",
+    "mkl-devel",  # needed for fdasrsf to work: https://github.com/jdtuck/fdasrsf_python/issues/41
+    "fdasrsf>=2.4.1", # not sure if necessary anymore
+    "scikit-fda",
 ]
 
 here = os.path.abspath(os.path.dirname(__file__))
