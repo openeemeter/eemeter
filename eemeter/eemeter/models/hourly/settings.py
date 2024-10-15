@@ -166,7 +166,7 @@ class TemperatureBinSettings(BaseSettings):
 
 class TemporalClusteringSettings(BaseSettings):
     """minimum variance ratio for fpca clustering"""
-    FPCA_MIN_VARIANCE_RATIO: float = pydantic.Field(
+    FPCA_MIN_VARIANCE_RATIO_EXPLAINED: float = pydantic.Field(
         default=0.95,
         ge=0.5,
         le=1,

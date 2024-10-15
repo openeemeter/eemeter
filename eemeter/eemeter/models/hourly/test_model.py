@@ -25,6 +25,9 @@ os.environ['OMP_NUM_THREADS'] = "1"
 os.environ['MKL_NUM_THREADS'] = "1"
 os.environ['OPENBLAS_NUM_THREADS'] = "1"
 
+import sklearn
+sklearn.set_config(assume_finite=True, skip_parameter_validation=True) # set to True, faster, we do checking, need to apply everywhere
+
 import numpy as np
 import pandas as pd
 
@@ -61,7 +64,7 @@ class TestHourlyModel(HourlyModel):
             settings = self.settings.TEMPORAL_CLUSTER
             labels = cluster_temporal_features(
                 pd.DataFrame(X), 
-                settings.FPCA_MIN_VARIANCE_RATIO, 
+                settings.FPCA_MIN_VARIANCE_RATIO_EXPLAINED, 
                 settings.RECLUSTER_COUNT, 
                 settings.N_CLUSTER_LOWER, 
                 settings.N_CLUSTER_UPPER, 
