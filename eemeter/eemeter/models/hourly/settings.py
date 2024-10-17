@@ -66,7 +66,7 @@ class TemperatureBinSettings(BaseSettings):
 
     """temperature bin width in fahrenheit"""
     BIN_WIDTH: Optional[float] = pydantic.Field(
-        default=18,
+        default=12,
         ge=1,
     )
 
@@ -82,7 +82,7 @@ class TemperatureBinSettings(BaseSettings):
 
     """number of days in edge bins"""
     EDGE_BIN_DAYS: Optional[int] = pydantic.Field(
-        default=21,
+        default=19,
         ge=5,
     )
 
@@ -167,14 +167,14 @@ class TemperatureBinSettings(BaseSettings):
 class TemporalClusteringSettings(BaseSettings):
     """minimum variance ratio for fpca clustering"""
     FPCA_MIN_VARIANCE_RATIO_EXPLAINED: float = pydantic.Field(
-        default=0.95,
+        default=0.98,
         ge=0.5,
         le=1,
     )
 
     """number of times to recluster"""
     RECLUSTER_COUNT: int = pydantic.Field(
-        default=10,
+        default=9,
         ge=1,
     )
 
@@ -207,65 +207,16 @@ class TemporalClusteringSettings(BaseSettings):
     )
 
 
-class TimeSeriesKMeansSettings(BaseSettings):
-    """maximum number of clusters to use for temporal clustering"""
-    MAX_CLUSTER_COUNT: int = pydantic.Field(
-        default=24,
-        ge=2,
-        le=7*12, # 7 days * 12 months for year of data
-    )
-
-    """maximum number of iterations for k-means clustering for a single run"""
-    MAX_ITER: int = pydantic.Field(
-        default=50,
-        ge=1,
-    )
-
-    """inertia variation threshold"""
-    TOL: float = pydantic.Field(
-        default=1e-3,
-        gt=0,
-    )
-
-    """number of times to run k-means clustering"""
-    N_INIT: int = pydantic.Field(
-        default=5,
-        ge=1,
-    )
-
-    """metric to use for cluster assignment and barycenter computation"""
-    METRIC: ClusteringMetric = pydantic.Field(
-        default=ClusteringMetric.EUCLIDEAN,
-    )
-
-    """maximum number of iterations for barycenter computation"""
-    MAX_ITER_BARYCENTER: int = pydantic.Field(
-        default=100,
-        ge=1,
-    )
-
-    """initialization method for k-means clustering"""
-    INIT_METHOD: str = pydantic.Field(
-        default="k-means++",
-    )
-
-    """sample size for calculating silhouette score of clustering"""
-    SCORE_SAMPLE_SIZE: Optional[int] = pydantic.Field(
-        default=None,
-        gt=1,
-    )
-
-
 class ElasticNetSettings(BaseSettings):
     """ElasticNet alpha parameter"""
     ALPHA: float = pydantic.Field(
-        default=0.041,
+        default=0.040,
         ge=0,
     )
 
     """ElasticNet l1_ratio parameter"""
     L1_RATIO: float = pydantic.Field(
-        default=0.55,
+        default=0.5,
         ge=0,
         le=1,
     )
@@ -326,9 +277,6 @@ class BaseHourlySettings(BaseSettings):
     )
 
     """settings for temporal clustering"""
-    # TEMPORAL_CLUSTER: TimeSeriesKMeansSettings = pydantic.Field(   # TODO: if switching methodologies, delete this
-    #     default_factory=TimeSeriesKMeansSettings,
-    # )
     TEMPORAL_CLUSTER: TemporalClusteringSettings = pydantic.Field(
         default_factory=TemporalClusteringSettings,
     )
