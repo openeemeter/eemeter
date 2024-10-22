@@ -167,7 +167,7 @@ class TemperatureBinSettings(BaseSettings):
 class TemporalClusteringSettings(BaseSettings):
     """minimum variance ratio for fpca clustering"""
     FPCA_MIN_VARIANCE_RATIO_EXPLAINED: float = pydantic.Field(
-        default=0.98,
+        default=0.97,
         ge=0.5,
         le=1,
     )
@@ -210,13 +210,13 @@ class TemporalClusteringSettings(BaseSettings):
 class ElasticNetSettings(BaseSettings):
     """ElasticNet alpha parameter"""
     ALPHA: float = pydantic.Field(
-        default=0.040,
+        default=0.015,
         ge=0,
     )
 
     """ElasticNet l1_ratio parameter"""
     L1_RATIO: float = pydantic.Field(
-        default=0.5,
+        default=0.65,
         ge=0,
         le=1,
     )
