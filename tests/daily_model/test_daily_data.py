@@ -24,6 +24,7 @@ from eemeter.eemeter.models.daily.data import DailyBaselineData, DailyReportingD
 from eemeter.eemeter.samples import load_sample
 import numpy as np
 import pandas as pd
+from pandas import Timestamp, DatetimeIndex, DataFrame
 import pytest
 
 TEMPERATURE_SEED = 29
@@ -831,3 +832,23 @@ def test_offset_aggregations_hourly(il_electricity_cdd_hdd_hourly):
     )
     assert baseline is not None
     assert len(baseline.df) == NUM_DAYS_IN_YEAR
+
+
+def test_dst_handling():
+    # 2020-03-08 02:00 is nonexistent, should push to 03:00
+    tz = "America/New_York"
+    idx = DatetimeIndex([Timestamp("2020-03-07 02", tz=tz), Timestamp("2021-03-06 02", tz=tz)])
+    df = DataFrame({"observed": [1]*2, "temperature": [50]*2}, index=idx)
+    baseline = DailyBaselineData(df, is_electricity_data=True)
+    assert len(baseline.df) == 365
+    hours, counts = np.unique(baseline.df.index.hour, return_counts=True)
+    assert (hours == [2, 3]).all()
+    assert (counts == [364, 1]).all()
+
+    # 2020-11-01 01:00 is ambiguous, single index should be chosen
+    tz = "America/New_York"
+    idx = DatetimeIndex([Timestamp("2020-03-07 01", tz=tz), Timestamp("2021-03-06 01", tz=tz)])
+    df = DataFrame({"observed": [1]*2, "temperature": [50]*2}, index=idx)
+    baseline = DailyBaselineData(df, is_electricity_data=True)
+    assert len(baseline.df) == 365
+    assert (baseline.df.index.hour == 1).all()
