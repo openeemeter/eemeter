@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+4.0.7
+-----
+
 * Handle ambiguous and nonexistent local times when creating daily dataclass
 
 4.0.6
