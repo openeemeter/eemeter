@@ -148,9 +148,12 @@ def shift_array(arr, num, fill_value=np.nan):
 
         return result
 
-def _interpolate_col(x, lags=337):
+def _interpolate_col(x, lags):
     # check that the column has nans
     if x.isna().sum() == 0:
+        return x
+
+    elif x.isna().sum() == len(x):
         return x
 
     # calculate the number of lags and leads to consider
@@ -175,7 +178,8 @@ def _interpolate_col(x, lags=337):
     autocorr_idx = autocorr[:, 0]
 
     # interpolate and update the values
-    for i in range(10): # try 10 times before giving up
+    max_iter = 10
+    for i in range(max_iter): # try 10 times before giving up
         num_rows = x.shape[0]
         num_cols = len(autocorr_idx)
 
@@ -184,9 +188,21 @@ def _interpolate_col(x, lags=337):
             shift = int(autocorr_idx[i])
             autocorr_helpers[:, i] = shift_array(x.values, shift)
 
-        # for each row, if the value is missing, calculate the mean of the lags and leads
+        # get the indices of the missing values
         nan_series_idx = x.index[x.isna()]
         nan_idx = x.index.get_indexer(nan_series_idx)
+
+        # nan values where helpers are not nan
+        # make valid_idx where at least 2 finite values are present
+        if i != max_iter - 1:
+            valid_idx = np.sum(~np.isnan(autocorr_helpers[nan_idx, :]), axis=1) >= 2
+            if valid_idx.sum() == 0:
+                continue
+            
+            nan_series_idx = nan_series_idx[valid_idx]
+            nan_idx = x.index.get_indexer(nan_series_idx)
+
+        # for each row, if the value is missing, calculate the mean of the lags and leads
         x.loc[nan_series_idx] = np.nanmean(autocorr_helpers[nan_idx, :], axis=1)
 
         if x.isna().sum() == 0:
@@ -195,8 +211,16 @@ def _interpolate_col(x, lags=337):
     return x
 
 
-def interpolate(df, columns=None):
-    lags = 24 * 7 * 2 + 1  # TODO: make this a parameter?
+def interpolate(df, columns=None): 
+    skip_autocorr_interpolation = False 
+    if len(df) > 6*24*7:
+        lags = 24*7*2 + 1
+    elif (len(df) > 3*24*7) and (len(df) <= 6*24*7):
+        lags = 24*7 + 1
+    elif (len(df) > 3*24) and (len(df) <= 3*24*7):
+        lags = 24 + 1
+    else:
+        skip_autocorr_interpolation = True
 
     interp_cols = columns
     if interp_cols is None:
@@ -213,7 +237,8 @@ def interpolate(df, columns=None):
 
         # main interpolation method
         idx_missing = df.loc[df[col].isna()].index
-        df[col] = _interpolate_col(df[col], lags)
+        if not skip_autocorr_interpolation:
+            df[col] = _interpolate_col(df[col], lags)
 
         # backup interpolation methods
         for method in ["time", "ffill", "bfill"]:
