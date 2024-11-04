@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Handle ambiguous and nonexistent local times when creating billing dataclass 
 
 4.0.7
 -----
