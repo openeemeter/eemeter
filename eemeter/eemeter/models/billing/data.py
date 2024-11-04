@@ -125,6 +125,8 @@ class _BillingData(_DailyData):
                 end=end_date,
                 freq="D",
                 tz=df.index.tz,
+                ambiguous=True,
+                nonexistent="shift_forward",
             )
             all_days_df = pd.DataFrame(index=all_days_index)
             meter_value_df = meter_value_df.merge(
