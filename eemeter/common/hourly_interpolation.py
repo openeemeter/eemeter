@@ -179,7 +179,7 @@ def _interpolate_col(x, lags):
 
     # interpolate and update the values
     max_iter = 10
-    for i, cnt_min in enumerate(np.linspace(n_cor_idx, 1, max_iter)): # try 10 times before giving up
+    for i, cnt_min in enumerate(np.linspace(n_cor_idx, 1, max_iter).astype(int)):
         num_rows = x.shape[0]
         num_cols = len(autocorr_idx)
 
@@ -193,7 +193,6 @@ def _interpolate_col(x, lags):
         nan_idx = x.index.get_indexer(nan_series_idx)
 
         # nan values where helpers are not nan
-        cnt_min = int(cnt_min)
         valid_idx = np.sum(~np.isnan(autocorr_helpers[nan_idx, :]), axis=1) >= cnt_min
         if valid_idx.sum() == 0:
             continue
