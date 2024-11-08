@@ -8,6 +8,8 @@ import pydantic
 from enum import Enum
 from typing import Optional, Literal, Union, TypeVar
 
+import pywt
+
 from eemeter.common.base_settings import BaseSettings
 from eemeter.common.metrics import BaselineMetrics
 
@@ -165,16 +167,32 @@ class TemperatureBinSettings(BaseSettings):
 
 
 class TemporalClusteringSettings(BaseSettings):
-    """minimum variance ratio for fpca clustering"""
-    FPCA_MIN_VARIANCE_RATIO_EXPLAINED: float = pydantic.Field(
-        default=0.97,
+    """wavelet decomposition level"""
+    WAVELET_N_LEVELS: int = pydantic.Field(
+        default=5,
+        ge=1,
+    )
+    
+    """wavelet choice for wavelet decomposition"""
+    WAVELET_NAME: str = pydantic.Field(
+        default="haar", # maybe db3?
+    )
+
+    """signal extension mode for wavelet decomposition"""
+    WAVELET_MODE: str = pydantic.Field(
+        default="periodization",
+    )
+
+    """minimum variance ratio for PCA clustering"""
+    PCA_MIN_VARIANCE_RATIO_EXPLAINED: float = pydantic.Field(
+        default=0.95,
         ge=0.5,
         le=1,
     )
 
     """number of times to recluster"""
     RECLUSTER_COUNT: int = pydantic.Field(
-        default=9,
+        default=3,
         ge=1,
     )
 
@@ -206,17 +224,29 @@ class TemporalClusteringSettings(BaseSettings):
         default=DistanceMetric.EUCLIDEAN,
     )
 
+    @pydantic.model_validator(mode="after")
+    def _check_wavelet(self):
+        all_wavelets = pywt.wavelist(kind='discrete')
+        if self.WAVELET_NAME not in all_wavelets:
+            raise ValueError(f"'WAVELET_NAME' must be a valid wavelet in PyWavelets: \n{all_wavelets}")
+
+        all_modes = pywt.Modes.modes
+        if self.WAVELET_MODE not in all_modes:
+            raise ValueError(f"'WAVELET_MODE' must be a valid mode in PyWavelets: \n{all_modes}")
+
+        return self
+
 
 class ElasticNetSettings(BaseSettings):
     """ElasticNet alpha parameter"""
     ALPHA: float = pydantic.Field(
-        default=0.015,
+        default=0.04,
         ge=0,
     )
 
     """ElasticNet l1_ratio parameter"""
     L1_RATIO: float = pydantic.Field(
-        default=0.65,
+        default=0.5,
         ge=0,
         le=1,
     )

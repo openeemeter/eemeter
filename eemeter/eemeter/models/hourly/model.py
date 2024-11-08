@@ -37,6 +37,9 @@ from scipy.spatial.distance import cdist
 
 from sklearn.linear_model import ElasticNet
 from sklearn.preprocessing import StandardScaler, RobustScaler
+from sklearn.decomposition import PCA, KernelPCA
+
+import pywt
 
 from timeit import default_timer as timer
 
@@ -45,7 +48,6 @@ import json
 from eemeter.eemeter.models.hourly import settings as _settings
 from eemeter.eemeter.models.hourly import HourlyBaselineData, HourlyReportingData
 from eemeter.common.clustering import (
-    transform as _transform,
     bisect_k_means as _bisect_k_means,
     scoring as _scoring,
 )
@@ -365,15 +367,17 @@ class HourlyModel:
 
             settings = self.settings.TEMPORAL_CLUSTER
             labels = cluster_temporal_features(
-                pd.DataFrame(X), 
-                settings.FPCA_MIN_VARIANCE_RATIO_EXPLAINED, 
+                X,
+                settings.WAVELET_N_LEVELS,
+                settings.WAVELET_NAME,
+                settings.WAVELET_MODE, 
+                settings.PCA_MIN_VARIANCE_RATIO_EXPLAINED, 
                 settings.RECLUSTER_COUNT, 
                 settings.N_CLUSTER_LOWER, 
                 settings.N_CLUSTER_UPPER, 
                 settings.SCORE_METRIC, 
                 settings.DISTANCE_METRIC, 
                 settings.MIN_CLUSTER_SIZE, 
-                200, 
                 settings._SEED
             )
 
@@ -657,7 +661,11 @@ class HourlyModel:
                 self._T_edge_bin_coeffs = {}
 
             cols = [col for col in df.columns if col.startswith("daily_temp_") and col[-1].isdigit()]
-            cols = [0, int(cols[-1].replace("daily_temp_", ""))]
+            last_temp_bin = int(cols[-1].replace("daily_temp_", ""))
+            # maybe add nonlinear terms to second and second to last columns?
+            # cols = [0, 1, last_temp_bin - 1, last_temp_bin]
+            # cols = list(set(cols))
+            cols = [0, last_temp_bin]
             
             for n in cols:
                 base_col = f"daily_temp_{n}"
@@ -918,23 +926,20 @@ class _LabelResult(BaseModel):
     n_clusters: int
 
 
-def cluster_temporal_features(
-    df: pd.DataFrame,
-    min_var_ratio: float,
+def cluster_time_series(
+    data: np.ndarray,
     recluster_count: int,
     n_cluster_lower: int,
     n_cluster_upper: int,
     score_choice: str,
     dist_metric: str,
     min_cluster_size: int,
-    max_non_outlier_cluster_count: int,
     seed: int,
 ):
     """
     clusters the temporal features of the dataframe
     """
-    # get the functional principal component analysis of the load
-    df_fpca, err = _transform._get_fpca_from_loadshape(df, min_var_ratio)
+    max_non_outlier_cluster_count = 200
 
     results = []
     for i in range(recluster_count):
@@ -946,12 +951,12 @@ def cluster_temporal_features(
             algorithm="elkan",  # ['lloyd', 'elkan']
             bisecting_strategy="largest_cluster",  # ['biggest_inertia', 'largest_cluster']
         )
-        algo.fit(df_fpca)
+        algo.fit(data)
         labels_dict = algo.labels_full
 
         for n_cluster, labels in labels_dict.items():
             score, score_unable_to_be_calculated = _scoring.score_clusters(
-                df_fpca.values,
+                data,
                 labels,
                 n_cluster_lower,
                 score_choice,
@@ -978,6 +983,80 @@ def cluster_temporal_features(
             HoF = result
 
     return HoF.labels
+
+def cluster_temporal_features(
+    data: np.ndarray,
+    wavelet_n_levels: int,
+    wavelet_name: str,
+    wavelet_mode: str,
+    min_var_ratio: float,
+    recluster_count: int,
+    n_cluster_lower: int,
+    n_cluster_upper: int,
+    score_choice: str,
+    dist_metric: str,
+    min_cluster_size: int,
+    seed: int,
+):
+    def _dwt_coeffs(data, wavelet='db1', wavelet_mode="periodization", n_levels=4):
+        all_features = []
+        # iterate through rows of numpy array
+        for row in range(len(data)):
+            decomp_coeffs = pywt.wavedec(data[row], wavelet=wavelet, mode=wavelet_mode, level=n_levels)
+            # remove last level
+            # if n_levels > 4:
+            # decomp_coeffs = decomp_coeffs[:-1]
+
+            decomp_coeffs = np.hstack(decomp_coeffs)
+
+            all_features.append(decomp_coeffs)
+
+        return np.vstack(all_features)
+
+    def _pca_coeffs(features, min_var_ratio=0.95):
+        # standardize the features
+        features = StandardScaler().fit_transform(features)
+
+        use_kernel_pca = False
+        if use_kernel_pca:
+            pca = KernelPCA(n_components=None, kernel='rbf')
+            pca_features = pca.fit_transform(features)
+
+            explained_variance_ratio = pca.eigenvalues_ / np.sum(pca.eigenvalues_)
+
+            # get the cumulative explained variance ratio
+            cumulative_explained_variance = np.cumsum(explained_variance_ratio)
+
+            # find number of components that explain pct% of the variance
+            n_components = np.argmax(cumulative_explained_variance > min_var_ratio)
+
+            # pca = PCA(n_components=n_components)
+            pca = KernelPCA(n_components=n_components, kernel='rbf')
+            pca_features = pca.fit_transform(features)
+
+        else:
+            pca = PCA(n_components=min_var_ratio)
+            pca_features = pca.fit_transform(features)
+
+        return pca_features
+    
+    # calculate wavelet coefficients
+    features = _dwt_coeffs(data, wavelet_name, wavelet_mode, wavelet_n_levels)
+    pca_features = _pca_coeffs(features, min_var_ratio)
+
+    # cluster the pca features
+    cluster_labels = cluster_time_series(
+        pca_features,
+        recluster_count,
+        n_cluster_lower,
+        n_cluster_upper,
+        score_choice,
+        dist_metric,
+        min_cluster_size,
+        seed,
+    )
+
+    return cluster_labels
 
 
 def fit_exp_growth_decay(x, y, k_only=True, is_x_sorted=False):
