@@ -254,7 +254,9 @@ class _HourlyData:
                 if col not in self.outputs
             ]
         else:
-            self.to_be_interpolated_columns = ["temperature", "observed", "ghi"]
+            self.to_be_interpolated_columns = ["temperature", "observed"]
+            if "ghi" in df.columns:
+                self.to_be_interpolated_columns.append("ghi")
 
         # for col in self.outputs:
         #     if col not in self.to_be_interpolated_columns: #TODO: this might be diffrent for supplemental data

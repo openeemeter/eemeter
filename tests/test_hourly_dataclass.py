@@ -41,6 +41,14 @@ def test_one(hourly_data):
     hm = HourlyModel().fit(baseline_data)
     hm.predict(reporting_data)
 
+def test_unaligned_data(hourly_data):
+    baseline, reporting = hourly_data
+    reporting.index = reporting.index.shift(8, freq="H")
+    baseline_data = HourlyBaselineData(baseline, is_electricity_data=True)
+    reporting_data = HourlyReportingData(reporting, is_electricity_data=True)
+    hm = HourlyModel().fit(baseline_data)
+    hm.predict(reporting_data)
+
 
 """TEST CASES
 TODO get a couple example meters with GHI, potentially some supplemental features?
