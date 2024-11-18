@@ -55,6 +55,85 @@ from eemeter.common.metrics import BaselineMetrics, BaselineMetricsFromDict
 
 # TODO: need to make explicit solar/nonsolar versions and set settings requirements/defaults appropriately
 class TestHourlyModel(HourlyModel):
+    _priority_cols = {
+        "ts": ["temporal_cluster", "temp_bin", "temperature", "ghi"],
+        "cat": ["temporal_cluster", "temp_bin"],
+    }
+
+    def _add_temperature_bins(self, df):
+        # TODO: do we need to do something about empty bins in prediction? I think not but maybe
+        settings = self.settings.TEMPERATURE_BIN
+
+        # add temperature bins based on temperature
+        if not self.is_fit:
+            if settings.METHOD == "equal_sample_count":
+                T_bin_edges = pd.qcut(df["temperature"], q=settings.N_BINS, labels=False)
+
+            elif settings.METHOD == "equal_bin_width":
+                T_bin_edges = pd.cut(df["temperature"], bins=settings.N_BINS, labels=False)
+
+            elif settings.METHOD == "set_bin_width":
+                bin_width = settings.BIN_WIDTH
+
+                min_temp = np.floor(df["temperature"].min())
+                max_temp = np.ceil(df["temperature"].max())
+
+                if not settings.INCLUDE_EDGE_BINS:
+                    step_num = np.round((max_temp - min_temp) / bin_width).astype(int) + 1
+
+                    # T_bin_edges = np.arange(min_temp, max_temp + bin_width, bin_width)
+                    T_bin_edges = np.linspace(min_temp, max_temp, step_num)
+
+                else:
+                    set_edge_bin_width = False
+                    if set_edge_bin_width:
+                        edge_bin_width = bin_width*1/2
+
+                        bin_range = [min_temp + edge_bin_width, max_temp - edge_bin_width]
+
+                    else:
+                        edge_bin_count = settings.EDGE_BIN_DAYS
+
+                        # get 5th smallest and 5th largest temperatures
+                        sorted_temp = np.sort(df["temperature"].unique())
+                        min_temp_reg_bin = np.ceil(sorted_temp[edge_bin_count])
+                        max_temp_reg_bin = np.floor(sorted_temp[-edge_bin_count])
+
+                        bin_range = [min_temp_reg_bin, max_temp_reg_bin]
+
+                    step_num = np.round((bin_range[1] - bin_range[0]) / bin_width).astype(int) + 1
+
+                    # create bins with set width
+                    T_bin_edges = np.array([min_temp, *np.linspace(*bin_range, step_num), max_temp])
+                
+            else:
+                raise ValueError("Invalid temperature binning method")
+
+            # set the first and last bin to -inf and inf
+            T_bin_edges[0] = -np.inf
+            T_bin_edges[-1] = np.inf
+
+            # store bin edges for prediction
+            self._T_bin_edges = T_bin_edges
+
+        T_bins = pd.cut(df["temperature"], bins=self._T_bin_edges, labels=False)
+
+        df["temp_bin"] = T_bins
+
+        # Create dummy variables for temperature bins
+        bin_dummies = pd.get_dummies(
+            pd.Categorical(
+                df["temp_bin"], categories=range(len(self._T_bin_edges) - 1)
+            ),
+            prefix="temp_bin",
+        )
+        bin_dummies.index = df.index
+
+        col_names = bin_dummies.columns.tolist()
+        df = pd.merge(df, bin_dummies, how="left", left_index=True, right_index=True)
+
+        return df, col_names
+    
     def _add_temperature_bin_masked_ts(self, df):
         settings = self.settings.TEMPERATURE_BIN
 
@@ -83,12 +162,12 @@ class TestHourlyModel(HourlyModel):
         # TODO: if this permanent then it should not create, erase, make anew
         self._ts_feature_norm.remove("temperature_norm")
 
-        # get all the daily_temp columns
+        # get all the temp_bin columns
         # get list of columns beginning with "daily_temp_" and ending in a number
-        for interaction_col in ["daily_temp_", "temporal_cluster_"]:
+        for interaction_col in ["temp_bin_", "temporal_cluster_"]:
             cols = [col for col in df.columns if col.startswith(interaction_col) and col[-1].isdigit()]
             for col in cols:
-                # splits temperature_norm into unique columns if that daily_temp column is True
+                # splits temperature_norm into unique columns if that temp_bin column is True
                 ts_col = f"{col}_ts"
                 df[ts_col] = df["temperature_norm"] * df[col]
 
@@ -99,12 +178,16 @@ class TestHourlyModel(HourlyModel):
             if self._T_edge_bin_coeffs is None:
                 self._T_edge_bin_coeffs = {}
 
-            cols = [col for col in df.columns if col.startswith("daily_temp_") and col[-1].isdigit()]
-            cols = [0, int(cols[-1].replace("daily_temp_", ""))]
-            cols = range(cols[0], cols[1] + 1)
+            cols = [col for col in df.columns if col.startswith("temp_bin_") and col[-1].isdigit()]
+            cols = [0, int(cols[-1].replace("temp_bin_", ""))]
+            # maybe add nonlinear terms to second and second to last columns?
+            # cols = [0, 1, last_temp_bin - 1, last_temp_bin]
+            # cols = list(set(cols))
+            # all columns?
+            # cols = range(cols[0], cols[1] + 1)
             
             for n in cols:
-                base_col = f"daily_temp_{n}"
+                base_col = f"temp_bin_{n}"
                 int_col = f"{base_col}_ts"
                 T_col = f"{base_col}_T"
 
@@ -113,7 +196,7 @@ class TestHourlyModel(HourlyModel):
                     # determine temperature conversion for bin
                     range_offset = settings.EDGE_BIN_TEMPERATURE_RANGE_OFFSET
                     T_range = [df[int_col].min() - range_offset, df[int_col].max() + range_offset]
-                    new_range = [-3, 3]
+                    new_range = [-4, 4]
 
                     T_a = (new_range[1] - new_range[0])/(T_range[1] - T_range[0])
                     T_b = new_range[1] - T_a*T_range[1]
@@ -159,8 +242,7 @@ class TestHourlyModel(HourlyModel):
                     self._ts_feature_norm.append(ts_col)
 
         return df
-
-
+    
 def fit_exp_growth_decay(x, y, k_only=True, is_x_sorted=False):
     # Courtsey: https://math.stackexchange.com/questions/1337601/fit-exponential-with-constant
     #           https://www.scribd.com/doc/14674814/Regressions-et-equations-integrales
