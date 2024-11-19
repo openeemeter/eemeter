@@ -33,6 +33,8 @@ import pandas as pd
 import sklearn
 sklearn.set_config(assume_finite=True, skip_parameter_validation=True) # Faster, we do checking
 
+from scipy.sparse import csr_matrix
+
 from scipy.spatial.distance import cdist
 
 from sklearn.linear_model import ElasticNet
@@ -252,6 +254,9 @@ class HourlyModel:
         # get feature matrices
         X_predict, _ = self._get_feature_matrices(meter_data, dst_indices)
 
+        # Convert X to sparse matrices
+        X_predict = csr_matrix(X_predict.astype(float))
+
         if not self.is_fit:
             meter_data = meter_data.set_index(initial_index)
             # remove insufficient days from fit data
@@ -265,6 +270,9 @@ class HourlyModel:
             meter_data = meter_data.reset_index()
 
             X_fit, y_fit = self._get_feature_matrices(meter_data, dst_indices)
+
+            # Convert to sparse matrix
+            X_fit = csr_matrix(X_fit.astype(float))
 
         else:
             X_fit, y_fit = None, None
