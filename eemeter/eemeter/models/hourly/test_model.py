@@ -92,7 +92,7 @@ class TestHourlyModel(HourlyModel):
                         bin_range = [min_temp + edge_bin_width, max_temp - edge_bin_width]
 
                     else:
-                        edge_bin_count = settings.EDGE_BIN_DAYS
+                        edge_bin_count = settings.EDGE_BIN_HOURS
 
                         # get 5th smallest and 5th largest temperatures
                         sorted_temp = np.sort(df["temperature"].unique())

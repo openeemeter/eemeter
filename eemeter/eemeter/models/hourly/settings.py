@@ -83,8 +83,8 @@ class TemperatureBinSettings(BaseSettings):
     )
 
     """number of days in edge bins"""
-    EDGE_BIN_DAYS: Optional[int] = pydantic.Field(
-        default=19,
+    EDGE_BIN_HOURS: Optional[int] = pydantic.Field(
+        default=75,
         ge=5,
     )
 
@@ -148,7 +148,7 @@ class TemperatureBinSettings(BaseSettings):
                 raise ValueError(
                     "'EDGE_BIN_RATE' must be specified if 'INCLUDE_EDGE_BINS' is True."
                 )
-            if self.EDGE_BIN_DAYS is None:
+            if self.EDGE_BIN_HOURS is None:
                 raise ValueError(
                     "'EDGE_BIN_DAYS' must be specified if 'INCLUDE_EDGE_BINS' is True."
                 )
@@ -158,7 +158,7 @@ class TemperatureBinSettings(BaseSettings):
                 raise ValueError(
                     "'EDGE_BIN_RATE' must be None if 'INCLUDE_EDGE_BINS' is False."
                 )
-            if self.EDGE_BIN_DAYS is not None:
+            if self.EDGE_BIN_HOURS is not None:
                 raise ValueError(
                     "'EDGE_BIN_DAYS' must be None if 'INCLUDE_EDGE_BINS' is False."
                 )
