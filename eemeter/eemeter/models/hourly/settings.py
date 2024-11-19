@@ -84,7 +84,7 @@ class TemperatureBinSettings(BaseSettings):
 
     """number of days in edge bins"""
     EDGE_BIN_HOURS: Optional[int] = pydantic.Field(
-        default=75,
+        default=400, # better than 75?
         ge=5,
     )
 
