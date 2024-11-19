@@ -69,7 +69,7 @@ def get_datetime_index_hourly_with_timezone():
         start="2023-01-01",
         end="2024-01-01",
         inclusive="left",
-        freq="H",
+        freq="h",
         tz="US/Eastern",
     )
 
@@ -546,7 +546,7 @@ def test_billing_baseline_data_with_specific_monthly_input():
 
 
 @pytest.mark.parametrize(
-    "get_datetime_index", [["30T", True], ["H", True]], indirect=True
+    "get_datetime_index", [["30T", True], ["h", True]], indirect=True
 )
 def test_billing_reporting_data_with_missing_half_hourly_frequencies(
     get_datetime_index,
@@ -575,7 +575,7 @@ def test_billing_reporting_data_with_missing_half_hourly_frequencies(
 
     if datetime_index.freq == "30T":
         assert len(cls.df.temperature.dropna()) == 268
-    elif datetime_index.freq == "H":
+    elif datetime_index.freq == "h":
         assert len(cls.df.temperature.dropna()) == 270
 
     assert len(cls.warnings) == 1

@@ -69,7 +69,7 @@ def get_datetime_index_hourly_with_timezone():
         start="2023-01-01",
         end="2024-01-01",
         inclusive="left",
-        freq="H",
+        freq="h",
         tz="US/Eastern",
     )
 
@@ -279,7 +279,7 @@ def test_daily_baseline_data_with_same_daily_frequencies(get_datetime_index):
 
 
 @pytest.mark.parametrize(
-    "get_datetime_index", [["30T", True], ["H", True]], indirect=True
+    "get_datetime_index", [["30T", True], ["h", True]], indirect=True
 )
 def test_daily_baseline_data_with_same_hourly_frequencies(get_datetime_index):
     datetime_index = get_datetime_index
@@ -659,7 +659,7 @@ def test_duplicate_datetime_index_values():
 
 
 @pytest.mark.parametrize(
-    "get_datetime_index", [["30T", True], ["H", True]], indirect=True
+    "get_datetime_index", [["30T", True], ["h", True]], indirect=True
 )
 def test_daily_reporting_data_with_half_hourly_and_hourly_frequencies(
     get_datetime_index,
@@ -682,7 +682,7 @@ def test_daily_reporting_data_with_half_hourly_and_hourly_frequencies(
 
 
 @pytest.mark.parametrize(
-    "get_datetime_index", [["30T", True], ["H", True]], indirect=True
+    "get_datetime_index", [["30T", True], ["h", True]], indirect=True
 )
 def test_daily_reporting_data_with_missing_half_hourly_and_hourly_frequencies(
     get_datetime_index,
@@ -710,7 +710,7 @@ def test_daily_reporting_data_with_missing_half_hourly_and_hourly_frequencies(
 
     if datetime_index.freq == "30T":
         assert len(cls.df.temperature.dropna()) == 268
-    elif datetime_index.freq == "H":
+    elif datetime_index.freq == "h":
         assert len(cls.df.temperature.dropna()) == 270
 
     assert len(cls.warnings) == 1

@@ -76,7 +76,7 @@ def test_meter_data_from_csv_hourly_freq(sample_metadata):
         meter_data = meter_data_from_csv(f, gzipped=True, freq="hourly")
     assert meter_data.shape == (19417, 1)
     assert str(meter_data.index.tz) == "UTC"
-    assert meter_data.index.freq == "H"
+    assert meter_data.index.freq == "h"
 
 
 def test_meter_data_from_csv_daily_freq(sample_metadata):
@@ -233,7 +233,7 @@ def test_temperature_data_from_csv_hourly_freq(sample_metadata):
         temperature_data = temperature_data_from_csv(f, gzipped=True, freq="hourly")
     assert temperature_data.shape == (19417,)
     assert str(temperature_data.index.tz) == "UTC"
-    assert temperature_data.index.freq == "H"
+    assert temperature_data.index.freq == "h"
 
 
 def test_temperature_data_from_csv_custom_columns(sample_metadata):
