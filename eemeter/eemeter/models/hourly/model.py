@@ -324,7 +324,7 @@ class HourlyModel:
 
                     # create bins with set width
                     T_bin_edges = np.array([min_temp, *np.linspace(*bin_range, step_num), max_temp])
-                
+
             else:
                 raise ValueError("Invalid temperature binning method")
 
@@ -352,7 +352,7 @@ class HourlyModel:
         df = pd.merge(df, bin_dummies, how="left", left_index=True, right_index=True)
 
         return df, col_names
-    
+
     def _add_categorical_features(self, df):
         def set_initial_temporal_clusters(df):
             fit_df_grouped = (
@@ -626,10 +626,10 @@ class HourlyModel:
             for hour in range(24):
                 df_hour = df[df["hour_of_day"] == hour]
                 df_hour = df_hour.sort_values(by=int_col)
-                
+
                 x_data = a*df_hour[int_col].values + b
                 y_data = df_hour["observed"].values
-                
+
                 # Fit the model using robust least squares
                 try:
                     params = fit_exp_growth_decay(x_data, y_data, k_only=True, is_x_sorted=True)
@@ -669,7 +669,7 @@ class HourlyModel:
             # cols = list(set(cols))
             # all columns?
             # cols = range(cols[0], cols[1] + 1)
-            
+
             for n in cols:
                 base_col = f"temp_bin_{n}"
                 int_col = f"{base_col}_ts"
@@ -706,8 +706,11 @@ class HourlyModel:
                 k = self._T_edge_bin_coeffs[n]["k"]
                 A = self._T_edge_bin_coeffs[n]["A"]
 
-                df[T_col] = 0
-                df.loc[df[base_col], T_col] = T_a*df[int_col] + T_b # doing this multiple times in get_k and here
+                df[T_col] = np.where(
+                    df[base_col].values,
+                    T_a * df[int_col].values + T_b,
+                    0
+                )
 
                 for pos_neg in ["pos", "neg"]:
                     # if first or last column, add additional column
@@ -720,8 +723,11 @@ class HourlyModel:
                     # set rate exponential
                     ts_col = f"{base_col}_{pos_neg}_exp_ts"
 
-                    df[ts_col] = 0
-                    df.loc[df[base_col], ts_col] = A*np.exp(s/k*df[T_col]) - A
+                    df[ts_col] = np.where(
+                        df[base_col].values,
+                        A * np.exp(s / k * df[T_col].values) - A,
+                        0
+                    )
 
                     self._ts_feature_norm.append(ts_col)
 
@@ -791,7 +797,7 @@ class HourlyModel:
                 ]
 
             y_scaler = [self._y_scaler.mean_, self._y_scaler.scale_]
-            
+
         elif self.settings.SCALING_METHOD == _settings.ScalingChoice.ROBUSTSCALER:
             for i, key in enumerate(self._ts_features):
                 feature_scaler[key] = [
@@ -803,7 +809,7 @@ class HourlyModel:
 
         # convert self._df_temporal_clusters to list of lists
         df_temporal_clusters = self._df_temporal_clusters.reset_index().values.tolist()
-        
+
         params = _settings.SerializeModel(
             SETTINGS=self.settings,
             TEMPORAL_CLUSTERS=df_temporal_clusters,
@@ -867,7 +873,7 @@ class HourlyModel:
 
             model_cls._y_scaler.center_ = np.array(y_scaler_values[0])
             model_cls._y_scaler.scale_ = np.array(y_scaler_values[1])
-        
+
         # set model
         model_cls._model.coef_ = np.array(data.get("COEFFICIENTS"))
         model_cls._model.intercept_ = np.array(data.get("INTERCEPT"))
