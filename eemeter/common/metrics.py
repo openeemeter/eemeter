@@ -368,7 +368,10 @@ class BaselineMetrics(ArbitraryPydanticModel):
         num = (1 - self.r_squared) * (n - 1)
         den = n_adj - 1
 
-        return 1 - _safe_divide(num, den, self._min_denominator)
+        res = _safe_divide(num, den, self._min_denominator)
+        if res is None:
+            return None
+        return 1 - res
 
     @computed_field_cached_property()
     def mape(self) -> Optional[float]:
