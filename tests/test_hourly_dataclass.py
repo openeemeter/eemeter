@@ -39,7 +39,11 @@ def test_one(hourly_data):
     baseline_data = HourlyBaselineData(baseline, is_electricity_data=True)
     reporting_data = HourlyReportingData(reporting, is_electricity_data=True)
     hm = HourlyModel().fit(baseline_data)
-    hm.predict(reporting_data)
+    p1 = hm.predict(reporting_data)
+    serialized = hm.to_json()
+    hm2 = HourlyModel.from_json(serialized)
+    p2 = hm2.predict(reporting_data)
+    assert p1.equals(p2)
 
 def test_unaligned_data(hourly_data):
     baseline, reporting = hourly_data
