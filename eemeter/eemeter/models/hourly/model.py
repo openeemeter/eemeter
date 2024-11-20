@@ -695,15 +695,15 @@ class HourlyModel:
                     A = 1/(np.exp(1/k*new_range[1]) - 1)
 
                     self._T_edge_bin_coeffs[n] = {
-                        "T_a": T_a,
-                        "T_b": T_b,
-                        "k": k,
-                        "A": A,
+                        "T_A": float(T_a),
+                        "T_B": float(T_b),
+                        "K": float(k),
+                        "A": float(A),
                     }
 
-                T_a = self._T_edge_bin_coeffs[n]["T_a"]
-                T_b = self._T_edge_bin_coeffs[n]["T_b"]
-                k = self._T_edge_bin_coeffs[n]["k"]
+                T_a = self._T_edge_bin_coeffs[n]["T_A"]
+                T_b = self._T_edge_bin_coeffs[n]["T_B"]
+                k = self._T_edge_bin_coeffs[n]["K"]
                 A = self._T_edge_bin_coeffs[n]["A"]
 
                 df[T_col] = np.where(
@@ -814,6 +814,7 @@ class HourlyModel:
             SETTINGS=self.settings,
             TEMPORAL_CLUSTERS=df_temporal_clusters,
             TEMPERATURE_BIN_EDGES=self._T_bin_edges,
+            TEMPERATURE_EDGE_BIN_COEFFICIENTS=self._T_edge_bin_coeffs,
             TS_FEATURES=self._ts_features,
             CATEGORICAL_FEATURES=self._categorical_features,
             COEFFICIENTS=self._model.coef_.tolist(),
@@ -849,6 +850,9 @@ class HourlyModel:
 
         model_cls._df_temporal_clusters = df_temporal_clusters
         model_cls._T_bin_edges = np.array(data.get("TEMPERATURE_BIN_EDGES"))
+        model_cls._T_edge_bin_coeffs = {
+            int(k): v for k, v in data.get("TEMPERATURE_EDGE_BIN_COEFFICIENTS").items()
+        }
 
         model_cls._ts_features = data.get("TS_FEATURES")
         model_cls._categorical_features = data.get("CATEGORICAL_FEATURES")

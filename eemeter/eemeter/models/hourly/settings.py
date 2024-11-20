@@ -6,7 +6,7 @@ import pandas as pd
 import pydantic
 
 from enum import Enum
-from typing import Optional, Literal, Union, TypeVar
+from typing import Optional, Literal, Union, TypeVar, Dict
 
 import pywt
 
@@ -399,10 +399,11 @@ class SerializeModel(BaseSettings):
     SETTINGS: Optional[HourlySettings] = None
     TEMPORAL_CLUSTERS: Optional[list[list[int]]] = None
     TEMPERATURE_BIN_EDGES: Optional[list] = None
+    TEMPERATURE_EDGE_BIN_COEFFICIENTS: Optional[Dict[int, Dict[str, float]]] = None
     TS_FEATURES: Optional[list] = None
     CATEGORICAL_FEATURES: Optional[list] = None
-    FEATURE_SCALER: Optional[dict[str, list[float]]] = None
-    CATAGORICAL_SCALER: Optional[dict[str, list[float]]] = None
+    FEATURE_SCALER: Optional[Dict[str, list[float]]] = None
+    CATAGORICAL_SCALER: Optional[Dict[str, list[float]]] = None
     Y_SCALER: Optional[list[float]] = None
     COEFFICIENTS: Optional[list[list[float]]] = None
     INTERCEPT: Optional[list[float]] = None
