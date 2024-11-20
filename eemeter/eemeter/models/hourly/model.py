@@ -314,7 +314,7 @@ class HourlyModel:
                         edge_bin_count = settings.EDGE_BIN_HOURS
 
                         # get 5th smallest and 5th largest temperatures
-                        sorted_temp = np.sort(df["temperature"].unique())
+                        sorted_temp = np.sort(df["temperature"])
                         min_temp_reg_bin = np.ceil(sorted_temp[edge_bin_count])
                         max_temp_reg_bin = np.floor(sorted_temp[-edge_bin_count])
 
