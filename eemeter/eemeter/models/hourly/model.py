@@ -126,8 +126,7 @@ class HourlyModel:
         # Initialize dataframe
         self.is_fit = False
 
-        # TODO: should we profile later to check if this copy is necessary?
-        df_meter = meter_data.df.copy()
+        df_meter = meter_data.df # used to have a copy here
 
         # Prepare feature arrays/matrices
         X_fit, X_predict, y_fit = self._prepare_features(df_meter)
@@ -184,8 +183,8 @@ class HourlyModel:
         Returns:
             pandas.DataFrame: The evaluation dataframe with model predictions added.
         """
-        # TODO: same as fit, is copy necessary?
-        df_eval = eval_data.df.copy()
+
+        df_eval = eval_data.df # used to have a copy here
         dst_indices = _get_dst_indices(df_eval)
         datetime_original = eval_data.df.index
         # # get list of columns to keep in output
@@ -311,7 +310,7 @@ class HourlyModel:
                         bin_range = [min_temp + edge_bin_width, max_temp - edge_bin_width]
 
                     else:
-                        edge_bin_count = settings.EDGE_BIN_HOURS
+                        edge_bin_count = int(len(df) * settings.EDGE_BIN_PERCENT)
 
                         # get 5th smallest and 5th largest temperatures
                         sorted_temp = np.sort(df["temperature"])
