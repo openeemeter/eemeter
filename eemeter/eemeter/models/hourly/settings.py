@@ -20,22 +20,14 @@ class SelectionChoice(str, Enum):
     CYCLIC = "cyclic"
     RANDOM = "random"
 
-
 class ScalingChoice(str, Enum):
     ROBUSTSCALER = "robustscaler"
     STANDARDSCALER = "standardscaler"
-
 
 class BinningChoice(str, Enum):
     EQUAL_SAMPLE_COUNT = "equal_sample_count"
     EQUAL_BIN_WIDTH = "equal_bin_width"
     SET_BIN_WIDTH = "set_bin_width"
-
-
-class ClusteringMetric(str, Enum):
-    EUCLIDEAN = "euclidean"
-    DTW = "dtw"
-    SOFTDTW = "softdtw"
 
 class ClusterScoringMetric(str, Enum):
     SILHOUETTE = "silhouette"
@@ -91,7 +83,7 @@ class TemperatureBinSettings(BaseSettings):
 
     """offset normalized temperature range for edge bins (keeps exp from blowing up)"""
     EDGE_BIN_TEMPERATURE_RANGE_OFFSET: Optional[float] = pydantic.Field(
-        default=0.5,
+        default=1.0,
         ge=0,
     )
 

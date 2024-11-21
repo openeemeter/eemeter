@@ -679,7 +679,7 @@ class HourlyModel:
                     # determine temperature conversion for bin
                     range_offset = settings.EDGE_BIN_TEMPERATURE_RANGE_OFFSET
                     T_range = [df[int_col].min() - range_offset, df[int_col].max() + range_offset]
-                    new_range = [-4, 4]
+                    new_range = [-1, 1]
 
                     T_a = (new_range[1] - new_range[0])/(T_range[1] - T_range[0])
                     T_b = new_range[1] - T_a*T_range[1]
