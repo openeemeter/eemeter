@@ -82,10 +82,11 @@ class TemperatureBinSettings(BaseSettings):
         default="heuristic",
     )
 
-    """number of days in edge bins"""
-    EDGE_BIN_HOURS: Optional[int] = pydantic.Field(
-        default=400, # better than 75?
-        ge=5,
+    """percent of total data in edge bins"""
+    EDGE_BIN_PERCENT: Optional[float] = pydantic.Field(
+        default=0.05,
+        ge=0,
+        le=0.45,
     )
 
     """offset normalized temperature range for edge bins (keeps exp from blowing up)"""
@@ -148,7 +149,7 @@ class TemperatureBinSettings(BaseSettings):
                 raise ValueError(
                     "'EDGE_BIN_RATE' must be specified if 'INCLUDE_EDGE_BINS' is True."
                 )
-            if self.EDGE_BIN_HOURS is None:
+            if self.EDGE_BIN_PERCENT is None:
                 raise ValueError(
                     "'EDGE_BIN_DAYS' must be specified if 'INCLUDE_EDGE_BINS' is True."
                 )
@@ -158,7 +159,7 @@ class TemperatureBinSettings(BaseSettings):
                 raise ValueError(
                     "'EDGE_BIN_RATE' must be None if 'INCLUDE_EDGE_BINS' is False."
                 )
-            if self.EDGE_BIN_HOURS is not None:
+            if self.EDGE_BIN_PERCENT is not None:
                 raise ValueError(
                     "'EDGE_BIN_DAYS' must be None if 'INCLUDE_EDGE_BINS' is False."
                 )
