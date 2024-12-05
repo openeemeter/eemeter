@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Allow identical observations to not raise exception for daily model in `linear_fit`.
 
 4.0.7
 -----
