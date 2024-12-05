@@ -17,6 +17,7 @@
    limitations under the License.
 
 """
+
 import numba
 import numpy as np
 from scipy.optimize import minimize_scalar
@@ -76,13 +77,14 @@ def get_slope(x, y, x_bp, intercept, alpha=2):
 
 def linear_fit(x, y, alpha):
     if alpha == 2:
-        # TODO raises exception if meter usage is identical for this period
-        # try/catch and return np.inf?
-        res = linregress(x, y)
+        if len(set(x)) == 1:
+            slope = 0
+            intercept = x[0]
+        else:
+            res = linregress(x, y)
 
-        slope = res.slope
-        intercept = res.intercept
-
+            slope = res.slope
+            intercept = res.intercept
     else:
         slope, intercept, _, _ = theilslopes(x, y, alpha=0.95)
 
