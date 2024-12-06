@@ -216,8 +216,8 @@ class TestOptimizeResult:
             "intercept",
         ]
         loss_alpha = 2.0
-        C = np.array([1, 2, 3, 4, 5, 6, 7])
-        T = np.array([1, 2, 3, 4, 5, 6, 7])
+        C = np.array([1, 2, 3, 4, 5, 6, 7]*2)
+        T = np.array([1, 2, 3, 4, 5, 6, 7]*2)
         model = np.array([1, 2, 3, 4, 5, 6, 7])
         resid = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7])
         weight = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7])
@@ -268,15 +268,15 @@ class TestOptimizeResult:
         # test that _refine_model sets coef_id and x correctly
         optimize_result._refine_model()
         assert optimize_result.coef_id == ["c_hdd_bp", "c_hdd_beta", "intercept"]
-        assert optimize_result.x == pytest.approx(np.array([1, 5, 7]))
+        assert optimize_result.x == pytest.approx(np.array([4, 5, 7]))
 
     def test_eval(self, optimize_result):
         # test that eval returns the correct values
         T = np.array([1, 2, 3, 4, 5])
         model, f_unc, hdd_load, cdd_load = optimize_result.eval(T)
-        assert model == pytest.approx(np.array([7, 12, 17, 22, 27]))
+        assert model == pytest.approx(np.array([7, 7, 7, 7, 12]))
         assert f_unc == pytest.approx(
             np.array([2.15564961, 2.15564961, 2.15564961, 2.15564961, 2.15564961])
         )
         assert hdd_load == pytest.approx(np.array([0, 0, 0, 0, 0]))
-        assert cdd_load == pytest.approx(np.array([0, 5, 10, 15, 20]))
+        assert cdd_load == pytest.approx(np.array([0, 0, 0, 0, 5]))
