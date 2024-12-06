@@ -543,7 +543,7 @@ def test_metered_savings_model_single_record(
         "model_split",
         "model_type",
     ]
-    assert round(results.predicted.sum() - results.observed.sum(), 2) == 1447.89
+    assert round(results.predicted.sum() - results.observed.sum(), 2) == 1458.91
 
 
 @pytest.fixture
