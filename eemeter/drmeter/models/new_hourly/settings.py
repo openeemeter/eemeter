@@ -76,7 +76,7 @@ class TemperatureBinSettings(BaseSettings):
 
     """percent of total data in edge bins"""
     EDGE_BIN_PERCENT: Optional[float] = pydantic.Field(
-        default=0.0425,
+        default=0.05,
         ge=0,
         le=0.45,
     )
@@ -178,7 +178,7 @@ class TemporalClusteringSettings(BaseSettings):
 
     """minimum variance ratio for PCA clustering"""
     PCA_MIN_VARIANCE_RATIO_EXPLAINED: float = pydantic.Field(
-        default=0.725,
+        default=0.8,
         ge=0.5,
         le=1,
     )
@@ -197,7 +197,7 @@ class TemporalClusteringSettings(BaseSettings):
 
     """upper bound for number of clusters"""
     N_CLUSTER_UPPER: int = pydantic.Field(
-        default=24,
+        default=7,
         ge=2,
     )
 
@@ -233,7 +233,7 @@ class TemporalClusteringSettings(BaseSettings):
 class ElasticNetSettings(BaseSettings):
     """ElasticNet alpha parameter"""
     ALPHA: float = pydantic.Field(
-        default=0.0425,
+        default=0.04,
         ge=0,
     )
 

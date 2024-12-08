@@ -47,8 +47,13 @@ from timeit import default_timer as timer
 
 import json
 
-from eemeter.eemeter.models.hourly import settings as _settings
-from eemeter.eemeter.models.hourly import HourlyBaselineData, HourlyReportingData
+from eemeter.eemeter.models.hourly.model import (
+    HourlyModel,
+    cluster_temporal_features,
+    fit_exp_growth_decay,
+)
+from eemeter.drmeter.models.new_hourly import settings as _settings
+from eemeter.drmeter.models.new_hourly import HourlyBaselineData, HourlyReportingData
 from eemeter.common.clustering import (
     bisect_k_means as _bisect_k_means,
     scoring as _scoring,
@@ -57,17 +62,10 @@ from eemeter.common.metrics import BaselineMetrics, BaselineMetricsFromDict
 
 
 # TODO: need to make explicit solar/nonsolar versions and set settings requirements/defaults appropriately
-class HourlyModel:
-    # set priority columns for sorting
-    # this is critical for ensuring predict column order matches fit column order
-    _priority_cols = {
-        "ts": ["temporal_cluster", "temp_bin", "temperature", "ghi"],
-        "cat": ["temporal_cluster", "temp_bin"],
-    }
-
+class DRHourlyModel(HourlyModel):
     """Note:
         Despite the temporal clusters, we can view all models created as a subset of the same full model.
-        The temporal clusters would simply have the same coefficients within the same days/month combinations.
+        The temporal clusters would simply have the same coefficients within the same days combinations.
     """
 
     def __init__(
@@ -116,43 +114,13 @@ class HourlyModel:
         self.baseline_metrics = None
 
     def fit(self, baseline_data, ignore_disqualification=False):
-        if not isinstance(baseline_data, HourlyBaselineData):
-            raise TypeError("baseline_data must be a DailyBaselineData object")
+        # if not isinstance(baseline_data, HourlyBaselineData):
+        #     raise TypeError("baseline_data must be a DailyBaselineData object")
         # TODO check DQ, log warnings
         self._fit(baseline_data)
+        
         return self
-
-    def _fit(self, meter_data):
-        # Initialize dataframe
-        self.is_fit = False
-
-        df_meter = meter_data.df # used to have a copy here
-
-        # Prepare feature arrays/matrices
-        X_fit, X_predict, y_fit = self._prepare_features(df_meter)
-
-        # fit the model
-        self._model.fit(X_fit, y_fit)
-        self.is_fit = True
-
-        # get number of model parameters
-        num_parameters = np.count_nonzero(self._model.coef_) + np.count_nonzero(
-            self._model.intercept_
-        )
-
-        # get model prediction of baseline
-        df_meter = self._predict(meter_data, X=X_predict)
-
-        # calculate baseline metrics on non-interpolated data
-        cols = [col for col in df_meter.columns if col.startswith("interpolated_")]
-        interpolated = df_meter[cols].any(axis=1)
-
-        self.baseline_metrics = BaselineMetrics(
-            df=df_meter.loc[~interpolated], num_model_params=num_parameters
-        )
-
-        return self
-
+    
     def predict(
         self,
         reporting_data,
@@ -164,119 +132,14 @@ class HourlyModel:
 
         # TODO check DQ, log warnings
 
-        if not isinstance(reporting_data, (HourlyBaselineData, HourlyReportingData)):
-            raise TypeError(
-                "reporting_data must be a DailyBaselineData or DailyReportingData object"
-            )
+        # if not isinstance(reporting_data, (HourlyBaselineData, HourlyReportingData)):
+        #     raise TypeError(
+        #         "reporting_data must be a DailyBaselineData or DailyReportingData object"
+        #     )
 
         df_eval = self._predict(reporting_data)
 
         return df_eval
-
-    def _predict(self, eval_data, X=None):
-        """
-        Makes model prediction on given temperature data.
-
-        Parameters:
-            df_eval (pandas.DataFrame): The evaluation dataframe.
-
-        Returns:
-            pandas.DataFrame: The evaluation dataframe with model predictions added.
-        """
-
-        df_eval = eval_data.df # used to have a copy here
-        dst_indices = _get_dst_indices(df_eval)
-        datetime_original = eval_data.df.index
-        # # get list of columns to keep in output
-        columns = df_eval.columns.tolist()
-        if "datetime" in columns:
-            columns.remove("datetime")  # index in output, not column
-
-        if X is None:
-            _, X, _ = self._prepare_features(df_eval)
-
-        y_predict_scaled = self._model.predict(X)
-        y_predict = self._y_scaler.inverse_transform(y_predict_scaled)
-        y_predict = y_predict.flatten()
-
-        y_predict = _transform_dst(y_predict, dst_indices)
-
-        df_eval["predicted"] = y_predict
-
-        # # remove columns not in original columns and predicted
-        df_eval = df_eval[[*columns, "predicted"]]
-
-        # reindex to original datetime index
-        df_eval = df_eval.reindex(datetime_original)
-
-        return df_eval
-
-    def _prepare_features(self, meter_data):
-        """
-        Initializes the meter data by performing the following operations:
-        - Renames the 'model' column to 'model_old' if it exists
-        - Converts the index to a DatetimeIndex if it is not already
-        - Adds a 'season' column based on the month of the index using the settings.season dictionary
-        - Adds a 'day_of_week' column based on the day of the week of the index
-        - Removes any rows with NaN values in the 'temperature' or 'observed' columns
-        - Sorts the data by the index
-        - Reorders the columns to have 'season' and 'day_of_week' first, followed by the remaining columns
-
-        Parameters:
-        - meter_data: A pandas DataFrame containing the meter data
-
-        Returns:
-        - A pandas DataFrame containing the initialized meter data
-        """
-        dst_indices = _get_dst_indices(meter_data)
-        initial_index = meter_data.index
-        meter_data = self._add_categorical_features(meter_data)
-        self._add_supplemental_features(meter_data)
-
-        self._ts_features, self._categorical_features = self._sort_features(
-            self._ts_features, 
-            self._categorical_features
-        )
-
-        meter_data = self._daily_sufficiency(meter_data)
-        meter_data = self._normalize_features(meter_data)
-        meter_data = self._add_temperature_bin_masked_ts(meter_data)
-
-        # save actual df used for later inspection
-        self._ts_feature_norm, _ = self._sort_features(self._ts_feature_norm)
-        selected_features = self._ts_feature_norm + self._categorical_features
-        if "observed_norm" in meter_data.columns:
-            selected_features += ["observed_norm"]
-        self._processed_meter_data_full = meter_data
-        self._processed_meter_data = self._processed_meter_data_full[selected_features]
-
-        # get feature matrices
-        X_predict, _ = self._get_feature_matrices(meter_data, dst_indices)
-
-        # Convert X to sparse matrices
-        X_predict = csr_matrix(X_predict.astype(float))
-
-        if not self.is_fit:
-            meter_data = meter_data.set_index(initial_index)
-            # remove insufficient days from fit data
-            meter_data = meter_data[meter_data["include_date"]]
-
-            # recalculate DST indices with removed days
-            dst_indices = _get_dst_indices(meter_data)
-
-            # index shouldn't matter since it's being aggregated on date col inside _get_feature_matrices,
-            # but just keeping the input consistent with initial call
-            meter_data = meter_data.reset_index()
-
-            X_fit, y_fit = self._get_feature_matrices(meter_data, dst_indices)
-
-            # Convert to sparse matrix
-            X_fit = csr_matrix(X_fit.astype(float))
-
-        else:
-            X_fit, y_fit = None, None
-
-        return X_fit, X_predict, y_fit
 
     def _add_temperature_bins(self, df):
         # TODO: do we need to do something about empty bins in prediction? I think not but maybe
@@ -355,20 +218,20 @@ class HourlyModel:
     def _add_categorical_features(self, df):
         def set_initial_temporal_clusters(df):
             fit_df_grouped = (
-                df.groupby(["month", "day_of_week", "hour_of_day"])["observed"]
+                df.groupby(["day_of_week", "hour_of_day"])["observed"]
                 .mean()
                 .reset_index()
             )
-            # pivot table to get 2D array of observed values
-            fit_df_grouped = fit_df_grouped.pivot_table(
-                index=["month", "day_of_week"], 
-                columns="hour_of_day", 
-                values="observed"
-            )
+            fit_grouped = fit_df_grouped.groupby(["day_of_week"])[
+                "observed"
+            ].apply(np.array)
+
+            # convert fit_grouped to 2D numpy array
+            X = np.stack(fit_grouped.values, axis=0)
 
             settings = self.settings.TEMPORAL_CLUSTER
             labels = cluster_temporal_features(
-                fit_df_grouped.values,
+                X,
                 settings.WAVELET_N_LEVELS,
                 settings.WAVELET_NAME,
                 settings.WAVELET_MODE, 
@@ -385,7 +248,7 @@ class HourlyModel:
             df_temporal_clusters = pd.DataFrame(
                 labels,
                 columns=["temporal_cluster"],
-                index=fit_df_grouped.index,
+                index=fit_grouped.index,
             )
 
             return df_temporal_clusters
@@ -394,9 +257,9 @@ class HourlyModel:
             # check and match any missing temporal combinations
 
             # get all unique combinations of month and day_of_week in df
-            df_temporal = df[["month", "day_of_week"]].drop_duplicates()
-            df_temporal = df_temporal.sort_values(["month", "day_of_week"])
-            df_temporal_index = df_temporal.set_index(["month", "day_of_week"]).index
+            df_temporal = df[["day_of_week"]].drop_duplicates()
+            df_temporal = df_temporal.sort_values(["day_of_week"])
+            df_temporal_index = df_temporal.set_index(["day_of_week"]).index
 
             # reindex self.df_temporal_clusters to df_temporal_index
             df_temporal_clusters = self._df_temporal_clusters.reindex(df_temporal_index)
@@ -410,60 +273,58 @@ class HourlyModel:
                 if "observed" in df.columns:
                     # filter df to only include missing combinations
                     df_missing = df[
-                        df.set_index(["month", "day_of_week"]).index.isin(
+                        df.set_index(["day_of_week"]).index.isin(
                             missing_combinations
                         )
                     ]
 
                     df_missing_grouped = (
-                        df_missing.groupby(["month", "day_of_week", "hour_of_day"])["observed"]
+                        df_missing.groupby(["day_of_week", "hour_of_day"])["observed"]
                         .mean()
                         .reset_index()
                     )
-                    df_missing_grouped = df_missing_grouped.pivot_table(
-                        index=["month", "day_of_week"],
-                        columns="hour_of_day",
-                        values="observed",
-                    )
-                    X = df_missing_grouped.values
+                    df_missing_grouped = df_missing_grouped.groupby(
+                        ["day_of_week"]
+                    )["observed"].apply(np.array)
+
+                    # convert fit_grouped to 2D numpy array
+                    X = np.stack(df_missing_grouped.values, axis=0)
 
                     # calculate average observed for known clusters
-                    # join df_temporal_clusters to df on month and day_of_week
+                    # join df_temporal_clusters to df on day_of_week
                     df = pd.merge(
                         df,
                         df_temporal_clusters,
                         how="left",
-                        left_on=["month", "day_of_week"],
+                        left_on=["day_of_week"],
                         right_index=True,
                     )
 
                     df_known = df[
-                        ~df.set_index(["month", "day_of_week"]).index.isin(
+                        ~df.set_index(["day_of_week"]).index.isin(
                             missing_combinations
                         )
                     ]
 
-                    df_known_mean = (
-                        df_known.groupby(["month", "day_of_week", "hour_of_day"])["observed"]
-                        .mean()
-                        .reset_index()
-                    )
-                    df_known_mean = df_known_mean.pivot_table(
-                        index=["month", "day_of_week"],
-                        columns="hour_of_day",
-                        values="observed",
-                    )
-                    X_known = df_known_mean.values
+                    df_known_groupby = df_known.groupby(
+                        ["day_of_week", "hour_of_day"]
+                    )["observed"]
+                    df_known_mean = df_known_groupby.mean().reset_index()
+                    df_known_mean = df_known_mean.groupby(["day_of_week"])[
+                        "observed"
+                    ].apply(np.array)
+
+                    # get temporal clusters df_known
+                    temporal_clusters = df_known.groupby(["day_of_week"])[
+                        "temporal_cluster"
+                    ].first()
+                    temporal_clusters = temporal_clusters.reindex(df_known_mean.index)
+
+                    X_known = np.stack(df_known_mean.values, axis=0)
 
                     # get smallest distance between X and X_known
                     dist = cdist(X, X_known, metric="euclidean")
                     min_dist_idx = np.argmin(dist, axis=1)
-
-                    # get temporal clusters df_known
-                    temporal_clusters = df_known.groupby(["month", "day_of_week"])[
-                        "temporal_cluster"
-                    ].first()
-                    temporal_clusters = temporal_clusters.reindex(df_known_mean.index)
 
                     # set labels to minimum distance of known clusters
                     labels = temporal_clusters.iloc[min_dist_idx].values
@@ -493,7 +354,6 @@ class HourlyModel:
 
         # assign basic temporal features
         df["date"] = df.index.date
-        df["month"] = df.index.month
         df["day_of_week"] = df.index.dayofweek
         df["hour_of_day"] = df.index.hour
 
@@ -508,7 +368,7 @@ class HourlyModel:
             df,
             self._df_temporal_clusters,
             how="left",
-            left_on=["month", "day_of_week"],
+            left_on=["day_of_week"],
             right_index=True,
         )
         n_clusters = self._df_temporal_clusters["temporal_cluster"].nunique()
@@ -846,8 +706,8 @@ class HourlyModel:
 
         df_temporal_clusters = pd.DataFrame(
             data.get("TEMPORAL_CLUSTERS"),
-            columns=["month", "day_of_week", "temporal_cluster"],
-        ).set_index(["month", "day_of_week"])
+            columns=["day_of_week", "temporal_cluster"],
+        ).set_index(["day_of_week"])
 
         model_cls._df_temporal_clusters = df_temporal_clusters
         model_cls._T_bin_edges = np.array(data.get("TEMPERATURE_BIN_EDGES"))
@@ -925,289 +785,3 @@ class HourlyModel:
             Matplotlib axes.
         """
         raise NotImplementedError
-
-
-class _LabelResult(BaseModel):
-    """
-    contains metrics about a cluster label returned from sklearn
-    """
-    class Config:
-        arbitrary_types_allowed = True
-
-    labels: np.ndarray
-    score: float
-    score_unable_to_be_calculated: bool
-    n_clusters: int
-
-
-def cluster_time_series(
-    data: np.ndarray,
-    recluster_count: int,
-    n_cluster_lower: int,
-    n_cluster_upper: int,
-    score_choice: str,
-    dist_metric: str,
-    min_cluster_size: int,
-    seed: int,
-):
-    """
-    clusters the temporal features of the dataframe
-    """
-    max_non_outlier_cluster_count = 200
-
-    results = []
-    for i in range(recluster_count):
-        algo = _bisect_k_means.BisectingKMeans(
-            n_clusters=n_cluster_upper,
-            init="k-means++",  # does not benefit from k-means++ like other k-means
-            n_init=5,  # default is 1
-            random_state=seed + i,  # can be set to None or seed_num
-            algorithm="elkan",  # ['lloyd', 'elkan']
-            bisecting_strategy="largest_cluster",  # ['biggest_inertia', 'largest_cluster']
-        )
-        algo.fit(data)
-        labels_dict = algo.labels_full
-
-        for n_cluster, labels in labels_dict.items():
-            score, score_unable_to_be_calculated = _scoring.score_clusters(
-                data,
-                labels,
-                n_cluster_lower,
-                score_choice,
-                dist_metric,
-                min_cluster_size,
-                max_non_outlier_cluster_count,
-            )
-
-            label_res = _LabelResult(
-                labels=labels,
-                score=score,
-                score_unable_to_be_calculated=score_unable_to_be_calculated,
-                n_clusters=n_cluster,
-            )
-            results.append(label_res)
-
-    # get the results index with the smallest score
-    HoF = None
-    for result in results:
-        if result.score_unable_to_be_calculated:
-            continue
-
-        if HoF is None or result.score < HoF.score:
-            HoF = result
-
-    return HoF.labels
-
-def cluster_temporal_features(
-    data: np.ndarray,
-    wavelet_n_levels: int,
-    wavelet_name: str,
-    wavelet_mode: str,
-    min_var_ratio: float,
-    recluster_count: int,
-    n_cluster_lower: int,
-    n_cluster_upper: int,
-    score_choice: str,
-    dist_metric: str,
-    min_cluster_size: int,
-    seed: int,
-):
-    def _dwt_coeffs(data, wavelet='db1', wavelet_mode="periodization", n_levels=4):
-        all_features = []
-        # iterate through rows of numpy array
-        for row in range(len(data)):
-            decomp_coeffs = pywt.wavedec(data[row], wavelet=wavelet, mode=wavelet_mode, level=n_levels)
-            # remove last level
-            # if n_levels > 4:
-            # decomp_coeffs = decomp_coeffs[:-1]
-
-            decomp_coeffs = np.hstack(decomp_coeffs)
-
-            all_features.append(decomp_coeffs)
-
-        return np.vstack(all_features)
-
-    def _pca_coeffs(features, min_var_ratio=0.95):
-        # standardize the features
-        features = StandardScaler().fit_transform(features)
-
-        use_kernel_pca = False
-        if use_kernel_pca:
-            pca = KernelPCA(n_components=None, kernel='rbf')
-            pca_features = pca.fit_transform(features)
-
-            explained_variance_ratio = pca.eigenvalues_ / np.sum(pca.eigenvalues_)
-
-            # get the cumulative explained variance ratio
-            cumulative_explained_variance = np.cumsum(explained_variance_ratio)
-
-            # find number of components that explain pct% of the variance
-            n_components = np.argmax(cumulative_explained_variance > min_var_ratio)
-
-            # pca = PCA(n_components=n_components)
-            pca = KernelPCA(n_components=n_components, kernel='rbf')
-            pca_features = pca.fit_transform(features)
-
-        else:
-            pca = PCA(n_components=min_var_ratio)
-            pca_features = pca.fit_transform(features)
-
-        return pca_features
-    
-    # calculate wavelet coefficients
-    features = _dwt_coeffs(data, wavelet_name, wavelet_mode, wavelet_n_levels)
-    pca_features = _pca_coeffs(features, min_var_ratio)
-
-    # cluster the pca features
-    cluster_labels = cluster_time_series(
-        pca_features,
-        recluster_count,
-        n_cluster_lower,
-        n_cluster_upper,
-        score_choice,
-        dist_metric,
-        min_cluster_size,
-        seed,
-    )
-
-    return cluster_labels
-
-
-def fit_exp_growth_decay(x, y, k_only=True, is_x_sorted=False):
-    # Courtsey: https://math.stackexchange.com/questions/1337601/fit-exponential-with-constant
-    #           https://www.scribd.com/doc/14674814/Regressions-et-equations-integrales
-    #           Jean Jacquelin
-
-    # fitting function is actual b*exp(c*x) + a
-
-    # sort x in order
-    x = np.array(x)
-    y = np.array(y)
-    n = len(x)
-
-    if not is_x_sorted:
-        sort_idx = np.argsort(x)
-        x = x[sort_idx]
-        y = y[sort_idx]
-
-    s = [0]
-    for i in range(1, len(x)):
-        s.append(s[i-1] + 0.5*(y[i] + y[i-1])*(x[i] - x[i-1]))
-
-    s = np.array(s)
-    
-    x_diff_sq = np.sum((x - x[0])**2)
-    xs_diff = np.sum(s*(x - x[0]))
-    s_sq = np.sum(s**2)
-    xy_diff = np.sum((x - x[0])*(y - y[0]))
-    ys_diff = np.sum(s*(y - y[0]))
-
-    A = np.array([[x_diff_sq, xs_diff], [xs_diff, s_sq]])
-    b = np.array([xy_diff, ys_diff])
-
-    _, c = np.linalg.solve(A, b)
-    k = 1/c
-
-    if k_only:
-        a, b = None, None
-    else:
-        theta_i = np.exp(c*x)
-
-        theta = np.sum(theta_i)
-        theta_sq = np.sum(theta_i**2)
-        y_sum = np.sum(y)
-        y_theta = np.sum(y*theta_i)
-
-        A = np.array([[n, theta], [theta, theta_sq]])
-        b = np.array([y_sum, y_theta])
-
-        a, b = np.linalg.solve(A, b)
-
-    return a, b, k
-
-
-def _get_dst_indices(df):
-    """
-    given a datetime-indexed dataframe,
-    return the indices which need to be interpolated and averaged
-    in order to ensure exact 24 hour slots
-    """
-    # TODO test on baselines that begin/end on DST change
-    counts = df.groupby(df.index.date).count()
-    interp = counts[counts["observed"] == 23]
-    mean = counts[counts["observed"] == 25]
-
-    interp_idx = []
-    for idx in interp.index:
-        month = df.loc[idx.isoformat()]
-        date_idx = counts.index.get_loc(idx)
-        missing_hour = set(range(24)) - set(month.index.hour)
-        if len(missing_hour) != 1:
-            raise ValueError("too many missing hours")
-        hour = missing_hour.pop()
-        interp_idx.append((date_idx, hour))
-
-    mean_idx = []
-    for idx in mean.index:
-        date_idx = counts.index.get_loc(idx)
-        month = df.loc[idx.isoformat()]
-        seen = set()
-        for i in month.index:
-            if i.hour in seen:
-                hour = i.hour
-                break
-            seen.add(i.hour)
-        mean_idx.append((date_idx, hour))
-
-    return interp_idx, mean_idx
-
-
-def _transform_dst(prediction, dst_indices):
-    interp, mean = dst_indices
-
-    START_END = 0
-    REMOVE = 1
-    INTERPOLATE = 2
-
-    # get concrete indices
-    remove_idx = [(REMOVE, date * 24 + hour) for date, hour in interp]
-    interp_idx = [(INTERPOLATE, date * 24 + hour + 1) for date, hour in mean]
-
-    # these values will be inserted for the 25th hour
-    interpolated_vals = []
-    for _, idx in interp_idx:
-        interpolated = (prediction[idx - 1] + prediction[idx]) / 2
-        interpolated_vals.append(interpolated)
-    interpolation = iter(interpolated_vals)
-
-    # sort "operations" by index (can't assume a strict back-and-forth ordering)
-    ops = sorted(remove_idx + interp_idx, key=lambda t: t[1])
-
-    # create fenceposts where slices end
-    pairs = list(zip([(START_END, 0)] + ops, ops + [(START_END, None)]))
-    slices = []
-    for start, end in pairs:
-        start_i = start[1]
-        end_i = end[1]
-        if start[0] == REMOVE:
-            start_i += 1
-        if start[0] == INTERPOLATE:
-            slices.append([next(interpolation)])
-        slices.append(prediction[slice(start_i, end_i)])
-    return np.concatenate(slices)
-
-    ## the block above is equivalent to:
-    # shift = 0
-    # for op in ops:
-    #     if op[0] == REMOVE:
-    #         # delete artificial DST hour
-    #         idx = op[1] + shift
-    #         prediction = np.delete(prediction, idx)
-    #         shift -= 1
-    #     if op[0] == INTERPOLATE:
-    #         # interpolate missing DST hour
-    #         idx = op[1] + shift
-    #         interp = (prediction[idx - 1] + prediction[idx]) / 2
-    #         prediction = np.insert(prediction, idx, interp)
-    #         shift += 1
-    # return prediction
