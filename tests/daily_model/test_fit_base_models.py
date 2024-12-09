@@ -2,21 +2,22 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2024 OpenEEmeter contributors
+Copyright 2014-2024 OpenEEmeter contributors
 
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-       http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 """
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -213,3 +214,91 @@ def test_fit_final_model(meter_data, get_settings, get_optimized_result):
     # Test case 2: Test if the function raises a TypeError when the input arguments are of the wrong type
     with pytest.raises(TypeError):
         fit_final_model("not a dataframe", "not an OptimizedResult", "not a dictionary")
+
+
+@pytest.fixture
+def meter_data_heating_and_cooling():
+    df_meter = pd.DataFrame(
+        {
+            "temperature": [
+                10.0,
+                15.0,
+                20.0,
+                25.0,
+                30.0,
+                35.0,
+                40.0,
+                45.0,
+                50.0,
+                55.0,
+                60.0,
+                65.0,
+                70.0,
+                75.0,
+                80.0,
+                85.0,
+                90.0,
+                95.0,
+                100.0,
+            ],
+            "observed": [
+                1000.0,
+                950.0,
+                900.0,
+                850.0,
+                800.0,
+                750.0,
+                700.0,
+                650.0,
+                600.0,
+                550.0,
+                600.0,
+                650.0,
+                700.0,
+                750.0,
+                800.0,
+                850.0,
+                900.0,
+                950.0,
+                1000.0,
+            ],
+            "datetime": [
+                "2022-01-01",
+                "2022-01-02",
+                "2022-01-03",
+                "2022-01-04",
+                "2022-01-05",
+                "2022-01-06",
+                "2022-01-07",
+                "2022-01-08",
+                "2022-01-09",
+                "2022-01-10",
+                "2022-01-11",
+                "2022-01-12",
+                "2022-01-13",
+                "2022-01-14",
+                "2022-01-15",
+                "2022-01-16",
+                "2022-01-17",
+                "2022-01-18",
+                "2022-01-19",
+            ],
+        }
+    )
+    df_meter["datetime"] = pd.to_datetime(df_meter["datetime"])
+    df_meter.set_index("datetime", inplace=True)
+    return df_meter
+
+
+def test_check_that_model_coefficient_slopes_are_always_positive(
+    meter_data_heating_and_cooling, get_settings
+):
+    T = np.array(meter_data_heating_and_cooling["temperature"])
+    obs = np.array(meter_data_heating_and_cooling["observed"])
+
+    fit_input = [T, obs, get_settings, _get_opt_options(get_settings)]
+    res_hdd_tidd_cdd = fit_model("hdd_tidd_cdd", fit_input, None, None)
+    res_c_hdd_tidd = fit_model("c_hdd_tidd", fit_input, None, None)
+
+    assert res_hdd_tidd_cdd.named_coeffs.hdd_beta > 0
+    assert res_c_hdd_tidd.named_coeffs.hdd_beta > 0
