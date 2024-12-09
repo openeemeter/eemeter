@@ -360,8 +360,11 @@ class DRHourlyModel(HourlyModel):
         # assign temporal clusters
         if not self.is_fit:
             self._df_temporal_clusters = set_initial_temporal_clusters(df)
+            n_clusters = self._df_temporal_clusters["temporal_cluster"].nunique()
+
         else:
             self._df_temporal_clusters = correct_missing_temporal_clusters(df)
+            n_clusters = len([c for c in self._categorical_features if c.startswith("temporal_cluster_")])
 
         # join df_temporal_clusters to df
         df = pd.merge(
@@ -371,7 +374,6 @@ class DRHourlyModel(HourlyModel):
             left_on=["day_of_week"],
             right_index=True,
         )
-        n_clusters = self._df_temporal_clusters["temporal_cluster"].nunique()
 
         cluster_dummies = pd.get_dummies(
             pd.Categorical(df["temporal_cluster"], categories=range(n_clusters)),
