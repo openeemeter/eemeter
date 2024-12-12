@@ -65,6 +65,8 @@ class HourlyModel:
         "cat": ["temporal_cluster", "temp_bin"],
     }
 
+    _temporal_cluster_cols = ["month", "day_of_week"]
+
     """Note:
         Despite the temporal clusters, we can view all models created as a subset of the same full model.
         The temporal clusters would simply have the same coefficients within the same days/month combinations.
@@ -355,13 +357,13 @@ class HourlyModel:
     def _add_categorical_features(self, df):
         def set_initial_temporal_clusters(df):
             fit_df_grouped = (
-                df.groupby(["month", "day_of_week", "hour_of_day"])["observed"]
+                df.groupby(self._temporal_cluster_cols + ["hour_of_day"])["observed"]
                 .mean()
                 .reset_index()
             )
             # pivot table to get 2D array of observed values
             fit_df_grouped = fit_df_grouped.pivot_table(
-                index=["month", "day_of_week"], 
+                index=self._temporal_cluster_cols, 
                 columns="hour_of_day", 
                 values="observed"
             )
@@ -394,9 +396,9 @@ class HourlyModel:
             # check and match any missing temporal combinations
 
             # get all unique combinations of month and day_of_week in df
-            df_temporal = df[["month", "day_of_week"]].drop_duplicates()
-            df_temporal = df_temporal.sort_values(["month", "day_of_week"])
-            df_temporal_index = df_temporal.set_index(["month", "day_of_week"]).index
+            df_temporal = df[self._temporal_cluster_cols].drop_duplicates()
+            df_temporal = df_temporal.sort_values(self._temporal_cluster_cols)
+            df_temporal_index = df_temporal.set_index(self._temporal_cluster_cols).index
 
             # reindex self.df_temporal_clusters to df_temporal_index
             df_temporal_clusters = self._df_temporal_clusters.reindex(df_temporal_index)
@@ -410,18 +412,18 @@ class HourlyModel:
                 if "observed" in df.columns:
                     # filter df to only include missing combinations
                     df_missing = df[
-                        df.set_index(["month", "day_of_week"]).index.isin(
+                        df.set_index(self._temporal_cluster_cols).index.isin(
                             missing_combinations
                         )
                     ]
 
                     df_missing_grouped = (
-                        df_missing.groupby(["month", "day_of_week", "hour_of_day"])["observed"]
+                        df_missing.groupby(self._temporal_cluster_cols + ["hour_of_day"])["observed"]
                         .mean()
                         .reset_index()
                     )
                     df_missing_grouped = df_missing_grouped.pivot_table(
-                        index=["month", "day_of_week"],
+                        index=self._temporal_cluster_cols,
                         columns="hour_of_day",
                         values="observed",
                     )
@@ -433,23 +435,23 @@ class HourlyModel:
                         df,
                         df_temporal_clusters,
                         how="left",
-                        left_on=["month", "day_of_week"],
+                        left_on=self._temporal_cluster_cols,
                         right_index=True,
                     )
 
                     df_known = df[
-                        ~df.set_index(["month", "day_of_week"]).index.isin(
+                        ~df.set_index(self._temporal_cluster_cols).index.isin(
                             missing_combinations
                         )
                     ]
 
                     df_known_mean = (
-                        df_known.groupby(["month", "day_of_week", "hour_of_day"])["observed"]
+                        df_known.groupby(self._temporal_cluster_cols + ["hour_of_day"])["observed"]
                         .mean()
                         .reset_index()
                     )
                     df_known_mean = df_known_mean.pivot_table(
-                        index=["month", "day_of_week"],
+                        index=self._temporal_cluster_cols,
                         columns="hour_of_day",
                         values="observed",
                     )
@@ -460,7 +462,7 @@ class HourlyModel:
                     min_dist_idx = np.argmin(dist, axis=1)
 
                     # get temporal clusters df_known
-                    temporal_clusters = df_known.groupby(["month", "day_of_week"])[
+                    temporal_clusters = df_known.groupby(self._temporal_cluster_cols)[
                         "temporal_cluster"
                     ].first()
                     temporal_clusters = temporal_clusters.reindex(df_known_mean.index)
@@ -511,7 +513,7 @@ class HourlyModel:
             df,
             self._df_temporal_clusters,
             how="left",
-            left_on=["month", "day_of_week"],
+            left_on=self._temporal_cluster_cols,
             right_index=True,
         )
 
@@ -848,8 +850,8 @@ class HourlyModel:
 
         df_temporal_clusters = pd.DataFrame(
             data.get("TEMPORAL_CLUSTERS"),
-            columns=["month", "day_of_week", "temporal_cluster"],
-        ).set_index(["month", "day_of_week"])
+            columns= model_cls._temporal_cluster_cols + ["temporal_cluster"],
+        ).set_index(model_cls._temporal_cluster_cols)
 
         model_cls._df_temporal_clusters = df_temporal_clusters
         model_cls._T_bin_edges = np.array(data.get("TEMPERATURE_BIN_EDGES"))
