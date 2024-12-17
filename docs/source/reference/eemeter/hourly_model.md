@@ -1,3 +1,7 @@
-# Hourly Model
-
-The hourly model is currently receiving an overhaul and updated documentation is coming soon.
+::: eemeter.eemeter.models.hourly
+    options:
+      show_submodules: true
+      members:
+      - HourlyModel
+      - HourlyBaselineData
+      - HourlyReportingData

@@ -58,6 +58,14 @@ from eemeter.common.metrics import BaselineMetrics, BaselineMetricsFromDict
 
 # TODO: need to make explicit solar/nonsolar versions and set settings requirements/defaults appropriately
 class HourlyModel:
+    """
+    A class to fit a model to the input meter data.
+
+    Attributes:
+        settings (dict): A dictionary of settings.
+        baseline_metrics (dict): A dictionary of metrics based on input baseline data and model fit.
+    """
+
     # set priority columns for sorting
     # this is critical for ensuring predict column order matches fit column order
     _priority_cols = {
@@ -78,7 +86,10 @@ class HourlyModel:
             _settings.HourlyNonSolarSettings | _settings.HourlySolarSettings | None
         ) = None,
     ):
-        """ """
+        """
+        Args:
+            settings: HourlySettings to use (generally left default). Will default to solar model if GHI is given to the fit step.
+        """
 
         # Initialize settings
         if settings is None:
@@ -114,19 +125,32 @@ class HourlyModel:
         self._categorical_features = None
         self._ts_feature_norm = None
 
-        self.is_fit = False
+        self.is_fitted = False
         self.baseline_metrics = None
 
-    def fit(self, baseline_data, ignore_disqualification=False):
+    def fit(self, baseline_data: HourlyBaselineData, ignore_disqualification: bool = False) -> HourlyModel:
+        """Fit the model using baseline data.
+
+        Args:
+            baseline_data: HourlyBaselineData object.
+            ignore_disqualification: Whether to ignore disqualification errors / warnings.
+
+        Returns:
+            The fitted model.
+
+        Raises:
+            TypeError: If baseline_data is not an HourlyBaselineData object.
+            DataSufficiencyError: If the model can't be fit on disqualified baseline data.
+        """
         if not isinstance(baseline_data, HourlyBaselineData):
-            raise TypeError("baseline_data must be a DailyBaselineData object")
+            raise TypeError("baseline_data must be an HourlyBaselineData object")
         # TODO check DQ, log warnings
         self._fit(baseline_data)
         return self
 
     def _fit(self, meter_data):
         # Initialize dataframe
-        self.is_fit = False
+        self.is_fitted = False
 
         df_meter = meter_data.df # used to have a copy here
 
@@ -135,7 +159,7 @@ class HourlyModel:
 
         # fit the model
         self._model.fit(X_fit, y_fit)
-        self.is_fit = True
+        self.is_fitted = True
 
         # get number of model parameters
         num_parameters = np.count_nonzero(self._model.coef_) + np.count_nonzero(
@@ -159,16 +183,29 @@ class HourlyModel:
         self,
         reporting_data,
         ignore_disqualification=False,
-    ):
-        """Perform initial sufficiency and typechecks before passing to private predict"""
-        if not self.is_fit:
+    ) -> pd.DataFrame:
+        """Predicts the energy consumption using the fitted model.
+
+        Args:
+            reporting_data (Union[HourlyBaselineData, HourlyReportingData]): The data used for prediction.
+            ignore_disqualification (bool, optional): Whether to ignore model disqualification. Defaults to False.
+
+        Returns:
+            Dataframe with input data along with predicted energy consumption.
+
+        Raises:
+            RuntimeError: If the model is not fitted.
+            DisqualifiedModelError: If the model is disqualified and ignore_disqualification is False.
+            TypeError: If the reporting data is not of type HourlyBaselineData or HourlyReportingData.
+        """
+        if not self.is_fitted:
             raise RuntimeError("Model must be fit before predictions can be made.")
 
         # TODO check DQ, log warnings
 
         if not isinstance(reporting_data, (HourlyBaselineData, HourlyReportingData)):
             raise TypeError(
-                "reporting_data must be a DailyBaselineData or DailyReportingData object"
+                "reporting_data must be a HourlyBaselineData or HourlyReportingData object"
             )
 
         df_eval = self._predict(reporting_data)
@@ -258,7 +295,7 @@ class HourlyModel:
         # Convert X to sparse matrices
         X_predict = csr_matrix(X_predict.astype(float))
 
-        if not self.is_fit:
+        if not self.is_fitted:
             meter_data = meter_data.set_index(initial_index)
             # remove insufficient days from fit data
             meter_data = meter_data[meter_data["include_date"]]
@@ -285,7 +322,7 @@ class HourlyModel:
         settings = self.settings.TEMPERATURE_BIN
 
         # add temperature bins based on temperature
-        if not self.is_fit:
+        if not self.is_fitted:
             if settings.METHOD == "equal_sample_count":
                 T_bin_edges = pd.qcut(df["temperature"], q=settings.N_BINS, labels=False)
 
@@ -500,7 +537,7 @@ class HourlyModel:
         df["hour_of_day"] = df.index.hour
 
         # assign temporal clusters
-        if not self.is_fit:
+        if not self.is_fitted:
             self._df_temporal_clusters = set_initial_temporal_clusters(df)
             n_clusters = self._df_temporal_clusters["temporal_cluster"].nunique()
 
@@ -605,7 +642,7 @@ class HourlyModel:
         self._ts_feature_norm = [i + "_norm" for i in train_features]
 
         # need to set scaler if not fit
-        if not self.is_fit:
+        if not self.is_fitted:
             self._feature_scaler.fit(df[train_features])
             self._y_scaler.fit(df["observed"].values.reshape(-1, 1))
 
@@ -681,7 +718,7 @@ class HourlyModel:
                 T_col = f"{base_col}_T"
 
                 # get k for exponential growth/decay
-                if not self.is_fit:
+                if not self.is_fitted:
                     # determine temperature conversion for bin
                     range_offset = settings.EDGE_BIN_TEMPERATURE_RANGE_OFFSET
                     T_range = [df[int_col].min() - range_offset, df[int_col].max() + range_offset]
@@ -777,7 +814,7 @@ class HourlyModel:
 
         X = np.concatenate((ts_feature, unique_dummies), axis=1)
 
-        if not self.is_fit:
+        if not self.is_fitted:
             agg_y = (
                 df.groupby("date")
                 .agg({"observed_norm": lambda x: list(x)})
@@ -792,7 +829,12 @@ class HourlyModel:
 
         return X, y
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
+        """Returns a dictionary of model parameters.
+
+        Returns:
+            Model parameters.
+        """
         feature_scaler = {}
         if self.settings.SCALING_METHOD == _settings.ScalingChoice.STANDARDSCALER:
             for i, key in enumerate(self._ts_features):
@@ -832,11 +874,24 @@ class HourlyModel:
 
         return params.model_dump()
 
-    def to_json(self):
+    def to_json(self) -> str:
+        """Returns a JSON string of model parameters.
+
+        Returns:
+            Model parameters.
+        """
         return json.dumps(self.to_dict())
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data) -> HourlyModel:
+        """Create a instance of the class from a dictionary (such as one produced from the to_dict method).
+
+        Args:
+            data (dict): The dictionary containing the model data.
+
+        Returns:
+            An instance of the class.
+        """
         # get settings
         train_features = data.get("SETTINGS").get("TRAIN_FEATURES")
 
@@ -887,7 +942,7 @@ class HourlyModel:
         model_cls._model.coef_ = np.array(data.get("COEFFICIENTS"))
         model_cls._model.intercept_ = np.array(data.get("INTERCEPT"))
 
-        model_cls.is_fit = True
+        model_cls.is_fitted = True
 
         # set baseline metrics
         model_cls.baseline_metrics = BaselineMetricsFromDict(
@@ -897,36 +952,26 @@ class HourlyModel:
         return model_cls
 
     @classmethod
-    def from_json(cls, str_data):
+    def from_json(cls, str_data) -> HourlyModel:
+        """Create an instance of the class from a JSON string.
+
+        Args:
+            str_data: The JSON string representing the object.
+
+        Returns:
+            An instance of the class.
+
+        """
         return cls.from_dict(json.loads(str_data))
 
     def plot(
         self,
-        df_eval,
-        ax=None,
-        title=None,
-        figsize=None,
-        temp_range=None,
+        df_eval: HourlyBaselineData | HourlyReportingData,
     ):
-        """Plot a model fit.
+        """Plot a model fit with baseline or reporting data.
 
-        Parameters
-        ----------
-        ax : :any:`matplotlib.axes.Axes`, optional
-            Existing axes to plot on.
-        title : :any:`str`, optional
-            Chart title.
-        figsize : :any:`tuple`, optional
-            (width, height) of chart.
-        with_candidates : :any:`bool`
-            If True, also plot candidate models.
-        temp_range : :any:`tuple`, optionl
-            Temperature range to plot
-
-        Returns
-        -------
-        ax : :any:`matplotlib.axes.Axes`
-            Matplotlib axes.
+        Args:
+            df_eval: The baseline or reporting data object to plot.
         """
         raise NotImplementedError
 
