@@ -21,7 +21,7 @@ import json
 
 import pytz
 from dateutil.parser import parse as parse_date
-from pkg_resources import resource_stream
+import importlib.resources
 
 from ..utilities.io import meter_data_from_csv, temperature_data_from_csv
 
@@ -29,8 +29,8 @@ __all__ = ("samples", "load_sample")
 
 
 def _load_sample_metadata():
-    with resource_stream("eemeter.eemeter.samples", "metadata.json") as f:
-        metadata = json.loads(f.read().decode("utf-8"))
+    with importlib.resources.files("eemeter.eemeter.samples").joinpath("metadata.json").open("rb") as f:
+        metadata = json.loads(f.read())
     return metadata
 
 
@@ -85,11 +85,11 @@ def load_sample(sample, tempF=True):
         freq = None
 
     meter_data_filename = metadata["meter_data_filename"]
-    with resource_stream("eemeter.eemeter.samples", meter_data_filename) as f:
+    with importlib.resources.files("eemeter.eemeter.samples").joinpath(meter_data_filename).open("rb") as f:
         meter_data = meter_data_from_csv(f, gzipped=True, freq=freq)
 
     temperature_filename = metadata["temperature_filename"]
-    with resource_stream("eemeter.eemeter.samples", temperature_filename) as f:
+    with importlib.resources.files("eemeter.eemeter.samples").joinpath(temperature_filename).open("rb") as f:
         temperature_data = temperature_data_from_csv(
             f, gzipped=True, freq="hourly", temp_col=temp_units
         )
