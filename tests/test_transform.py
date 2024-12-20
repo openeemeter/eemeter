@@ -840,11 +840,13 @@ def test_clean_caltrack_daily_data_hourly_local_tz(il_electricity_cdd_hdd_hourly
 
 def test_clean_caltrack_billing_data_estimated(il_electricity_cdd_hdd_billing_monthly):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
-    meter_data["estimated"] = False
-    meter_data.estimated.iloc[2] = True
-    meter_data.estimated.iloc[5] = True
-    meter_data.estimated.iloc[6] = True
-    meter_data.estimated.iloc[10] = True
+    meter_data['estimated'] = False
+    estimated_col_index = meter_data.columns.get_loc("estimated")
+    meter_data.iloc[:,estimated_col_index] = False
+    meter_data.iloc[2,estimated_col_index] = True
+    meter_data.iloc[5,estimated_col_index] = True
+    meter_data.iloc[6,estimated_col_index] = True
+    meter_data.iloc[10,estimated_col_index] = True
 
     cleaned_data = clean_caltrack_billing_data(meter_data, "billing_monthly")
     assert cleaned_data.dropna().shape[0] == cleaned_data.shape[0] - 2
@@ -954,7 +956,7 @@ def test_format_temperature_data_for_caltrack(il_electricity_cdd_hdd_hourly):
     temperature_data = temperature_data.reindex(index=temperature_data.index[::-1])
 
     # inserting new value of 0.04 at 09.34 22/11/2015
-    new_start = pd.to_datetime("22/11/2015 09:34").tz_localize("UTC")
+    new_start = pd.to_datetime("22/11/2015 09:34", dayfirst=True).tz_localize("UTC")
     temperature_data.loc[new_start] = [0.04]
 
     # rename column name to 'consumption'
@@ -978,7 +980,7 @@ def test_format_energy_data_for_caltrack_hourly(il_electricity_cdd_hdd_hourly):
     df = df.reindex(index=df.index[::-1])
 
     # inserting new value of 0.04 at 09.34 22/11/2015
-    new_start = pd.to_datetime("22/11/2015 09:34").tz_localize("UTC")
+    new_start = pd.to_datetime("22/11/2015 09:34", dayfirst=True).tz_localize("UTC")
     df.loc[new_start] = [0.04]
 
     # rename column name to 'consumption'
@@ -1003,7 +1005,7 @@ def test_format_energy_data_for_caltrack_daily(il_electricity_cdd_hdd_daily):
     df = df.reindex(index=df.index[::-1])
 
     # inserting new value of 0.04 at 09.34 22/11/2015
-    new_start = pd.to_datetime("22/11/2015 09:34").tz_localize("UTC")
+    new_start = pd.to_datetime("22/11/2015 09:34", dayfirst=True).tz_localize("UTC")
     df.loc[new_start] = [0.04]
 
     # rename column name to 'consumption'
@@ -1028,7 +1030,7 @@ def test_format_energy_data_for_caltrack_billing(il_electricity_cdd_hdd_daily):
     df = df.reindex(index=df.index[::-1])
 
     # inserting new value of 0.04 at 09.34 22/11/2015
-    new_start = pd.to_datetime("22/11/2015 09:34").tz_localize("UTC")
+    new_start = pd.to_datetime("22/11/2015 09:34", dayfirst=True).tz_localize("UTC")
     df.loc[new_start] = [0.04]
 
     # rename column name to 'consumption'

@@ -1185,7 +1185,7 @@ def test_compute_occupancy_feature_with_nans(even_occupancy):
 @pytest.fixture
 def occupancy_precursor_only_nan(il_electricity_cdd_hdd_hourly):
     meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
-    meter_data = meter_data["2017-01-04":"2017-06-01"]
+    meter_data = meter_data["2017-01-04":"2017-06-01"].copy()
     meter_data.iloc[-1] = np.nan
     # Simulates a segment where there is only a single nan value
     temperature_data = il_electricity_cdd_hdd_hourly["temperature_data"]
