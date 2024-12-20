@@ -951,7 +951,7 @@ def format_energy_data_for_caltrack(*args, method="hourly", tz="UTC"):
     elif method == "daily":
         freq = "D"
     elif method == "billing":
-        freq = "M"
+        freq = "ME"
     else:
         raise ValueError("'method' must be either 'hourly', 'daily' or 'billing'.")
 
