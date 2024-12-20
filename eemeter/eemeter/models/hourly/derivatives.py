@@ -44,9 +44,7 @@ def _compute_ols_error(
         t_stat * rmse_base_residuals * (post_obs * base_obs / nprime) ** 0.5
     )
 
-    ols_total_agg_error = (
-        ols_model_agg_error**2.0 + ols_noise_agg_error**2.0
-    ) ** 0.5
+    ols_total_agg_error = (ols_model_agg_error**2.0 + ols_noise_agg_error**2.0) ** 0.5
 
     return ols_total_agg_error, ols_model_agg_error, ols_noise_agg_error
 
@@ -357,9 +355,7 @@ def _compute_error_bands_modeled_savings(
     return {
         "FSU Error Band: Baseline": fsu_error_band_baseline,
         "FSU Error Band: Reporting": fsu_error_band_reporting,
-        "FSU Error Band": (
-            fsu_error_band_baseline**2.0 + fsu_error_band_reporting**2.0
-        )
+        "FSU Error Band": (fsu_error_band_baseline**2.0 + fsu_error_band_reporting**2.0)
         ** 0.5,
     }
 
