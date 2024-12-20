@@ -194,7 +194,7 @@ def get_meter_data_monthly(get_datetime_index_monthly_with_timezone):
 
     # Create the DataFrame
     df = pd.DataFrame(data={"observed": meter_value}, index=datetime_index)
-    df["observed"][-1] = np.nan
+    df.iloc[-1, df.columns.get_loc("observed")] = np.nan
 
     return df
 
@@ -306,7 +306,7 @@ def test_billing_baseline_data_with_bimonthly_frequencies(get_datetime_index):
         index=datetime_index,
     )
     df.index = df.index[:-1].union([df.index[-1] - pd.Timedelta(days=1)])
-    df["observed"][-1] = np.nan
+    df.iloc[-1, df.columns.get_loc("observed")] = np.nan
 
     cls = BillingBaselineData(df, is_electricity_data=True)
 
