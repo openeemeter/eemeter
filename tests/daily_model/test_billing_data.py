@@ -209,7 +209,7 @@ def get_meter_data_bimonthly(get_datetime_index_bimonthly_with_timezone):
 
     # Create the DataFrame
     df = pd.DataFrame(data={"observed": meter_value}, index=datetime_index)
-    df["observed"][-1] = np.nan
+    df.iloc[-1, df.columns.get_loc("observed")] = np.nan
 
     return df
 

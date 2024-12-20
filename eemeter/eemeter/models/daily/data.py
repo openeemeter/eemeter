@@ -341,7 +341,7 @@ class _DailyData:
                     )
 
                 # Set missing high frequency data to NaN
-                temperature_features.value[temperature_features.coverage > 0.5] = (
+                temperature_features.loc[temperature_features.coverage > 0.5, "value"] = (
                     temperature_features[temperature_features.coverage > 0.5].value
                     / temperature_features[temperature_features.coverage > 0.5].coverage
                 )

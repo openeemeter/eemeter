@@ -770,7 +770,7 @@ def downsample_and_clean_caltrack_daily_data(data):
     data = as_freq(data.value, "D", include_coverage=True)
 
     # CalTRACK 2.2.2.1 - interpolate with average of non-null values
-    data.value[data.coverage > 0.5] = (
+    data.loc[data.coverage > 0.5, "value"] = (
         data[data.coverage > 0.5].value / data[data.coverage > 0.5].coverage
     )
 

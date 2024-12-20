@@ -770,7 +770,8 @@ def test_remove_duplicates_series():
 
 def test_as_freq_hourly_to_daily(il_electricity_cdd_hdd_hourly):
     meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
-    meter_data.iloc[-1]["value"] = np.nan
+
+    meter_data.iloc[-1,meter_data.columns.get_loc("value")] = np.nan
     assert meter_data.shape == (19417, 1)
     as_daily = as_freq(meter_data.value, freq="D")
     assert as_daily.shape == (811,)
@@ -787,7 +788,7 @@ def test_as_freq_daily_to_daily(il_electricity_cdd_hdd_daily):
 
 def test_as_freq_hourly_to_daily_include_coverage(il_electricity_cdd_hdd_hourly):
     meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
-    meter_data.iloc[-1]["value"] = np.nan
+    meter_data.iloc[-1,meter_data.columns.get_loc("value")] = np.nan
     assert meter_data.shape == (19417, 1)
     as_daily = as_freq(meter_data.value, freq="D", include_coverage=True)
     assert as_daily.shape == (811, 2)
@@ -901,7 +902,7 @@ def test_clean_caltrack_billing_data_uneven_datetimes(
 def test_overwrite_partial_rows_with_nan(il_electricity_cdd_hdd_billing_monthly):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     meter_data["other_column"] = meter_data["value"]
-    meter_data["other_column"][:3] = np.nan
+    meter_data.iloc[:3,meter_data.columns.get_loc("other_column")] = np.nan
     meter_data_nanned = overwrite_partial_rows_with_nan(meter_data)
     assert pd.isnull(meter_data_nanned["value"][:3]).all()
 
