@@ -4,7 +4,8 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Bump to latest packages and remove all deprecation/future warnings as of 2024-12-20.
+* Fix bug where HourlyBaselineData and HourlyReportingData wasn't actually NaNning zero rows when `is_electricity=True`.
 
 4.0.7
 -----

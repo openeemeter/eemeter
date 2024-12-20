@@ -55,7 +55,7 @@ def get_datetime_index_half_hourly_with_timezone():
         start="2023-01-01",
         end="2024-01-01",
         inclusive="left",
-        freq="30T",
+        freq="30min",
         tz="US/Eastern",
     )
 
@@ -69,7 +69,7 @@ def get_datetime_index_hourly_with_timezone():
         start="2023-01-01",
         end="2024-01-01",
         inclusive="left",
-        freq="H",
+        freq="h",
         tz="US/Eastern",
     )
 
@@ -194,7 +194,7 @@ def get_meter_data_monthly(get_datetime_index_monthly_with_timezone):
 
     # Create the DataFrame
     df = pd.DataFrame(data={"observed": meter_value}, index=datetime_index)
-    df["observed"][-1] = np.nan
+    df.iloc[-1, df.columns.get_loc("observed")] = np.nan
 
     return df
 
@@ -209,7 +209,7 @@ def get_meter_data_bimonthly(get_datetime_index_bimonthly_with_timezone):
 
     # Create the DataFrame
     df = pd.DataFrame(data={"observed": meter_value}, index=datetime_index)
-    df["observed"][-1] = np.nan
+    df.iloc[-1, df.columns.get_loc("observed")] = np.nan
 
     return df
 
@@ -306,7 +306,7 @@ def test_billing_baseline_data_with_bimonthly_frequencies(get_datetime_index):
         index=datetime_index,
     )
     df.index = df.index[:-1].union([df.index[-1] - pd.Timedelta(days=1)])
-    df["observed"][-1] = np.nan
+    df.iloc[-1, df.columns.get_loc("observed")] = np.nan
 
     cls = BillingBaselineData(df, is_electricity_data=True)
 
@@ -546,7 +546,7 @@ def test_billing_baseline_data_with_specific_monthly_input():
 
 
 @pytest.mark.parametrize(
-    "get_datetime_index", [["30T", True], ["H", True]], indirect=True
+    "get_datetime_index", [["30min", True], ["h", True]], indirect=True
 )
 def test_billing_reporting_data_with_missing_half_hourly_frequencies(
     get_datetime_index,
@@ -573,9 +573,9 @@ def test_billing_reporting_data_with_missing_half_hourly_frequencies(
     assert cls.df is not None
     assert len(cls.df) == NUM_DAYS_IN_YEAR
 
-    if datetime_index.freq == "30T":
+    if datetime_index.freq == "30min":
         assert len(cls.df.temperature.dropna()) == 268
-    elif datetime_index.freq == "H":
+    elif datetime_index.freq == "h":
         assert len(cls.df.temperature.dropna()) == 270
 
     assert len(cls.warnings) == 1

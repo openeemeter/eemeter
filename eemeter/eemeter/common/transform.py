@@ -770,7 +770,7 @@ def downsample_and_clean_caltrack_daily_data(data):
     data = as_freq(data.value, "D", include_coverage=True)
 
     # CalTRACK 2.2.2.1 - interpolate with average of non-null values
-    data.value[data.coverage > 0.5] = (
+    data.loc[data.coverage > 0.5, "value"] = (
         data[data.coverage > 0.5].value / data[data.coverage > 0.5].coverage
     )
 
@@ -830,7 +830,7 @@ def add_freq(idx, freq=None):
     return idx
 
 
-def trim(*args, freq="H", tz="UTC"):
+def trim(*args, freq="h", tz="UTC"):
     """A helper function which trims a given number of time series dataframes so that they all correspond to the same
     time periods. Typically used to ensure that both gas, electricity, and temperature datasets cover the same time
     period. Trim undertakes the following steps:
@@ -947,11 +947,11 @@ def format_energy_data_for_caltrack(*args, method="hourly", tz="UTC"):
     """
 
     if method == "hourly":
-        freq = "H"
+        freq = "h"
     elif method == "daily":
         freq = "D"
     elif method == "billing":
-        freq = "M"
+        freq = "ME"
     else:
         raise ValueError("'method' must be either 'hourly', 'daily' or 'billing'.")
 

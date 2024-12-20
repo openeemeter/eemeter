@@ -139,6 +139,9 @@ def robust_confidence_ellipse(x, y, var=np.ones([2, 2]) * 1.96, outlier_std=3, N
 
         mu, cov, a, b, phi = confidence_ellipse(x, y, var_outlier)
 
+        if a == 0 or b == 0:
+            break
+
         # Center points
         xc = x - mu[0]
         yc = y - mu[1]

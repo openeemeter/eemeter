@@ -33,7 +33,7 @@ class HourlyReportingData:
             df["observed"] = np.nan
 
         if is_electricity_data:
-            df[df["observed"] == 0]["observed"] = np.nan
+            df.loc[df["observed"] == 0, "observed"] = np.nan
 
         df = self._correct_frequency(df)
 
@@ -52,12 +52,12 @@ class HourlyReportingData:
             )
         else:
             # TODO : Add the high frequency check for meter data
-            meter = meter.resample("H").sum(min_count=1)
-            meter.index.freq = "H"
+            meter = meter.resample("h").sum(min_count=1)
+            meter.index.freq = "h"
 
         # TODO : Add the high frequency check for temperature data and add NaNs
-        temp = temp.resample("H").mean()
-        temp.index.freq = "H"
+        temp = temp.resample("h").mean()
+        temp.index.freq = "h"
 
         return merge_features([meter, temp], keep_partial_nan_rows=True)
 
@@ -85,7 +85,7 @@ class HourlyReportingData:
 class HourlyBaselineData(HourlyReportingData):
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
         if is_electricity_data:
-            df[df["observed"] == 0]["observed"] = np.nan
+            df.loc[df["observed"] == 0, "observed"] = np.nan
 
         df = self._correct_frequency(df)
 

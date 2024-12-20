@@ -39,9 +39,12 @@ def _compute_rmse(combined):
 
 
 def _compute_rmse_adj(combined, length, num_parameters):
-    return (
-        (combined["residuals"].astype(float) ** 2).sum() / (length - num_parameters)
-    ) ** 0.5
+    if length > num_parameters:
+        return (
+            (combined["residuals"].astype(float) ** 2).sum() / (length - num_parameters)
+        ) ** 0.5
+    else:
+        return np.nan
 
 
 def _compute_cvrmse(rmse, observed_mean):
