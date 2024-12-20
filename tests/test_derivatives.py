@@ -93,7 +93,7 @@ def reporting_meter_data_daily():
 @pytest.fixture
 def reporting_temperature_data():
     index = pd.date_range("2011-01-01", freq="D", periods=60, tz="UTC")
-    return pd.Series(np.arange(30.0, 90.0), index=index).asfreq("H").ffill()
+    return pd.Series(np.arange(30.0, 90.0), index=index).asfreq("h").ffill()
 
 
 def test_metered_savings_cdd_hdd_daily(
@@ -308,7 +308,7 @@ def test_modeled_savings_cdd_hdd_daily(
 def test_modeled_savings_daily_empty_temperature_data(
     baseline_model_daily, reporting_model_daily
 ):
-    index = pd.DatetimeIndex([], tz="UTC", name="dt", freq="H")
+    index = pd.DatetimeIndex([], tz="UTC", name="dt", freq="h")
     temperature_data = pd.Series([], index=index).to_frame()
 
     with pytest.raises(ValueError):
@@ -396,7 +396,7 @@ def reporting_model_hourly(il_electricity_cdd_hdd_hourly):
 @pytest.fixture
 def reporting_meter_data_hourly():
     index = pd.date_range("2011-01-01", freq="D", periods=60, tz="UTC")
-    return pd.DataFrame({"value": 1}, index=index).asfreq("H").ffill()
+    return pd.DataFrame({"value": 1}, index=index).asfreq("h").ffill()
 
 
 def test_metered_savings_cdd_hdd_hourly(
@@ -440,7 +440,7 @@ def test_modeled_savings_cdd_hdd_hourly(
 def normal_year_temperature_data():
     index = pd.date_range("2015-01-01", freq="D", periods=365, tz="UTC")
     np.random.seed(0)
-    return pd.Series(np.random.rand(365) * 30 + 45, index=index).asfreq("H").ffill()
+    return pd.Series(np.random.rand(365) * 30 + 45, index=index).asfreq("h").ffill()
 
 
 def test_modeled_savings_cdd_hdd_billing(

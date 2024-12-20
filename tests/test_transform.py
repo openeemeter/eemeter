@@ -48,13 +48,13 @@ def test_as_freq_not_series(il_electricity_cdd_hdd_billing_monthly):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     assert meter_data.shape == (27, 1)
     with pytest.raises(ValueError):
-        as_freq(meter_data, freq="H")
+        as_freq(meter_data, freq="h")
 
 
 def test_as_freq_hourly(il_electricity_cdd_hdd_billing_monthly):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     assert meter_data.shape == (27, 1)
-    as_hourly = as_freq(meter_data.value, freq="H")
+    as_hourly = as_freq(meter_data.value, freq="h")
     assert as_hourly.shape == (18961,)
     assert round(meter_data.value.sum(), 1) == round(as_hourly.sum(), 1) == 21290.2
 
@@ -96,7 +96,7 @@ def test_as_freq_month_start(il_electricity_cdd_hdd_billing_monthly):
 def test_as_freq_hourly_temperature(il_electricity_cdd_hdd_billing_monthly):
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"]
     assert temperature_data.shape == (19417,)
-    as_hourly = as_freq(temperature_data, freq="H", series_type="instantaneous")
+    as_hourly = as_freq(temperature_data, freq="h", series_type="instantaneous")
     assert as_hourly.shape == (19417,)
     assert round(temperature_data.mean(), 1) == round(as_hourly.mean(), 1) == 54.6
 
@@ -128,7 +128,7 @@ def test_as_freq_daily_temperature_monthly(il_electricity_cdd_hdd_billing_monthl
 
 def test_as_freq_empty():
     meter_data = pd.DataFrame({"value": []})
-    empty_meter_data = as_freq(meter_data.value, freq="H")
+    empty_meter_data = as_freq(meter_data.value, freq="h")
     assert empty_meter_data.empty
 
 
@@ -917,7 +917,7 @@ def test_add_freq(il_electricity_cdd_hdd_hourly):
 
     # infer frequency
     meter_data.index = add_freq(meter_data.index)
-    assert meter_data.index.freq == "H"
+    assert meter_data.index.freq == "h"
 
 
 def test_trim_two_dataframes(
@@ -970,7 +970,7 @@ def test_format_temperature_data_for_caltrack(il_electricity_cdd_hdd_hourly):
     assert (
         temperature_data_reformatted.index[0] < temperature_data_reformatted.index[-1]
     )
-    assert temperature_data_reformatted.index.freq == "H"
+    assert temperature_data_reformatted.index.freq == "h"
     assert temperature_data_reformatted.index.tzinfo is not None
 
 
@@ -993,7 +993,7 @@ def test_format_energy_data_for_caltrack_hourly(il_electricity_cdd_hdd_hourly):
 
     assert isinstance(df_reformatted, pd.DataFrame)
     assert df_reformatted.index[0] < df_reformatted.index[-1]
-    assert df_reformatted.index.freq == "H"
+    assert df_reformatted.index.freq == "h"
     assert df_reformatted.columns[0] == "value"
     assert df_reformatted.index.tzinfo is not None
     assert len(df_reformatted.columns) == 1
