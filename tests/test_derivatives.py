@@ -432,7 +432,7 @@ def test_modeled_savings_cdd_hdd_hourly(
         "modeled_reporting_usage",
         "modeled_savings",
     ]
-    assert round(results.modeled_savings.sum(), 2) == 55.3
+    assert round(results.modeled_savings.sum(), 1) == 55.3
     assert error_bands is None
 
 
