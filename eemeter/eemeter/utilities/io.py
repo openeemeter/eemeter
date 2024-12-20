@@ -229,7 +229,9 @@ def meter_data_from_json(data: list, orient: str = "list") -> pd.DataFrame:
         df = df.set_index("start")
         df["value"] = df["value"].astype(float)
         if "estimated" in df.columns:
-            df["estimated"] = df["estimated"].where(df["estimated"].notna(), False).astype(bool)
+            df["estimated"] = (
+                df["estimated"].where(df["estimated"].notna(), False).astype(bool)
+            )
         return df
     else:
         raise ValueError("orientation not recognized.")

@@ -341,7 +341,7 @@ def clean_billing_daily_data(data, source_interval, warnings):
 
 # TODO : requires more testing
 def compute_minimum_granularity(index: pd.Series, default_granularity: Optional[str]):
-    if len(index) <=1:
+    if len(index) <= 1:
         return default_granularity
     # Inferred frequency returns None if frequency can't be autodetected
     index.freq = index.inferred_freq
