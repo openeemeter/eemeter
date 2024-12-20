@@ -572,7 +572,7 @@ def _estimate_hour_of_week_occupancy(model_data, threshold):
 
     return (
         model_data_with_residuals.groupby(["hour_of_week"], observed=False)
-        .apply(_is_high_usage)
+        .apply(_is_high_usage, include_groups=False)
         .rename("occupancy")
         .reindex(index)
         .astype(bool)
