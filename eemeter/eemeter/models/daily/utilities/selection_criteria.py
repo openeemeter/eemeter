@@ -35,7 +35,7 @@ def neg_log_likelihood(loss, N):
     # log likelihood for n independent identical normal distributions:
     # log_likelihood = -n/2*np.log(2*np.pi) - n/2*np.log(sigma**2) - 1/(2*sigma**2)*np.sum((x - mu)**2)
 
-    if loss <= 0 or N <=0:
+    if loss <= 0 or N <= 0:
         return np.inf
 
     # log likelihood for for least squares fitting:

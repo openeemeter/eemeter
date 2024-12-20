@@ -307,14 +307,20 @@ class CalTRACKHourlyModel(SegmentedModel):
             CalTRACKSegmentModel.from_json(s) for s in data.get("segment_models")
         ]
 
-        occupancy_lookup = pd.read_json(StringIO(data.get("occupancy_lookup")), orient="split")
+        occupancy_lookup = pd.read_json(
+            StringIO(data.get("occupancy_lookup")), orient="split"
+        )
         occupancy_lookup.index = occupancy_lookup.index.astype("category")
 
         c = cls(
             segment_models,
             occupancy_lookup,
-            pd.read_json(StringIO(data.get("occupied_temperature_bins")), orient="split"),
-            pd.read_json(StringIO(data.get("unoccupied_temperature_bins")), orient="split"),
+            pd.read_json(
+                StringIO(data.get("occupied_temperature_bins")), orient="split"
+            ),
+            pd.read_json(
+                StringIO(data.get("unoccupied_temperature_bins")), orient="split"
+            ),
             data.get("segment_type"),
         )
 

@@ -53,8 +53,11 @@ def test_eemeter_caltrack_sample_known():
 def test_eemeter_caltrack_meter_data_only():
     runner = CliRunner()
 
-    meter_file = str(importlib.resources.files("eemeter.eemeter.samples").joinpath("il-gas-hdd-only-daily.csv.gz"
-))
+    meter_file = str(
+        importlib.resources.files("eemeter.eemeter.samples").joinpath(
+            "il-gas-hdd-only-daily.csv.gz"
+        )
+    )
     result = runner.invoke(caltrack, ["--meter-file={}".format(meter_file)])
 
     assert result.exit_code == 1
@@ -64,7 +67,9 @@ def test_eemeter_caltrack_meter_data_only():
 def test_eemeter_caltrack_temperature_data_only():
     runner = CliRunner()
 
-    temperature_file = str(importlib.resources.files("eemeter.eemeter.samples").joinpath("il-tempF.csv.gz"))
+    temperature_file = str(
+        importlib.resources.files("eemeter.eemeter.samples").joinpath("il-tempF.csv.gz")
+    )
 
     result = runner.invoke(caltrack, ["--temperature-file={}".format(temperature_file)])
 
@@ -75,8 +80,14 @@ def test_eemeter_caltrack_temperature_data_only():
 def test_eemeter_caltrack_temperature_custom_data():
     runner = CliRunner()
 
-    meter_file = str(importlib.resources.files("eemeter.eemeter.samples").joinpath("il-gas-hdd-only-daily.csv.gz"))
-    temperature_file = str(importlib.resources.files("eemeter.eemeter.samples").joinpath("il-tempF.csv.gz"))
+    meter_file = str(
+        importlib.resources.files("eemeter.eemeter.samples").joinpath(
+            "il-gas-hdd-only-daily.csv.gz"
+        )
+    )
+    temperature_file = str(
+        importlib.resources.files("eemeter.eemeter.samples").joinpath("il-tempF.csv.gz")
+    )
 
     result = runner.invoke(
         caltrack,

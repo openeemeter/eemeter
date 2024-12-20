@@ -38,7 +38,11 @@ def test_meter_data_from_csv(sample_metadata):
     meter_item = sample_metadata["il-electricity-cdd-hdd-daily"]
     meter_data_filename = meter_item["meter_data_filename"]
 
-    fname = str(importlib.resources.files("eemeter.eemeter.samples").joinpath(meter_data_filename))
+    fname = str(
+        importlib.resources.files("eemeter.eemeter.samples").joinpath(
+            meter_data_filename
+        )
+    )
     with gzip.open(fname) as f:
         meter_data = meter_data_from_csv(f)
     assert meter_data.shape == (810, 1)
@@ -50,7 +54,9 @@ def test_meter_data_from_csv_gzipped(sample_metadata):
     meter_item = sample_metadata["il-electricity-cdd-hdd-daily"]
     meter_data_filename = meter_item["meter_data_filename"]
 
-    with importlib.resources.files("eemeter.eemeter.samples").joinpath(meter_data_filename).open("rb") as f:
+    with importlib.resources.files("eemeter.eemeter.samples").joinpath(
+        meter_data_filename
+    ).open("rb") as f:
         meter_data = meter_data_from_csv(f, gzipped=True)
     assert meter_data.shape == (810, 1)
     assert str(meter_data.index.tz) == "UTC"
@@ -61,7 +67,9 @@ def test_meter_data_from_csv_with_tz(sample_metadata):
     meter_item = sample_metadata["il-electricity-cdd-hdd-daily"]
     meter_data_filename = meter_item["meter_data_filename"]
 
-    with importlib.resources.files("eemeter.eemeter.samples").joinpath(meter_data_filename).open("rb") as f:
+    with importlib.resources.files("eemeter.eemeter.samples").joinpath(
+        meter_data_filename
+    ).open("rb") as f:
         meter_data = meter_data_from_csv(f, gzipped=True, tz="US/Eastern")
     assert meter_data.shape == (810, 1)
     assert str(meter_data.index.tz) == "US/Eastern"
@@ -72,7 +80,9 @@ def test_meter_data_from_csv_hourly_freq(sample_metadata):
     meter_item = sample_metadata["il-electricity-cdd-hdd-daily"]
     meter_data_filename = meter_item["meter_data_filename"]
 
-    with importlib.resources.files("eemeter.eemeter.samples").joinpath(meter_data_filename).open("rb") as f:
+    with importlib.resources.files("eemeter.eemeter.samples").joinpath(
+        meter_data_filename
+    ).open("rb") as f:
         meter_data = meter_data_from_csv(f, gzipped=True, freq="hourly")
     assert meter_data.shape == (19417, 1)
     assert str(meter_data.index.tz) == "UTC"
@@ -83,7 +93,9 @@ def test_meter_data_from_csv_daily_freq(sample_metadata):
     meter_item = sample_metadata["il-electricity-cdd-hdd-daily"]
     meter_data_filename = meter_item["meter_data_filename"]
 
-    with importlib.resources.files("eemeter.eemeter.samples").joinpath(meter_data_filename).open("rb") as f:
+    with importlib.resources.files("eemeter.eemeter.samples").joinpath(
+        meter_data_filename
+    ).open("rb") as f:
         meter_data = meter_data_from_csv(f, gzipped=True, freq="daily")
     assert meter_data.shape == (810, 1)
     assert str(meter_data.index.tz) == "UTC"
@@ -195,7 +207,11 @@ def test_temperature_data_from_csv(sample_metadata):
     meter_item = sample_metadata["il-electricity-cdd-hdd-daily"]
     temperature_filename = meter_item["temperature_filename"]
 
-    fname = str(importlib.resources.files("eemeter.eemeter.samples").joinpath(temperature_filename))
+    fname = str(
+        importlib.resources.files("eemeter.eemeter.samples").joinpath(
+            temperature_filename
+        )
+    )
     with gzip.open(fname) as f:
         temperature_data = temperature_data_from_csv(f)
     assert temperature_data.shape == (19417,)
@@ -207,7 +223,9 @@ def test_temperature_data_from_csv_gzipped(sample_metadata):
     meter_item = sample_metadata["il-electricity-cdd-hdd-daily"]
     temperature_filename = meter_item["temperature_filename"]
 
-    with importlib.resources.files("eemeter.eemeter.samples").joinpath(temperature_filename).open("rb") as f:
+    with importlib.resources.files("eemeter.eemeter.samples").joinpath(
+        temperature_filename
+    ).open("rb") as f:
         temperature_data = temperature_data_from_csv(f, gzipped=True)
     assert temperature_data.shape == (19417,)
     assert str(temperature_data.index.tz) == "UTC"
@@ -218,7 +236,9 @@ def test_temperature_data_from_csv_with_tz(sample_metadata):
     meter_item = sample_metadata["il-electricity-cdd-hdd-daily"]
     temperature_filename = meter_item["temperature_filename"]
 
-    with importlib.resources.files("eemeter.eemeter.samples").joinpath(temperature_filename).open("rb") as f:
+    with importlib.resources.files("eemeter.eemeter.samples").joinpath(
+        temperature_filename
+    ).open("rb") as f:
         temperature_data = temperature_data_from_csv(f, gzipped=True, tz="US/Eastern")
     assert temperature_data.shape == (19417,)
     assert str(temperature_data.index.tz) == "US/Eastern"
@@ -229,7 +249,9 @@ def test_temperature_data_from_csv_hourly_freq(sample_metadata):
     meter_item = sample_metadata["il-electricity-cdd-hdd-daily"]
     temperature_filename = meter_item["temperature_filename"]
 
-    with importlib.resources.files("eemeter.eemeter.samples").joinpath(temperature_filename).open("rb") as f:
+    with importlib.resources.files("eemeter.eemeter.samples").joinpath(
+        temperature_filename
+    ).open("rb") as f:
         temperature_data = temperature_data_from_csv(f, gzipped=True, freq="hourly")
     assert temperature_data.shape == (19417,)
     assert str(temperature_data.index.tz) == "UTC"

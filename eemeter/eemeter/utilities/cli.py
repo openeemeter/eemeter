@@ -64,12 +64,18 @@ def _get_data(
     temperature_file,
 ):
     if sample is not None:
-        with importlib.resources.files("eemeter.eemeter.samples").joinpath("metadata.json").open("rb") as f:
+        with importlib.resources.files("eemeter.eemeter.samples").joinpath(
+            "metadata.json"
+        ).open("rb") as f:
             metadata = json.loads(f.read().decode("utf-8"))
         if sample in metadata:
             click.echo("Loading sample: {}".format(sample))
-            meter_file = importlib.resources.files("eemeter.eemeter.samples").joinpath(metadata[sample]["meter_data_filename"])
-            temperature_file = importlib.resources.files("eemeter.eemeter.samples").joinpath(metadata[sample]["temperature_filename"])
+            meter_file = importlib.resources.files("eemeter.eemeter.samples").joinpath(
+                metadata[sample]["meter_data_filename"]
+            )
+            temperature_file = importlib.resources.files(
+                "eemeter.eemeter.samples"
+            ).joinpath(metadata[sample]["temperature_filename"])
         else:
             raise click.ClickException(
                 "Sample not found. Try one of these?\n{}".format(
