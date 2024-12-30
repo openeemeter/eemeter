@@ -157,6 +157,12 @@ def test_json_hourly():
 
     assert result1["predicted"].sum() == result2["predicted"].sum()
 
+    # Check that model metrics are properly serialized/serialized
+    assert (
+        baseline_model.model.totals_metrics["dec-jan-feb-weighted"].observed_length
+        == m.model.totals_metrics["dec-jan-feb-weighted"].observed_length
+    )
+
 
 def test_legacy_deserialization_daily():
     legacy_model_dict = {
