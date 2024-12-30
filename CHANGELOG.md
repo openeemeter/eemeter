@@ -4,7 +4,8 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Rename HourlyBaselineData.sufficiency_warnings -> HourlyBaselineData.warnings
+* Add disqualification field to HourlyBaselineData and HourlyReportingData
 
 4.0.7
 -----
