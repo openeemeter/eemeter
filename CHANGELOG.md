@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Fix serialization and deserialization of metrics.
 
 4.0.7
 -----
