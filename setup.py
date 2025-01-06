@@ -29,7 +29,7 @@ from shutil import rmtree
 
 from setuptools import find_packages, setup, Command
 
-NAME = "eemeter"
+NAME = "eemeter-test"
 REQUIRED = [
     "click",
     "pandas>=1.0.0",
