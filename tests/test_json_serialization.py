@@ -120,6 +120,21 @@ def test_json_billing():
     assert total_metered_savings == total_metered_savings_loaded
 
 
+def test_json_hourly_with_zeros():
+    meter_data, temperature_data, sample_metadata = load_sample(
+        "il-electricity-cdd-hdd-hourly"
+    )
+    meter_data["value"] = 0
+    baseline = HourlyBaselineData.from_series(
+        meter_data, temperature_data, is_electricity_data=True
+    )
+    assert baseline.df["observed"].isnull().all()
+    reporting = HourlyReportingData.from_series(
+        meter_data, temperature_data, is_electricity_data=True
+    )
+    assert reporting.df["observed"].isnull().all()
+
+
 def test_json_hourly():
     meter_data, temperature_data, sample_metadata = load_sample(
         "il-electricity-cdd-hdd-hourly"
@@ -218,4 +233,4 @@ def test_legacy_deserialization_hourly(request):
         metered_savings_dataframe["observed"] - metered_savings_dataframe["predicted"]
     ).sum()
 
-    assert round(total_metered_savings, 2) == -52893.66
+    assert round(total_metered_savings, 2) == -52454.02
