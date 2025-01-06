@@ -29,7 +29,7 @@ from shutil import rmtree
 
 from setuptools import find_packages, setup, Command
 
-NAME = "eemeter-test"
+NAME = "eemeter"
 REQUIRED = [
     "click",
     "pandas>=1.0.0",
@@ -89,7 +89,7 @@ class UploadCommand(Command):
 
 # Where the magic happens:
 setup(
-    name=NAME,
+    name="eemeter-test",
     version=about["__version__"],
     description=about["__description__"],
     long_description=long_description,
