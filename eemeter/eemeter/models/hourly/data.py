@@ -33,11 +33,13 @@ class HourlyReportingData:
             df["observed"] = np.nan
 
         if is_electricity_data:
-            df[df["observed"] == 0]["observed"] = np.nan
+            df.loc[df["observed"] == 0, "observed"] = np.nan
 
         df = self._correct_frequency(df)
 
         self.df = df
+        self.warnings = []
+        self.disqualification = []
 
     def _correct_frequency(self, df: pd.DataFrame):
         meter = df["observed"]
@@ -85,12 +87,13 @@ class HourlyReportingData:
 class HourlyBaselineData(HourlyReportingData):
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
         if is_electricity_data:
-            df[df["observed"] == 0]["observed"] = np.nan
+            df.loc[df["observed"] == 0, "observed"] = np.nan
 
         df = self._correct_frequency(df)
 
         self.df = df
-        self.sufficiency_warnings = self._check_data_sufficiency()
+        self.warnings = self._check_data_sufficiency()
+        self.disqualification = []
 
     def _check_data_sufficiency(self):
         meter = self.df["observed"].rename("meter_value")
