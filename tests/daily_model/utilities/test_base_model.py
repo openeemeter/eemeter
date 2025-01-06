@@ -125,7 +125,7 @@ def test_linear_fit():
     y = np.array([2, 4, 6, 8, 10])
     alpha = 0.95
     slope, intercept = linear_fit(x, y, alpha)
-    res = theilslopes(x, y, alpha=0.95)
+    res = theilslopes(y, x, alpha=0.95)
     assert slope == res[0]
     assert intercept == res[1]
 
@@ -137,7 +137,7 @@ def test_linear_fit():
     with pytest.raises(ValueError):
         res = linregress(x, y)
     assert slope == 0
-    assert intercept == 10
+    assert intercept == x[0]
 
 
 def test_get_smooth_coeffs():
