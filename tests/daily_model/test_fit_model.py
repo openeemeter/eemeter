@@ -28,7 +28,7 @@ class TestFitModel:
     @classmethod
     def setup_class(cls):
         # Create a sample meter data DataFrame from the test data
-        df = pd.read_csv("tests/daily_model/test_data.csv")
+        df = pd.read_csv("eemeter/tests/daily_model/test_data.csv")
         df.index = pd.to_datetime(df["datetime"])
         df = df[["temperature", "observed"]]
         cls.meter_data = DailyBaselineData(df, is_electricity_data=True)
