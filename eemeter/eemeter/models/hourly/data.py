@@ -38,6 +38,8 @@ class HourlyReportingData:
         df = self._correct_frequency(df)
 
         self.df = df
+        self.warnings = []
+        self.disqualification = []
 
     def _correct_frequency(self, df: pd.DataFrame):
         meter = df["observed"]
@@ -90,7 +92,8 @@ class HourlyBaselineData(HourlyReportingData):
         df = self._correct_frequency(df)
 
         self.df = df
-        self.sufficiency_warnings = self._check_data_sufficiency()
+        self.warnings = self._check_data_sufficiency()
+        self.disqualification = []
 
     def _check_data_sufficiency(self):
         meter = self.df["observed"].rename("meter_value")
