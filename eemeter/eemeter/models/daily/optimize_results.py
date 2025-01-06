@@ -170,7 +170,7 @@ def reduce_model(
     elif (hdd_beta != 0) and (cdd_beta == 0) and (pct_hdd_k == 0):
         coef_id = ["c_hdd_bp", "c_hdd_beta", "intercept"]
         if hdd_bp >= T_max_seg:
-            hdd_bp = T_max
+            hdd_bp = T_max_seg
 
         hdd_beta = -hdd_beta
         x = [hdd_bp, hdd_beta, intercept]
@@ -178,7 +178,7 @@ def reduce_model(
     elif (hdd_beta == 0) and (cdd_beta != 0) and (pct_cdd_k == 0):
         coef_id = ["c_hdd_bp", "c_hdd_beta", "intercept"]
         if cdd_bp <= T_min_seg:
-            cdd_bp = T_min
+            cdd_bp = T_min_seg
 
         x = [cdd_bp, cdd_beta, intercept]
 
