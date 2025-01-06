@@ -5,6 +5,7 @@ Development
 -----------
 
 * Fix bug where HourlyBaselineData and HourlyReportingData wasn't actually NaNning zero rows when `is_electricity=True`.
+* Constrain eemeter daily model balance points to T_min_seg and T_max_seg rather than T_min and T_max.
 
 4.0.7
 -----
