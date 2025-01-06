@@ -7,6 +7,9 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/eemeter-test
     permissions:
       id-token: write
     steps:
@@ -22,3 +25,5 @@ jobs:
         run: python -m build
       - name: Publish
         uses: pypa/gh-action-pypi-publish@v1.12.3
+        with:
+          repository-url: https://test.pypi.org/legacy/
