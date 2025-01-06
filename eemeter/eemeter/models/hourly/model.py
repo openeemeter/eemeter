@@ -168,9 +168,17 @@ class CalTRACKHourlyModelResults(object):
         d = data.get("avgs_metrics")
         if d:
             c.avgs_metrics = ModelMetrics.from_json(d)  # pragma: no cover
+            c.avgs_metrics = {
+                segment_name: ModelMetrics.from_json(seg_d)
+                for segment_name, seg_d in d.items()
+            }
         d = data.get("totals_metrics")
         if d:
-            c.totals_metrics = ModelMetrics.from_json(d)
+            c.totals_metrics = ModelMetrics.from_json(d)  # pragma: no cover
+            c.totals_metrics = {
+                segment_name: ModelMetrics.from_json(seg_d)
+                for segment_name, seg_d in d.items()
+            }
         return c
 
     def predict(self, prediction_index, temperature_data, **kwargs):

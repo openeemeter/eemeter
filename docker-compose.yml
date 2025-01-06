@@ -2,6 +2,7 @@ version: '3'
 services:
   shell:
     build: .
+    platform: linux/amd64
     image: eemeter_shell
     stdin_open: true
     tty: true
