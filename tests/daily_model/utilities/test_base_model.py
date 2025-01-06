@@ -17,6 +17,7 @@
    limitations under the License.
 
 """
+
 import numpy as np
 import pytest
 from scipy.stats import linregress, theilslopes
@@ -127,6 +128,16 @@ def test_linear_fit():
     res = theilslopes(x, y, alpha=0.95)
     assert slope == res[0]
     assert intercept == res[1]
+
+    # Test case 3: Test with alpha = 2 and identical observations
+    x = np.array([10, 10, 10, 10, 10])
+    y = np.array([2, 4, 6, 8, 10])
+    alpha = 2
+    slope, intercept = linear_fit(x, y, alpha)
+    with pytest.raises(ValueError):
+        res = linregress(x, y)
+    assert slope == 0
+    assert intercept == 10
 
 
 def test_get_smooth_coeffs():
