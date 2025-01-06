@@ -143,9 +143,9 @@ def get_full_model_x(model_key, x, T_min, T_max, T_min_seg, T_max_seg):
         [c_hdd_bp, c_hdd_beta, intercept] = x
 
         if c_hdd_bp < T_min_seg:
-            cdd_bp = hdd_bp = T_min
+            cdd_bp = hdd_bp = T_min_seg
         elif c_hdd_bp > T_max_seg:
-            cdd_bp = hdd_bp = T_max
+            cdd_bp = hdd_bp = T_max_seg
         else:
             hdd_bp = cdd_bp = c_hdd_bp
 

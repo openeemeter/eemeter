@@ -33,7 +33,7 @@ class HourlyReportingData:
             df["observed"] = np.nan
 
         if is_electricity_data:
-            df[df["observed"] == 0]["observed"] = np.nan
+            df.loc[df["observed"] == 0, "observed"] = np.nan
 
         df = self._correct_frequency(df)
 
@@ -87,7 +87,7 @@ class HourlyReportingData:
 class HourlyBaselineData(HourlyReportingData):
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
         if is_electricity_data:
-            df[df["observed"] == 0]["observed"] = np.nan
+            df.loc[df["observed"] == 0, "observed"] = np.nan
 
         df = self._correct_frequency(df)
 
