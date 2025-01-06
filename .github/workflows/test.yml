@@ -1,0 +1,24 @@
+name: Test
+
+on: [pull_request] #tmp for testing w/o merge
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.10", "3.11", "3.12"]
+        # macos-13 is x86_64, macos-14/macos-latest is ARM
+        os: [ubuntu-latest, windows-latest, macos-13, macos-14]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python }} on ${{ matrix.os }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install tox
+        run: pip install tox
+      - name: Run tox
+        run: tox -e `echo py${{ matrix.python }} | tr -d "."` # remove dot to correspond with tox env

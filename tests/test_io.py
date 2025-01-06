@@ -20,6 +20,7 @@
 import gzip
 from tempfile import TemporaryFile
 import importlib.resources
+import platform
 
 import pandas as pd
 import pytest
@@ -200,7 +201,10 @@ def test_meter_data_to_csv(sample_metadata):
     with TemporaryFile("w+") as f:
         meter_data_to_csv(df, f)
         f.seek(0)
-        assert f.read() == ("start,value\n" "2017-01-01 00:00:00+00:00,5\n")
+        if platform.system() == "Windows":
+            assert f.read() == ("start,value\n\n" "2017-01-01 00:00:00+00:00,5\n\n")
+        else:
+            assert f.read() == ("start,value\n" "2017-01-01 00:00:00+00:00,5\n")
 
 
 def test_temperature_data_from_csv(sample_metadata):
@@ -289,4 +293,7 @@ def test_temperature_data_to_csv(sample_metadata):
     with TemporaryFile("w+") as f:
         temperature_data_to_csv(series, f)
         f.seek(0)
-        assert f.read() == ("dt,temperature\n" "2017-01-01 00:00:00+00:00,10\n")
+        if platform.system() == "Windows":
+            assert f.read() == ("dt,temperature\n\n" "2017-01-01 00:00:00+00:00,10\n\n")
+        else:
+            assert f.read() == ("dt,temperature\n" "2017-01-01 00:00:00+00:00,10\n")
