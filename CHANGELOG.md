@@ -4,6 +4,7 @@ Changelog
 Development
 -----------
 
+* Fix serialization and deserialization of metrics.
 * Rename HourlyBaselineData.sufficiency_warnings -> HourlyBaselineData.warnings
 * Add disqualification field to HourlyBaselineData and HourlyReportingData
 * Fix bug where HourlyBaselineData and HourlyReportingData wasn't actually NaNning zero rows when `is_electricity=True`.
