@@ -4,6 +4,7 @@ Changelog
 Development
 -----------
 
+* Handle ambiguous and nonexistent local times when creating billing dataclass 
 * Fix serialization and deserialization of metrics.
 * Rename HourlyBaselineData.sufficiency_warnings -> HourlyBaselineData.warnings
 * Add disqualification field to HourlyBaselineData and HourlyReportingData
