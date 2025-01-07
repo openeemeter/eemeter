@@ -1044,7 +1044,7 @@ def test_format_energy_data_for_caltrack_billing(il_electricity_cdd_hdd_daily):
 
     assert isinstance(df_reformatted, pd.DataFrame)
     assert df_reformatted.index[0] < df_reformatted.index[-1]
-    assert df_reformatted.index.freq == "ME"
+    assert df_reformatted.index.freq == pd.tseries.offsets.MonthEnd()
     assert df_reformatted.columns[0] == "value"
     assert df_reformatted.index.tzinfo is not None
     assert len(df_reformatted.columns) == 1
