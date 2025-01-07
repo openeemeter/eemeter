@@ -85,7 +85,7 @@ def linear_fit(x, y, alpha):
         slope = res.slope
         intercept = res.intercept
     else:
-        slope, intercept, _, _ = theilslopes(x, y, alpha=0.95)
+        slope, intercept, _, _ = theilslopes(y, x, alpha=0.95)
 
     return slope, intercept
 
