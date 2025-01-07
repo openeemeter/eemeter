@@ -5,7 +5,14 @@ Development
 -----------
 
 * Bump to latest packages and remove all deprecation/future warnings as of 2024-12-20.
+* Allow identical observations to not raise exception for daily model in `linear_fit`.
+* Handle ambiguous and nonexistent local times when creating billing dataclass 
+* Fix serialization and deserialization of hourly CalTRACK metrics.
+* Rename HourlyBaselineData.sufficiency_warnings -> HourlyBaselineData.warnings
+* Add disqualification field to HourlyBaselineData and HourlyReportingData
 * Fix bug where HourlyBaselineData and HourlyReportingData wasn't actually NaNning zero rows when `is_electricity=True`.
+* Constrain eemeter daily model balance points to T_min_seg and T_max_seg rather than T_min and T_max.
+* Fix bug in `linear_fit` due to SciPy's `theilslopes(y, x)` not following the same order as `linregress(x, y)`
 
 4.0.7
 -----
