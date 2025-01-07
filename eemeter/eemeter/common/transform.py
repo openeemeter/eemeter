@@ -21,6 +21,7 @@ from datetime import timedelta
 
 import numpy as np
 import pandas as pd
+from pandas.tseries.offsets import MonthEnd
 import pytz
 
 from .exceptions import NoBaselineDataError, NoReportingDataError
@@ -951,7 +952,7 @@ def format_energy_data_for_caltrack(*args, method="hourly", tz="UTC"):
     elif method == "daily":
         freq = "D"
     elif method == "billing":
-        freq = "ME"
+        freq = MonthEnd()  # "M"/"ME" depending on pandas version
     else:
         raise ValueError("'method' must be either 'hourly', 'daily' or 'billing'.")
 
