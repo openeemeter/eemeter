@@ -438,7 +438,7 @@ class HourlySufficiencyCriteria(SufficiencyCriteria):
     def _check_hourly_consecutive_temperature_data(self):
         # TODO : Check implementation wrt Caltrack 2.2.4.1
         # Resample to hourly by taking the first non NaN value
-        hourly_data = self.data["temperature"].resample("H").first()
+        hourly_data = self.data["temperature"].resample("h").first()
         mask = hourly_data.isna().any(axis=1)
         grouped = mask.groupby((mask != mask.shift()).cumsum())
         max_consecutive_nans = grouped.sum().max()

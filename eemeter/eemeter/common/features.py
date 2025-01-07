@@ -139,7 +139,7 @@ def compute_time_features(index, hour_of_week=True, day_of_week=True, hour_of_da
         - day_of_week : Label for day of week, 0-6, 0 is Monday.
         - hour_of_day : Label for hour of day, 0-23, 0 is 12-1am.
     """
-    if index.freq != "H":
+    if index.freq != "h":
         raise ValueError(
             "index must have hourly frequency (freq='H')."
             " Found: {}".format(index.freq)
@@ -382,7 +382,7 @@ def compute_temperature_features(
     data : :any:`pandas.DataFrame`
         A dataset with the specified parameters.
     """
-    if temperature_data.index.freq != "H":
+    if temperature_data.index.freq != "h":
         raise ValueError(
             "temperature_data.index must have hourly frequency (freq='H')."
             " Found: {}".format(temperature_data.index.freq)
@@ -394,7 +394,7 @@ def compute_temperature_features(
             " temperature_data.tz_localize(...)."
         )
 
-    if meter_data_index.freq is None and meter_data_index.inferred_freq == "H":
+    if meter_data_index.freq is None and meter_data_index.inferred_freq == "h":
         raise ValueError(
             "If you have hourly data explicitly set the frequency"
             " of the dataframe by setting"
@@ -434,7 +434,7 @@ def compute_temperature_features(
         if degree_day_method == "hourly":
             pass
         elif degree_day_method == "daily":
-            if meter_data_index.freq == "H":
+            if meter_data_index.freq == "h":
                 raise ValueError(
                     "degree_day_method='daily' must be used with"
                     " daily meter data. Found: 'hourly'".format(degree_day_method)
@@ -442,7 +442,7 @@ def compute_temperature_features(
         else:
             raise ValueError("method not supported: {}".format(degree_day_method))
 
-    if freq_timedelta == pd.Timedelta("1H"):
+    if freq_timedelta == pd.Timedelta("1h"):
         # special fast route for hourly data.
         df = temperature_data.to_frame("temperature_mean").reindex(meter_data_index)
 
@@ -571,7 +571,9 @@ def _estimate_hour_of_week_occupancy(model_data, threshold):
         return int(ratio_positive_residuals > threshold)
 
     return (
-        model_data_with_residuals.groupby(["hour_of_week"], observed=False)
+        model_data_with_residuals.groupby(["hour_of_week"], observed=False)[
+            ["residuals"]
+        ]
         .apply(_is_high_usage)
         .rename("occupancy")
         .reindex(index)
@@ -742,7 +744,7 @@ def fit_temperature_bins(
         unoccupied_segmented_bins = {}
         segmented_datasets = iterate_segmented_dataset(data, segmentation)
         for segment_name, segmented_data in segmented_datasets:
-            hourly_segmented_data = segmented_data.resample("H").mean(numeric_only=True)
+            hourly_segmented_data = segmented_data.resample("h").mean(numeric_only=True)
             time_features = compute_time_features(
                 hourly_segmented_data.index,
                 hour_of_week=True,
