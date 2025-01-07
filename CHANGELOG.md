@@ -4,6 +4,7 @@ Changelog
 Development
 -----------
 
+* Add github action to publish to pypi
 * Allow identical observations to not raise exception for daily model in `linear_fit`.
 * Handle ambiguous and nonexistent local times when creating billing dataclass 
 * Fix serialization and deserialization of metrics.
@@ -20,14 +21,12 @@ Development
 4.0.6
 -----
 
-
 * Update docs.
 * Update typehints on core daily and utility functions.
 * Minor change to loading test data to ensure the reporting period is a year ahead of the baseline period.
 
 4.0.5
 -----
-
 
 * Flip slope when deserializing legacy hdd_only models
 
