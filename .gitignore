@@ -11,7 +11,7 @@ venv/
 .ipynb_checkpoints/
 
 .*
-!.github/*
+!.github/
 !.travis.yml
 !.coveragerc
 !.gitignore
