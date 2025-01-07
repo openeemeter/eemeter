@@ -60,9 +60,10 @@ def fit_hdd_tidd_cdd(
         x0 = _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings, smooth)
 
     max_slope = np.max([x0.hdd_beta, x0.cdd_beta])
-    max_slope += 10 ** (
-        np.log10(np.abs(max_slope)) + np.log10(settings.maximum_slope_OoM_scaler)
-    )
+    if max_slope != 0:
+        max_slope += 10 ** (
+            np.log10(np.abs(max_slope)) + np.log10(settings.maximum_slope_OoM_scaler)
+        )
 
     if initial_fit:
         T_min = np.min(T)

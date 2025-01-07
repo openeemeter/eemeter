@@ -4,6 +4,7 @@ Changelog
 Development
 -----------
 
+* Bump to latest packages and remove all deprecation/future warnings as of 2024-12-20.
 * Allow identical observations to not raise exception for daily model in `linear_fit`.
 * Handle ambiguous and nonexistent local times when creating billing dataclass 
 * Fix serialization and deserialization of hourly CalTRACK metrics.
