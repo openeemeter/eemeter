@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+4.0.8
+-----
+
 * Add github action to publish to pypi
 * Bump to latest packages and remove all deprecation/future warnings as of 2024-12-20.
 * Allow identical observations to not raise exception for daily model in `linear_fit`.
