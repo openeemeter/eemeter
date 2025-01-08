@@ -21,4 +21,4 @@ jobs:
       - name: Install tox
         run: pip install tox
       - name: Run tox
-        run: tox -e `echo py${{ matrix.python }} | tr -d "."` # remove dot to correspond with tox env
+        run: tox -e ${{ matrix.python }}
