@@ -15,8 +15,6 @@ on:
 
 jobs:
   build:
-    environment:
-      name: staging
     strategy:
       fail-fast: false
       matrix:
