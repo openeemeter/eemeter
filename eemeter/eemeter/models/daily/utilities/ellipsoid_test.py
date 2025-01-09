@@ -115,7 +115,7 @@ def confidence_ellipse(x, y, var=np.ones([2, 2]) * 1.96):
     return mu, cov, a, b, phi
 
 
-def robust_confidence_ellipse(x, y, var=np.ones([2, 2]) * 1.96, outlier_std=3, N=2):
+def robust_confidence_ellipse(x, y, var=np.ones([2, 2]) * 1.96, outlier_std=3, N=3):
     """
     Computes a robust confidence ellipse for a set of points.
 
@@ -124,7 +124,7 @@ def robust_confidence_ellipse(x, y, var=np.ones([2, 2]) * 1.96, outlier_std=3, N
     y (numpy.ndarray): Array of y-coordinates of the points.
     var (numpy.ndarray): Variance-covariance matrix. Default is a 2x2 matrix with 1.96 in the diagonal.
     outlier_std (float): Standard deviation for outlier detection. Default is 3.
-    N (int): Number of iterations for outlier removal. Default is 2.
+    N (int): Number of iterations for outlier removal. Default is 3.
 
     Returns:
     list: A list containing the mean, covariance matrix, major and minor axis lengths, and rotation angle of the ellipse.
@@ -156,7 +156,12 @@ def robust_confidence_ellipse(x, y, var=np.ones([2, 2]) * 1.96, outlier_std=3, N
 
         idx = np.argwhere(r <= 1).flatten()  # non-outlier points
 
-        if len(x) - 3 <= len(idx):
+        # if all outliers, break
+        if len(idx) < 3:
+            break
+
+        # if no outliers, break
+        if len(idx) == len(x):
             break
 
         x = x[idx]
