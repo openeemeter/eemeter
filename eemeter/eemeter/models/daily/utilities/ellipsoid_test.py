@@ -213,7 +213,7 @@ def ellipsoid_split_filter(meter, n_std=[1.4, 1.4]):
             if (len(T) < 3) or (len(obs) < 3):
                 mu = cov = a = b = phi = None
             else:
-                mu, cov, a, b, phi = robust_confidence_ellipse(T, obs, var)
+                mu, cov, a, b, phi = robust_confidence_ellipse(T, obs, var, outlier_std=3.6, N=3)
                 # mu, cov, a, b, phi = confidence_ellipse(T, obs, std_sqr)
 
             cluster_ellipse[key] = {"mu": mu, "cov": cov, "a": a, "b": b, "phi": phi}
