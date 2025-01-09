@@ -640,8 +640,14 @@ def test_billing_reporting_data_with_missing_daily_frequencies(get_datetime_inde
 def test_dst_handling():
     # 2020-03-08 02:00 is nonexistent, should push to 03:00
     tz = "America/New_York"
-    idx = DatetimeIndex([Timestamp("2020-03-07 02", tz=tz), Timestamp("2020-04-06 02", tz=tz), Timestamp("2020-05-06 02", tz=tz)])
-    df = DataFrame({"observed": [1]*3, "temperature": [50]*3}, index=idx)
+    idx = DatetimeIndex(
+        [
+            Timestamp("2020-03-07 02", tz=tz),
+            Timestamp("2020-04-06 02", tz=tz),
+            Timestamp("2020-05-06 02", tz=tz),
+        ]
+    )
+    df = DataFrame({"observed": [1] * 3, "temperature": [50] * 3}, index=idx)
     baseline = BillingBaselineData(df, is_electricity_data=True)
     assert len(baseline.df) == 61
     hours = np.unique(baseline.df.index.hour)
@@ -649,7 +655,13 @@ def test_dst_handling():
 
     # 2020-11-01 01:00 is ambiguous, single index should be chosen
     tz = "America/New_York"
-    idx = DatetimeIndex([Timestamp("2020-10-31 01", tz=tz), Timestamp("2020-11-28 01", tz=tz), Timestamp("2020-12-28 01", tz=tz)])
-    df = DataFrame({"observed": [1]*3, "temperature": [50]*3}, index=idx)
+    idx = DatetimeIndex(
+        [
+            Timestamp("2020-10-31 01", tz=tz),
+            Timestamp("2020-11-28 01", tz=tz),
+            Timestamp("2020-12-28 01", tz=tz),
+        ]
+    )
+    df = DataFrame({"observed": [1] * 3, "temperature": [50] * 3}, index=idx)
     baseline = BillingBaselineData(df, is_electricity_data=True)
     assert (baseline.df.index.hour == 1).all()
