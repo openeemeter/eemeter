@@ -1,9 +1,22 @@
 name: Test
 
-on: [pull_request] #tmp for testing w/o merge
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+  schedule:
+    # run monthly to monitor dependency updates
+    - cron: "0 0 1 * *"
 
 jobs:
   build:
+    environment:
+      name: staging
     strategy:
       fail-fast: false
       matrix:
