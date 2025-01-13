@@ -41,11 +41,12 @@ REQUIRED = [
     "attrs",
     "requests",
     "pyarrow",    # why?
-    "numpy>=1.24.4,<2",    # why less than 2?
+    "numpy>=1.24.4",
     "scikit-learn>=1.3.0",
-    "mkl-devel",  # needed for fdasrsf to work: https://github.com/jdtuck/fdasrsf_python/issues/41
+    # "mkl-devel",  # needed for fdasrsf to work: https://github.com/jdtuck/fdasrsf_python/issues/41
     "fdasrsf>=2.4.1", # not sure if necessary anymore
     "scikit-fda",
+    "PyWavelets",
 ]
 
 here = os.path.abspath(os.path.dirname(__file__))
