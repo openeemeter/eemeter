@@ -45,9 +45,9 @@ from eemeter.eemeter.models.daily.parameters import (
     DailySubmodelParameters,
 )
 from eemeter.eemeter.models.daily.utilities.base_model import get_smooth_coeffs
-from eemeter.eemeter.models.daily.utilities.config import (
-    caltrack_legacy_settings,
-    default_settings,
+from eemeter.eemeter.models.daily.utilities.settings import (
+    DailySettings,
+    DailyLegacySettings,
     update_daily_settings,
 )
 from eemeter.eemeter.models.daily.utilities.ellipsoid_test import ellipsoid_split_filter
@@ -97,9 +97,9 @@ class DailyModel:
             settings = {}
 
         if model.replace(" ", "").replace("_", ".").lower() in ["current", "default"]:
-            self.settings = default_settings(**settings)
+            self.settings = DailySettings(**settings)
         elif model.replace(" ", "").replace("_", ".").lower() in ["legacy"]:
-            self.settings = caltrack_legacy_settings(**settings)
+            self.settings = DailyLegacySettings(**settings)
         else:
             raise Exception(
                 "Invalid 'settings' choice: must be 'current', 'default', or 'legacy'"
@@ -115,14 +115,16 @@ class DailyModel:
         ]
         self.day_options = [["wd", "we"]]
 
-        n_week = list(range(len(self.settings.is_weekday)))
+        # make dictionary is_weekday from settings
+        day_dict = self.settings.WEEKDAY_WEEKEND._NUM_DICT
+        n_week = list(range(len(day_dict)))
         self.combo_dictionary = {
             "su": "summer",
             "sh": "shoulder",
             "wi": "winter",
             "fw": [n + 1 for n in n_week],
-            "wd": [n + 1 for n in n_week if self.settings.is_weekday[n + 1]],
-            "we": [n + 1 for n in n_week if not self.settings.is_weekday[n + 1]],
+            "wd": [n + 1 for n in n_week if day_dict[n+1] == "weekday"],
+            "we": [n + 1 for n in n_week if day_dict[n+1] == "weekend"],
         }
         self.verbose = verbose
 
@@ -159,11 +161,11 @@ class DailyModel:
         self.warnings = baseline_data.warnings
         self.disqualification = baseline_data.disqualification
         self._fit(baseline_data.df)
-        if self.error["CVRMSE"] > self.settings.cvrmse_threshold:
+        if self.error["CVRMSE"] > self.settings.CVRMSE_THRESHOLD:
             cvrmse_warning = EEMeterWarning(
                 qualified_name="eemeter.model_fit_metrics.cvrmse",
                 description=(
-                    f"Fit model has CVRMSE > {self.settings.cvrmse_threshold}"
+                    f"Fit model has CVRMSE > {self.settings.CVRMSE_THRESHOLD}"
                 ),
                 data={"CVRMSE": self.error["CVRMSE"]},
             )
@@ -437,7 +439,7 @@ class DailyModel:
             )
         params = DailyModelParameters(
             submodels=submodels,
-            settings=self.settings.to_dict(),
+            settings=self.settings.model_dump(),
             info={
                 "error": self.error,
                 "baseline_timezone": str(self.baseline_timezone),
@@ -487,7 +489,7 @@ class DailyModel:
                 meter_data.drop([col], axis=1, inplace=True)
                 cols.remove(col)
 
-        meter_data["season"] = meter_data.index.month.map(self.settings.season)
+        meter_data["season"] = meter_data.index.month.map(self.settings.SEASON._NUM_DICT)
         meter_data["day_of_week"] = meter_data.index.dayofweek + 1
         meter_data = meter_data.sort_index()
         meter_data = meter_data[["season", "day_of_week", *cols]]
@@ -629,14 +631,14 @@ class DailyModel:
             """
 
             meter = self.df_meter
-            allow_sep_summer = settings.allow_separate_summer
-            allow_sep_shoulder = settings.allow_separate_shoulder
-            allow_sep_winter = settings.allow_separate_winter
-            allow_sep_weekday_weekend = settings.allow_separate_weekday_weekend
+            allow_sep_summer = settings.SPLIT_SELECTION.ALLOW_SEPARATE_SUMMER
+            allow_sep_shoulder = settings.SPLIT_SELECTION.ALLOW_SEPARATE_SHOULDER
+            allow_sep_winter = settings.SPLIT_SELECTION.ALLOW_SEPARATE_WINTER
+            allow_sep_weekday_weekend = settings.SPLIT_SELECTION.ALLOW_SEPARATE_WEEKDAY_WEEKEND
 
-            if settings.reduce_splits_by_gaussian:
+            if settings.SPLIT_SELECTION.REDUCE_SPLITS_BY_GAUSSIAN:
                 allow_split = ellipsoid_split_filter(
-                    self.df_meter, n_std=settings.reduce_splits_num_std
+                    self.df_meter, n_std=settings.SPLIT_SELECTION.REDUCE_SPLITS_NUM_STD
                 )
 
                 if allow_sep_summer and not allow_split["summer"]:
@@ -778,11 +780,12 @@ class DailyModel:
             dict: A dictionary containing the fitted components.
         """
 
-        if self.settings.alpha_final_type == "last":
+        if self.settings.ALPHA_FINAL_TYPE == "last":
             settings_update = {
-                "developer_mode": True,
-                "alpha_final_type": None,
-                "final_bounds_scalar": None,
+                "DEVELOPER_MODE": True,
+                "SILENT_DEVELOPER_MODE": True, 
+                "ALPHA_FINAL_TYPE": None,
+                "FINAL_BOUNDS_SCALAR": None,
             }
 
             self.component_settings = update_daily_settings(
@@ -828,9 +831,9 @@ class DailyModel:
 
         loss = wRMSE / self.wRMSE_base
 
-        criteria_type = self.settings.split_selection_criteria.lower()
-        penalty_multiplier = self.settings.split_selection_penalty_multiplier
-        penalty_power = self.settings.split_selection_penalty_power
+        criteria_type = self.settings.SPLIT_SELECTION.CRITERIA.lower()
+        penalty_multiplier = self.settings.SPLIT_SELECTION.PENALTY_MULTIPLIER
+        penalty_power = self.settings.SPLIT_SELECTION.PENALTY_POWER
 
         criteria = selection_criteria(
             loss, TSS, N, num_coeffs, criteria_type, penalty_multiplier, penalty_power
@@ -881,14 +884,18 @@ class DailyModel:
             settings = self.settings
             prior_model = self.fit_components[component]
 
-            if settings.alpha_final_type is None:
+            if settings.ALPHA_FINAL_TYPE is None:
                 if self.verbose:
                     print(f"{component}__{prior_model.model_name}")
 
                 model[component] = prior_model
                 continue
 
-            settings_update = {"developer_mode": True, "regularization_alpha": 0.0}
+            settings_update = {
+                "DEVELOPER_MODE": True, 
+                "SILENT_DEVELOPER_MODE": True, 
+                "REGULARIZATION_ALPHA": 0.0
+            }
             settings = update_daily_settings(self.settings, settings_update)
 
             # separate meter appropriately

@@ -128,7 +128,7 @@ def obj_fcn_decorator(
     """
 
     N = np.shape(obs)[0]
-    N_min = settings.segment_minimum_count  # N minimum for a sloped segment
+    N_min = settings.SEGMENT_MINIMUM_COUNT  # N minimum for a sloped segment
     sigma = 2.698  # 1.5 IQR
     quantile = 0.25
     min_weight = 0.00
@@ -138,10 +138,10 @@ def obj_fcn_decorator(
 
     model_fcn = model_fcn_dec(model_fcn_full, T_fit_bnds, T)
 
-    lasso_a = settings.regularization_percent_lasso * settings.regularization_alpha
+    lasso_a = settings.REGULARIZATION_PERCENT_LASSO * settings.REGULARIZATION_ALPHA
     ridge_a = (
-        1 - settings.regularization_percent_lasso
-    ) * settings.regularization_alpha
+        1 - settings.REGULARIZATION_PERCENT_LASSO
+    ) * settings.REGULARIZATION_ALPHA
 
     idx_k = get_idx(["dd_k"], coef_id)
     idx_beta = get_idx(["dd_beta"], coef_id)
@@ -319,7 +319,7 @@ def obj_fcn_decorator(
         wSSE = np.sum(weight * resid**2)
         loss = wSSE / N
 
-        if settings.regularization_alpha != 0:
+        if settings.REGULARIZATION_ALPHA != 0:
             loss += elastic_net_penalty(
                 X, T_sorted, obs_sorted, weight_sorted, np.sqrt(loss)
             )
@@ -328,7 +328,7 @@ def obj_fcn_decorator(
             return loss
 
         else:
-            if ("r_squared" in settings.split_selection_criteria) and callable(TSS_fcn):
+            if ("r_squared" in settings.SPLIT_SELECTION.CRITERIA) and callable(TSS_fcn):
                 TSS = TSS_fcn(*X, T_sorted, obs_sorted)
             else:
                 TSS = wSSE
