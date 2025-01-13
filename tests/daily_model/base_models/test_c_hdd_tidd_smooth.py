@@ -22,7 +22,7 @@ from eemeter.eemeter.models.daily.parameters import ModelCoefficients
 from eemeter.eemeter.models.daily.parameters import ModelType
 from eemeter.eemeter.models.daily.utilities.config import DailySettings as Settings
 from eemeter.eemeter.models.daily.base_models.c_hdd_tidd import fit_c_hdd_tidd
-from eemeter.eemeter.models.daily.fit_base_models import _get_opt_options
+from eemeter.eemeter.models.daily.fit_base_models import _get_opt_settings
 
 
 def test_fit_c_hdd_tidd_smooth():
@@ -30,13 +30,13 @@ def test_fit_c_hdd_tidd_smooth():
     T = np.array([10, 20, 30, 40, 50, 60, 70, 80, 90, 100]).astype(float)
     obs = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).astype(float)
     settings = Settings(
-        developer_mode=True,
+        DEVELOPER_MODE=True,
         alpha_selection=0.1,
         alpha_final=0.2,
         segment_minimum_count=5,
         maximum_slope_OoM_scaler=1,
     )
-    opt_options = _get_opt_options(settings)
+    opt_options = _get_opt_settings(settings)
     x0 = ModelCoefficients(
         model_type=ModelType.HDD_TIDD_SMOOTH,
         intercept=0.0,
@@ -57,13 +57,13 @@ def test_fit_c_hdd_tidd_smooth():
     T = np.array([10, 20, 30, 40, 50, 60, 70, 80, 90, 100]).astype(float)
     obs = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).astype(float)
     settings = Settings(
-        developer_mode=True,
+        DEVELOPER_MODE=True,
         alpha_selection=0.1,
         alpha_final=0.2,
         segment_minimum_count=5,
         maximum_slope_OoM_scaler=1,
     )
-    opt_options = _get_opt_options(settings)
+    opt_options = _get_opt_settings(settings)
     x0 = ModelCoefficients(
         model_type=ModelType.HDD_TIDD_SMOOTH,
         intercept=0.0,
@@ -84,13 +84,13 @@ def test_fit_c_hdd_tidd_smooth():
     T = np.array([10, 20, 30, 40, 50, 60, 70, 80, 90, 100]).astype(float)
     obs = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]).astype(float)
     settings = Settings(
-        developer_mode=True,
+        DEVELOPER_MODE=True,
         alpha_selection=0.1,
         alpha_final=0.2,
         segment_minimum_count=5,
         maximum_slope_OoM_scaler=1,
     )
-    opt_options = _get_opt_options(settings)
+    opt_options = _get_opt_settings(settings)
     x0 = None
     bnds = None
     initial_fit = True

@@ -391,7 +391,7 @@ class DailySettings:
 
     """
 
-    developer_mode: bool = attrs.field(
+    DEVELOPER_MODE: bool = attrs.field(
         validator=simple_validation(
             lambda x: isinstance(x, bool),
         ),
@@ -399,7 +399,7 @@ class DailySettings:
         default=False,
     )
 
-    algorithm_choice: str = attrs.field(
+    ALGORITHM_CHOICE: str = attrs.field(
         converter=lambda x: x.lower() if isinstance(x, str) else x,
         validator=developer_mode_validation(algorithm_choice_validator),
         metadata={_KEY_DESCR: "optimization algorithm choice"},
@@ -407,7 +407,7 @@ class DailySettings:
         default=AlgorithmChoice.NLOPT_SBPLX.lower(),
     )
 
-    initial_guess_algorithm_choice: str = attrs.field(
+    INITIAL_GUESS_ALGORITHM_CHOICE: str = attrs.field(
         converter=lambda x: x.lower() if isinstance(x, str) else x,
         validator=developer_mode_validation(algorithm_choice_validator),
         metadata={_KEY_DESCR: "initial guess optimization algorithm choice"},
@@ -415,7 +415,7 @@ class DailySettings:
         default=AlgorithmChoice.NLOPT_DIRECT.lower(),  # AlgorithmChoice.NLOPT_STOGO
     )
 
-    full_model: str = attrs.field(
+    FULL_MODEL: str = attrs.field(
         converter=lambda x: x.lower() if isinstance(x, str) else x,
         validator=developer_mode_validation(full_model_validator),
         metadata={_KEY_DESCR: "the largest model allowed"},
@@ -423,7 +423,7 @@ class DailySettings:
         default=FullModelSelection.HDD_TIDD_CDD,
     )
 
-    smoothed_model: bool = attrs.field(
+    SMOOTHED_MODEL: bool = attrs.field(
         validator=simple_validation(
             lambda x: isinstance(x, bool),
             dev_setting=True,
@@ -433,7 +433,7 @@ class DailySettings:
         default=True,
     )
 
-    allow_separate_summer: bool = attrs.field(
+    ALLOW_SEPARATE_SUMMER: bool = attrs.field(
         validator=simple_validation(
             lambda x: isinstance(x, bool),
             dev_setting=True,
@@ -443,7 +443,7 @@ class DailySettings:
         default=True,
     )
 
-    allow_separate_shoulder: bool = attrs.field(
+    ALLOW_SEPARATE_SHOULDER: bool = attrs.field(
         validator=simple_validation(
             lambda x: isinstance(x, bool),
             dev_setting=True,
@@ -453,7 +453,7 @@ class DailySettings:
         default=True,
     )
 
-    allow_separate_winter: bool = attrs.field(
+    ALLOW_SEPARATE_WINTER: bool = attrs.field(
         validator=simple_validation(
             lambda x: isinstance(x, bool),
             dev_setting=True,
@@ -463,7 +463,7 @@ class DailySettings:
         default=True,
     )
 
-    allow_separate_weekday_weekend: bool = attrs.field(
+    ALLOW_SEPARATE_WEEKDAY_WEEKEND: bool = attrs.field(
         validator=simple_validation(
             lambda x: isinstance(x, bool),
             dev_setting=True,
@@ -473,7 +473,7 @@ class DailySettings:
         default=True,
     )
 
-    reduce_splits_by_gaussian: bool = attrs.field(
+    REDUCE_SPLITS_BY_GAUSSIAN: bool = attrs.field(
         validator=simple_validation(
             lambda x: isinstance(x, bool),
             dev_setting=True,
@@ -486,7 +486,7 @@ class DailySettings:
     )
 
     # TODO: Fix the conversion and validator
-    reduce_splits_num_std: list[float] = attrs.field(
+    REDUCE_SPLITS_NUM_STD: list[float] = attrs.field(
         # converter=lambda x: float(x) if isinstance(x, int) else x,
         # validator=simple_validation(
         #     lambda x: isinstance(x, float) and (0 < x), "must be 0 < float"
@@ -497,7 +497,7 @@ class DailySettings:
         default=[1.4, 0.89],
     )
 
-    alpha_minimum: float = attrs.field(
+    ALPHA_MINIMUM: float = attrs.field(
         converter=lambda x: float(x) if isinstance(x, int) else x,
         validator=simple_validation(
             lambda x: isinstance(x, float) and (x <= -10),
@@ -511,7 +511,7 @@ class DailySettings:
         default=-100,
     )
 
-    alpha_selection: float = attrs.field(
+    ALPHA_SELECTION: float = attrs.field(
         converter=lambda x: float(x) if isinstance(x, int) else x,
         validator=simple_validation(
             lambda x: isinstance(x, float) and (-10 <= x) and (x <= 2),
@@ -525,7 +525,7 @@ class DailySettings:
         default=2,
     )
 
-    alpha_final_type: str = attrs.field(
+    ALPHA_FINAL_TYPE: str = attrs.field(
         converter=lambda x: x.lower() if isinstance(x, str) else x,
         validator=developer_mode_validation(
             attrs.validators.in_(get_pub_class_attrib_values(AlphaFinalType))
@@ -537,7 +537,7 @@ class DailySettings:
         default="last",
     )
 
-    alpha_final: float | str | None = attrs.field(
+    ALPHA_FINAL: float | str | None = attrs.field(
         converter=lambda x: float(x) if isinstance(x, int) else x,
         validator=developer_mode_validation(alpha_final_validator),
         metadata={
@@ -547,7 +547,7 @@ class DailySettings:
         default="adaptive",
     )
 
-    final_bounds_scalar: float | None = attrs.field(
+    FINAL_BOUNDS_SCALAR: float | None = attrs.field(
         converter=lambda x: float(x) if isinstance(x, int) else x,
         validator=developer_mode_validation(final_bounds_scalar_validator),
         metadata={_KEY_DESCR: "scalar for calculating bounds of 'alpha_final'"},
@@ -555,7 +555,7 @@ class DailySettings:
         default=1,
     )
 
-    regularization_alpha: float = attrs.field(
+    REGULARIZATION_ALPHA: float = attrs.field(
         converter=lambda x: float(x) if isinstance(x, int) else x,
         validator=simple_validation(
             lambda x: 0 <= x,
@@ -567,7 +567,7 @@ class DailySettings:
         default=0.001,
     )
 
-    regularization_percent_lasso: float = attrs.field(
+    REGULARIZATION_PERCENT_LASSO: float = attrs.field(
         converter=lambda x: float(x) if isinstance(x, int) else x,
         validator=simple_validation(
             lambda x: (0 <= x) and (x <= 1),
@@ -579,7 +579,7 @@ class DailySettings:
         default=1,
     )
 
-    segment_minimum_count: int = attrs.field(
+    SEGMENT_MINIMUM_COUNT: int = attrs.field(
         converter=lambda x: int(x) if isinstance(x, float) else x,
         validator=simple_validation(
             lambda x: isinstance(x, int) and (3 <= x),
@@ -591,7 +591,7 @@ class DailySettings:
         default=6,
     )
 
-    maximum_slope_OoM_scaler: float = attrs.field(
+    MAXIMUM_SLOPE_OOM_SCALER: float = attrs.field(
         converter=lambda x: float(x) if isinstance(x, int) else x,
         validator=simple_validation(
             lambda x: isinstance(x, float) and (0 < x),
@@ -605,7 +605,7 @@ class DailySettings:
         default=2,
     )
 
-    initial_smoothing_parameter: float | None = attrs.field(
+    INITIAL_SMOOTHING_PARAMETER: float | None = attrs.field(
         converter=lambda x: float(x) if isinstance(x, int) else x,
         validator=developer_mode_validation(initial_smoothing_parameter_validator),
         metadata={_KEY_DESCR: "initial guess for the smoothing parameter"},
@@ -613,7 +613,7 @@ class DailySettings:
         default=0.5,
     )
 
-    initial_step_percentage: float | None = attrs.field(
+    INITIAL_STEP_PERCENTAGE: float | None = attrs.field(
         converter=lambda x: float(x) if isinstance(x, int) else x,
         validator=developer_mode_validation(initial_step_percentage_validator),
         metadata={_KEY_DESCR: "initial step-size for relevant algorithms"},
@@ -621,7 +621,7 @@ class DailySettings:
         default=0.10,
     )
 
-    split_selection_criteria: str = attrs.field(
+    SPLIT_SELECTION_CRITERIA: str = attrs.field(
         converter=lambda x: x.lower() if isinstance(x, str) else x,
         validator=attrs.validators.in_(
             get_pub_class_attrib_values(ModelSelectionCriteria)
@@ -634,7 +634,7 @@ class DailySettings:
     )
 
     # TODO: If this is permanent then it needs to be set up to work for only valid split_selection_criteria
-    split_selection_penalty_multiplier: float = attrs.field(
+    SPLIT_SELECTION_PENALTY_MULTIPLIER: float = attrs.field(
         converter=lambda x: float(x) if isinstance(x, int) else x,
         validator=simple_validation(
             lambda x: isinstance(x, float) and (0 <= x),
@@ -649,7 +649,7 @@ class DailySettings:
     )
 
     # TODO: If this is permanent then it needs to be set up to work for only valid split_selection_criteria
-    split_selection_penalty_power: float = attrs.field(
+    SPLIT_SELECTION_PENALTY_POWER: float = attrs.field(
         converter=lambda x: float(x) if isinstance(x, int) else x,
         validator=simple_validation(
             lambda x: isinstance(x, float) and (0 <= x),
@@ -663,7 +663,7 @@ class DailySettings:
         default=2.061,
     )
 
-    season: Dict[int, str] = attrs.field(
+    SEASON: Dict[int, str] = attrs.field(
         converter=lambda x: {int(k): str(v).lower().strip() for k, v in x.items()},
         validator=season_choice_validator,
         metadata={
@@ -686,7 +686,7 @@ class DailySettings:
         },
     )
 
-    is_weekday: Dict[int, bool] = attrs.field(
+    WEEKDAY_WEEKEND: Dict[int, bool] = attrs.field(
         validator=is_weekday_validator,
         converter=lambda x: {int(k): v for k, v in x.items()},
         metadata={
@@ -704,7 +704,7 @@ class DailySettings:
         },
     )
 
-    uncertainty_alpha: float = attrs.field(
+    UNCERTAINTY_ALPHA: float = attrs.field(
         converter=lambda x: float(x) if isinstance(x, int) else x,
         validator=simple_validation(
             lambda x: isinstance(x, float) and ((0 < x) and (x < 1)),
@@ -718,7 +718,7 @@ class DailySettings:
         default=0.1,
     )
 
-    cvrmse_threshold: float = attrs.field(
+    CVRMSE_THRESHOLD: float = attrs.field(
         converter=lambda x: float(x) if isinstance(x, int) else x,
         validator=simple_validation(
             lambda x: isinstance(x, float) and (0 < x),
@@ -848,7 +848,7 @@ def caltrack_legacy_settings(**kwargs) -> DailySettings:
     settings.update(kwargs)
 
     settings = DailySettings(**settings)
-    settings.developer_mode = False
+    settings.DEVELOPER_MODE = False
 
     return settings
 

@@ -64,9 +64,9 @@ def fit_c_hdd_tidd(
     """
 
     if initial_fit:
-        alpha = settings.alpha_selection
+        alpha = settings.ALPHA_SELECTION
     else:
-        alpha = settings.alpha_final
+        alpha = settings.ALPHA_FINAL
 
     if x0 is None:
         x0 = _c_hdd_tidd_x0(T, obs, alpha, settings, smooth)
@@ -82,7 +82,7 @@ def fit_c_hdd_tidd(
 
     # limit slope based on initial regression & configurable order of magnitude
     max_slope = np.abs(tdd_beta) + 10 ** (
-        np.log10(np.abs(tdd_beta)) + np.log10(settings.maximum_slope_OoM_scaler)
+        np.log10(np.abs(tdd_beta)) + np.log10(settings.MAXIMUM_SLOPE_OOM_SCALER)
     )
 
     # initial fit bounded by Tmin:Tmax, final fit has minimum T segment buffer
@@ -268,7 +268,7 @@ def _tdd_coefficients(
 
 
 def _c_hdd_tidd_x0(T, obs, alpha, settings, smooth):
-    min_T_idx = settings.segment_minimum_count
+    min_T_idx = settings.SEGMENT_MINIMUM_COUNT
 
     # c_hdd_bp = initial_guess_bp_1(T, obs, s=2, int_method="trapezoid")
     c_hdd_bp = _c_hdd_tidd_bp0(T, obs, alpha, settings)
@@ -314,7 +314,7 @@ def _c_hdd_tidd_x0_final(T, obs, x0, alpha, settings):
     else:
         c_hdd_bp, c_hdd_beta, intercept = x0.to_np_array()
 
-    min_T_idx = settings.segment_minimum_count
+    min_T_idx = settings.SEGMENT_MINIMUM_COUNT
     idx_hdd = np.argwhere(T <= c_hdd_bp).flatten()
     idx_cdd = np.argwhere(T >= c_hdd_bp).flatten()
 
@@ -332,7 +332,7 @@ def _c_hdd_tidd_x0_final(T, obs, x0, alpha, settings):
 
 
 def _c_hdd_tidd_bp0(T, obs, alpha, settings, min_weight=0.0):
-    min_T_idx = settings.segment_minimum_count
+    min_T_idx = settings.SEGMENT_MINIMUM_COUNT
 
     idx_sorted = np.argsort(T).flatten()
     T = T[idx_sorted]
@@ -378,7 +378,7 @@ def _c_hdd_tidd_bp0(T, obs, alpha, settings, min_weight=0.0):
 
         return bp_obj_fcn
 
-    algorithm = nlopt_algorithms[settings.initial_guess_algorithm_choice]
+    algorithm = nlopt_algorithms[settings.INITIAL_GUESS_ALGORITHM_CHOICE]
     # algorithm = nlopt.GN_DIRECT
 
     obj_fcn = bp_obj_fcn_dec(T, obs)
