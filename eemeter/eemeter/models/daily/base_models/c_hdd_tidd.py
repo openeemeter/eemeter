@@ -277,11 +277,11 @@ def _c_hdd_tidd_x0(T, obs, alpha, settings, smooth):
     idx_hdd = np.argwhere(T <= c_hdd_bp).flatten()
     idx_cdd = np.argwhere(T >= c_hdd_bp).flatten()
 
-    hdd_beta, _ = linear_fit(obs[idx_hdd], T[idx_hdd], alpha)
+    hdd_beta, _ = linear_fit(T[idx_hdd], obs[idx_hdd], alpha)
     if hdd_beta > 0:
         hdd_beta = 0
 
-    cdd_beta, _ = linear_fit(obs[idx_cdd], T[idx_cdd], alpha)
+    cdd_beta, _ = linear_fit(T[idx_cdd], obs[idx_cdd], alpha)
     if cdd_beta < 0:
         cdd_beta = 0
 
@@ -347,11 +347,11 @@ def _c_hdd_tidd_bp0(T, obs, alpha, settings, min_weight=0.0):
             idx_hdd = np.argwhere(T <= c_hdd_bp).flatten()
             idx_cdd = np.argwhere(T >= c_hdd_bp).flatten()
 
-            hdd_beta, _ = linear_fit(obs[idx_hdd], T[idx_hdd], alpha)
+            hdd_beta, _ = linear_fit(T[idx_hdd], obs[idx_hdd], alpha)
             if hdd_beta > 0:
                 hdd_beta = 0
 
-            cdd_beta, _ = linear_fit(obs[idx_cdd], T[idx_cdd], alpha)
+            cdd_beta, _ = linear_fit(T[idx_cdd], obs[idx_cdd], alpha)
             if cdd_beta < 0:
                 cdd_beta = 0
 

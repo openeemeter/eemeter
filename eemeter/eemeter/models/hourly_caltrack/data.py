@@ -24,9 +24,7 @@ import pandas as pd
 
 from eemeter.eemeter.common.data_processor_utilities import compute_minimum_granularity
 from eemeter.eemeter.common.features import compute_temperature_features, merge_features
-from eemeter.eemeter.models.hourly_caltrack.usage_per_day import (
-    caltrack_sufficiency_criteria,
-)
+from eemeter.eemeter.models.hourly_caltrack.usage_per_day import caltrack_sufficiency_criteria
 
 
 class HourlyReportingData:
@@ -35,11 +33,13 @@ class HourlyReportingData:
             df["observed"] = np.nan
 
         if is_electricity_data:
-            df[df["observed"] == 0]["observed"] = np.nan
+            df.loc[df["observed"] == 0, "observed"] = np.nan
 
         df = self._correct_frequency(df)
 
         self.df = df
+        self.warnings = []
+        self.disqualification = []
 
     def _correct_frequency(self, df: pd.DataFrame):
         meter = df["observed"]
@@ -54,12 +54,12 @@ class HourlyReportingData:
             )
         else:
             # TODO : Add the high frequency check for meter data
-            meter = meter.resample("H").sum(min_count=1)
-            meter.index.freq = "H"
+            meter = meter.resample("h").sum(min_count=1)
+            meter.index.freq = "h"
 
         # TODO : Add the high frequency check for temperature data and add NaNs
-        temp = temp.resample("H").mean()
-        temp.index.freq = "H"
+        temp = temp.resample("h").mean()
+        temp.index.freq = "h"
 
         return merge_features([meter, temp], keep_partial_nan_rows=True)
 
@@ -87,12 +87,13 @@ class HourlyReportingData:
 class HourlyBaselineData(HourlyReportingData):
     def __init__(self, df: pd.DataFrame, is_electricity_data: bool):
         if is_electricity_data:
-            df[df["observed"] == 0]["observed"] = np.nan
+            df.loc[df["observed"] == 0, "observed"] = np.nan
 
         df = self._correct_frequency(df)
 
         self.df = df
-        self.sufficiency_warnings = self._check_data_sufficiency()
+        self.warnings = self._check_data_sufficiency()
+        self.disqualification = []
 
     def _check_data_sufficiency(self):
         meter = self.df["observed"].rename("meter_value")
