@@ -17,6 +17,7 @@
    limitations under the License.
 
 """
+from io import StringIO
 import pandas as pd
 import statsmodels.formula.api as smf
 
@@ -168,9 +169,17 @@ class CalTRACKHourlyModelResults(object):
         d = data.get("avgs_metrics")
         if d:
             c.avgs_metrics = ModelMetrics.from_json(d)  # pragma: no cover
+            c.avgs_metrics = {
+                segment_name: ModelMetrics.from_json(seg_d)
+                for segment_name, seg_d in d.items()
+            }
         d = data.get("totals_metrics")
         if d:
-            c.totals_metrics = ModelMetrics.from_json(d)
+            c.totals_metrics = ModelMetrics.from_json(d)  # pragma: no cover
+            c.totals_metrics = {
+                segment_name: ModelMetrics.from_json(seg_d)
+                for segment_name, seg_d in d.items()
+            }
         return c
 
     def predict(self, prediction_index, temperature_data, **kwargs):
@@ -306,14 +315,20 @@ class CalTRACKHourlyModel(SegmentedModel):
             CalTRACKSegmentModel.from_json(s) for s in data.get("segment_models")
         ]
 
-        occupancy_lookup = pd.read_json(data.get("occupancy_lookup"), orient="split")
+        occupancy_lookup = pd.read_json(
+            StringIO(data.get("occupancy_lookup")), orient="split"
+        )
         occupancy_lookup.index = occupancy_lookup.index.astype("category")
 
         c = cls(
             segment_models,
             occupancy_lookup,
-            pd.read_json(data.get("occupied_temperature_bins"), orient="split"),
-            pd.read_json(data.get("unoccupied_temperature_bins"), orient="split"),
+            pd.read_json(
+                StringIO(data.get("occupied_temperature_bins")), orient="split"
+            ),
+            pd.read_json(
+                StringIO(data.get("unoccupied_temperature_bins")), orient="split"
+            ),
             data.get("segment_type"),
         )
 
@@ -551,8 +566,7 @@ def fit_caltrack_hourly_model_segment(segment_name, segment_data):
             ordered=False,
         )
         model = smf.wls(formula=formula, data=segment_data, weights=segment_data.weight)
-        model = model.fit()
-        model_params = {coeff: value for coeff, value in model.params.items()}
+        model_params = {coeff: value for coeff, value in model.fit().params.items()}
 
     segment_model = CalTRACKSegmentModel(
         segment_name=segment_name,
@@ -563,7 +577,7 @@ def fit_caltrack_hourly_model_segment(segment_name, segment_data):
     )
     if model:
         this_segment_data = segment_data[segment_data.weight == 1]
-        predicted_value = pd.Series(model.predict(this_segment_data))
+        predicted_value = pd.Series(model.fit().predict(this_segment_data))
         segment_model.totals_metrics = ModelMetrics(
             this_segment_data.meter_value, predicted_value, len(model_params)
         )

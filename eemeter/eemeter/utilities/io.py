@@ -99,7 +99,7 @@ def meter_data_from_csv(
         df = df.tz_convert(tz)
 
     if freq == "hourly":
-        df = df.resample("H").sum(min_count=1)
+        df = df.resample("h").sum(min_count=1)
     elif freq == "daily":
         df = df.resample("D").sum(min_count=1)
 
@@ -158,7 +158,7 @@ def temperature_data_from_csv(
         df = df.tz_convert(tz)
 
     if freq == "hourly":
-        df = df.resample("H").sum(min_count=1)
+        df = df.resample("h").sum(min_count=1)
 
     return df[temp_col]
 
@@ -229,7 +229,9 @@ def meter_data_from_json(data: list, orient: str = "list") -> pd.DataFrame:
         df = df.set_index("start")
         df["value"] = df["value"].astype(float)
         if "estimated" in df.columns:
-            df["estimated"] = df["estimated"].fillna(False).astype(bool)
+            df["estimated"] = (
+                df["estimated"].where(df["estimated"].notna(), False).astype(bool)
+            )
         return df
     else:
         raise ValueError("orientation not recognized.")

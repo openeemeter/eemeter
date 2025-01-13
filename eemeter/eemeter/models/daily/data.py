@@ -303,7 +303,7 @@ class _DailyData:
         """
         temp_series = df["temperature"]
         temp_series.index.freq = temp_series.index.inferred_freq
-        if temp_series.index.freq != "H":
+        if temp_series.index.freq != "h":
             if temp_series.index.freq is None or temp_series.index.freq > pd.Timedelta(
                 hours=1
             ):
@@ -341,7 +341,9 @@ class _DailyData:
                     )
 
                 # Set missing high frequency data to NaN
-                temperature_features.value[temperature_features.coverage > 0.5] = (
+                temperature_features.loc[
+                    temperature_features.coverage > 0.5, "value"
+                ] = (
                     temperature_features[temperature_features.coverage > 0.5].value
                     / temperature_features[temperature_features.coverage > 0.5].coverage
                 )

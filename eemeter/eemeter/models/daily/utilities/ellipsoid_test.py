@@ -115,7 +115,7 @@ def confidence_ellipse(x, y, var=np.ones([2, 2]) * 1.96):
     return mu, cov, a, b, phi
 
 
-def robust_confidence_ellipse(x, y, var=np.ones([2, 2]) * 1.96, outlier_std=3, N=2):
+def robust_confidence_ellipse(x, y, var=np.ones([2, 2]) * 1.96, outlier_std=3, N=3):
     """
     Computes a robust confidence ellipse for a set of points.
 
@@ -124,7 +124,7 @@ def robust_confidence_ellipse(x, y, var=np.ones([2, 2]) * 1.96, outlier_std=3, N
     y (numpy.ndarray): Array of y-coordinates of the points.
     var (numpy.ndarray): Variance-covariance matrix. Default is a 2x2 matrix with 1.96 in the diagonal.
     outlier_std (float): Standard deviation for outlier detection. Default is 3.
-    N (int): Number of iterations for outlier removal. Default is 2.
+    N (int): Number of iterations for outlier removal. Default is 3.
 
     Returns:
     list: A list containing the mean, covariance matrix, major and minor axis lengths, and rotation angle of the ellipse.
@@ -138,6 +138,9 @@ def robust_confidence_ellipse(x, y, var=np.ones([2, 2]) * 1.96, outlier_std=3, N
             break
 
         mu, cov, a, b, phi = confidence_ellipse(x, y, var_outlier)
+
+        if a == 0 or b == 0:
+            break
 
         # Center points
         xc = x - mu[0]
@@ -153,7 +156,12 @@ def robust_confidence_ellipse(x, y, var=np.ones([2, 2]) * 1.96, outlier_std=3, N
 
         idx = np.argwhere(r <= 1).flatten()  # non-outlier points
 
-        if len(x) - 3 <= len(idx):
+        # if all outliers, break
+        if len(idx) < 3:
+            break
+
+        # if no outliers, break
+        if len(idx) == len(x):
             break
 
         x = x[idx]
@@ -205,7 +213,7 @@ def ellipsoid_split_filter(meter, n_std=[1.4, 1.4]):
             if (len(T) < 3) or (len(obs) < 3):
                 mu = cov = a = b = phi = None
             else:
-                mu, cov, a, b, phi = robust_confidence_ellipse(T, obs, var)
+                mu, cov, a, b, phi = robust_confidence_ellipse(T, obs, var, outlier_std=3.6, N=3)
                 # mu, cov, a, b, phi = confidence_ellipse(T, obs, std_sqr)
 
             cluster_ellipse[key] = {"mu": mu, "cov": cov, "a": a, "b": b, "phi": phi}

@@ -795,7 +795,7 @@ def test_compute_temperature_features_with_duplicated_index(
 
 
 def test_compute_temperature_features_empty_temperature_data():
-    index = pd.DatetimeIndex([], tz="UTC", name="dt", freq="H")
+    index = pd.DatetimeIndex([], tz="UTC", name="dt", freq="h")
     temperature_data = pd.Series({"value": []}, index=index).astype(float)
     result_index = temperature_data.resample("D").sum().index
     meter_data_hack = pd.DataFrame({"value": 0}, index=result_index)
@@ -818,7 +818,7 @@ def test_compute_temperature_features_empty_temperature_data():
 
 
 def test_compute_temperature_features_empty_meter_data():
-    index = pd.DatetimeIndex([], tz="UTC", name="dt", freq="H")
+    index = pd.DatetimeIndex([], tz="UTC", name="dt", freq="h")
     temperature_data = pd.Series({"value": 0}, index=index)
     result_index = temperature_data.resample("D").sum().index
     meter_data_hack = pd.DataFrame({"value": []}, index=result_index)
@@ -842,7 +842,7 @@ def test_compute_temperature_features_empty_meter_data():
 
 
 def test_merge_features():
-    index = pd.date_range("2017-01-01", periods=100, freq="H", tz="UTC")
+    index = pd.date_range("2017-01-01", periods=100, freq="h", tz="UTC")
     features = merge_features(
         [
             pd.Series(1, index=index, name="a"),
@@ -868,7 +868,7 @@ def test_merge_features_empty_raises():
 
 @pytest.fixture
 def meter_data_hourly():
-    index = pd.date_range("2017-01-01", periods=100, freq="H", tz="UTC")
+    index = pd.date_range("2017-01-01", periods=100, freq="h", tz="UTC")
     return pd.DataFrame({"value": 1}, index=index)
 
 
@@ -912,7 +912,7 @@ def test_compute_usage_per_day_feature_billing(meter_data_billing):
 
 @pytest.fixture
 def complete_hour_of_week_feature():
-    index = pd.date_range("2017-01-01", periods=168, freq="H", tz="UTC")
+    index = pd.date_range("2017-01-01", periods=168, freq="h", tz="UTC")
     time_features = compute_time_features(index, hour_of_week=True)
     hour_of_week_feature = time_features.hour_of_week
     return hour_of_week_feature
@@ -925,7 +925,7 @@ def test_get_missing_hours_of_week_warning_ok(complete_hour_of_week_feature):
 
 @pytest.fixture
 def partial_hour_of_week_feature():
-    index = pd.date_range("2017-01-01", periods=84, freq="H", tz="UTC")
+    index = pd.date_range("2017-01-01", periods=84, freq="h", tz="UTC")
     time_features = compute_time_features(index, hour_of_week=True)
     hour_of_week_feature = time_features.hour_of_week
     return hour_of_week_feature
@@ -945,7 +945,7 @@ def test_compute_time_features_bad_freq():
 
 
 def test_compute_time_features_all():
-    index = pd.date_range("2017-01-01", periods=168, freq="H", tz="UTC")
+    index = pd.date_range("2017-01-01", periods=168, freq="h", tz="UTC")
     features = compute_time_features(index)
     assert list(features.columns) == ["day_of_week", "hour_of_day", "hour_of_week"]
     assert features.shape == (168, 3)
@@ -964,7 +964,7 @@ def test_compute_time_features_all():
 
 
 def test_compute_time_features_none():
-    index = pd.date_range("2017-01-01", periods=168, freq="H", tz="UTC")
+    index = pd.date_range("2017-01-01", periods=168, freq="h", tz="UTC")
     with pytest.raises(ValueError):
         compute_time_features(
             index, hour_of_week=False, day_of_week=False, hour_of_day=False
@@ -1026,7 +1026,7 @@ def test_estimate_hour_of_week_occupancy_one_month_segmentation(
 
 @pytest.fixture
 def temperature_means():
-    index = pd.date_range("2017-01-01", periods=2000, freq="H", tz="UTC")
+    index = pd.date_range("2017-01-01", periods=2000, freq="h", tz="UTC")
     return pd.DataFrame({"temperature_mean": [10, 35, 55, 80, 100] * 400}, index=index)
 
 
@@ -1158,7 +1158,7 @@ def even_occupancy():
 
 
 def test_compute_occupancy_feature(even_occupancy):
-    index = pd.date_range("2017-01-01", periods=1000, freq="H", tz="UTC")
+    index = pd.date_range("2017-01-01", periods=1000, freq="h", tz="UTC")
     time_features = compute_time_features(index, hour_of_week=True)
     hour_of_week = time_features.hour_of_week
     occupancy = compute_occupancy_feature(hour_of_week, even_occupancy)
@@ -1169,10 +1169,10 @@ def test_compute_occupancy_feature(even_occupancy):
 
 def test_compute_occupancy_feature_with_nans(even_occupancy):
     """If there are less than 168 periods, the NaN at the end causes problems"""
-    index = pd.date_range("2017-01-01", periods=100, freq="H", tz="UTC")
+    index = pd.date_range("2017-01-01", periods=100, freq="h", tz="UTC")
     time_features = compute_time_features(index, hour_of_week=True)
+    time_features.iloc[-1, time_features.columns.get_loc("hour_of_week")] = np.nan
     hour_of_week = time_features.hour_of_week
-    hour_of_week[-1] = np.nan
     #  comment out line below to see the error from not dropping na when
     # calculationg _add_weights when there are less than 168 periods.
 
@@ -1180,12 +1180,15 @@ def test_compute_occupancy_feature_with_nans(even_occupancy):
     # right now, it will error if the dropna below isn't used.
     hour_of_week.dropna(inplace=True)
     occupancy = compute_occupancy_feature(hour_of_week, even_occupancy)
+    assert occupancy.name == "occupancy"
+    assert occupancy.shape == (99,)
+    assert occupancy.sum().sum() == 50
 
 
 @pytest.fixture
 def occupancy_precursor_only_nan(il_electricity_cdd_hdd_hourly):
     meter_data = il_electricity_cdd_hdd_hourly["meter_data"]
-    meter_data = meter_data["2017-01-04":"2017-06-01"]
+    meter_data = meter_data["2017-01-04":"2017-06-01"].copy()
     meter_data.iloc[-1] = np.nan
     # Simulates a segment where there is only a single nan value
     temperature_data = il_electricity_cdd_hdd_hourly["temperature_data"]
@@ -1218,7 +1221,7 @@ def test_estimate_hour_of_week_occupancy_segmentation_only_nan(
 
 
 def test_compute_occupancy_feature_hour_of_week_has_nan(even_occupancy):
-    index = pd.date_range("2017-01-01", periods=72, freq="H", tz="UTC")
+    index = pd.date_range("2017-01-01", periods=72, freq="h", tz="UTC")
     time_features = compute_time_features(index, hour_of_week=True)
     hour_of_week = time_features.hour_of_week
     hour_of_week.iloc[-1] = np.nan

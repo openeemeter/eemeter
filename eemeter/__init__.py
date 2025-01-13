@@ -24,7 +24,29 @@ from .__version__ import __title__, __description__, __url__, __version__
 from .__version__ import __author__, __author_email__, __license__
 from .__version__ import __copyright__
 
-from .common import *
+import platform
+import warnings
+
+if platform.processor() == "arm":
+    # these happen during native code execution and segfault pytest when filterwarnings is set to error
+    warnings.filterwarnings("ignore", module="importlib._bootstrap")
+    warnings.filterwarnings("ignore", "builtin type swigvarlink has no __module__ attribute")
+
+if platform.system() == "Windows":
+    # numba JIT breaks on Windows with int32/int64 return types
+    from numba import config
+    config.DISABLE_JIT = True
+
+from .common import (
+    abstract_data_processor,
+    abstract_data_settings,
+    adaptive_loss_tck,
+    adaptive_loss,
+    const,
+    data_settings,
+    test_data,
+    utils,
+)
 from . import (
     eemeter,
     drmeter,
@@ -32,3 +54,25 @@ from . import (
 
 # Set default logging handler to avoid "No handler found" warnings.
 _logging.getLogger(__name__).addHandler(_logging.NullHandler())
+
+# exclude built-in imports from namespace
+__all__ = (
+    "__title__",
+    "__description__",
+    "__url__",
+    "__version__",
+    "__author__",
+    "__author_email__",
+    "__license__",
+    "__copyright__",
+    "abstract_data_processor",
+    "abstract_data_settings",
+    "adaptive_loss_tck",
+    "adaptive_loss",
+    "const",
+    "data_settings",
+    "test_data",
+    "utils",
+    "eemeter",
+    "drmeter",
+)
