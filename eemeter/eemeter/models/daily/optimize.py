@@ -21,9 +21,11 @@ from timeit import default_timer as timer
 
 import nlopt
 import numpy as np
-from scipy.optimize import minimize as scipy_minimize
-from scipy.optimize import minimize_scalar as scipy_minimize_scalar
-
+from scipy.optimize import (
+    direct as scipy_direct,
+    minimize as scipy_minimize,
+    minimize_scalar as scipy_minimize_scalar,
+)
 from eemeter.eemeter.models.daily.optimize_results import OptimizedResult
 
 nlopt_algorithms = {
@@ -130,7 +132,7 @@ class Optimizer:
         opt_options (dict): The options for the optimization.
     """
 
-    def __init__(self, obj_fcn, x0, bnds, coef_id, settings, opt_options):
+    def __init__(self, obj_fcn, x0, bnds, coef_id, settings, opt_settings):
         """
         The constructor for the Optimizer class.
 
@@ -140,7 +142,7 @@ class Optimizer:
             bnds (list): The bounds for the optimization.
             coef_id (str): The identifier for the coefficient.
             settings (dict): The settings for the optimization.
-            opt_options (dict): The options for the optimization.
+            opt_settings (Opt_Settings): The settings for the optimization.
         """
         self.bnds = np.array(bnds)
         self.x0 = np.clip(
@@ -152,7 +154,7 @@ class Optimizer:
         self.coef_id = coef_id
 
         self.settings = settings
-        self.opt_options = opt_options
+        self.opt_settings = opt_settings
 
     def run(self):
         """
@@ -163,31 +165,26 @@ class Optimizer:
         """
         bnds = self.bnds
 
-        res = {}
-        for opt_type in ["global", "local"]:
-            options = self.opt_options[opt_type]
-
-            if len(options) == 0:
-                continue
-
+        res = []
+        for settings in [self.opt_settings]:
             if len(res) == 0:
                 x0 = self.x0
             else:
                 x0 = res[list(res.keys())[-1]].x
 
-            if options["algorithm"][:5] == "scipy":
-                res[opt_type] = self.scipy(x0, bnds, options)
-            elif options["algorithm"][:5] == "nlopt":
-                res[opt_type] = self.nlopt(x0, bnds, options)
+            if settings.ALGORITHM[:5] == "scipy":
+                res.append(self.scipy(x0, bnds, settings))
+            elif settings.ALGORITHM[:5] == "nlopt":
+                res.append(self.nlopt(x0, bnds, settings))
 
             if (
-                options["algorithm"] == "nlopt_MLSL_LDS"
+                settings.ALGORITHM == "nlopt_MLSL_LDS"
             ):  # if using multistart algorithm, break upon finishing loop
                 break
 
-        return res[list(res.keys())[-1]]
+        return res[-1]
 
-    def scipy(self, x0, bnds, options):
+    def scipy(self, x0, bnds, settings):
         """
         Optimize the objective function using the SciPy library. Different optimization options are available,
         such as scipy_COBYLA, scipy_SLSQP, scipy_L_BFGS_B, scipy_TNC, scipy_BFGS, scipy_Powell, scipy_Nelder-Mead.
@@ -196,7 +193,7 @@ class Optimizer:
         Args:
             x0 (list): Initial guess for the optimization.
             bnds (tuple): Bounds for the optimization.
-            options (dict): Options for the optimization.
+            settings (Opt_Settings): The settings for the optimization.
 
         Returns:
             res_out (OptimizedResult): An object containing the results of the optimization.
@@ -204,7 +201,7 @@ class Optimizer:
 
         timer_start = timer()
 
-        algorithm = options["algorithm"][6:]
+        algorithm = settings.ALGORITHM[6:]
 
         if algorithm.lower() in ["brent", "golden", "bounded"]:
             scipy_obj_fcn = lambda x: self.obj_fcn([x])
@@ -227,9 +224,17 @@ class Optimizer:
 
             scipy_obj_fcn = lambda x: self.obj_fcn(x)
 
-            res = scipy_minimize(
-                scipy_obj_fcn, x0_opt, method=algorithm, bounds=bnds_opt
-            )
+            if algorithm.lower() == "direct":
+                res = scipy_direct(
+                    scipy_obj_fcn, 
+                    bounds=bnds_opt,
+                    maxiter=settings.STOP_CRITERIA_VALUE,
+                    f_min_rtol=settings.F_TOL_REL,
+                )
+            else:
+                res = scipy_minimize(
+                    scipy_obj_fcn, x0_opt, method=algorithm, bounds=bnds_opt
+                )
 
         x = res.x
         x, mean_loss, TSS, T, model, weight, resid, jac, alpha, C = self.obj_fcn(
@@ -267,7 +272,7 @@ class Optimizer:
 
         return res_out
 
-    def nlopt(self, x0, bnds, options):
+    def nlopt(self, x0, bnds, settings):
         """
         Optimize the objective function using the NLopt library.
 
@@ -288,24 +293,24 @@ class Optimizer:
         bnds_opt = bnds[idx_opt, :].T
         coef_id_opt = [id for n, id in enumerate(self.coef_id) if n in idx_opt]
 
-        algorithm = nlopt_algorithms[options["algorithm"]]
+        algorithm = nlopt_algorithms[settings.ALGORITHM]
 
         opt = nlopt.opt(algorithm, np.size(x0_opt))
         opt.set_min_objective(obj_fcn)
-        if options["stop_criteria_type"] == "Iteration Maximum":
-            opt.set_maxeval(int(options["stop_criteria_val"]) - 1)
-        elif options["stop_criteria_type"] == "Maximum Time [min]":
-            opt.set_maxtime(options["stop_criteria_val"] * 60)
+        if settings.STOP_CRITERIA_TYPE == "Iteration Maximum":
+            opt.set_maxeval(int(settings.STOP_CRITERIA_VALUE) - 1)
+        elif settings.STOP_CRITERIA_TYPE == "Maximum Time [min]":
+            opt.set_maxtime(settings.STOP_CRITERIA_VALUE * 60)
 
-        opt.set_xtol_rel(options["xtol_rel"])
-        opt.set_ftol_rel(options["ftol_rel"])
+        opt.set_xtol_rel(settings.X_TOL_REL)
+        opt.set_ftol_rel(settings.F_TOL_REL)
         opt.set_lower_bounds(bnds_opt[0])
         opt.set_upper_bounds(bnds_opt[1])
 
         # initial_step
         max_initial_step = np.max(np.abs(bnds_opt - x0_opt), axis=0)
 
-        initial_step = (bnds_opt[1] - bnds_opt[0]) * options["initial_step"]
+        initial_step = (bnds_opt[1] - bnds_opt[0]) * settings.INITIAL_STEP
 
         for n, coef_name in enumerate(coef_id_opt):
             if "dd_bp" in coef_name:
@@ -324,25 +329,25 @@ class Optimizer:
         opt.set_initial_step(initial_step)
 
         # alter default size of population in relevant algorithms
-        if options["algorithm"] == "nlopt_CRS2_LM":
+        if settings.ALGORITHM == "nlopt_CRS2_LM":
             default_pop_size = 10 * (len(x0_opt) + 1)
-        elif options["algorithm"] in ["nlopt_MLSL_LDS", "nlopt_MLSL"]:
+        elif settings.ALGORITHM in ["nlopt_MLSL_LDS", "nlopt_MLSL"]:
             default_pop_size = 4
-        elif options["algorithm"] == "nlopt_ISRES":
+        elif settings.ALGORITHM == "nlopt_ISRES":
             default_pop_size = 20 * (len(x0_opt) + 1)
 
             opt.set_population(
-                int(np.rint(default_pop_size * options["initial_pop_multiplier"]))
+                int(np.rint(default_pop_size * settings["initial_pop_multiplier"]))
             )
 
-        if (
-            options["algorithm"] == "nlopt_MLSL_LDS"
-        ):  # if using multistart algorithm as global, set subopt
-            local_algorithm = nlopt_algorithms[self.opt_options["local"]["algorithm"]]
+        # if using multistart algorithm as global, set subopt
+        if (settings.ALGORITHM == "nlopt_MLSL_LDS"):  
+            raise NotImplementedError("nlopt_MLSL_LDS not implemented")
+            local_algorithm = nlopt_algorithms[self.opt_settings.ALGORITHM]
             sub_opt = nlopt.opt(local_algorithm, np.size(x0_opt))
             sub_opt.set_initial_step(initial_step)
-            sub_opt.set_xtol_rel(options["xtol_rel"])
-            sub_opt.set_ftol_rel(options["ftol_rel"])
+            sub_opt.set_xtol_rel(settings.X_TOL_REL)
+            sub_opt.set_ftol_rel(settings.F_TOL_REL)
             opt.set_local_optimizer(sub_opt)
 
         x_opt = opt.optimize(x0_opt)  # optimize!

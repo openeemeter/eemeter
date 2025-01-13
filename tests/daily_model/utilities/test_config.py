@@ -26,7 +26,7 @@ from eemeter.eemeter.models.daily.utilities.config import (
 
 def test_default_settings():
     settings = DailySettings()
-    assert settings.developer_mode is False
+    assert settings.DEVELOPER_MODE is False
     assert settings.algorithm_choice.lower() == "nlopt_sbplx"
     assert settings.initial_guess_algorithm_choice.lower() == "nlopt_direct"
     assert settings.alpha_selection == 2.0
@@ -34,18 +34,18 @@ def test_default_settings():
     assert settings.alpha_final_type == "last"
     assert settings.regularization_alpha == 0.001
     assert settings.regularization_percent_lasso == 1.0
-    assert settings.smoothed_model is True
-    assert settings.allow_separate_summer is True
-    assert settings.allow_separate_shoulder is True
-    assert settings.allow_separate_winter is True
-    assert settings.allow_separate_weekday_weekend is True
-    assert settings.reduce_splits_by_gaussian is True
+    assert settings.SMOOTHED_MODEL is True
+    assert settings.ALLOW_SEPARATE_SUMMER is True
+    assert settings.ALLOW_SEPARATE_SHOULDER is True
+    assert settings.ALLOW_SEPARATE_WINTER is True
+    assert settings.ALLOW_SEPARATE_WEEKDAY_WEEKEND is True
+    assert settings.REDUCE_SPLITS_BY_GAUSSIAN is True
     assert settings.segment_minimum_count == 6
 
 
 def test_custom_settings():
     settings = DailySettings(
-        developer_mode=True,
+        DEVELOPER_MODE=True,
         algorithm_choice="scipy_SLSQP",
         initial_guess_algorithm_choice="nlopt_DIRECT_L",
         alpha_selection=1.5,
@@ -53,15 +53,15 @@ def test_custom_settings():
         alpha_final_type="last",
         regularization_alpha=0.01,
         regularization_percent_lasso=0.5,
-        smoothed_model=True,
-        allow_separate_summer=True,
-        allow_separate_shoulder=True,
-        allow_separate_winter=True,
-        allow_separate_weekday_weekend=True,
-        reduce_splits_by_gaussian=True,
+        SMOOTHED_MODEL=True,
+        ALLOW_SEPARATE_SUMMER=True,
+        ALLOW_SEPARATE_SHOULDER=True,
+        ALLOW_SEPARATE_WINTER=True,
+        ALLOW_SEPARATE_WEEKDAY_WEEKEND=True,
+        REDUCE_SPLITS_BY_GAUSSIAN=True,
         segment_minimum_count=20,
     )
-    assert settings.developer_mode is True
+    assert settings.DEVELOPER_MODE is True
     assert settings.algorithm_choice.lower() == "scipy_slsqp"
     assert settings.initial_guess_algorithm_choice.lower() == "nlopt_direct_l"
     assert settings.alpha_selection == 1.5
@@ -69,23 +69,23 @@ def test_custom_settings():
     assert settings.alpha_final_type == "last"
     assert settings.regularization_alpha == 0.01
     assert settings.regularization_percent_lasso == 0.5
-    assert settings.smoothed_model is True
-    assert settings.allow_separate_summer is True
-    assert settings.allow_separate_shoulder is True
-    assert settings.allow_separate_winter is True
-    assert settings.allow_separate_weekday_weekend is True
-    assert settings.reduce_splits_by_gaussian is True
+    assert settings.SMOOTHED_MODEL is True
+    assert settings.ALLOW_SEPARATE_SUMMER is True
+    assert settings.ALLOW_SEPARATE_SHOULDER is True
+    assert settings.ALLOW_SEPARATE_WINTER is True
+    assert settings.ALLOW_SEPARATE_WEEKDAY_WEEKEND is True
+    assert settings.REDUCE_SPLITS_BY_GAUSSIAN is True
     assert settings.segment_minimum_count == 20
 
 
 def test_invalid_settings():
     with pytest.raises(TypeError):
-        DailySettings(developer_mode=False, invalid_key="invalid_value")
+        DailySettings(DEVELOPER_MODE=False, invalid_key="invalid_value")
     with pytest.raises(ValueError):
-        DailySettings(developer_mode=False, algorithm_choice="invalid_algorithm")
+        DailySettings(DEVELOPER_MODE=False, algorithm_choice="invalid_algorithm")
     with pytest.raises(ValueError):
-        DailySettings(developer_mode=False, alpha_selection=0.5)
+        DailySettings(DEVELOPER_MODE=False, alpha_selection=0.5)
     with pytest.raises(ValueError):
-        DailySettings(developer_mode=False, alpha_selection=1.5)
+        DailySettings(DEVELOPER_MODE=False, alpha_selection=1.5)
     with pytest.raises(ValueError):
-        DailySettings(developer_mode=False, alpha_final_type="invalid_type")
+        DailySettings(DEVELOPER_MODE=False, alpha_final_type="invalid_type")

@@ -130,7 +130,7 @@ def fix_identical_bnds(bnds):
 
 
 def get_T_bnds(T, settings):
-    n_min_seg = settings.segment_minimum_count
+    n_min_seg = settings.SEGMENT_MINIMUM_COUNT
 
     T_min = np.min(T)
     T_max = np.max(T)
