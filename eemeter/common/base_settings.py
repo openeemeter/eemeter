@@ -28,8 +28,8 @@ from typing import Any
 class BaseSettings(pydantic.BaseModel):
     class Config:
         frozen = True
-        anystr_strip_whitespace = True
-        anystr_lower = True
+        str_to_lower = True
+        str_strip_whitespace = True
 
     """Make all property keys case insensitive"""
     @pydantic.model_validator(mode="before")

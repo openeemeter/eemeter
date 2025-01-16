@@ -23,45 +23,46 @@ import nlopt
 import numpy as np
 from scipy.optimize import (
     direct as scipy_direct,
+    Bounds as scipy_Bounds,
     minimize as scipy_minimize,
     minimize_scalar as scipy_minimize_scalar,
 )
 from eemeter.eemeter.models.daily.optimize_results import OptimizedResult
 
 nlopt_algorithms = {
-    "nlopt_DIRECT": nlopt.GN_DIRECT,
-    "nlopt_DIRECT_NOSCAL": nlopt.GN_DIRECT_NOSCAL,
-    "nlopt_DIRECT_L": nlopt.GN_DIRECT_L,
-    "nlopt_DIRECT_L_RAND": nlopt.GN_DIRECT_L_RAND,
-    "nlopt_DIRECT_L_NOSCAL": nlopt.GN_DIRECT_L_NOSCAL,
-    "nlopt_DIRECT_L_RAND_NOSCAL": nlopt.GN_DIRECT_L_RAND_NOSCAL,
-    "nlopt_ORIG_DIRECT": nlopt.GN_ORIG_DIRECT,
-    "nlopt_ORIG_DIRECT_L": nlopt.GN_ORIG_DIRECT_L,
-    "nlopt_CRS2_LM": nlopt.GN_CRS2_LM,
-    "nlopt_MLSL_LDS": nlopt.G_MLSL_LDS,
-    "nlopt_MLSL": nlopt.G_MLSL,
-    "nlopt_STOGO": nlopt.GD_STOGO,
-    "nlopt_STOGO_RAND": nlopt.GD_STOGO_RAND,
-    "nlopt_AGS": nlopt.GN_AGS,
-    "nlopt_ISRES": nlopt.GN_ISRES,
-    "nlopt_ESCH": nlopt.GN_ESCH,
-    "nlopt_COBYLA": nlopt.LN_COBYLA,
-    "nlopt_BOBYQA": nlopt.LN_BOBYQA,
-    "nlopt_NEWUOA": nlopt.LN_NEWUOA,
-    "nlopt_NEWUOA_BOUND": nlopt.LN_NEWUOA_BOUND,
-    "nlopt_PRAXIS": nlopt.LN_PRAXIS,
-    "nlopt_NELDERMEAD": nlopt.LN_NELDERMEAD,
-    "nlopt_SBPLX": nlopt.LN_SBPLX,
-    "nlopt_MMA": nlopt.LD_MMA,
-    "nlopt_CCSAQ": nlopt.LD_CCSAQ,
-    "nlopt_SLSQP": nlopt.LD_SLSQP,
-    "nlopt_LBFGS": nlopt.LD_LBFGS,
-    "nlopt_TNEWTON": nlopt.LD_TNEWTON,
-    "nlopt_TNEWTON_PRECOND": nlopt.LD_TNEWTON_PRECOND,
-    "nlopt_TNEWTON_RESTART": nlopt.LD_TNEWTON_RESTART,
-    "nlopt_TNEWTON_PRECOND_RESTART": nlopt.LD_TNEWTON_PRECOND_RESTART,
-    "nlopt_VAR1": nlopt.LD_VAR1,
-    "nlopt_VAR2": nlopt.LD_VAR2,
+    "nlopt_direct": nlopt.GN_DIRECT,
+    "nlopt_direct_noscal": nlopt.GN_DIRECT_NOSCAL,
+    "nlopt_direct_l": nlopt.GN_DIRECT_L,
+    "nlopt_direct_l_rand": nlopt.GN_DIRECT_L_RAND,
+    "nlopt_direct_l_noscal": nlopt.GN_DIRECT_L_NOSCAL,
+    "nlopt_direct_l_rand_noscal": nlopt.GN_DIRECT_L_RAND_NOSCAL,
+    "nlopt_orig_direct": nlopt.GN_ORIG_DIRECT,
+    "nlopt_orig_direct_l": nlopt.GN_ORIG_DIRECT_L,
+    "nlopt_crs2_lm": nlopt.GN_CRS2_LM,
+    "nlopt_mlsl_lds": nlopt.G_MLSL_LDS,
+    "nlopt_mlsl": nlopt.G_MLSL,
+    "nlopt_stogo": nlopt.GD_STOGO,
+    "nlopt_stogo_rand": nlopt.GD_STOGO_RAND,
+    "nlopt_ags": nlopt.GN_AGS,
+    "nlopt_isres": nlopt.GN_ISRES,
+    "nlopt_esch": nlopt.GN_ESCH,
+    "nlopt_cobyla": nlopt.LN_COBYLA,
+    "nlopt_bobyqa": nlopt.LN_BOBYQA,
+    "nlopt_newuoa": nlopt.LN_NEWUOA,
+    "nlopt_newuoa_bound": nlopt.LN_NEWUOA_BOUND,
+    "nlopt_praxis": nlopt.LN_PRAXIS,
+    "nlopt_neldermead": nlopt.LN_NELDERMEAD,
+    "nlopt_sbplx": nlopt.LN_SBPLX,
+    "nlopt_mma": nlopt.LD_MMA,
+    "nlopt_ccsaq": nlopt.LD_CCSAQ,
+    "nlopt_slsqp": nlopt.LD_SLSQP,
+    "nlopt_lbfgs": nlopt.LD_LBFGS,
+    "nlopt_tnewton": nlopt.LD_TNEWTON,
+    "nlopt_tnewton_precond": nlopt.LD_TNEWTON_PRECOND,
+    "nlopt_tnewton_restart": nlopt.LD_TNEWTON_RESTART,
+    "nlopt_tnewton_precond_restart": nlopt.LD_TNEWTON_PRECOND_RESTART,
+    "nlopt_var1": nlopt.LD_VAR1,
+    "nlopt_var2": nlopt.LD_VAR2,
 }
 
 nlopt_algorithms = {k.lower(): v for k, v in nlopt_algorithms.items()}
@@ -109,15 +110,263 @@ def obj_fcn_dec(obj_fcn, x0, bnds):
     return obj_fcn_eval, idx_opt
 
 
+class BaseOptimizedResult:
+    x = None
+    success = None
+    status = None
+    message = None
+    fun = None
+    jac = None
+    hess = None
+    hess_inv = None
+    nfev = None
+    njev = None
+    nhev = None
+    nit = None
+    maxcv = None
+    time_elapsed = None
+
+
+class BaseOptimizer:
+    def __init__(self, obj_fcn, x0, bnds, settings):
+        """
+        The constructor for the Optimizer class.
+
+        Parameters:
+            obj_fcn (function): The objective function to be optimized.
+            x0 (np.array): The initial guess for the optimization.
+            bnds (list): The bounds for the optimization.
+            coef_id (str): The identifier for the coefficient.
+            settings (dict): The settings for the optimization.
+            opt_settings (Opt_Settings): The settings for the optimization.
+        """
+        self.bnds = np.array(bnds)
+        self.x0 = np.clip(
+            x0, bnds[:, 0], bnds[:, 1]
+        )  # clip x0 to the bnds, just in case
+
+        self.obj_fcn, self.idx_opt = obj_fcn_dec(obj_fcn, x0, bnds)
+
+        self.settings = settings
+
+
+class SciPyOptimizer(BaseOptimizer):
+    def run(self):
+        """
+        Optimize the objective function using the SciPy library. Different optimization options are available,
+        such as scipy_COBYLA, scipy_SLSQP, scipy_L_BFGS_B, scipy_TNC, scipy_BFGS, scipy_Powell, scipy_Nelder-Mead.
+        options argument needs to have the algorithm specified.
+
+        Args:
+            x0 (list): Initial guess for the optimization.
+            bnds (tuple): Bounds for the optimization.
+            settings (Opt_Settings): The settings for the optimization.
+
+        Returns:
+            res_out (OptimizedResult): An object containing the results of the optimization.
+        """
+
+        settings = self.settings
+        x0 = self.x0
+        bnds = self.bnds
+
+        timer_start = timer()
+
+        algorithm = settings.ALGORITHM[6:]
+
+        if algorithm.lower() in ["brent", "golden", "bounded"]:
+            scipy_obj_fcn = lambda x: self.obj_fcn([x])
+
+            if algorithm.lower() in ["brent", "golden"]:
+                res = scipy_minimize_scalar(
+                    scipy_obj_fcn, bracket=bnds, method=algorithm.lower()
+                )
+
+            elif algorithm.lower() == "bounded":
+                res = scipy_minimize_scalar(
+                    scipy_obj_fcn, bounds=bnds[0], method="bounded"
+                )
+
+            res.x = [res.x]
+
+        else:
+            x0_opt = x0[self.idx_opt]
+            bnds_opt = bnds[self.idx_opt, :]
+            bnds_opt = tuple(map(tuple, bnds_opt))
+
+            scipy_obj_fcn = lambda x: self.obj_fcn(x)
+
+            if algorithm.lower() == "direct":
+                res = scipy_direct(
+                    scipy_obj_fcn, 
+                    bnds_opt,
+                    maxiter=int(settings.STOP_CRITERIA_VALUE),
+                    f_min_rtol=settings.F_TOL_REL,
+                )
+            else:
+                res = scipy_minimize(
+                    scipy_obj_fcn, x0_opt, method=algorithm, bounds=bnds_opt
+                )
+
+        res.time_elapsed = timer() - timer_start
+
+        return res
+    
+
+class NLoptOptimizer(BaseOptimizer):
+    def run(self):
+        """
+        Optimize the objective function using the NLopt library.
+
+        Args:
+            x0 (ndarray): Initial guess for the optimization.
+            bnds (ndarray): Bounds on the variables.
+            options (dict): Dictionary of options for the optimization.
+
+        Returns:
+            res_out (OptimizedResult): Object containing the results of the optimization.
+        """
+        settings = self.settings
+        x0 = self.x0
+        bnds = self.bnds
+
+        timer_start = timer()
+
+        obj_fcn = self.obj_fcn
+        idx_opt = self.idx_opt
+
+        x0_opt = x0[idx_opt]
+        bnds_opt = bnds[idx_opt, :].T
+        
+        algorithm = nlopt_algorithms[settings.ALGORITHM]
+
+        opt = nlopt.opt(algorithm, np.size(x0_opt))
+        opt.set_min_objective(obj_fcn)
+        if settings.STOP_CRITERIA_TYPE == "iteration maximum":
+            opt.set_maxeval(int(settings.STOP_CRITERIA_VALUE) - 1)
+        elif settings.STOP_CRITERIA_TYPE == "maximum time [min]":
+            opt.set_maxtime(settings.STOP_CRITERIA_VALUE * 60)
+
+        opt.set_xtol_rel(settings.X_TOL_REL)
+        opt.set_ftol_rel(settings.F_TOL_REL)
+        opt.set_lower_bounds(bnds_opt[0])
+        opt.set_upper_bounds(bnds_opt[1])
+
+        # initial_step
+        max_initial_step = np.max(np.abs(bnds_opt - x0_opt), axis=0)
+
+        initial_step = (bnds_opt[1] - bnds_opt[0]) * settings.INITIAL_STEP
+
+        # TODO: bring this back in at some point?
+        # coef_id_opt = [id for n, id in enumerate(self.coef_id) if n in idx_opt]
+        # for n, coef_name in enumerate(coef_id_opt):
+        #     if "dd_bp" in coef_name:
+        #         initial_step[n] *= 2
+
+        #     if coef_name == "hdd_bp":
+        #         initial_step[n] *= -1
+
+        initial_step = np.clip(initial_step, -max_initial_step, max_initial_step)
+
+        x1 = x0_opt + initial_step
+        np.putmask(
+            initial_step, (x1 < bnds_opt[0]) | (x1 > bnds_opt[1]), -initial_step
+        )  # first step in direction of more variable space
+
+        opt.set_initial_step(initial_step)
+
+        # alter default size of population in relevant algorithms
+        if settings.ALGORITHM == "nlopt_crs2_lm":
+            default_pop_size = 10 * (len(x0_opt) + 1)
+        elif settings.ALGORITHM in ["nlopt_mlsl_lds", "nlopt_mlsl"]:
+            default_pop_size = 4
+        elif settings.ALGORITHM == "nlopt_isres":
+            default_pop_size = 20 * (len(x0_opt) + 1)
+
+            opt.set_population(
+                int(np.rint(default_pop_size * settings["initial_pop_multiplier"]))
+            )
+
+        # if using multistart algorithm as global, set subopt
+        if (settings.ALGORITHM == "nlopt_mlsl_lds"):  
+            raise NotImplementedError("nlopt_mlsl_lds not implemented")
+            local_algorithm = nlopt_algorithms[self.opt_settings.ALGORITHM]
+            sub_opt = nlopt.opt(local_algorithm, np.size(x0_opt))
+            sub_opt.set_initial_step(initial_step)
+            sub_opt.set_xtol_rel(settings.X_TOL_REL)
+            sub_opt.set_ftol_rel(settings.F_TOL_REL)
+            opt.set_local_optimizer(sub_opt)
+
+        x_opt = opt.optimize(x0_opt)  # optimize!
+
+        if nlopt.SUCCESS > 0:
+            success = True
+            msg = pos_msg[nlopt.SUCCESS - 1]
+        else:
+            success = False
+            msg = neg_msg[nlopt.SUCCESS - 1]
+
+        res = BaseOptimizedResult()
+        res.x = x_opt
+        res.success = success
+        res.message = msg
+        res.fun = opt.last_optimum_value()
+        res.nfev = opt.get_numevals()
+        res.time_elapsed = timer() - timer_start
+
+        return res
+
+
+class InitialGuessOptimizer:
+    def __init__(self, obj_fcn, x0, bnds, settings):
+        """
+        The constructor for the Optimizer class.
+
+        Parameters:
+            obj_fcn (function): The objective function to be optimized.
+            x0 (np.array): The initial guess for the optimization.
+            bnds (list): The bounds for the optimization.
+            opt_settings (Opt_Settings): The settings for the optimization.
+        """
+        self.x0 = np.array(x0)
+        self.bnds = np.array(bnds)
+        
+        self.obj_fcn = obj_fcn
+
+        self.settings = settings
+
+    def run(self):
+        """
+        This method runs the optimization process.
+
+        Returns:
+            OptimizedResult: An object containing the results of the optimization.
+        """
+        bnds = self.bnds
+
+        res_all = []
+        for settings in [self.settings]:
+            if len(res_all) == 0:
+                x0 = self.x0
+            else:
+                x0 = res_all[list(res_all.keys())[-1]].x
+
+            if settings.ALGORITHM[:5] == "scipy":
+                res = SciPyOptimizer(self.obj_fcn, x0, bnds, settings).run()
+            elif settings.ALGORITHM[:5] == "nlopt":
+                res = NLoptOptimizer(self.obj_fcn, x0, bnds, settings).run()
+
+            res_all.append(res)
+
+            if (
+                settings.ALGORITHM == "nlopt_MLSL_LDS"
+            ):  # if using multistart algorithm, break upon finishing loop
+                break
+
+        return res_all[-1]
+
+
 class Optimizer:
-    # opt_options = {"global": {"algorithm": "scipy_COBYLA",
-    #                           "stop_criteria_type": 'Iteration Maximum',
-    #                           "stop_criteria_val": 2000,
-    #                           "initial_step": 0.1 # percentage},
-    #                           "xtol_rel": 1E-5
-    #                           "ftol_rel": 1E-5
-    #                           "initial_pop_multiplier": 2
-    #                "local": {} # same}
     """
     This class is used to perform optimization on a given objective function using either the SciPy or NLopt library.
     The optimization can be performed globally or locally based on the options provided.
@@ -144,14 +393,11 @@ class Optimizer:
             settings (dict): The settings for the optimization.
             opt_settings (Opt_Settings): The settings for the optimization.
         """
-        self.bnds = np.array(bnds)
-        self.x0 = np.clip(
-            x0, bnds[:, 0], bnds[:, 1]
-        )  # clip x0 to the bnds, just in case
-
-        self.obj_fcn, self.idx_opt = obj_fcn_dec(obj_fcn, x0, bnds)
-
         self.coef_id = coef_id
+        self.x0 = np.array(x0)
+        self.bnds = np.array(bnds)
+        
+        self.obj_fcn = obj_fcn
 
         self.settings = settings
         self.opt_settings = opt_settings
@@ -165,227 +411,46 @@ class Optimizer:
         """
         bnds = self.bnds
 
-        res = []
+        res_all = []
         for settings in [self.opt_settings]:
-            if len(res) == 0:
+            if len(res_all) == 0:
                 x0 = self.x0
             else:
-                x0 = res[list(res.keys())[-1]].x
+                x0 = res_all[list(res_all.keys())[-1]].x
 
             if settings.ALGORITHM[:5] == "scipy":
-                res.append(self.scipy(x0, bnds, settings))
+                res = SciPyOptimizer(self.obj_fcn, x0, bnds, settings).run()
             elif settings.ALGORITHM[:5] == "nlopt":
-                res.append(self.nlopt(x0, bnds, settings))
+                res = NLoptOptimizer(self.obj_fcn, x0, bnds, settings).run()
+
+            x, mean_loss, TSS, T, model, weight, resid, jac, alpha, C = self.obj_fcn(
+                res.x, optimize_flag=False
+            )
+            res = OptimizedResult(
+                x,
+                bnds,
+                self.coef_id,
+                alpha,
+                C,
+                T,
+                model,
+                weight,
+                resid,
+                jac,
+                mean_loss,
+                TSS,
+                res.success,
+                res.message,
+                res.nfev,
+                res.time_elapsed,
+                self.settings,
+            )
+
+            res_all.append(res)
 
             if (
                 settings.ALGORITHM == "nlopt_MLSL_LDS"
             ):  # if using multistart algorithm, break upon finishing loop
                 break
 
-        return res[-1]
-
-    def scipy(self, x0, bnds, settings):
-        """
-        Optimize the objective function using the SciPy library. Different optimization options are available,
-        such as scipy_COBYLA, scipy_SLSQP, scipy_L_BFGS_B, scipy_TNC, scipy_BFGS, scipy_Powell, scipy_Nelder-Mead.
-        options argument needs to have the algorithm specified.
-
-        Args:
-            x0 (list): Initial guess for the optimization.
-            bnds (tuple): Bounds for the optimization.
-            settings (Opt_Settings): The settings for the optimization.
-
-        Returns:
-            res_out (OptimizedResult): An object containing the results of the optimization.
-        """
-
-        timer_start = timer()
-
-        algorithm = settings.ALGORITHM[6:]
-
-        if algorithm.lower() in ["brent", "golden", "bounded"]:
-            scipy_obj_fcn = lambda x: self.obj_fcn([x])
-
-            if algorithm.lower() in ["brent", "golden"]:
-                res = scipy_minimize_scalar(
-                    scipy_obj_fcn, bracket=bnds, method=algorithm.lower()
-                )
-
-            elif algorithm.lower() == "bounded":
-                res = scipy_minimize_scalar(
-                    scipy_obj_fcn, bounds=bnds[0], method="bounded"
-                )
-
-            res.x = [res.x]
-
-        else:
-            x0_opt = x0[self.idx_opt]
-            bnds_opt = bnds[self.idx_opt, :]
-
-            scipy_obj_fcn = lambda x: self.obj_fcn(x)
-
-            if algorithm.lower() == "direct":
-                res = scipy_direct(
-                    scipy_obj_fcn, 
-                    bounds=bnds_opt,
-                    maxiter=settings.STOP_CRITERIA_VALUE,
-                    f_min_rtol=settings.F_TOL_REL,
-                )
-            else:
-                res = scipy_minimize(
-                    scipy_obj_fcn, x0_opt, method=algorithm, bounds=bnds_opt
-                )
-
-        x = res.x
-        x, mean_loss, TSS, T, model, weight, resid, jac, alpha, C = self.obj_fcn(
-            x, optimize_flag=False
-        )
-        success = res.success
-        message = res.message
-        nfev = res.nfev
-        time_elapsed = timer() - timer_start
-
-        res_out = OptimizedResult(
-            x,
-            bnds,
-            self.coef_id,
-            alpha,
-            C,
-            T,
-            model,
-            weight,
-            resid,
-            jac,
-            mean_loss,
-            TSS,
-            success,
-            message,
-            nfev,
-            time_elapsed,
-            self.settings,
-        )
-        # res_out.jac = res.jac
-        # res_out.hess = res.hess
-        # res_out.hess_inv = res.hess_inv
-        # res_out.njev = res.njev
-        # res_out.nhev = res.nhev
-
-        return res_out
-
-    def nlopt(self, x0, bnds, settings):
-        """
-        Optimize the objective function using the NLopt library.
-
-        Args:
-            x0 (ndarray): Initial guess for the optimization.
-            bnds (ndarray): Bounds on the variables.
-            options (dict): Dictionary of options for the optimization.
-
-        Returns:
-            res_out (OptimizedResult): Object containing the results of the optimization.
-        """
-        timer_start = timer()
-
-        obj_fcn = self.obj_fcn
-        idx_opt = self.idx_opt
-
-        x0_opt = x0[idx_opt]
-        bnds_opt = bnds[idx_opt, :].T
-        coef_id_opt = [id for n, id in enumerate(self.coef_id) if n in idx_opt]
-
-        algorithm = nlopt_algorithms[settings.ALGORITHM]
-
-        opt = nlopt.opt(algorithm, np.size(x0_opt))
-        opt.set_min_objective(obj_fcn)
-        if settings.STOP_CRITERIA_TYPE == "Iteration Maximum":
-            opt.set_maxeval(int(settings.STOP_CRITERIA_VALUE) - 1)
-        elif settings.STOP_CRITERIA_TYPE == "Maximum Time [min]":
-            opt.set_maxtime(settings.STOP_CRITERIA_VALUE * 60)
-
-        opt.set_xtol_rel(settings.X_TOL_REL)
-        opt.set_ftol_rel(settings.F_TOL_REL)
-        opt.set_lower_bounds(bnds_opt[0])
-        opt.set_upper_bounds(bnds_opt[1])
-
-        # initial_step
-        max_initial_step = np.max(np.abs(bnds_opt - x0_opt), axis=0)
-
-        initial_step = (bnds_opt[1] - bnds_opt[0]) * settings.INITIAL_STEP
-
-        for n, coef_name in enumerate(coef_id_opt):
-            if "dd_bp" in coef_name:
-                initial_step[n] *= 2
-
-            if coef_name == "hdd_bp":
-                initial_step[n] *= -1
-
-        initial_step = np.clip(initial_step, -max_initial_step, max_initial_step)
-
-        x1 = x0_opt + initial_step
-        np.putmask(
-            initial_step, (x1 < bnds_opt[0]) | (x1 > bnds_opt[1]), -initial_step
-        )  # first step in direction of more variable space
-
-        opt.set_initial_step(initial_step)
-
-        # alter default size of population in relevant algorithms
-        if settings.ALGORITHM == "nlopt_CRS2_LM":
-            default_pop_size = 10 * (len(x0_opt) + 1)
-        elif settings.ALGORITHM in ["nlopt_MLSL_LDS", "nlopt_MLSL"]:
-            default_pop_size = 4
-        elif settings.ALGORITHM == "nlopt_ISRES":
-            default_pop_size = 20 * (len(x0_opt) + 1)
-
-            opt.set_population(
-                int(np.rint(default_pop_size * settings["initial_pop_multiplier"]))
-            )
-
-        # if using multistart algorithm as global, set subopt
-        if (settings.ALGORITHM == "nlopt_MLSL_LDS"):  
-            raise NotImplementedError("nlopt_MLSL_LDS not implemented")
-            local_algorithm = nlopt_algorithms[self.opt_settings.ALGORITHM]
-            sub_opt = nlopt.opt(local_algorithm, np.size(x0_opt))
-            sub_opt.set_initial_step(initial_step)
-            sub_opt.set_xtol_rel(settings.X_TOL_REL)
-            sub_opt.set_ftol_rel(settings.F_TOL_REL)
-            opt.set_local_optimizer(sub_opt)
-
-        x_opt = opt.optimize(x0_opt)  # optimize!
-
-        if nlopt.SUCCESS > 0:
-            success = True
-            msg = pos_msg[nlopt.SUCCESS - 1]
-        else:
-            success = False
-            msg = neg_msg[nlopt.SUCCESS - 1]
-
-        x = x_opt
-        x, mean_loss, TSS, T, model, weight, resid, jac, alpha, C = obj_fcn(
-            x, optimize_flag=False
-        )
-        success = success
-        message = msg
-        nfev = opt.get_numevals()
-        time_elapsed = timer() - timer_start
-
-        res_out = OptimizedResult(
-            x,
-            bnds,
-            self.coef_id,
-            alpha,
-            C,
-            T,
-            model,
-            weight,
-            resid,
-            jac,
-            mean_loss,
-            TSS,
-            success,
-            message,
-            nfev,
-            time_elapsed,
-            self.settings,
-        )
-
-        return res_out
+        return res_all[-1]
