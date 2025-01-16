@@ -29,7 +29,8 @@ from eemeter.eemeter.models.daily.base_models.full_model import (
     full_model_weight,
 )
 from eemeter.eemeter.models.daily.objective_function import obj_fcn_decorator
-from eemeter.eemeter.models.daily.optimize import Optimizer, nlopt_algorithms
+from eemeter.eemeter.models.daily.utilities.opt_settings import OptimizationSettings
+from eemeter.eemeter.models.daily.optimize import InitialGuessOptimizer, Optimizer
 from eemeter.eemeter.models.daily.parameters import ModelCoefficients, ModelType
 from eemeter.eemeter.models.daily.utilities.base_model import (
     fix_identical_bnds,
@@ -117,6 +118,7 @@ def fit_hdd_tidd_cdd(
         model_fcn = _hdd_tidd_cdd
         weight_fcn = _hdd_tidd_cdd_weight
         TSS_fcn = _hdd_tidd_cdd_total_sum_of_squares
+
     obj_fcn = obj_fcn_decorator(
         model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, coef_id, initial_fit
     )
@@ -248,7 +250,6 @@ def _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings, smooth, min_weight=0.0):
 
         return bp_obj_fcn
 
-    algorithm = nlopt_algorithms[settings.INITIAL_GUESS_ALGORITHM_CHOICE]
     obj_fcn = bp_obj_fcn_dec(T, obs, min_T_idx)
 
     T_bnds = [T[min_T_idx - 1], T[-min_T_idx]]
@@ -266,21 +267,22 @@ def _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings, smooth, min_weight=0.0):
     T_range = T_max - T_min
 
     x0 = np.array([T_range * 0.10, T_range * 0.90]) + T_min
-    bnds = np.array([T_bnds, T_bnds]).T
+    bnds = np.array([T_bnds, T_bnds])
 
-    opt = nlopt.opt(algorithm, int(len(x0)))
-    opt.set_min_objective(obj_fcn)
+    opt_settings = OptimizationSettings(
+        ALGORITHM=settings.INITIAL_GUESS_ALGORITHM_CHOICE,
+        STOP_CRITERIA_TYPE="Iteration Maximum",
+        STOP_CRITERIA_VALUE=200,
+        INITIAL_STEP=settings.INITIAL_STEP_PERCENTAGE,
+        X_TOL_REL=1e-3,
+        F_TOL_REL=0.5,
+    )
 
-    opt.set_initial_step([T_range * 0.10, -T_range * 0.10])
-    opt.set_maxeval(200)
-    opt.set_xtol_rel(1e-3)
-    opt.set_xtol_abs(0.5)
-    opt.set_lower_bounds(bnds[0])
-    opt.set_upper_bounds(bnds[1])
+    res = InitialGuessOptimizer(
+        obj_fcn, x0, bnds, opt_settings
+    ).run()
 
-    x_opt = opt.optimize(x0)  # optimize!
-
-    x0 = obj_fcn(x_opt, optimize_flag=False)
+    x0 = obj_fcn(res.x, optimize_flag=False)
 
     if smooth:
         model_type = ModelType.HDD_TIDD_CDD_SMOOTH
