@@ -83,8 +83,8 @@ class AlgorithmChoice(str, Enum):
 
 
 class StopCriteriaChoice(str, Enum):
-    ITERATION_MAXIMUM = "Iteration Maximum"
-    MAXIMUM_TIME = "Maximum Time [min]"
+    ITERATION_MAXIMUM = "iteration maximum"
+    MAXIMUM_TIME = "maximum time [min]"
 
 
 class OptimizationSettings(BaseSettings):
