@@ -13,6 +13,8 @@ import pywt
 from eemeter.common.base_settings import BaseSettings
 from eemeter.common.metrics import BaselineMetrics
 
+from eemeter.eemeter.common.warnings import EEMeterWarning
+
 # from eemeter.common.const import CountryCode
 
 
@@ -282,6 +284,7 @@ class ElasticNetSettings(BaseSettings):
 class BaseHourlySettings(BaseSettings):
     """train features used within the model"""
 
+    #TODO add a "ghi-auto" or similar so that we can init with the rest of default settings and detect ghi on fit
     TRAIN_FEATURES: list[str] = pydantic.Field(
         default=["temperature"],
         frozen=True,
@@ -384,12 +387,19 @@ class HourlyNonSolarSettings(BaseHourlySettings):
         return self
 
 
-HourlySettings = TypeVar('HourlySettings', bound=BaseHourlySettings)
+class ModelInfo(pydantic.BaseModel):
+    """additional information about the model"""
+    warnings: list[EEMeterWarning]
+    disqualification: list[EEMeterWarning]
+    error: dict
+    baseline_timezone: str
+    version: str
+
 class SerializeModel(BaseSettings):
     class Config:
         arbitrary_types_allowed = True
 
-    SETTINGS: Optional[HourlySettings] = None
+    SETTINGS: Optional[BaseHourlySettings] = None
     TEMPORAL_CLUSTERS: Optional[list[list[int]]] = None
     TEMPERATURE_BIN_EDGES: Optional[list] = None
     TEMPERATURE_EDGE_BIN_COEFFICIENTS: Optional[Dict[int, Dict[str, float]]] = None
@@ -401,3 +411,6 @@ class SerializeModel(BaseSettings):
     COEFFICIENTS: Optional[list[list[float]]] = None
     INTERCEPT: Optional[list[float]] = None
     BASELINE_METRICS: Optional[BaselineMetrics] = None
+    INFO: ModelInfo
+
+#TODO lowercase names to match daily serialization
