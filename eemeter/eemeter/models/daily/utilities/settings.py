@@ -175,11 +175,22 @@ class Split_Selection_Definition(BaseSettings):
         description="Reduces splits by fitting with multivariate Gaussians and testing for overlap",
     )
 
-    REDUCE_SPLITS_NUM_STD: list[float] = CustomField(
+    REDUCE_SPLITS_NUM_STD: Optional[list[float]] = CustomField(
         default=[1.4, 0.89],
         developer=True,
         description="Number of standard deviations to use with Gaussians",
     )
+
+    @pydantic.model_validator(mode="after")
+    def _check_reduce_splits_num_std(self):
+        if self.REDUCE_SPLITS_NUM_STD is not None:
+            if len(self.REDUCE_SPLITS_NUM_STD) != 2:
+                raise ValueError("`REDUCE_SPLITS_NUM_STD` must be a list of length 2")
+            
+            if self.REDUCE_SPLITS_NUM_STD[0] <= 0 or self.REDUCE_SPLITS_NUM_STD[1] <= 0:
+                raise ValueError("`REDUCE_SPLITS_NUM_STD` entries must be > 0")
+            
+        return self
 
 
 def _check_developer_mode(cls):   
