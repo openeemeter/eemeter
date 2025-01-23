@@ -88,11 +88,11 @@ class BillingModel(DailyModel):
         self.warnings = baseline_data.warnings
         self.disqualification = baseline_data.disqualification
         self._fit(baseline_data.df)
-        if self.error["CVRMSE"] > self.settings.cvrmse_threshold:
+        if self.error["CVRMSE"] > self.settings.CVRMSE_THRESHOLD:
             cvrmse_warning = EEMeterWarning(
                 qualified_name="eemeter.model_fit_metrics.cvrmse",
                 description=(
-                    f"Fit model has CVRMSE > {self.settings.cvrmse_threshold}"
+                    f"Fit model has CVRMSE > {self.settings.CVRMSE_THRESHOLD}"
                 ),
                 data={"CVRMSE": self.error["CVRMSE"]},
             )
