@@ -20,7 +20,6 @@
 from math import isclose
 from typing import Optional
 
-import nlopt
 import numba
 import numpy as np
 
@@ -28,7 +27,8 @@ from eemeter.common.adaptive_loss import adaptive_weights
 from eemeter.eemeter.models.daily.base_models.full_model import full_model
 from eemeter.eemeter.models.daily.base_models.hdd_tidd_cdd import full_model_weight
 from eemeter.eemeter.models.daily.objective_function import obj_fcn_decorator
-from eemeter.eemeter.models.daily.optimize import Optimizer, nlopt_algorithms
+from eemeter.eemeter.models.daily.utilities.opt_settings import OptimizationSettings
+from eemeter.eemeter.models.daily.optimize import InitialGuessOptimizer, Optimizer
 from eemeter.eemeter.models.daily.parameters import ModelCoefficients, ModelType
 from eemeter.eemeter.models.daily.utilities.base_model import (
     fix_identical_bnds,
@@ -378,9 +378,6 @@ def _c_hdd_tidd_bp0(T, obs, alpha, settings, min_weight=0.0):
 
         return bp_obj_fcn
 
-    algorithm = nlopt_algorithms[settings.INITIAL_GUESS_ALGORITHM_CHOICE]
-    # algorithm = nlopt.GN_DIRECT
-
     obj_fcn = bp_obj_fcn_dec(T, obs)
 
     T_min = T[min_T_idx - 1]
@@ -388,21 +385,22 @@ def _c_hdd_tidd_bp0(T, obs, alpha, settings, min_weight=0.0):
     T_range = T_max - T_min
 
     x0 = np.array([T_range * 0.5]) + T_min
-    bnds = np.array([[T_min, T_max]]).T
+    bnds = np.array([[T_min, T_max]])
 
-    opt = nlopt.opt(algorithm, int(len(x0)))
-    opt.set_min_objective(obj_fcn)
+    opt_settings = OptimizationSettings(
+        ALGORITHM=settings.INITIAL_GUESS_ALGORITHM_CHOICE,
+        STOP_CRITERIA_TYPE="Iteration Maximum",
+        STOP_CRITERIA_VALUE=100,
+        INITIAL_STEP=settings.INITIAL_STEP_PERCENTAGE,
+        X_TOL_REL=1e-3,
+        F_TOL_REL=0.5,
+    )
 
-    opt.set_initial_step([T_range * 0.25])
-    opt.set_maxeval(100)
-    opt.set_xtol_rel(1e-3)
-    opt.set_xtol_abs(0.5)
-    opt.set_lower_bounds(bnds[0])
-    opt.set_upper_bounds(bnds[1])
+    res = InitialGuessOptimizer(
+        obj_fcn, x0, bnds, opt_settings
+    ).run()
 
-    x_opt = opt.optimize(x0)  # optimize!
-
-    return x_opt[0]
+    return res.x[0]
 
 
 def _c_hdd_tidd(
