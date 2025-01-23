@@ -18,11 +18,11 @@
 
 """
 import logging
-
+import pydantic
 __all__ = ("EEMeterWarning",)
 
 
-class EEMeterWarning(object):
+class EEMeterWarning(pydantic.BaseModel):
     """An object representing a warning and data associated with it.
 
     Attributes
@@ -35,16 +35,14 @@ class EEMeterWarning(object):
         Data that reproducibly shows why the warning was issued. Data should
         be JSON serializable.
     """
-
-    def __init__(self, qualified_name, description, data):
-        self.qualified_name = qualified_name
-        self.description = description
-        self.data = data
+    qualified_name: str
+    description: str
+    data: dict
 
     def __repr__(self):
         return "EEMeterWarning(qualified_name={})".format(self.qualified_name)
 
-    def json(self):
+    def json(self) -> dict:
         """Return a JSON-serializable representation of this result.
 
         The output of this function can be converted to a serialized string

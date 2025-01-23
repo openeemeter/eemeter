@@ -49,12 +49,17 @@ import json
 
 from eemeter.eemeter.models.hourly import settings as _settings
 from eemeter.eemeter.models.hourly import HourlyBaselineData, HourlyReportingData
+from eemeter.eemeter.common.exceptions import (
+    DataSufficiencyError,
+    DisqualifiedModelError,
+)
+from eemeter.eemeter.common.warnings import EEMeterWarning
 from eemeter.common.clustering import (
     bisect_k_means as _bisect_k_means,
     scoring as _scoring,
 )
 from eemeter.common.metrics import BaselineMetrics, BaselineMetricsFromDict
-
+from eemeter import __version__
 
 # TODO: need to make explicit solar/nonsolar versions and set settings requirements/defaults appropriately
 class HourlyModel:
@@ -121,12 +126,19 @@ class HourlyModel:
         self._T_bin_edges = None
         self._T_edge_bin_rate = None
         self._df_temporal_clusters = None
-        self._ts_features = self.settings._TRAIN_FEATURES.copy()
+        self._ts_features = self.settings._TRAIN_FEATURES.copy() #TODO during fit()
         self._categorical_features = None
         self._ts_feature_norm = None
 
         self.is_fitted = False
         self.baseline_metrics = None
+
+        self.warnings: list[EEMeterWarning] = []
+        self.disqualification: list[EEMeterWarning] = []
+
+        self.baseline_timezone = None
+        self.error = dict()
+        self.version = __version__
 
     def fit(self, baseline_data: HourlyBaselineData, ignore_disqualification: bool = False) -> HourlyModel:
         """Fit the model using baseline data.
@@ -144,8 +156,26 @@ class HourlyModel:
         """
         if not isinstance(baseline_data, HourlyBaselineData):
             raise TypeError("baseline_data must be an HourlyBaselineData object")
-        # TODO check DQ, log warnings
+        baseline_data.log_warnings()
+        if baseline_data.disqualification and not ignore_disqualification:
+            raise DataSufficiencyError("Can't fit model on disqualified baseline data")
+        if "ghi" in self._ts_features and not "ghi" in baseline_data.df.columns:
+            raise ValueError("Model was explicitly set to use GHI, but baseline data does not contain GHI.")
+
+        self.warnings = baseline_data.warnings
+        if "ghi" in baseline_data.df.columns and not "ghi" in self._ts_features:
+            model_mismatch_warning = EEMeterWarning(
+                qualified_name="eemeter.potential_model_mismatch",
+                description=(
+                    "Model was explicitly set to ignore GHI, but baseline period contained a GHI column."
+                ),
+                data={},
+            )
+            model_mismatch_warning.warn()
+            self.warnings.append(model_mismatch_warning)
+        self.disqualification = baseline_data.disqualification
         self._fit(baseline_data)
+        # TODO PNRMSE/CVRMSE threshold check + DQ append
         return self
 
     def _fit(self, meter_data):
@@ -201,16 +231,36 @@ class HourlyModel:
         if not self.is_fitted:
             raise RuntimeError("Model must be fit before predictions can be made.")
 
-        # TODO check DQ, log warnings
+        if missing_features := (set(self._ts_features) - set(reporting_data.df.columns)):
+            raise ValueError(f"Reporting data is missing the following features: {missing_features}")
+
+        if "ghi" in reporting_data.df.columns and not "ghi" in self._ts_features:
+            model_mismatch_warning = EEMeterWarning(
+                qualified_name="eemeter.potential_model_mismatch",
+                description=(
+                    "Reporting data contains GHI, but model was fit without GHI."
+                ),
+                data={},
+            )
+            model_mismatch_warning.warn()
+            self.warnings.append(model_mismatch_warning)
+        
+        if str(self.baseline_timezone) != str(reporting_data.tz):
+            raise ValueError(
+                "Reporting data must use the same timezone that the model was initially fit on."
+            )
+
+        if self.disqualification and not ignore_disqualification:
+            raise DisqualifiedModelError(
+                "Attempting to predict using disqualified model without setting ignore_disqualification=True"
+            )
 
         if not isinstance(reporting_data, (HourlyBaselineData, HourlyReportingData)):
             raise TypeError(
                 "reporting_data must be a HourlyBaselineData or HourlyReportingData object"
             )
 
-        df_eval = self._predict(reporting_data)
-
-        return df_eval
+        return self._predict(reporting_data)
 
     def _predict(self, eval_data, X=None):
         """
@@ -870,9 +920,17 @@ class HourlyModel:
             CATAGORICAL_SCALER=None,
             Y_SCALER=y_scaler,
             BASELINE_METRICS=self.baseline_metrics,
+            INFO=_settings.ModelInfo(
+                disqualification=self.disqualification,
+                warnings=self.warnings,
+                error=self.error,
+                baseline_timezone=str(self.baseline_timezone),
+                version=self.version,
+            )
         )
 
-        return params.model_dump()
+        model_dict = params.model_dump()
+        return model_dict
 
     def to_json(self) -> str:
         """Returns a JSON string of model parameters.
@@ -948,6 +1006,13 @@ class HourlyModel:
         model_cls.baseline_metrics = BaselineMetricsFromDict(
             data.get("BASELINE_METRICS")
         )
+
+        info = _settings.ModelInfo(**data.get("INFO"))
+        model_cls.warnings = info.warnings
+        model_cls.disqualification = info.disqualification
+        model_cls.error = info.error
+        model_cls.baseline_timezone = info.baseline_timezone
+        model_cls.version = info.version
 
         return model_cls
 
