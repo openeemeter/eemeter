@@ -175,12 +175,7 @@ class _HourlyData:
         self._too_many_missing_data = False
 
         self._df = self._set_data(df)
-
-        # sufficiency_df = self._df.merge(
-        #     temp_coverage, left_index=True, right_index=True, how="left"
-        # )
-        # disqualification, warnings = self._check_data_sufficiency(sufficiency_df)
-        disqualification, warnings = [], []
+        disqualification, warnings = self._check_data_sufficiency()
 
         self.disqualification += disqualification
         self.warnings += warnings
@@ -307,7 +302,7 @@ class _HourlyData:
         ).tz_convert(meter.index.tz)
         return df
 
-    def _check_data_sufficiency(self, sufficiency_df):
+    def _check_data_sufficiency(self):
         raise NotImplementedError(
             "Can't instantiate class _HourlyData, use HourlyBaselineData or HourlyReportingData."
         )
@@ -394,15 +389,17 @@ class HourlyBaselineData(_HourlyData):
         pv_start (datetime.date): Solar install date. If left unset, assumed to be at beginning of data.
 
     """
-    def _check_data_sufficiency(self, sufficiency_df):
+    def _check_data_sufficiency(self):
+        data = _create_sufficiency_df(self.df)
         hsc = HourlySufficiencyCriteria(
-            data=sufficiency_df, is_electricity_data=self.is_electricity_data
+            data=data, is_electricity_data=self.is_electricity_data
         )
         hsc.check_sufficiency_baseline()
         disqualification = hsc.disqualification
         warnings = hsc.warnings
 
         return disqualification, warnings
+
 
 
 class HourlyReportingData(_HourlyData):
@@ -435,12 +432,23 @@ class HourlyReportingData(_HourlyData):
 
         super().__init__(df, is_electricity_data, **kwargs)
 
-    def _check_data_sufficiency(self, sufficiency_df):
+    def _check_data_sufficiency(self):
+        data = _create_sufficiency_df(self.df)
         hsc = HourlySufficiencyCriteria(
-            data=sufficiency_df, is_electricity_data=self.is_electricity_data
+            data=data, is_electricity_data=self.is_electricity_data
         )
         hsc.check_sufficiency_reporting()
         disqualification = hsc.disqualification
         warnings = hsc.warnings
 
         return disqualification, warnings
+
+
+def _create_sufficiency_df(df: pd.DataFrame):
+    """Creates dataframe equivalent to legacy hourly input"""
+    df.loc[df["interpolated_observed"] == 1, "observed"] = np.nan
+    df.loc[df["interpolated_temperature"] == 1, "temperature"] = np.nan
+    # set temperature_not_null  to 1.0 if temperature is not null
+    df["temperature_not_null"] = df["temperature"].notnull().astype(float)
+    df["temperature_null"] = df["temperature"].isnull().astype(float)
+    return df
