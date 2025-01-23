@@ -19,7 +19,6 @@
 """
 from typing import Optional
 
-import nlopt
 import numba
 import numpy as np
 
