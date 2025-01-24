@@ -88,40 +88,40 @@ class StopCriteriaChoice(str, Enum):
 
 
 class OptimizationSettings(BaseSettings):
-    ALGORITHM: AlgorithmChoice = CustomField(
+    algorithm: AlgorithmChoice = CustomField(
         default=AlgorithmChoice.NLOPT_SBPLX,
         description="Optimization algorithm choice",
     )
 
-    STOP_CRITERIA_TYPE: StopCriteriaChoice = CustomField(
+    stop_criteria_type: StopCriteriaChoice = CustomField(
         default=StopCriteriaChoice.ITERATION_MAXIMUM,
         description="Stopping criteria",
     )
 
-    STOP_CRITERIA_VALUE: float = CustomField(
+    stop_criteria_value: float = CustomField(
         default=2000,
         gt=0,
         description="Stopping criteria value for the optimization algorithm",
     )
     
-    INITIAL_STEP: Optional[float] = CustomField(
+    initial_step: Optional[float] = CustomField(
         default=0.1,
         description="Initial step size for the optimization algorithm",
     )
 
-    X_TOL_REL: float = CustomField(
+    x_tol_rel: float = CustomField(
         default=1e-5,
         gt=0,
         description="Relative cutoff X tolerance for the optimization algorithm",
     )
 
-    F_TOL_REL: float = CustomField(
+    f_tol_rel: float = CustomField(
         default=1e-5,
         gt=0,
         description="Relative cutoff function tolerance for the optimization algorithm",
     )
 
-    INITIAL_POPULATION_MULTIPLIER: Optional[float] = CustomField(
+    initial_population_multiplier: Optional[float] = CustomField(
         default=None,
         description="Initial population multiplier for the optimization algorithm",
     )
@@ -129,12 +129,12 @@ class OptimizationSettings(BaseSettings):
 
     @pydantic.model_validator(mode="after")
     def _check_population_multiplier(self):
-        if self.INITIAL_POPULATION_MULTIPLIER is None:
-            if self.ALGORITHM == AlgorithmChoice.NLOPT_ISRES:
+        if self.initial_population_multiplier is None:
+            if self.algorithm == AlgorithmChoice.NLOPT_ISRES:
                 raise ValueError("INITIAL_POPULATION_MULTIPLIER must be > 1 for nlopt_ISRES")
         else:
-            if self.ALGORITHM == AlgorithmChoice.NLOPT_ISRES:
-                if self.INITIAL_POPULATION_MULTIPLIER <= 1:
+            if self.algorithm == AlgorithmChoice.NLOPT_ISRES:
+                if self.initial_population_multiplier <= 1:
                     raise ValueError("INITIAL_POPULATION_MULTIPLIER must be > 1 for nlopt_ISRES")
             else:
                 raise ValueError("INITIAL_POPULATION_MULTIPLIER must be None for all algorithms except nlopt_ISRES")
