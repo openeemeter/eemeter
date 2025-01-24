@@ -82,7 +82,7 @@ def full_model(
             k = -cdd_k
 
         else:  # Temperature independent
-            beta = 0
+            beta = 0.0
 
         # Evaluate
         if beta == 0:  # tidd
@@ -123,7 +123,7 @@ def get_full_model_x(model_key, x, T_min, T_max, T_min_seg, T_max_seg):
 
     elif model_key == "hdd_tidd_cdd":
         [hdd_bp, hdd_beta, cdd_bp, cdd_beta, intercept] = x
-        hdd_k = cdd_k = 0
+        hdd_k = cdd_k = 0.0
 
     elif model_key == "c_hdd_tidd_smooth":
         [c_hdd_bp, c_hdd_beta, c_hdd_k, intercept] = x
@@ -132,12 +132,12 @@ def get_full_model_x(model_key, x, T_min, T_max, T_min_seg, T_max_seg):
         if c_hdd_beta < 0:
             hdd_beta = -c_hdd_beta
             hdd_k = c_hdd_k
-            cdd_beta = cdd_k = 0
+            cdd_beta = cdd_k = 0.0
 
         else:
             cdd_beta = c_hdd_beta
             cdd_k = c_hdd_k
-            hdd_beta = hdd_k = 0
+            hdd_beta = hdd_k = 0.0
 
     elif model_key == "c_hdd_tidd":
         [c_hdd_bp, c_hdd_beta, intercept] = x
@@ -151,15 +151,15 @@ def get_full_model_x(model_key, x, T_min, T_max, T_min_seg, T_max_seg):
 
         if c_hdd_beta < 0:
             hdd_beta = -c_hdd_beta
-            cdd_beta = cdd_k = hdd_k = 0
+            cdd_beta = cdd_k = hdd_k = 0.0
 
         else:
             cdd_beta = c_hdd_beta
-            hdd_beta = hdd_k = cdd_k = 0
+            hdd_beta = hdd_k = cdd_k = 0.0
 
     elif model_key == "tidd":
         [intercept] = x
-        hdd_bp = hdd_beta = hdd_k = cdd_bp = cdd_beta = cdd_k = 0
+        hdd_bp = hdd_beta = hdd_k = cdd_bp = cdd_beta = cdd_k = 0.0
 
     x = [hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept]
 
@@ -192,16 +192,16 @@ def fix_full_model_x(x, T_min_seg, T_max_seg):
     # if there is a slope, but the breakpoint is at the end, it's a c_hdd_tidd model
     if hdd_bp != cdd_bp:
         if cdd_bp >= T_max_seg:
-            cdd_beta = 0
+            cdd_beta = 0.0
         elif hdd_bp <= T_min_seg:
-            hdd_beta = 0
+            hdd_beta = 0.0
 
     # if slopes are zero then smoothing is zero
     if hdd_beta == 0:
-        hdd_k = 0
+        hdd_k = 0.0
 
     if cdd_beta == 0:
-        cdd_k = 0
+        cdd_k = 0.0
 
     return [hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept]
 

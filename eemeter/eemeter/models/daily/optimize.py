@@ -23,7 +23,6 @@ import nlopt
 import numpy as np
 from scipy.optimize import (
     direct as scipy_direct,
-    Bounds as scipy_Bounds,
     minimize as scipy_minimize,
     minimize_scalar as scipy_minimize_scalar,
 )
@@ -172,7 +171,7 @@ class SciPyOptimizer(BaseOptimizer):
 
         timer_start = timer()
 
-        algorithm = settings.ALGORITHM[6:]
+        algorithm = settings.algorithm[6:]
 
         if algorithm.lower() in ["brent", "golden", "bounded"]:
             scipy_obj_fcn = lambda x: self.obj_fcn([x])
@@ -200,8 +199,8 @@ class SciPyOptimizer(BaseOptimizer):
                 res = scipy_direct(
                     scipy_obj_fcn, 
                     bnds_opt,
-                    maxiter=int(settings.STOP_CRITERIA_VALUE),
-                    f_min_rtol=settings.F_TOL_REL,
+                    maxiter=int(settings.stop_criteria_value),
+                    f_min_rtol=settings.f_tol_rel,
                 )
             else:
                 res = scipy_minimize(
@@ -238,24 +237,24 @@ class NLoptOptimizer(BaseOptimizer):
         x0_opt = x0[idx_opt]
         bnds_opt = bnds[idx_opt, :].T
         
-        algorithm = nlopt_algorithms[settings.ALGORITHM]
+        algorithm = nlopt_algorithms[settings.algorithm]
 
         opt = nlopt.opt(algorithm, np.size(x0_opt))
         opt.set_min_objective(obj_fcn)
-        if settings.STOP_CRITERIA_TYPE == "iteration maximum":
-            opt.set_maxeval(int(settings.STOP_CRITERIA_VALUE) - 1)
-        elif settings.STOP_CRITERIA_TYPE == "maximum time [min]":
-            opt.set_maxtime(settings.STOP_CRITERIA_VALUE * 60)
+        if settings.stop_criteria_type == "iteration maximum":
+            opt.set_maxeval(int(settings.stop_criteria_value) - 1)
+        elif settings.stop_criteria_type == "maximum time [min]":
+            opt.set_maxtime(settings.stop_criteria_value * 60)
 
-        opt.set_xtol_rel(settings.X_TOL_REL)
-        opt.set_ftol_rel(settings.F_TOL_REL)
+        opt.set_xtol_rel(settings.x_tol_rel)
+        opt.set_ftol_rel(settings.f_tol_rel)
         opt.set_lower_bounds(bnds_opt[0])
         opt.set_upper_bounds(bnds_opt[1])
 
         # initial_step
         max_initial_step = np.max(np.abs(bnds_opt - x0_opt), axis=0)
 
-        initial_step = (bnds_opt[1] - bnds_opt[0]) * settings.INITIAL_STEP
+        initial_step = (bnds_opt[1] - bnds_opt[0]) * settings.initial_step
 
         # TODO: bring this back in at some point?
         # coef_id_opt = [id for n, id in enumerate(self.coef_id) if n in idx_opt]
@@ -276,11 +275,11 @@ class NLoptOptimizer(BaseOptimizer):
         opt.set_initial_step(initial_step)
 
         # alter default size of population in relevant algorithms
-        if settings.ALGORITHM == "nlopt_crs2_lm":
+        if settings.algorithm == "nlopt_crs2_lm":
             default_pop_size = 10 * (len(x0_opt) + 1)
-        elif settings.ALGORITHM in ["nlopt_mlsl_lds", "nlopt_mlsl"]:
+        elif settings.algorithm in ["nlopt_mlsl_lds", "nlopt_mlsl"]:
             default_pop_size = 4
-        elif settings.ALGORITHM == "nlopt_isres":
+        elif settings.algorithm == "nlopt_isres":
             default_pop_size = 20 * (len(x0_opt) + 1)
 
             opt.set_population(
@@ -288,13 +287,13 @@ class NLoptOptimizer(BaseOptimizer):
             )
 
         # if using multistart algorithm as global, set subopt
-        if (settings.ALGORITHM == "nlopt_mlsl_lds"):  
+        if (settings.algorithm == "nlopt_mlsl_lds"):  
             raise NotImplementedError("nlopt_mlsl_lds not implemented")
-            local_algorithm = nlopt_algorithms[self.opt_settings.ALGORITHM]
+            local_algorithm = nlopt_algorithms[self.opt_settings.algorithm]
             sub_opt = nlopt.opt(local_algorithm, np.size(x0_opt))
             sub_opt.set_initial_step(initial_step)
-            sub_opt.set_xtol_rel(settings.X_TOL_REL)
-            sub_opt.set_ftol_rel(settings.F_TOL_REL)
+            sub_opt.set_xtol_rel(settings.x_tol_rel)
+            sub_opt.set_ftol_rel(settings.f_tol_rel)
             opt.set_local_optimizer(sub_opt)
 
         x_opt = opt.optimize(x0_opt)  # optimize!
@@ -351,15 +350,15 @@ class InitialGuessOptimizer:
             else:
                 x0 = res_all[list(res_all.keys())[-1]].x
 
-            if settings.ALGORITHM[:5] == "scipy":
+            if settings.algorithm[:5] == "scipy":
                 res = SciPyOptimizer(self.obj_fcn, x0, bnds, settings).run()
-            elif settings.ALGORITHM[:5] == "nlopt":
+            elif settings.algorithm[:5] == "nlopt":
                 res = NLoptOptimizer(self.obj_fcn, x0, bnds, settings).run()
 
             res_all.append(res)
 
             if (
-                settings.ALGORITHM == "nlopt_MLSL_LDS"
+                settings.algorithm == "nlopt_MLSL_LDS"
             ):  # if using multistart algorithm, break upon finishing loop
                 break
 
@@ -418,14 +417,18 @@ class Optimizer:
             else:
                 x0 = res_all[list(res_all.keys())[-1]].x
 
-            if settings.ALGORITHM[:5] == "scipy":
-                res = SciPyOptimizer(self.obj_fcn, x0, bnds, settings).run()
-            elif settings.ALGORITHM[:5] == "nlopt":
-                res = NLoptOptimizer(self.obj_fcn, x0, bnds, settings).run()
+            if settings.algorithm[:5] == "scipy":
+                optimizer_class = SciPyOptimizer
+            elif settings.algorithm[:5] == "nlopt":
+                optimizer_class = NLoptOptimizer
+                
+            optimizer = optimizer_class(self.obj_fcn, x0, bnds, settings)
+            res = optimizer.run()
 
-            x, mean_loss, TSS, T, model, weight, resid, jac, alpha, C = self.obj_fcn(
+            x, mean_loss, TSS, T, model, weight, resid, jac, alpha, C = optimizer.obj_fcn(
                 res.x, optimize_flag=False
             )
+
             res = OptimizedResult(
                 x,
                 bnds,
@@ -449,7 +452,7 @@ class Optimizer:
             res_all.append(res)
 
             if (
-                settings.ALGORITHM == "nlopt_MLSL_LDS"
+                settings.algorithm == "nlopt_MLSL_LDS"
             ):  # if using multistart algorithm, break upon finishing loop
                 break
 
