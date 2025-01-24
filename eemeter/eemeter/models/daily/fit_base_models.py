@@ -25,7 +25,7 @@ from eemeter.eemeter.models.daily.base_models.hdd_tidd_cdd import fit_hdd_tidd_c
 from eemeter.eemeter.models.daily.base_models.tidd import fit_tidd
 from eemeter.eemeter.models.daily.optimize_results import OptimizedResult
 from eemeter.eemeter.models.daily.parameters import ModelCoefficients
-from eemeter.eemeter.models.daily.utilities.config import FullModelSelection
+from eemeter.eemeter.models.daily.utilities.settings import FullModelSelection
 from eemeter.eemeter.models.daily.utilities.opt_settings import OptimizationSettings
 
 
@@ -41,8 +41,8 @@ def _get_opt_settings(settings):
     """
 
     opt_dict = {
-        "ALGORITHM": settings.ALGORITHM_CHOICE,
-        "INITIAL_STEP": settings.INITIAL_STEP_PERCENTAGE,
+        "ALGORITHM": settings.algorithm_choice,
+        "INITIAL_STEP": settings.initial_step_percentage,
     }
     opt_settings = OptimizationSettings(**opt_dict)
 
@@ -69,15 +69,15 @@ def fit_initial_models_from_full_model(df_meter, settings, print_res=False):
     fit_input = [T, obs, settings, opt_settings]
 
     # initial fitting of the most complicated model allowed
-    if settings.FULL_MODEL == FullModelSelection.HDD_TIDD_CDD:
+    if settings.full_model == FullModelSelection.HDD_TIDD_CDD:
         model_res = fit_hdd_tidd_cdd(
-            *fit_input, smooth=settings.SMOOTHED_MODEL, initial_fit=True
+            *fit_input, smooth=settings.allow_smooth_model, initial_fit=True
         )
-    elif settings.FULL_MODEL == FullModelSelection.C_HDD_TIDD:
+    elif settings.full_model == FullModelSelection.C_HDD_TIDD:
         model_res = fit_c_hdd_tidd(
-            *fit_input, smooth=settings.SMOOTHED_MODEL, initial_fit=True
+            *fit_input, smooth=settings.allow_smooth_model, initial_fit=True
         )
-    elif settings.FULL_MODEL == FullModelSelection.TIDD:
+    elif settings.full_model == FullModelSelection.TIDD:
         model_res = fit_tidd(*fit_input, initial_fit=True)
 
     if print_res:
@@ -158,7 +158,7 @@ def fit_final_model(df_meter, HoF: OptimizedResult, settings, print_res=False):
     fit_input = [T, obs, settings, opt_settings]
 
     x0 = HoF.x
-    bnds = get_bnds(x0, settings.FINAL_BOUNDS_SCALAR)
+    bnds = get_bnds(x0, settings.final_bounds_scalar)
 
     HoF = fit_model(HoF.model_key, fit_input, HoF.named_coeffs, bnds)
 

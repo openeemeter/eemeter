@@ -116,7 +116,7 @@ class DailyModel:
         self.day_options = [["wd", "we"]]
 
         # make dictionary is_weekday from settings
-        day_dict = self.settings.WEEKDAY_WEEKEND._NUM_DICT
+        day_dict = self.settings.weekday_weekend._num_dict
         n_week = list(range(len(day_dict)))
         self.combo_dictionary = {
             "su": "summer",
@@ -161,11 +161,11 @@ class DailyModel:
         self.warnings = baseline_data.warnings
         self.disqualification = baseline_data.disqualification
         self._fit(baseline_data.df)
-        if self.error["CVRMSE"] > self.settings.CVRMSE_THRESHOLD:
+        if self.error["CVRMSE"] > self.settings.cvrmse_threshold:
             cvrmse_warning = EEMeterWarning(
                 qualified_name="eemeter.model_fit_metrics.cvrmse",
                 description=(
-                    f"Fit model has CVRMSE > {self.settings.CVRMSE_THRESHOLD}"
+                    f"Fit model has CVRMSE > {self.settings.cvrmse_threshold}"
                 ),
                 data={"CVRMSE": self.error["CVRMSE"]},
             )
@@ -489,7 +489,7 @@ class DailyModel:
                 meter_data.drop([col], axis=1, inplace=True)
                 cols.remove(col)
 
-        meter_data["season"] = meter_data.index.month.map(self.settings.SEASON._NUM_DICT)
+        meter_data["season"] = meter_data.index.month.map(self.settings.season._num_dict)
         meter_data["day_of_week"] = meter_data.index.dayofweek + 1
         meter_data = meter_data.sort_index()
         meter_data = meter_data[["season", "day_of_week", *cols]]
@@ -631,14 +631,14 @@ class DailyModel:
             """
 
             meter = self.df_meter
-            allow_sep_summer = settings.SPLIT_SELECTION.ALLOW_SEPARATE_SUMMER
-            allow_sep_shoulder = settings.SPLIT_SELECTION.ALLOW_SEPARATE_SHOULDER
-            allow_sep_winter = settings.SPLIT_SELECTION.ALLOW_SEPARATE_WINTER
-            allow_sep_weekday_weekend = settings.SPLIT_SELECTION.ALLOW_SEPARATE_WEEKDAY_WEEKEND
+            allow_sep_summer = settings.split_selection.allow_separate_summer
+            allow_sep_shoulder = settings.split_selection.allow_separate_shoulder
+            allow_sep_winter = settings.split_selection.allow_separate_winter
+            allow_sep_weekday_weekend = settings.split_selection.allow_separate_weekday_weekend
 
-            if settings.SPLIT_SELECTION.REDUCE_SPLITS_BY_GAUSSIAN:
+            if settings.split_selection.reduce_splits_by_gaussian:
                 allow_split = ellipsoid_split_filter(
-                    self.df_meter, n_std=settings.SPLIT_SELECTION.REDUCE_SPLITS_NUM_STD
+                    self.df_meter, n_std=settings.split_selection.reduce_splits_num_std
                 )
 
                 if allow_sep_summer and not allow_split["summer"]:
@@ -780,7 +780,7 @@ class DailyModel:
             dict: A dictionary containing the fitted components.
         """
 
-        if self.settings.ALPHA_FINAL_TYPE == "last":
+        if self.settings.alpha_final_type == "last":
             settings_update = {
                 "DEVELOPER_MODE": True,
                 "SILENT_DEVELOPER_MODE": True, 
@@ -831,9 +831,9 @@ class DailyModel:
 
         loss = wRMSE / self.wRMSE_base
 
-        criteria_type = self.settings.SPLIT_SELECTION.CRITERIA.lower()
-        penalty_multiplier = self.settings.SPLIT_SELECTION.PENALTY_MULTIPLIER
-        penalty_power = self.settings.SPLIT_SELECTION.PENALTY_POWER
+        criteria_type = self.settings.split_selection.criteria.lower()
+        penalty_multiplier = self.settings.split_selection.penalty_multiplier
+        penalty_power = self.settings.split_selection.penalty_power
 
         criteria = selection_criteria(
             loss, TSS, N, num_coeffs, criteria_type, penalty_multiplier, penalty_power
@@ -884,7 +884,7 @@ class DailyModel:
             settings = self.settings
             prior_model = self.fit_components[component]
 
-            if settings.ALPHA_FINAL_TYPE is None:
+            if settings.alpha_final_type is None:
                 if self.verbose:
                     print(f"{component}__{prior_model.model_name}")
 

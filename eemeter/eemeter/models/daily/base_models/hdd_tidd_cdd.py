@@ -52,9 +52,9 @@ def fit_hdd_tidd_cdd(
     # assert x0 is None or x0.model_type is ModelType.HDD_TIDD_CDD_SMOOTH
 
     if initial_fit:
-        alpha = settings.ALPHA_SELECTION
+        alpha = settings.alpha_selection
     else:
-        alpha = settings.ALPHA_FINAL
+        alpha = settings.alpha_final
 
     if x0 is None:
         x0 = _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings, smooth)
@@ -62,14 +62,14 @@ def fit_hdd_tidd_cdd(
     max_slope = np.max([x0.hdd_beta, x0.cdd_beta])
     if max_slope != 0:
         max_slope += 10 ** (
-            np.log10(np.abs(max_slope)) + np.log10(settings.MAXIMUM_SLOPE_OOM_SCALER)
+            np.log10(np.abs(max_slope)) + np.log10(settings.maximum_slope_oom_scalar)
         )
 
     if initial_fit:
         T_min = np.min(T)
         T_max = np.max(T)
     else:
-        N_min = settings.SEGMENT_MINIMUM_COUNT
+        N_min = settings.segment_minimum_count
 
         T_min = np.partition(T, N_min)[N_min]
         T_max = np.partition(T, -N_min)[-N_min]
@@ -172,8 +172,8 @@ def evaluate_hdd_tidd_cdd_smooth(
 
 
 def _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings, smooth, min_weight=0.0):
-    min_T_idx = settings.SEGMENT_MINIMUM_COUNT
-    lasso_a = settings.REGULARIZATION_ALPHA
+    min_T_idx = settings.segment_minimum_count
+    lasso_a = settings.regularization_alpha
 
     idx_sorted = np.argsort(T).flatten()
     T = T[idx_sorted]
@@ -269,12 +269,12 @@ def _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings, smooth, min_weight=0.0):
     bnds = np.array([T_bnds, T_bnds])
 
     opt_settings = OptimizationSettings(
-        ALGORITHM=settings.INITIAL_GUESS_ALGORITHM_CHOICE,
-        STOP_CRITERIA_TYPE="Iteration Maximum",
-        STOP_CRITERIA_VALUE=200,
-        INITIAL_STEP=settings.INITIAL_STEP_PERCENTAGE,
-        X_TOL_REL=1e-3,
-        F_TOL_REL=0.5,
+        algorithm=settings.initial_guess_algorithm_choice,
+        stop_criteria_type="Iteration Maximum",
+        stop_criteria_value=200,
+        initial_step=settings.initial_step_percentage,
+        x_tol_rel=1e-3,
+        f_tol_rel=0.5,
     )
 
     res = InitialGuessOptimizer(

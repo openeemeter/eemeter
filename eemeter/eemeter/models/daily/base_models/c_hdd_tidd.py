@@ -64,9 +64,9 @@ def fit_c_hdd_tidd(
     """
 
     if initial_fit:
-        alpha = settings.ALPHA_SELECTION
+        alpha = settings.alpha_selection
     else:
-        alpha = settings.ALPHA_FINAL
+        alpha = settings.alpha_final
 
     if x0 is None:
         x0 = _c_hdd_tidd_x0(T, obs, alpha, settings, smooth)
@@ -82,7 +82,7 @@ def fit_c_hdd_tidd(
 
     # limit slope based on initial regression & configurable order of magnitude
     max_slope = np.abs(tdd_beta) + 10 ** (
-        np.log10(np.abs(tdd_beta)) + np.log10(settings.MAXIMUM_SLOPE_OOM_SCALER)
+        np.log10(np.abs(tdd_beta)) + np.log10(settings.maximum_slope_oom_scalar)
     )
 
     # initial fit bounded by Tmin:Tmax, final fit has minimum T segment buffer
@@ -147,6 +147,7 @@ def fit_c_hdd_tidd(
     res = Optimizer(
         obj_fcn, x0.to_np_array(), bnds, coef_id, settings, opt_options
     ).run()
+
     return res
 
 
@@ -167,12 +168,12 @@ def set_full_model_coeffs_smooth(c_hdd_bp, c_hdd_beta, c_hdd_k, intercept):
     if c_hdd_beta < 0:
         hdd_beta = -c_hdd_beta
         hdd_k = c_hdd_k
-        cdd_beta = cdd_k = 0
+        cdd_beta = cdd_k = 0.0
 
     else:
         cdd_beta = c_hdd_beta
         cdd_k = c_hdd_k
-        hdd_beta = hdd_k = 0
+        hdd_beta = hdd_k = 0.0
 
     return np.array([hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept])
 
@@ -189,7 +190,7 @@ def set_full_model_coeffs(c_hdd_bp, c_hdd_beta, intercept):
     np.array: An array containing the coefficients for the full model.
     """
 
-    return set_full_model_coeffs_smooth(c_hdd_bp, c_hdd_beta, 0, intercept)
+    return set_full_model_coeffs_smooth(c_hdd_bp, c_hdd_beta, 0.0, intercept)
 
 
 def _c_hdd_tidd_update_bnds(new_bnds, bnds, smooth):
@@ -268,7 +269,7 @@ def _tdd_coefficients(
 
 
 def _c_hdd_tidd_x0(T, obs, alpha, settings, smooth):
-    min_T_idx = settings.SEGMENT_MINIMUM_COUNT
+    min_T_idx = settings.segment_minimum_count
 
     # c_hdd_bp = initial_guess_bp_1(T, obs, s=2, int_method="trapezoid")
     c_hdd_bp = _c_hdd_tidd_bp0(T, obs, alpha, settings)
@@ -314,7 +315,7 @@ def _c_hdd_tidd_x0_final(T, obs, x0, alpha, settings):
     else:
         c_hdd_bp, c_hdd_beta, intercept = x0.to_np_array()
 
-    min_T_idx = settings.SEGMENT_MINIMUM_COUNT
+    min_T_idx = settings.segment_minimum_count
     idx_hdd = np.argwhere(T <= c_hdd_bp).flatten()
     idx_cdd = np.argwhere(T >= c_hdd_bp).flatten()
 
@@ -332,7 +333,7 @@ def _c_hdd_tidd_x0_final(T, obs, x0, alpha, settings):
 
 
 def _c_hdd_tidd_bp0(T, obs, alpha, settings, min_weight=0.0):
-    min_T_idx = settings.SEGMENT_MINIMUM_COUNT
+    min_T_idx = settings.segment_minimum_count
 
     idx_sorted = np.argsort(T).flatten()
     T = T[idx_sorted]
@@ -388,12 +389,12 @@ def _c_hdd_tidd_bp0(T, obs, alpha, settings, min_weight=0.0):
     bnds = np.array([[T_min, T_max]])
 
     opt_settings = OptimizationSettings(
-        ALGORITHM=settings.INITIAL_GUESS_ALGORITHM_CHOICE,
-        STOP_CRITERIA_TYPE="Iteration Maximum",
-        STOP_CRITERIA_VALUE=100,
-        INITIAL_STEP=settings.INITIAL_STEP_PERCENTAGE,
-        X_TOL_REL=1e-3,
-        F_TOL_REL=0.5,
+        algorithm=settings.initial_guess_algorithm_choice,
+        stop_criteria_type="Iteration Maximum",
+        stop_criteria_value=100,
+        initial_step=settings.initial_step_percentage,
+        x_tol_rel=1e-3,
+        f_tol_rel=0.5,
     )
 
     res = InitialGuessOptimizer(
