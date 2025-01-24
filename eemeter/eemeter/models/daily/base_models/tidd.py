@@ -45,9 +45,9 @@ def fit_tidd(
         x0 = _tidd_x0(T, obs)
 
     if initial_fit:
-        alpha = settings.ALPHA_SELECTION
+        alpha = settings.alpha_selection
     else:
-        alpha = settings.ALPHA_FINAL
+        alpha = settings.alpha_final
 
     intercept_bnds = np.quantile(obs, [0.01, 0.99])
     bnds_0 = np.array([intercept_bnds])

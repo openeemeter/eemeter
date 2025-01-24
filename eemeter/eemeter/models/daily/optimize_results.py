@@ -315,7 +315,7 @@ class OptimizedResult:
             MSE = np.mean(resid**2)
             self.cov = MSE * self.hess_inv
 
-            unc_alpha = self.settings.UNCERTAINTY_ALPHA
+            unc_alpha = self.settings.uncertainty_alpha
             self.x_unc = np.sqrt(np.diag(self.cov)) * unc_factor(
                 self.DoF + 1, interval="PI", alpha=unc_alpha
             )
@@ -359,7 +359,7 @@ class OptimizedResult:
         if self.DoF < 1:
             self.DoF = 1
 
-        alpha = self.settings.UNCERTAINTY_ALPHA
+        alpha = self.settings.uncertainty_alpha
         f_unc = np.std(self.resid) * unc_factor(
             self.DoF + 1, interval="PI", alpha=alpha
         )

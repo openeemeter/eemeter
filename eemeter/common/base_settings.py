@@ -32,12 +32,17 @@ class BaseSettings(pydantic.BaseModel):
         str_strip_whitespace = True
 
     """Make all property keys case insensitive"""
+    @pydantic.model_validator(mode="before")
+    def __lowercase_property_keys__(cls, values: Any) -> Any:
+        def __lower__(value: Any) -> Any:
+            if isinstance(value, dict):
+                return {k.lower() if isinstance(k, str) else k: __lower__(v) for k, v in value.items()}
+            return value
 
-    # @pydantic.model_validator(mode="before")
-    # def __uppercase_property_keys__(cls, values: Any) -> Any:
-    #     def __upper__(value: Any) -> Any:
-    #         if isinstance(value, dict):
-    #             return {k.upper() if isinstance(k, str) else k: __upper__(v) for k, v in value.items()}
-    #         return value
+        return __lower__(values)
 
-    #     return __upper__(values)
+
+# add developer field to pydantic Field
+def CustomField(developer=False, *args, **kwargs):
+    field = pydantic.Field(developer=developer, *args, **kwargs)
+    return field
