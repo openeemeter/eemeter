@@ -186,6 +186,14 @@ def test_monthly_percentage(baseline):
 def test_hourly_consecutive_missing(baseline):
     pass
 
+def test_from_series(baseline, reporting):
+    baseline_series = HourlyBaselineData.from_series(baseline["observed"], baseline["temperature"], is_electricity_data=True)
+    baseline_df = HourlyBaselineData(baseline[["observed", "temperature"]], is_electricity_data=True)
+    assert baseline_series.df.equals(baseline_df.df)
+    reporting_series = HourlyReportingData.from_series(reporting["observed"], reporting["temperature"], is_electricity_data=True)
+    reporting_df = HourlyReportingData(reporting[["observed", "temperature"]], is_electricity_data=True)
+    assert reporting_series.df.equals(reporting_df.df)
+
 def assert_dq(data, expected_disqualifications):
     remaining_dq = set(expected_disqualifications)
     for dq in data.disqualification:

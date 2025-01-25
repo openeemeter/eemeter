@@ -17,11 +17,12 @@
    limitations under the License.
 
 """
+from __future__ import annotations
 
 from pathlib import Path
 import copy
 from typing import Optional, Union
-from datetime import date
+from datetime import date, tzinfo
 
 from eemeter.eemeter.common.data_processor_utilities import (
     compute_minimum_granularity,
@@ -196,11 +197,48 @@ class _HourlyData:
         cls,
         meter_data: Union[pd.Series, pd.DataFrame],
         temperature_data: Union[pd.Series, pd.DataFrame],
-        is_electricity_data,
+        is_electricity_data: bool,
     ):
-        raise NotImplementedError(
-            "Unimplemented until full release--use regular constructor with complete hourly dataframe."
+        """Create an instance of the hourly dataclass from meter data and temperature data.
+
+        Public method that can can handle two separate series (meter and temperature) and join them to create a single dataframe. The temperature column should have values in Fahrenheit.
+
+        Args:
+            meter_data: The meter data.
+            temperature_data: The temperature data.
+            is_electricity_data: A flag indicating whether the data represents electricity data. This is required as electricity data with 0 values are converted to NaNs.
+
+        Returns:
+            An instance of the hourly dataclass.
+        """
+
+        if isinstance(meter_data, pd.Series):
+            meter_data = meter_data.to_frame()
+        if isinstance(temperature_data, pd.Series):
+            temperature_data = temperature_data.to_frame()
+        meter_data = meter_data.rename(columns={meter_data.columns[0]: "observed"})
+        temperature_data = temperature_data.rename(
+            columns={temperature_data.columns[0]: "temperature"}
         )
+        temperature_data.index = temperature_data.index.tz_convert(
+            meter_data.index.tzinfo
+        )
+
+        if temperature_data.empty:
+            raise ValueError("Temperature data cannot be empty.")
+        if meter_data.empty:
+            # reporting from_series always passes a full index of nan
+            raise ValueError("Meter data cannot by empty.")
+
+        df = pd.concat([meter_data, temperature_data], axis=1)
+
+        df.index.freq = df.index.inferred_freq
+        if df.index.freq != pd.offsets.Hour():
+            raise ValueError("Data must have hourly frequency.")
+
+        if df.empty:
+            raise ValueError("Meter and temperature data are fully misaligned.")
+        return cls(df, is_electricity_data)
 
     def log_warnings(self):
         """
@@ -426,6 +464,49 @@ class HourlyReportingData(_HourlyData):
             df["observed"] = np.nan
 
         super().__init__(df, is_electricity_data, pv_start, **kwargs)
+    
+    @classmethod
+    def from_series(
+        cls,
+        meter_data: pd.Series | pd.DataFrame | None,
+        temperature_data: pd.Series | pd.DataFrame,
+        is_electricity_data: bool | None = None,
+        tzinfo: tzinfo | None = None,
+    ) -> HourlyReportingData:
+        """Create an instance of the Data class from meter data and temperature data.
+
+        Args:
+            meter_data: The meter data to be used for the HourlyReportingData instance.
+            temperature_data: The temperature data to be used for the HourlyReportingData instance.
+            is_electricity_data: Flag indicating whether the meter data represents electricity data.
+            tzinfo: Timezone information to be used for the meter data.
+
+        Returns:
+            An instance of the Data class.
+        """
+        if tzinfo and meter_data is not None:
+            raise ValueError(
+                "When passing meter data to HourlyReportingData, convert its DatetimeIndex to local timezone first; `tzinfo` param should only be used in the absence of reporting meter data."
+            )
+        if is_electricity_data is None and meter_data is not None:
+            raise ValueError(
+                "Must specify is_electricity_data when passing meter data."
+            )
+        if meter_data is None:
+            meter_data = pd.DataFrame(
+                {"observed": np.nan}, index=temperature_data.index
+            )
+            if tzinfo:
+                meter_data = meter_data.tz_convert(tzinfo)
+
+            # If is_electricity_data is not specified, set it to True for proper functioning in the parent class. If it hits this point it's all NaNs anyway.
+            if is_electricity_data is None:
+                is_electricity_data = True
+        if meter_data.empty:
+            raise ValueError(
+                "Pass meter_data=None rather than an empty series in order to explicitly create a temperature-only reporting data instance."
+            )
+        return super().from_series(meter_data, temperature_data, is_electricity_data)
 
     def _check_data_sufficiency(self):
         data = _create_sufficiency_df(self.df)
