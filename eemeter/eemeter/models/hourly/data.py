@@ -21,6 +21,7 @@
 from pathlib import Path
 import copy
 from typing import Optional, Union
+from datetime import date
 
 from eemeter.eemeter.common.data_processor_utilities import (
     compute_minimum_granularity,
@@ -150,8 +151,7 @@ class _HourlyData:
     Will raise exception during data sufficiency check if instantiated
     """
 
-    # TODO do we need to specify elec? consider a default true? how common are hourly gas meters
-    def __init__(self, df: pd.DataFrame, is_electricity_data: bool, **kwargs: dict):
+    def __init__(self, df: pd.DataFrame, is_electricity_data: bool, pv_start: Union[date, str, None] = None, **kwargs: dict):
         self._df = None
         self.warnings = []
         self.disqualification = []
@@ -160,9 +160,11 @@ class _HourlyData:
 
         # TODO copied from HourlyData
         self._to_be_interpolated_columns = []
-        self._interp = None
         self._outputs = []
+
         self.pv_start = None
+        if pv_start is not None:
+            self.pv_start = pd.to_datetime(pv_start).date()
 
         # TODO not sure why we're keeping this copy, just set the attrs
         self._kwargs = copy.deepcopy(kwargs)
@@ -277,13 +279,6 @@ class _HourlyData:
         return df
 
     def _add_pv_start_date(self, df, model_type="TS"):
-        # add pv start date here to avoid interpolating the pv start date
-        # TODO make pv_start a first class argument rather than nested inside metadata
-        if "metadata" in self._kwargs:
-            if "pv_start" in self._kwargs["metadata"]:
-                self.pv_start = self._kwargs["metadata"]["pv_start"]
-                if self.pv_start is not None:
-                    self.pv_start = pd.to_datetime(self.pv_start).date()
         if self.pv_start is None:
             self.pv_start = df.index.date.min()
 
@@ -425,12 +420,12 @@ class HourlyReportingData(_HourlyData):
         pv_start (datetime.date): Solar install date. If left unset, assumed to be at beginning of data.
     """
 
-    def __init__(self, df: pd.DataFrame, is_electricity_data: bool, **kwargs: dict):
+    def __init__(self, df: pd.DataFrame, is_electricity_data: bool, pv_start: Union[date, str, None] = None, **kwargs: dict):
         df = df.copy()
         if "observed" not in df.columns:
             df["observed"] = np.nan
 
-        super().__init__(df, is_electricity_data, **kwargs)
+        super().__init__(df, is_electricity_data, pv_start, **kwargs)
 
     def _check_data_sufficiency(self):
         data = _create_sufficiency_df(self.df)
