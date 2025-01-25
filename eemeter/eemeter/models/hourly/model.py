@@ -98,7 +98,7 @@ class HourlyModel:
 
         # Initialize settings
         if settings is None:
-            self.settings = _settings.HourlyNonSolarSettings()
+            self.settings = _settings.BaseHourlySettings()
         else:
             self.settings = settings
 
@@ -126,9 +126,12 @@ class HourlyModel:
         self._T_bin_edges = None
         self._T_edge_bin_rate = None
         self._df_temporal_clusters = None
-        self._ts_features = self.settings._TRAIN_FEATURES.copy() #TODO during fit()
         self._categorical_features = None
         self._ts_feature_norm = None
+
+        self._ts_features = []
+        if self.settings.TRAIN_FEATURES:
+            self._ts_features = self.settings.TRAIN_FEATURES.copy()
 
         self.is_fitted = False
         self.baseline_metrics = None
@@ -163,6 +166,12 @@ class HourlyModel:
             raise ValueError("Model was explicitly set to use GHI, but baseline data does not contain GHI.")
 
         self.warnings = baseline_data.warnings
+        self.disqualification = baseline_data.disqualification
+
+        if not self._ts_features:
+            self.settings = self.settings.add_default_features(baseline_data.df.columns)
+            self._ts_features = self.settings.TRAIN_FEATURES.copy()
+
         if "ghi" in baseline_data.df.columns and not "ghi" in self._ts_features:
             model_mismatch_warning = EEMeterWarning(
                 qualified_name="eemeter.potential_model_mismatch",
@@ -173,7 +182,7 @@ class HourlyModel:
             )
             model_mismatch_warning.warn()
             self.warnings.append(model_mismatch_warning)
-        self.disqualification = baseline_data.disqualification
+
         self._fit(baseline_data)
         # TODO PNRMSE/CVRMSE threshold check + DQ append
         return self
@@ -206,6 +215,7 @@ class HourlyModel:
         self.baseline_metrics = BaselineMetrics(
             df=df_meter.loc[~interpolated], num_model_params=num_parameters
         )
+        self.baseline_timezone = meter_data.tz
 
         return self
 
