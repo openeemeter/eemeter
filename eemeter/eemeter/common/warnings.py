@@ -42,6 +42,9 @@ class EEMeterWarning(pydantic.BaseModel):
     def __repr__(self):
         return "EEMeterWarning(qualified_name={})".format(self.qualified_name)
 
+    def __str__(self):
+        return repr(self)
+
     def json(self) -> dict:
         """Return a JSON-serializable representation of this result.
 
