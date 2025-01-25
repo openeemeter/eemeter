@@ -220,4 +220,5 @@ TODO get a couple example meters with GHI, potentially some supplemental feature
 * test a few DQs - baseline length, etc
 * unmarked net metering flag - includes warning
 * all above tests using from_series in parallel, verifying that output is identical
+* test with various pv_start values
 """

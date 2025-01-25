@@ -47,6 +47,10 @@ class DistanceMetric(str, Enum):
     MANHATTAN = "manhattan"
     COSINE = "cosine"
 
+class DefaultTrainingFeatures(str, Enum):
+    SOLAR = ["temperature", "ghi"]
+    NONSOLAR = ["temperature"]
+
 
 class TemperatureBinSettings(BaseSettings):
     """how to bin temperature data"""
@@ -285,10 +289,7 @@ class BaseHourlySettings(BaseSettings):
     """train features used within the model"""
 
     #TODO add a "ghi-auto" or similar so that we can init with the rest of default settings and detect ghi on fit
-    TRAIN_FEATURES: list[str] = pydantic.Field(
-        default=["temperature"],
-        frozen=True,
-    )
+    TRAIN_FEATURES: Optional[list[str]] = None
 
     """minimum number of training hours per day below which a day is excluded"""
     MIN_DAILY_TRAINING_HOURS: int = pydantic.Field(
@@ -345,6 +346,14 @@ class BaseHourlySettings(BaseSettings):
 
         return self
 
+    def add_default_features(self, incoming_columns: list[str]):
+        """"called prior fit step to set default training features"""
+        if "ghi" in incoming_columns:
+            default_features = ["temperature", "ghi"]
+        else:
+            default_features = ["temperature"]
+        return self.model_copy(update={"TRAIN_FEATURES": default_features})
+
 
 class HourlySolarSettings(BaseHourlySettings):
     """train features used within the model"""
@@ -353,21 +362,13 @@ class HourlySolarSettings(BaseHourlySettings):
         default=["temperature", "ghi"],
     )
 
-    @pydantic.model_validator(mode="after")
-    def _check_features(self):
-        # make all features lowercase
-        self._TRAIN_FEATURES = [s.lower() for s in self.TRAIN_FEATURES]
-
-        for feature in ["temperature", "ghi"]:
-            if feature not in self._TRAIN_FEATURES:
-                self._TRAIN_FEATURES.insert(0, feature)
-
-        self._TRAIN_FEATURES = sorted(
-            self._TRAIN_FEATURES, key=lambda x: x not in ["temperature", "ghi"]
-        )
-
-        return self
-
+    @pydantic.field_validator("TRAIN_FEATURES", mode="after")
+    def _add_required_features(cls, v):
+        required_features = ["ghi", "temperature"]
+        for feature in required_features:
+            if feature not in v:
+                v.insert(0, feature)
+        return v
 
 class HourlyNonSolarSettings(BaseHourlySettings):
     """number of temperature bins"""
@@ -375,16 +376,15 @@ class HourlyNonSolarSettings(BaseHourlySettings):
     #     default=10,
     #     ge=1,
     # )
+    TRAIN_FEATURES: list[str] = pydantic.Field(
+        default=["temperature"],
+    )
 
-    @pydantic.model_validator(mode="after")
-    def _check_features(self):
-        # make all features lowercase
-        self._TRAIN_FEATURES = [s.lower() for s in self.TRAIN_FEATURES]
-
-        if "temperature" not in self._TRAIN_FEATURES:
-            self._TRAIN_FEATURES.insert(0, "temperature")
-
-        return self
+    @pydantic.field_validator("TRAIN_FEATURES", mode="after")
+    def _add_required_features(cls, v):
+        if "temperature" not in v:
+            v.insert(0, "temperature")
+        return v
 
 
 class ModelInfo(pydantic.BaseModel):
