@@ -18,7 +18,9 @@
 
 """
 import logging
+from typing import Union
 import pydantic
+
 __all__ = ("EEMeterWarning",)
 
 
@@ -35,9 +37,10 @@ class EEMeterWarning(pydantic.BaseModel):
         Data that reproducibly shows why the warning was issued. Data should
         be JSON serializable.
     """
+
     qualified_name: str
     description: str
-    data: dict
+    data: Union[dict, list]
 
     def __repr__(self):
         return "EEMeterWarning(qualified_name={})".format(self.qualified_name)
