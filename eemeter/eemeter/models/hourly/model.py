@@ -184,7 +184,19 @@ class HourlyModel:
             self.warnings.append(model_mismatch_warning)
 
         self._fit(baseline_data)
-        # TODO PNRMSE/CVRMSE threshold check + DQ append
+        if not self._model_fit_is_acceptable():
+            model_fit_warning = EEMeterWarning(
+                qualified_name="eemeter.model_fit_metrics",
+                description="Model disqualified due to poor fit.",
+                data={
+                    "cvrmse_threshold": self.settings.cvrmse_threshold,
+                    "cvrmse_adj": self.baseline_metrics.cvrmse_adj,
+                    "pnrmse_threshold": self.settings.pnrmse_threshold,
+                    "pnrmse_adj": self.baseline_metrics.pnrmse_adj,
+                },
+            )
+            model_fit_warning.warn()
+            self.disqualification.append(model_fit_warning)
         return self
 
     def _fit(self, meter_data):
@@ -254,7 +266,7 @@ class HourlyModel:
             )
             model_mismatch_warning.warn()
             self.warnings.append(model_mismatch_warning)
-        
+
         if str(self.baseline_timezone) != str(reporting_data.tz):
             raise ValueError(
                 "Reporting data must use the same timezone that the model was initially fit on."
@@ -888,6 +900,15 @@ class HourlyModel:
             y = None
 
         return X, y
+
+    def _model_fit_is_acceptable(self):
+        # TODO confirm thresholds and default behavior of allowing either to pass
+        cvrmse = self.baseline_metrics.cvrmse_adj
+        pnrmse = self.baseline_metrics.pnrmse_adj
+        if (cvrmse is not None and cvrmse < self.settings.cvrmse_threshold) or (
+            pnrmse is not None and pnrmse < self.settings.pnrmse_threshold
+        ):
+            return True
 
     def to_dict(self) -> dict:
         """Returns a dictionary of model parameters.

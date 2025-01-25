@@ -290,6 +290,16 @@ class BaseHourlySettings(BaseSettings):
 
     train_features: Optional[list[str]] = None
 
+    """CVRMSE threshold for model disqualification"""
+    cvrmse_threshold: float = pydantic.Field(
+        default=1.4,
+    )
+
+    """PNRMSE threshold for model disqualification"""
+    pnrmse_threshold: float = pydantic.Field(
+        default=2.2,
+    )
+
     """minimum number of training hours per day below which a day is excluded"""
     min_daily_training_hours: int = pydantic.Field(
         default=12,
@@ -411,4 +421,3 @@ class SerializeModel(BaseSettings):
     intercept: Optional[list[float]] = None
     baseline_metrics: Optional[BaselineMetrics] = None
     info: ModelInfo
-    

@@ -20,7 +20,7 @@
 from datetime import datetime
 
 from eemeter.eemeter import HourlyBaselineData, HourlyReportingData, HourlyModel, HourlySolarSettings, HourlyNonSolarSettings
-from eemeter.eemeter.common.exceptions import DataSufficiencyError
+from eemeter.eemeter.common.exceptions import DataSufficiencyError, DisqualifiedModelError
 from eemeter.eemeter.common.warnings import EEMeterWarning
 from eemeter.common.test_data import load_test_data
 import numpy as np
@@ -186,6 +186,14 @@ def test_monthly_percentage(baseline):
 def test_hourly_consecutive_missing(baseline):
     pass
 
+def test_hourly_error_metric_dq(baseline):
+    baseline["observed"] = np.random.normal(-1, 10, len(baseline)) ** 3
+    baseline_data = HourlyBaselineData(baseline, is_electricity_data=True)
+    model = HourlyModel().fit(baseline_data)
+    assert_dq(baseline_data, ["eemeter.model_fit_metrics"])
+    with pytest.raises(DisqualifiedModelError):
+        model.predict(baseline_data)
+
 def assert_dq(data, expected_disqualifications):
     remaining_dq = set(expected_disqualifications)
     for dq in data.disqualification:
@@ -219,6 +227,5 @@ TODO get a couple example meters with GHI, potentially some supplemental feature
     * should still happen to allow model fit, but add (and test for) DQ
 * test a few DQs - baseline length, etc
 * unmarked net metering flag - includes warning
-* all above tests using from_series in parallel, verifying that output is identical
 * test with various pv_start values
 """
