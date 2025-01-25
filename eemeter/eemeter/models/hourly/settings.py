@@ -54,41 +54,41 @@ class DefaultTrainingFeatures(str, Enum):
 
 class TemperatureBinSettings(BaseSettings):
     """how to bin temperature data"""
-    METHOD: BinningChoice = pydantic.Field(
+    method: BinningChoice = pydantic.Field(
         default=BinningChoice.SET_BIN_WIDTH,
     )
 
     """number of temperature bins"""
-    N_BINS: Optional[int] = pydantic.Field(
+    n_bins: Optional[int] = pydantic.Field(
         default=None,
         ge=1,
     )
 
     """temperature bin width in fahrenheit"""
-    BIN_WIDTH: Optional[float] = pydantic.Field(
+    bin_width: Optional[float] = pydantic.Field(
         default=12,
         ge=1,
     )
 
     """use edge bins bool"""
-    INCLUDE_EDGE_BINS: bool = pydantic.Field(
+    include_edge_bins: bool = pydantic.Field(
         default=True,
     )
 
     """rate for edge temperature bins"""
-    EDGE_BIN_RATE: Optional[Union[float, Literal["heuristic"]]] = pydantic.Field(
+    edge_bin_rate: Optional[Union[float, Literal["heuristic"]]] = pydantic.Field(
         default="heuristic",
     )
 
     """percent of total data in edge bins"""
-    EDGE_BIN_PERCENT: Optional[float] = pydantic.Field(
+    edge_bin_percent: Optional[float] = pydantic.Field(
         default=0.0425,
         ge=0,
         le=0.45,
     )
 
     """offset normalized temperature range for edge bins (keeps exp from blowing up)"""
-    EDGE_BIN_TEMPERATURE_RANGE_OFFSET: Optional[float] = pydantic.Field(
+    edge_bin_temperature_range_offset: Optional[float] = pydantic.Field(
         default=1.0,
         ge=0,
     )
@@ -97,69 +97,69 @@ class TemperatureBinSettings(BaseSettings):
     @pydantic.model_validator(mode="after")
     def _check_temperature_bins(self):
         # check that temperature bin count is set based on binning method
-        if self.METHOD is None:
-            if self.N_BINS is not None:
+        if self.method is None:
+            if self.n_bins is not None:
                 raise ValueError(
-                    "'N_BINS' must be None if 'METHOD' is None."
+                    "'n_bins' must be None if 'method' is None."
                 )
-            if self.BIN_WIDTH is not None:
+            if self.bin_width is not None:
                 raise ValueError(
-                    "'N_BINS' must be None if 'METHOD' is None."
+                    "'n_bins' must be None if 'method' is None."
                 )
         else:
-            if self.METHOD == BinningChoice.SET_BIN_WIDTH:
-                if self.BIN_WIDTH is None:
+            if self.method == BinningChoice.SET_BIN_WIDTH:
+                if self.bin_width is None:
                     raise ValueError(
-                        "'N_BINS' must be specified if 'METHOD' is 'SET_BIN_WIDTH'."
+                        "'n_bins' must be specified if 'method' is 'set_bin_width'."
                     )
-                elif isinstance(self.BIN_WIDTH, float):
-                    if self.BIN_WIDTH <= 0:
+                elif isinstance(self.bin_width, float):
+                    if self.bin_width <= 0:
                         raise ValueError(
-                            "'BIN_WIDTH' must be greater than 0."
+                            "'bin_width' must be greater than 0."
                         )
                     
-                if self.N_BINS is not None:
+                if self.n_bins is not None:
                     raise ValueError(
-                        "'N_BINS' must be None if 'METHOD' is 'SET_BIN_WIDTH'."
+                        "'n_bins' must be None if 'method' is 'set_bin_width'."
                     )
             else:
-                if self.N_BINS is None:
+                if self.n_bins is None:
                     raise ValueError(
-                        "'N_BINS' must be specified if 'METHOD' is not None."
+                        "'n_bins' must be specified if 'method' is not None."
                     )
-                if self.BIN_WIDTH is not None:
+                if self.bin_width is not None:
                     raise ValueError(
-                        "'N_BINS' must be None if 'METHOD' is not None."
+                        "'n_bins' must be None if 'method' is not None."
                     )
 
         return self
 
     @pydantic.model_validator(mode="after")
     def _check_edge_bins(self):
-        if self.METHOD != BinningChoice.SET_BIN_WIDTH:
-            if self.INCLUDE_EDGE_BINS:
+        if self.method != BinningChoice.SET_BIN_WIDTH:
+            if self.include_edge_bins:
                 raise ValueError(
-                    "'INCLUDE_EDGE_BINS' must be False if 'METHOD' is not 'SET_BIN_WIDTH'."
+                    "'include_edge_bins' must be False if 'method' is not 'set_bin_width'."
                 )
             
-        if self.INCLUDE_EDGE_BINS:
-            if self.EDGE_BIN_RATE is None:
+        if self.include_edge_bins:
+            if self.edge_bin_rate is None:
                 raise ValueError(
-                    "'EDGE_BIN_RATE' must be specified if 'INCLUDE_EDGE_BINS' is True."
+                    "'edge_bin_rate' must be specified if 'include_edge_bins' is True."
                 )
-            if self.EDGE_BIN_PERCENT is None:
+            if self.edge_bin_percent is None:
                 raise ValueError(
-                    "'EDGE_BIN_DAYS' must be specified if 'INCLUDE_EDGE_BINS' is True."
+                    "'edge_bin_days' must be specified if 'include_edge_bins' is True."
                 )
 
         else:
-            if self.EDGE_BIN_RATE is not None:
+            if self.edge_bin_rate is not None:
                 raise ValueError(
-                    "'EDGE_BIN_RATE' must be None if 'INCLUDE_EDGE_BINS' is False."
+                    "'edge_bin_rate' must be None if 'include_edge_bins' is False."
                 )
-            if self.EDGE_BIN_PERCENT is not None:
+            if self.edge_bin_percent is not None:
                 raise ValueError(
-                    "'EDGE_BIN_DAYS' must be None if 'INCLUDE_EDGE_BINS' is False."
+                    "'edge_bin_days' must be None if 'include_edge_bins' is False."
                 )
 
         return self
@@ -167,119 +167,119 @@ class TemperatureBinSettings(BaseSettings):
 
 class TemporalClusteringSettings(BaseSettings):
     """wavelet decomposition level"""
-    WAVELET_N_LEVELS: int = pydantic.Field(
+    wavelet_n_levels: int = pydantic.Field(
         default=5,
         ge=1,
     )
     
     """wavelet choice for wavelet decomposition"""
-    WAVELET_NAME: str = pydantic.Field(
+    wavelet_name: str = pydantic.Field(
         default="haar", # maybe db3?
     )
 
     """signal extension mode for wavelet decomposition"""
-    WAVELET_MODE: str = pydantic.Field(
+    wavelet_mode: str = pydantic.Field(
         default="periodization",
     )
 
     """minimum variance ratio for PCA clustering"""
-    PCA_MIN_VARIANCE_RATIO_EXPLAINED: float = pydantic.Field(
+    pca_min_variance_ratio_explained: float = pydantic.Field(
         default=0.725,
         ge=0.5,
         le=1,
     )
 
     """number of times to recluster"""
-    RECLUSTER_COUNT: int = pydantic.Field(
+    recluster_count: int = pydantic.Field(
         default=3,
         ge=1,
     )
 
     """lower bound for number of clusters"""
-    N_CLUSTER_LOWER: int = pydantic.Field(
+    n_cluster_lower: int = pydantic.Field(
         default=2,
         ge=2,
     )
 
     """upper bound for number of clusters"""
-    N_CLUSTER_UPPER: int = pydantic.Field(
+    n_cluster_upper: int = pydantic.Field(
         default=24,
         ge=2,
     )
 
     """minimum cluster size"""
-    MIN_CLUSTER_SIZE: int = pydantic.Field(
+    min_cluster_size: int = pydantic.Field(
         default=1,
         ge=1,
     )
 
     """scoring method for clustering"""
-    SCORE_METRIC: ClusterScoringMetric = pydantic.Field(
+    score_metric: ClusterScoringMetric = pydantic.Field(
         default=ClusterScoringMetric.VARIANCE_RATIO,
     )
 
     """distance metric for clustering"""
-    DISTANCE_METRIC: DistanceMetric = pydantic.Field(
+    distance_metric: DistanceMetric = pydantic.Field(
         default=DistanceMetric.EUCLIDEAN,
     )
 
     @pydantic.model_validator(mode="after")
     def _check_wavelet(self):
         all_wavelets = pywt.wavelist(kind='discrete')
-        if self.WAVELET_NAME not in all_wavelets:
-            raise ValueError(f"'WAVELET_NAME' must be a valid wavelet in PyWavelets: \n{all_wavelets}")
+        if self.wavelet_name not in all_wavelets:
+            raise ValueError(f"'wavelet_name' must be a valid wavelet in PyWavelets: \n{all_wavelets}")
 
         all_modes = pywt.Modes.modes
-        if self.WAVELET_MODE not in all_modes:
-            raise ValueError(f"'WAVELET_MODE' must be a valid mode in PyWavelets: \n{all_modes}")
+        if self.wavelet_mode not in all_modes:
+            raise ValueError(f"'wavelet_mode' must be a valid mode in PyWavelets: \n{all_modes}")
 
         return self
 
 
 class ElasticNetSettings(BaseSettings):
     """ElasticNet alpha parameter"""
-    ALPHA: float = pydantic.Field(
+    alpha: float = pydantic.Field(
         default=0.0425,
         ge=0,
     )
 
     """ElasticNet l1_ratio parameter"""
-    L1_RATIO: float = pydantic.Field(
+    l1_ratio: float = pydantic.Field(
         default=0.5,
         ge=0,
         le=1,
     )
 
     """ElasticNet fit_intercept parameter"""
-    FIT_INTERCEPT: bool = pydantic.Field(
+    fit_intercept: bool = pydantic.Field(
         default=True,
     )
 
     """ElasticNet parameter to precompute Gram matrix"""
-    PRECOMPUTE: bool = pydantic.Field(
+    precompute: bool = pydantic.Field(
         default=False,
     )
 
     """ElasticNet max_iter parameter"""
-    MAX_ITER: int = pydantic.Field(
+    max_iter: int = pydantic.Field(
         default=1000,
         ge=1,
         le=2**32 - 1,
     )
 
     """ElasticNet copy_X parameter"""
-    COPY_X: bool = pydantic.Field(
+    copy_x: bool = pydantic.Field(
         default=True,
     )
 
     """ElasticNet tol parameter"""
-    TOL: float = pydantic.Field(
+    tol: float = pydantic.Field(
         default=1e-4,
         gt=0,
     )
 
     """ElasticNet selection parameter"""
-    SELECTION: SelectionChoice = pydantic.Field(
+    selection: SelectionChoice = pydantic.Field(
         default=SelectionChoice.CYCLIC,
     )
 
@@ -288,61 +288,60 @@ class ElasticNetSettings(BaseSettings):
 class BaseHourlySettings(BaseSettings):
     """train features used within the model"""
 
-    #TODO add a "ghi-auto" or similar so that we can init with the rest of default settings and detect ghi on fit
-    TRAIN_FEATURES: Optional[list[str]] = None
+    train_features: Optional[list[str]] = None
 
     """minimum number of training hours per day below which a day is excluded"""
-    MIN_DAILY_TRAINING_HOURS: int = pydantic.Field(
+    min_daily_training_hours: int = pydantic.Field(
         default=12,
         ge=0,
         le=24,
     )
 
     """temperature bin settings"""
-    TEMPERATURE_BIN: Optional[TemperatureBinSettings] = pydantic.Field(
+    temperature_bin: Optional[TemperatureBinSettings] = pydantic.Field(
         default_factory=TemperatureBinSettings,
     )
 
     """settings for temporal clustering"""
-    TEMPORAL_CLUSTER: TemporalClusteringSettings = pydantic.Field(
+    temporal_cluster: TemporalClusteringSettings = pydantic.Field(
         default_factory=TemporalClusteringSettings,
     )
 
     """supplemental time series column names"""
-    SUPPLEMENTAL_TIME_SERIES_COLUMNS: Optional[list] = pydantic.Field(
+    supplemental_time_series_columns: Optional[list] = pydantic.Field(
         default=None,
     )
 
     """supplemental categorical column names"""
-    SUPPLEMENTAL_CATEGORICAL_COLUMNS: Optional[list] = pydantic.Field(
+    supplemental_categorical_columns: Optional[list] = pydantic.Field(
         default=None,
     )
 
     """ElasticNet settings"""
-    ELASTICNET: ElasticNetSettings = pydantic.Field(
+    elasticnet: ElasticNetSettings = pydantic.Field(
         default_factory=ElasticNetSettings,
     )
 
     """Feature scaling method"""
-    SCALING_METHOD: ScalingChoice = pydantic.Field(
+    scaling_method: ScalingChoice = pydantic.Field(
         default=ScalingChoice.STANDARDSCALER,
     )
 
     """seed for any random state assignment (ElasticNet, Clustering)"""
-    SEED: Optional[int] = pydantic.Field(
+    seed: Optional[int] = pydantic.Field(
         default=None,
         ge=0,
     )
 
     @pydantic.model_validator(mode="after")
     def _check_seed(self):
-        if self.SEED is None:
-            self._SEED = np.random.randint(0, 2**32 - 1)
+        if self.seed is None:
+            self._seed = np.random.randint(0, 2**32 - 1)
         else:
-            self._SEED = self.SEED
+            self._seed = self.seed
 
-        self.ELASTICNET._SEED = self._SEED
-        self.TEMPORAL_CLUSTER._SEED = self._SEED
+        self.elasticnet._seed = self._seed
+        self.temporal_cluster._seed = self._seed
 
         return self
 
@@ -352,17 +351,17 @@ class BaseHourlySettings(BaseSettings):
             default_features = ["temperature", "ghi"]
         else:
             default_features = ["temperature"]
-        return self.model_copy(update={"TRAIN_FEATURES": default_features})
+        return self.model_copy(update={"train_features": default_features})
 
 
 class HourlySolarSettings(BaseHourlySettings):
     """train features used within the model"""
 
-    TRAIN_FEATURES: list[str] = pydantic.Field(
+    train_features: list[str] = pydantic.Field(
         default=["temperature", "ghi"],
     )
 
-    @pydantic.field_validator("TRAIN_FEATURES", mode="after")
+    @pydantic.field_validator("train_features", mode="after")
     def _add_required_features(cls, v):
         required_features = ["ghi", "temperature"]
         for feature in required_features:
@@ -376,11 +375,11 @@ class HourlyNonSolarSettings(BaseHourlySettings):
     #     default=10,
     #     ge=1,
     # )
-    TRAIN_FEATURES: list[str] = pydantic.Field(
+    train_features: list[str] = pydantic.Field(
         default=["temperature"],
     )
 
-    @pydantic.field_validator("TRAIN_FEATURES", mode="after")
+    @pydantic.field_validator("train_features", mode="after")
     def _add_required_features(cls, v):
         if "temperature" not in v:
             v.insert(0, "temperature")
@@ -399,18 +398,17 @@ class SerializeModel(BaseSettings):
     class Config:
         arbitrary_types_allowed = True
 
-    SETTINGS: Optional[BaseHourlySettings] = None
-    TEMPORAL_CLUSTERS: Optional[list[list[int]]] = None
-    TEMPERATURE_BIN_EDGES: Optional[list] = None
-    TEMPERATURE_EDGE_BIN_COEFFICIENTS: Optional[Dict[int, Dict[str, float]]] = None
-    TS_FEATURES: Optional[list] = None
-    CATEGORICAL_FEATURES: Optional[list] = None
-    FEATURE_SCALER: Optional[Dict[str, list[float]]] = None
-    CATAGORICAL_SCALER: Optional[Dict[str, list[float]]] = None
-    Y_SCALER: Optional[list[float]] = None
-    COEFFICIENTS: Optional[list[list[float]]] = None
-    INTERCEPT: Optional[list[float]] = None
-    BASELINE_METRICS: Optional[BaselineMetrics] = None
-    INFO: ModelInfo
-
-#TODO lowercase names to match daily serialization
+    settings: Optional[BaseHourlySettings] = None
+    temporal_clusters: Optional[list[list[int]]] = None
+    temperature_bin_edges: Optional[list] = None
+    temperature_edge_bin_coefficients: Optional[Dict[int, Dict[str, float]]] = None
+    ts_features: Optional[list] = None
+    categorical_features: Optional[list] = None
+    feature_scaler: Optional[Dict[str, list[float]]] = None
+    catagorical_scaler: Optional[Dict[str, list[float]]] = None
+    y_scaler: Optional[list[float]] = None
+    coefficients: Optional[list[list[float]]] = None
+    intercept: Optional[list[float]] = None
+    baseline_metrics: Optional[BaselineMetrics] = None
+    info: ModelInfo
+    
