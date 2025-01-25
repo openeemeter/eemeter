@@ -31,11 +31,11 @@ class BaseSettings(pydantic.BaseModel):
 
     """Make all property keys case insensitive"""
 
-    @pydantic.model_validator(mode="before")
-    def __uppercase_property_keys__(cls, values: Any) -> Any:
-        def __upper__(value: Any) -> Any:
-            if isinstance(value, dict):
-                return {k.upper() if isinstance(k, str) else k: __upper__(v) for k, v in value.items()}
-            return value
+    # @pydantic.model_validator(mode="before")
+    # def __uppercase_property_keys__(cls, values: Any) -> Any:
+    #     def __upper__(value: Any) -> Any:
+    #         if isinstance(value, dict):
+    #             return {k.upper() if isinstance(k, str) else k: __upper__(v) for k, v in value.items()}
+    #         return value
 
-        return __upper__(values)
+    #     return __upper__(values)

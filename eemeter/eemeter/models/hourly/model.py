@@ -103,24 +103,24 @@ class HourlyModel:
             self.settings = settings
 
         # Initialize model
-        if self.settings.SCALING_METHOD == _settings.ScalingChoice.STANDARDSCALER:
+        if self.settings.scaling_method == _settings.ScalingChoice.STANDARDSCALER:
             self._feature_scaler = StandardScaler()
             self._y_scaler = StandardScaler()
-        elif self.settings.SCALING_METHOD == _settings.ScalingChoice.ROBUSTSCALER:
+        elif self.settings.scaling_method == _settings.ScalingChoice.ROBUSTSCALER:
             self._feature_scaler = RobustScaler(unit_variance=True)
             self._y_scaler = RobustScaler(unit_variance=True)
 
         self._T_edge_bin_coeffs = None
 
         self._model = ElasticNet(
-            alpha=self.settings.ELASTICNET.ALPHA,
-            l1_ratio=self.settings.ELASTICNET.L1_RATIO,
-            fit_intercept=self.settings.ELASTICNET.FIT_INTERCEPT,
-            precompute=self.settings.ELASTICNET.PRECOMPUTE,
-            max_iter=self.settings.ELASTICNET.MAX_ITER,
-            tol=self.settings.ELASTICNET.TOL,
-            selection=self.settings.ELASTICNET.SELECTION,
-            random_state=self.settings.ELASTICNET._SEED,
+            alpha=self.settings.elasticnet.alpha,
+            l1_ratio=self.settings.elasticnet.l1_ratio,
+            fit_intercept=self.settings.elasticnet.fit_intercept,
+            precompute=self.settings.elasticnet.precompute,
+            max_iter=self.settings.elasticnet.max_iter,
+            tol=self.settings.elasticnet.tol,
+            selection=self.settings.elasticnet.selection,
+            random_state=self.settings.elasticnet._seed,
         )
 
         self._T_bin_edges = None
@@ -130,8 +130,8 @@ class HourlyModel:
         self._ts_feature_norm = None
 
         self._ts_features = []
-        if self.settings.TRAIN_FEATURES:
-            self._ts_features = self.settings.TRAIN_FEATURES.copy()
+        if self.settings.train_features:
+            self._ts_features = self.settings.train_features.copy()
 
         self.is_fitted = False
         self.baseline_metrics = None
@@ -170,7 +170,7 @@ class HourlyModel:
 
         if not self._ts_features:
             self.settings = self.settings.add_default_features(baseline_data.df.columns)
-            self._ts_features = self.settings.TRAIN_FEATURES.copy()
+            self._ts_features = self.settings.train_features.copy()
 
         if "ghi" in baseline_data.df.columns and not "ghi" in self._ts_features:
             model_mismatch_warning = EEMeterWarning(
@@ -379,23 +379,23 @@ class HourlyModel:
 
     def _add_temperature_bins(self, df):
         # TODO: do we need to do something about empty bins in prediction? I think not but maybe
-        settings = self.settings.TEMPERATURE_BIN
+        settings = self.settings.temperature_bin
 
         # add temperature bins based on temperature
         if not self.is_fitted:
-            if settings.METHOD == "equal_sample_count":
-                T_bin_edges = pd.qcut(df["temperature"], q=settings.N_BINS, labels=False)
+            if settings.method == "equal_sample_count":
+                T_bin_edges = pd.qcut(df["temperature"], q=settings.n_bins, labels=False)
 
-            elif settings.METHOD == "equal_bin_width":
-                T_bin_edges = pd.cut(df["temperature"], bins=settings.N_BINS, labels=False)
+            elif settings.method == "equal_bin_width":
+                T_bin_edges = pd.cut(df["temperature"], bins=settings.n_bins, labels=False)
 
-            elif settings.METHOD == "set_bin_width":
-                bin_width = settings.BIN_WIDTH
+            elif settings.method == "set_bin_width":
+                bin_width = settings.bin_width
 
                 min_temp = np.floor(df["temperature"].min())
                 max_temp = np.ceil(df["temperature"].max())
 
-                if not settings.INCLUDE_EDGE_BINS:
+                if not settings.include_edge_bins:
                     step_num = np.round((max_temp - min_temp) / bin_width).astype(int) + 1
 
                     # T_bin_edges = np.arange(min_temp, max_temp + bin_width, bin_width)
@@ -409,7 +409,7 @@ class HourlyModel:
                         bin_range = [min_temp + edge_bin_width, max_temp - edge_bin_width]
 
                     else:
-                        edge_bin_count = int(len(df) * settings.EDGE_BIN_PERCENT)
+                        edge_bin_count = int(len(df) * settings.edge_bin_percent)
 
                         # get 5th smallest and 5th largest temperatures
                         sorted_temp = np.sort(df["temperature"])
@@ -465,20 +465,20 @@ class HourlyModel:
                 values="observed"
             )
 
-            settings = self.settings.TEMPORAL_CLUSTER
+            settings = self.settings.temporal_cluster
             labels = cluster_temporal_features(
                 fit_df_grouped.values,
-                settings.WAVELET_N_LEVELS,
-                settings.WAVELET_NAME,
-                settings.WAVELET_MODE, 
-                settings.PCA_MIN_VARIANCE_RATIO_EXPLAINED, 
-                settings.RECLUSTER_COUNT, 
-                settings.N_CLUSTER_LOWER, 
-                settings.N_CLUSTER_UPPER, 
-                settings.SCORE_METRIC, 
-                settings.DISTANCE_METRIC, 
-                settings.MIN_CLUSTER_SIZE, 
-                settings._SEED
+                settings.wavelet_n_levels,
+                settings.wavelet_name,
+                settings.wavelet_mode, 
+                settings.pca_min_variance_ratio_explained, 
+                settings.recluster_count, 
+                settings.n_cluster_lower, 
+                settings.n_cluster_upper, 
+                settings.score_metric, 
+                settings.distance_metric, 
+                settings.min_cluster_size, 
+                settings._seed
             )
 
             df_temporal_clusters = pd.DataFrame(
@@ -627,7 +627,7 @@ class HourlyModel:
             df, cluster_dummies, how="left", left_index=True, right_index=True
         )
 
-        if self.settings.TEMPERATURE_BIN is not None:
+        if self.settings.temperature_bin is not None:
             df, temp_bin_cols = self._add_temperature_bins(df)
             self._categorical_features.extend(temp_bin_cols)
 
@@ -635,13 +635,13 @@ class HourlyModel:
 
     def _add_supplemental_features(self, df):
         # TODO: should either do upper or lower on all strs
-        if self.settings.SUPPLEMENTAL_TIME_SERIES_COLUMNS is not None:
-            for col in self.settings.SUPPLEMENTAL_TIME_SERIES_COLUMNS:
+        if self.settings.supplemental_time_series_columns is not None:
+            for col in self.settings.supplemental_time_series_columns:
                 if (col in df.columns) and (col not in self._ts_features):
                     self._ts_features.append(col)
 
-        if self.settings.SUPPLEMENTAL_CATEGORICAL_COLUMNS is not None:
-            for col in self.settings.SUPPLEMENTAL_CATEGORICAL_COLUMNS:
+        if self.settings.supplemental_categorical_columns is not None:
+            for col in self.settings.supplemental_categorical_columns:
                 if (
                     (col in df.columns)
                     and (col not in self._ts_features)
@@ -674,7 +674,7 @@ class HourlyModel:
     # TODO rename to avoid confusion with data sufficiency
     def _daily_sufficiency(self, df):
         # remove days with insufficient data
-        min_hours = self.settings.MIN_DAILY_TRAINING_HOURS
+        min_hours = self.settings.min_daily_training_hours
 
         if min_hours > 0:
             # find any rows with interpolated data
@@ -721,7 +721,7 @@ class HourlyModel:
         return df
 
     def _add_temperature_bin_masked_ts(self, df):
-        settings = self.settings.TEMPERATURE_BIN
+        settings = self.settings.temperature_bin
 
         def get_k(int_col, a, b):
             k = []
@@ -760,7 +760,7 @@ class HourlyModel:
                 self._ts_feature_norm.append(ts_col)
 
         # TODO: if this is permanent then it should be a function, not this mess
-        if settings.INCLUDE_EDGE_BINS:
+        if settings.include_edge_bins:
             if self._T_edge_bin_coeffs is None:
                 self._T_edge_bin_coeffs = {}
 
@@ -780,7 +780,7 @@ class HourlyModel:
                 # get k for exponential growth/decay
                 if not self.is_fitted:
                     # determine temperature conversion for bin
-                    range_offset = settings.EDGE_BIN_TEMPERATURE_RANGE_OFFSET
+                    range_offset = settings.edge_bin_temperature_range_offset
                     T_range = [df[int_col].min() - range_offset, df[int_col].max() + range_offset]
                     new_range = [-1, 1]
 
@@ -788,10 +788,10 @@ class HourlyModel:
                     T_b = new_range[1] - T_a*T_range[1]
 
                     # The best rate for exponential
-                    if settings.EDGE_BIN_RATE == "heuristic":
+                    if settings.edge_bin_rate == "heuristic":
                         k = get_k(int_col, T_a, T_b)
                     else:
-                        k = settings.EDGE_BIN_RATE
+                        k = settings.edge_bin_rate
 
                     # get A for exponential
                     A = 1/(np.exp(1/k*new_range[1]) - 1)
@@ -896,7 +896,7 @@ class HourlyModel:
             Model parameters.
         """
         feature_scaler = {}
-        if self.settings.SCALING_METHOD == _settings.ScalingChoice.STANDARDSCALER:
+        if self.settings.scaling_method == _settings.ScalingChoice.STANDARDSCALER:
             for i, key in enumerate(self._ts_features):
                 feature_scaler[key] = [
                     self._feature_scaler.mean_[i],
@@ -905,7 +905,7 @@ class HourlyModel:
 
             y_scaler = [self._y_scaler.mean_, self._y_scaler.scale_]
 
-        elif self.settings.SCALING_METHOD == _settings.ScalingChoice.ROBUSTSCALER:
+        elif self.settings.scaling_method == _settings.ScalingChoice.ROBUSTSCALER:
             for i, key in enumerate(self._ts_features):
                 feature_scaler[key] = [
                     self._feature_scaler.center_[i],
@@ -918,19 +918,19 @@ class HourlyModel:
         df_temporal_clusters = self._df_temporal_clusters.reset_index().values.tolist()
 
         params = _settings.SerializeModel(
-            SETTINGS=self.settings,
-            TEMPORAL_CLUSTERS=df_temporal_clusters,
-            TEMPERATURE_BIN_EDGES=self._T_bin_edges,
-            TEMPERATURE_EDGE_BIN_COEFFICIENTS=self._T_edge_bin_coeffs,
-            TS_FEATURES=self._ts_features,
-            CATEGORICAL_FEATURES=self._categorical_features,
-            COEFFICIENTS=self._model.coef_.tolist(),
-            INTERCEPT=self._model.intercept_.tolist(),
-            FEATURE_SCALER=feature_scaler,
-            CATAGORICAL_SCALER=None,
-            Y_SCALER=y_scaler,
-            BASELINE_METRICS=self.baseline_metrics,
-            INFO=_settings.ModelInfo(
+            settings=self.settings,
+            temporal_clusters=df_temporal_clusters,
+            temperature_bin_edges=self._T_bin_edges,
+            temperature_edge_bin_coefficients=self._T_edge_bin_coeffs,
+            ts_features=self._ts_features,
+            categorical_features=self._categorical_features,
+            coefficients=self._model.coef_.tolist(),
+            intercept=self._model.intercept_.tolist(),
+            feature_scaler=feature_scaler,
+            catagorical_scaler=None,
+            y_scaler=y_scaler,
+            baseline_metrics=self.baseline_metrics,
+            info=_settings.ModelInfo(
                 disqualification=self.disqualification,
                 warnings=self.warnings,
                 error=self.error,
@@ -961,45 +961,45 @@ class HourlyModel:
             An instance of the class.
         """
         # get settings
-        train_features = data.get("SETTINGS").get("TRAIN_FEATURES")
+        train_features = data.get("settings").get("train_features")
 
         if "ghi" in train_features:
-            settings = _settings.HourlySolarSettings(**data.get("SETTINGS"))
+            settings = _settings.HourlySolarSettings(**data.get("settings"))
         else:
-            settings = _settings.HourlyNonSolarSettings(**data.get("SETTINGS"))
+            settings = _settings.HourlyNonSolarSettings(**data.get("settings"))
 
         # initialize model class
         model_cls = cls(settings=settings)
 
         df_temporal_clusters = pd.DataFrame(
-            data.get("TEMPORAL_CLUSTERS"),
+            data.get("temporal_clusters"),
             columns= model_cls._temporal_cluster_cols + ["temporal_cluster"],
         ).set_index(model_cls._temporal_cluster_cols)
 
         model_cls._df_temporal_clusters = df_temporal_clusters
-        model_cls._T_bin_edges = np.array(data.get("TEMPERATURE_BIN_EDGES"))
+        model_cls._T_bin_edges = np.array(data.get("temperature_bin_edges"))
         model_cls._T_edge_bin_coeffs = {
-            int(k): v for k, v in data.get("TEMPERATURE_EDGE_BIN_COEFFICIENTS").items()
+            int(k): v for k, v in data.get("temperature_edge_bin_coefficients").items()
         }
 
-        model_cls._ts_features = data.get("TS_FEATURES")
-        model_cls._categorical_features = data.get("CATEGORICAL_FEATURES")
+        model_cls._ts_features = data.get("ts_features")
+        model_cls._categorical_features = data.get("categorical_features")
 
         # set scalers
-        feature_scaler_values = list(data.get("FEATURE_SCALER").values())
+        feature_scaler_values = list(data.get("feature_scaler").values())
         feature_scaler_loc = [i[0] for i in feature_scaler_values]
         feature_scaler_scale = [i[1] for i in feature_scaler_values]
 
-        y_scaler_values = data.get("Y_SCALER")
+        y_scaler_values = data.get("y_scaler")
 
-        if settings.SCALING_METHOD == _settings.ScalingChoice.STANDARDSCALER:
+        if settings.scaling_method == _settings.ScalingChoice.STANDARDSCALER:
             model_cls._feature_scaler.mean_ = np.array(feature_scaler_loc)
             model_cls._feature_scaler.scale_ = np.array(feature_scaler_scale)
 
             model_cls._y_scaler.mean_ = np.array(y_scaler_values[0])
             model_cls._y_scaler.scale_ = np.array(y_scaler_values[1])
 
-        elif settings.SCALING_METHOD == _settings.ScalingChoice.ROBUSTSCALER:
+        elif settings.scaling_method == _settings.ScalingChoice.ROBUSTSCALER:
             model_cls._feature_scaler.center_ = np.array(feature_scaler_loc)
             model_cls._feature_scaler.scale_ = np.array(feature_scaler_scale)
 
@@ -1007,17 +1007,17 @@ class HourlyModel:
             model_cls._y_scaler.scale_ = np.array(y_scaler_values[1])
 
         # set model
-        model_cls._model.coef_ = np.array(data.get("COEFFICIENTS"))
-        model_cls._model.intercept_ = np.array(data.get("INTERCEPT"))
+        model_cls._model.coef_ = np.array(data.get("coefficients"))
+        model_cls._model.intercept_ = np.array(data.get("intercept"))
 
         model_cls.is_fitted = True
 
         # set baseline metrics
         model_cls.baseline_metrics = BaselineMetricsFromDict(
-            data.get("BASELINE_METRICS")
+            data.get("baseline_metrics")
         )
 
-        info = _settings.ModelInfo(**data.get("INFO"))
+        info = _settings.ModelInfo(**data.get("info"))
         model_cls.warnings = info.warnings
         model_cls.disqualification = info.disqualification
         model_cls.error = info.error
