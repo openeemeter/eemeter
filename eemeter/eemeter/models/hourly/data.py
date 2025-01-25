@@ -191,17 +191,6 @@ class _HourlyData:
         else:
             return self._df.copy()
 
-    @classmethod
-    def from_series(
-        cls,
-        meter_data: Union[pd.Series, pd.DataFrame],
-        temperature_data: Union[pd.Series, pd.DataFrame],
-        is_electricity_data,
-    ):
-        raise NotImplementedError(
-            "Unimplemented until full release--use regular constructor with complete hourly dataframe."
-        )
-
     def log_warnings(self):
         """
         Logs the warnings and disqualifications associated with the data.
