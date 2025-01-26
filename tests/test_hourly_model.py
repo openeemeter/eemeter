@@ -169,12 +169,18 @@ def test_low_freq_meter(baseline):
 
 def test_monthly_percentage(baseline):
     missing_idx = pd.date_range(start=baseline.index.min(), end=baseline.index.max(), freq="H")
-    #create datetimeindex where a little over 10% of days are missing each month
+    #create datetimeindex where a little over 10% of days are missing in feb, but still 90% overall
     missing_idx = missing_idx[missing_idx.day < 4]
     invalid_baseline = baseline[~baseline.index.isin(missing_idx)]
-    #create datetimeindex where a little under 10% of days are missing each month
+    #create datetimeindex where a little under 10% of days are missing in feb
     missing_idx = missing_idx[missing_idx.day < 3]
     valid_baseline = baseline[~baseline.index.isin(missing_idx)]
+
+    invalid_temp = baseline.copy()
+    invalid_temp.loc[invalid_temp.index.day < 5, "temperature"] = np.nan
+
+    invalid_meter = baseline.copy()
+    invalid_meter.loc[invalid_meter.index.day < 5, "observed"] = np.nan
 
     baseline_data = HourlyBaselineData(invalid_baseline, is_electricity_data=True)
     assert_dq(baseline_data, ["eemeter.sufficiency_criteria.missing_monthly_temperature_data"])
@@ -183,8 +189,41 @@ def test_monthly_percentage(baseline):
     baseline_data = HourlyBaselineData(valid_baseline, is_electricity_data=True)
     HourlyModel().fit(baseline_data)
 
-def test_hourly_consecutive_missing(baseline):
-    pass
+    baseline_data = HourlyBaselineData(invalid_temp, is_electricity_data=True)
+    assert_dq(baseline_data, [
+        "eemeter.sufficiency_criteria.too_many_days_with_missing_data",
+        "eemeter.sufficiency_criteria.missing_monthly_temperature_data",
+        "eemeter.sufficiency_criteria.too_many_days_with_missing_temperature_data",
+        ])
+    with pytest.raises(DataSufficiencyError):
+        HourlyModel().fit(baseline_data)
+
+    baseline_data = HourlyBaselineData(invalid_meter, is_electricity_data=True)
+    assert_dq(baseline_data, [
+        "eemeter.sufficiency_criteria.too_many_days_with_missing_data",
+        "eemeter.sufficiency_criteria.missing_monthly_meter_data",
+        "eemeter.sufficiency_criteria.too_many_days_with_missing_meter_data",
+        ])
+    with pytest.raises(DataSufficiencyError):
+        HourlyModel().fit(baseline_data)
+
+def test_hourly_fit_daily_threshold(baseline):
+    """confirm that days with >50% interpolated data are excluded from fit step"""
+
+    # bit fragile testing private methods this way, but fine for now
+    m = HourlyModel()
+    b1 = baseline.copy()
+    b1.loc["2018-01-08":"2018-01-08 11", "temperature"] = np.nan
+    b1 = m._add_categorical_features(b1)
+    b1 = m._daily_sufficiency(b1)
+    assert b1.loc["2018-01-08", "include_date"].sum() == 24
+
+    b2 = baseline.copy()
+    b2.loc["2018-01-08":"2018-01-08 12", "temperature"] = np.nan
+    b2 = m._add_categorical_features(b2)
+    b2 = m._daily_sufficiency(b2)
+    assert b2.loc["2018-01-08", "include_date"].sum() == 0
+    assert b2.loc["2018-01-09", "include_date"].sum() == 24
 
 def test_hourly_error_metric_dq(baseline):
     baseline["observed"] = np.random.normal(-1, 10, len(baseline)) ** 3
@@ -201,31 +240,3 @@ def assert_dq(data, expected_disqualifications):
             remaining_dq.remove(dq.qualified_name)
     assert not remaining_dq
     
-    
-
-"""TEST CASES
-TODO get a couple example meters with GHI, potentially some supplemental features?
-    * at least one solar and one non-solar
-
-* good, clean data with known fit/predict numbers to check for regressions
-* good meter, bad temperature
-    * daily frequency temp
-    * too many missing values
-    * tz-naive
-* good temp, bad meter
-    * daily/worse frequency meter
-    * too many missing values
-    * tz-naive
-* no GHI, attempting solar
-* GHI, attempting nonsolar (warning?)
-* test against supplemental data logic -> should require a flag in model to fit
-* all 0s in meter data -> leads to full nan
-* test valid interpolations
-* test with various days removed due to interpolation during fit()
-    * include day where timezone shifts in either direction
-* test edge case, nearly valid, but not allowed interpolations (7 consecutive hours, etc)
-    * should still happen to allow model fit, but add (and test for) DQ
-* test a few DQs - baseline length, etc
-* unmarked net metering flag - includes warning
-* test with various pv_start values
-"""

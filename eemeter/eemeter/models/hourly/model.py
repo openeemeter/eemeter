@@ -61,7 +61,6 @@ from eemeter.common.clustering import (
 from eemeter.common.metrics import BaselineMetrics, BaselineMetricsFromDict
 from eemeter import __version__
 
-# TODO: need to make explicit solar/nonsolar versions and set settings requirements/defaults appropriately
 class HourlyModel:
     """
     A class to fit a model to the input meter data.
