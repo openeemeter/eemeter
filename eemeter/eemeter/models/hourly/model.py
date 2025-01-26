@@ -477,7 +477,7 @@ class HourlyModel:
             )
 
             settings = self.settings.temporal_cluster
-            labels = cluster_temporal_features(
+            labels = _cluster_temporal_features(
                 fit_df_grouped.values,
                 settings.wavelet_n_levels,
                 settings.wavelet_name,
@@ -745,7 +745,7 @@ class HourlyModel:
 
                 # Fit the model using robust least squares
                 try:
-                    params = fit_exp_growth_decay(x_data, y_data, k_only=True, is_x_sorted=True)
+                    params = _fit_exp_growth_decay(x_data, y_data, k_only=True, is_x_sorted=True)
                     # save k for each hour
                     k.append(params[2])
                 except:
@@ -1084,7 +1084,7 @@ class _LabelResult(BaseModel):
     n_clusters: int
 
 
-def cluster_time_series(
+def _cluster_time_series(
     data: np.ndarray,
     recluster_count: int,
     n_cluster_lower: int,
@@ -1142,7 +1142,7 @@ def cluster_time_series(
 
     return HoF.labels
 
-def cluster_temporal_features(
+def _cluster_temporal_features(
     data: np.ndarray,
     wavelet_n_levels: int,
     wavelet_name: str,
@@ -1203,7 +1203,7 @@ def cluster_temporal_features(
     pca_features = _pca_coeffs(features, min_var_ratio)
 
     # cluster the pca features
-    cluster_labels = cluster_time_series(
+    cluster_labels = _cluster_time_series(
         pca_features,
         recluster_count,
         n_cluster_lower,
@@ -1217,7 +1217,7 @@ def cluster_temporal_features(
     return cluster_labels
 
 
-def fit_exp_growth_decay(x, y, k_only=True, is_x_sorted=False):
+def _fit_exp_growth_decay(x, y, k_only=True, is_x_sorted=False):
     # Courtsey: https://math.stackexchange.com/questions/1337601/fit-exponential-with-constant
     #           https://www.scribd.com/doc/14674814/Regressions-et-equations-integrales
     #           Jean Jacquelin
