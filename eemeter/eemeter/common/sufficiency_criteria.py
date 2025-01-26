@@ -29,8 +29,9 @@ from pydantic import BaseModel
 from eemeter.eemeter.common.warnings import EEMeterWarning
 from eemeter.eemeter.common.data_processor_utilities import day_counts
 
-#TODO implement as registered functions rather than needing to call everything manually
-#probably easiest to use two decorators, can be stacked, for baseline/reporting
+# TODO implement as registered functions rather than needing to call everything manually
+# probably easiest to use two decorators, can be stacked, for baseline/reporting
+
 
 class SufficiencyCriteria(BaseModel):
     class Config:
@@ -46,7 +47,7 @@ class SufficiencyCriteria(BaseModel):
     is_electricity_data: bool = True
     # note that pydantic creates mutable defaults on each init
     # so this does not run into the issue that mutable default params in functions have
-    disqualification: list = []  
+    disqualification: list = []
     warnings: list = []
     n_days_total: Optional[int] = None
 
@@ -54,10 +55,10 @@ class SufficiencyCriteria(BaseModel):
     n_valid_days: Optional[int] = None
     n_valid_temperature_days: Optional[int] = None
 
-    #TODO probably use a model validator rather than this blanket call
+    # TODO probably use a model validator rather than this blanket call
     def model_post_init(self, __context):
         self._compute_n_days_total()
-        self._compute_valid_meter_temperature_days() #TODO this only works for dail
+        self._compute_valid_meter_temperature_days()
 
     def _check_no_data(self):
         if self.data.dropna().empty:
@@ -173,7 +174,7 @@ class SufficiencyCriteria(BaseModel):
         MIN_BASELINE_LENGTH = ceil(0.9 * MAX_BASELINE_LENGTH)
         if (
             not self.is_reporting_data
-            #TODO can throw with Optional. check if actually optional vs using -1 as default?
+            # TODO can throw with Optional. check if actually optional vs using -1 as default?
             and self.n_days_total > MAX_BASELINE_LENGTH
             or self.n_days_total < MIN_BASELINE_LENGTH
         ):
@@ -190,8 +191,6 @@ class SufficiencyCriteria(BaseModel):
             )
 
     def _compute_valid_meter_temperature_days(self):
-        #TODO this does not work for hourly
-
         if not self.is_reporting_data:
             valid_meter_value_rows = self.data.observed.notnull()
         valid_temperature_rows = (
@@ -355,7 +354,7 @@ class SufficiencyCriteria(BaseModel):
                 )
 
     def _check_high_frequency_temperature_values(self):
-        #TODO broken as written
+        # TODO broken as written
         # If high frequency data check for 50% data coverage in rollup
         if len(temperature_features[temperature_features.coverage <= 0.5]) > 0:
             self.warnings.append(
@@ -446,7 +445,7 @@ class HourlySufficiencyCriteria(SufficiencyCriteria):
                             "More than 10% of the monthly meter data is missing."
                         ),
                         data={
-                            # TODO report percentage
+                            "lowest_monthly_coverage": non_null_meter_percentage_per_month.min(),
                         },
                     )
                 )
@@ -480,10 +479,10 @@ class HourlySufficiencyCriteria(SufficiencyCriteria):
         self._check_monthly_temperature_values_percentage()
         self._check_monthly_meter_readings_percentage()
         self._check_extreme_values()
-        #TODO these are just broken. do we need to check them if they're used in set_data?
-        #self._check_high_frequency_meter_values()
-        #self._check_high_frequency_temperature_values()
-        #self._check_hourly_consecutive_temperature_data()
+        # TODO these will only apply to legacy, and currently do not work
+        # self._check_high_frequency_meter_values()
+        # self._check_high_frequency_temperature_values()
+        # self._check_hourly_consecutive_temperature_data()
 
     def check_sufficiency_reporting(self):
         self._check_no_data()
