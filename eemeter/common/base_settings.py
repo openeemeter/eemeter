@@ -26,8 +26,7 @@ from typing import Any
 
 
 class BaseSettings(pydantic.BaseModel):
-    class Config:
-        frozen = True
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
     """Make all property keys case insensitive"""
 

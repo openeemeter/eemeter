@@ -386,8 +386,7 @@ class HourlyNonSolarSettings(BaseHourlySettings):
 
 HourlySettings = TypeVar('HourlySettings', bound=BaseHourlySettings)
 class SerializeModel(BaseSettings):
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
     SETTINGS: Optional[HourlySettings] = None
     TEMPORAL_CLUSTERS: Optional[list[list[int]]] = None

@@ -25,7 +25,7 @@ os.environ['OMP_NUM_THREADS'] = "1"
 os.environ['MKL_NUM_THREADS'] = "1"
 os.environ['OPENBLAS_NUM_THREADS'] = "1"
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 import numpy as np
 import pandas as pd
@@ -1075,8 +1075,7 @@ class _LabelResult(BaseModel):
     """
     contains metrics about a cluster label returned from sklearn
     """
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     labels: np.ndarray
     score: float

@@ -24,7 +24,7 @@ import pandas as pd
 import pytz
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from eemeter.eemeter.common.warnings import EEMeterWarning
 from eemeter.eemeter.common.data_processor_utilities import day_counts
@@ -34,8 +34,7 @@ from eemeter.eemeter.common.data_processor_utilities import day_counts
 
 
 class SufficiencyCriteria(BaseModel):
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     data: pd.DataFrame
     requested_start: Optional[pd.Timestamp] = None
