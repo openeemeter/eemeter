@@ -543,8 +543,7 @@ class HourlyModel:
                 df_temporal_clusters["temporal_cluster"].isna()
             ].index
             if not missing_combinations.empty:
-                # TODO: this assumes that observed has values in df and not all null
-                if "observed" in df.columns:
+                if "observed" in df.columns and not df["observed"].isnull().all():
                     # filter df to only include missing combinations
                     df_missing = df[
                         df.set_index(self._temporal_cluster_cols).index.isin(
@@ -751,10 +750,10 @@ class HourlyModel:
 
         # need to set scaler if not fit
         if not self.is_fitted:
-            self._feature_scaler.fit(df[train_features])
+            self._feature_scaler.fit(df[train_features].values)
             self._y_scaler.fit(df["observed"].values.reshape(-1, 1))
 
-        data_transformed = self._feature_scaler.transform(df[train_features])
+        data_transformed = self._feature_scaler.transform(df[train_features].values)
         normalized_df = pd.DataFrame(
             data_transformed, index=df.index, columns=self._ts_feature_norm
         )
@@ -947,7 +946,6 @@ class HourlyModel:
         return X, y
 
     def _model_fit_is_acceptable(self):
-        # TODO confirm thresholds and default behavior of allowing either to pass
         cvrmse = self.baseline_metrics.cvrmse_adj
         pnrmse = self.baseline_metrics.pnrmse_adj
         if (cvrmse is not None and cvrmse < self.settings.cvrmse_threshold) or (
@@ -969,7 +967,7 @@ class HourlyModel:
                     self._feature_scaler.scale_[i],
                 ]
 
-            y_scaler = [self._y_scaler.mean_, self._y_scaler.scale_]
+            y_scaler = [self._y_scaler.mean_.squeeze(), self._y_scaler.scale_.squeeze()]
 
         elif self.settings.scaling_method == _settings.ScalingChoice.ROBUSTSCALER:
             for i, key in enumerate(self._ts_features):
@@ -978,7 +976,7 @@ class HourlyModel:
                     self._feature_scaler.scale_[i],
                 ]
 
-            y_scaler = [self._y_scaler.center_, self._y_scaler.scale_]
+            y_scaler = [self._y_scaler.center_.squeeze(), self._y_scaler.scale_.squeeze()]
 
         # convert self._df_temporal_clusters to list of lists
         df_temporal_clusters = self._df_temporal_clusters.reset_index().values.tolist()
