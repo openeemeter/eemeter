@@ -244,7 +244,7 @@ def interpolate(df, columns=None):
         # main interpolation method
         idx_missing = df.loc[df[col].isna()].index
         if not skip_autocorr_interpolation:
-            df[col] = _interpolate_col(df[col], lags)
+            df[col] = _interpolate_col(df[col].copy(), lags)
 
         # backup interpolation methods
         for method in ["time", "ffill", "bfill"]:
