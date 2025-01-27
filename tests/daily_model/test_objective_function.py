@@ -31,7 +31,7 @@ from eemeter.eemeter.models.daily.base_models.hdd_tidd_cdd import (
     _hdd_tidd_cdd_smooth_weight,
 )
 
-from eemeter.eemeter.models.daily.utilities.config import DailySettings as Settings
+from eemeter.eemeter.models.daily.utilities.settings import DailySettings as Settings
 
 
 def test_get_idx():
