@@ -234,6 +234,7 @@ def full_model_weight(
     intercept (float): The intercept of the model.
     T (array-like): The temperature array.
     residual (array-like): The residual array.
+    weights (array-like): The input weights array.
     sigma (float, optional): The standard deviation. Default is 3.0.
     quantile (float, optional): The quantile to be used. Default is 0.25.
     alpha (float, optional): The alpha value. Default is 2.0.

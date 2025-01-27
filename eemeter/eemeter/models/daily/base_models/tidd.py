@@ -35,6 +35,7 @@ from eemeter.eemeter.models.daily.utilities.base_model import fix_identical_bnds
 def fit_tidd(
     T,
     obs,
+    weights,
     settings,
     opt_options,
     x0: Optional[ModelCoefficients] = None,
@@ -62,7 +63,7 @@ def fit_tidd(
     weight_fcn = _tidd_weight
     TSS_fcn = _tidd_total_sum_of_squares
     obj_fcn = obj_fcn_decorator(
-        model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, coef_id, initial_fit
+        model_fcn, weight_fcn, TSS_fcn, T, obs, weights, settings, alpha, coef_id, initial_fit
     )
 
     res = Optimizer(

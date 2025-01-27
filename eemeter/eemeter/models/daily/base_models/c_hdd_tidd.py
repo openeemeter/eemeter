@@ -42,6 +42,7 @@ from eemeter.eemeter.models.daily.utilities.base_model import (
 def fit_c_hdd_tidd(
     T,
     obs,
+    weights,
     settings,
     opt_options,
     smooth,
@@ -142,7 +143,7 @@ def fit_c_hdd_tidd(
         weight_fcn = _c_hdd_tidd_weight
         TSS_fcn = _c_hdd_tidd_total_sum_of_squares
     obj_fcn = obj_fcn_decorator(
-        model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, coef_id, initial_fit
+        model_fcn, weight_fcn, TSS_fcn, T, obs, weights, settings, alpha, coef_id, initial_fit
     )
     res = Optimizer(
         obj_fcn, x0.to_np_array(), bnds, coef_id, settings, opt_options

@@ -65,8 +65,13 @@ def fit_initial_models_from_full_model(df_meter, settings, print_res=False):
     T = df_meter["temperature"].values
     obs = df_meter["observed"].values
 
+    if "weights" in df_meter.columns:
+        weights = df_meter["weights"].values
+    else:
+        weights = None
+
     opt_settings = _get_opt_settings(settings)
-    fit_input = [T, obs, settings, opt_settings]
+    fit_input = [T, obs, weights, settings, opt_settings]
 
     # initial fitting of the most complicated model allowed
     if settings.full_model == FullModelSelection.HDD_TIDD_CDD:
@@ -154,8 +159,13 @@ def fit_final_model(df_meter, HoF: OptimizedResult, settings, print_res=False):
     T = df_meter["temperature"].values
     obs = df_meter["observed"].values
 
+    if "weights" in df_meter.columns:
+        weights = df_meter["weights"].values
+    else:
+        weights = None
+
     opt_settings = _get_opt_settings(settings)
-    fit_input = [T, obs, settings, opt_settings]
+    fit_input = [T, obs, weights, settings, opt_settings]
 
     x0 = HoF.x
     bnds = get_bnds(x0, settings.final_bounds_scalar)
