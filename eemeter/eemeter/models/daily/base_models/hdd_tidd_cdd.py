@@ -271,7 +271,7 @@ def _hdd_tidd_cdd_smooth_x0(T, obs, alpha, settings, smooth, min_weight=0.0):
 
     opt_settings = OptimizationSettings(
         algorithm=settings.initial_guess_algorithm_choice,
-        stop_criteria_type="Iteration Maximum",
+        stop_criteria_type="iteration maximum",
         stop_criteria_value=200,
         initial_step=settings.initial_step_percentage,
         x_tol_rel=1e-3,

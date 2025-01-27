@@ -22,7 +22,7 @@ import numpy as np
 import pytest
 from scipy.stats import linregress, theilslopes
 
-from eemeter.eemeter.models.daily.utilities.config import DailySettings
+from eemeter.eemeter.models.daily.utilities.settings import DailySettings
 from eemeter.eemeter.models.daily.utilities.base_model import (
     get_slope,
     linear_fit,
