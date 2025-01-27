@@ -199,11 +199,11 @@ def _load_file(file):
     return df
 
 
-def _download_repo_data_file(file):
+def _download_repo_data_file(file: Path):
     repo_full_name = "openeemeter/eemeter"
     path = "data"
 
-    url = f"https://raw.githubusercontent.com/{repo_full_name}/{branch}/{path}/{file}"
+    url = f"https://raw.githubusercontent.com/{repo_full_name}/{branch}/{path}/{file.name}"
 
     r = requests.get(url)
     r.raise_for_status()
