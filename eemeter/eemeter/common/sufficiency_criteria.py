@@ -319,6 +319,8 @@ class SufficiencyCriteria(BaseModel):
         )
 
     def _check_extreme_values(self):
+        if self.data["observed"].dropna().empty:
+            return
         if not self.is_reporting_data:
             median = self.data.observed.median()
             upper_quantile = self.data.observed.quantile(0.75)
