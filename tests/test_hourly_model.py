@@ -66,7 +66,7 @@ def test_good_data(baseline, reporting):
     assert p1.equals(p2)
 
 def test_misaligned_data(baseline, reporting):
-    reporting.index = reporting.index.shift(8, freq="H")
+    reporting.index = reporting.index.shift(8, freq="h")
     baseline_data = HourlyBaselineData(baseline, is_electricity_data=True)
     reporting_data = HourlyReportingData(reporting, is_electricity_data=True)
     hm = HourlyModel().fit(baseline_data)
@@ -168,7 +168,7 @@ def test_low_freq_meter(baseline):
         HourlyModel().fit(baseline_data)
 
 def test_monthly_percentage(baseline):
-    missing_idx = pd.date_range(start=baseline.index.min(), end=baseline.index.max(), freq="H")
+    missing_idx = pd.date_range(start=baseline.index.min(), end=baseline.index.max(), freq="h")
     #create datetimeindex where a little over 10% of days are missing in feb, but still 90% overall
     missing_idx = missing_idx[missing_idx.day < 4]
     invalid_baseline = baseline[~baseline.index.isin(missing_idx)]

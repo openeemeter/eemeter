@@ -248,10 +248,10 @@ def interpolate(df, columns=None):
                 df[col] = df[col].interpolate(method="time", limit_direction="both")
 
             elif method == "ffill":
-                df[col] = df[col].fillna(method="ffill")
+                df[col] = df[col].ffill()
             
             elif method == "bfill":
-                df[col] = df[col].fillna(method="bfill")
+                df[col] = df[col].bfill()
 
         # TODO: we can check if we have similar values multiple times back to back, if yes, raise a warning
         # where na_datetime_original is True and the col is not na, set the interpolation boolean to True
