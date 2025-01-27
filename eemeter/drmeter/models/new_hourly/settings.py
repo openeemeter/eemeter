@@ -20,20 +20,24 @@ class SelectionChoice(str, Enum):
     CYCLIC = "cyclic"
     RANDOM = "random"
 
+
 class ScalingChoice(str, Enum):
     ROBUSTSCALER = "robustscaler"
     STANDARDSCALER = "standardscaler"
+
 
 class BinningChoice(str, Enum):
     EQUAL_SAMPLE_COUNT = "equal_sample_count"
     EQUAL_BIN_WIDTH = "equal_bin_width"
     SET_BIN_WIDTH = "set_bin_width"
 
+
 class ClusterScoringMetric(str, Enum):
     SILHOUETTE = "silhouette"
     SILHOUETTE_MEDIAN = "silhouette_median"
     VARIANCE_RATIO = "variance_ratio"
     DAVIES_BOULDIN = "davies-bouldin"
+
 
 class DistanceMetric(str, Enum):
     """
@@ -48,6 +52,7 @@ class DistanceMetric(str, Enum):
 
 class TemperatureBinSettings(BaseSettings):
     """how to bin temperature data"""
+
     METHOD: BinningChoice = pydantic.Field(
         default=BinningChoice.SET_BIN_WIDTH,
     )
@@ -87,19 +92,14 @@ class TemperatureBinSettings(BaseSettings):
         ge=0,
     )
 
-
     @pydantic.model_validator(mode="after")
     def _check_temperature_bins(self):
         # check that temperature bin count is set based on binning method
         if self.METHOD is None:
             if self.N_BINS is not None:
-                raise ValueError(
-                    "'N_BINS' must be None if 'METHOD' is None."
-                )
+                raise ValueError("'N_BINS' must be None if 'METHOD' is None.")
             if self.BIN_WIDTH is not None:
-                raise ValueError(
-                    "'N_BINS' must be None if 'METHOD' is None."
-                )
+                raise ValueError("'N_BINS' must be None if 'METHOD' is None.")
         else:
             if self.METHOD == BinningChoice.SET_BIN_WIDTH:
                 if self.BIN_WIDTH is None:
@@ -108,10 +108,8 @@ class TemperatureBinSettings(BaseSettings):
                     )
                 elif isinstance(self.BIN_WIDTH, float):
                     if self.BIN_WIDTH <= 0:
-                        raise ValueError(
-                            "'BIN_WIDTH' must be greater than 0."
-                        )
-                    
+                        raise ValueError("'BIN_WIDTH' must be greater than 0.")
+
                 if self.N_BINS is not None:
                     raise ValueError(
                         "'N_BINS' must be None if 'METHOD' is 'SET_BIN_WIDTH'."
@@ -122,9 +120,7 @@ class TemperatureBinSettings(BaseSettings):
                         "'N_BINS' must be specified if 'METHOD' is not None."
                     )
                 if self.BIN_WIDTH is not None:
-                    raise ValueError(
-                        "'N_BINS' must be None if 'METHOD' is not None."
-                    )
+                    raise ValueError("'N_BINS' must be None if 'METHOD' is not None.")
 
         return self
 
@@ -135,7 +131,7 @@ class TemperatureBinSettings(BaseSettings):
                 raise ValueError(
                     "'INCLUDE_EDGE_BINS' must be False if 'METHOD' is not 'SET_BIN_WIDTH'."
                 )
-            
+
         if self.INCLUDE_EDGE_BINS:
             if self.EDGE_BIN_RATE is None:
                 raise ValueError(
@@ -161,14 +157,15 @@ class TemperatureBinSettings(BaseSettings):
 
 class TemporalClusteringSettings(BaseSettings):
     """wavelet decomposition level"""
+
     WAVELET_N_LEVELS: int = pydantic.Field(
         default=5,
         ge=1,
     )
-    
+
     """wavelet choice for wavelet decomposition"""
     WAVELET_NAME: str = pydantic.Field(
-        default="haar", # maybe db3?
+        default="haar",  # maybe db3?
     )
 
     """signal extension mode for wavelet decomposition"""
@@ -219,19 +216,24 @@ class TemporalClusteringSettings(BaseSettings):
 
     @pydantic.model_validator(mode="after")
     def _check_wavelet(self):
-        all_wavelets = pywt.wavelist(kind='discrete')
+        all_wavelets = pywt.wavelist(kind="discrete")
         if self.WAVELET_NAME not in all_wavelets:
-            raise ValueError(f"'WAVELET_NAME' must be a valid wavelet in PyWavelets: \n{all_wavelets}")
+            raise ValueError(
+                f"'WAVELET_NAME' must be a valid wavelet in PyWavelets: \n{all_wavelets}"
+            )
 
         all_modes = pywt.Modes.modes
         if self.WAVELET_MODE not in all_modes:
-            raise ValueError(f"'WAVELET_MODE' must be a valid mode in PyWavelets: \n{all_modes}")
+            raise ValueError(
+                f"'WAVELET_MODE' must be a valid mode in PyWavelets: \n{all_modes}"
+            )
 
         return self
 
 
 class ElasticNetSettings(BaseSettings):
     """ElasticNet alpha parameter"""
+
     ALPHA: float = pydantic.Field(
         default=0.0425,
         ge=0,
@@ -368,6 +370,7 @@ class HourlySolarSettings(BaseHourlySettings):
 
 class HourlyNonSolarSettings(BaseHourlySettings):
     """number of temperature bins"""
+
     # TEMPERATURE_BIN_COUNT: Optional[int] = pydantic.Field(
     #     default=10,
     #     ge=1,
@@ -384,7 +387,9 @@ class HourlyNonSolarSettings(BaseHourlySettings):
         return self
 
 
-HourlySettings = TypeVar('HourlySettings', bound=BaseHourlySettings)
+HourlySettings = TypeVar("HourlySettings", bound=BaseHourlySettings)
+
+
 class SerializeModel(BaseSettings):
     model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 

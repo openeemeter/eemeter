@@ -21,15 +21,19 @@
 from __future__ import annotations
 
 import os
-os.environ['OMP_NUM_THREADS'] = "1"
-os.environ['MKL_NUM_THREADS'] = "1"
-os.environ['OPENBLAS_NUM_THREADS'] = "1"
+
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
 
 import numpy as np
 import pandas as pd
 
 import sklearn
-sklearn.set_config(assume_finite=True, skip_parameter_validation=True) # Faster, we do checking
+
+sklearn.set_config(
+    assume_finite=True, skip_parameter_validation=True
+)  # Faster, we do checking
 
 from sklearn.linear_model import ElasticNet
 from sklearn.preprocessing import StandardScaler, RobustScaler
@@ -45,8 +49,8 @@ from eemeter.drmeter.models.new_hourly import HourlyBaselineData, HourlyReportin
 # TODO: need to make explicit solar/nonsolar versions and set settings requirements/defaults appropriately
 class DRHourlyModel(HourlyModel):
     """Note:
-        Despite the temporal clusters, we can view all models created as a subset of the same full model.
-        The temporal clusters would simply have the same coefficients within the same days combinations.
+    Despite the temporal clusters, we can view all models created as a subset of the same full model.
+    The temporal clusters would simply have the same coefficients within the same days combinations.
     """
 
     _temporal_cluster_cols = ["day_of_week"]
@@ -101,9 +105,9 @@ class DRHourlyModel(HourlyModel):
         #     raise TypeError("baseline_data must be a DailyBaselineData object")
         # TODO check DQ, log warnings
         self._fit(baseline_data)
-        
+
         return self
-    
+
     def predict(
         self,
         reporting_data,
@@ -131,10 +135,14 @@ class DRHourlyModel(HourlyModel):
         # add temperature bins based on temperature
         if not self.is_fit:
             if settings.METHOD == "equal_sample_count":
-                T_bin_edges = pd.qcut(df["temperature"], q=settings.N_BINS, labels=False)
+                T_bin_edges = pd.qcut(
+                    df["temperature"], q=settings.N_BINS, labels=False
+                )
 
             elif settings.METHOD == "equal_bin_width":
-                T_bin_edges = pd.cut(df["temperature"], bins=settings.N_BINS, labels=False)
+                T_bin_edges = pd.cut(
+                    df["temperature"], bins=settings.N_BINS, labels=False
+                )
 
             elif settings.METHOD == "set_bin_width":
                 bin_width = settings.BIN_WIDTH
@@ -143,7 +151,9 @@ class DRHourlyModel(HourlyModel):
                 max_temp = np.ceil(df["temperature"].max())
 
                 if not settings.INCLUDE_EDGE_BINS:
-                    step_num = np.round((max_temp - min_temp) / bin_width).astype(int) + 1
+                    step_num = (
+                        np.round((max_temp - min_temp) / bin_width).astype(int) + 1
+                    )
 
                     # T_bin_edges = np.arange(min_temp, max_temp + bin_width, bin_width)
                     T_bin_edges = np.linspace(min_temp, max_temp, step_num)
@@ -151,9 +161,12 @@ class DRHourlyModel(HourlyModel):
                 else:
                     set_edge_bin_width = False
                     if set_edge_bin_width:
-                        edge_bin_width = bin_width*1/2
+                        edge_bin_width = bin_width * 1 / 2
 
-                        bin_range = [min_temp + edge_bin_width, max_temp - edge_bin_width]
+                        bin_range = [
+                            min_temp + edge_bin_width,
+                            max_temp - edge_bin_width,
+                        ]
 
                     else:
                         edge_bin_count = int(len(df) * settings.EDGE_BIN_PERCENT)
@@ -165,10 +178,15 @@ class DRHourlyModel(HourlyModel):
 
                         bin_range = [min_temp_reg_bin, max_temp_reg_bin]
 
-                    step_num = np.round((bin_range[1] - bin_range[0]) / bin_width).astype(int) + 1
+                    step_num = (
+                        np.round((bin_range[1] - bin_range[0]) / bin_width).astype(int)
+                        + 1
+                    )
 
                     # create bins with set width
-                    T_bin_edges = np.array([min_temp, *np.linspace(*bin_range, step_num), max_temp])
+                    T_bin_edges = np.array(
+                        [min_temp, *np.linspace(*bin_range, step_num), max_temp]
+                    )
 
             else:
                 raise ValueError("Invalid temperature binning method")

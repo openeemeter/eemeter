@@ -151,7 +151,13 @@ class _HourlyData:
     Will raise exception during data sufficiency check if instantiated
     """
 
-    def __init__(self, df: pd.DataFrame, is_electricity_data: bool, pv_start: Union[date, str, None] = None, **kwargs: dict):
+    def __init__(
+        self,
+        df: pd.DataFrame,
+        is_electricity_data: bool,
+        pv_start: Union[date, str, None] = None,
+        **kwargs: dict,
+    ):
         self._df = None
         self.warnings = []
         self.disqualification = []
@@ -373,6 +379,7 @@ class HourlyBaselineData(_HourlyData):
         pv_start (datetime.date): Solar install date. If left unset, assumed to be at beginning of data.
 
     """
+
     def _check_data_sufficiency(self):
         data = _create_sufficiency_df(self.df)
         hsc = HourlySufficiencyCriteria(
@@ -383,7 +390,6 @@ class HourlyBaselineData(_HourlyData):
         warnings = hsc.warnings
 
         return disqualification, warnings
-
 
 
 class HourlyReportingData(_HourlyData):
@@ -409,7 +415,13 @@ class HourlyReportingData(_HourlyData):
         pv_start (datetime.date): Solar install date. If left unset, assumed to be at beginning of data.
     """
 
-    def __init__(self, df: pd.DataFrame, is_electricity_data: bool, pv_start: Union[date, str, None] = None, **kwargs: dict):
+    def __init__(
+        self,
+        df: pd.DataFrame,
+        is_electricity_data: bool,
+        pv_start: Union[date, str, None] = None,
+        **kwargs: dict,
+    ):
         df = df.copy()
         if "observed" not in df.columns:
             df["observed"] = np.nan

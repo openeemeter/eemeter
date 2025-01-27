@@ -54,7 +54,7 @@ def _normalize_single_loadshape(ls_arr: np.ndarray):
     )
 
     if ls_min == ls_max:
-        return np.full_like(ls_arr, (a + b)/2)
+        return np.full_like(ls_arr, (a + b) / 2)
 
     ret_arr = (b - a) * (ls_arr_transposed - ls_min) / (ls_max - ls_min) + a
 
@@ -62,9 +62,8 @@ def _normalize_single_loadshape(ls_arr: np.ndarray):
 
 
 def _normalize_df_loadshapes(
-        df: pd.DataFrame, 
-        normalize_method = "min_max"
-    ) -> pd.DataFrame:
+    df: pd.DataFrame, normalize_method="min_max"
+) -> pd.DataFrame:
     """
     transforms a loadshape dataframe
 
@@ -78,11 +77,11 @@ def _normalize_df_loadshapes(
     #         ls_arr=data.values
     #     )
     #     df_list.append(transformed_data)
-    # 
+    #
     # df_transformed = pd.concat(df_list).to_frame(name="ls")  # type: ignore
 
     if normalize_method == "min_max":
-        df = df.apply(_normalize_single_loadshape, result_type='broadcast', axis=1)
+        df = df.apply(_normalize_single_loadshape, result_type="broadcast", axis=1)
 
     return df
 
@@ -91,11 +90,7 @@ class FpcaError(Exception):
     pass
 
 
-def _fpca_base(
-    x: np.ndarray, 
-    y: np.ndarray, 
-    min_var_ratio: float
-) -> np.ndarray:
+def _fpca_base(x: np.ndarray, y: np.ndarray, min_var_ratio: float) -> np.ndarray:
     """
     applies fpca to concatenated transform loadshape dataframe values
 
@@ -112,7 +107,7 @@ def _fpca_base(
 
     if not np.all(np.isfinite(x)) or not np.all(np.isfinite(y)):
         raise FpcaError("provided non finite values for fpca")
-    
+
     if len(x) == 0 or len(y) == 0:
         raise FpcaError("provided empty values for fpca")
 
@@ -120,7 +115,7 @@ def _fpca_base(
     # get maximum n components
 
     # smallest 1  || min(largest = number of samples - 1, # time points)
-    n_max = np.min(np.array(np.shape(y)) - [1, 5])  
+    n_max = np.min(np.array(np.shape(y)) - [1, 5])
     if n_max < n_min:
         n_max = n_min
 
@@ -131,18 +126,14 @@ def _fpca_base(
     basis_fcn = _Fourier
 
     basis_fd = fd.to_basis(basis_fcn(n_basis=n_max + 4))
-    fpca = _FPCA(
-        n_components=n_max, components_basis=basis_fcn(n_basis=n_max + 4)
-    )
+    fpca = _FPCA(n_components=n_max, components_basis=basis_fcn(n_basis=n_max + 4))
     fpca.fit(basis_fd)
 
     var_ratio = np.cumsum(fpca.explained_variance_ratio_) - min_var_ratio
     n = int(np.argmin(var_ratio < 0.0) + 1)
 
     basis_fd = fd.to_basis(basis_fcn(n_basis=n + 4))
-    fpca = _FPCA(
-        n_components=n, components_basis=basis_fcn(n_basis=n + 4)
-    )
+    fpca = _FPCA(n_components=n, components_basis=basis_fcn(n_basis=n + 4))
     fpca.fit(basis_fd)
 
     mixture_components = fpca.transform(basis_fd)
@@ -165,11 +156,7 @@ def _get_fpca_from_loadshape(
     ls = df.values
 
     try:
-        fcpa_mixture_components = _fpca_base(
-            x=time, 
-            y=ls, 
-            min_var_ratio=min_var_ratio
-        )
+        fcpa_mixture_components = _fpca_base(x=time, y=ls, min_var_ratio=min_var_ratio)
     except FpcaError as e:
         return pd.DataFrame(), str(e)
 
