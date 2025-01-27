@@ -346,7 +346,7 @@ class BaseHourlySettings(BaseSettings):
     @pydantic.model_validator(mode="after")
     def _check_seed(self):
         if self.seed is None:
-            self._seed = np.random.randint(0, 2**32 - 1)
+            self._seed = np.random.randint(0, 2**32 - 1, dtype=np.int64)
         else:
             self._seed = self.seed
 
