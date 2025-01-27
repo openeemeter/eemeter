@@ -29,7 +29,7 @@ from eemeter.eemeter.models.daily.base_models.hdd_tidd_cdd import (
 )
 
 from eemeter.eemeter.models.daily.fit_base_models import _get_opt_settings
-from eemeter.eemeter.models.daily.utilities.config import DailySettings as Settings
+from eemeter.eemeter.models.daily.utilities.settings import DailySettings as Settings
 
 
 def test_obj_fcn_dec():
@@ -124,21 +124,21 @@ def test_optimizer_run(get_settings, get_obj_fcn, get_x0, get_bnds):
     assert np.allclose(res.x, np.array([20.13393]), rtol=1e-5, atol=1e-5)
 
     # Test case 2: Test with scipy algorithm
-    settings = Settings(DEVELOPER_MODE=True, algorithm_choice="scipy_Nelder-Mead")
+    settings = Settings(developer_mode=True, algorithm_choice="scipy_Nelder-Mead")
     opt_options = _get_opt_settings(settings)
     optimizer = Optimizer(get_obj_fcn, x0, bnds, coef_id, settings, opt_options)
     res = optimizer.run()
     assert np.allclose(res.x, np.array([20.13393]), rtol=1e-5, atol=1e-5)
 
     # Test case 3: Test with nlopt algorithm
-    settings = Settings(DEVELOPER_MODE=True, algorithm_choice="nlopt_direct")
+    settings = Settings(developer_mode=True, algorithm_choice="nlopt_direct")
     opt_options = _get_opt_settings(get_settings)
     optimizer = Optimizer(get_obj_fcn, x0, bnds, coef_id, get_settings, opt_options)
     res = optimizer.run()
     assert np.allclose(res.x, np.array([20.13393]), rtol=1e-5, atol=1e-5)
 
     # Test case 4: Test with multistart algorithm
-    settings = Settings(DEVELOPER_MODE=True, algorithm_choice="nlopt_mlsl_lds")
+    settings = Settings(developer_mode=True, algorithm_choice="nlopt_mlsl_lds")
     opt_options = _get_opt_settings(get_settings)
     optimizer = Optimizer(get_obj_fcn, x0, bnds, coef_id, settings, opt_options)
     res = optimizer.run()
