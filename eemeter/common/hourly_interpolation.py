@@ -40,11 +40,10 @@ def autocorr_fcn(x, lags, exclude_0=True):
     xp = x_msk - mean
     corr = [1.0 if l == 0 else ma.sum(xp[l:] * xp[:-l]) / len(x) / var for l in lags]
 
-    # explicitly cast masked values to nan to avoid warning
-    corr = [np.nan if type(v) == ma.core.MaskedConstant else v for v in corr]
-
-    # combine the lags, the correlation values, and mirror to get leads/lags
-    res = np.vstack((lags, corr)).T
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", "Warning: converting a masked element to nan")
+        # combine the lags, the correlation values, and mirror to get leads/lags
+        res = np.vstack((lags, corr)).T
     if exclude_0:  # remove the 0 lag
         res = res[1:]
         rev_res = copy(res)[::-1]
