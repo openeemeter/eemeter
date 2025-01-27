@@ -26,8 +26,7 @@ from typing import Any, Optional
 
 
 class PydanticDf(pydantic.BaseModel):
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
     df: pd.DataFrame
 
@@ -57,11 +56,11 @@ class PydanticDf(pydantic.BaseModel):
                         raise ValueError(
                             f"Expected column {col} to be of type {col_type} but got {self.df[col].dtype}"
                         )
+        return self
 
 
 class ArbitraryPydanticModel(pydantic.BaseModel):
-    class Config:
-        arbitrary_types_allowed = True  # required for dataframe / series
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
 
 def PydanticFromDict(input_dict, name="PydanticModel"):

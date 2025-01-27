@@ -399,8 +399,7 @@ class ModelChoice(str, Enum):
 
 
 class ReportingMetrics(pydantic.BaseModel):
-    class Config:
-        arbitrary_types_allowed = True  # required for dataframe / series
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
     baseline_metrics: BaselineMetrics = pydantic.Field(exclude=True)
 

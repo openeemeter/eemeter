@@ -405,8 +405,7 @@ class ModelInfo(pydantic.BaseModel):
     version: str
 
 class SerializeModel(BaseSettings):
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
 
     settings: Optional[BaseHourlySettings] = None
     temporal_clusters: Optional[list[list[int]]] = None
