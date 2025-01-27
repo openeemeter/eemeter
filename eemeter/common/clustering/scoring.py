@@ -100,10 +100,10 @@ def score_clusters(
     data: np.ndarray,
     labels: np.ndarray,
     n_cluster_lower: int,
-    score_choice = "silhouette",
-    dist_metric = "euclidean",
-    min_cluster_size = 2,
-    max_non_outlier_cluster_count = 200,
+    score_choice="silhouette",
+    dist_metric="euclidean",
+    min_cluster_size=2,
+    max_non_outlier_cluster_count=200,
 ) -> tuple[float, bool]:
     """
     ---
@@ -131,7 +131,7 @@ def score_clusters(
 
     if non_outlier_cluster_count > max_non_outlier_cluster_count:
         return get_max_score_from_system_size(), True
-    
+
     # don't include outlier cluster in scoring
     idx = np.argwhere(labels != -1).flatten()
     data_non_outlier = data[idx, :]
@@ -142,12 +142,14 @@ def score_clusters(
         try:
             # if sample size is a number then it randomly samples within the group, None looks at all
             # if using silhouette score for large datasets, might want to specify sample_size
-            score = float(_metrics.silhouette_score(
-                        data_non_outlier,
-                        labels_non_outlier,
-                        metric=dist_metric,
-                        sample_size=10_000,
-                    ))
+            score = float(
+                _metrics.silhouette_score(
+                    data_non_outlier,
+                    labels_non_outlier,
+                    metric=dist_metric,
+                    sample_size=10_000,
+                )
+            )
 
         except Exception:
             score = float(10.0)
@@ -157,10 +159,8 @@ def score_clusters(
         try:
             # if this is too computationally intensive, could sample clusters instead
             score_all = -10 * _metrics.silhouette_samples(
-                data_non_outlier, 
-                labels_non_outlier, 
-                metric=dist_metric
-            ) # type: ignore
+                data_non_outlier, labels_non_outlier, metric=dist_metric
+            )  # type: ignore
             score = float(np.median(score_all[idx]))
         except Exception:
             score = float(10.0)
@@ -168,19 +168,25 @@ def score_clusters(
 
     elif score_choice in ["variance_ratio", "calinski-harabasz"]:
         try:
-            score = -1*_metrics.calinski_harabasz_score(data_non_outlier, labels_non_outlier)   
+            score = -1 * _metrics.calinski_harabasz_score(
+                data_non_outlier, labels_non_outlier
+            )
         except Exception:
             score = get_max_score_from_system_size()
             score_error = True
 
     elif score_choice == "davies-bouldin":
         try:
-            score = float(_metrics.davies_bouldin_score(data_non_outlier, labels_non_outlier))
+            score = float(
+                _metrics.davies_bouldin_score(data_non_outlier, labels_non_outlier)
+            )
         except Exception:
             score = get_max_score_from_system_size()
             score_error = True
 
     else:
-        raise ValueError(f"{score_choice} is not a recognized clustering scoring function")
-    
+        raise ValueError(
+            f"{score_choice} is not a recognized clustering scoring function"
+        )
+
     return score, score_error

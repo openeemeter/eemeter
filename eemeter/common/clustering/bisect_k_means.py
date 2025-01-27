@@ -30,16 +30,17 @@ from sklearn.cluster import _bisect_k_means
 from sklearn.cluster._kmeans import (
     _kmeans_single_elkan,
     _kmeans_single_lloyd,
-) # type: ignore
+)  # type: ignore
 from sklearn.cluster._k_means_common import (
     _inertia_dense,
     _inertia_sparse,
-) # type: ignore
+)  # type: ignore
 from sklearn.utils.extmath import row_norms
 from sklearn.utils.validation import (
     _check_sample_weight,
     check_random_state,
-) # type: ignore
+)  # type: ignore
+
 # from sklearn.utils._openmp_helpers import _openmp_effective_n_threads
 
 import logging

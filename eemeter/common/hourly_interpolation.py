@@ -32,17 +32,17 @@ from copy import deepcopy as copy
 
 
 def autocorr_fcn(x, lags, exclude_0=True):
-    '''manualy compute, non partial'''
+    """manualy compute, non partial"""
     x_msk = ma.masked_invalid(x)
     mean = ma.mean(x_msk)
     var = ma.var(x_msk)
     xp = x_msk - mean
-    corr = [1. if l==0 else ma.sum(xp[l:]*xp[:-l])/len(x)/var for l in lags]
+    corr = [1.0 if l == 0 else ma.sum(xp[l:] * xp[:-l]) / len(x) / var for l in lags]
 
     # combine the lags, the correlation values, and mirror to get leads/lags
     res = np.vstack((lags, corr)).T
-    if exclude_0: # remove the 0 lag
-        res = res[1:] 
+    if exclude_0:  # remove the 0 lag
+        res = res[1:]
         rev_res = copy(res)[::-1]
     else:
         rev_res = copy(res)[::-1][:-1]
@@ -52,39 +52,42 @@ def autocorr_fcn(x, lags, exclude_0=True):
 
     return res
 
+
 # unused
-def autocorr_fcn2(x,lags):
-    '''np.correlate, non partial'''
+def autocorr_fcn2(x, lags):
+    """np.correlate, non partial"""
     x_msk = ma.masked_invalid(x)
     mean = ma.mean(x_msk)
     var = ma.var(x_msk)
     xp = x_msk - mean
 
-    corr = ma.correlate(xp,xp,'full')[len(x)-1:]/var/len(x)
+    corr = ma.correlate(xp, xp, "full")[len(x) - 1 :] / var / len(x)
 
-    return corr[:len(lags)]
+    return corr[: len(lags)]
+
 
 # unused
 def autocorr_fcn3(x, lags):
-    '''fft, pad 0s, non partial'''
+    """fft, pad 0s, non partial"""
     x_msk = ma.masked_invalid(x)
     n = len(x)
     # pad 0s to 2n-1
-    ext_size = 2*n-1
+    ext_size = 2 * n - 1
     # nearest power of 2
-    fsize = 2**np.ceil(np.log2(ext_size)).astype('int')
+    fsize = 2 ** np.ceil(np.log2(ext_size)).astype("int")
 
     mean = ma.mean(x_msk)
     var = ma.var(x_msk)
-    xp = x-mean
+    xp = x - mean
 
     # do fft and ifft
-    cf=np.fft.fft(xp,fsize)
-    sf=cf.conjugate()*cf
-    corr=np.fft.ifft(sf).real
-    corr=corr/var/n
+    cf = np.fft.fft(xp, fsize)
+    sf = cf.conjugate() * cf
+    corr = np.fft.ifft(sf).real
+    corr = corr / var / n
 
-    return corr[:len(lags)]
+    return corr[: len(lags)]
+
 
 # unused
 def multiple_imputation(df, columns=None, **kwargs):
@@ -93,16 +96,18 @@ def multiple_imputation(df, columns=None, **kwargs):
 
     df_imputed = df[columns].reset_index()
     # convert datetime to hours since earliest datetime
-    df_imputed["datetime_elapsed"] = (df_imputed["datetime"] - df_imputed["datetime"].min()).dt.total_seconds() / 3600
+    df_imputed["datetime_elapsed"] = (
+        df_imputed["datetime"] - df_imputed["datetime"].min()
+    ).dt.total_seconds() / 3600
     df_imputed["hour_of_day"] = df_imputed["datetime"].dt.hour
     df_imputed["day_of_week"] = df_imputed["datetime"].dt.dayofweek
     df_imputed["month"] = df_imputed["datetime"].dt.month
     df_imputed = df_imputed.set_index("datetime")
 
     settings_dict = {
-        "estimator": BayesianRidge(), # can use SVR, BayesianRidge, etc.
+        "estimator": BayesianRidge(),  # can use SVR, BayesianRidge, etc.
         "max_iter": 10,
-        "random_state": None
+        "random_state": None,
     }
     settings_dict.update(kwargs)
 
@@ -148,6 +153,7 @@ def shift_array(arr, num, fill_value=np.nan):
 
         return result
 
+
 def _interpolate_col(x, lags):
     # check that the column has nans
     if x.isna().sum() == 0:
@@ -159,14 +165,16 @@ def _interpolate_col(x, lags):
     # calculate the number of lags and leads to consider
     if x.name == "observed":
         missing_frac = x.isna().sum() / len(x)
-        n_cor_idx_heuristic = np.round((4.012 * np.log(missing_frac) + 24.38) / 2, 0) * 2
+        n_cor_idx_heuristic = (
+            np.round((4.012 * np.log(missing_frac) + 24.38) / 2, 0) * 2
+        )
         n_cor_idx = int(np.max([6, n_cor_idx_heuristic]))
     else:
         n_cor_idx = 6
 
     # Calculate the correlation of col with its lags and leads
     # create lags from -lags to lags
-    lag_array = np.arange(lags+1)
+    lag_array = np.arange(lags + 1)
     autocorr = autocorr_fcn(x.values, lag_array, exclude_0=True)
 
     # take the largest n_cor_idx from second column using argpartition
@@ -196,7 +204,7 @@ def _interpolate_col(x, lags):
         valid_idx = np.sum(~np.isnan(autocorr_helpers[nan_idx, :]), axis=1) >= cnt_min
         if valid_idx.sum() == 0:
             continue
-        
+
         nan_series_idx = nan_series_idx[valid_idx]
         nan_idx = x.index.get_indexer(nan_series_idx)
 
@@ -209,20 +217,20 @@ def _interpolate_col(x, lags):
     return x
 
 
-def interpolate(df, columns=None): 
-    skip_autocorr_interpolation = False 
-    if len(df) > 6*24*7:
-        lags = 24*7*2 + 1
-    elif (len(df) > 3*24*7) and (len(df) <= 6*24*7):
-        lags = 24*7 + 1
-    elif (len(df) > 3*24) and (len(df) <= 3*24*7):
+def interpolate(df, columns=None):
+    skip_autocorr_interpolation = False
+    if len(df) > 6 * 24 * 7:
+        lags = 24 * 7 * 2 + 1
+    elif (len(df) > 3 * 24 * 7) and (len(df) <= 6 * 24 * 7):
+        lags = 24 * 7 + 1
+    elif (len(df) > 3 * 24) and (len(df) <= 3 * 24 * 7):
         lags = 24 + 1
     else:
         skip_autocorr_interpolation = True
 
     interp_cols = columns
     if interp_cols is None:
-        interp_cols = ["temperature", "ghi", "observed"] 
+        interp_cols = ["temperature", "ghi", "observed"]
 
     # check if the columns are in the dataframe and modify columns appropriately
     for col in interp_cols:
@@ -249,7 +257,7 @@ def interpolate(df, columns=None):
 
             elif method == "ffill":
                 df[col] = df[col].ffill()
-            
+
             elif method == "bfill":
                 df[col] = df[col].bfill()
 

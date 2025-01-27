@@ -21,9 +21,10 @@
 from __future__ import annotations
 
 import os
-os.environ['OMP_NUM_THREADS'] = "1"
-os.environ['MKL_NUM_THREADS'] = "1"
-os.environ['OPENBLAS_NUM_THREADS'] = "1"
+
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
 
 from pydantic import BaseModel, ConfigDict
 
@@ -31,7 +32,10 @@ import numpy as np
 import pandas as pd
 
 import sklearn
-sklearn.set_config(assume_finite=True, skip_parameter_validation=True) # Faster, we do checking
+
+sklearn.set_config(
+    assume_finite=True, skip_parameter_validation=True
+)  # Faster, we do checking
 
 from scipy.sparse import csr_matrix
 
@@ -60,6 +64,7 @@ from eemeter.common.clustering import (
 )
 from eemeter.common.metrics import BaselineMetrics, BaselineMetricsFromDict
 from eemeter import __version__
+
 
 class HourlyModel:
     """
@@ -142,7 +147,9 @@ class HourlyModel:
         self.error = dict()
         self.version = __version__
 
-    def fit(self, baseline_data: HourlyBaselineData, ignore_disqualification: bool = False) -> HourlyModel:
+    def fit(
+        self, baseline_data: HourlyBaselineData, ignore_disqualification: bool = False
+    ) -> HourlyModel:
         """Fit the model using baseline data.
 
         Args:
@@ -162,7 +169,9 @@ class HourlyModel:
         if baseline_data.disqualification and not ignore_disqualification:
             raise DataSufficiencyError("Can't fit model on disqualified baseline data")
         if "ghi" in self._ts_features and not "ghi" in baseline_data.df.columns:
-            raise ValueError("Model was explicitly set to use GHI, but baseline data does not contain GHI.")
+            raise ValueError(
+                "Model was explicitly set to use GHI, but baseline data does not contain GHI."
+            )
 
         self.warnings = baseline_data.warnings
         self.disqualification = baseline_data.disqualification
@@ -202,7 +211,7 @@ class HourlyModel:
         # Initialize dataframe
         self.is_fitted = False
 
-        df_meter = meter_data.df # used to have a copy here
+        df_meter = meter_data.df  # used to have a copy here
 
         # Prepare feature arrays/matrices
         X_fit, X_predict, y_fit = self._prepare_features(df_meter)
@@ -252,8 +261,12 @@ class HourlyModel:
         if not self.is_fitted:
             raise RuntimeError("Model must be fit before predictions can be made.")
 
-        if missing_features := (set(self._ts_features) - set(reporting_data.df.columns)):
-            raise ValueError(f"Reporting data is missing the following features: {missing_features}")
+        if missing_features := (
+            set(self._ts_features) - set(reporting_data.df.columns)
+        ):
+            raise ValueError(
+                f"Reporting data is missing the following features: {missing_features}"
+            )
 
         if "ghi" in reporting_data.df.columns and not "ghi" in self._ts_features:
             model_mismatch_warning = EEMeterWarning(
@@ -294,7 +307,7 @@ class HourlyModel:
             pandas.DataFrame: The evaluation dataframe with model predictions added.
         """
 
-        df_eval = eval_data.df # used to have a copy here
+        df_eval = eval_data.df  # used to have a copy here
         dst_indices = _get_dst_indices(df_eval)
         datetime_original = eval_data.df.index
         # # get list of columns to keep in output
@@ -344,8 +357,7 @@ class HourlyModel:
         self._add_supplemental_features(meter_data)
 
         self._ts_features, self._categorical_features = self._sort_features(
-            self._ts_features, 
-            self._categorical_features
+            self._ts_features, self._categorical_features
         )
 
         meter_data = self._daily_sufficiency(meter_data)
@@ -395,10 +407,14 @@ class HourlyModel:
         # add temperature bins based on temperature
         if not self.is_fitted:
             if settings.method == "equal_sample_count":
-                T_bin_edges = pd.qcut(df["temperature"], q=settings.n_bins, labels=False)
+                T_bin_edges = pd.qcut(
+                    df["temperature"], q=settings.n_bins, labels=False
+                )
 
             elif settings.method == "equal_bin_width":
-                T_bin_edges = pd.cut(df["temperature"], bins=settings.n_bins, labels=False)
+                T_bin_edges = pd.cut(
+                    df["temperature"], bins=settings.n_bins, labels=False
+                )
 
             elif settings.method == "set_bin_width":
                 bin_width = settings.bin_width
@@ -407,7 +423,9 @@ class HourlyModel:
                 max_temp = np.ceil(df["temperature"].max())
 
                 if not settings.include_edge_bins:
-                    step_num = np.round((max_temp - min_temp) / bin_width).astype(int) + 1
+                    step_num = (
+                        np.round((max_temp - min_temp) / bin_width).astype(int) + 1
+                    )
 
                     # T_bin_edges = np.arange(min_temp, max_temp + bin_width, bin_width)
                     T_bin_edges = np.linspace(min_temp, max_temp, step_num)
@@ -415,9 +433,12 @@ class HourlyModel:
                 else:
                     set_edge_bin_width = False
                     if set_edge_bin_width:
-                        edge_bin_width = bin_width*1/2
+                        edge_bin_width = bin_width * 1 / 2
 
-                        bin_range = [min_temp + edge_bin_width, max_temp - edge_bin_width]
+                        bin_range = [
+                            min_temp + edge_bin_width,
+                            max_temp - edge_bin_width,
+                        ]
 
                     else:
                         edge_bin_count = int(len(df) * settings.edge_bin_percent)
@@ -429,10 +450,15 @@ class HourlyModel:
 
                         bin_range = [min_temp_reg_bin, max_temp_reg_bin]
 
-                    step_num = np.round((bin_range[1] - bin_range[0]) / bin_width).astype(int) + 1
+                    step_num = (
+                        np.round((bin_range[1] - bin_range[0]) / bin_width).astype(int)
+                        + 1
+                    )
 
                     # create bins with set width
-                    T_bin_edges = np.array([min_temp, *np.linspace(*bin_range, step_num), max_temp])
+                    T_bin_edges = np.array(
+                        [min_temp, *np.linspace(*bin_range, step_num), max_temp]
+                    )
 
             else:
                 raise ValueError("Invalid temperature binning method")
@@ -471,9 +497,9 @@ class HourlyModel:
             )
             # pivot table to get 2D array of observed values
             fit_df_grouped = fit_df_grouped.pivot_table(
-                index=self._temporal_cluster_cols, 
-                columns="hour_of_day", 
-                values="observed"
+                index=self._temporal_cluster_cols,
+                columns="hour_of_day",
+                values="observed",
             )
 
             settings = self.settings.temporal_cluster
@@ -481,15 +507,15 @@ class HourlyModel:
                 fit_df_grouped.values,
                 settings.wavelet_n_levels,
                 settings.wavelet_name,
-                settings.wavelet_mode, 
-                settings.pca_min_variance_ratio_explained, 
-                settings.recluster_count, 
-                settings.n_cluster_lower, 
-                settings.n_cluster_upper, 
-                settings.score_metric, 
-                settings.distance_metric, 
-                settings.min_cluster_size, 
-                settings._seed
+                settings.wavelet_mode,
+                settings.pca_min_variance_ratio_explained,
+                settings.recluster_count,
+                settings.n_cluster_lower,
+                settings.n_cluster_upper,
+                settings.score_metric,
+                settings.distance_metric,
+                settings.min_cluster_size,
+                settings._seed,
             )
 
             df_temporal_clusters = pd.DataFrame(
@@ -526,7 +552,9 @@ class HourlyModel:
                     ]
 
                     df_missing_grouped = (
-                        df_missing.groupby(self._temporal_cluster_cols + ["hour_of_day"])["observed"]
+                        df_missing.groupby(
+                            self._temporal_cluster_cols + ["hour_of_day"]
+                        )["observed"]
                         .mean()
                         .reset_index()
                     )
@@ -554,7 +582,9 @@ class HourlyModel:
                     ]
 
                     df_known_mean = (
-                        df_known.groupby(self._temporal_cluster_cols + ["hour_of_day"])["observed"]
+                        df_known.groupby(self._temporal_cluster_cols + ["hour_of_day"])[
+                            "observed"
+                        ]
                         .mean()
                         .reset_index()
                     )
@@ -614,7 +644,13 @@ class HourlyModel:
 
         else:
             self._df_temporal_clusters = correct_missing_temporal_clusters(df)
-            n_clusters = len([c for c in self._categorical_features if c.startswith("temporal_cluster_")])
+            n_clusters = len(
+                [
+                    c
+                    for c in self._categorical_features
+                    if c.startswith("temporal_cluster_")
+                ]
+            )
 
         # join df_temporal_clusters to df
         df = pd.merge(
@@ -740,12 +776,14 @@ class HourlyModel:
                 df_hour = df[df["hour_of_day"] == hour]
                 df_hour = df_hour.sort_values(by=int_col)
 
-                x_data = a*df_hour[int_col].values + b
+                x_data = a * df_hour[int_col].values + b
                 y_data = df_hour["observed"].values
 
                 # Fit the model using robust least squares
                 try:
-                    params = _fit_exp_growth_decay(x_data, y_data, k_only=True, is_x_sorted=True)
+                    params = _fit_exp_growth_decay(
+                        x_data, y_data, k_only=True, is_x_sorted=True
+                    )
                     # save k for each hour
                     k.append(params[2])
                 except:
@@ -762,7 +800,11 @@ class HourlyModel:
         # get all the temp_bin columns
         # get list of columns beginning with "daily_temp_" and ending in a number
         for interaction_col in ["temp_bin_", "temporal_cluster_"]:
-            cols = [col for col in df.columns if col.startswith(interaction_col) and col[-1].isdigit()]
+            cols = [
+                col
+                for col in df.columns
+                if col.startswith(interaction_col) and col[-1].isdigit()
+            ]
             for col in cols:
                 # splits temperature_norm into unique columns if that temp_bin column is True
                 ts_col = f"{col}_ts"
@@ -775,7 +817,11 @@ class HourlyModel:
             if self._T_edge_bin_coeffs is None:
                 self._T_edge_bin_coeffs = {}
 
-            cols = [col for col in df.columns if col.startswith("temp_bin_") and col[-1].isdigit()]
+            cols = [
+                col
+                for col in df.columns
+                if col.startswith("temp_bin_") and col[-1].isdigit()
+            ]
             cols = [0, int(cols[-1].replace("temp_bin_", ""))]
             # maybe add nonlinear terms to second and second to last columns?
             # cols = [0, 1, last_temp_bin - 1, last_temp_bin]
@@ -792,11 +838,14 @@ class HourlyModel:
                 if not self.is_fitted:
                     # determine temperature conversion for bin
                     range_offset = settings.edge_bin_temperature_range_offset
-                    T_range = [df[int_col].min() - range_offset, df[int_col].max() + range_offset]
+                    T_range = [
+                        df[int_col].min() - range_offset,
+                        df[int_col].max() + range_offset,
+                    ]
                     new_range = [-1, 1]
 
-                    T_a = (new_range[1] - new_range[0])/(T_range[1] - T_range[0])
-                    T_b = new_range[1] - T_a*T_range[1]
+                    T_a = (new_range[1] - new_range[0]) / (T_range[1] - T_range[0])
+                    T_b = new_range[1] - T_a * T_range[1]
 
                     # The best rate for exponential
                     if settings.edge_bin_rate == "heuristic":
@@ -805,7 +854,7 @@ class HourlyModel:
                         k = settings.edge_bin_rate
 
                     # get A for exponential
-                    A = 1/(np.exp(1/k*new_range[1]) - 1)
+                    A = 1 / (np.exp(1 / k * new_range[1]) - 1)
 
                     self._T_edge_bin_coeffs[n] = {
                         "T_A": float(T_a),
@@ -820,9 +869,7 @@ class HourlyModel:
                 A = self._T_edge_bin_coeffs[n]["A"]
 
                 df[T_col] = np.where(
-                    df[base_col].values,
-                    T_a * df[int_col].values + T_b,
-                    0
+                    df[base_col].values, T_a * df[int_col].values + T_b, 0
                 )
 
                 for pos_neg in ["pos", "neg"]:
@@ -837,9 +884,7 @@ class HourlyModel:
                     ts_col = f"{base_col}_{pos_neg}_exp_ts"
 
                     df[ts_col] = np.where(
-                        df[base_col].values,
-                        A * np.exp(s / k * df[T_col].values) - A,
-                        0
+                        df[base_col].values, A * np.exp(s / k * df[T_col].values) - A, 0
                     )
 
                     self._ts_feature_norm.append(ts_col)
@@ -956,7 +1001,7 @@ class HourlyModel:
                 error=self.error,
                 baseline_timezone=str(self.baseline_timezone),
                 version=self.version,
-            )
+            ),
         )
 
         model_dict = params.model_dump()
@@ -993,7 +1038,7 @@ class HourlyModel:
 
         df_temporal_clusters = pd.DataFrame(
             data.get("temporal_clusters"),
-            columns= model_cls._temporal_cluster_cols + ["temporal_cluster"],
+            columns=model_cls._temporal_cluster_cols + ["temporal_cluster"],
         ).set_index(model_cls._temporal_cluster_cols)
 
         model_cls._df_temporal_clusters = df_temporal_clusters
@@ -1075,6 +1120,7 @@ class _LabelResult(BaseModel):
     """
     contains metrics about a cluster label returned from sklearn
     """
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     labels: np.ndarray
@@ -1141,6 +1187,7 @@ def _cluster_time_series(
 
     return HoF.labels
 
+
 def _cluster_temporal_features(
     data: np.ndarray,
     wavelet_n_levels: int,
@@ -1155,11 +1202,13 @@ def _cluster_temporal_features(
     min_cluster_size: int,
     seed: int,
 ):
-    def _dwt_coeffs(data, wavelet='db1', wavelet_mode="periodization", n_levels=4):
+    def _dwt_coeffs(data, wavelet="db1", wavelet_mode="periodization", n_levels=4):
         all_features = []
         # iterate through rows of numpy array
         for row in range(len(data)):
-            decomp_coeffs = pywt.wavedec(data[row], wavelet=wavelet, mode=wavelet_mode, level=n_levels)
+            decomp_coeffs = pywt.wavedec(
+                data[row], wavelet=wavelet, mode=wavelet_mode, level=n_levels
+            )
             # remove last level
             # if n_levels > 4:
             # decomp_coeffs = decomp_coeffs[:-1]
@@ -1176,7 +1225,7 @@ def _cluster_temporal_features(
 
         use_kernel_pca = False
         if use_kernel_pca:
-            pca = KernelPCA(n_components=None, kernel='rbf')
+            pca = KernelPCA(n_components=None, kernel="rbf")
             pca_features = pca.fit_transform(features)
 
             explained_variance_ratio = pca.eigenvalues_ / np.sum(pca.eigenvalues_)
@@ -1188,7 +1237,7 @@ def _cluster_temporal_features(
             n_components = np.argmax(cumulative_explained_variance > min_var_ratio)
 
             # pca = PCA(n_components=n_components)
-            pca = KernelPCA(n_components=n_components, kernel='rbf')
+            pca = KernelPCA(n_components=n_components, kernel="rbf")
             pca_features = pca.fit_transform(features)
 
         else:
@@ -1196,7 +1245,7 @@ def _cluster_temporal_features(
             pca_features = pca.fit_transform(features)
 
         return pca_features
-    
+
     # calculate wavelet coefficients
     features = _dwt_coeffs(data, wavelet_name, wavelet_mode, wavelet_n_levels)
     pca_features = _pca_coeffs(features, min_var_ratio)
@@ -1235,31 +1284,31 @@ def _fit_exp_growth_decay(x, y, k_only=True, is_x_sorted=False):
 
     s = [0]
     for i in range(1, len(x)):
-        s.append(s[i-1] + 0.5*(y[i] + y[i-1])*(x[i] - x[i-1]))
+        s.append(s[i - 1] + 0.5 * (y[i] + y[i - 1]) * (x[i] - x[i - 1]))
 
     s = np.array(s)
-    
-    x_diff_sq = np.sum((x - x[0])**2)
-    xs_diff = np.sum(s*(x - x[0]))
+
+    x_diff_sq = np.sum((x - x[0]) ** 2)
+    xs_diff = np.sum(s * (x - x[0]))
     s_sq = np.sum(s**2)
-    xy_diff = np.sum((x - x[0])*(y - y[0]))
-    ys_diff = np.sum(s*(y - y[0]))
+    xy_diff = np.sum((x - x[0]) * (y - y[0]))
+    ys_diff = np.sum(s * (y - y[0]))
 
     A = np.array([[x_diff_sq, xs_diff], [xs_diff, s_sq]])
     b = np.array([xy_diff, ys_diff])
 
     _, c = np.linalg.solve(A, b)
-    k = 1/c
+    k = 1 / c
 
     if k_only:
         a, b = None, None
     else:
-        theta_i = np.exp(c*x)
+        theta_i = np.exp(c * x)
 
         theta = np.sum(theta_i)
         theta_sq = np.sum(theta_i**2)
         y_sum = np.sum(y)
-        y_theta = np.sum(y*theta_i)
+        y_theta = np.sum(y * theta_i)
 
         A = np.array([[n, theta], [theta, theta_sq]])
         b = np.array([y_sum, y_theta])
