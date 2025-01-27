@@ -21,6 +21,7 @@
 from __future__ import annotations
 
 import os
+import warnings
 
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
@@ -1247,7 +1248,11 @@ def _cluster_temporal_features(
         return pca_features
 
     # calculate wavelet coefficients
-    features = _dwt_coeffs(data, wavelet_name, wavelet_mode, wavelet_n_levels)
+    with warnings.catch_warnings():
+        #TODO wavelet level 5 was chosen during hyperparam optimization, but
+        # worth investigating this further
+        warnings.filterwarnings("ignore", module="pywt._multilevel")
+        features = _dwt_coeffs(data, wavelet_name, wavelet_mode, wavelet_n_levels)
     pca_features = _pca_coeffs(features, min_var_ratio)
 
     # cluster the pca features

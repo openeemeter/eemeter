@@ -168,6 +168,7 @@ class TemporalClusteringSettings(BaseSettings):
     wavelet_n_levels: int = pydantic.Field(
         default=5,
         ge=1,
+        # le=5,  #TODO investigate upper limit
     )
 
     """wavelet choice for wavelet decomposition"""
