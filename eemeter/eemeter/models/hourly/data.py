@@ -79,11 +79,11 @@ class NREL_Weather_API:  # TODO: reload data for all years
             df.columns = [x.lower().replace(" ", "_") for x in df.columns]
 
             if self.round_minutes_method == "floor":
-                df["datetime"] = df["datetime"].dt.floor("H")
+                df["datetime"] = df["datetime"].dt.floor("h")
             elif self.round_minutes_method == "ceil":
-                df["datetime"] = df["datetime"].dt.ceil("H")
+                df["datetime"] = df["datetime"].dt.ceil("h")
             elif self.round_minutes_method == "round":
-                df["datetime"] = df["datetime"].dt.round("H")
+                df["datetime"] = df["datetime"].dt.round("h")
 
             df = df.set_index("datetime")
 
@@ -210,7 +210,7 @@ class _HourlyData:
 
         # create a new index with all the hours between the earliest and latest datetime
         complete_dt = pd.date_range(
-            start=earliest_datetime, end=latest_datetime, freq="H"
+            start=earliest_datetime, end=latest_datetime, freq="h"
         )
 
         # merge meter data with complete_dt
