@@ -17,6 +17,7 @@
    limitations under the License.
 
 """
+import warnings
 
 import numba
 import numpy as np
@@ -38,6 +39,9 @@ def autocorr_fcn(x, lags, exclude_0=True):
     var = ma.var(x_msk)
     xp = x_msk - mean
     corr = [1.0 if l == 0 else ma.sum(xp[l:] * xp[:-l]) / len(x) / var for l in lags]
+
+    # explicitly cast masked values to nan to avoid warning
+    corr = [np.nan if type(v) == ma.core.MaskedConstant else v for v in corr]
 
     # combine the lags, the correlation values, and mirror to get leads/lags
     res = np.vstack((lags, corr)).T
