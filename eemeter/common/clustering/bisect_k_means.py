@@ -21,6 +21,7 @@
 from __future__ import annotations
 
 from copy import deepcopy as copy
+import warnings
 
 import numpy as np
 import scipy.sparse as sp
@@ -94,14 +95,18 @@ class BisectingKMeans(_sklearn_BisectingKMeans):
 
         self._validate_params()  # type: ignore
 
-        X = self._validate_data(  # type: ignore
-            X,
-            accept_sparse="csr",
-            dtype=[np.float64, np.float32],
-            order="C",
-            copy=self.copy_x,  # type: ignore
-            accept_large_sparse=False,
-        )
+        with warnings.catch_warnings():
+            #TODO deprecated in sklearn 1.6, removed in 1.7 (April 2025)
+            warnings.filterwarnings("ignore", "`BaseEstimator._validate_data`")
+
+            X = self._validate_data(  # type: ignore
+                X,
+                accept_sparse="csr",
+                dtype=[np.float64, np.float32],
+                order="C",
+                copy=self.copy_x,  # type: ignore
+                accept_large_sparse=False,
+            )
 
         self._check_params_vs_input(X)  # type: ignore
 
