@@ -28,9 +28,9 @@ from eemeter.eemeter import (
     BillingBaselineData,
     BillingReportingData,
     BillingModel,
-    HourlyModel,
-    HourlyBaselineData,
-    HourlyReportingData,
+    HourlyCaltrackModel,
+    HourlyCaltrackBaselineData,
+    HourlyCaltrackReportingData,
 )
 
 
@@ -125,17 +125,17 @@ def test_json_hourly_with_zeros():
         "il-electricity-cdd-hdd-hourly"
     )
     meter_data["value"] = 0
-    baseline = HourlyBaselineData.from_series(
+    baseline = HourlyCaltrackBaselineData.from_series(
         meter_data, temperature_data, is_electricity_data=True
     )
     assert baseline.df["observed"].isnull().all()
-    reporting = HourlyReportingData.from_series(
+    reporting = HourlyCaltrackReportingData.from_series(
         meter_data, temperature_data, is_electricity_data=True
     )
     assert reporting.df["observed"].isnull().all()
 
 
-def test_json_hourly():
+def test_json_caltrack_hourly():
     meter_data, temperature_data, sample_metadata = load_sample(
         "il-electricity-cdd-hdd-hourly"
     )
@@ -147,18 +147,18 @@ def test_json_hourly():
     baseline_meter_data, warnings = get_baseline_data(
         meter_data, end=blackout_start_date, max_days=365
     )
-    baseline = HourlyBaselineData.from_series(
+    baseline = HourlyCaltrackBaselineData.from_series(
         baseline_meter_data, temperature_data, is_electricity_data=True
     )
 
     # build a CalTRACK hourly model
-    baseline_model = HourlyModel().fit(baseline)
+    baseline_model = HourlyCaltrackModel().fit(baseline)
 
     # get a year of reporting period data
     reporting_meter_data, warnings = get_reporting_data(
         meter_data, start=blackout_end_date, max_days=365
     )
-    reporting = HourlyReportingData.from_series(
+    reporting = HourlyCaltrackReportingData.from_series(
         reporting_meter_data, temperature_data, is_electricity_data=True
     )
 
@@ -166,7 +166,7 @@ def test_json_hourly():
 
     # serialize, deserialize
     json_str = baseline_model.to_json()
-    m = HourlyModel.from_json(json_str)
+    m = HourlyCaltrackModel.from_json(json_str)
 
     result2 = m.predict(reporting)
 
@@ -214,7 +214,7 @@ def test_legacy_deserialization_daily():
 def test_legacy_deserialization_hourly(request):
     with open(request.fspath.dirname + "/legacy_hourly.json", "r") as f:
         legacy_str = f.read()
-    baseline_model = HourlyModel.from_2_0_json(legacy_str)
+    baseline_model = HourlyCaltrackModel.from_2_0_json(legacy_str)
 
     meter_data, temperature_data, sample_metadata = load_sample(
         "il-electricity-cdd-hdd-hourly"
@@ -224,7 +224,7 @@ def test_legacy_deserialization_hourly(request):
     reporting_meter_data, warnings = get_reporting_data(
         meter_data, start=blackout_end_date, max_days=365
     )
-    reporting = HourlyReportingData.from_series(
+    reporting = HourlyCaltrackReportingData.from_series(
         reporting_meter_data, temperature_data, is_electricity_data=True
     )
 

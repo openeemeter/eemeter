@@ -17,8 +17,24 @@
    limitations under the License.
 
 """
+from __future__ import annotations
 
-from eemeter.eemeter.models.hourly.data import (
-    HourlyBaselineData as BaselineData,
-    HourlyReportingData as ReportingData,
-)
+import pydantic
+
+from enum import Enum
+from typing import Any
+
+
+class BaseSettings(pydantic.BaseModel):
+    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+
+    """Make all property keys case insensitive"""
+
+    # @pydantic.model_validator(mode="before")
+    # def __uppercase_property_keys__(cls, values: Any) -> Any:
+    #     def __upper__(value: Any) -> Any:
+    #         if isinstance(value, dict):
+    #             return {k.upper() if isinstance(k, str) else k: __upper__(v) for k, v in value.items()}
+    #         return value
+
+    #     return __upper__(values)

@@ -18,7 +18,7 @@
 
 """
 
-from eemeter.eemeter.models.hourly import HourlyModel
+from eemeter.eemeter.models.hourly_caltrack import HourlyModel
 
 
 class Model(HourlyModel):

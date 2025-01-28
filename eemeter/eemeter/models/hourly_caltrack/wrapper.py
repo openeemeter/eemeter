@@ -27,15 +27,15 @@ from eemeter.eemeter.common.features import (
     estimate_hour_of_week_occupancy,
     fit_temperature_bins,
 )
-from eemeter.eemeter.models.hourly.design_matrices import (
+from eemeter.eemeter.models.hourly_caltrack.design_matrices import (
     create_caltrack_hourly_preliminary_design_matrix,
     create_caltrack_hourly_segmented_design_matrices,
 )
-from eemeter.eemeter.models.hourly.model import (
+from eemeter.eemeter.models.hourly_caltrack.model import (
     CalTRACKHourlyModelResults,
     fit_caltrack_hourly_model,
 )
-from eemeter.eemeter.models.hourly.segmentation import segment_time_series
+from eemeter.eemeter.models.hourly_caltrack.segmentation import segment_time_series
 
 month_dict = {
     "jan": 1,
