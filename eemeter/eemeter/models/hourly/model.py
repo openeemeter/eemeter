@@ -92,16 +92,14 @@ class HourlyModel:
 
     def __init__(
         self,
-        settings: (
-            dict | _settings.BaseHourlySettings | None
-        ) = None,
+        settings: dict | _settings.BaseHourlySettings | None = None,
     ):
         """
         Args:
             settings: HourlySettings to use (generally left default). Will default to solar model if GHI is given to the fit step.
         """
 
-        #TODO move this logic into HourlySettings init
+        # TODO move this logic into HourlySettings init
         if isinstance(settings, dict):
             if features := settings.get("train_features"):
                 if "ghi" in features:
@@ -986,7 +984,10 @@ class HourlyModel:
                     self._feature_scaler.scale_[i],
                 ]
 
-            y_scaler = [self._y_scaler.center_.squeeze(), self._y_scaler.scale_.squeeze()]
+            y_scaler = [
+                self._y_scaler.center_.squeeze(),
+                self._y_scaler.scale_.squeeze(),
+            ]
 
         # convert self._df_temporal_clusters to list of lists
         df_temporal_clusters = self._df_temporal_clusters.reset_index().values.tolist()
@@ -1257,7 +1258,7 @@ def _cluster_temporal_features(
 
     # calculate wavelet coefficients
     with warnings.catch_warnings():
-        #TODO wavelet level 5 was chosen during hyperparam optimization, but
+        # TODO wavelet level 5 was chosen during hyperparam optimization, but
         # worth investigating this further
         warnings.filterwarnings("ignore", module="pywt._multilevel")
         features = _dwt_coeffs(data, wavelet_name, wavelet_mode, wavelet_n_levels)
