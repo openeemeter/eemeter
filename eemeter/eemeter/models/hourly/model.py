@@ -93,13 +93,23 @@ class HourlyModel:
     def __init__(
         self,
         settings: (
-            _settings.HourlyNonSolarSettings | _settings.HourlySolarSettings | None
+            dict | _settings.BaseHourlySettings | None
         ) = None,
     ):
         """
         Args:
             settings: HourlySettings to use (generally left default). Will default to solar model if GHI is given to the fit step.
         """
+
+        #TODO move this logic into HourlySettings init
+        if isinstance(settings, dict):
+            if features := settings.get("train_features"):
+                if "ghi" in features:
+                    settings = _settings.HourlySolarSettings(**settings)
+                else:
+                    settings = _settings.HourlyNonSolarSettings(**settings)
+            else:
+                settings = _settings.BaseHourlySettings(**settings)
 
         # Initialize settings
         if settings is None:

@@ -20,6 +20,7 @@
 from datetime import datetime
 
 from eemeter.eemeter import HourlyBaselineData, HourlyReportingData, HourlyModel, HourlySolarSettings, HourlyNonSolarSettings
+from eemeter.eemeter.models.hourly.settings import BaseHourlySettings
 from eemeter.eemeter.common.exceptions import DataSufficiencyError, DisqualifiedModelError
 from eemeter.eemeter.common.warnings import EEMeterWarning
 from eemeter.common.test_data import load_test_data
@@ -240,4 +241,15 @@ def assert_dq(data, expected_disqualifications):
         if dq.qualified_name in remaining_dq:
             remaining_dq.remove(dq.qualified_name)
     assert not remaining_dq
+
+def test_hourly_dict_settings():
+    m = HourlyModel(settings={"train_features": ["feature_col"]})
+    assert isinstance(m.settings, HourlyNonSolarSettings)
+    assert set(m.settings.train_features) == {"temperature", "feature_col"}
+    m = HourlyModel(settings={"train_features": ["feature_col", "ghi"]})
+    assert isinstance(m.settings, HourlySolarSettings)
+    assert set(m.settings.train_features) == {"temperature", "ghi", "feature_col"}
+    m = HourlyModel(settings={"cvrmse_threshold": 1.0})
+    assert isinstance(m.settings, BaseHourlySettings)
+    assert m.settings.train_features == None
     
