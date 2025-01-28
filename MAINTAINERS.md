@@ -7,11 +7,11 @@ Commission.
 
 ## Committers - Technical Steering Committee (TSC).
 
-- Phil Ngo (TSC chair)
+- Travis Sikes (TSC chair)
+- Phil Ngo
+- Adam Scheer
 - Steve Suffian
 - McGee Young
-- Adam Scheer
-- Travis Sikes
 
 ## Contributors (alphabetical)
 
@@ -20,16 +20,20 @@ incomplete list of those who have contributed code, documentation, or technical
 artifacts to the project.
 
 - Alyssia Byers
+- Armin Aligholian
 - Arpan Kotecha
 - Brandon Willard
+- Caleb Canchola
 - Carmen Best
 - Cathy Deng
 - Dave Yeager
 - Eric Dill
-- kfogel
 - Hassan Shaban
+- Jason Chulock
 - Joe Glass
+- Joydeep Nag
 - Juan-Pablo Velez
+- kfogel
 - Marc Pare
 - Matt Golden
 - mdrpheus
