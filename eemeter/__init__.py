@@ -27,14 +27,19 @@ from .__version__ import __copyright__
 import platform
 import warnings
 
-if platform.processor() == "arm":
-    # these happen during native code execution and segfault pytest when filterwarnings is set to error
-    warnings.filterwarnings("ignore", module="importlib._bootstrap")
-    warnings.filterwarnings("ignore", "builtin type swigvarlink has no __module__ attribute")
+# these happen during native code execution and segfault pytest when filterwarnings is set to error
+warnings.filterwarnings("ignore", module="importlib._bootstrap")
+warnings.filterwarnings(
+    "ignore", "builtin type swigvarlink has no __module__ attribute"
+)
+warnings.filterwarnings(
+    "ignore", "builtin type SwigPyPacked has no __module__ attribute"
+)
 
 if platform.system() == "Windows":
     # numba JIT breaks on Windows with int32/int64 return types
     from numba import config
+
     config.DISABLE_JIT = True
 
 from .common import (

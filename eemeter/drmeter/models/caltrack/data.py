@@ -18,4 +18,7 @@
 
 """
 
-from eemeter.drmeter.models import *
+from eemeter.eemeter.models.hourly_caltrack.data import (
+    HourlyBaselineData as BaselineData,
+    HourlyReportingData as ReportingData,
+)

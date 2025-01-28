@@ -55,6 +55,7 @@ def plot(
 ):
     # sort meter_eval by temperature
     meter_eval = meter_eval.sort_values(by="temperature")
+    meter_eval = meter_eval.dropna(subset=["temperature", "predicted"])
 
     fig = plt.figure(figsize=(14, 4), dpi=300)
     if include_resid:
@@ -187,4 +188,4 @@ def plot(
     # if title is not None:
     #     ax.set_title(title)
 
-    # return ax
+    return ax

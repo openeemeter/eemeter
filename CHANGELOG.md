@@ -6,6 +6,11 @@ Development
 
 * Placeholder
 
+4.1.0
+-----
+
+* Add new hourly model to support solar meters and improve nonsolar results
+
 4.0.8
 -----
 

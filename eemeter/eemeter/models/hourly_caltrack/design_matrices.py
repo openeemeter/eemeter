@@ -25,8 +25,12 @@ from eemeter.eemeter.common.features import (
     compute_usage_per_day_feature,
     merge_features,
 )
-from eemeter.eemeter.models.hourly.model import caltrack_hourly_fit_feature_processor
-from eemeter.eemeter.models.hourly.segmentation import iterate_segmented_dataset
+from eemeter.eemeter.models.hourly_caltrack.model import (
+    caltrack_hourly_fit_feature_processor,
+)
+from eemeter.eemeter.models.hourly_caltrack.segmentation import (
+    iterate_segmented_dataset,
+)
 
 __all__ = (
     "create_caltrack_hourly_preliminary_design_matrix",

@@ -3111,7 +3111,7 @@ The temperature column should have values in Fahrenheit. Please convert your tem
             </td>
             <td>
               <div class="doc-md-description">
-                <p>A list of ssues with the data, but none that will severely reduce the quality of the model built.</p>
+                <p>A list of issues with the data, but none that will severely reduce the quality of the model built.</p>
               </div>
             </td>
           </tr>
@@ -3806,7 +3806,7 @@ The temperature column should have values in Fahrenheit. Please convert your tem
             </td>
             <td>
               <div class="doc-md-description">
-                <p>A list of ssues with the data, but none that will severely reduce the quality of the model built.</p>
+                <p>A list of issues with the data, but none that will severely reduce the quality of the model built.</p>
               </div>
             </td>
           </tr>
@@ -3815,17 +3815,17 @@ The temperature column should have values in Fahrenheit. Please convert your tem
 
                   <details class="quote">
                     <summary>Source code in <code>eemeter/eemeter/models/daily/data.py</code></summary>
-                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-597">597</a></span>
-<span class="normal"><a href="#__codelineno-0-598">598</a></span>
-<span class="normal"><a href="#__codelineno-0-599">599</a></span>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-599">599</a></span>
 <span class="normal"><a href="#__codelineno-0-600">600</a></span>
 <span class="normal"><a href="#__codelineno-0-601">601</a></span>
-<span class="normal"><a href="#__codelineno-0-602">602</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-597" name="__codelineno-0-597"></a><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">is_electricity_data</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
-<a id="__codelineno-0-598" name="__codelineno-0-598"></a>    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-<a id="__codelineno-0-599" name="__codelineno-0-599"></a>    <span class="k">if</span> <span class="s2">&quot;observed&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
-<a id="__codelineno-0-600" name="__codelineno-0-600"></a>        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;observed&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
-<a id="__codelineno-0-601" name="__codelineno-0-601"></a>
-<a id="__codelineno-0-602" name="__codelineno-0-602"></a>    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">is_electricity_data</span><span class="p">)</span>
+<span class="normal"><a href="#__codelineno-0-602">602</a></span>
+<span class="normal"><a href="#__codelineno-0-603">603</a></span>
+<span class="normal"><a href="#__codelineno-0-604">604</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-599" name="__codelineno-0-599"></a><span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">is_electricity_data</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
+<a id="__codelineno-0-600" name="__codelineno-0-600"></a>    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<a id="__codelineno-0-601" name="__codelineno-0-601"></a>    <span class="k">if</span> <span class="s2">&quot;observed&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+<a id="__codelineno-0-602" name="__codelineno-0-602"></a>        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;observed&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+<a id="__codelineno-0-603" name="__codelineno-0-603"></a>
+<a id="__codelineno-0-604" name="__codelineno-0-604"></a>    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">is_electricity_data</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
                   </details>
 
@@ -4115,9 +4115,7 @@ The temperature column should have values in Fahrenheit. Please convert your tem
 
             <details class="quote">
               <summary>Source code in <code>eemeter/eemeter/models/daily/data.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-604">604</a></span>
-<span class="normal"><a href="#__codelineno-0-605">605</a></span>
-<span class="normal"><a href="#__codelineno-0-606">606</a></span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-606">606</a></span>
 <span class="normal"><a href="#__codelineno-0-607">607</a></span>
 <span class="normal"><a href="#__codelineno-0-608">608</a></span>
 <span class="normal"><a href="#__codelineno-0-609">609</a></span>
@@ -4156,48 +4154,50 @@ The temperature column should have values in Fahrenheit. Please convert your tem
 <span class="normal"><a href="#__codelineno-0-642">642</a></span>
 <span class="normal"><a href="#__codelineno-0-643">643</a></span>
 <span class="normal"><a href="#__codelineno-0-644">644</a></span>
-<span class="normal"><a href="#__codelineno-0-645">645</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-604" name="__codelineno-0-604"></a><span class="nd">@classmethod</span>
-<a id="__codelineno-0-605" name="__codelineno-0-605"></a><span class="k">def</span> <span class="nf">from_series</span><span class="p">(</span>
-<a id="__codelineno-0-606" name="__codelineno-0-606"></a>    <span class="bp">cls</span><span class="p">,</span>
-<a id="__codelineno-0-607" name="__codelineno-0-607"></a>    <span class="n">meter_data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span> <span class="o">|</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-608" name="__codelineno-0-608"></a>    <span class="n">temperature_data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span> <span class="o">|</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
-<a id="__codelineno-0-609" name="__codelineno-0-609"></a>    <span class="n">is_electricity_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-610" name="__codelineno-0-610"></a>    <span class="n">tzinfo</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">tzinfo</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-<a id="__codelineno-0-611" name="__codelineno-0-611"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DailyReportingData</span><span class="p">:</span>
-<a id="__codelineno-0-612" name="__codelineno-0-612"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create an instance of the Data class from meter data and temperature data.</span>
-<a id="__codelineno-0-613" name="__codelineno-0-613"></a>
-<a id="__codelineno-0-614" name="__codelineno-0-614"></a><span class="sd">    Args:</span>
-<a id="__codelineno-0-615" name="__codelineno-0-615"></a><span class="sd">        meter_data: The meter data to be used for the DailyReportingData instance.</span>
-<a id="__codelineno-0-616" name="__codelineno-0-616"></a><span class="sd">        temperature_data: The temperature data to be used for the DailyReportingData instance.</span>
-<a id="__codelineno-0-617" name="__codelineno-0-617"></a><span class="sd">        is_electricity_data: Flag indicating whether the meter data represents electricity data.</span>
-<a id="__codelineno-0-618" name="__codelineno-0-618"></a><span class="sd">        tzinfo: Timezone information to be used for the meter data.</span>
-<a id="__codelineno-0-619" name="__codelineno-0-619"></a>
-<a id="__codelineno-0-620" name="__codelineno-0-620"></a><span class="sd">    Returns:</span>
-<a id="__codelineno-0-621" name="__codelineno-0-621"></a><span class="sd">        An instance of the Data class.</span>
-<a id="__codelineno-0-622" name="__codelineno-0-622"></a><span class="sd">    &quot;&quot;&quot;</span>
-<a id="__codelineno-0-623" name="__codelineno-0-623"></a>    <span class="k">if</span> <span class="n">tzinfo</span> <span class="ow">and</span> <span class="n">meter_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-624" name="__codelineno-0-624"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-625" name="__codelineno-0-625"></a>            <span class="s2">&quot;When passing meter data to DailyReportingData, convert its DatetimeIndex to local timezone first; `tzinfo` param should only be used in the absence of reporting meter data.&quot;</span>
-<a id="__codelineno-0-626" name="__codelineno-0-626"></a>        <span class="p">)</span>
-<a id="__codelineno-0-627" name="__codelineno-0-627"></a>    <span class="k">if</span> <span class="n">is_electricity_data</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">meter_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-628" name="__codelineno-0-628"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-629" name="__codelineno-0-629"></a>            <span class="s2">&quot;Must specify is_electricity_data when passing meter data.&quot;</span>
-<a id="__codelineno-0-630" name="__codelineno-0-630"></a>        <span class="p">)</span>
-<a id="__codelineno-0-631" name="__codelineno-0-631"></a>    <span class="k">if</span> <span class="n">meter_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-632" name="__codelineno-0-632"></a>        <span class="n">meter_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-<a id="__codelineno-0-633" name="__codelineno-0-633"></a>            <span class="p">{</span><span class="s2">&quot;observed&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">},</span> <span class="n">index</span><span class="o">=</span><span class="n">temperature_data</span><span class="o">.</span><span class="n">index</span>
-<a id="__codelineno-0-634" name="__codelineno-0-634"></a>        <span class="p">)</span>
-<a id="__codelineno-0-635" name="__codelineno-0-635"></a>        <span class="k">if</span> <span class="n">tzinfo</span><span class="p">:</span>
-<a id="__codelineno-0-636" name="__codelineno-0-636"></a>            <span class="n">meter_data</span> <span class="o">=</span> <span class="n">meter_data</span><span class="o">.</span><span class="n">tz_convert</span><span class="p">(</span><span class="n">tzinfo</span><span class="p">)</span>
-<a id="__codelineno-0-637" name="__codelineno-0-637"></a>
-<a id="__codelineno-0-638" name="__codelineno-0-638"></a>        <span class="c1"># If is_electricity_data is not specified, set it to True for proper functioning in the parent class. If it hits this point it&#39;s all NaNs anyway.</span>
-<a id="__codelineno-0-639" name="__codelineno-0-639"></a>        <span class="k">if</span> <span class="n">is_electricity_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-<a id="__codelineno-0-640" name="__codelineno-0-640"></a>            <span class="n">is_electricity_data</span> <span class="o">=</span> <span class="kc">True</span>
-<a id="__codelineno-0-641" name="__codelineno-0-641"></a>    <span class="k">if</span> <span class="n">meter_data</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
-<a id="__codelineno-0-642" name="__codelineno-0-642"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-<a id="__codelineno-0-643" name="__codelineno-0-643"></a>            <span class="s2">&quot;Pass meter_data=None rather than an empty series in order to explicitly create a temperature-only reporting data instance.&quot;</span>
-<a id="__codelineno-0-644" name="__codelineno-0-644"></a>        <span class="p">)</span>
-<a id="__codelineno-0-645" name="__codelineno-0-645"></a>    <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">from_series</span><span class="p">(</span><span class="n">meter_data</span><span class="p">,</span> <span class="n">temperature_data</span><span class="p">,</span> <span class="n">is_electricity_data</span><span class="p">)</span>
+<span class="normal"><a href="#__codelineno-0-645">645</a></span>
+<span class="normal"><a href="#__codelineno-0-646">646</a></span>
+<span class="normal"><a href="#__codelineno-0-647">647</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-606" name="__codelineno-0-606"></a><span class="nd">@classmethod</span>
+<a id="__codelineno-0-607" name="__codelineno-0-607"></a><span class="k">def</span> <span class="nf">from_series</span><span class="p">(</span>
+<a id="__codelineno-0-608" name="__codelineno-0-608"></a>    <span class="bp">cls</span><span class="p">,</span>
+<a id="__codelineno-0-609" name="__codelineno-0-609"></a>    <span class="n">meter_data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span> <span class="o">|</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-610" name="__codelineno-0-610"></a>    <span class="n">temperature_data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span> <span class="o">|</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+<a id="__codelineno-0-611" name="__codelineno-0-611"></a>    <span class="n">is_electricity_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-612" name="__codelineno-0-612"></a>    <span class="n">tzinfo</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">tzinfo</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-613" name="__codelineno-0-613"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DailyReportingData</span><span class="p">:</span>
+<a id="__codelineno-0-614" name="__codelineno-0-614"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Create an instance of the Data class from meter data and temperature data.</span>
+<a id="__codelineno-0-615" name="__codelineno-0-615"></a>
+<a id="__codelineno-0-616" name="__codelineno-0-616"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-617" name="__codelineno-0-617"></a><span class="sd">        meter_data: The meter data to be used for the DailyReportingData instance.</span>
+<a id="__codelineno-0-618" name="__codelineno-0-618"></a><span class="sd">        temperature_data: The temperature data to be used for the DailyReportingData instance.</span>
+<a id="__codelineno-0-619" name="__codelineno-0-619"></a><span class="sd">        is_electricity_data: Flag indicating whether the meter data represents electricity data.</span>
+<a id="__codelineno-0-620" name="__codelineno-0-620"></a><span class="sd">        tzinfo: Timezone information to be used for the meter data.</span>
+<a id="__codelineno-0-621" name="__codelineno-0-621"></a>
+<a id="__codelineno-0-622" name="__codelineno-0-622"></a><span class="sd">    Returns:</span>
+<a id="__codelineno-0-623" name="__codelineno-0-623"></a><span class="sd">        An instance of the Data class.</span>
+<a id="__codelineno-0-624" name="__codelineno-0-624"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-625" name="__codelineno-0-625"></a>    <span class="k">if</span> <span class="n">tzinfo</span> <span class="ow">and</span> <span class="n">meter_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-626" name="__codelineno-0-626"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+<a id="__codelineno-0-627" name="__codelineno-0-627"></a>            <span class="s2">&quot;When passing meter data to DailyReportingData, convert its DatetimeIndex to local timezone first; `tzinfo` param should only be used in the absence of reporting meter data.&quot;</span>
+<a id="__codelineno-0-628" name="__codelineno-0-628"></a>        <span class="p">)</span>
+<a id="__codelineno-0-629" name="__codelineno-0-629"></a>    <span class="k">if</span> <span class="n">is_electricity_data</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">meter_data</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-630" name="__codelineno-0-630"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+<a id="__codelineno-0-631" name="__codelineno-0-631"></a>            <span class="s2">&quot;Must specify is_electricity_data when passing meter data.&quot;</span>
+<a id="__codelineno-0-632" name="__codelineno-0-632"></a>        <span class="p">)</span>
+<a id="__codelineno-0-633" name="__codelineno-0-633"></a>    <span class="k">if</span> <span class="n">meter_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-634" name="__codelineno-0-634"></a>        <span class="n">meter_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+<a id="__codelineno-0-635" name="__codelineno-0-635"></a>            <span class="p">{</span><span class="s2">&quot;observed&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">},</span> <span class="n">index</span><span class="o">=</span><span class="n">temperature_data</span><span class="o">.</span><span class="n">index</span>
+<a id="__codelineno-0-636" name="__codelineno-0-636"></a>        <span class="p">)</span>
+<a id="__codelineno-0-637" name="__codelineno-0-637"></a>        <span class="k">if</span> <span class="n">tzinfo</span><span class="p">:</span>
+<a id="__codelineno-0-638" name="__codelineno-0-638"></a>            <span class="n">meter_data</span> <span class="o">=</span> <span class="n">meter_data</span><span class="o">.</span><span class="n">tz_convert</span><span class="p">(</span><span class="n">tzinfo</span><span class="p">)</span>
+<a id="__codelineno-0-639" name="__codelineno-0-639"></a>
+<a id="__codelineno-0-640" name="__codelineno-0-640"></a>        <span class="c1"># If is_electricity_data is not specified, set it to True for proper functioning in the parent class. If it hits this point it&#39;s all NaNs anyway.</span>
+<a id="__codelineno-0-641" name="__codelineno-0-641"></a>        <span class="k">if</span> <span class="n">is_electricity_data</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-642" name="__codelineno-0-642"></a>            <span class="n">is_electricity_data</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-0-643" name="__codelineno-0-643"></a>    <span class="k">if</span> <span class="n">meter_data</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+<a id="__codelineno-0-644" name="__codelineno-0-644"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+<a id="__codelineno-0-645" name="__codelineno-0-645"></a>            <span class="s2">&quot;Pass meter_data=None rather than an empty series in order to explicitly create a temperature-only reporting data instance.&quot;</span>
+<a id="__codelineno-0-646" name="__codelineno-0-646"></a>        <span class="p">)</span>
+<a id="__codelineno-0-647" name="__codelineno-0-647"></a>    <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">from_series</span><span class="p">(</span><span class="n">meter_data</span><span class="p">,</span> <span class="n">temperature_data</span><span class="p">,</span> <span class="n">is_electricity_data</span><span class="p">)</span>
 </code></pre></div></td></tr></table></div>
             </details>
     </div>

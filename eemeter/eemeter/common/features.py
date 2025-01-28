@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 import statsmodels.formula.api as smf
 
-from ..models.hourly.segmentation import iterate_segmented_dataset
+from ..models.hourly_caltrack.segmentation import iterate_segmented_dataset
 from .transform import day_counts, overwrite_partial_rows_with_nan
 from .warnings import EEMeterWarning
 

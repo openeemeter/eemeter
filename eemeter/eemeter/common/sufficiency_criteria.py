@@ -19,30 +19,43 @@
 """
 from math import ceil
 
-import dataclasses
 import numpy as np
 import pandas as pd
 import pytz
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
 
 from eemeter.eemeter.common.warnings import EEMeterWarning
 from eemeter.eemeter.common.data_processor_utilities import day_counts
 
+# TODO implement as registered functions rather than needing to call everything manually
+# probably easiest to use two decorators, can be stacked, for baseline/reporting
 
-@dataclasses.dataclass
-class SufficiencyCriteria:
+
+class SufficiencyCriteria(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     data: pd.DataFrame
-    requested_start: pd.Timestamp = None
-    requested_end: pd.Timestamp = None
+    requested_start: Optional[pd.Timestamp] = None
+    requested_end: Optional[pd.Timestamp] = None
     num_days: int = 365
     min_fraction_daily_coverage: float = 0.9
     min_fraction_hourly_temperature_coverage_per_period: float = 0.9
     is_reporting_data: bool = False
     is_electricity_data: bool = True
-    disqualification: list = dataclasses.field(default_factory=list)
-    warnings: list = dataclasses.field(default_factory=list)
-    n_days_total: int = None
+    # note that pydantic creates mutable defaults on each init
+    # so this does not run into the issue that mutable default params in functions have
+    disqualification: list = []
+    warnings: list = []
+    n_days_total: Optional[int] = None
 
-    def __post_init__(self):
+    n_valid_meter_value_days: Optional[int] = None
+    n_valid_days: Optional[int] = None
+    n_valid_temperature_days: Optional[int] = None
+
+    # TODO probably use a model validator rather than this blanket call
+    def model_post_init(self, __context):
         self._compute_n_days_total()
         self._compute_valid_meter_temperature_days()
 
@@ -160,6 +173,7 @@ class SufficiencyCriteria:
         MIN_BASELINE_LENGTH = ceil(0.9 * MAX_BASELINE_LENGTH)
         if (
             not self.is_reporting_data
+            # TODO can throw with Optional. check if actually optional vs using -1 as default?
             and self.n_days_total > MAX_BASELINE_LENGTH
             or self.n_days_total < MIN_BASELINE_LENGTH
         ):
@@ -305,6 +319,8 @@ class SufficiencyCriteria:
         )
 
     def _check_extreme_values(self):
+        if self.data["observed"].dropna().empty:
+            return
         if not self.is_reporting_data:
             median = self.data.observed.median()
             upper_quantile = self.data.observed.quantile(0.75)
@@ -339,6 +355,7 @@ class SufficiencyCriteria:
                 )
 
     def _check_high_frequency_temperature_values(self):
+        # TODO broken as written
         # If high frequency data check for 50% data coverage in rollup
         if len(temperature_features[temperature_features.coverage <= 0.5]) > 0:
             self.warnings.append(
@@ -410,8 +427,7 @@ class HourlySufficiencyCriteria(SufficiencyCriteria):
         super().__init__(*args, **kwargs)
 
     def _check_baseline_length_hourly_model(self):
-        # TODO : Implement this
-        raise NotImplementedError("Hourly Baseline length check not implemented yet")
+        pass
 
     def _check_monthly_meter_readings_percentage(self):
         if not self.is_reporting_data:
@@ -430,7 +446,7 @@ class HourlySufficiencyCriteria(SufficiencyCriteria):
                             "More than 10% of the monthly meter data is missing."
                         ),
                         data={
-                            # TODO report percentage
+                            "lowest_monthly_coverage": non_null_meter_percentage_per_month.min(),
                         },
                     )
                 )
@@ -438,7 +454,7 @@ class HourlySufficiencyCriteria(SufficiencyCriteria):
     def _check_hourly_consecutive_temperature_data(self):
         # TODO : Check implementation wrt Caltrack 2.2.4.1
         # Resample to hourly by taking the first non NaN value
-        hourly_data = self.data["temperature"].resample("h").first()
+        hourly_data = self.data["temperature"].resample("H").first()
         mask = hourly_data.isna().any(axis=1)
         grouped = mask.groupby((mask != mask.shift()).cumsum())
         max_consecutive_nans = grouped.sum().max()
@@ -457,16 +473,17 @@ class HourlySufficiencyCriteria(SufficiencyCriteria):
         # TODO : add caltrack check number on top of each method
         self._check_no_data()
         self._check_negative_meter_values()
-        self._check_baseline_length_hourly_model()
+        self._check_baseline_length_daily_billing_model()
         self._check_valid_days_percentage()
         self._check_valid_meter_readings_percentage()
         self._check_valid_temperature_values_percentage()
         self._check_monthly_temperature_values_percentage()
         self._check_monthly_meter_readings_percentage()
         self._check_extreme_values()
-        self._check_high_frequency_meter_values()
-        self._check_high_frequency_temperature_values()
-        self._check_hourly_consecutive_temperature_data()
+        # TODO these will only apply to legacy, and currently do not work
+        # self._check_high_frequency_meter_values()
+        # self._check_high_frequency_temperature_values()
+        # self._check_hourly_consecutive_temperature_data()
 
     def check_sufficiency_reporting(self):
         self._check_no_data()
