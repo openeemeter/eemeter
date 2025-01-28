@@ -225,6 +225,7 @@ def test_hourly_fit_daily_threshold(baseline):
     assert b2.loc["2018-01-08", "include_date"].sum() == 0
     assert b2.loc["2018-01-09", "include_date"].sum() == 24
 
+@pytest.mark.filterwarnings("ignore:Objective did not converge.")
 def test_hourly_error_metric_dq(baseline):
     baseline["observed"] = np.random.normal(-1, 10, len(baseline)) ** 3
     baseline_data = HourlyBaselineData(baseline, is_electricity_data=True)
