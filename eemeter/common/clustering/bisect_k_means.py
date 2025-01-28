@@ -96,7 +96,7 @@ class BisectingKMeans(_sklearn_BisectingKMeans):
         self._validate_params()  # type: ignore
 
         with warnings.catch_warnings():
-            #TODO deprecated in sklearn 1.6, removed in 1.7 (April 2025)
+            # TODO deprecated in sklearn 1.6, removed in 1.7 (April 2025)
             warnings.filterwarnings("ignore", "`BaseEstimator._validate_data`")
 
             X = self._validate_data(  # type: ignore
