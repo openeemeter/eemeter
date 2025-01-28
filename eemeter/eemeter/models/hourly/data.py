@@ -36,11 +36,7 @@ import numpy as np
 import pandas as pd
 
 
-# TODO move to settings/const
-_MAX_MISSING_HOURS_PCT = 10
-
-
-class NREL_Weather_API:  # TODO: reload data for all years
+class NREL_Weather_API:
     api_key = (
         "---"  # get your own key from https://developer.nrel.gov/signup/  #Required
     )
@@ -179,9 +175,6 @@ class _HourlyData:
         else:
             self._outputs = ["temperature", "observed"]
 
-        self._missing_values_amount = {}
-        self._too_many_missing_data = False
-
         self._df = self._set_data(df)
         disqualification, warnings = self._check_data_sufficiency()
 
@@ -227,7 +220,6 @@ class _HourlyData:
 
         return df
 
-    # TODO move to common/transforms rather than operating on self
     def _interpolate(self, df):
         # make column of interpolated boolean if any observed or temperature is nan
         # check if in each row of the columns in output has nan values, the interpolated column will be true
@@ -245,28 +237,10 @@ class _HourlyData:
             if "ghi" in df.columns:
                 self._to_be_interpolated_columns.append("ghi")
 
-        # for col in self._outputs:
-        #     if col not in self._to_be_interpolated_columns: #TODO: this might be diffrent for supplemental data
-        #         self._to_be_interpolated_columns += [col]
-
-        # #TODO: remove this in the actual implementation, this is just for CalTRACK testing
-        # if 'model' in self._outputs:
-        #     self._to_be_interpolated_columns += ['model']
-
         for col in self._to_be_interpolated_columns:
             if f"interpolated_{col}" in df.columns:
                 continue
             self._outputs += [f"interpolated_{col}"]
-
-        # check how many nans are in the columns
-        nan_numbers_cols = df[self._to_be_interpolated_columns].isna().sum()
-        # if the number of nan is more than max_missing_hours_pct, then we we flag them
-        # TODO: this should be as a part of disqualification and warning/error logs
-        for col in self._to_be_interpolated_columns:
-            if nan_numbers_cols[col] > len(df) * _MAX_MISSING_HOURS_PCT / 100:
-                if not self._too_many_missing_data:
-                    self._too_many_missing_data = True
-                self._missing_values_amount[col] = nan_numbers_cols[col]
 
         # we can add kwargs to the interpolation class like: inter_kwargs = {"n_cor_idx": self.kwargs["n_cor_idx"]}
         df = interpolate(df, columns=self._to_be_interpolated_columns)
@@ -304,7 +278,6 @@ class _HourlyData:
             "temperature",
             # "ghi",
         ]
-        # TODO maybe check datatypes
         if not set(expected_columns).issubset(set(df.columns)):
             # show the columns that are missing
             raise ValueError(
