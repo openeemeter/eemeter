@@ -110,6 +110,8 @@ class BillingWeightedModel(DailyModel):
             "PNRMSE": np.nan,
         }
 
+        print("The weighted billing model is under development and is not ready for public use.")
+
     def fit(
         self, baseline_data: BillingBaselineData, ignore_disqualification: bool = False
     ) -> BillingWeightedModel:

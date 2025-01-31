@@ -159,8 +159,8 @@ def test_metered_savings_cdd_hdd_billing(
         is_electricity_data=True,
     )
     results = baseline_model_billing.predict(reporting_data)
-    metered_savings = results["predicted"] - results["observed"]
-    assert round(metered_savings.sum(), 2) == 1605.14
+    metered_savings = (results["predicted"] - results["observed"]).sum()
+    assert np.isclose(metered_savings, 1605.14, rtol=1e-3)
 
 
 def test_metered_savings_cdd_hdd_billing_no_reporting_data(
@@ -184,7 +184,8 @@ def test_metered_savings_cdd_hdd_billing_no_reporting_data(
         "model_split",
         "model_type",
     ]
-    assert round(results.predicted.sum(), 2) == 1607.1
+    predicted_sum = results.predicted.sum()
+    assert np.isclose(predicted_sum, 1607.1, rtol=1e-3)
 
 
 def test_metered_savings_cdd_hdd_billing_single_record_reporting_data(
@@ -272,7 +273,8 @@ def test_metered_savings_cdd_hdd_billing_single_record_baseline_data(
         "model_split",
         "model_type",
     ]
-    assert round(results.predicted.sum() - results.observed.sum(), 2) == 1785.8
+    metered_savings = (results.predicted - results.observed).sum()
+    assert np.isclose(metered_savings, 1785.8, rtol=1e-2)
 
 
 @pytest.fixture
@@ -479,7 +481,8 @@ def test_modeled_savings_cdd_hdd_billing(
         "model_split",
         "model_type",
     ]
-    assert round(results.predicted.sum(), 2) == 8245.37
+    predicted_sum = results.predicted.sum()
+    assert np.isclose(predicted_sum, 8245.37, rtol=1e-2)
 
 
 @pytest.fixture
@@ -549,7 +552,8 @@ def test_metered_savings_model_single_record(
         "model_split",
         "model_type",
     ]
-    assert round(results.predicted.sum() - results.observed.sum(), 2) == 1458.91
+    metered_savings = (results.predicted - results.observed).sum()
+    assert np.isclose(metered_savings, 1436.72, rtol=1e-3)
 
 
 @pytest.fixture

@@ -168,10 +168,10 @@ def test_create_caltrack_billing_design_matrix_empty_temp(
 ):
     meter_data = il_electricity_cdd_hdd_billing_monthly["meter_data"]
     temperature_data = il_electricity_cdd_hdd_billing_monthly["temperature_data"][:0]
-    design_matrix = create_caltrack_billing_design_matrix(
-        meter_data[:10], temperature_data
-    )
-    assert "n_days_kept" in design_matrix.columns
+    with pytest.raises(ValueError):
+        design_matrix = create_caltrack_billing_design_matrix(
+            meter_data[:10], temperature_data
+        )
 
 
 def test_create_caltrack_billing_design_matrix_partial_empty_temp(

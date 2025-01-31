@@ -17,6 +17,9 @@
    limitations under the License.
 
 """
+
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 from eemeter.eemeter.models.daily.model import DailyModel
@@ -24,11 +27,15 @@ from eemeter.eemeter.models.daily.data import DailyBaselineData
 from eemeter.eemeter.models.daily.optimize_results import OptimizedResult
 
 
+# Define the current directory
+current_dir = Path(__file__).resolve().parent
+
+
 class TestFitModel:
     @classmethod
     def setup_class(cls):
         # Create a sample meter data DataFrame from the test data
-        df = pd.read_csv("tests/daily_model/test_data.csv")
+        df = pd.read_csv(current_dir / "test_data.csv")
         df.index = pd.to_datetime(df["datetime"])
         df = df[["temperature", "observed"]]
         cls.meter_data = DailyBaselineData(df, is_electricity_data=True)

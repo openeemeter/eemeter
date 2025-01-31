@@ -48,9 +48,10 @@ def test_fit_c_hdd_tidd_smooth():
         cdd_k=None,
     )
     bnds = None
+    weights = None
     initial_fit = True
     smooth = True
-    res = fit_c_hdd_tidd(T, obs, settings, opt_options, smooth, x0, bnds, initial_fit)
+    res = fit_c_hdd_tidd(T, obs, weights, settings, opt_options, smooth, x0, bnds, initial_fit)
     assert res.success == True
 
     # Test case 2: Test with initial_fit=False
@@ -77,7 +78,7 @@ def test_fit_c_hdd_tidd_smooth():
     bnds = None
     initial_fit = False
     smooth = True
-    res = fit_c_hdd_tidd(T, obs, settings, opt_options, smooth, x0, bnds, initial_fit)
+    res = fit_c_hdd_tidd(T, obs, weights, settings, opt_options, smooth, x0, bnds, initial_fit)
     assert res.success == True
 
     # Test case 3: Test with x0=None
@@ -95,5 +96,5 @@ def test_fit_c_hdd_tidd_smooth():
     bnds = None
     initial_fit = True
     smooth = True
-    res = fit_c_hdd_tidd(T, obs, settings, opt_options, smooth, x0, bnds, initial_fit)
+    res = fit_c_hdd_tidd(T, obs, weights, settings, opt_options, smooth, x0, bnds, initial_fit)
     assert res.success == True

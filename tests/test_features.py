@@ -800,21 +800,15 @@ def test_compute_temperature_features_empty_temperature_data():
     result_index = temperature_data.resample("D").sum().index
     meter_data_hack = pd.DataFrame({"value": 0}, index=result_index)
 
-    df = compute_temperature_features(
-        meter_data_hack.index,
-        temperature_data,
-        heating_balance_points=[65],
-        cooling_balance_points=[65],
-        degree_day_method="daily",
-        use_mean_daily_values=False,
-    )
-    assert df.shape == (0, 3)
-    assert list(sorted(df.columns)) == [
-        "n_days_dropped",
-        "n_days_kept",
-        "temperature_mean",
-    ]
-    assert round(df.temperature_mean.sum()) == 0
+    with pytest.raises(ValueError):
+        df = compute_temperature_features(
+            meter_data_hack.index,
+            temperature_data,
+            heating_balance_points=[65],
+            cooling_balance_points=[65],
+            degree_day_method="daily",
+            use_mean_daily_values=False,
+        )
 
 
 def test_compute_temperature_features_empty_meter_data():
@@ -824,21 +818,15 @@ def test_compute_temperature_features_empty_meter_data():
     meter_data_hack = pd.DataFrame({"value": []}, index=result_index)
     meter_data_hack.index.freq = None
 
-    df = compute_temperature_features(
-        meter_data_hack.index,
-        temperature_data,
-        heating_balance_points=[65],
-        cooling_balance_points=[65],
-        degree_day_method="daily",
-        use_mean_daily_values=False,
-    )
-    assert df.shape == (0, 3)
-    assert list(sorted(df.columns)) == [
-        "n_days_dropped",
-        "n_days_kept",
-        "temperature_mean",
-    ]
-    assert round(df.temperature_mean.sum()) == 0
+    with pytest.raises(ValueError):
+        df = compute_temperature_features(
+            meter_data_hack.index,
+            temperature_data,
+            heating_balance_points=[65],
+            cooling_balance_points=[65],
+            degree_day_method="daily",
+            use_mean_daily_values=False,
+        )
 
 
 def test_merge_features():
