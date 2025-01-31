@@ -367,7 +367,7 @@ class DailySettings(BaseSettings):
     )
 
     uncertainty_alpha: float = CustomField(
-        default=0.05,
+        default=0.1,
         ge=0,
         le=1,
         developer=False,
@@ -532,7 +532,7 @@ class DailyLegacySettings(DailySettings):
     )
 
     alpha_final: Optional[Union[float, Literal["adaptive"]]] = CustomField(
-        default=2,
+        default=2.0,
         developer=True,
         description="Specified alpha or 'adaptive' for adaptive loss in model evaluation",
     )
@@ -559,6 +559,9 @@ def update_daily_settings(settings, update_dict):
     settings_dict = settings.model_dump()
     settings_dict.update(update_dict)
 
+    if isinstance(settings, DailyLegacySettings):
+        return DailyLegacySettings(**settings_dict)
+     
     return DailySettings(**settings_dict)
 
 

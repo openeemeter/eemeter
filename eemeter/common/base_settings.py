@@ -44,7 +44,7 @@ class BaseSettings(pydantic.BaseModel):
         return __lower__(values)
 
     """Make all property values lowercase and strip whitespace before validation"""
-    @pydantic.validator('*', pre=True)
+    @pydantic.field_validator("*", mode="before")
     def lowercase_values(cls, v):
         if isinstance(v, str):
             return v.lower().strip()
@@ -53,5 +53,5 @@ class BaseSettings(pydantic.BaseModel):
 
 # add developer field to pydantic Field
 def CustomField(developer=False, *args, **kwargs):
-    field = pydantic.Field(developer=developer, *args, **kwargs)
+    field = pydantic.Field(json_schema_extra={"developer": developer}, *args, **kwargs)
     return field
