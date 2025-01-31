@@ -28,8 +28,9 @@ from typing import Any
 class BaseSettings(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(
         frozen = True,
+        arbitrary_types_allowed=True,
         str_to_lower = True,
-        str_strip_whitespace = True
+        str_strip_whitespace = True,
     )
 
     """Make all property keys lowercase and strip whitespace"""
@@ -48,7 +49,6 @@ class BaseSettings(pydantic.BaseModel):
         if isinstance(v, str):
             return v.lower().strip()
         return v
-
 
 
 # add developer field to pydantic Field
