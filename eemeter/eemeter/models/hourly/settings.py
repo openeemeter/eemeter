@@ -287,6 +287,46 @@ class ElasticNetSettings(BaseSettings):
         default=SelectionChoice.CYCLIC,
     )
 
+    """Adaptive Daily Weights for ElasticNet"""
+    adaptive_weights: bool = pydantic.Field(
+        default=True,
+    )
+
+    """Number of iterations to iterate weights"""
+    adaptive_weight_max_iter: Optional[int] = pydantic.Field(
+        default=100,
+        ge=1,
+    )
+
+    """Relative difference in weights to stop iteration"""
+    adaptive_weight_tol: Optional[float] = pydantic.Field(
+        default=1e-4,
+        ge=0,
+    )
+
+    @pydantic.model_validator(mode="after")
+    def _check_adaptive_weights(self):
+        if self.adaptive_weights:
+            if self.adaptive_weight_max_iter is None:
+                raise ValueError(
+                    "'adaptive_weight_iter' must be specified if 'adaptive_weights' is True."
+                )
+            if self.adaptive_weight_tol is None:
+                raise ValueError(
+                    "'adaptive_weight_tol' must be specified if 'adaptive_weights' is True."
+                )
+        else:
+            if self.adaptive_weight_max_iter is not None:
+                raise ValueError(
+                    "'adaptive_weight_iter' must be None if 'adaptive_weights' is False."
+                )
+            if self.adaptive_weight_tol is not None:
+                raise ValueError(
+                    "'adaptive_weight_tol' must be None if 'adaptive_weights' is False."
+                )
+
+        return self
+
 
 # analytic_features = ['GHI', 'Temperature', 'DHI', 'DNI', 'Relative Humidity', 'Wind Speed', 'Clearsky DHI', 'Clearsky DNI', 'Clearsky GHI', 'Cloud Type']
 class BaseHourlySettings(BaseSettings):

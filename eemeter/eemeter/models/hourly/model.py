@@ -32,6 +32,8 @@ from pydantic import BaseModel, ConfigDict
 import numpy as np
 import pandas as pd
 
+from copy import deepcopy as copy
+
 import sklearn
 
 sklearn.set_config(
@@ -63,6 +65,7 @@ from eemeter.common.clustering import (
     bisect_k_means as _bisect_k_means,
     scoring as _scoring,
 )
+from eemeter.common.adaptive_loss import adaptive_weights
 from eemeter.common.metrics import BaselineMetrics, BaselineMetricsFromDict
 from eemeter import __version__
 
@@ -200,7 +203,11 @@ class HourlyModel:
             model_mismatch_warning.warn()
             self.warnings.append(model_mismatch_warning)
 
-        self._fit(baseline_data)
+        if self.settings.elasticnet.adaptive_weights:
+            self._adaptive_fit(baseline_data)
+        else:
+            self._fit(baseline_data)
+
         if not self._model_fit_is_acceptable():
             model_fit_warning = EEMeterWarning(
                 qualified_name="eemeter.model_fit_metrics",
@@ -227,6 +234,74 @@ class HourlyModel:
 
         # fit the model
         self._model.fit(X_fit, y_fit)
+        self.is_fitted = True
+
+        # get number of model parameters
+        num_parameters = np.count_nonzero(self._model.coef_) + np.count_nonzero(
+            self._model.intercept_
+        )
+
+        # get model prediction of baseline
+        df_meter = self._predict(meter_data, X=X_predict)
+
+        # calculate baseline metrics on non-interpolated data
+        cols = [col for col in df_meter.columns if col.startswith("interpolated_")]
+        interpolated = df_meter[cols].any(axis=1)
+
+        self.baseline_metrics = BaselineMetrics(
+            df=df_meter.loc[~interpolated], num_model_params=num_parameters
+        )
+        self.baseline_timezone = meter_data.tz
+
+        return self
+
+    def _adaptive_fit(self, meter_data):
+        # Initialize dataframe
+        self.is_fitted = False
+
+        df_meter = meter_data.df  # used to have a copy here
+
+        # Prepare feature arrays/matrices
+        X_fit, X_predict, y_fit = self._prepare_features(df_meter)
+
+        weights = 1
+        rmse_annual_prior = np.inf
+        # fit the model
+        for i in range(self.settings.elasticnet.adaptive_weight_max_iter):
+            self._model.fit(X_fit, y_fit, sample_weight=weights)
+
+            y_predict = self._model.predict(X_fit)
+
+            # calculate residuals and annual rmse
+            resid = y_fit - y_predict
+
+            rmse_annual = np.sqrt(np.mean(resid ** 2))
+
+            rel_diff = (rmse_annual - rmse_annual_prior) / rmse_annual_prior
+            rmse_annual_prior = rmse_annual
+
+            # if rmse is not changing much, break
+            if rel_diff < self.settings.elasticnet.adaptive_weight_tol:
+                break
+
+            # for each day, calculate rmse to downweight outlier days
+            # rmse_daily = np.sqrt(np.mean(resid**2, axis=1))
+            mae_daily = np.mean(np.abs(resid), axis=1)
+
+            weights_prior = copy(weights)
+
+            weights, _, alpha = adaptive_weights(
+                mae_daily, 
+                alpha="adaptive", 
+                sigma=2.698, 
+                quantile=0.25, 
+                min_weight=0.0
+            )
+            weights *= weights_prior
+
+            if alpha == 2:
+                break
+
         self.is_fitted = True
 
         # get number of model parameters
