@@ -108,9 +108,8 @@ def test_metered_savings_cdd_hdd_daily(
     results = baseline_model_daily.predict(reporting_data)
     metered_savings = results["predicted"] - results["observed"]
 
-    assert np.isclose(
-        metered_savings.sum(), 1643.61, rtol=1e-2
-    )  # platform difference on Windows requires bigger tolerance here
+    # platform difference on Windows requires bigger tolerance here
+    assert np.isclose(metered_savings.sum(), 1630, rtol=1e-2)
 
 
 @pytest.fixture

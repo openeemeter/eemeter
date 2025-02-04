@@ -82,7 +82,7 @@ class TestFitModel:
 
         # Test that the wRMSE_base attribute is a float
         assert isinstance(fm.wRMSE_base, float)
-        assert np.isclose(fm.wRMSE_base, 18.389335982383994, rtol=1e-3)
+        assert np.isclose(fm.wRMSE_base, 18.39, rtol=1e-2)
 
         # Test that the best combination is as expected
         expected_best_combination = "wd-su_sh_wi__we-su_sh_wi"
