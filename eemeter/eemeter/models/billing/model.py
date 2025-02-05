@@ -56,49 +56,11 @@ class BillingModel(DailyModel):
         model (sklearn.pipeline.Pipeline): The final fitted model.
         id (str): The index of the meter data.
     """
+    _baseline_data_type = BillingBaselineData
+    _reporting_data_type = BillingReportingData
 
-    def __init__(self, settings=None):
-        super().__init__(model="legacy", settings=settings)
-
-    def fit(
-        self, baseline_data: BillingBaselineData, ignore_disqualification: bool = False
-    ) -> BillingModel:
-        """Fit the model using baseline data.
-
-        Args:
-            baseline_data: BillingBaselineData object.
-            ignore_disqualification: Whether to ignore disqualification errors / warnings.
-
-        Returns:
-            The fitted model.
-
-        Raises:
-            TypeError: If baseline_data is not a BillingBaselineData object.
-            DataSufficiencyError: If the model can't be fit on disqualified baseline data.
-        """
-        # TODO there's a fair bit of duplicated code between this and daily fit(), refactor
-        if not isinstance(baseline_data, BillingBaselineData):
-            raise TypeError("baseline_data must be a BillingBaselineData object")
-        baseline_data.log_warnings()
-        if baseline_data.disqualification and not ignore_disqualification:
-            for warning in baseline_data.disqualification + baseline_data.warnings:
-                print(warning.json())
-            raise DataSufficiencyError("Can't fit model on disqualified baseline data")
-        self.baseline_timezone = baseline_data.tz
-        self.warnings = baseline_data.warnings
-        self.disqualification = baseline_data.disqualification
-        self._fit(baseline_data.df)
-        if self.error["CVRMSE"] > self.settings.cvrmse_threshold:
-            cvrmse_warning = EEMeterWarning(
-                qualified_name="eemeter.model_fit_metrics.cvrmse",
-                description=(
-                    f"Fit model has CVRMSE > {self.settings.cvrmse_threshold}"
-                ),
-                data={"CVRMSE": self.error["CVRMSE"]},
-            )
-            cvrmse_warning.warn()
-            self.disqualification.append(cvrmse_warning)
-        return self
+    def __init__(self, settings=None, verbose: bool = False,):
+        super().__init__(model="legacy", settings=settings, verbose=verbose)
 
     def predict(
         self,
@@ -182,7 +144,7 @@ class BillingModel(DailyModel):
 
     def plot(
         self,
-        df_eval,
+        data,
         aggregation: str | None = None,
     ):
         """Plot a model fit with baseline or reporting data. Requires matplotlib to use.
@@ -198,7 +160,7 @@ class BillingModel(DailyModel):
 
         # TODO: pass more kwargs to plotting function
 
-        plot(self, self.predict(df_eval, aggregation=aggregation))
+        plot(self, self.predict(data, aggregation=aggregation))
 
     def to_dict(self) -> dict:
         """Returns a dictionary of model parameters.

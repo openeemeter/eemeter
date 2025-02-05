@@ -76,6 +76,9 @@ class DailyModel:
         id (str): The index of the meter data.
     """
 
+    _baseline_data_type = DailyBaselineData
+    _reporting_data_type = DailyReportingData
+
     def __init__(
         self,
         model: str = "current",
@@ -90,20 +93,7 @@ class DailyModel:
         """
 
         # Initialize settings
-        # Note: Model designates the base settings, it can be 'current' or 'legacy'
-        #       Settings is to be a dictionary of settings to be changed
-
-        if settings is None:
-            settings = {}
-
-        if model.replace(" ", "").replace("_", ".").lower() in ["current", "default"]:
-            self.settings = DailySettings(**settings)
-        elif model.replace(" ", "").replace("_", ".").lower() in ["legacy"]:
-            self.settings = DailyLegacySettings(**settings)
-        else:
-            raise Exception(
-                "Invalid 'settings' choice: must be 'current', 'default', or 'legacy'"
-            )
+        self._initialize_settings(model, settings)
 
         # Initialize seasons and weekday/weekend
         self.seasonal_options = [
@@ -136,8 +126,37 @@ class DailyModel:
             "PNRMSE": np.nan,
         }
 
+        # update type hints
+        self.__class__.fit.__annotations__['baseline_data'] = self._baseline_data_type
+        self.__class__.fit.__annotations__['return'] = self.__class__
+        self.__class__.predict.__annotations__['reporting_data'] = Union[self._baseline_data_type, self._reporting_data_type]
+        self.__class__.plot.__annotations__['df_eval'] = Union[self._baseline_data_type, self._reporting_data_type]
+
+    def _initialize_settings(
+        self,
+        model: str = "current",
+        settings: dict | None = None
+    ) -> None:
+
+        # Note: Model designates the base settings, it can be 'current' or 'legacy'
+        #       Settings is to be a dictionary of settings to be changed
+
+        if settings is None:
+            settings = {}
+
+        if model.replace(" ", "").replace("_", ".").lower() in ["current", "default"]:
+            self.settings = DailySettings(**settings)
+        elif model.replace(" ", "").replace("_", ".").lower() in ["legacy"]:
+            self.settings = DailyLegacySettings(**settings)
+        else:
+            raise Exception(
+                "Invalid 'settings' choice: must be 'current', 'default', or 'legacy'"
+            )
+
     def fit(
-        self, baseline_data: DailyBaselineData, ignore_disqualification: bool = False
+        self, 
+        baseline_data: DailyBaselineData, 
+        ignore_disqualification: bool = False
     ) -> DailyModel:
         """Fit the model using baseline data.
 
@@ -152,8 +171,8 @@ class DailyModel:
             TypeError: If baseline_data is not a DailyBaselineData object.
             DataSufficiencyError: If the model can't be fit on disqualified baseline data.
         """
-        if not isinstance(baseline_data, DailyBaselineData):
-            raise TypeError("baseline_data must be a DailyBaselineData object")
+        if not isinstance(baseline_data, self._baseline_data_type):
+            raise TypeError(f"baseline_data must be a {self._baseline_data_type.__name__} object")
         baseline_data.log_warnings()
         if baseline_data.disqualification and not ignore_disqualification:
             raise DataSufficiencyError("Can't fit model on disqualified baseline data")
@@ -206,7 +225,7 @@ class DailyModel:
 
     def predict(
         self,
-        reporting_data: Union[DailyBaselineData, DailyReportingData],
+        reporting_data: DailyBaselineData | DailyReportingData,
         ignore_disqualification=False,
     ) -> pd.DataFrame:
         """Predicts the energy consumption using the fitted model.
@@ -241,9 +260,9 @@ class DailyModel:
                 "Reporting data must use the same timezone that the model was initially fit on."
             )
 
-        if not isinstance(reporting_data, (DailyBaselineData, DailyReportingData)):
+        if not isinstance(reporting_data, (self._baseline_data_type, self._reporting_data_type)):
             raise TypeError(
-                "reporting_data must be a DailyBaselineData or DailyReportingData object"
+                f"reporting_data must be a {self._baseline_data_type.__name__} or {self._reporting_data_type.__name__} object"
             )
 
         return self._predict(reporting_data.df)
@@ -407,7 +426,7 @@ class DailyModel:
 
     def plot(
         self,
-        df_eval: DailyBaselineData | DailyReportingData,
+        data: DailyBaselineData | DailyReportingData,
     ) -> None:
         """Plot a model fit with baseline or reporting data. Requires matplotlib to use.
 
@@ -421,7 +440,7 @@ class DailyModel:
 
         # TODO: pass more kwargs to plotting function
 
-        plot(self, self._predict(df_eval.df))
+        plot(self, self._predict(data.df))
 
     def _create_params_from_fit_model(self):
         submodels = {}
