@@ -469,6 +469,25 @@ class HourlySufficiencyCriteria(SufficiencyCriteria):
                 )
             )
 
+    def _check_monthly_ghi_percentage(self):
+        if "ghi" not in self.data.columns:
+            return
+        non_null_temp_ghi_per_month = (
+            self.data["ghi"]
+            .groupby(self.data.index.month)
+            .apply(lambda x: x.notna().mean())
+        )
+        if (non_null_temp_ghi_per_month < self.min_fraction_daily_coverage).any():
+            self.disqualification.append(
+                EEMeterWarning(
+                    qualified_name="eemeter.sufficiency_criteria.missing_monthly_ghi_data",
+                    description=("At least one month is missing over 10% of GHI data."),
+                    data={
+                        "lowest_monthly_coverage": non_null_temp_ghi_per_month.min(),
+                    },
+                )
+            )
+
     def check_sufficiency_baseline(self):
         # TODO : add caltrack check number on top of each method
         self._check_no_data()
@@ -480,6 +499,7 @@ class HourlySufficiencyCriteria(SufficiencyCriteria):
         self._check_monthly_temperature_values_percentage()
         self._check_monthly_meter_readings_percentage()
         self._check_extreme_values()
+        self._check_monthly_ghi_percentage()
         # TODO these will only apply to legacy, and currently do not work
         # self._check_high_frequency_meter_values()
         # self._check_high_frequency_temperature_values()
@@ -490,6 +510,7 @@ class HourlySufficiencyCriteria(SufficiencyCriteria):
         self._check_valid_days_percentage()
         self._check_valid_temperature_values_percentage()
         self._check_monthly_temperature_values_percentage()
+        self._check_monthly_ghi_percentage()
         # self._check_high_frequency_temperature_values()
 
 

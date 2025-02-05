@@ -80,6 +80,9 @@ def test_good_data(baseline, reporting):
     reporting_data = HourlyReportingData(reporting, is_electricity_data=True)
     hm = HourlyModel().fit(baseline_data)
     p1 = hm.predict(reporting_data)
+    assert np.isclose(
+        p1["predicted"].sum(), 1134235, rtol=1e-5
+    )  # quick check that model fit isn't changing drastically
     serialized = hm.to_json()
     hm2 = HourlyModel.from_json(serialized)
     p2 = hm2.predict(reporting_data)
@@ -253,6 +256,27 @@ def test_monthly_percentage(baseline):
             "eemeter.sufficiency_criteria.too_many_days_with_missing_data",
             "eemeter.sufficiency_criteria.missing_monthly_meter_data",
             "eemeter.sufficiency_criteria.too_many_days_with_missing_meter_data",
+        ],
+    )
+    with pytest.raises(DataSufficiencyError):
+        HourlyModel().fit(baseline_data)
+
+
+def test_monthly_ghi_percentage(baseline):
+    # create datetimeindex where a little over 10% of days are missing in feb, but still 90% overall
+    missing_idx = pd.date_range(
+        start=baseline.index.min(), end=baseline.index.max(), freq="h"
+    )
+    missing_idx = missing_idx[missing_idx.day < 4]
+
+    invalid_ghi = baseline.copy()
+    invalid_ghi.loc[invalid_ghi.index.day < 5, "ghi"] = np.nan
+
+    baseline_data = HourlyBaselineData(invalid_ghi, is_electricity_data=True)
+    assert_dq(
+        baseline_data,
+        [
+            "eemeter.sufficiency_criteria.missing_monthly_ghi_data",
         ],
     )
     with pytest.raises(DataSufficiencyError):
