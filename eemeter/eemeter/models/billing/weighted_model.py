@@ -58,19 +58,26 @@ class BillingWeightedModel(DailyModel):
         id (str): The index of the meter data.
     """
 
+    _baseline_data_type = BillingBaselineData
+    _reporting_data_type = BillingReportingData
+    _settings_type = BillingSettings
+
     # TODO: lot of duplicated code between this and daily model, refactor later
     def __init__(
         self,
         settings: dict | None = None,
         verbose: bool = False,
     ):
-        """
-        Args:
-            settings: DailySettings to be changed.
-            verbose: Whether to print verbose output.
-        """
+        super().__init__(model="legacy", settings=settings, verbose=verbose)
 
-        # Initialize settings
+        print("The weighted billing model is under development and is not ready for public use.")
+
+    def _initialize_settings(
+        self,
+        model: str = "current",
+        settings: dict | None = None
+    ) -> None:
+
         # Note: Model designates the base settings, it can be 'current' or 'legacy'
         #       Settings is to be a dictionary of settings to be changed
 
@@ -78,39 +85,6 @@ class BillingWeightedModel(DailyModel):
             settings = {}
 
         self.settings = BillingSettings(**settings)
-
-        # Initialize seasons and weekday/weekend
-        self.seasonal_options = [
-            ["su_sh_wi"],
-            ["su", "sh_wi"],
-            ["su_sh", "wi"],
-            ["su_wi", "sh"],
-            ["su", "sh", "wi"],
-        ]
-        self.day_options = [["wd", "we"]]
-
-        # make dictionary is_weekday from settings
-        day_dict = self.settings.weekday_weekend._num_dict
-        n_week = list(range(len(day_dict)))
-        self.combo_dictionary = {
-            "su": "summer",
-            "sh": "shoulder",
-            "wi": "winter",
-            "fw": [n + 1 for n in n_week],
-            "wd": [n + 1 for n in n_week if day_dict[n+1] == "weekday"],
-            "we": [n + 1 for n in n_week if day_dict[n+1] == "weekend"],
-        }
-        self.verbose = verbose
-
-        self.error = {
-            "wRMSE": np.nan,
-            "RMSE": np.nan,
-            "MAE": np.nan,
-            "CVRMSE": np.nan,
-            "PNRMSE": np.nan,
-        }
-
-        print("The weighted billing model is under development and is not ready for public use.")
 
     def fit(
         self, baseline_data: BillingBaselineData, ignore_disqualification: bool = False
@@ -139,7 +113,7 @@ class BillingWeightedModel(DailyModel):
         self.baseline_timezone = baseline_data.tz
         self.warnings = baseline_data.warnings
         self.disqualification = baseline_data.disqualification
-        self._fit(baseline_data.billing_df)
+        self._fit(baseline_data.billing_df)   # TODO: abstract this so that fit can be removed from this inheritance
         if self.error["CVRMSE"] > self.settings.cvrmse_threshold:
             cvrmse_warning = EEMeterWarning(
                 qualified_name="eemeter.model_fit_metrics.cvrmse",
@@ -150,37 +124,6 @@ class BillingWeightedModel(DailyModel):
             )
             cvrmse_warning.warn()
             self.disqualification.append(cvrmse_warning)
-        return self
-
-    def _fit(self, meter_data):
-        # Initialize dataframe
-        self.df_meter, _ = self._initialize_data(meter_data)
-
-        # Begin fitting
-        self.combinations = self._combinations()
-        self.components = self._components()
-        self.fit_components = self._fit_components()
-
-        # calculate mean bias error for no splits
-        self.wRMSE_base = self._get_error_metrics("fw-su_sh_wi")[0]
-
-        # find best combination
-        self.best_combination = self._best_combination(print_out=False)
-        self.model = self._final_fit(self.best_combination)
-
-        self.id = meter_data.index.unique()[0]
-
-        wRMSE, RMSE, MAE, CVRMSE, PNRMSE = self._get_error_metrics(
-            self.best_combination
-        )
-        self.error["wRMSE"] = float(wRMSE)
-        self.error["RMSE"] = float(RMSE)
-        self.error["MAE"] = float(MAE)
-        self.error["CVRMSE"] = float(CVRMSE)
-        self.error["PNRMSE"] = float(PNRMSE)
-
-        self.params = self._create_params_from_fit_model()
-        self.is_fitted = True
         return self
 
     def predict(
@@ -218,7 +161,7 @@ class BillingWeightedModel(DailyModel):
                 "reporting_data must be a BillingBaselineData or BillingReportingData object"
             )
 
-        df_res = self._predict(reporting_data.billing_df)
+        df_res = self._predict(reporting_data.billing_df) # TODO: abstract this so that fit can be removed from this inheritance
 
         if aggregation is None:
             agg = None
@@ -265,7 +208,7 @@ class BillingWeightedModel(DailyModel):
 
     def plot(
         self,
-        df_eval,
+        data,
         aggregation: str | None = None,
     ):
         """Plot a model fit with baseline or reporting data. Requires matplotlib to use.
@@ -281,7 +224,7 @@ class BillingWeightedModel(DailyModel):
 
         # TODO: pass more kwargs to plotting function
 
-        plot(self, self.predict(df_eval, aggregation=aggregation))
+        plot(self, self.predict(data, aggregation=aggregation))
 
     def to_dict(self) -> dict:
         """Returns a dictionary of model parameters.
