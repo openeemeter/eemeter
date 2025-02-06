@@ -31,10 +31,11 @@ from eemeter.eemeter.models.billing.data import (
     BillingBaselineData,
     BillingReportingData,
 )
+from eemeter.eemeter.models.billing.settings import BillingSettings
 from eemeter.eemeter.models.daily.model import DailyModel
 
 
-class BillingModel(DailyModel):
+class BillingWeightedModel(DailyModel):
     """A class to fit a model to the input meter data.
 
     BillingModel is a wrapper for the DailyModel class using billing presets.
@@ -56,18 +57,40 @@ class BillingModel(DailyModel):
         model (sklearn.pipeline.Pipeline): The final fitted model.
         id (str): The index of the meter data.
     """
+
     _baseline_data_type = BillingBaselineData
     _reporting_data_type = BillingReportingData
-    _data_df_name = "df"
+    _data_df_name = "billing_df"
 
-    def __init__(self, settings=None, verbose: bool = False,):
+    # TODO: lot of duplicated code between this and daily model, refactor later
+    def __init__(
+        self,
+        settings: dict | None = None,
+        verbose: bool = False,
+    ):
         super().__init__(model="legacy", settings=settings, verbose=verbose)
+
+        print("The weighted billing model is under development and is not ready for public use.")
+
+    def _initialize_settings(
+        self,
+        model: str = "current",
+        settings: dict | None = None
+    ) -> None:
+
+        # Note: Model designates the base settings, it can be 'current' or 'legacy'
+        #       Settings is to be a dictionary of settings to be changed
+
+        if settings is None:
+            settings = {}
+
+        self.settings = BillingSettings(**settings)
 
     def fit(
         self, 
         baseline_data: BillingBaselineData, 
         ignore_disqualification: bool = False
-    ) -> BillingModel:
+    ) -> BillingWeightedModel:
         return super().fit(baseline_data, ignore_disqualification=ignore_disqualification)
 
     def predict(

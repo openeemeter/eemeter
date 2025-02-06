@@ -436,6 +436,12 @@ class OptimizedResult:
                 - cdd_load: Array of cooling degree day loads.
         """
 
+        # find if T is an array of floats, else convert to array
+        if isinstance(T, (int, float)):
+            T = np.array([T]).astype(float)
+        elif T.dtype != float:
+            T = T.astype(float)
+
         x = get_full_model_x(
             self.model_key,
             self.x,

@@ -22,13 +22,13 @@ import pandas as pd
 import pytest
 from eemeter.eemeter.models.daily.parameters import ModelCoefficients
 
-from eemeter.eemeter.models.daily.utilities.config import DailySettings as Settings
+from eemeter.eemeter.models.daily.utilities.settings import DailySettings as Settings
 from eemeter.eemeter.models.daily.parameters import ModelType
 from eemeter.eemeter.models.daily.fit_base_models import (
     fit_initial_models_from_full_model,
     fit_model,
     fit_final_model,
-    _get_opt_options,
+    _get_opt_settings,
 )
 
 from eemeter.eemeter.models.daily.optimize_results import OptimizedResult
@@ -169,8 +169,9 @@ def test_fit_model(meter_data, get_settings):
     # Test case 1: Test for model_key = "hdd_tidd_cdd_smooth"
     T = np.array(meter_data["temperature"])
     obs = np.array(meter_data["observed"])
+    weights = None
 
-    fit_input = [T, obs, get_settings, _get_opt_options(get_settings)]
+    fit_input = [T, obs, weights, get_settings, _get_opt_settings(get_settings)]
     res = fit_model("hdd_tidd_cdd_smooth", fit_input, None, None)
     assert isinstance(res, OptimizedResult)
 

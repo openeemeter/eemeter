@@ -20,9 +20,9 @@
 import numpy as np
 from eemeter.eemeter.models.daily.parameters import ModelCoefficients
 from eemeter.eemeter.models.daily.parameters import ModelType
-from eemeter.eemeter.models.daily.utilities.config import DailySettings as Settings
+from eemeter.eemeter.models.daily.utilities.settings import DailySettings as Settings
 from eemeter.eemeter.models.daily.base_models.c_hdd_tidd import fit_c_hdd_tidd
-from eemeter.eemeter.models.daily.fit_base_models import _get_opt_options
+from eemeter.eemeter.models.daily.fit_base_models import _get_opt_settings
 
 
 def test_fit_c_hdd_tidd_smooth():
@@ -36,7 +36,7 @@ def test_fit_c_hdd_tidd_smooth():
         segment_minimum_count=5,
         maximum_slope_OoM_scaler=1,
     )
-    opt_options = _get_opt_options(settings)
+    opt_options = _get_opt_settings(settings)
     x0 = ModelCoefficients(
         model_type=ModelType.HDD_TIDD_SMOOTH,
         intercept=0.0,
@@ -48,9 +48,10 @@ def test_fit_c_hdd_tidd_smooth():
         cdd_k=None,
     )
     bnds = None
+    weights = None
     initial_fit = True
     smooth = True
-    res = fit_c_hdd_tidd(T, obs, settings, opt_options, smooth, x0, bnds, initial_fit)
+    res = fit_c_hdd_tidd(T, obs, weights, settings, opt_options, smooth, x0, bnds, initial_fit)
     assert res.success == True
 
     # Test case 2: Test with initial_fit=False
@@ -63,7 +64,7 @@ def test_fit_c_hdd_tidd_smooth():
         segment_minimum_count=5,
         maximum_slope_OoM_scaler=1,
     )
-    opt_options = _get_opt_options(settings)
+    opt_options = _get_opt_settings(settings)
     x0 = ModelCoefficients(
         model_type=ModelType.HDD_TIDD_SMOOTH,
         intercept=0.0,
@@ -77,7 +78,7 @@ def test_fit_c_hdd_tidd_smooth():
     bnds = None
     initial_fit = False
     smooth = True
-    res = fit_c_hdd_tidd(T, obs, settings, opt_options, smooth, x0, bnds, initial_fit)
+    res = fit_c_hdd_tidd(T, obs, weights, settings, opt_options, smooth, x0, bnds, initial_fit)
     assert res.success == True
 
     # Test case 3: Test with x0=None
@@ -90,10 +91,10 @@ def test_fit_c_hdd_tidd_smooth():
         segment_minimum_count=5,
         maximum_slope_OoM_scaler=1,
     )
-    opt_options = _get_opt_options(settings)
+    opt_options = _get_opt_settings(settings)
     x0 = None
     bnds = None
     initial_fit = True
     smooth = True
-    res = fit_c_hdd_tidd(T, obs, settings, opt_options, smooth, x0, bnds, initial_fit)
+    res = fit_c_hdd_tidd(T, obs, weights, settings, opt_options, smooth, x0, bnds, initial_fit)
     assert res.success == True

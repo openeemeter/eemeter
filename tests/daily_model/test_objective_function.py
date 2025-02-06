@@ -31,7 +31,7 @@ from eemeter.eemeter.models.daily.base_models.hdd_tidd_cdd import (
     _hdd_tidd_cdd_smooth_weight,
 )
 
-from eemeter.eemeter.models.daily.utilities.config import DailySettings as Settings
+from eemeter.eemeter.models.daily.utilities.settings import DailySettings as Settings
 
 
 def test_get_idx():
@@ -125,6 +125,7 @@ def test_obj_fcn_decorator():
     TSS_fcn = None
     T = np.array([1, 2, 3]).astype(float)
     obs = np.array([4, 5, 6]).astype(float)
+    weights = None
     settings = type(
         "Settings",
         (object,),
@@ -143,6 +144,7 @@ def test_obj_fcn_decorator():
         TSS_fcn,
         T,
         obs,
+        weights,
         settings,
         alpha,
         coef_id,
@@ -180,6 +182,7 @@ def test_obj_fcn_decorator():
         TSS_fcn,
         T,
         obs,
+        weights,
         settings,
         alpha,
         coef_id,

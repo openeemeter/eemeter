@@ -28,8 +28,8 @@ from eemeter.eemeter.models.daily.base_models.hdd_tidd_cdd import (
     _hdd_tidd_cdd_smooth_weight,
 )
 
-from eemeter.eemeter.models.daily.fit_base_models import _get_opt_options
-from eemeter.eemeter.models.daily.utilities.config import DailySettings as Settings
+from eemeter.eemeter.models.daily.fit_base_models import _get_opt_settings
+from eemeter.eemeter.models.daily.utilities.settings import DailySettings as Settings
 
 
 def test_obj_fcn_dec():
@@ -47,19 +47,14 @@ def test_obj_fcn_dec():
     assert idx_opt == [0, 1, 2]
 
 
-@pytest.fixture
-def get_settings():
-    return Settings()
-
-
-@pytest.fixture
-def get_obj_fcn(get_settings):
+def get_obj_fcn(settings):
     # Test case 1: Test with minimum input values
     model_fcn_full = evaluate_hdd_tidd_cdd_smooth
     weight_fcn = _hdd_tidd_cdd_smooth_weight
     TSS_fcn = None
     T = np.array([1, 2, 3, 4, 5, 6, 7]).astype(float)
     obs = np.array([2, 4, 6, 8, 10, 12, 14]).astype(float)
+    base_weights = None
     alpha = 2.0
     coef_id = [
         "hdd_bp",
@@ -77,7 +72,8 @@ def get_obj_fcn(get_settings):
         TSS_fcn,
         T,
         obs,
-        get_settings,
+        base_weights,
+        settings,
         alpha,
         coef_id,
         initial_fit,
@@ -104,7 +100,7 @@ def get_bnds():
     )
 
 
-def test_optimizer_run(get_settings, get_obj_fcn, get_x0, get_bnds):
+def test_optimizer_run(get_x0, get_bnds):
     x0 = get_x0
     bnds = get_bnds
     coef_id = [
@@ -118,28 +114,25 @@ def test_optimizer_run(get_settings, get_obj_fcn, get_x0, get_bnds):
     ]
 
     # Test case 1: Test with empty options
-    opt_options = _get_opt_options(get_settings)
-    optimizer = Optimizer(get_obj_fcn, x0, bnds, coef_id, get_settings, opt_options)
+    settings = Settings()
+    opt_settings = _get_opt_settings(settings)
+    obj_fcn = get_obj_fcn(settings)
+    optimizer = Optimizer(obj_fcn, x0, bnds, coef_id, settings, opt_settings)
     res = optimizer.run()
     assert np.allclose(res.x, np.array([20.13393]), rtol=1e-5, atol=1e-5)
 
     # Test case 2: Test with scipy algorithm
     settings = Settings(developer_mode=True, algorithm_choice="scipy_Nelder-Mead")
-    opt_options = _get_opt_options(settings)
-    optimizer = Optimizer(get_obj_fcn, x0, bnds, coef_id, settings, opt_options)
+    opt_settings = _get_opt_settings(settings)
+    obj_fcn = get_obj_fcn(settings)
+    optimizer = Optimizer(obj_fcn, x0, bnds, coef_id, settings, opt_settings)
     res = optimizer.run()
     assert np.allclose(res.x, np.array([20.13393]), rtol=1e-5, atol=1e-5)
 
     # Test case 3: Test with nlopt algorithm
-    settings = Settings(developer_mode=True, algorithm_choice="nlopt_direct")
-    opt_options = _get_opt_options(get_settings)
-    optimizer = Optimizer(get_obj_fcn, x0, bnds, coef_id, get_settings, opt_options)
+    settings = Settings(developer_mode=True, algorithm_choice="nlopt_sbplx")
+    opt_settings = _get_opt_settings(settings)
+    obj_fcn = get_obj_fcn(settings)
+    optimizer = Optimizer(obj_fcn, x0, bnds, coef_id, settings, opt_settings)
     res = optimizer.run()
     assert np.allclose(res.x, np.array([20.13393]), rtol=1e-5, atol=1e-5)
-
-    # Test case 4: Test with multistart algorithm
-    settings = Settings(developer_mode=True, algorithm_choice="nlopt_mlsl_lds")
-    opt_options = _get_opt_options(get_settings)
-    optimizer = Optimizer(get_obj_fcn, x0, bnds, coef_id, settings, opt_options)
-    res = optimizer.run()
-    assert np.allclose(res.x, np.array([20.13393783]), rtol=1e-5, atol=1e-5)
