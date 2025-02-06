@@ -103,6 +103,7 @@ def obj_fcn_decorator(
     TSS_fcn,
     T,
     obs,
+    base_weights,
     settings,
     alpha=2.0,
     coef_id=[],
@@ -311,9 +312,13 @@ def obj_fcn_decorator(
         # model_sorted = model[idx_sorted]
         obs_sorted = obs[idx_sorted]
         resid_sorted = resid[idx_sorted]
+
         weight_sorted, c, a = weight_fcn(
             *X, T_sorted, resid_sorted, sigma, quantile, alpha, min_weight
         )
+        if base_weights is not None:
+            weight_sorted *= base_weights[idx_sorted]
+            weight_sorted /= np.sum(weight_sorted)
 
         weight = weight_sorted[idx_initial]
         wSSE = np.sum(weight * resid**2)
@@ -328,7 +333,7 @@ def obj_fcn_decorator(
             return loss
 
         else:
-            if ("r_squared" in settings.split_selection_criteria) and callable(TSS_fcn):
+            if ("r_squared" in settings.split_selection.criteria) and callable(TSS_fcn):
                 TSS = TSS_fcn(*X, T_sorted, obs_sorted)
             else:
                 TSS = wSSE

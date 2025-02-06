@@ -29,7 +29,7 @@ from eemeter.eemeter.models.daily.optimize_results import (
 
 
 from eemeter.eemeter.models.daily.parameters import ModelCoefficients
-from eemeter.eemeter.models.daily.utilities.config import DailySettings as Settings
+from eemeter.eemeter.models.daily.utilities.settings import DailySettings as Settings
 
 
 def test_get_k():

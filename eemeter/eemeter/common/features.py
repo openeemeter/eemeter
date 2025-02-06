@@ -540,6 +540,9 @@ def compute_temperature_features(
     if not keep_partial_nan_rows:
         df = overwrite_partial_rows_with_nan(df)
 
+    if df.dropna(how='all').empty:
+        raise ValueError("All rows are NaN.")
+
     # nan last row
     df = df.iloc[:-1].reindex(df.index)
     return df

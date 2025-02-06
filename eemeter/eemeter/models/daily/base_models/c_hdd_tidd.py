@@ -20,7 +20,6 @@
 from math import isclose
 from typing import Optional
 
-import nlopt
 import numba
 import numpy as np
 
@@ -28,7 +27,8 @@ from eemeter.common.adaptive_loss import adaptive_weights
 from eemeter.eemeter.models.daily.base_models.full_model import full_model
 from eemeter.eemeter.models.daily.base_models.hdd_tidd_cdd import full_model_weight
 from eemeter.eemeter.models.daily.objective_function import obj_fcn_decorator
-from eemeter.eemeter.models.daily.optimize import Optimizer, nlopt_algorithms
+from eemeter.eemeter.models.daily.utilities.opt_settings import OptimizationSettings
+from eemeter.eemeter.models.daily.optimize import InitialGuessOptimizer, Optimizer
 from eemeter.eemeter.models.daily.parameters import ModelCoefficients, ModelType
 from eemeter.eemeter.models.daily.utilities.base_model import (
     fix_identical_bnds,
@@ -42,6 +42,7 @@ from eemeter.eemeter.models.daily.utilities.base_model import (
 def fit_c_hdd_tidd(
     T,
     obs,
+    weights,
     settings,
     opt_options,
     smooth,
@@ -82,7 +83,7 @@ def fit_c_hdd_tidd(
 
     # limit slope based on initial regression & configurable order of magnitude
     max_slope = np.abs(tdd_beta) + 10 ** (
-        np.log10(np.abs(tdd_beta)) + np.log10(settings.maximum_slope_OoM_scaler)
+        np.log10(np.abs(tdd_beta)) + np.log10(settings.maximum_slope_oom_scalar)
     )
 
     # initial fit bounded by Tmin:Tmax, final fit has minimum T segment buffer
@@ -142,11 +143,12 @@ def fit_c_hdd_tidd(
         weight_fcn = _c_hdd_tidd_weight
         TSS_fcn = _c_hdd_tidd_total_sum_of_squares
     obj_fcn = obj_fcn_decorator(
-        model_fcn, weight_fcn, TSS_fcn, T, obs, settings, alpha, coef_id, initial_fit
+        model_fcn, weight_fcn, TSS_fcn, T, obs, weights, settings, alpha, coef_id, initial_fit
     )
     res = Optimizer(
         obj_fcn, x0.to_np_array(), bnds, coef_id, settings, opt_options
     ).run()
+
     return res
 
 
@@ -167,12 +169,12 @@ def set_full_model_coeffs_smooth(c_hdd_bp, c_hdd_beta, c_hdd_k, intercept):
     if c_hdd_beta < 0:
         hdd_beta = -c_hdd_beta
         hdd_k = c_hdd_k
-        cdd_beta = cdd_k = 0
+        cdd_beta = cdd_k = 0.0
 
     else:
         cdd_beta = c_hdd_beta
         cdd_k = c_hdd_k
-        hdd_beta = hdd_k = 0
+        hdd_beta = hdd_k = 0.0
 
     return np.array([hdd_bp, hdd_beta, hdd_k, cdd_bp, cdd_beta, cdd_k, intercept])
 
@@ -189,7 +191,7 @@ def set_full_model_coeffs(c_hdd_bp, c_hdd_beta, intercept):
     np.array: An array containing the coefficients for the full model.
     """
 
-    return set_full_model_coeffs_smooth(c_hdd_bp, c_hdd_beta, 0, intercept)
+    return set_full_model_coeffs_smooth(c_hdd_bp, c_hdd_beta, 0.0, intercept)
 
 
 def _c_hdd_tidd_update_bnds(new_bnds, bnds, smooth):
@@ -378,9 +380,6 @@ def _c_hdd_tidd_bp0(T, obs, alpha, settings, min_weight=0.0):
 
         return bp_obj_fcn
 
-    algorithm = nlopt_algorithms[settings.initial_guess_algorithm_choice]
-    # algorithm = nlopt.GN_DIRECT
-
     obj_fcn = bp_obj_fcn_dec(T, obs)
 
     T_min = T[min_T_idx - 1]
@@ -388,21 +387,22 @@ def _c_hdd_tidd_bp0(T, obs, alpha, settings, min_weight=0.0):
     T_range = T_max - T_min
 
     x0 = np.array([T_range * 0.5]) + T_min
-    bnds = np.array([[T_min, T_max]]).T
+    bnds = np.array([[T_min, T_max]])
 
-    opt = nlopt.opt(algorithm, int(len(x0)))
-    opt.set_min_objective(obj_fcn)
+    opt_settings = OptimizationSettings(
+        algorithm=settings.initial_guess_algorithm_choice,
+        stop_criteria_type="iteration maximum",
+        stop_criteria_value=100,
+        initial_step=settings.initial_step_percentage,
+        x_tol_rel=1e-3,
+        f_tol_rel=0.5,
+    )
 
-    opt.set_initial_step([T_range * 0.25])
-    opt.set_maxeval(100)
-    opt.set_xtol_rel(1e-3)
-    opt.set_xtol_abs(0.5)
-    opt.set_lower_bounds(bnds[0])
-    opt.set_upper_bounds(bnds[1])
+    res = InitialGuessOptimizer(
+        obj_fcn, x0, bnds, opt_settings
+    ).run()
 
-    x_opt = opt.optimize(x0)  # optimize!
-
-    return x_opt[0]
+    return res.x[0]
 
 
 def _c_hdd_tidd(
