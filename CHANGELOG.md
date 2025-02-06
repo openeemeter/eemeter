@@ -4,7 +4,7 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Add GHI sufficiency check requiring 90% coverage for each month
 
 4.1.0
 -----
