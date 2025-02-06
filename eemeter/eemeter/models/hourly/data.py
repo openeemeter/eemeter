@@ -417,6 +417,8 @@ def _create_sufficiency_df(df: pd.DataFrame):
     """Creates dataframe equivalent to legacy hourly input"""
     df.loc[df["interpolated_observed"] == 1, "observed"] = np.nan
     df.loc[df["interpolated_temperature"] == 1, "temperature"] = np.nan
+    if "ghi" in df.columns:
+        df.loc[df["interpolated_ghi"] == 1, "ghi"] = np.nan
     # set temperature_not_null  to 1.0 if temperature is not null
     df["temperature_not_null"] = df["temperature"].notnull().astype(float)
     df["temperature_null"] = df["temperature"].isnull().astype(float)
