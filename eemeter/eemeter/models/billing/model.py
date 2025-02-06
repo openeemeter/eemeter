@@ -58,9 +58,17 @@ class BillingModel(DailyModel):
     """
     _baseline_data_type = BillingBaselineData
     _reporting_data_type = BillingReportingData
+    _data_df_name = "df"
 
     def __init__(self, settings=None, verbose: bool = False,):
         super().__init__(model="legacy", settings=settings, verbose=verbose)
+
+    def fit(
+        self, 
+        baseline_data: BillingBaselineData, 
+        ignore_disqualification: bool = False
+    ) -> BillingModel:
+        return super().fit(baseline_data, ignore_disqualification=ignore_disqualification)
 
     def predict(
         self,
@@ -97,7 +105,8 @@ class BillingModel(DailyModel):
                 "reporting_data must be a BillingBaselineData or BillingReportingData object"
             )
 
-        df_res = self._predict(reporting_data.df)
+        df = getattr(reporting_data, self._data_df_name)
+        df_res = self._predict(df)
 
         if aggregation is None:
             agg = None
