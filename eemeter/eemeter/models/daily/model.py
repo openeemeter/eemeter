@@ -78,6 +78,7 @@ class DailyModel:
 
     _baseline_data_type = DailyBaselineData
     _reporting_data_type = DailyReportingData
+    _data_df_name = "df"
 
     def __init__(
         self,
@@ -126,12 +127,6 @@ class DailyModel:
             "PNRMSE": np.nan,
         }
 
-        # update type hints
-        self.__class__.fit.__annotations__['baseline_data'] = self._baseline_data_type
-        self.__class__.fit.__annotations__['return'] = self.__class__
-        self.__class__.predict.__annotations__['reporting_data'] = Union[self._baseline_data_type, self._reporting_data_type]
-        self.__class__.plot.__annotations__['df_eval'] = Union[self._baseline_data_type, self._reporting_data_type]
-
     def _initialize_settings(
         self,
         model: str = "current",
@@ -179,7 +174,8 @@ class DailyModel:
         self.baseline_timezone = baseline_data.tz
         self.warnings = baseline_data.warnings
         self.disqualification = baseline_data.disqualification
-        self._fit(baseline_data.df)
+        df = getattr(baseline_data, self._data_df_name)
+        self._fit(df)
         if self.error["CVRMSE"] > self.settings.cvrmse_threshold:
             cvrmse_warning = EEMeterWarning(
                 qualified_name="eemeter.model_fit_metrics.cvrmse",
@@ -265,7 +261,10 @@ class DailyModel:
                 f"reporting_data must be a {self._baseline_data_type.__name__} or {self._reporting_data_type.__name__} object"
             )
 
-        return self._predict(reporting_data.df)
+        df = getattr(reporting_data, self._data_df_name)
+        df_res = self._predict(df)
+
+        return df_res
 
     def _predict(self, df_eval, mask_observed_with_missing_temperature=True):
         """
