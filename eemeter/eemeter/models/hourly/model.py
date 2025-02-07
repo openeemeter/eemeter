@@ -285,13 +285,12 @@ class HourlyModel:
                 break
 
             # for each day, calculate rmse to downweight outlier days
-            # rmse_daily = np.sqrt(np.mean(resid**2, axis=1))
-            mae_daily = np.mean(np.abs(resid), axis=1)
+            rmse_daily = np.sqrt(np.mean(resid**2, axis=1))
 
             weights_prior = copy(weights)
 
             weights, _, alpha = adaptive_weights(
-                mae_daily, 
+                rmse_daily, 
                 alpha="adaptive", 
                 sigma=2.698, 
                 quantile=0.25, 
