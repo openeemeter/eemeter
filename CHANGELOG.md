@@ -8,6 +8,7 @@ Development
 * Add weights propogation from data class to daily model via "weights" column
 * Converted daily model settings from attrs to pydantic
 * Refactored daily model initial guess optimization to use consolidated optimize function
+* Add experimental daily weighting for hourly model fitting (if one day is crazy, it will be down weighted in the fit)
 
 4.1.0
 -----
