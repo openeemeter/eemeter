@@ -26,15 +26,32 @@ from typing import Any
 
 
 class BaseSettings(pydantic.BaseModel):
-    model_config = pydantic.ConfigDict(arbitrary_types_allowed=True)
+    model_config = pydantic.ConfigDict(
+        frozen = True,
+        arbitrary_types_allowed=True,
+        str_to_lower = True,
+        str_strip_whitespace = True,
+    )
 
-    """Make all property keys case insensitive"""
+    """Make all property keys lowercase and strip whitespace"""
+    @pydantic.model_validator(mode="before")
+    def __lowercase_property_keys__(cls, values: Any) -> Any:
+        def __lower__(value: Any) -> Any:
+            if isinstance(value, dict):
+                return {k.lower().strip() if isinstance(k, str) else k: __lower__(v) for k, v in value.items()}
+            return value
 
-    # @pydantic.model_validator(mode="before")
-    # def __uppercase_property_keys__(cls, values: Any) -> Any:
-    #     def __upper__(value: Any) -> Any:
-    #         if isinstance(value, dict):
-    #             return {k.upper() if isinstance(k, str) else k: __upper__(v) for k, v in value.items()}
-    #         return value
+        return __lower__(values)
 
-    #     return __upper__(values)
+    """Make all property values lowercase and strip whitespace before validation"""
+    @pydantic.field_validator("*", mode="before")
+    def lowercase_values(cls, v):
+        if isinstance(v, str):
+            return v.lower().strip()
+        return v
+
+
+# add developer field to pydantic Field
+def CustomField(developer=False, *args, **kwargs):
+    field = pydantic.Field(json_schema_extra={"developer": developer}, *args, **kwargs)
+    return field

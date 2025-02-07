@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-"""A module housing billing model classes and functions.
+"""
 
    Copyright 2014-2024 OpenEEmeter contributors
 
@@ -17,14 +17,18 @@
    limitations under the License.
 
 """
+from __future__ import annotations
 
-from .data import BillingBaselineData, BillingReportingData
-from .model import BillingModel
-from .weighted_model import BillingWeightedModel
+from eemeter.common.base_settings import CustomField
 
-__all__ = (
-    "BillingBaselineData",
-    "BillingReportingData",
-    "BillingModel",
-    "BillingWeightedModel",
-)
+from eemeter.eemeter.models.daily.utilities.settings import DailyLegacySettings
+
+
+
+class BillingSettings(DailyLegacySettings):
+    segment_minimum_count: int = CustomField(
+        default=3,
+        ge=3,
+        developer=True,
+        description="Minimum number of data points for HDD/CDD",
+    )

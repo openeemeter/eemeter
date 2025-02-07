@@ -940,16 +940,16 @@ class HourlyModel:
                     A = 1 / (np.exp(1 / k * new_range[1]) - 1)
 
                     self._T_edge_bin_coeffs[n] = {
-                        "T_A": float(T_a),
-                        "T_B": float(T_b),
-                        "K": float(k),
-                        "A": float(A),
+                        "t_a": float(T_a),
+                        "t_b": float(T_b),
+                        "k": float(k),
+                        "a": float(A),
                     }
 
-                T_a = self._T_edge_bin_coeffs[n]["T_A"]
-                T_b = self._T_edge_bin_coeffs[n]["T_B"]
-                k = self._T_edge_bin_coeffs[n]["K"]
-                A = self._T_edge_bin_coeffs[n]["A"]
+                T_a = self._T_edge_bin_coeffs[n]["t_a"]
+                T_b = self._T_edge_bin_coeffs[n]["t_b"]
+                k = self._T_edge_bin_coeffs[n]["k"]
+                A = self._T_edge_bin_coeffs[n]["a"]
 
                 df[T_col] = np.where(
                     df[base_col].values, T_a * df[int_col].values + T_b, 0

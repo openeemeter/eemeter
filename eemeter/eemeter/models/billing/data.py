@@ -279,6 +279,61 @@ class _BillingData(_DailyData):
         features = temperature_features.drop(columns=["temperature_mean"])
         return temp, features
 
+    # TODO: DELETE THIS after making real billing data class
+    @property
+    def billing_df(self) -> pd.DataFrame | None:
+        """Get the corrected input data stored in the class. The actual dataframe is immutable, this returns a copy."""
+
+        df = self._df.copy()
+
+        # find indices where observed changes from prior
+        observed_change = df["observed"].diff()
+        observed_change = observed_change[observed_change != 0].index
+        obs_change_idx = df.index.get_indexer(observed_change)
+        obs_change_idx = np.append(obs_change_idx, len(df))
+        obs_change_idx = np.delete(obs_change_idx, np.where(np.diff(obs_change_idx) < 15)[0])
+
+        if obs_change_idx[0] != 0:
+            obs_change_idx = np.insert(obs_change_idx, 0, 0)
+
+        # create vector where value increases at each observed change
+        group = []
+        for i in range(1, len(obs_change_idx)):
+            idx_range = obs_change_idx[i] - obs_change_idx[i-1]
+
+            group.extend([i] * idx_range)
+
+        df["group"] = group
+
+        # get median delta
+
+        # get first datetime, average temperature, sum of observed for each group and make new df
+        df_temp = df.reset_index()
+        df_temp = df_temp.rename(columns={"index": "datetime"})
+
+        df_grouped = df_temp.groupby("group").agg({
+            "datetime": "first",
+            "season": "first",
+            "weekday_weekend": "first",
+            "temperature": "mean",
+            "observed": "mean",
+        }).set_index("datetime")
+
+        # create days column for number of days between current and previous index
+        df_grouped["days"] = df_grouped.index.to_series().diff().dt.days
+
+        df_grouped = df_grouped.dropna()
+
+        # create weights from days column
+        df_grouped["weights"] = df_grouped["days"] / df_grouped["days"].sum()
+
+        df_grouped = df_grouped.drop(columns=["days"])
+
+        if self._df is None:
+            return None
+        else:
+            return df_grouped.copy()
+
 
 class BillingBaselineData(_BillingData):
     """

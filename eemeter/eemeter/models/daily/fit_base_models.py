@@ -25,10 +25,11 @@ from eemeter.eemeter.models.daily.base_models.hdd_tidd_cdd import fit_hdd_tidd_c
 from eemeter.eemeter.models.daily.base_models.tidd import fit_tidd
 from eemeter.eemeter.models.daily.optimize_results import OptimizedResult
 from eemeter.eemeter.models.daily.parameters import ModelCoefficients
-from eemeter.eemeter.models.daily.utilities.config import FullModelSelection
+from eemeter.eemeter.models.daily.utilities.settings import FullModelSelection
+from eemeter.eemeter.models.daily.utilities.opt_settings import OptimizationSettings
 
 
-def _get_opt_options(settings):
+def _get_opt_settings(settings):
     """
     Returns a dictionary containing optimization options for the global and local optimization algorithms.
 
@@ -36,24 +37,16 @@ def _get_opt_options(settings):
         settings: A DailySettings object containing the settings for the optimization algorithm.
 
     Returns:
-        A dictionary containing the optimization options for the global and local optimization algorithms.
+        A dictionary containing the optimization options for the optimization algorithm.
     """
 
-    # TODO: opt_options can be removed in place of settings in the future
-    opt_options = {
-        "global": {
-            "algorithm": settings.algorithm_choice,
-            "stop_criteria_type": "Iteration Maximum",
-            "stop_criteria_val": 2000,
-            "initial_step": settings.initial_step_percentage,
-            "xtol_rel": 1e-5,
-            "ftol_rel": 1e-5,
-            "initial_pop_multiplier": 2,
-        },
-        "local": {},
+    opt_dict = {
+        "ALGORITHM": settings.algorithm_choice,
+        "INITIAL_STEP": settings.initial_step_percentage,
     }
+    opt_settings = OptimizationSettings(**opt_dict)
 
-    return opt_options
+    return opt_settings
 
 
 def fit_initial_models_from_full_model(df_meter, settings, print_res=False):
@@ -72,17 +65,22 @@ def fit_initial_models_from_full_model(df_meter, settings, print_res=False):
     T = df_meter["temperature"].values
     obs = df_meter["observed"].values
 
-    opt_options = _get_opt_options(settings)
-    fit_input = [T, obs, settings, opt_options]
+    if "weights" in df_meter.columns:
+        weights = df_meter["weights"].values
+    else:
+        weights = None
+
+    opt_settings = _get_opt_settings(settings)
+    fit_input = [T, obs, weights, settings, opt_settings]
 
     # initial fitting of the most complicated model allowed
     if settings.full_model == FullModelSelection.HDD_TIDD_CDD:
         model_res = fit_hdd_tidd_cdd(
-            *fit_input, smooth=settings.smoothed_model, initial_fit=True
+            *fit_input, smooth=settings.allow_smooth_model, initial_fit=True
         )
     elif settings.full_model == FullModelSelection.C_HDD_TIDD:
         model_res = fit_c_hdd_tidd(
-            *fit_input, smooth=settings.smoothed_model, initial_fit=True
+            *fit_input, smooth=settings.allow_smooth_model, initial_fit=True
         )
     elif settings.full_model == FullModelSelection.TIDD:
         model_res = fit_tidd(*fit_input, initial_fit=True)
@@ -161,8 +159,13 @@ def fit_final_model(df_meter, HoF: OptimizedResult, settings, print_res=False):
     T = df_meter["temperature"].values
     obs = df_meter["observed"].values
 
-    opt_options = _get_opt_options(settings)
-    fit_input = [T, obs, settings, opt_options]
+    if "weights" in df_meter.columns:
+        weights = df_meter["weights"].values
+    else:
+        weights = None
+
+    opt_settings = _get_opt_settings(settings)
+    fit_input = [T, obs, weights, settings, opt_settings]
 
     x0 = HoF.x
     bnds = get_bnds(x0, settings.final_bounds_scalar)

@@ -45,9 +45,9 @@ from eemeter.eemeter.models.daily.parameters import (
     DailySubmodelParameters,
 )
 from eemeter.eemeter.models.daily.utilities.base_model import get_smooth_coeffs
-from eemeter.eemeter.models.daily.utilities.config import (
-    caltrack_legacy_settings,
-    default_settings,
+from eemeter.eemeter.models.daily.utilities.settings import (
+    DailySettings,
+    DailyLegacySettings,
     update_daily_settings,
 )
 from eemeter.eemeter.models.daily.utilities.ellipsoid_test import ellipsoid_split_filter
@@ -76,6 +76,10 @@ class DailyModel:
         id (str): The index of the meter data.
     """
 
+    _baseline_data_type = DailyBaselineData
+    _reporting_data_type = DailyReportingData
+    _data_df_name = "df"
+
     def __init__(
         self,
         model: str = "current",
@@ -90,20 +94,7 @@ class DailyModel:
         """
 
         # Initialize settings
-        # Note: Model designates the base settings, it can be 'current' or 'legacy'
-        #       Settings is to be a dictionary of settings to be changed
-
-        if settings is None:
-            settings = {}
-
-        if model.replace(" ", "").replace("_", ".").lower() in ["current", "default"]:
-            self.settings = default_settings(**settings)
-        elif model.replace(" ", "").replace("_", ".").lower() in ["legacy"]:
-            self.settings = caltrack_legacy_settings(**settings)
-        else:
-            raise Exception(
-                "Invalid 'settings' choice: must be 'current', 'default', or 'legacy'"
-            )
+        self._initialize_settings(model, settings)
 
         # Initialize seasons and weekday/weekend
         self.seasonal_options = [
@@ -115,14 +106,16 @@ class DailyModel:
         ]
         self.day_options = [["wd", "we"]]
 
-        n_week = list(range(len(self.settings.is_weekday)))
+        # make dictionary is_weekday from settings
+        day_dict = self.settings.weekday_weekend._num_dict
+        n_week = list(range(len(day_dict)))
         self.combo_dictionary = {
             "su": "summer",
             "sh": "shoulder",
             "wi": "winter",
             "fw": [n + 1 for n in n_week],
-            "wd": [n + 1 for n in n_week if self.settings.is_weekday[n + 1]],
-            "we": [n + 1 for n in n_week if not self.settings.is_weekday[n + 1]],
+            "wd": [n + 1 for n in n_week if day_dict[n+1] == "weekday"],
+            "we": [n + 1 for n in n_week if day_dict[n+1] == "weekend"],
         }
         self.verbose = verbose
 
@@ -134,8 +127,31 @@ class DailyModel:
             "PNRMSE": np.nan,
         }
 
+    def _initialize_settings(
+        self,
+        model: str = "current",
+        settings: dict | None = None
+    ) -> None:
+
+        # Note: Model designates the base settings, it can be 'current' or 'legacy'
+        #       Settings is to be a dictionary of settings to be changed
+
+        if settings is None:
+            settings = {}
+
+        if model.replace(" ", "").replace("_", ".").lower() in ["current", "default"]:
+            self.settings = DailySettings(**settings)
+        elif model.replace(" ", "").replace("_", ".").lower() in ["legacy"]:
+            self.settings = DailyLegacySettings(**settings)
+        else:
+            raise Exception(
+                "Invalid 'settings' choice: must be 'current', 'default', or 'legacy'"
+            )
+
     def fit(
-        self, baseline_data: DailyBaselineData, ignore_disqualification: bool = False
+        self, 
+        baseline_data: DailyBaselineData, 
+        ignore_disqualification: bool = False
     ) -> DailyModel:
         """Fit the model using baseline data.
 
@@ -150,15 +166,16 @@ class DailyModel:
             TypeError: If baseline_data is not a DailyBaselineData object.
             DataSufficiencyError: If the model can't be fit on disqualified baseline data.
         """
-        if not isinstance(baseline_data, DailyBaselineData):
-            raise TypeError("baseline_data must be a DailyBaselineData object")
+        if not isinstance(baseline_data, self._baseline_data_type):
+            raise TypeError(f"baseline_data must be a {self._baseline_data_type.__name__} object")
         baseline_data.log_warnings()
         if baseline_data.disqualification and not ignore_disqualification:
             raise DataSufficiencyError("Can't fit model on disqualified baseline data")
         self.baseline_timezone = baseline_data.tz
         self.warnings = baseline_data.warnings
         self.disqualification = baseline_data.disqualification
-        self._fit(baseline_data.df)
+        df = getattr(baseline_data, self._data_df_name)
+        self._fit(df)
         if self.error["CVRMSE"] > self.settings.cvrmse_threshold:
             cvrmse_warning = EEMeterWarning(
                 qualified_name="eemeter.model_fit_metrics.cvrmse",
@@ -204,7 +221,7 @@ class DailyModel:
 
     def predict(
         self,
-        reporting_data: Union[DailyBaselineData, DailyReportingData],
+        reporting_data: DailyBaselineData | DailyReportingData,
         ignore_disqualification=False,
     ) -> pd.DataFrame:
         """Predicts the energy consumption using the fitted model.
@@ -239,12 +256,15 @@ class DailyModel:
                 "Reporting data must use the same timezone that the model was initially fit on."
             )
 
-        if not isinstance(reporting_data, (DailyBaselineData, DailyReportingData)):
+        if not isinstance(reporting_data, (self._baseline_data_type, self._reporting_data_type)):
             raise TypeError(
-                "reporting_data must be a DailyBaselineData or DailyReportingData object"
+                f"reporting_data must be a {self._baseline_data_type.__name__} or {self._reporting_data_type.__name__} object"
             )
 
-        return self._predict(reporting_data.df)
+        df = getattr(reporting_data, self._data_df_name)
+        df_res = self._predict(df)
+
+        return df_res
 
     def _predict(self, df_eval, mask_observed_with_missing_temperature=True):
         """
@@ -405,7 +425,7 @@ class DailyModel:
 
     def plot(
         self,
-        df_eval: DailyBaselineData | DailyReportingData,
+        data: DailyBaselineData | DailyReportingData,
     ) -> None:
         """Plot a model fit with baseline or reporting data. Requires matplotlib to use.
 
@@ -419,7 +439,7 @@ class DailyModel:
 
         # TODO: pass more kwargs to plotting function
 
-        plot(self, self._predict(df_eval.df))
+        plot(self, self._predict(data.df))
 
     def _create_params_from_fit_model(self):
         submodels = {}
@@ -437,7 +457,7 @@ class DailyModel:
             )
         params = DailyModelParameters(
             submodels=submodels,
-            settings=self.settings.to_dict(),
+            settings=self.settings.model_dump(),
             info={
                 "error": self.error,
                 "baseline_timezone": str(self.baseline_timezone),
@@ -487,7 +507,7 @@ class DailyModel:
                 meter_data.drop([col], axis=1, inplace=True)
                 cols.remove(col)
 
-        meter_data["season"] = meter_data.index.month.map(self.settings.season)
+        meter_data["season"] = meter_data.index.month.map(self.settings.season._num_dict)
         meter_data["day_of_week"] = meter_data.index.dayofweek + 1
         meter_data = meter_data.sort_index()
         meter_data = meter_data[["season", "day_of_week", *cols]]
@@ -629,14 +649,14 @@ class DailyModel:
             """
 
             meter = self.df_meter
-            allow_sep_summer = settings.allow_separate_summer
-            allow_sep_shoulder = settings.allow_separate_shoulder
-            allow_sep_winter = settings.allow_separate_winter
-            allow_sep_weekday_weekend = settings.allow_separate_weekday_weekend
+            allow_sep_summer = settings.split_selection.allow_separate_summer
+            allow_sep_shoulder = settings.split_selection.allow_separate_shoulder
+            allow_sep_winter = settings.split_selection.allow_separate_winter
+            allow_sep_weekday_weekend = settings.split_selection.allow_separate_weekday_weekend
 
-            if settings.reduce_splits_by_gaussian:
+            if settings.split_selection.reduce_splits_by_gaussian:
                 allow_split = ellipsoid_split_filter(
-                    self.df_meter, n_std=settings.reduce_splits_num_std
+                    self.df_meter, n_std=settings.split_selection.reduce_splits_num_std
                 )
 
                 if allow_sep_summer and not allow_split["summer"]:
@@ -780,9 +800,10 @@ class DailyModel:
 
         if self.settings.alpha_final_type == "last":
             settings_update = {
-                "developer_mode": True,
-                "alpha_final_type": None,
-                "final_bounds_scalar": None,
+                "DEVELOPER_MODE": True,
+                "SILENT_DEVELOPER_MODE": True, 
+                "ALPHA_FINAL_TYPE": None,
+                "FINAL_BOUNDS_SCALAR": None,
             }
 
             self.component_settings = update_daily_settings(
@@ -828,9 +849,9 @@ class DailyModel:
 
         loss = wRMSE / self.wRMSE_base
 
-        criteria_type = self.settings.split_selection_criteria.lower()
-        penalty_multiplier = self.settings.split_selection_penalty_multiplier
-        penalty_power = self.settings.split_selection_penalty_power
+        criteria_type = self.settings.split_selection.criteria.lower()
+        penalty_multiplier = self.settings.split_selection.penalty_multiplier
+        penalty_power = self.settings.split_selection.penalty_power
 
         criteria = selection_criteria(
             loss, TSS, N, num_coeffs, criteria_type, penalty_multiplier, penalty_power
@@ -888,7 +909,11 @@ class DailyModel:
                 model[component] = prior_model
                 continue
 
-            settings_update = {"developer_mode": True, "regularization_alpha": 0.0}
+            settings_update = {
+                "DEVELOPER_MODE": True, 
+                "SILENT_DEVELOPER_MODE": True, 
+                "REGULARIZATION_ALPHA": 0.0
+            }
             settings = update_daily_settings(self.settings, settings_update)
 
             # separate meter appropriately

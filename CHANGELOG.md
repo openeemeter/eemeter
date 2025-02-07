@@ -4,7 +4,10 @@ Changelog
 Development
 -----------
 
-* Placeholder
+* Add GHI sufficiency check requiring 90% coverage for each month
+* Add weights propogation from data class to daily model via "weights" column
+* Converted daily model settings from attrs to pydantic
+* Refactored daily model initial guess optimization to use consolidated optimize function
 
 4.1.0
 -----
