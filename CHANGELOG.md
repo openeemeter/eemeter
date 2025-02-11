@@ -4,6 +4,11 @@ Changelog
 Development
 -----------
 
+* Placeholder
+
+4.1.1
+-----
+
 * Add GHI sufficiency check requiring 90% coverage for each month
 * Add weights propogation from data class to daily model via "weights" column
 * Converted daily model settings from attrs to pydantic
