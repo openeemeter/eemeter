@@ -11,10 +11,8 @@ Guidelines
 * Contributions are reviewed by a maintainer before acceptance. To facilitate
   review, please make a [pull request](https://github.com/opendsm/opendsm/pulls/new)
   and provide a description and follow the checklist in the pull request template.
-  Contributions without passing tests or with incomplete checklists will not
-  be accepted. Tests will be automatically run using Travis CI after a pull
-  request is created.
-* Prefix new feature branches with `feature/` and bug fix branches with `fix`
+  Tests will be automatically run using GitHub Actions after a pull request is created.
+* Prefix new feature branches with `feature/` and bug fix branches with `fix/`
   and make pull requests directly against `master`.
 * Contributions that add new required dependencies to the library will be
   given a more thorough review to ensure that those dependency additions
@@ -56,8 +54,6 @@ docker-compose run --rm test -k compute              # filter for tests with `co
 ```
 
 Test configuration can be found in `tox.ini`, `pytest.ini`, and `tests/conftest.py`.
-
-Travis CI configuration can be found in `.travis.yml`.
 
 When writing tests using py.test fixtures, place fixtures as close as possible
 to the test functions or classes that call them.
@@ -163,45 +159,22 @@ Release process
 
 Pre-release
 
-1. create branch off of master named `feature/<examplefeature>` or `bugfix/<>` and make desired changes.
+1. create branch off of master named `feature/<examplefeature>` or `fix/<>` and make desired changes.
 2. edit CHANGELOG.md with changes under a new section called `Development`
 3. create, review, and merge PR for feature/examplefeature
 4. repeat steps 1-3 if desired for other features as convenient, though preference is for frequent version bumps
 
 Releasing
 
-5. make a new branch called release/vX.X.X
-6. bump version - edit `__version__.py` with the new version
-7. Rename `Development` section with the new version in CHANGELOG.md
-8. commit changes
-9. create a tag called vX.X.X on release/vX.X.X branch
-10. push tag and branch
-11. submit to pypi with `pipenv run python setup.py upload` (must have proper credentials)
-12. merge release branch to master
+5. bump version - edit `__version__.py` with the new version
+6. Rename `Development` section with the new version in CHANGELOG.md
+7. commit changes
+8. push branch and create PR
+9. merge release branch to master after tests pass and an approved review
+10. create GitHub release describing changes, creating tag `vX.Y.Z` to match new `__version__.py`
+11. approve the resulting pypi-publish action
 
-Release command cheatsheet
-
-```
-git checkout master
-git pull
-git checkout -b release/vX.X.X
-
-# then bump versions
-vim opendsm/__version__.py
-vim CHANGELOG.md
-git commit -sam "Bump version"
-
-git tag vX.X.X
-git push -u origin release/vX.X.X --tags
-docker-compose run --rm pipenv run python setup.py upload
-git checkout master
-git pull
-git merge release/vX.X.X
-git push
-```
-
-Or, you can use the `bump_verion.sh` to print out versions of these commands
-that are populated with the appropriate version number.
+You can use `bump_version.sh` to print out commands that rotate the changelog and bump the package version:
 
 ```
 ./bump_version.sh X.X.X Y.Y.Y
