@@ -1,4 +1,4 @@
-::: eemeter.eemeter.models.billing
+::: opendsm.eemeter.models.billing
     options:
       members:
       - BillingModel
