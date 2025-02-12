@@ -66,7 +66,7 @@ General Discussion
 ------------------
 
 Discussions for this project take place on the
-[opendsm-discussion@lists.lfenergy.org](https://lists.lfenergy.org/g/opendsm-discussion/)
+[opendsm@lists.lfenergy.org](https://lists.lfenergy.org/g/opendsm/)
 mailing list.
 
 License
