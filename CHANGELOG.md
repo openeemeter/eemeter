@@ -6,6 +6,11 @@ Development
 
 * Placeholder
 
+1.0.0
+-----
+
+* Initial OpenDSM release
+
 eemeter-4.1.1
 -----
 
