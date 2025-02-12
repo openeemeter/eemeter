@@ -1,4 +1,4 @@
-# Technical Charter (the "Charter") for OpenEEMeter, a Series of LF Projects, LLC
+# Technical Charter (the "Charter") for OpenDSM, a Series of LF Projects, LLC
 
 Adopted August 28, 2024
 
@@ -9,7 +9,7 @@ established as OpenDSM a Series of LF Projects, LLC (the “Project”).
 LF Projects, LLC (“LF Projects”) is a Delaware series limited liability company. 
 All Contributors to the Project must comply with the terms of this Charter. 
 
-1) Mission and Scope of the Project
+## 1) Mission and Scope of the Project
 -----------------------------------
 
 a) The mission of the Project is to develop an open source project with the
@@ -33,7 +33,7 @@ open source licenses supporting the mission, documentation, testing, integration
 the creation of other artifacts that aid the development, deployment, operation, or
 adoption of the open source software project.
 
-2) Techincal Steering Committee
+## 2) Technical Steering Committee
 -------------------------------
 
 a) The Technical Steering Committee (the "TSC") will be responsible for all
@@ -97,7 +97,7 @@ the Project, which may include:
 - x) coordinating any marketing, events, or communications regarding the Project with the
   LF Projects Manager or their designee.
 
-3) TSC Voting
+## 3) TSC Voting
 -------------
 
 a) While the Project aims to operate as a consensus-based community, if any TSC
@@ -117,7 +117,7 @@ d) In the event a vote cannot be resolved by the TSC, any voting member of the
 TSC may refer the matter to the Series Manager for assistance in reaching a
 resolution.
 
-4) Compliance with Policies
+## 4) Compliance with Policies
 ---------------------------
 
 a) This Charter is subject to the Series Agreement for the Project and the
@@ -153,7 +153,7 @@ private discussions may happen, the basis for decisions should be publicly
 documented and accessible. Any violations or potential violations of these 
 requirements should be reported immediately to the LF Projects Manager.
 
-5) Community Assets
+## 5) Community Assets
 -------------------
 
 a) LF Projects will hold title to all trade or service marks used by the
@@ -171,7 +171,7 @@ c) Under no circumstances will LF Projects be expected or required to undertake
 any action on behalf of the Project that is inconsistent with the tax-exempt
 status or purpose, as applicable, of LFP, Inc. or LF Projects, LLC.
 
-6) General Rules and Operations
+## 6) General Rules and Operations
 -------------------------------
 
 a) The Project will:
@@ -183,7 +183,7 @@ a) The Project will:
 - ii) respect the rights of all trademark owners, including any branding and
   trademark usage guidelines.
 
-7) Intellectual Property Policy
+## 7) Intellectual Property Policy
 -------------------------------
 
 a) Participants acknowledge that the copyright in all new contributions will be
@@ -226,7 +226,7 @@ d) Contributed files should contain license information, such as SPDX short
 form identifiers, indicating the open source license or licenses pertaining
 to the file.
 
-8) Amendments
+## 8) Amendments
 -------------
 
 This charter may be amended by a two-thirds vote of the entire TSC and is
