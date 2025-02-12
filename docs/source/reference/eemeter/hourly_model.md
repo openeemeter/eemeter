@@ -1,4 +1,4 @@
-::: eemeter.eemeter.models.hourly
+::: opendsm.eemeter.models.hourly
     options:
       show_submodules: true
       members:

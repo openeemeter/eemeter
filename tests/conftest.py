@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2024 OpenEEmeter contributors
+   Copyright 2014-2025 OpenDSM contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -22,12 +22,12 @@ import importlib.resources
 
 import pytest
 
-from eemeter.eemeter.samples import load_sample
+from opendsm.eemeter.samples import load_sample
 
 
 @pytest.fixture
 def sample_metadata():
-    with importlib.resources.files("eemeter.eemeter.samples").joinpath(
+    with importlib.resources.files("opendsm.eemeter.samples").joinpath(
         "metadata.json"
     ).open("rb") as f:
         metadata = json.loads(f.read().decode("utf-8"))

@@ -1,9 +1,9 @@
 ---
 name: Bug report
-about: A report of or request to fix an issue in the eemeter library
+about: A report of or request to fix an issue in the opendsm library
 ---
 
-A complete bug report will help eemeter contributors to reproduce the bug and provide
+A complete bug report will help opendsm contributors to reproduce the bug and provide
 insight into fixing.
 
 Bug reports must:
@@ -12,20 +12,20 @@ Bug reports must:
   format the code nicely by using GitHub Flavored Markdown:
 
     ```python
-    >>> import eemeter
+    >>> import opendsm
     >>> import pandas as pd
     >>> meter_data = pd.DataFrame({"start": ..., "value": ...})
-    >>> eemeter.get_baseline_data(meter_data)
+    >>> opendsm.get_baseline_data(meter_data)
     ...
     ```
 
-2. Include the full version string of eemeter, pandas, and their dependencies. You can
+2. Include the full version string of opendsm, pandas, and their dependencies. You can
   use the built-in function:
 
     ```python
-    >>> import eemeter
+    >>> import opendsm
     >>> import pandas as pd
-    >>> eemeter.get_version()
+    >>> opendsm.get_version()
     >>> pd.show_versions()
     ```
 3. Explain why the current behavior is wrong/not desired and what you expect instead.
@@ -35,7 +35,7 @@ Bug reports must:
 
 **Report installed package versions**
 ```
-eemeter==X.X.X
+opendsm==X.X.X
 pandas==X.X.X
 scipy==X.X.X
 numpy==X.X.X

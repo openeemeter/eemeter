@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2024 OpenEEmeter contributors
+   Copyright 2014-2025 OpenDSM contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -22,13 +22,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from eemeter.eemeter.models.hourly_caltrack.model import (
+from opendsm.eemeter.models.hourly_caltrack.model import (
     caltrack_hourly_fit_feature_processor,
     caltrack_hourly_prediction_feature_processor,
     fit_caltrack_hourly_model_segment,
     fit_caltrack_hourly_model,
 )
-from eemeter.eemeter.common.features import (
+from opendsm.eemeter.common.features import (
     compute_time_features,
 )
 

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2024 OpenEEmeter contributors
+   Copyright 2014-2025 OpenDSM contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -22,9 +22,9 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from eemeter.eemeter.models.daily.model import DailyModel
-from eemeter.eemeter.models.daily.data import DailyBaselineData
-from eemeter.eemeter.models.daily.optimize_results import OptimizedResult
+from opendsm.eemeter.models.daily.model import DailyModel
+from opendsm.eemeter.models.daily.data import DailyBaselineData
+from opendsm.eemeter.models.daily.optimize_results import OptimizedResult
 
 
 # Define the current directory

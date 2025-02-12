@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2024 OpenEEmeter contributors
+   Copyright 2014-2025 OpenDSM contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@
 """
 import json
 
-from eemeter.eemeter.samples import load_sample
-from eemeter.eemeter.common.transform import get_baseline_data, get_reporting_data
-from eemeter.eemeter import (
+from opendsm.eemeter.samples import load_sample
+from opendsm.eemeter.common.transform import get_baseline_data, get_reporting_data
+from opendsm.eemeter import (
     DailyBaselineData,
     DailyReportingData,
     DailyModel,

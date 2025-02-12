@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2024 OpenEEmeter contributors
+   Copyright 2014-2025 OpenDSM contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import pandas as pd
 import pytest
 import pytz
 
-from eemeter.eemeter.common.transform import (
+from opendsm.eemeter.common.transform import (
     as_freq,
     clean_caltrack_billing_data,
     downsample_and_clean_caltrack_daily_data,

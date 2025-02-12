@@ -1,28 +1,26 @@
-# Technical Charter (the "Charter") for OpenEEMeter, a Series of LF Projects, LLC
+# Technical Charter (the "Charter") for OpenDSM, a Series of LF Projects, LLC
 
-Adopted Apr 5, 2019
+Adopted August 28, 2024
 
 
-This charter (the "Charter") sets forth the responsibilities and procedures for
-technical contribution to, and oversight of, the OpenEEMeter, which has been
-established as OpenEEMeter a Series of LF Projects, LLC (the "Project").
-LF Projects, LLC ("LF Projects") is a Delaware series limited liability
-company. All Contributors to the Project must comply with the terms of this
-Charter.
+This charter (the “Charter”) sets forth the responsibilities and procedures for 
+technical contribution to, and oversight of, OpenDSM, which has been 
+established as OpenDSM a Series of LF Projects, LLC (the “Project”).  
+LF Projects, LLC (“LF Projects”) is a Delaware series limited liability company. 
+All Contributors to the Project must comply with the terms of this Charter. 
 
-1) Mission and Scope of the Project
+## 1) Mission and Scope of the Project
 -----------------------------------
 
 a) The mission of the Project is to develop an open source project with the
 following goals:
 
-- i) Build and maintain methods and an open source engine for quantifying the change in
-  energy consumption attributable to specific interventions at the utility meter to
-  enable the rapid diffusion of distributed energy resources;
-- ii) Maintain a production-ready project to define consistent transactional units
-  for distributed energy resources in markets and expand capabilities over
-  time;
-- iii) Ensure transparency and trust by providing open source code that enables
+- i) Build an open source library for predicting energy consumption of utility meters 
+  based on their historical usage and additional covariate data;
+- ii) Maintain a production-ready library to act as a measurement system for 
+  distributed energy resources that can be replicated by all parties in markets and 
+  expand capabilities over time;
+- iii) Ensure transparency and trust by providing open source code that enables 
   reliable validation and mutual accountability in energy markets;
 - iv) Provide reusable components with documented APIs and consistent security
   practices; and
@@ -35,93 +33,71 @@ open source licenses supporting the mission, documentation, testing, integration
 the creation of other artifacts that aid the development, deployment, operation, or
 adoption of the open source software project.
 
-2) Techincal Steering Committee
+## 2) Technical Steering Committee
 -------------------------------
 
 a) The Technical Steering Committee (the "TSC") will be responsible for all
 technical oversight of the open source Project.
 
-b) Composition
+b) The TSC voting members are initially the Project’s Committers. At the inception of 
+the project, the Committers of the Project will be as set forth within the 
+[MAINTAINERS](MAINTAINERS.md) file within the Project’s code repository. The TSC may 
+choose an alternative approach for determining the voting members of the TSC, and any 
+such alternative approach will be documented in the [MAINTAINERS](MAINTAINERS.md) file. 
+Any meetings of the Technical Steering Committee are intended to be open to the public, 
+and can be conducted electronically, via teleconference, or in person.
 
-- 1) "Startup Period": During the initial twelve (12) months after project
-  launch or for such time period as the TSC may otherwise approve, the TSC
-  voting members will be determined by the Project’s Committers at the time of
-  Project creation.
-- 2) "Steady State": After the Startup Period, there will be a nomination and
-  election period for electing Contributors or Committers to the TSC. The TSC
-  voting members will consist of elected Contributors or Committers chosen by
-  the Committers, as defined herein. The TSC will approve the process and
-  timing for nominations and elections held on an annual basis, and will decide
-  the long-term size of the TSC.
+c) TSC projects generally will involve Contributors and Committers. The TSC may adopt or 
+modify roles so long as the roles are documented in the CONTRIBUTING file. Unless 
+otherwise documented:
 
-c) At an appropriate time (e.g., after the first release), the TSC shall approve
-a transition plan to transition the TSC from the Startup Period to Steady
-State.
-
-d) The list of current TSC voting members shall be maintained with the
-[MAINTAINERS](MAINTAINERS.md) file within the Project’s code repository.  The
-TSC may choose an alternative approach for determining the voting members
-of the TSC, and any such alternative approach will be documented in the
-MAINTAINERS file.  Any meetings of the Technical Steering Committee are
-intended to be open to the public, and can be conducted electronically, via
-teleconference, or in person.
-
-e) TSC projects generally will involve Contributors and Committers. The TSC may
-adopt or modify roles so long as the roles are documented in the CONTRIBUTING
-file. Unless otherwise documented:
-
-- i) Contributors include anyone in the technical community that contributes code,
+- i) Contributors include anyone in the technical community that contributes code, 
   documentation, or other technical artifacts to the Project;
-- ii) Committers are Contributors to whom the Project has granted the privilege of
-  modifying ("committing") source code, documentation or other technical
-  artifacts directly in a Project repository; and ..
-- iii) A Contributor may become a Committer by a three-quarter majority of the
-  existing Committers. A Committer may be removed by a majority approval of
-  the other existing Committers.
+- ii) "Committers are Contributors to whom the Project has granted the privilege of 
+  modifying (“committing”) source code, documentation or other technical artifacts 
+  directly in a Project repository; and
+- iii) A Contributor may become a Committer by a three-quarter majority of the existing 
+  Committers. A Committer may be removed by a majority approval of the other existing 
+  Committers.
 
-f) Participation in the Project through becoming a Contributor and Committer is
-open to anyone so long as they abide by the terms of this Charter and abide by
-the Project's [Code of Conduct](CODE_OF_CONDUCT.md).
+d) Participation in the Project through becoming a Contributor and Committer is open to 
+anyone so long as they abide by the terms of this Charter.
 
-g) The TSC may (1) establish work flow procedures for the prioritization,
-submission, approval, and closure/archiving of projects, (2) set requirements
-for the promotion of Contributors to Committer status, as applicable, and
-(3) amend, adjust, refine and/or eliminate the roles of Contributors, and
-Committers, and create new roles, and publicly document any TSC roles, as
-it sees fit.
+e) The TSC may (1) establish work flow procedures for the prioritization, submission, 
+approval, and closure/archiving of projects, (2) set requirements for the promotion of 
+Contributors to Committer status, as applicable, and (3) amend, adjust, refine and/or 
+eliminate the roles of Contributors, and Committers, and create new roles, and publicly 
+document any TSC roles, as it sees fit.
 
-h) The TSC may elect a TSC Chair, who will preside over meetings of the TSC and
-will serve until their resignation or replacement by the TSC.  The TSC Chair,
-or any other TSC member so designated by the TSC, will serve as the primary
-communication contact between the Project and LF Energy as the Project's
-representative to the TAC.
+f) The TSC may elect a TSC Chair, who will preside over meetings of the TSC and will 
+serve until their resignation or replacement by the TSC.  The TSC Chair, or any other 
+TSC member so designated by the TSC, will serve as the primary communication contact 
+between the Project and LF Energy Foundation of The Linux Foundation.
 
-i) Responsibilities: The TSC will be responsible for all aspects of oversight
-relating to the Project, which may include:
+g) Responsibilities: The TSC will be responsible for all aspects of oversight relating to
+the Project, which may include:
 
-- i) coordinating the technical direction of the Project;
-- ii) approving project or system proposals (including, but not limited to,
-  incubation, deprecation, and changes to a sub-project’s scope);
+- i) Coordinating the technical direction of the Project;
+- ii) Approving project or system proposals (including, but not limited to, incubation, 
+  deprecation, and changes to a sub-project’s scope);
 - iii) organizing sub-projects and removing sub-projects;
-- iv) creating sub-committees or working groups to focus on cross-project
-  technical issues and requirements;
-- v) appointing representatives to work with other open source or open standards
+- iv) creating sub-committees or working groups to focus on cross-project technical 
+  issues and requirements;
+- v) appointing representatives to work with other open source or open standards 
   communities;
-- vi) coordinate with other LF Energy technical projects, including selecting a
-  representative to participate in the LF Energy Technical Advisory Council
-  (TAC);
-- vii) establishing community norms, workflows, issuing releases, and security issue
+- vi) coordinate with other LF Energy technical projects, including selecting a 
+  representative to participate in the LF Energy Technical Advisory Council (TAC);
+- vii) establishing community norms, workflows, issuing releases, and security issue 
   reporting policies;
-- viii) approving and implementing policies and processes for contributing (to be
-  published in the project repository) and coordinating with the Series Manager
-  to resolve matters or concerns that may arise as set forth in Section 7 of
-  this Charter;
-- ix) discussions, seeking consensus, and where necessary, voting on technical
-  matters relating to the code base that affect multiple projects; and
-- x) coordinating any marketing, events, or communications regarding the Project
-  with the LF Projects Manager or their designee.
+- viii) approving and implementing policies and processes for contributing (to be 
+  published in the project repository) and coordinating with the Series Manager to 
+  resolve matters or concerns that may arise as set forth in Section 7 of this Charter;
+- ix) discussions, seeking consensus, and where necessary, voting on technical matters 
+  relating to the code base that affect multiple projects; and
+- x) coordinating any marketing, events, or communications regarding the Project with the
+  LF Projects Manager or their designee.
 
-3) TSC Voting
+## 3) TSC Voting
 -------------
 
 a) While the Project aims to operate as a consensus-based community, if any TSC
@@ -132,17 +108,16 @@ b) Quorum for TSC meetings requires at least fifty percent of all voting members
 of the TSC to be present. The TSC may continue to meet if quorum is not met,
 but will be prevented from making any decisions at the meeting.
 
-c) Except as provided in Section 7.c. and 8.a, decisions by vote at a meeting
-require a majority vote of those in attendance, provided quorum is met.
+c) Except as provided in Section 7.c. and 8.a, decisions by vote at a meeting require a 
+majority vote of those in attendance, provided quorum is met. Decisions made by 
+electronic vote without a meeting require a majority vote of all voting members of the 
+TSC.
 
-d) Decisions made by electronic vote without a meeting require a majority vote of
-all voting members of the TSC.
-
-e) In the event a vote cannot be resolved by the TSC, any voting member of the
+d) In the event a vote cannot be resolved by the TSC, any voting member of the
 TSC may refer the matter to the Series Manager for assistance in reaching a
 resolution.
 
-4) Compliance with Policies
+## 4) Compliance with Policies
 ---------------------------
 
 a) This Charter is subject to the Series Agreement for the Project and the
@@ -154,7 +129,7 @@ limitation the policies listed at
 b) The TSC may adopt a code of conduct ("CoC") for the Project, which is
 subject to approval by the Series Manager.  Contributors to the Project will
 comply with the CoC or, in the event that a Project-specific CoC has not been
-approved, the LF Projects Code of Conduct listed at
+approved, the LF Projects [Code of Conduct](CODE_OF_CONDUCT.md) listed at
 [https://lfprojects.org/policies/](https://lfprojects.org/policies/).
 
 c) When amending or adopting any policy applicable to the Project, LF Projects
@@ -175,11 +150,10 @@ e) The Project will operate in a transparent, open, collaborative, and ethical
 manner at all times.  All official Project discussions, proposals, timelines,
 decisions, and status  should be made open and easily accessible to all; while
 private discussions may happen, the basis for decisions should be publicly
-documented and accessible.
+documented and accessible. Any violations or potential violations of these 
+requirements should be reported immediately to the LF Projects Manager.
 
-Any violations or potential violations of these requirements should be reported immediately to the LF Projects Manager.
-
-5) Community Assets
+## 5) Community Assets
 -------------------
 
 a) LF Projects will hold title to all trade or service marks used by the
@@ -197,7 +171,7 @@ c) Under no circumstances will LF Projects be expected or required to undertake
 any action on behalf of the Project that is inconsistent with the tax-exempt
 status or purpose, as applicable, of LFP, Inc. or LF Projects, LLC.
 
-6) General Rules and Operations
+## 6) General Rules and Operations
 -------------------------------
 
 a) The Project will:
@@ -209,7 +183,7 @@ a) The Project will:
 - ii) respect the rights of all trademark owners, including any branding and
   trademark usage guidelines.
 
-7) Intellectual Property Policy
+## 7) Intellectual Property Policy
 -------------------------------
 
 a) Participants acknowledge that the copyright in all new contributions will be
@@ -233,24 +207,26 @@ subject to the following:
 - iv) Documentation will be received and made available by the Project under
   the Creative Commons Attribution 4.0 International License (available at
   [http://creativecommons.org/licenses/by/4.0/](http://creativecommons.org/licenses/by/4.0/)).
-- v) The Project may seek to integrate and contribute back to other open
+- v) To the extent a contribution includes or consists of data sets, any rights in such 
+  data will be made available under the CDLA-Permissive 1.0 License.
+- vi) The Project may seek to integrate and contribute back to other open
   source projects ("Upstream Projects"). In such cases, the Project will
   conform to all license requirements of the Upstream Projects, including
   dependencies, leveraged by the Project.  Upstream Project code contributions
   will comply with the contribution process and license terms for the
   applicable Upstream Project.
 
-  - a) The TSC may approve the use of an alternative license or licenses for
-    inbound or outbound contributions on an exception basis. To request an
-    exception, please describe the contribution, the alternative open source
-    license(s), and the justification for using an alternative open source license
-    in the Project. License exceptions must be approved by a two-thirds vote of the entire TSC.
+c) The TSC may approve the use of an alternative license or licenses for inbound or 
+outbound contributions on an exception basis. To request an exception, please describe 
+the contribution, the alternative open source license(s), and the justification for using 
+an alternative open source license in the Project. License exceptions must be approved by 
+a two-thirds vote of the entire TSC.
 
-c) Contributed files should contain license information, such as SPDX short
+d) Contributed files should contain license information, such as SPDX short
 form identifiers, indicating the open source license or licenses pertaining
 to the file.
 
-8) Amendments
+## 8) Amendments
 -------------
 
 This charter may be amended by a two-thirds vote of the entire TSC and is

@@ -1,4 +1,4 @@
-::: eemeter.eemeter.models.daily
+::: opendsm.eemeter.models.daily
     options:
       show_submodules: true
       members:

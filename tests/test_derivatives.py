@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2024 OpenEEmeter contributors
+   Copyright 2014-2025 OpenDSM contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -21,26 +21,26 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from eemeter.eemeter.models.hourly_caltrack.design_matrices import (
+from opendsm.eemeter.models.hourly_caltrack.design_matrices import (
     create_caltrack_billing_design_matrix,
     create_caltrack_hourly_preliminary_design_matrix,
     create_caltrack_hourly_segmented_design_matrices,
 )
-from eemeter.eemeter.models.hourly_caltrack.model import fit_caltrack_hourly_model
-from eemeter.eemeter.models.hourly_caltrack.derivatives import (
+from opendsm.eemeter.models.hourly_caltrack.model import fit_caltrack_hourly_model
+from opendsm.eemeter.models.hourly_caltrack.derivatives import (
     metered_savings,
     modeled_savings,
 )
-from eemeter.eemeter.common.features import (
+from opendsm.eemeter.common.features import (
     estimate_hour_of_week_occupancy,
     fit_temperature_bins,
 )
-from eemeter.eemeter.models.hourly_caltrack.segmentation import segment_time_series
-from eemeter.eemeter.common.transform import get_baseline_data, get_reporting_data
-from eemeter.eemeter.models.daily.model import DailyModel
-from eemeter.eemeter.models.daily.data import DailyBaselineData, DailyReportingData
-from eemeter.eemeter.models.billing.model import BillingModel
-from eemeter.eemeter.models.billing.data import (
+from opendsm.eemeter.models.hourly_caltrack.segmentation import segment_time_series
+from opendsm.eemeter.common.transform import get_baseline_data, get_reporting_data
+from opendsm.eemeter.models.daily.model import DailyModel
+from opendsm.eemeter.models.daily.data import DailyBaselineData, DailyReportingData
+from opendsm.eemeter.models.billing.model import BillingModel
+from opendsm.eemeter.models.billing.data import (
     BillingBaselineData,
     BillingReportingData,
 )

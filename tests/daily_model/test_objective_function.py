@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2024 OpenEEmeter contributors
+   Copyright 2014-2025 OpenDSM contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -20,18 +20,18 @@
 import numpy as np
 import pytest
 
-from eemeter.eemeter.models.daily.objective_function import (
+from opendsm.eemeter.models.daily.objective_function import (
     get_idx,
     no_weights_obj_fcn,
     obj_fcn_decorator,
 )
 
-from eemeter.eemeter.models.daily.base_models.hdd_tidd_cdd import (
+from opendsm.eemeter.models.daily.base_models.hdd_tidd_cdd import (
     evaluate_hdd_tidd_cdd_smooth,
     _hdd_tidd_cdd_smooth_weight,
 )
 
-from eemeter.eemeter.models.daily.utilities.settings import DailySettings as Settings
+from opendsm.eemeter.models.daily.utilities.settings import DailySettings as Settings
 
 
 def test_get_idx():

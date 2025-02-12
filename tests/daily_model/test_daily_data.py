@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2024 OpenEEmeter contributors
+   Copyright 2014-2025 OpenDSM contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@
 """
 from datetime import datetime
 
-from eemeter.eemeter.common.transform import get_baseline_data
-from eemeter.eemeter.models.daily.data import DailyBaselineData, DailyReportingData
-from eemeter.eemeter.samples import load_sample
+from opendsm.eemeter.common.transform import get_baseline_data
+from opendsm.eemeter.models.daily.data import DailyBaselineData, DailyReportingData
+from opendsm.eemeter.samples import load_sample
 import numpy as np
 import pandas as pd
 from pandas import Timestamp, DatetimeIndex, DataFrame

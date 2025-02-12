@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2024 OpenEEmeter contributors
+   Copyright 2014-2025 OpenDSM contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
 
 """
 import numpy as np
-from eemeter.eemeter.models.daily.utilities.selection_criteria import (
+from opendsm.eemeter.models.daily.utilities.selection_criteria import (
     neg_log_likelihood,
     selection_criteria,
 )

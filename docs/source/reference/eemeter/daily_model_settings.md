@@ -1,4 +1,4 @@
-::: eemeter.eemeter.models.daily.utilities.config
+::: opendsm.eemeter.models.daily.utilities.settings
     options:
       filters:
       - "!^__repr"

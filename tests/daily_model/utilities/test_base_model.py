@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2024 OpenEEmeter contributors
+   Copyright 2014-2025 OpenDSM contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@ import numpy as np
 import pytest
 from scipy.stats import linregress, theilslopes
 
-from eemeter.eemeter.models.daily.utilities.settings import DailySettings
-from eemeter.eemeter.models.daily.utilities.base_model import (
+from opendsm.eemeter.models.daily.utilities.settings import DailySettings
+from opendsm.eemeter.models.daily.utilities.base_model import (
     get_slope,
     linear_fit,
     get_smooth_coeffs,

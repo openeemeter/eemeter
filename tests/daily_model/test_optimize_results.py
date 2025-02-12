@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2024 OpenEEmeter contributors
+   Copyright 2014-2025 OpenDSM contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 import pytest
 import numpy as np
 
-from eemeter.eemeter.models.daily.optimize_results import (
+from opendsm.eemeter.models.daily.optimize_results import (
     get_k,
     reduce_model,
     acf,
@@ -28,8 +28,8 @@ from eemeter.eemeter.models.daily.optimize_results import (
 )
 
 
-from eemeter.eemeter.models.daily.parameters import ModelCoefficients
-from eemeter.eemeter.models.daily.utilities.settings import DailySettings as Settings
+from opendsm.eemeter.models.daily.parameters import ModelCoefficients
+from opendsm.eemeter.models.daily.utilities.settings import DailySettings as Settings
 
 
 def test_get_k():

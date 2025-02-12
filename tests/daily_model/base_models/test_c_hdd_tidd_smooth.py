@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2024 OpenEEmeter contributors
+   Copyright 2014-2025 OpenDSM contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -18,11 +18,11 @@
 
 """
 import numpy as np
-from eemeter.eemeter.models.daily.parameters import ModelCoefficients
-from eemeter.eemeter.models.daily.parameters import ModelType
-from eemeter.eemeter.models.daily.utilities.settings import DailySettings as Settings
-from eemeter.eemeter.models.daily.base_models.c_hdd_tidd import fit_c_hdd_tidd
-from eemeter.eemeter.models.daily.fit_base_models import _get_opt_settings
+from opendsm.eemeter.models.daily.parameters import ModelCoefficients
+from opendsm.eemeter.models.daily.parameters import ModelType
+from opendsm.eemeter.models.daily.utilities.settings import DailySettings as Settings
+from opendsm.eemeter.models.daily.base_models.c_hdd_tidd import fit_c_hdd_tidd
+from opendsm.eemeter.models.daily.fit_base_models import _get_opt_settings
 
 
 def test_fit_c_hdd_tidd_smooth():

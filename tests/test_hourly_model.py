@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 
-   Copyright 2014-2024 OpenEEmeter contributors
+   Copyright 2014-2025 OpenDSM contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -19,20 +19,20 @@
 """
 from datetime import datetime
 
-from eemeter.eemeter import (
+from opendsm.eemeter import (
     HourlyBaselineData,
     HourlyReportingData,
     HourlyModel,
     HourlySolarSettings,
     HourlyNonSolarSettings,
 )
-from eemeter.eemeter.models.hourly.settings import BaseHourlySettings
-from eemeter.eemeter.common.exceptions import (
+from opendsm.eemeter.models.hourly.settings import BaseHourlySettings
+from opendsm.eemeter.common.exceptions import (
     DataSufficiencyError,
     DisqualifiedModelError,
 )
-from eemeter.eemeter.common.warnings import EEMeterWarning
-from eemeter.common.test_data import load_test_data
+from opendsm.eemeter.common.warnings import EEMeterWarning
+from opendsm.common.test_data import load_test_data
 import numpy as np
 import pandas as pd
 import pytest
