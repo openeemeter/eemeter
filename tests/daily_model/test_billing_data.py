@@ -17,11 +17,11 @@
    limitations under the License.
 
 """
-from eemeter.eemeter.models.billing.data import (
+from opendsm.eemeter.models.billing.data import (
     BillingBaselineData,
     BillingReportingData,
 )
-from eemeter.eemeter.samples import load_sample
+from opendsm.eemeter.samples import load_sample
 import numpy as np
 import pandas as pd
 from pandas import Timestamp, DatetimeIndex, DataFrame

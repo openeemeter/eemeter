@@ -20,7 +20,7 @@
 import pytest
 import numpy as np
 
-from eemeter.eemeter.models.daily.optimize_results import (
+from opendsm.eemeter.models.daily.optimize_results import (
     get_k,
     reduce_model,
     acf,
@@ -28,8 +28,8 @@ from eemeter.eemeter.models.daily.optimize_results import (
 )
 
 
-from eemeter.eemeter.models.daily.parameters import ModelCoefficients
-from eemeter.eemeter.models.daily.utilities.settings import DailySettings as Settings
+from opendsm.eemeter.models.daily.parameters import ModelCoefficients
+from opendsm.eemeter.models.daily.utilities.settings import DailySettings as Settings
 
 
 def test_get_k():

@@ -17,7 +17,7 @@
    limitations under the License.
 
 """
-from eemeter.eemeter.common.warnings import EEMeterWarning
+from opendsm.eemeter.common.warnings import EEMeterWarning
 
 
 def test_eemeter_warning():

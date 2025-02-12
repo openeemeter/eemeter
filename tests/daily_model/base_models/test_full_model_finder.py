@@ -18,7 +18,7 @@
 
 """
 import numpy as np
-from eemeter.eemeter.models.daily.base_models.full_model import full_model
+from opendsm.eemeter.models.daily.base_models.full_model import full_model
 
 
 def test_full_model_import():

@@ -19,7 +19,7 @@
 """
 import numpy as np
 
-from eemeter.common.adaptive_loss import (
+from opendsm.common.adaptive_loss import (
     remove_outliers,
     adaptive_weights,
     adaptive_loss_fcn,

@@ -25,7 +25,7 @@ import platform
 import pandas as pd
 import pytest
 
-from eemeter.eemeter.utilities.io import (
+from opendsm.eemeter.utilities.io import (
     meter_data_from_csv,
     meter_data_from_json,
     meter_data_to_csv,
@@ -40,7 +40,7 @@ def test_meter_data_from_csv(sample_metadata):
     meter_data_filename = meter_item["meter_data_filename"]
 
     fname = str(
-        importlib.resources.files("eemeter.eemeter.samples").joinpath(
+        importlib.resources.files("opendsm.eemeter.samples").joinpath(
             meter_data_filename
         )
     )
@@ -55,7 +55,7 @@ def test_meter_data_from_csv_gzipped(sample_metadata):
     meter_item = sample_metadata["il-electricity-cdd-hdd-daily"]
     meter_data_filename = meter_item["meter_data_filename"]
 
-    with importlib.resources.files("eemeter.eemeter.samples").joinpath(
+    with importlib.resources.files("opendsm.eemeter.samples").joinpath(
         meter_data_filename
     ).open("rb") as f:
         meter_data = meter_data_from_csv(f, gzipped=True)
@@ -68,7 +68,7 @@ def test_meter_data_from_csv_with_tz(sample_metadata):
     meter_item = sample_metadata["il-electricity-cdd-hdd-daily"]
     meter_data_filename = meter_item["meter_data_filename"]
 
-    with importlib.resources.files("eemeter.eemeter.samples").joinpath(
+    with importlib.resources.files("opendsm.eemeter.samples").joinpath(
         meter_data_filename
     ).open("rb") as f:
         meter_data = meter_data_from_csv(f, gzipped=True, tz="US/Eastern")
@@ -81,7 +81,7 @@ def test_meter_data_from_csv_hourly_freq(sample_metadata):
     meter_item = sample_metadata["il-electricity-cdd-hdd-daily"]
     meter_data_filename = meter_item["meter_data_filename"]
 
-    with importlib.resources.files("eemeter.eemeter.samples").joinpath(
+    with importlib.resources.files("opendsm.eemeter.samples").joinpath(
         meter_data_filename
     ).open("rb") as f:
         meter_data = meter_data_from_csv(f, gzipped=True, freq="hourly")
@@ -94,7 +94,7 @@ def test_meter_data_from_csv_daily_freq(sample_metadata):
     meter_item = sample_metadata["il-electricity-cdd-hdd-daily"]
     meter_data_filename = meter_item["meter_data_filename"]
 
-    with importlib.resources.files("eemeter.eemeter.samples").joinpath(
+    with importlib.resources.files("opendsm.eemeter.samples").joinpath(
         meter_data_filename
     ).open("rb") as f:
         meter_data = meter_data_from_csv(f, gzipped=True, freq="daily")
@@ -212,7 +212,7 @@ def test_temperature_data_from_csv(sample_metadata):
     temperature_filename = meter_item["temperature_filename"]
 
     fname = str(
-        importlib.resources.files("eemeter.eemeter.samples").joinpath(
+        importlib.resources.files("opendsm.eemeter.samples").joinpath(
             temperature_filename
         )
     )
@@ -227,7 +227,7 @@ def test_temperature_data_from_csv_gzipped(sample_metadata):
     meter_item = sample_metadata["il-electricity-cdd-hdd-daily"]
     temperature_filename = meter_item["temperature_filename"]
 
-    with importlib.resources.files("eemeter.eemeter.samples").joinpath(
+    with importlib.resources.files("opendsm.eemeter.samples").joinpath(
         temperature_filename
     ).open("rb") as f:
         temperature_data = temperature_data_from_csv(f, gzipped=True)
@@ -240,7 +240,7 @@ def test_temperature_data_from_csv_with_tz(sample_metadata):
     meter_item = sample_metadata["il-electricity-cdd-hdd-daily"]
     temperature_filename = meter_item["temperature_filename"]
 
-    with importlib.resources.files("eemeter.eemeter.samples").joinpath(
+    with importlib.resources.files("opendsm.eemeter.samples").joinpath(
         temperature_filename
     ).open("rb") as f:
         temperature_data = temperature_data_from_csv(f, gzipped=True, tz="US/Eastern")
@@ -253,7 +253,7 @@ def test_temperature_data_from_csv_hourly_freq(sample_metadata):
     meter_item = sample_metadata["il-electricity-cdd-hdd-daily"]
     temperature_filename = meter_item["temperature_filename"]
 
-    with importlib.resources.files("eemeter.eemeter.samples").joinpath(
+    with importlib.resources.files("opendsm.eemeter.samples").joinpath(
         temperature_filename
     ).open("rb") as f:
         temperature_data = temperature_data_from_csv(f, gzipped=True, freq="hourly")

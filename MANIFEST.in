@@ -1,3 +1,3 @@
-include README.rst LICENSE pytest.ini
-include eemeter/eemeter/samples/*.json eemeter/eemeter/samples/*.csv.gz
+include README.md LICENSE pytest.ini
+include opendsm/eemeter/samples/*.json opendsm/eemeter/samples/*.csv.gz
 recursive-include tests *.py

@@ -18,7 +18,7 @@
 
 """
 import numpy as np
-from eemeter.eemeter.models.daily.utilities.selection_criteria import (
+from opendsm.eemeter.models.daily.utilities.selection_criteria import (
     neg_log_likelihood,
     selection_criteria,
 )

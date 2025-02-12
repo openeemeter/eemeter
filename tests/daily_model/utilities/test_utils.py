@@ -21,7 +21,7 @@ import numpy as np
 import numba
 import pytest
 
-from eemeter.common.utils import (
+from opendsm.common.utils import (
     np_clip,
     OoM,
     RoundToSigFigs,

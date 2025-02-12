@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from eemeter.eemeter.models.hourly_caltrack.segmentation import (
+from opendsm.eemeter.models.hourly_caltrack.segmentation import (
     CalTRACKSegmentModel,
     SegmentedModel,
     segment_time_series,

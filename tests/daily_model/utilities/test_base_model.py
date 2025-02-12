@@ -22,8 +22,8 @@ import numpy as np
 import pytest
 from scipy.stats import linregress, theilslopes
 
-from eemeter.eemeter.models.daily.utilities.settings import DailySettings
-from eemeter.eemeter.models.daily.utilities.base_model import (
+from opendsm.eemeter.models.daily.utilities.settings import DailySettings
+from opendsm.eemeter.models.daily.utilities.base_model import (
     get_slope,
     linear_fit,
     get_smooth_coeffs,

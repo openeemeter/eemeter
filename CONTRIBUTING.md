@@ -9,7 +9,7 @@ Guidelines
 * Commit messages should start with a capital letter ("Updated models", not "updated models").
 * Write new tests and run old tests! Make sure that % test coverage does not decrease.
 * Contributions are reviewed by a maintainer before acceptance. To facilitate
-  review, please make a [pull request](https://github.com/openeemeter/eemeter/pulls/new)
+  review, please make a [pull request](https://github.com/opendsm/opendsm/pulls/new)
   and provide a description and follow the checklist in the pull request template.
   Contributions without passing tests or with incomplete checklists will not
   be accepted. Tests will be automatically run using Travis CI after a pull
@@ -66,7 +66,7 @@ General Discussion
 ------------------
 
 Discussions for this project take place on the
-[openeemeter@lists.lfenergy.org](https://lists.lfenergy.org/g/openeemeter/)
+[opendsm-discussion@lists.lfenergy.org](https://lists.lfenergy.org/g/opendsm-discussion/)
 mailing list.
 
 License
@@ -79,7 +79,7 @@ All source files must apply the following SPDX header:
 ``` python
 """
 
-   Copyright 2014-2024 OpenEEmeter contributors
+   Copyright 2014-2025 OpenDSM contributors
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -187,7 +187,7 @@ git pull
 git checkout -b release/vX.X.X
 
 # then bump versions
-vim eemeter/__version__.py
+vim opendsm/__version__.py
 vim CHANGELOG.md
 git commit -sam "Bump version"
 

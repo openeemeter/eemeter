@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/eemeter
+      url: https://pypi.org/p/opendsm
     permissions:
       id-token: write
     steps:

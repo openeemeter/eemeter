@@ -29,7 +29,7 @@ from shutil import rmtree
 
 from setuptools import find_packages, setup, Command
 
-NAME = "eemeter"
+NAME = "opendsm"
 REQUIRED = [
     "click",
     "pandas>=1.1.0",
@@ -52,7 +52,7 @@ REQUIRED = [
 here = os.path.abspath(os.path.dirname(__file__))
 
 # Import the README and use it as the long-description.
-with io.open(os.path.join(here, "README.rst"), encoding="utf-8") as f:
+with io.open(os.path.join(here, "README.md"), encoding="utf-8") as f:
     long_description = "\n" + f.read()
 
 # Load the package's __version__.py module as a dictionary.
@@ -104,7 +104,6 @@ setup(
     author_email=about["__author_email__"],
     url=about["__url__"],
     packages=find_packages(exclude=("tests",)),
-    entry_points={"console_scripts": ["eemeter=eemeter.eemeter.utilities.cli:cli"]},
     install_requires=REQUIRED,
     include_package_data=True,
     license=about["__license__"],

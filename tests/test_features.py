@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from eemeter.eemeter.common.features import (
+from opendsm.eemeter.common.features import (
     compute_occupancy_feature,
     compute_temperature_features,
     compute_temperature_bin_features,
@@ -32,7 +32,7 @@ from eemeter.eemeter.common.features import (
     fit_temperature_bins,
     merge_features,
 )
-from eemeter.eemeter.models.hourly_caltrack.segmentation import segment_time_series
+from opendsm.eemeter.models.hourly_caltrack.segmentation import segment_time_series
 
 
 def test_compute_temperature_features_no_freq_index(

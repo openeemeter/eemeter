@@ -20,18 +20,18 @@
 import numpy as np
 import pandas as pd
 import pytest
-from eemeter.eemeter.models.daily.parameters import ModelCoefficients
+from opendsm.eemeter.models.daily.parameters import ModelCoefficients
 
-from eemeter.eemeter.models.daily.utilities.settings import DailySettings as Settings
-from eemeter.eemeter.models.daily.parameters import ModelType
-from eemeter.eemeter.models.daily.fit_base_models import (
+from opendsm.eemeter.models.daily.utilities.settings import DailySettings as Settings
+from opendsm.eemeter.models.daily.parameters import ModelType
+from opendsm.eemeter.models.daily.fit_base_models import (
     fit_initial_models_from_full_model,
     fit_model,
     fit_final_model,
     _get_opt_settings,
 )
 
-from eemeter.eemeter.models.daily.optimize_results import OptimizedResult
+from opendsm.eemeter.models.daily.optimize_results import OptimizedResult
 
 
 @pytest.fixture

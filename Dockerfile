@@ -11,8 +11,8 @@ COPY Pipfile.lock Pipfile.lock
 RUN set -ex && pipenv install --system --deploy --dev
 ENV PYTHONPATH=/usr/local/bin:/app
 
-COPY setup.py README.rst /app/
-COPY eemeter/ /app/eemeter/
+COPY setup.py README.md /app/
+COPY opendsm/ /app/opendsm/
 RUN set -ex && pip install -e /app
 RUN set -ex && cd /usr/local/lib/ && python /app/setup.py develop
 

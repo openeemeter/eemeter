@@ -18,8 +18,8 @@
 
 """
 
-import eemeter
+import opendsm
 
 
 def test_version():
-    assert eemeter.__version__.startswith("4")
+    assert opendsm.__version__.startswith("1")

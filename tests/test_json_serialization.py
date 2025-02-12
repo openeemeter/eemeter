@@ -19,9 +19,9 @@
 """
 import json
 
-from eemeter.eemeter.samples import load_sample
-from eemeter.eemeter.common.transform import get_baseline_data, get_reporting_data
-from eemeter.eemeter import (
+from opendsm.eemeter.samples import load_sample
+from opendsm.eemeter.common.transform import get_baseline_data, get_reporting_data
+from opendsm.eemeter import (
     DailyBaselineData,
     DailyReportingData,
     DailyModel,

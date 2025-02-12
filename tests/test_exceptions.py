@@ -17,7 +17,7 @@
    limitations under the License.
 
 """
-from eemeter.eemeter.common.exceptions import (
+from opendsm.eemeter.common.exceptions import (
     EEMeterError,
     NoBaselineDataError,
     NoReportingDataError,

@@ -19,7 +19,7 @@
 """
 import pytest
 
-from eemeter.eemeter.models.daily.utilities.settings import (
+from opendsm.eemeter.models.daily.utilities.settings import (
     DailySettings,
 )
 

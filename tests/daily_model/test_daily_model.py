@@ -21,10 +21,10 @@ import pytest
 
 import numpy as np
 
-from eemeter.eemeter import DailyModel, DailyBaselineData, DailyReportingData
-from eemeter.eemeter.samples import load_sample
-from eemeter.eemeter.common.transform import get_baseline_data
-from eemeter.eemeter.common.exceptions import (
+from opendsm.eemeter import DailyModel, DailyBaselineData, DailyReportingData
+from opendsm.eemeter.samples import load_sample
+from opendsm.eemeter.common.transform import get_baseline_data
+from opendsm.eemeter.common.exceptions import (
     DataSufficiencyError,
     DisqualifiedModelError,
 )

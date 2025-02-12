@@ -19,9 +19,9 @@
 """
 from datetime import datetime
 
-from eemeter.eemeter.common.transform import get_baseline_data
-from eemeter.eemeter.models.daily.data import DailyBaselineData, DailyReportingData
-from eemeter.eemeter.samples import load_sample
+from opendsm.eemeter.common.transform import get_baseline_data
+from opendsm.eemeter.models.daily.data import DailyBaselineData, DailyReportingData
+from opendsm.eemeter.samples import load_sample
 import numpy as np
 import pandas as pd
 from pandas import Timestamp, DatetimeIndex, DataFrame

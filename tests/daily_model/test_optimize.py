@@ -19,17 +19,17 @@
 """
 import numpy as np
 import pytest
-from eemeter.eemeter.models.daily.optimize import obj_fcn_dec, Optimizer
+from opendsm.eemeter.models.daily.optimize import obj_fcn_dec, Optimizer
 
-from eemeter.eemeter.models.daily.objective_function import obj_fcn_decorator
+from opendsm.eemeter.models.daily.objective_function import obj_fcn_decorator
 
-from eemeter.eemeter.models.daily.base_models.hdd_tidd_cdd import (
+from opendsm.eemeter.models.daily.base_models.hdd_tidd_cdd import (
     evaluate_hdd_tidd_cdd_smooth,
     _hdd_tidd_cdd_smooth_weight,
 )
 
-from eemeter.eemeter.models.daily.fit_base_models import _get_opt_settings
-from eemeter.eemeter.models.daily.utilities.settings import DailySettings as Settings
+from opendsm.eemeter.models.daily.fit_base_models import _get_opt_settings
+from opendsm.eemeter.models.daily.utilities.settings import DailySettings as Settings
 
 
 def test_obj_fcn_dec():
