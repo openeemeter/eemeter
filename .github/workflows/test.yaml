@@ -14,7 +14,8 @@ on:
     - cron: "0 0 1 * *"
 
 jobs:
-  build:
+  test:
+    name: Run Tests
     strategy:
       fail-fast: false
       matrix:
