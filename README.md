@@ -159,7 +159,28 @@ cooling and heating regions such that the model would be able to change slope. T
 likely still be limited such that the model's slope in each region is appropriately
 constrained. A new smoothing function would also need to be developed.
 
-7. Greater weather coverage
+7. Integrate EEweather
+
+EEweather is commonly used to obtain weather information to be used within OpenDSM. If it 
+were more tightly coupled, it would streamline the most standard use of OpenDSM. As an 
+example this could simplify several of the data classes such that the aggregation of 
+weather data would be done within EEweather instead of within data classes where it is a
+more complex procedure
+
+8. Integrate GRIDmeter
+
+GRIDmeter is frequently used after DR/EEmeter in order to correct models for external
+population-level effects by using non-participant meters. Similarly to EEweather, this 
+process could be streamlines and made more cohesive by fully integrating it into OpenDSM. 
+
+9. Organize and revise existing test suite
+
+The existing testing suite is the last remaining vestige of the library prior to the 
+extensive reorganization and API changes made. It would be well served to update the
+testing suite to make it easier for future contributors to know how and where they 
+should develop their tests for any new features or bugs found.
+
+10. Greater weather coverage
 
 The weather station coverage in the EEweather package includes full coverage of US and
 Australia, but with some technical work, it could be expanded to include greater, or
