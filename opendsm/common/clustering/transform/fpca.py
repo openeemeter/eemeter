@@ -22,6 +22,7 @@ from sklearn.decomposition import PCA
 
 from opendsm.common.clustering import settings as _settings
 
+from opendsm.common.clustering.exceptions import ClusteringError
 from opendsm.common.clustering.transform.normalize import normalize
 from opendsm.common.clustering.transform.parallel_analysis import (
     _parallel_analysis_n_components,
@@ -134,7 +135,7 @@ def _fpca_transform_with_n(x: np.ndarray, y: np.ndarray, n: int) -> np.ndarray:
 # FPCA transform
 # ---------------------------------------------------------------------------
 
-class FpcaError(Exception):
+class FpcaError(ClusteringError):
     pass
 
 

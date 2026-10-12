@@ -30,8 +30,12 @@ from opendsm.common.clustering.algorithms.dbscan import dbscan as _dbscan_cluste
 from opendsm.common.clustering.algorithms.hdbscan import hdbscan as _hdbscan_clustering
 from opendsm.common.clustering.algorithms.spectral import spectral as _spectral_clustering
 from opendsm.common.clustering.algorithms.spectral import spectral_divisive as _spectral_divisive_clustering
+from opendsm.common.clustering.exceptions import ClusteringError
 from opendsm.common.clustering.metrics.labels import ClusteringResult
-from opendsm.common.clustering.metrics.label_ops import remove_outliers_mad
+from opendsm.common.clustering.metrics.label_ops import (
+    prepare_labels,
+    remove_outliers_mad,
+)
 from opendsm.common.clustering.metrics.settings import SmallClusterMode
 
 
@@ -118,17 +122,69 @@ def _cluster_features(
     return cluster_fcn(data, settings)
 
 
+def _hold_minimum_after_removal(
+    data: np.ndarray,
+    labels: np.ndarray,
+    result: ClusteringResult,
+) -> np.ndarray:
+    """Prepare labels that outlier removal left with a cluster below ``min_cluster_size``
+    the way *result* prepared each candidate labeling.
+
+    Returns:
+        The labels unchanged when every cluster still meets the minimum, else the prepared
+        labels.
+
+    Raises:
+        ClusteringError: If the prepared labels fall below the lower bound on the cluster
+            count (one cluster, for algorithms without a cluster-count range).
+    """
+    _, counts = np.unique(labels[labels >= 0], return_counts=True)
+    if (counts >= result.min_cluster_size).all():
+        return labels
+
+    held, data_clean, _, _ = prepare_labels(
+        labels, data, result.score_settings, result.n_cluster_lower,
+        min_cluster_size=result.min_cluster_size,
+        small_cluster_mode=result.small_cluster_mode,
+    )
+    if data_clean is None:
+        n_held = len(np.unique(held[held >= 0]))
+        raise ClusteringError(
+            f"after outlier removal, {n_held} clusters of at least {result.min_cluster_size} "
+            f"samples remain, fewer than the lower bound on the cluster count"
+        )
+
+    return held
+
+
 def _run_pipeline(
     df: pd.DataFrame,
     settings: _settings.ClusteringSettings,
 ) -> tuple[ClusteringResult | None, np.ndarray]:
-    """Shared preprocessing pipeline. Returns (result, cluster_labels)."""
+    """Shared preprocessing pipeline. Returns (result, cluster_labels).
+
+    Raises:
+        ClusteringError: If the data cannot form the lower bound on the cluster count
+            with at least ``min_cluster_size`` samples in each cluster, before clustering or
+            after outlier removal.
+    """
     data = df.to_numpy(dtype=np.float32, na_value=np.nan)
+    n_samples = len(data)
 
     algo_settings = _k_range_algo_settings(settings)
     if algo_settings is not None:
-        if algo_settings.n_cluster.lower >= len(data):
-            return None, np.arange(len(data))
+        n_cluster_lower = algo_settings.n_cluster.lower
+        # with no minimum cluster size, every sample can stand as its own cluster
+        if settings.min_cluster_size == 1 and n_cluster_lower >= n_samples:
+            labels = np.arange(n_samples)
+
+            return None, labels
+
+        if n_samples < n_cluster_lower * settings.min_cluster_size:
+            raise ClusteringError(
+                f"{n_samples} samples cannot form {n_cluster_lower} clusters of at least "
+                f"{settings.min_cluster_size} samples each"
+            )
 
     transform_result = _transform.transform_features(data, settings)
     data = transform_result.data
@@ -148,6 +204,7 @@ def _run_pipeline(
             data, cluster_labels, settings._outlier_mad_threshold,
             small_cluster_mode=settings.small_cluster_mode,
         )
+        cluster_labels = _hold_minimum_after_removal(data, cluster_labels, result)
 
     if settings.cluster_sort.enable:
         cluster_remap_dict = _build_label_remap(cluster_labels, settings)

@@ -93,6 +93,21 @@ def cg_clustering_data(_comstock_hourly_all):
     return treatment_data, comparison_pool_data
 
 
+@pytest.fixture(scope="session")
+def cg_pool_of(_comstock_hourly_all):
+    """Factory: a comparison pool of the first ``n_meters`` meters after the treatment
+    meters of ``cg_clustering_data``."""
+    df_baseline, _ = _comstock_hourly_all
+    ids = sorted(df_baseline.index.get_level_values("id").unique())
+
+    def _pool(n_meters):
+        pool = _hour_loadshape_data(df_baseline, ids[8:8 + n_meters])
+
+        return pool
+
+    return _pool
+
+
 @pytest.fixture
 def col_name():
     return 'col1'
