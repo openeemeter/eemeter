@@ -19,7 +19,11 @@ from opendsm.eemeter import (
     HourlySolarSettings,
     HourlyNonSolarSettings,
 )
-from opendsm.eemeter.models.hourly.model import _fit_exp_growth_decay, _hourly_profiles
+from opendsm.eemeter.models.hourly.model import (
+    _fit_exp_growth_decay,
+    _get_dst_indices,
+    _hourly_profiles,
+)
 from opendsm.eemeter.models.hourly.settings import BaseHourlySettings
 from opendsm.eemeter.common.exceptions import (
     DataSufficiencyError,
@@ -650,6 +654,21 @@ class TestFitStatisticsFromIncludedDays:
             f"the week whose Sunday is the 23-hour day labeled it {dst_week}, "
             f"the following week labeled its Sunday {ordinary_week}"
         )
+
+
+def test_dst_days_are_found_by_row_count_not_by_missing_values():
+    """A missing value in the frame's first column does not make its day look 23 hours long."""
+    index = pd.date_range(
+        "2019-01-01", "2020-01-01", freq="h", tz="America/New_York", inclusive="left"
+    )
+    df = pd.DataFrame({"occupancy": 1.0, "observed": 1.0}, index=index)
+    df.loc["2019-07-17 15:00", "occupancy"] = np.nan
+    days = sorted(set(index.date))
+
+    interp, mean = _get_dst_indices(df)
+
+    assert [(days[i], hour) for i, hour in interp] == [(date(2019, 3, 10), 2)]
+    assert [(days[i], hour) for i, hour in mean] == [(date(2019, 11, 3), 1)]
 
 
 def test_hourly_profiles_fill_a_skipped_hour_from_its_neighbours():

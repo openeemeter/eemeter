@@ -185,10 +185,10 @@ def _get_dst_indices(df):
     in order to ensure exact 24 hour slots
     """
     # TODO test on baselines that begin/end on DST change
-    counts = df.groupby(df.index.date).count()
-    first_col = counts.columns[0]
-    interp = counts[counts[first_col] == 23]
-    mean = counts[counts[first_col] == 25]
+    # rows per day, so a missing value in any column never reads as a missing hour
+    counts = df.groupby(df.index.date).size()
+    interp = counts[counts == 23]
+    mean = counts[counts == 25]
 
     interp_idx = []
     for idx in interp.index:
