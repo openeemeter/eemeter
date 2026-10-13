@@ -269,9 +269,11 @@ def assert_all_hours_present(df):
 def baseline_with_supplemental_features(baseline):
     """Baseline data with custom supplemental features for testing"""
     baseline = baseline.copy()
-    np.random.seed(42)
-    baseline['custom_ts_feature'] = np.random.randn(len(baseline))
-    baseline['custom_cat_feature'] = np.random.choice(['A', 'B', 'C'], len(baseline))
+    rng = np.random.default_rng(42)
+    baseline["custom_ts_feature"] = rng.standard_normal(len(baseline))
+    # numeric codes: a categorical column reaches the design matrix uncast, so
+    # string labels raise on the float conversion
+    baseline["custom_cat_feature"] = rng.integers(0, 3, len(baseline))
 
     return baseline
 
