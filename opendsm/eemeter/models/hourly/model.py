@@ -963,8 +963,6 @@ class HourlyModel:
         return df
 
     def _supplemental_columns(self, df):
-        """Supplemental time-series and categorical columns named in the settings and present in
-        ``df``, as two lists."""
         settings = self.settings
         ts_cols = [c for c in settings.supplemental_time_series_columns or [] if c in df.columns]
         cat_cols = [c for c in settings.supplemental_categorical_columns or [] if c in df.columns]
@@ -1234,12 +1232,8 @@ class HourlyModel:
         return X, y, fit_mask
 
     def _supplemental_design_columns(self):
-        """Design-matrix columns of each supplemental input, keyed by its column name.
-
-        Returns:
-            Two dicts: each time series' 24 hourly columns, and each categorical input's single
-            day-level column (as a one-element array).
-        """
+        """Design-matrix column indices of each supplemental input, keyed by its name: 24 for
+        a time series, one for a categorical."""
         ts_columns = {}
         for col in self.settings.supplemental_time_series_columns or []:
             norm_col = f"{col}_norm"
@@ -1317,7 +1311,6 @@ class HourlyModel:
         elif self.settings.base_model == _settings.BaseModel.KERNEL_RIDGE:
             coef = self._model.dual_coef_
 
-        # calculate baseline metrics on measured hours
         df_measured = df_meter.loc[self._measured_hours(df_meter)]
 
         num_parameters = np.count_nonzero(coef)
