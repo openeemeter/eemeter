@@ -206,9 +206,8 @@ def test_model_correction_contiguous_labels_runs():
     ids=["noncontiguous_int", "float_labels"],
 )
 def test_model_correction_label_indexed_by_position(cg_label):
-    """Regression: cluster outputs and T_weight are indexed by enumeration
-    position, not label value, so non-contiguous integer labels and
-    float-valued labels both index correctly."""
+    """Cluster outputs and T_weight are indexed by enumeration position, not label
+    value, so non-contiguous integer labels and float-valued labels both index correctly."""
     mTrc, _, _ = model_correction(
         OTR, MTR, OCGR, MCGR,
         None, None, None, None, None,

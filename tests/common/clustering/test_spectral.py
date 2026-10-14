@@ -1474,16 +1474,11 @@ class TestSpectralDivisiveConfigurations:
     def test_well_separated_finds_k3(self, affinity, use_pic):
         """Well-separated 3-cluster data gives k=3 for all 6 configs.
 
-        Uses centers at multiples of 5 with std=1.0 (sep/std=5) and 50 points
-        per cluster. A much larger separation (sep/std=67, 30 points per
-        cluster) is not "well-separated" in any practical sense: inter-cluster
-        affinity underflows to 0 in float32 and the top Laplacian eigenvalues
-        collapse to a rotation-degenerate subspace, where different BLAS pick
-        different orthonormal bases and the score function reads them as
-        different winners (k=2 on Windows, k=3 on Linux, k=4 on macOS).
-        sep/std=5 + n=50 keeps the eigengap wide enough for stable
-        cross-platform agreement; n=30 alone is insufficient because the
-        score function in self_tuning + no_PIC becomes small-sample noisy.
+        Centers at multiples of 5 with std=1.0 (sep/std=5) and 50 points per cluster keep
+        the eigengap wide enough for every BLAS to agree on k. A far wider separation
+        underflows the inter-cluster affinity in float32, leaving each platform's
+        eigensolver to pick a different k; fewer points make the self_tuning, no-PIC
+        score small-sample noisy.
         """
         from opendsm.common.clustering.algorithms.spectral.spectral_divisive import spectral_divisive
         from opendsm.common.clustering.algorithms.settings import AffinityMatrixOptions
