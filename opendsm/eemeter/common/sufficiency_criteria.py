@@ -648,7 +648,7 @@ class BillingSufficiencyCriteria(SufficiencyCriteria):
 
         # self._check_n_days_boundary_gap("start")
         # self._check_n_days_boundary_gap("end")
-        # if self.median_granularity == "billing_monthly":
+        # if self.median_data_frequency == "billing_monthly":
         #     self._check_observed_data_billing_monthly()
         # else :
         #     self._check_observed_data_billing_bimonthly()
