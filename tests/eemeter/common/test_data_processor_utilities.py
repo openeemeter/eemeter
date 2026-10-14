@@ -25,8 +25,7 @@ from opendsm.eemeter.common.data_processor_utilities import (
 
 
 
-# day_counts / remove_duplicates / as_freq are exercised in test_transform.py;
-# compute_data_frequency has no direct coverage.
+# day_counts, remove_duplicates and as_freq are tested in test_transform.py.
 
 @pytest.mark.parametrize(
     "freq,periods,expected",

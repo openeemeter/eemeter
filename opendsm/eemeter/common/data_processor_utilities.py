@@ -383,19 +383,7 @@ def compute_data_frequency(index: pd.Series, default_data_frequency: Optional[st
     # Inferred frequency returns None if frequency can't be autodetected
     index.freq = index.inferred_freq
     if index.freq is None:
-        # max_difference = day_counts(index).max()
-        # min_difference = day_counts(index).min()
         median_difference = day_counts(index).median()
-        # if max_difference == 1 and min_difference == 1:
-        #     data_frequency = 'daily'
-        # elif max_difference < 1:
-        #     data_frequency = 'hourly'
-        # elif max_difference >= 60:
-        #     data_frequency = 'billing_bimonthly'
-        # elif max_difference >= 30:
-        #     data_frequency = 'billing_monthly'
-        # else:
-        #     data_frequency = default_data_frequency
 
         data_frequency_dict = {
             median_difference < 1: "hourly",
