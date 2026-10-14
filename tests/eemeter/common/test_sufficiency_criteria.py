@@ -509,9 +509,7 @@ def test_fresh_instances_have_independent_result_lists():
 
 
 # ---------------------------------------------------------------------------
-# reporting sufficiency auto-runs observed-facing checks when observed is
-# present (valid-days, unique-values), and still skips baseline day-length
-# and extreme-values on the reporting path regardless
+# reporting path: observed checks run when observed is present
 # ---------------------------------------------------------------------------
 
 _GRANULARITY_CLASSES = [
@@ -574,10 +572,7 @@ def _frame_long_with_extreme_observed(n_days=400):
 
 @pytest.mark.parametrize("cls, settings_cls", _GRANULARITY_CLASSES)
 def test_baseline_still_runs_day_length_and_extreme_values(cls, settings_cls):
-    """Sanity check: the frame below would fail baseline day-length and extreme-values.
-
-    Confirms the reporting-path skip asserted next is not a vacuous frame choice.
-    """
+    """Control: the reporting-path frame fails baseline day-length and extreme-values."""
     sc = cls(
         data=_frame_long_with_extreme_observed(),
         is_electricity_data=True,

@@ -1230,11 +1230,9 @@ def BaselineMetricsFromDict(input_dict: dict) -> BaselineMetrics:
     BaselineMetrics
         Constructed BaselineMetrics instance.
     """
-    # model_construct builds genuine instances without running the from-dataframe
-    # validators, so a deserialized model re-serializes through SerializeModel's
-    # isinstance validation. Computed fields are cached_property based; priming the
-    # instance __dict__ with the dumped values keeps them as data, since recomputing
-    # would need the excluded dataframe.
+    # model_construct gives genuine instances (SerializeModel validates by isinstance) without
+    # the from-dataframe validators; computed fields are primed from the dump, since
+    # recomputing them needs the dataframe
     def _construct(cls, data):
         fields = {k: v for k, v in data.items() if k in cls.model_fields}
         computed_names = cls.__pydantic_decorators__.computed_fields
