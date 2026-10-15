@@ -22,12 +22,15 @@ import pytest
 from opendsm.common.clustering.cluster import (
     _build_label_remap,
     _cluster_features,
+    _hold_minimum_after_removal,
     cluster_features,
 )
+from opendsm.common.clustering.exceptions import ClusteringError
 from opendsm.common.clustering.metrics.label_ops import (
     assign_small_clusters_outlier,
     assign_small_clusters_nearest,
 )
+from opendsm.common.clustering.metrics.labels import ClusteringResult
 from opendsm.common.clustering.settings import (
     ClusteringSettings,
     ClusterAlgorithms,
@@ -1346,6 +1349,103 @@ class TestClusterFeaturesDegenerateColumns:
         labels = cluster_features(two_block_df, self._k2_settings())
         assert len(labels) == len(two_block_df)
         assert np.all(np.isfinite(labels))
+
+
+# =============================================================================
+# Minimum cluster size, before clustering and after outlier removal
+# =============================================================================
+
+class TestMinimumClusterSize:
+    """min_cluster_size holds at every step that can leave a cluster short of it."""
+
+    @staticmethod
+    def _blocks(sizes, locs):
+        """Tight 24-feature blocks of the given sizes centred at the given locations,
+        labeled in order."""
+        rng = np.random.default_rng(0)
+        data = np.vstack([
+            rng.normal(loc=loc, scale=0.1, size=(n, 24)) for n, loc in zip(sizes, locs)
+        ])
+        labels = np.repeat(np.arange(len(sizes)), sizes)
+
+        return data, labels
+
+    @staticmethod
+    def _settings(min_cluster_size=15, lower=2):
+        settings = make_clustering_settings(
+            "kmedians",
+            min_cluster_size=min_cluster_size,
+            small_cluster_mode="outlier",
+            kmedians={"n_cluster": {"lower": lower, "upper": lower + 1}},
+        )
+
+        return settings
+
+    @staticmethod
+    def _sizes(labels):
+        _, counts = np.unique(labels[labels >= 0], return_counts=True)
+        sizes = sorted(counts.tolist())
+
+        return sizes
+
+    def test_lower_bound_at_or_above_n_is_refused_when_a_minimum_size_is_set(self):
+        """Once clusters have a minimum size above one, fewer samples than the lower bound
+        is refused: one-sample clusters would fall below it."""
+        df = pd.DataFrame(np.random.default_rng(0).normal(size=(2, 24)))
+
+        with pytest.raises(ClusteringError, match="2 samples cannot form 2 clusters"):
+            cluster_features(df, self._settings())
+
+    def test_too_few_samples_for_minimum_size_clusters_are_refused(self):
+        df = pd.DataFrame(np.random.default_rng(0).normal(size=(29, 24)))
+
+        with pytest.raises(
+            ClusteringError, match="29 samples cannot form 2 clusters of at least 15"
+        ):
+            cluster_features(df, self._settings())
+
+    @staticmethod
+    def _result(data, small_cluster_mode=SmallClusterMode.OUTLIER, lower=2):
+        result = ClusteringResult(
+            data=data,
+            n_cluster_lower=lower,
+            min_cluster_size=15,
+            small_cluster_mode=small_cluster_mode,
+        )
+
+        return result
+
+    def test_removal_that_leaves_a_cluster_below_the_minimum_relabels_it_as_outliers(self):
+        data, labels = self._blocks([20, 14, 18], [0.0, 3.0, 20.0])
+
+        held = _hold_minimum_after_removal(data, labels, self._result(data))
+
+        assert (held[20:34] == -1).all(), f"short cluster kept as {np.unique(held[20:34])}"
+        assert self._sizes(held) == [18, 20]
+
+    def test_removal_that_leaves_a_cluster_below_the_minimum_absorbs_it_into_the_nearest(self):
+        data, labels = self._blocks([20, 14, 18], [0.0, 3.0, 20.0])
+        result = self._result(data, small_cluster_mode=SmallClusterMode.ABSORB)
+
+        held = _hold_minimum_after_removal(data, labels, result)
+
+        assert (held[20:34] == held[0]).all(), "short cluster not absorbed by the nearest block"
+        assert self._sizes(held) == [18, 34]
+
+    def test_removal_that_leaves_every_cluster_at_the_minimum_leaves_labels_unchanged(self):
+        data, labels = self._blocks([20, 16, 18], [0.0, 3.0, 20.0])
+
+        held = _hold_minimum_after_removal(data, labels, self._result(data))
+
+        np.testing.assert_array_equal(held, labels)
+
+    def test_removal_that_leaves_too_few_clusters_is_refused(self):
+        data, labels = self._blocks([20, 14], [0.0, 20.0])
+
+        with pytest.raises(
+            ClusteringError, match="1 clusters of at least 15 samples remain"
+        ):
+            _hold_minimum_after_removal(data, labels, self._result(data))
 
 
 if __name__ == '__main__':

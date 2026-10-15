@@ -21,6 +21,7 @@ import pydantic
 from scipy.spatial.distance import pdist, squareform
 
 from opendsm.common.pydantic_utils import ArbitraryPydanticModel
+from opendsm.common.clustering.exceptions import ClusteringError
 from opendsm.common.clustering.metrics.single_k_metrics import SingleKMetrics
 from opendsm.common.clustering.metrics.label_ops import prepare_labels
 from opendsm.common.clustering.metrics import cross_k_metrics as _cross_k
@@ -371,7 +372,7 @@ class ClusteringResult(LabelStore):
                 raise ValueError("No labels have been added")
 
             lower = self.n_cluster_lower
-            raise ValueError(
+            raise ClusteringError(
                 f"No clustering met the cluster-count constraints "
                 f"(n_cluster_lower={lower}): every candidate labeling was "
                 f"rejected — each collapsed below the lower bound or exceeded "

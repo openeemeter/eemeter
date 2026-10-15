@@ -17,6 +17,7 @@ from __future__ import annotations
 import numpy as np
 
 from opendsm.common.clustering.algorithms import sklearn_bisect_k_means as _bisect_k_means
+from opendsm.common.clustering.exceptions import ClusteringError
 from opendsm.common.clustering.metrics.labels import ClusteringResult
 
 
@@ -35,9 +36,9 @@ def bisect_k_means(data, settings):
 
     n_samples = data.shape[0]
     min_required_samples = n_cluster_lower * min_cluster_size
-    if n_samples <= min_required_samples:
-        raise ValueError(
-            f"Insufficient samples for clustering: need more than {min_required_samples} samples "
+    if n_samples < min_required_samples:
+        raise ClusteringError(
+            f"Insufficient samples for clustering: need at least {min_required_samples} samples "
             f"(n_cluster_lower={n_cluster_lower} * min_cluster_size={min_cluster_size}), "
             f"but only have {n_samples} samples"
         )
