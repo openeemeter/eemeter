@@ -15,6 +15,7 @@
 import numpy as np
 import pytest
 
+from opendsm.common.clustering import ClusteringError
 from opendsm.comparison_groups.cg_clustering.create_comparison_groups import CG_Clustering
 from opendsm.comparison_groups.cg_clustering.settings import CG_Clustering_Settings
 
@@ -29,6 +30,31 @@ def test_get_labels_assigns_every_pool_meter(cg_clustering_data):
     assert clusters["cluster"].notna().all()
     # at least one real (non-outlier) cluster is found
     assert (clusters["cluster"] >= 0).any()
+
+
+@pytest.mark.parametrize("n_meters", [1, 2, 3, 29, 30])
+def test_get_labels_refuses_a_pool_too_small_for_two_minimum_size_clusters(cg_pool_of, n_meters):
+    """A pool that cannot hold two clusters of min_cluster_size meters is refused, the one-
+    and two-meter pools included."""
+    pool = cg_pool_of(n_meters)
+
+    with pytest.raises(ClusteringError, match=f"Comparison pool of {n_meters} meters"):
+        CG_Clustering(CG_Clustering_Settings()).get_labels(pool)
+
+
+@pytest.mark.parametrize("seed", [42, 7, 123])
+def test_every_cluster_holds_min_cluster_size(cg_clustering_data, seed):
+    """No cluster in the output is smaller than min_cluster_size, including after the
+    post-selection outlier removal takes meters out of a cluster."""
+    _, comparison_pool_data = cg_clustering_data
+    settings = CG_Clustering_Settings(seed=seed)
+
+    clusters = CG_Clustering(settings).get_labels(comparison_pool_data)
+
+    sizes = clusters.loc[clusters["cluster"] >= 0, "cluster"].value_counts()
+    assert (sizes >= settings.min_cluster_size).all(), (
+        f"cluster sizes {sorted(sizes.tolist())}, minimum {settings.min_cluster_size}"
+    )
 
 
 def test_match_treatment_to_clusters_rows_are_simplex(cg_clustering_data):

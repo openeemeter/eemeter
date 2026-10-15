@@ -22,6 +22,7 @@ from opendsm.comparison_groups.cg_clustering import settings as _settings
 import opendsm.comparison_groups.cg_clustering.bounds as _bounds
 from opendsm.comparison_groups.cg_clustering import treatment_fit as _treatment_fit 
 from opendsm.common.clustering.cluster import cluster_features as _cluster
+from opendsm.common.clustering.exceptions import ClusteringError
 
 
 class CG_Clustering(Comparison_Group_Algorithm):
@@ -36,6 +37,21 @@ class CG_Clustering(Comparison_Group_Algorithm):
         self.settings = settings
 
     def get_labels(self, comparison_pool_data):
+        """Cluster the comparison pool's loadshapes.
+
+        Args:
+            comparison_pool_data: The comparison pool, with ``loadshape`` (one row per meter)
+                and ``ids``.
+
+        Returns:
+            A frame indexed by meter id with each meter's ``cluster``; -1 marks an outlier.
+            Every other cluster holds at least ``min_cluster_size`` meters.
+
+        Raises:
+            ClusteringError: If the pool cannot be clustered, including when it cannot form
+                the lower bound on the cluster count with at least ``min_cluster_size`` meters
+                in each cluster.
+        """
         self.comparison_pool_loadshape = comparison_pool_data.loadshape
 
         # update cluster count
@@ -55,10 +71,16 @@ class CG_Clustering(Comparison_Group_Algorithm):
         self.settings = _settings.CG_Clustering_Settings(**settings_dict)
 
         # perform clustering
-        labels = _cluster(
-            self.comparison_pool_loadshape,
-            self.settings
-        )
+        try:
+            labels = _cluster(
+                self.comparison_pool_loadshape,
+                self.settings
+            )
+        except ClusteringError as exc:
+            raise ClusteringError(
+                f"Comparison pool of {len(comparison_pool_data.ids)} meters could not be "
+                f"clustered: {exc}"
+            ) from exc
 
         self.clusters = pd.DataFrame(
             {"cluster": labels},

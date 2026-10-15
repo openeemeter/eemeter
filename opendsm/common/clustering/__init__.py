@@ -13,5 +13,6 @@
 #  limitations under the License.
 
 from opendsm.common.clustering.cluster import cluster_features, cluster_result
+from opendsm.common.clustering.exceptions import ClusteringError
 from opendsm.common.clustering.settings import ClusteringSettings
 from opendsm.common.clustering.metrics.labels import ClusteringResult

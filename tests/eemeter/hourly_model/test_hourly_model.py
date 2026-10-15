@@ -52,6 +52,36 @@ def test_good_data(baseline, reporting):
     assert p1.equals(p2)
 
 
+def test_fit_is_unchanged_by_last_bit_noise_on_a_temperature_bin_edge(
+    baseline, reporting
+):
+    """A reading exactly on a temperature bin edge lands in the same bin whatever its
+    last bit, so moving it by one unit in the last place leaves the fit's predictions
+    in place."""
+    settings = HourlyNonSolarSettings(seed=42)
+    on_edge = baseline["temperature"].isin(settings.temperature_bin.fixed_bins)
+    assert on_edge.any(), "the fixture has no reading on a bin edge"
+
+    nudged = baseline.copy()
+    nudged.loc[on_edge, "temperature"] = np.nextafter(
+        nudged.loc[on_edge, "temperature"].to_numpy(), np.inf
+    )
+    reporting_data = HourlyReportingData(reporting, is_electricity_data=True)
+
+    fit = HourlyModel(settings=settings).fit(
+        HourlyBaselineData(baseline, is_electricity_data=True)
+    )
+    fit_nudged = HourlyModel(settings=HourlyNonSolarSettings(seed=42)).fit(
+        HourlyBaselineData(nudged, is_electricity_data=True)
+    )
+
+    np.testing.assert_allclose(
+        fit_nudged.predict(reporting_data)["predicted"].to_numpy(),
+        fit.predict(reporting_data)["predicted"].to_numpy(),
+        rtol=1e-9,
+    )
+
+
 def test_misaligned_data(baseline, reporting):
     reporting.index = reporting.index.shift(8, freq="h")
     baseline_data = HourlyBaselineData(baseline, is_electricity_data=True)

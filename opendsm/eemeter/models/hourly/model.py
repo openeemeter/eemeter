@@ -84,6 +84,12 @@ def _hourly_profiles(df, group_cols, aggregation):
     return profiles
 
 
+# Temperatures are binned at this many decimals: far coarser than float noise, which would
+# otherwise move a reading that lies exactly on a bin edge (50 F is 10 C exactly) across it, and
+# far finer than any meaningful temperature difference.
+_T_BIN_DECIMALS = 6
+
+
 def _eliminate_empty_bins(bin_edges, temp):
     valid_bin_edges = [-np.inf]
     for i in range(len(bin_edges) - 1):
@@ -618,10 +624,11 @@ class HourlyModel:
     def _add_temperature_bins(self, df):
         # TODO: do we need to do something about empty bins in prediction? I think not but maybe
         settings = self.settings.temperature_bin
+        binned_temperature = df["temperature"].round(_T_BIN_DECIMALS)
 
         # add temperature bins based on temperature
         if not self._is_fit:
-            temperature = df.loc[df["include_date"], "temperature"]
+            temperature = binned_temperature[df["include_date"]]
 
             if settings.method == "equal_sample_count":
                 T_bin_edges = pd.qcut(
@@ -700,7 +707,7 @@ class HourlyModel:
             # store bin edges for prediction
             self._T_bin_edges = T_bin_edges
 
-        T_bins = pd.cut(df["temperature"], bins=self._T_bin_edges, labels=False)
+        T_bins = pd.cut(binned_temperature, bins=self._T_bin_edges, labels=False)
 
         df["temp_bin"] = T_bins
 
