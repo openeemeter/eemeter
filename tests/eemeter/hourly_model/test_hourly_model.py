@@ -19,7 +19,11 @@ from opendsm.eemeter import (
     HourlySolarSettings,
     HourlyNonSolarSettings,
 )
-from opendsm.eemeter.models.hourly.model import _fit_exp_growth_decay, _hourly_profiles
+from opendsm.eemeter.models.hourly.model import (
+    _fit_exp_growth_decay,
+    _get_dst_indices,
+    _hourly_profiles,
+)
 from opendsm.eemeter.models.hourly.settings import BaseHourlySettings
 from opendsm.eemeter.common.exceptions import (
     DataSufficiencyError,
@@ -680,6 +684,286 @@ class TestFitStatisticsFromIncludedDays:
             f"the week whose Sunday is the 23-hour day labeled it {dst_week}, "
             f"the following week labeled its Sunday {ordinary_week}"
         )
+
+
+_SUPPLEMENTAL = {
+    "supplemental_time_series_columns": ["occupancy"],
+    "supplemental_categorical_columns": ["shift"],
+}
+
+# to_dict fields computed from every baseline day rather than learned from the fit days
+_NOT_LEARNED_FIELDS = {"baseline_metrics", "baseline_hour_metrics", "info"}
+
+
+@pytest.fixture
+def supplemental_hourly(flagged_hourly):
+    """``flagged_hourly`` with an occupancy series behind part of its load and a day-level shift
+    code whose most common value is 0."""
+    rng = np.random.default_rng(1)
+    index = flagged_hourly.index
+    occupied = (index.dayofweek < 5) & (index.hour >= 8) & (index.hour < 18)
+    flagged_hourly["occupancy"] = occupied + rng.normal(0, 0.1, len(index))
+    dates = pd.Index(index.date)
+    days = dates.unique()
+    codes = pd.Series(rng.choice([0, 1, 2], size=len(days), p=[0.6, 0.3, 0.1]), index=days)
+    flagged_hourly["shift"] = codes.reindex(dates).to_numpy()
+
+    return flagged_hourly
+
+
+def _supplemental_week(df):
+    week = df.drop(columns=_UNMEASURED_FLAGS).loc["2019-07-15":"2019-07-21"].copy()
+
+    return week
+
+
+def _predicted(model, df, column="predicted"):
+    predicted = model.predict(HourlyReportingData(df, is_electricity_data=True))[column]
+
+    return predicted
+
+
+def _warning_data(model, qualified_name):
+    data = [warning.data for warning in model.warnings if warning.qualified_name == qualified_name]
+
+    return data
+
+
+def _restored_without_fill_values(df):
+    """A model fit on ``df`` and restored from model JSON stripped of its supplemental fill
+    values, with a week of ``df`` missing one occupancy value on 2019-07-17."""
+    model_json = _fit_flagged(df, **_SUPPLEMENTAL).to_dict()
+    del model_json["supplemental_fill_values"]
+    restored = HourlyModel.from_dict(model_json)
+    week = _supplemental_week(df)
+    week.loc["2019-07-17 15:00", "occupancy"] = np.nan
+
+    return restored, week
+
+
+class TestMissingSupplementalValues:
+    """The model does not impute supplemental inputs: a day missing one is left out of the fit,
+    and a missing value at prediction takes its typical baseline value, the median of its hour
+    for a series and the most common value for a categorical."""
+
+    @pytest.mark.parametrize(
+        ("column", "missing"),
+        [
+            ("occupancy", lambda index: (index.date == date(2019, 7, 17)) & (index.hour == 15)),
+            ("occupancy", lambda index: (index.date == date(2019, 3, 10)) & (index.hour == 15)),
+            ("occupancy", lambda index: (index.date == date(2019, 11, 3)) & (index.hour == 1)),
+            ("shift", lambda index: index.date == date(2019, 7, 17)),
+        ],
+        ids=["series-hour", "series-hour-23-hour-day", "series-repeated-hour", "categorical-day"],
+    )
+    def test_day_missing_a_supplemental_value_leaves_the_fitted_model_unchanged(
+        self, supplemental_hourly, column, missing
+    ):
+        index = supplemental_hourly.index
+        rows = missing(index)
+        supplemental_hourly.loc[rows, column] = np.nan
+        day = index.date == index[rows][0].date()
+        perturbed = supplemental_hourly.copy()
+        perturbed.loc[day, "temperature"] = supplemental_hourly["temperature"].max() + 30
+        perturbed.loc[day, "observed"] *= 5
+        perturbed.loc[day, "occupancy"] *= 10
+
+        # with no measured-hour minimum, only a missing supplemental value can leave a day out
+        original = _fit_flagged(supplemental_hourly, min_daily_training_hours=0, **_SUPPLEMENTAL)
+        refit = _fit_flagged(perturbed, min_daily_training_hours=0, **_SUPPLEMENTAL)
+
+        changed = set(_changed_fields(original, refit)) - _NOT_LEARNED_FIELDS
+        assert not changed, (
+            f"a day missing a supplemental value changed these fitted fields: {sorted(changed)}"
+        )
+
+    @pytest.mark.parametrize(
+        "shift_missing",
+        [
+            lambda index: np.zeros(len(index), dtype=bool),
+            lambda index: (index.date == date(2019, 7, 17)) & (index.hour >= 12),
+        ],
+        ids=["complete-day", "shift-missing-after-noon"],
+    )
+    def test_day_with_every_supplemental_input_changes_the_model(
+        self, supplemental_hourly, shift_missing
+    ):
+        """A categorical present at some hours gives the day its first value, so the day is
+        fit."""
+        index = supplemental_hourly.index
+        supplemental_hourly.loc[shift_missing(index), "shift"] = np.nan
+        perturbed = supplemental_hourly.copy()
+        perturbed.loc[index.date == date(2019, 7, 17), "observed"] *= 5
+
+        original = _fit_flagged(supplemental_hourly, **_SUPPLEMENTAL)
+        refit = _fit_flagged(perturbed, **_SUPPLEMENTAL)
+
+        changed = _changed_fields(original, refit)
+        assert "coefficients" in changed, (
+            f"a day with every supplemental input left the coefficients unchanged; changed "
+            f"fields: {changed}"
+        )
+
+    def test_baseline_metrics_leave_out_only_the_hours_missing_a_supplemental_value(
+        self, supplemental_hourly
+    ):
+        """Ten hours missing occupancy take their day out of the fit, but only those ten hours
+        out of the baseline metrics: the day's other fourteen are scored."""
+        index = supplemental_hourly.index
+        missing = (index.date == date(2019, 7, 17)) & (index.hour < 10)
+        supplemental_hourly.loc[missing, "occupancy"] = np.nan
+
+        model = _fit_flagged(supplemental_hourly, **_SUPPLEMENTAL)
+
+        scored = int((~missing).sum())
+        assert model.baseline_metrics.n == scored, (
+            f"expected {scored} scored hours, got {model.baseline_metrics.n}"
+        )
+        expected_by_hour = pd.Series(index.hour[~missing]).value_counts().to_dict()
+        scored_by_hour = {hour: metrics.n for hour, metrics in model.baseline_hour_metrics.items()}
+        assert scored_by_hour == expected_by_hour, (
+            f"scored hours by hour of day {scored_by_hour}, expected {expected_by_hour}"
+        )
+
+    def test_prediction_uncertainty_leaves_out_hours_given_a_typical_value(
+        self, supplemental_hourly
+    ):
+        """A reporting hour whose supplemental value is filled counts toward its hour's
+        uncertainty the way an interpolated hour does: not at all."""
+        model = _fit_flagged(supplemental_hourly, **_SUPPLEMENTAL)
+        filled = _supplemental_week(supplemental_hourly)
+        filled.loc["2019-07-17 15:00", "occupancy"] = np.nan
+        interpolated = _supplemental_week(supplemental_hourly)
+        interpolated.loc["2019-07-17 15:00", "observed"] = np.nan
+
+        filled_unc = _predicted(model, filled, column="predicted_unc")
+        interpolated_unc = _predicted(model, interpolated, column="predicted_unc")
+
+        hour_15 = filled_unc.index.hour == 15
+        assert filled_unc[hour_15].notna().all(), "hour 15 got no uncertainty"
+        np.testing.assert_allclose(filled_unc[hour_15], interpolated_unc[hour_15], rtol=1e-12)
+
+    def test_fit_raises_when_every_day_is_missing_a_supplemental_value(self, supplemental_hourly):
+        supplemental_hourly.loc[supplemental_hourly.index.hour == 0, "occupancy"] = np.nan
+
+        with pytest.raises(DataSufficiencyError, match="missing a supplemental value"):
+            _fit_flagged(supplemental_hourly, **_SUPPLEMENTAL)
+
+    def test_fit_reports_the_days_left_out(self, supplemental_hourly):
+        supplemental_hourly.loc["2019-07-17 15:00", "occupancy"] = np.nan
+        supplemental_hourly.loc["2019-08-01", "shift"] = np.nan
+
+        model = _fit_flagged(supplemental_hourly, **_SUPPLEMENTAL)
+
+        reported = _warning_data(model, "eemeter.data_quality.supplemental_days_excluded")
+        assert reported == [{"days": 2}], f"expected one warning for 2 days, got {reported}"
+
+    def test_missing_series_value_predicts_as_its_hours_baseline_median(
+        self, supplemental_hourly
+    ):
+        model = _fit_flagged(supplemental_hourly, **_SUPPLEMENTAL)
+        index = supplemental_hourly.index
+        median = supplemental_hourly.loc[index.hour == 15, "occupancy"].median()
+        with_gap = _supplemental_week(supplemental_hourly)
+        with_gap.loc["2019-07-17 15:00", "occupancy"] = np.nan
+        with_median = _supplemental_week(supplemental_hourly)
+        with_median.loc["2019-07-17 15:00", "occupancy"] = median
+
+        predicted = _predicted(model, with_gap)
+
+        assert predicted.notna().all(), f"{predicted.isna().sum()} hours were not predicted"
+        np.testing.assert_allclose(predicted, _predicted(model, with_median), rtol=1e-12)
+
+    def test_day_without_a_categorical_value_predicts_as_its_most_common_value(
+        self, supplemental_hourly
+    ):
+        model = _fit_flagged(supplemental_hourly, **_SUPPLEMENTAL)
+        index = supplemental_hourly.index
+        most_common = supplemental_hourly["shift"].groupby(index.date).first().mode().iloc[0]
+        with_gap = _supplemental_week(supplemental_hourly)
+        with_gap.loc["2019-07-17", "shift"] = np.nan
+        with_most_common = _supplemental_week(supplemental_hourly)
+        with_most_common.loc["2019-07-17", "shift"] = most_common
+
+        predicted = _predicted(model, with_gap)
+
+        assert predicted.notna().all(), f"{predicted.isna().sum()} hours were not predicted"
+        np.testing.assert_allclose(predicted, _predicted(model, with_most_common), rtol=1e-12)
+
+    def test_prediction_reports_the_values_filled(self, supplemental_hourly):
+        model = _fit_flagged(supplemental_hourly, **_SUPPLEMENTAL)
+        week = _supplemental_week(supplemental_hourly)
+        week.loc["2019-07-17 15:00":"2019-07-17 16:00", "occupancy"] = np.nan
+        week.loc["2019-07-18", "shift"] = np.nan
+
+        _predicted(model, week)
+
+        reported = _warning_data(model, "eemeter.data_quality.supplemental_values_filled")
+        expected = [{"days": 2, "values": 3}]
+        assert reported == expected, f"expected {expected}, got {reported}"
+
+    def test_serialized_model_fills_missing_values_as_fitted(self, supplemental_hourly):
+        model = _fit_flagged(supplemental_hourly, **_SUPPLEMENTAL)
+        restored = HourlyModel.from_json(model.to_json())
+        week = _supplemental_week(supplemental_hourly)
+        week.loc["2019-07-17 15:00", "occupancy"] = np.nan
+        week.loc["2019-07-18", "shift"] = np.nan
+
+        restored_predicted = _predicted(restored, week)
+
+        assert restored_predicted.notna().all(), "the restored model left hours unpredicted"
+        np.testing.assert_array_equal(restored_predicted, _predicted(model, week))
+
+    def test_model_json_without_fill_values_leaves_a_gap_day_unpredicted(
+        self, supplemental_hourly
+    ):
+        restored, week = _restored_without_fill_values(supplemental_hourly)
+
+        predicted = _predicted(restored, week)
+
+        gap_day = predicted.index.date == date(2019, 7, 17)
+        assert predicted[gap_day].isna().all(), "the day with a gap was predicted"
+        assert predicted[~gap_day].notna().all(), "days without a gap were left unpredicted"
+
+    def test_model_json_without_fill_values_reports_nothing_filled(self, supplemental_hourly):
+        restored, week = _restored_without_fill_values(supplemental_hourly)
+
+        _predicted(restored, week)
+
+        reported = _warning_data(restored, "eemeter.data_quality.supplemental_values_filled")
+        assert reported == [], f"nothing was filled, but the model reported {reported}"
+
+    def test_baseline_ending_before_its_last_hour_predicts_every_hour(
+        self, baseline_with_supplemental_features
+    ):
+        """The bundled baseline ends at 22:00, so its last day gets a 23:00 row without
+        supplemental values; that day is left out of the fit and still predicted."""
+        data = HourlyBaselineData(baseline_with_supplemental_features, is_electricity_data=True)
+        model = HourlyModel(
+            settings={
+                "supplemental_time_series_columns": ["custom_ts_feature"],
+                "supplemental_categorical_columns": ["custom_cat_feature"],
+            }
+        ).fit(data)
+
+        predicted = model.predict(data)["predicted"]
+
+        assert predicted.notna().all(), f"{predicted.isna().sum()} hours were not predicted"
+
+
+def test_dst_days_are_found_by_row_count_not_by_missing_values():
+    """A missing value in the frame's first column does not make its day look 23 hours long."""
+    index = pd.date_range(
+        "2019-01-01", "2020-01-01", freq="h", tz="America/New_York", inclusive="left"
+    )
+    df = pd.DataFrame({"occupancy": 1.0, "observed": 1.0}, index=index)
+    df.loc["2019-07-17 15:00", "occupancy"] = np.nan
+    days = sorted(set(index.date))
+
+    interp, mean = _get_dst_indices(df)
+
+    assert [(days[i], hour) for i, hour in interp] == [(date(2019, 3, 10), 2)]
+    assert [(days[i], hour) for i, hour in mean] == [(date(2019, 11, 3), 1)]
 
 
 def test_hourly_profiles_fill_a_skipped_hour_from_its_neighbours():

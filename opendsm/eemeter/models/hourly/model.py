@@ -191,10 +191,10 @@ def _get_dst_indices(df):
     in order to ensure exact 24 hour slots
     """
     # TODO test on baselines that begin/end on DST change
-    counts = df.groupby(df.index.date).count()
-    first_col = counts.columns[0]
-    interp = counts[counts[first_col] == 23]
-    mean = counts[counts[first_col] == 25]
+    # rows per day, so a missing value in any column never reads as a missing hour
+    counts = df.groupby(df.index.date).size()
+    interp = counts[counts == 23]
+    mean = counts[counts == 25]
 
     interp_idx = []
     for idx in interp.index:
@@ -324,6 +324,7 @@ class HourlyModel:
         self._df_temporal_clusters = None
         self._categorical_features = None
         self._ts_feature_norm = None
+        self._supplemental_fill_values = {}
 
         self._ts_features = []
         if self.settings.train_features:
@@ -613,9 +614,10 @@ class HourlyModel:
 
         # get feature matrices
         X, y, fit_mask = self._get_feature_matrices(meter_data, dst_indices)
+        X = self._fill_missing_supplemental(X.astype(float), fit_mask)
 
         # Convert to sparse matrix
-        X = csr_matrix(X.astype(float))
+        X = csr_matrix(X)
 
         return X, y, fit_mask
 
@@ -921,6 +923,7 @@ class HourlyModel:
     def _daily_fitting_sufficiency(self, df):
         # remove days with insufficient data
         min_hours = self.settings.min_daily_training_hours
+        dates = pd.Series(df.index.date, index=df.index)
 
         if min_hours > 0:
             # find any rows with interpolated or missing data
@@ -928,7 +931,6 @@ class HourlyModel:
 
             # count number of non interpolated hours per day; a complete 23- or 25-hour DST
             # day counts as 24
-            dates = pd.Series(df.index.date, index=df.index)
             daily_hours = 24 - df.groupby(dates)["interpolated"].sum()
             sufficient_days = daily_hours[daily_hours >= min_hours].index
 
@@ -943,7 +945,58 @@ class HourlyModel:
         else:
             df["include_date"] = True
 
+        # the model does not impute supplemental inputs, so a day missing one stays out of the fit
+        missing_dates = self._days_missing_supplemental(df, dates)
+        df["include_date"] &= ~dates.isin(missing_dates)
+
+        if not self._is_fit and len(missing_dates) > 0:
+            if not df["include_date"].any():
+                raise DataSufficiencyError(
+                    "Cannot fit model: every day with enough measured hours is missing a "
+                    "supplemental value"
+                )
+
+            warning = self._model_warning(
+                qualified_name="eemeter.data_quality.supplemental_days_excluded",
+                description=(
+                    "Days missing a supplemental value were left out of the fit, and the hours "
+                    "missing one were left out of the baseline metrics."
+                ),
+                data={"days": len(missing_dates)},
+            )
+            warning.warn()
+            self.warnings.append(warning)
+
         return df
+
+    def _supplemental_columns(self, df):
+        settings = self.settings
+        ts_cols = [c for c in settings.supplemental_time_series_columns or [] if c in df.columns]
+        cat_cols = [c for c in settings.supplemental_categorical_columns or [] if c in df.columns]
+
+        return ts_cols, cat_cols
+
+    def _measured_hours(self, df):
+        """Mask of the rows of ``df`` that are measured: no interpolated value and no supplemental
+        value missing, including a categorical value its day takes from an earlier hour."""
+        ts_cols, cat_cols = self._supplemental_columns(df)
+        missing_supplemental = df[ts_cols + cat_cols].isna().any(axis=1)
+        measured = ~_get_interpolated_mask(df) & ~missing_supplemental
+
+        return measured
+
+    def _days_missing_supplemental(self, df, dates):
+        """Dates whose design-matrix row would lack a supplemental input: a time series without a
+        value at some hour, or a categorical with no value at any hour (a day takes its first
+        value)."""
+        ts_cols, cat_cols = self._supplemental_columns(df)
+
+        ts_missing = df[ts_cols].isna().any(axis=1).groupby(dates).any()
+        cat_missing = df[cat_cols].isna().groupby(dates).all().any(axis=1)
+        missing = ts_missing | cat_missing
+        missing_dates = missing.index[missing]
+
+        return missing_dates
 
     def _normalize_features(self, df):
         """ """
@@ -1185,6 +1238,73 @@ class HourlyModel:
 
         return X, y, fit_mask
 
+    def _supplemental_design_columns(self):
+        """Design-matrix column indices of each supplemental input, keyed by its name: 24 for
+        a time series, one for a categorical."""
+        ts_columns = {}
+        for col in self.settings.supplemental_time_series_columns or []:
+            norm_col = f"{col}_norm"
+            if norm_col in self._ts_feature_norm:
+                start = 24 * self._ts_feature_norm.index(norm_col)
+                ts_columns[col] = np.arange(start, start + 24)
+
+        n_ts_columns = 24 * len(self._ts_feature_norm)
+        cat_columns = {}
+        for col in self.settings.supplemental_categorical_columns or []:
+            if col in self._categorical_features:
+                cat_columns[col] = np.array([n_ts_columns + self._categorical_features.index(col)])
+
+        return ts_columns, cat_columns
+
+    def _fill_missing_supplemental(self, X, fit_mask):
+        """Design matrix ``X`` with each missing supplemental input set to its typical baseline
+        value; ``X`` itself is left unchanged.
+
+        Fitting learns the typical values from the rows in ``fit_mask``, none of which lacks a
+        supplemental input: the median of each hourly column of a time series and the most
+        common value of a categorical. An input with no learned value stays missing. Predicting
+        records a warning counting the inputs filled.
+        """
+        ts_columns, cat_columns = self._supplemental_design_columns()
+        if not self._is_fit:
+            self._supplemental_fill_values = {}
+            for col, idx in ts_columns.items():
+                fit_values = X[np.ix_(fit_mask, idx)]
+                self._supplemental_fill_values[col] = np.median(fit_values, axis=0).tolist()
+
+            for col, idx in cat_columns.items():
+                fit_values = X[np.ix_(fit_mask, idx)].ravel()
+                most_common = pd.Series(fit_values).mode().iloc[0]
+                self._supplemental_fill_values[col] = [float(most_common)]
+
+        columns = {**ts_columns, **cat_columns}
+        if not columns:
+            return X
+
+        X_filled = X.copy()
+        filled_days = np.zeros(len(X), dtype=bool)
+        n_filled = 0
+        for col, idx in columns.items():
+            fill = np.broadcast_to(self._supplemental_fill_values.get(col, np.nan), len(idx))
+            filled = np.isnan(X[:, idx]) & ~np.isnan(fill)
+            X_filled[:, idx] = np.where(filled, fill, X[:, idx])
+            filled_days |= filled.any(axis=1)
+            n_filled += int(filled.sum())
+
+        if self._is_fit and filled_days.any():
+            warning = self._model_warning(
+                qualified_name="eemeter.data_quality.supplemental_values_filled",
+                description=(
+                    "Missing supplemental values were set to their typical baseline values for "
+                    "prediction."
+                ),
+                data={"days": int(filled_days.sum()), "values": n_filled},
+            )
+            warning.warn()
+            self.warnings.append(warning)
+
+        return X_filled
+
     def _set_baseline_metrics(self, df_meter, X_fit=None):
         # unwrap adaptive model if needed
         adaptive_weights = None
@@ -1198,13 +1318,11 @@ class HourlyModel:
         elif self.settings.base_model == _settings.BaseModel.KERNEL_RIDGE:
             coef = self._model.dual_coef_
 
-        # calculate baseline metrics on non-interpolated data
-        interpolated = _get_interpolated_mask(df_meter)
-        df_non_interp = df_meter.loc[~interpolated]
+        df_measured = df_meter.loc[self._measured_hours(df_meter)]
 
         num_parameters = np.count_nonzero(coef)
         self.baseline_metrics = BaselineMetrics(
-            df=df_non_interp,
+            df=df_measured,
             num_model_params=num_parameters + 1, # + 1 for intercept
         )
 
@@ -1219,7 +1337,7 @@ class HourlyModel:
 
         for hour in range(24):
             hour_coef = coef[:, hour] if is_kernel else coef[hour]
-            hour_data = df_non_interp[df_non_interp.index.hour == hour]
+            hour_data = df_measured[df_measured.index.hour == hour]
 
             if len(hour_data) < 3:
                 self.baseline_hour_metrics[hour] = None
@@ -1333,7 +1451,7 @@ class HourlyModel:
         ASHRAE-14 formula. The uncertainty_scale_factor is applied as a final
         multiplicative correction for pipeline-stage bias not captured by edf.
         """
-        interpolated = _get_interpolated_mask(df_eval)
+        measured = self._measured_hours(df_eval)
         usf = self.settings.uncertainty_scale_factor
         confidence_level = 1 - self.settings.uncertainty_alpha
 
@@ -1346,7 +1464,7 @@ class HourlyModel:
             if bm_h is None:
                 continue
 
-            reporting_df = df_eval.loc[mask & ~interpolated]
+            reporting_df = df_eval.loc[mask & measured]
             if reporting_df.empty:
                 continue
 
@@ -1382,14 +1500,14 @@ class HourlyModel:
 
     def _calculate_uncertainty_global_legacy(self, df_eval):
         """Global homoscedastic uncertainty for legacy model_json."""
-        interpolated = _get_interpolated_mask(df_eval)
+        measured = self._measured_hours(df_eval)
 
         if self.baseline_metrics is None:
             return df_eval
 
         reporting_metrics = ReportingMetrics(
             baseline_metrics=self.baseline_metrics,
-            reporting_df=df_eval[~interpolated],
+            reporting_df=df_eval[measured],
             data_frequency="hourly",
             confidence_level=1 - self.settings.uncertainty_alpha,
             t_tail=2,
@@ -1436,6 +1554,7 @@ class HourlyModel:
             categorical_features=self._categorical_features,
             coefficients=self._model.coef_.tolist(),
             intercept=self._model.intercept_.tolist(),
+            supplemental_fill_values=self._supplemental_fill_values,
             feature_scaler=feature_scaler,
             catagorical_scaler=None,
             y_scaler=y_scaler,
@@ -1513,6 +1632,10 @@ class HourlyModel:
         # set model
         model_cls._model.coef_ = np.array(data.get("coefficients"))
         model_cls._model.intercept_ = np.array(data.get("intercept"))
+
+        # COMPAT[hourly-json-without-fill-values]: model_json serialized without supplemental
+        # fill values loads with none, so its missing supplemental inputs stay missing
+        model_cls._supplemental_fill_values = data.get("supplemental_fill_values") or {}
 
         model_cls._is_fit = True
 

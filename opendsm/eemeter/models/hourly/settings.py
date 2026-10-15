@@ -398,12 +398,16 @@ class BaseHourlySettings(BaseSettings):
         gt=0,
     )
 
-    """supplemental time series column names"""
+    """supplemental time series column names; the model does not impute them: a day missing a
+    value is left out of the fit, and a missing value at prediction takes the baseline median for
+    its hour"""
     supplemental_time_series_columns: Optional[list] = pydantic.Field(
         default=None,
     )
 
-    """supplemental categorical column names"""
+    """supplemental categorical column names, as numeric codes; a day takes its first value, a
+    day with none is left out of the fit, and a day with none at prediction takes the most common
+    baseline value"""
     supplemental_categorical_columns: Optional[list] = pydantic.Field(
         default=None,
     )
@@ -555,6 +559,7 @@ class SerializeModel(BaseSettings):
     y_scaler: Optional[list[float]] = None
     coefficients: Optional[list[list[float]]] = None
     intercept: Optional[list[float]] = None
+    supplemental_fill_values: Optional[Dict[str, list[float]]] = None
     baseline_metrics: Optional[BaselineMetrics] = None
     baseline_hour_metrics: Optional[Dict[str, BaselineMetrics]] = None
     info: ModelInfo
