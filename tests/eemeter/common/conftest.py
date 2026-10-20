@@ -44,6 +44,13 @@ def monthly_temperature(comstock_hourly):
 
 
 @pytest.fixture
+def bimonthly_meter(monthly_meter):
+    """Two-month periods on the meter's own boundaries (every other monthly period start);
+    ``value`` holds the first month's reading."""
+    return monthly_meter.iloc[::2]
+
+
+@pytest.fixture
 def daily_meter(comstock_daily):
     df_b, df_r = comstock_daily
     return _utc_meter(pd.concat([df_b, df_r]))

@@ -220,8 +220,9 @@ def test_compute_temperature_features_hourly_data_quality(hourly_meter, hourly_t
     params=[
         ("daily_meter", "daily_temperature"),
         ("monthly_meter", "monthly_temperature"),
+        ("bimonthly_meter", "monthly_temperature"),
     ],
-    ids=["daily", "billing_monthly"],
+    ids=["daily", "billing_monthly", "billing_bimonthly"],
 )
 def meter_and_temperature(request):
     meter_fixture, temperature_fixture = request.param
