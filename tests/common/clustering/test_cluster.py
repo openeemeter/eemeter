@@ -36,7 +36,7 @@ from opendsm.common.clustering.settings import (
     ClusterAlgorithms,
 )
 
-from .conftest import make_clustering_settings
+from .helpers import make_clustering_settings
 
 
 # =============================================================================

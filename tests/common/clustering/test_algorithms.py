@@ -30,7 +30,7 @@ from opendsm.common.clustering.algorithms.bisect_k_means import bisect_k_means
 from opendsm.common.clustering.algorithms.bisect_k_medians import bisect_k_medians
 from opendsm.common.clustering.algorithms.k_medians import kmedians
 
-from .conftest import make_clustering_settings
+from .helpers import make_clustering_settings
 
 
 

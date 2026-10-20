@@ -24,7 +24,7 @@ from opendsm.common.clustering.algorithms.spectral.spectral_divisive import spec
 from opendsm.common.clustering.metrics.settings import ScoreSettings, SmallClusterMode
 from opendsm.common.clustering.settings import ClusteringSettings
 
-from .conftest import make_clustering_settings
+from .helpers import make_clustering_settings
 
 
 def _spectral_cs(spectral_settings: SpectralSettings | dict | None = None, seed: int = 42, **overrides) -> ClusteringSettings:
@@ -286,7 +286,6 @@ class TestSpectralDivisive:
         )
 
     def test_cluster_count_in_range(self, simple_2d_data):
-        from opendsm.common.clustering.algorithms.spectral.spectral_divisive import spectral_divisive
         settings = self._settings(n_lower=2, n_upper=6)
         labels = spectral_divisive(simple_2d_data, _spectral_div_cs(settings, seed=42)).labels
         assert len(labels) == len(simple_2d_data)
@@ -295,7 +294,6 @@ class TestSpectralDivisive:
 
     def test_valid_labels(self, simple_2d_data):
         """spectral_divisive returns valid label arrays."""
-        from opendsm.common.clustering.algorithms.spectral.spectral_divisive import spectral_divisive
         settings = self._settings()
         labels = spectral_divisive(simple_2d_data, _spectral_div_cs(settings, seed=42)).labels
         assert len(labels) == len(simple_2d_data)
@@ -305,7 +303,6 @@ class TestSpectralDivisive:
 
     def test_finds_reasonable_clusters(self, simple_2d_data):
         """Well-separated 3-cluster data should produce 2-4 clusters."""
-        from opendsm.common.clustering.algorithms.spectral.spectral_divisive import spectral_divisive
         settings = SpectralSettings(
             n_cluster={"lower": 2, "upper": 8},
             recluster_count=0,
@@ -526,7 +523,6 @@ class TestAutoPCAFallback:
     def test_pca_reduces_when_n_less_than_features(self):
         """When n < d, output has n-1 features."""
         from opendsm.common.clustering.transform.transform import transform_features
-        from opendsm.common.clustering.settings import ClusteringSettings
         data = np.random.default_rng(42).random((7, 504)).astype(np.float32)
         settings = ClusteringSettings(
             feature_transform={"wavelet": {"enabled": False}},
@@ -539,7 +535,6 @@ class TestAutoPCAFallback:
     def test_no_pca_when_n_greater_than_features(self):
         """When n > d, features are unchanged."""
         from opendsm.common.clustering.transform.transform import transform_features
-        from opendsm.common.clustering.settings import ClusteringSettings
         data = np.random.default_rng(42).random((100, 24)).astype(np.float32)
         settings = ClusteringSettings(seed=0)
         result = transform_features(data, settings).data
@@ -549,7 +544,6 @@ class TestAutoPCAFallback:
     def test_pca_with_magnitude_features(self):
         """Auto-PCA fires after magnitude features are appended."""
         from opendsm.common.clustering.transform.transform import transform_features
-        from opendsm.common.clustering.settings import ClusteringSettings
         # n=5 with d=504 + magnitude (3) = 507 features; should reduce to 4
         data = np.random.default_rng(42).random((5, 504)).astype(np.float32)
         settings = ClusteringSettings(
@@ -563,7 +557,6 @@ class TestAutoPCAFallback:
     def test_pca_single_sample(self):
         """n=1 should not crash (PCA requires n>1)."""
         from opendsm.common.clustering.transform.transform import transform_features
-        from opendsm.common.clustering.settings import ClusteringSettings
         data = np.random.default_rng(42).random((1, 504)).astype(np.float32)
         settings = ClusteringSettings(
             feature_transform={"wavelet": {"enabled": False}},
@@ -937,7 +930,6 @@ class TestConstrainedFiedlerSplit:
         from opendsm.common.clustering.algorithms.spectral.spectral_divisive import (
             spectral_divisive,
         )
-        from opendsm.common.clustering.metrics.settings import ScoreSettings, SmallClusterMode
 
         rng = np.random.default_rng(42)
         # 10 points, min_cs=6 -> 2*6=12 > 10, so no split should happen
@@ -1014,8 +1006,6 @@ class TestBisectionMinClusterSize:
 
     def test_keep_mode_min_cs_1_allows_singletons(self):
         """KEEP mode with min_cs=1: singletons may appear in candidates."""
-        from opendsm.common.clustering.algorithms.spectral.spectral_divisive import spectral_divisive
-        from opendsm.common.clustering.metrics.settings import ScoreSettings, SmallClusterMode
 
         rng = np.random.default_rng(42)
         # 4 well-separated clusters, one with a single isolated point
@@ -1069,8 +1059,6 @@ class TestBisectionMinClusterSize:
 
     def test_outlier_mode_explores_freely(self):
         """OUTLIER mode with min_cs=15: algorithm explores many k values."""
-        from opendsm.common.clustering.algorithms.spectral.spectral_divisive import spectral_divisive
-        from opendsm.common.clustering.metrics.settings import ScoreSettings, SmallClusterMode
 
         rng = np.random.default_rng(42)
         X = np.vstack([
@@ -1094,7 +1082,6 @@ class TestBisectionMinClusterSize:
 
     def test_council_never_selects_k1_when_gate_passes(self):
         """When the structure gate passes, council never picks k=1."""
-        from opendsm.common.clustering.algorithms.spectral.spectral_divisive import spectral_divisive
 
         rng = np.random.default_rng(42)
         X = np.vstack([
@@ -1480,7 +1467,6 @@ class TestSpectralDivisiveConfigurations:
         eigensolver to pick a different k; fewer points make the self_tuning, no-PIC
         score small-sample noisy.
         """
-        from opendsm.common.clustering.algorithms.spectral.spectral_divisive import spectral_divisive
         from opendsm.common.clustering.algorithms.settings import AffinityMatrixOptions
 
         np.random.seed(42)
@@ -1515,7 +1501,6 @@ class TestSpectralDivisiveConfigurations:
     )
     def test_deterministic_seed42(self, affinity, use_pic):
         """All 6 configs are deterministic (seed=42 twice gives same labels)."""
-        from opendsm.common.clustering.algorithms.spectral.spectral_divisive import spectral_divisive
         from opendsm.common.clustering.algorithms.settings import AffinityMatrixOptions
 
         np.random.seed(42)

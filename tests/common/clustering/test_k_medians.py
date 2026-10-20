@@ -38,7 +38,7 @@ from opendsm.common.clustering.algorithms.k_medians import (
     DEFAULT_INIT_SCHEDULE,
 )
 
-from .conftest import make_clustering_settings
+from .helpers import make_clustering_settings
 
 
 

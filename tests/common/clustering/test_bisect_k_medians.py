@@ -27,7 +27,7 @@ from sklearn.metrics import adjusted_rand_score
 
 from opendsm.common.clustering.algorithms.bisect_k_medians import bisect_k_medians
 
-from .conftest import make_clustering_settings
+from .helpers import make_clustering_settings
 
 
 

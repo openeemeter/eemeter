@@ -19,7 +19,7 @@ from sklearn.datasets import make_blobs
 from opendsm.common.clustering.algorithms.bisect_k_means import bisect_k_means
 from opendsm.common.clustering.algorithms.settings import BisectingKMeansSettings
 
-from .conftest import make_clustering_settings
+from .helpers import make_clustering_settings
 
 
 def _bkm_cs(algo_settings=None, seed=42):

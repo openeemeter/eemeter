@@ -26,7 +26,7 @@ from sklearn.metrics import adjusted_rand_score
 from opendsm.common.clustering.settings import ClusteringSettings
 from opendsm.common.clustering.algorithms.birch import birch
 
-from .conftest import three_blobs
+from .helpers import three_blobs
 
 
 

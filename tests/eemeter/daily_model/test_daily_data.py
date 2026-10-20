@@ -18,14 +18,8 @@ import pandas as pd
 from pandas import Timestamp, DatetimeIndex, DataFrame
 import pytest
 
+from ..constants import METER_SEED, NUM_DAYS_IN_YEAR, TEMPERATURE_SEED
 
-
-TEMPERATURE_SEED = 29
-METER_SEED = 41
-
-
-
-NUM_DAYS_IN_YEAR = 365
 
 
 @pytest.fixture

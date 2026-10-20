@@ -15,15 +15,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from .constants import METER_SEED, TEMPERATURE_SEED
 
-
-TEMPERATURE_SEED = 29
-METER_SEED = 41
 
 
 @pytest.fixture
 def get_datetime_index(request):
-    # request.param = (frequency, is_timezone_aware)
+    # request.param: (frequency, is_timezone_aware)
     if request.param[0] in ["MS", "2MS"]:
         inclusive = "both"
     else:

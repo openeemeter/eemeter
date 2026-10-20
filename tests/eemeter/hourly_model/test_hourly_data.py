@@ -36,7 +36,7 @@ from opendsm.eemeter.models.hourly.data import (
 )
 from opendsm.eemeter.common.data_settings import HourlyDataSettings
 
-from .conftest import (
+from .helpers import (
     create_hourly_dataframe,
     create_repeated_values,
     create_extreme_values,
