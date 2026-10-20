@@ -112,6 +112,8 @@ core = "sysmon"
 # uncovered even when exercised.
 omit = [
   ".tox/*",
+  # presentational code: figure assembly for notebooks, not measured
+  "*/eemeter/models/*/plot.py",
 ]
 
 [tool.coverage.report]
