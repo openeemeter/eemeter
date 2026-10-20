@@ -420,8 +420,8 @@ class TestEdgeCases:
         rng = np.random.default_rng(42)
         X = np.vstack([rng.normal(0, 0.1, (2, 3)), rng.normal(5, 0.1, (2, 3))])
         ckm = _make_ckm(X, max_k=2)
-        assert isinstance(ckm.sigclust_test, float)
-        assert isinstance(ckm.spectral_gap_test, float)
+        assert 0.0 <= ckm.sigclust_test <= 1.0
+        assert 0.0 <= ckm.spectral_gap_test <= 1.0
 
     def test_identical_data_does_not_crash(self):
         ckm = CrossKMetrics(

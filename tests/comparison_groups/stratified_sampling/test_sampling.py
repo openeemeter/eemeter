@@ -284,7 +284,10 @@ def test_stratified_sampling_fit_and_sample_dont_require_equivalence(
     ## attempting to estimate both n_bins and n_samples
     stratified_sampling_obj.fit_and_sample(df_treatment, df_pool, random_seed=1)
     output = stratified_sampling_obj.data_sample.df
-    assert not output.empty
+
+    assert 0 < len(output) <= len(df_pool)
+    assert set(output.index) <= set(df_pool.index)
+    assert output["_bin_label"].nunique() >= 2
 
 
 def test_stratified_sampling_fit_and_sample_upper_limit_n_samples_approx(

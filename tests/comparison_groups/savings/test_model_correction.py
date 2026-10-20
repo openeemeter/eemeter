@@ -12,8 +12,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import os
-
 import numpy as np
 import pytest
 
@@ -27,7 +25,6 @@ from opendsm.comparison_groups.savings.model_correction import (
     _model_magnitude_weights,
     _water_fill_weights,
 )
-from .generate_correction_fixtures import build_fixtures
 from opendsm.comparison_groups.savings.settings import (
     CGCorrectionSettings,
     CorrectionAlgorithm,
@@ -545,34 +542,13 @@ def test_cluster_unc_is_nan_with_single_finite_meter():
     assert np.isnan(cluster_unc)
 
 
-# ── Fixture generation (run once, manually, JIT-on) ──────────────────────────
-
-@pytest.mark.skipif(
-    not os.environ.get("GENERATE_FIXTURES"),
-    reason="regenerates committed model_correction fixtures; run manually",
-)
-def test_generate_correction_fixtures(
-    _comstock_hourly_all, _comstock_daily_all, _comstock_monthly_all
-):
-    """Regenerate the real-data .npz fixtures from ComStock meters.
-
-    GENERATE_FIXTURES=1 [GENERATE_FIXTURES_N=99] pytest -k generate_correction_fixtures
-    """
-    n_pool = int(os.environ.get("GENERATE_FIXTURES_N", "99"))
-    min_cluster_size = int(os.environ.get("GENERATE_FIXTURES_MIN", "5"))
-    build_fixtures(
-        _comstock_hourly_all, _comstock_daily_all, _comstock_monthly_all,
-        n_pool=n_pool, min_cluster_size=min_cluster_size,
-    )
-
-
 # ── Real-data snapshot across model frequencies x correction algorithms ──────────
 
 
 # Pinned corrected reporting-period usage (mTrc) and its uncertainty, produced
 # by model_correction on the committed real-ComStock fixtures. Regenerate the
-# fixtures with generate_correction_fixtures (GENERATE_FIXTURES=1) if the
-# upstream models change; update these alongside.
+# fixtures by running generate_correction_fixtures.py if the upstream models
+# change; update these alongside.
 _EXPECTED = {
     ("hourly", CorrectionAlgorithm.ODID): (725413.0, 701720.3),
     ("hourly", CorrectionAlgorithm.PCTDID): (775788.8, 95833.3),

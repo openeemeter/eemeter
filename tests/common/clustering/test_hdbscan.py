@@ -274,8 +274,7 @@ class TestAlgorithmParameters:
 
         labels = hdbscan(data, settings).labels
 
-        # Should try to find multiple clusters or mark some as outliers
-        assert isinstance(labels, np.ndarray)
+        assert len(set(labels.tolist()) - {-1}) >= 2
 
     def test_max_cluster_size_none(self, simple_clustered_data):
         """Test with max_cluster_size=None (unlimited)."""

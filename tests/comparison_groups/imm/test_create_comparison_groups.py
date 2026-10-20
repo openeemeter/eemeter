@@ -93,7 +93,10 @@ def test_minimize_loadshape_distance_path(cg_loadshape_data):
 
     clusters, _ = imm.get_comparison_group(treatment_data, comparison_pool_data)
 
-    assert not clusters.empty
+    assert set(clusters["treatment"]) == set(treatment_data.ids)
+    assert clusters.groupby("treatment").size().eq(2).all()
+    assert clusters.index.is_unique
+    assert not clusters["duplicated"].any()
 
 
 def test_allow_duplicates_requires_meter_distance():

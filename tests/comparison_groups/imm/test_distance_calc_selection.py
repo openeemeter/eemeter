@@ -76,7 +76,11 @@ def test_distance_match():
             treatment_group=treatment_group,
             comparison_pool=comparison_pool
         )
-        assert not comparison_group.empty
+
+        assert len(comparison_group) == n_treatment * n_matches_per_treatment
+        assert comparison_group.groupby("treatment").size().eq(n_matches_per_treatment).all()
+        assert comparison_group["id"].is_unique
+        assert not comparison_group["duplicated"].any()
 
 
 def test_distance_match_duplicates_allowed():

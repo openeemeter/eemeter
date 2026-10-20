@@ -62,10 +62,12 @@ def test_equivalence(diagnostics_obj):
     assert equivalence["ks_ok"].all() == True and equivalence["t_ok"].all() == True
 
 
-def test_count_bins_returns_populated_frame(diagnostics_obj):
+def test_count_bins_has_one_row_per_bin_with_the_sample_total(diagnostics_obj):
     counts = diagnostics_obj.count_bins()
 
-    assert not counts.empty
+    assert len(counts) == 4
+    assert (counts["n_sampled"] > 0).all()
+    assert counts["n_sampled"].sum() == len(diagnostics_obj.data_sample.df)
 
 
 def test_equivalence_passed_summarizes_the_equivalence_table(diagnostics_obj):

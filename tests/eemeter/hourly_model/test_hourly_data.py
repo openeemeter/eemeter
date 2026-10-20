@@ -80,13 +80,16 @@ class TestHourlyDataClassInit:
         assert "ghi" in data.df.columns
 
     def test_reporting_with_valid_data(self, synthetic_hourly_data):
-        """Basic reporting data instantiation"""
+        """A year of clean reporting data comes back padded to whole days with no
+        disqualification."""
         data = HourlyReportingData(
             df=synthetic_hourly_data, is_electricity_data=True
         )
 
-        assert data is not None
-        assert isinstance(data.df, pd.DataFrame)
+        assert_all_hours_present(data.df)
+        assert len(data.df) == 8760
+        assert data.df.index[0] == synthetic_hourly_data.index[0]
+        assert data.disqualification == []
 
     def test_reporting_without_observed(self):
         """Observed column missing (should work for reporting)"""
@@ -119,15 +122,6 @@ class TestHourlyDataClassInit:
 
         with pytest.raises(ValueError, match="observed"):
             HourlyBaselineData(df=df, is_electricity_data=True)
-
-    def test_datetime_as_column(self):
-        """Datetime in column, not index"""
-        df = create_hourly_dataframe()
-        df = df.reset_index().rename(columns={"index": "datetime"})
-
-        data = HourlyBaselineData(df=df, is_electricity_data=True)
-
-        assert isinstance(data.df.index, pd.DatetimeIndex)
 
     def test_datetime_missing_timezone(self):
         """Should raise ValueError for timezone-naive datetime"""
@@ -219,15 +213,6 @@ class TestHourlyDataClassInit:
         assert data.tz is not None
         assert str(data.tz) == "America/New_York"
 
-    def test_settings_property(self, synthetic_hourly_data):
-        """Settings accessible and correct type"""
-        data = HourlyBaselineData(
-            df=synthetic_hourly_data, is_electricity_data=True
-        )
-
-        assert data.settings is not None
-        assert isinstance(data.settings, HourlyDataSettings)
-
     def test_pv_start_property(self):
         """PV start date handling"""
         df = create_hourly_dataframe()
@@ -237,22 +222,6 @@ class TestHourlyDataClassInit:
         )
 
         assert data.pv_start == pv_date
-
-    def test_warnings_list(self, synthetic_hourly_data):
-        """Warnings list accessible"""
-        data = HourlyBaselineData(
-            df=synthetic_hourly_data, is_electricity_data=True
-        )
-
-        assert isinstance(data.warnings, list)
-
-    def test_disqualification_list(self, synthetic_hourly_data):
-        """Disqualifications list accessible"""
-        data = HourlyBaselineData(
-            df=synthetic_hourly_data, is_electricity_data=True
-        )
-
-        assert isinstance(data.disqualification, list)
 
     # ===== Settings Configuration Tests =====
 
@@ -717,13 +686,14 @@ class TestHourlyDataProcessing:
         for col in required_cols:
             assert_column_exists(data.df, col)
 
-    def test_output_index_type(self):
-        """DatetimeIndex maintained"""
+    def test_output_index_keeps_the_input_timezone(self):
         df = create_hourly_dataframe(start="2019-01-01", end="2019-12-31")
 
         data = HourlyBaselineData(df=df, is_electricity_data=True)
 
         assert isinstance(data.df.index, pd.DatetimeIndex)
+        assert str(data.df.index.tz) == "America/New_York"
+        assert_all_hours_present(data.df)
 
     def test_output_dtypes(self):
         """Correct data types"""
@@ -1028,8 +998,9 @@ class TestHourlySufficiencyCriteria:
 
         data = HourlyBaselineData(df=df, is_electricity_data=True)
 
-        # Will likely fail joint or temperature coverage check
-        assert len(data.disqualification) > 0
+        assert_has_disqualification(
+            data, "eemeter.sufficiency_criteria.too_many_days_with_missing_joint_data"
+        )
 
     def test_joint_daily_coverage_observed_missing(self):
         """Observed NaN fails joint"""
@@ -1040,8 +1011,9 @@ class TestHourlySufficiencyCriteria:
 
         data = HourlyBaselineData(df=df, is_electricity_data=True)
 
-        # Will likely fail joint or observed coverage check
-        assert len(data.disqualification) > 0
+        assert_has_disqualification(
+            data, "eemeter.sufficiency_criteria.too_many_days_with_missing_joint_data"
+        )
 
     def test_joint_daily_coverage_below_threshold(self):
         """Both NaN fails joint"""
@@ -1457,13 +1429,16 @@ class TestHourlyDataIntegration:
         assert "has_pv" in data.df.columns
 
     def test_reporting_complete_pipeline(self):
-        """Raw data → processed reporting"""
+        """Three months of clean reporting data come back as 90 whole local days (one of
+        them 23 hours long) with the interpolation flags and no disqualification."""
         df = create_hourly_dataframe(start="2019-01-01", end="2019-03-31")
 
         data = HourlyReportingData(df=df, is_electricity_data=True)
 
-        assert data.df is not None
-        assert len(data.df) > 0
+        assert_all_hours_present(data.df)
+        assert len(data.df) == 90 * 24 - 1
+        assert {"interpolated_observed", "interpolated_temperature"} <= set(data.df.columns)
+        assert data.disqualification == []
 
     def test_with_ghi_complete_pipeline(self):
         """Include GHI in pipeline"""
@@ -1623,13 +1598,13 @@ class TestHourlyDataEdgeCases:
     # ===== Data Type Edge Cases =====
 
     def test_integer_observed_values(self):
-        """Not just floats"""
+        """Integer readings pass through unchanged."""
         df = create_hourly_dataframe(start="2019-01-01", end="2019-12-31")
         df["observed"] = df["observed"].astype(int)
 
         data = HourlyBaselineData(df=df, is_electricity_data=True)
 
-        assert data.df is not None
+        assert (data.df.loc[df.index, "observed"] == df["observed"]).all()
 
     def test_very_small_values(self):
         """Near-zero, not exactly zero"""
@@ -1642,13 +1617,16 @@ class TestHourlyDataEdgeCases:
         assert data.df["observed"].notna().any()
 
     def test_very_large_values(self):
-        """Not extreme, but large"""
+        """Scaling every reading up keeps the values and raises no extreme-value warning,
+        since the spread scales with them."""
         df = create_hourly_dataframe(start="2019-01-01", end="2019-12-31")
         df["observed"] = df["observed"] * 100
 
         data = HourlyBaselineData(df=df, is_electricity_data=True)
 
-        assert data.df is not None
+        assert (data.df.loc[df.index, "observed"] == df["observed"]).all()
+        warning_names = [w.qualified_name for w in data.warnings]
+        assert "eemeter.sufficiency_criteria.extreme_values_detected" not in warning_names
 
     # ===== Empty & Minimal Data =====
 
@@ -1658,8 +1636,9 @@ class TestHourlyDataEdgeCases:
 
         data = HourlyBaselineData(df=df, is_electricity_data=True)
 
-        # Will be disqualified for length
-        assert len(data.disqualification) > 0
+        assert_has_disqualification(
+            data, "eemeter.sufficiency_criteria.incorrect_number_of_total_days"
+        )
 
     def test_two_days(self):
         """48 hours (minimum for some checks)"""
@@ -1696,7 +1675,7 @@ class TestHourlyDataEdgeCases:
         assert "ghi" in data_with_ghi.df.columns
 
     def test_datetime_column_vs_index(self):
-        """Both supported"""
+        """A datetime column and a datetime index produce the same processed frame."""
         df_index = create_hourly_dataframe(start="2019-01-01", end="2019-12-31")
         df_column = df_index.reset_index().rename(columns={"index": "datetime"})
 
@@ -1704,7 +1683,7 @@ class TestHourlyDataEdgeCases:
         data_column = HourlyBaselineData(df=df_column, is_electricity_data=True)
 
         assert isinstance(data_index.df.index, pd.DatetimeIndex)
-        assert isinstance(data_column.df.index, pd.DatetimeIndex)
+        pd.testing.assert_frame_equal(data_column.df, data_index.df)
 
 
 # End of test file
