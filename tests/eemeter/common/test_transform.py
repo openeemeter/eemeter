@@ -50,12 +50,9 @@ def test_as_freq_not_series(monthly_meter, monthly_temperature, snapshot):
     [("h", "as_hourly"), ("D", "as_daily"), ("MS", "as_month_start")],
     ids=["hourly", "daily", "month_start"],
 )
-def test_as_freq(monthly_meter, monthly_temperature, snapshot, freq, result_label):
-    meter_data = monthly_meter
-    assert list(meter_data.shape) == snapshot(name="meter_data_shape")
-    resampled = as_freq(meter_data.value, freq=freq)
+def test_as_freq(monthly_meter, snapshot, freq, result_label):
+    resampled = as_freq(monthly_meter.value, freq=freq)
     assert list(resampled.shape) == snapshot(name=f"{result_label}_shape")
-    assert round(meter_data.value.sum(), 1) == snapshot(name="meter_data_sum")
     assert round(resampled.sum(), 1) == snapshot(name=f"{result_label}_sum")
 
 

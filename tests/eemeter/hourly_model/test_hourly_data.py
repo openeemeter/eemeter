@@ -807,6 +807,7 @@ class TestHourlySufficiencyCriteria:
             ("2020-01-01", "2020-12-31", False),
             ("2019-01-01", "2019-11-20", True),
             ("2019-01-01", "2020-01-10", True),
+            ("2019-01-01", "2019-01-01", True),
         ],
         ids=[
             "full_year_365_days",
@@ -814,6 +815,7 @@ class TestHourlySufficiencyCriteria:
             "leap_year_366_days",
             "under_329_days",
             "over_366_days",
+            "single_day",
         ],
     )
     def test_baseline_length(self, start, end, expect_disqualified):
@@ -1525,42 +1527,22 @@ class TestHourlyDataEdgeCases:
     # ===== Boundary Conditions =====
 
     @pytest.mark.parametrize(
-        "start, end, expect_disqualified",
+        "n_missing_hours, expect_disqualified",
         [
-            ("2019-01-01", "2019-11-26", False),
-            ("2020-01-01", "2020-12-31", False),
-            ("2019-01-01", "2019-01-01", True),
+            (876, False),
+            (877, True),
         ],
-        ids=["exactly_329_days", "exactly_366_days", "single_day"],
+        ids=["exactly_90_pct_valid_hours_passes", "one_hour_fewer_fails"],
     )
-    def test_baseline_length_boundaries(self, start, end, expect_disqualified):
-        df = create_hourly_dataframe(start=start, end=end)
-
-        data = HourlyBaselineData(df=df, is_electricity_data=True)
-
-        dq_name = "eemeter.sufficiency_criteria.incorrect_number_of_total_days"
-
-        if expect_disqualified:
-            assert_has_disqualification(data, dq_name)
-        else:
-            dq_names = [dq.qualified_name for dq in data.disqualification]
-            assert dq_name not in dq_names
-
-    @pytest.mark.parametrize(
-        "seed, missing_fraction, expect_disqualified",
-        [
-            (65, 0.09, False),
-            (66, 0.11, True),
-        ],
-        ids=["exactly_90_percent", "89_9_percent"],
-    )
-    def test_temperature_daily_coverage_boundaries(
-        self, seed, missing_fraction, expect_disqualified
+    def test_temperature_daily_coverage_at_the_threshold(
+        self, n_missing_hours, expect_disqualified
     ):
-        df = create_hourly_dataframe(start="2019-01-01", end="2019-12-31")
-        np.random.seed(seed)
-        mask = np.random.random(len(df)) < missing_fraction
-        df.loc[mask, "temperature"] = np.nan
+        """Daily coverage is valid hours over the span: 876 of 8760 hours missing is exactly
+        90% and passes the strict threshold, one more hour fails."""
+        df = create_hourly_dataframe(start="2019-01-01", end="2019-12-31 23:00")
+        assert len(df) == 8760
+        # an interior gap leaves the first-to-last valid span at the full 365 days
+        df.loc[df.index[1000:1000 + n_missing_hours], "temperature"] = np.nan
 
         data = HourlyBaselineData(df=df, is_electricity_data=True)
 
@@ -1575,16 +1557,20 @@ class TestHourlyDataEdgeCases:
             assert dq_name not in dq_names
 
     @pytest.mark.parametrize(
-        "repeated_fraction, expect_disqualified",
+        "n_unique, expect_disqualified",
         [
-            (0.90, False),
-            (0.901, True),
+            (876, False),
+            (875, True),
         ],
-        ids=["exactly_10_percent_unique", "9_9_percent_unique"],
+        ids=["exactly_10_pct_unique_passes", "one_value_fewer_fails"],
     )
-    def test_unique_observed_boundaries(self, repeated_fraction, expect_disqualified):
-        df = create_hourly_dataframe(start="2019-01-01", end="2019-12-31")
-        df = create_repeated_values(df, repeated_fraction)
+    def test_unique_observed_at_the_threshold(self, n_unique, expect_disqualified):
+        """Uniqueness is distinct values over non-null rows: 876 distinct of 8760 is exactly
+        10% and passes the strict threshold, one fewer fails."""
+        df = create_hourly_dataframe(start="2019-01-01", end="2019-12-31 23:00")
+        n_repeated = len(df) - n_unique + 1
+        df.loc[df.index[:n_repeated], "observed"] = df["observed"].iloc[0]
+        assert df["observed"].nunique() == n_unique
 
         data = HourlyBaselineData(df=df, is_electricity_data=True)
 
@@ -1599,19 +1585,22 @@ class TestHourlyDataEdgeCases:
     # ===== DST & Timezone Edge Cases =====
 
     @pytest.mark.parametrize(
-        "start, end",
+        "start, end, expected_rows",
         [
-            ("2019-03-09", "2019-03-11"),
-            ("2019-11-02", "2019-11-04"),
+            ("2019-03-09", "2019-03-11", 71),
+            ("2019-11-02", "2019-11-04", 73),
         ],
         ids=["spring_forward_missing_hour", "fall_back_duplicate_hour"],
     )
-    def test_dst_transition_handled(self, start, end):
+    def test_dst_transition_keeps_a_contiguous_hourly_index(self, start, end, expected_rows):
+        """Three local days across a transition pad to whole days of real hours: the
+        skipped hour is absent and the repeated hour is kept."""
         df = create_hourly_dataframe(start=start, end=end, tz="America/New_York")
 
         data = HourlyBaselineData(df=df, is_electricity_data=True)
 
-        assert data.df is not None
+        assert_all_hours_present(data.df)
+        assert len(data.df) == expected_rows
 
     def test_utc_input_warning(self):
         """UTC timezone issues warning"""

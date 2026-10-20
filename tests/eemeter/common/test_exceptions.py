@@ -38,6 +38,8 @@ SUBCLASSES = [
 
 
 def test_eemeter_error_is_catchable_as_exception():
+    """A catch-all ``except Exception`` handler sees eemeter errors, so the base class must not
+    derive from ``BaseException`` alone."""
     with pytest.raises(Exception):
         raise EEMeterError
 
@@ -52,10 +54,4 @@ def test_every_exported_error_is_covered():
 @pytest.mark.parametrize("error_cls", SUBCLASSES, ids=lambda cls: cls.__name__)
 def test_subclass_is_catchable_as_eemeter_error(error_cls):
     with pytest.raises(EEMeterError):
-        raise error_cls
-
-
-@pytest.mark.parametrize("error_cls", SUBCLASSES, ids=lambda cls: cls.__name__)
-def test_subclass_raises_without_arguments(error_cls):
-    with pytest.raises(error_cls):
         raise error_cls
