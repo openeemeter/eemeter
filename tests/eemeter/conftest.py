@@ -15,6 +15,14 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from opendsm.eemeter import (
+    BillingBaselineData,
+    BillingModel,
+    DailyBaselineData,
+    DailyModel,
+    DailyReportingData,
+)
+
 from .constants import METER_SEED, TEMPERATURE_SEED
 
 
@@ -137,3 +145,45 @@ def get_meter_data_daily(get_datetime_index_daily_with_timezone):
     df = pd.DataFrame(data={"observed": meter_value}, index=datetime_index)
 
     return df
+
+
+@pytest.fixture(scope="session")
+def baseline_data_daily(comstock_daily):
+    df_b, _ = comstock_daily
+    data = DailyBaselineData(df=df_b.reset_index().copy(), is_electricity_data=True)
+
+    return data
+
+
+@pytest.fixture(scope="session")
+def baseline_model_daily(baseline_data_daily):
+    """The daily model fit once on the ComStock baseline meter; tests read it and never
+    mutate it."""
+    model = DailyModel().fit(baseline_data_daily, ignore_disqualification=True)
+
+    return model
+
+
+@pytest.fixture(scope="session")
+def reporting_data_daily(comstock_daily):
+    _, df_r = comstock_daily
+    data = DailyReportingData(df=df_r.reset_index().copy(), is_electricity_data=True)
+
+    return data
+
+
+@pytest.fixture(scope="session")
+def baseline_data_billing(comstock_monthly):
+    df_b, _ = comstock_monthly
+    data = BillingBaselineData(df=df_b.reset_index().copy(), is_electricity_data=True)
+
+    return data
+
+
+@pytest.fixture(scope="session")
+def baseline_model_billing(baseline_data_billing):
+    """The billing model fit once on the ComStock baseline meter; tests read it and never
+    mutate it."""
+    model = BillingModel().fit(baseline_data_billing, ignore_disqualification=True)
+
+    return model

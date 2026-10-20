@@ -56,25 +56,6 @@ else:
 
 
 @pytest.fixture(scope="session")
-def baseline_data_daily(comstock_daily):
-    df_b, _ = comstock_daily
-
-    return DailyBaselineData(df=df_b.reset_index().copy(), is_electricity_data=True)
-
-
-@pytest.fixture(scope="session")
-def baseline_model_daily(baseline_data_daily):
-    return DailyModel().fit(baseline_data_daily, ignore_disqualification=True)
-
-
-@pytest.fixture(scope="session")
-def reporting_data_daily(comstock_daily):
-    _, df_r = comstock_daily
-
-    return DailyReportingData(df=df_r.reset_index().copy(), is_electricity_data=True)
-
-
-@pytest.fixture(scope="session")
 def reporting_model_daily(comstock_daily):
     # Reporting-period DailyModel is trained as a baseline fit on the reporting period;
     # use DailyBaselineData here because DailyReportingData has no observed values to fit on.
@@ -112,14 +93,6 @@ def test_metered_savings_cdd_hdd_daily(
     assert regression_block(results, freq="daily") == snapshot(
         name=f"regression{SNAP_SUFFIX}"
     )
-
-
-@pytest.fixture(scope="session")
-def baseline_model_billing(comstock_monthly):
-    df_b, _ = comstock_monthly
-    baseline_data = BillingBaselineData(df=df_b.reset_index().copy(), is_electricity_data=True)
-
-    return BillingModel().fit(baseline_data, ignore_disqualification=True)
 
 
 @pytest.fixture(scope="session")
