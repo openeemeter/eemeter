@@ -504,25 +504,24 @@ def test_json_hourly_with_zeros(comstock_hourly):
 
 
 @pytest.mark.slow
-def test_json_caltrack_hourly(comstock_hourly):
-    df_b, df_r = comstock_hourly
-    meter_b = df_b[["observed"]].rename(columns={"observed": "value"}).copy()
+def test_json_caltrack_hourly(comstock_hourly, caltrack_hourly_model):
+    """A model reloaded from its JSON predicts the same total and keeps a segment's observed
+    length."""
+    _, df_r = comstock_hourly
+    # the first three days of every month, so each of the twelve segment models predicts
+    df_r = df_r[df_r.index.day <= 3]
     meter_r = df_r[["observed"]].rename(columns={"observed": "value"}).copy()
-    temperature = df_b["temperature"]
+    reporting = HourlyCaltrackReportingData.from_series(
+        meter_r, df_r["temperature"], is_electricity_data=True
+    )
+    result1 = caltrack_hourly_model.predict(reporting)
 
-    baseline = HourlyCaltrackBaselineData.from_series(meter_b, temperature, is_electricity_data=True)
-    baseline_model = HourlyCaltrackModel().fit(baseline)
-
-    reporting = HourlyCaltrackReportingData.from_series(meter_r, df_r["temperature"], is_electricity_data=True)
-    result1 = baseline_model.predict(reporting)
-
-    json_str = baseline_model.to_json()
-    m = HourlyCaltrackModel.from_json(json_str)
+    m = HourlyCaltrackModel.from_json(caltrack_hourly_model.to_json())
     result2 = m.predict(reporting)
 
     assert result1["predicted"].sum() == result2["predicted"].sum()
     assert (
-        baseline_model.model.totals_metrics["dec-jan-feb-weighted"].observed_length
+        caltrack_hourly_model.model.totals_metrics["dec-jan-feb-weighted"].observed_length
         == m.model.totals_metrics["dec-jan-feb-weighted"].observed_length
     )
 
@@ -547,18 +546,12 @@ def _forbid_dmatrix(monkeypatch):
 
 
 @pytest.mark.slow
-def test_from_json_rejects_formula_outside_the_grammar(comstock_hourly, monkeypatch):
-    df_b, _ = comstock_hourly
-    meter_b = df_b[["observed"]].rename(columns={"observed": "value"}).copy()
-    baseline = HourlyCaltrackBaselineData.from_series(
-        meter_b, df_b["temperature"], is_electricity_data=True
-    )
-    serialized = json.loads(HourlyCaltrackModel().fit(baseline).to_json())
+def test_from_json_rejects_formula_outside_the_grammar(caltrack_hourly_model, monkeypatch):
+    serialized = json.loads(caltrack_hourly_model.to_json())
     tampered = _with_every_formula(
         serialized, "meter_value ~ __import__('os').getpid()"
     )
     _forbid_dmatrix(monkeypatch)
-
     with pytest.raises(ValueError, match="formula"):
         HourlyCaltrackModel.from_json(json.dumps(tampered))
 

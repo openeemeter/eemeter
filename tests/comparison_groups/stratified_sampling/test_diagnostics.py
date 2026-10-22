@@ -62,16 +62,20 @@ def test_equivalence(diagnostics_obj):
     assert equivalence["ks_ok"].all() == True and equivalence["t_ok"].all() == True
 
 
-def test_count_bins_returns_populated_frame(diagnostics_obj):
+def test_count_bins_has_one_row_per_bin_with_the_sample_total(diagnostics_obj):
     counts = diagnostics_obj.count_bins()
 
-    assert not counts.empty
+    assert len(counts) == 4
+    assert (counts["n_sampled"] > 0).all()
+    assert counts["n_sampled"].sum() == len(diagnostics_obj.data_sample.df)
 
 
-def test_equivalence_passed_returns_bool(diagnostics_obj):
+def test_equivalence_passed_summarizes_the_equivalence_table(diagnostics_obj):
+    equivalence = diagnostics_obj.equivalence()
+
     passed = diagnostics_obj.equivalence_passed()
 
-    assert isinstance(passed, (bool, np.bool_))
+    assert passed == (equivalence["ks_ok"].all() and equivalence["t_ok"].all())
 
 
 def test_histogram_builds_matplotlib_figure_per_column(diagnostics_obj):
@@ -94,11 +98,15 @@ def test_quantile_equivalence_builds_matplotlib_figure(diagnostics_obj):
     assert isinstance(figure, Figure)
 
 
-def test_n_sampled_to_n_treatment_ratio_is_not_floored(diagnostics_obj):
-    """Regression: the ratio must stay a float. Flooring it to int broke
-    comparisons against fractional thresholds (e.g. the DSS 0.25 default)."""
+def test_n_sampled_to_n_treatment_ratio_is_the_smallest_per_bin_ratio(diagnostics_obj):
+    """The ratio is the smallest per-bin sampled-to-treatment count ratio and
+    stays a float, so fractional thresholds compare against it correctly."""
+    counts = diagnostics_obj.count_bins()
+    expected = (counts["n_sampled"] / counts["n_treatment"]).min()
+
     ratio = diagnostics_obj.n_sampled_to_n_treatment_ratio()
 
+    assert ratio == expected
     assert isinstance(ratio, (float, np.floating))
 
 

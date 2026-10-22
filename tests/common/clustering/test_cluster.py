@@ -36,7 +36,7 @@ from opendsm.common.clustering.settings import (
     ClusterAlgorithms,
 )
 
-from .conftest import make_clustering_settings
+from .helpers import make_clustering_settings
 
 
 # =============================================================================
@@ -856,8 +856,8 @@ class TestPrepareLabelsModes:
             min_cluster_size=min_cs, small_cluster_mode=scm,
         )
 
-        assert data_clean is not None
-        assert labels_clean is not None
+        assert data_clean.shape == data.shape
+        assert len(np.unique(labels_clean)) == 10
 
     # ----- n_cluster_lower guard -----
 
@@ -1198,19 +1198,6 @@ class TestDBSCANHDBSCAN:
         assert np.all(labels >= -1)
         # Should find at least one cluster
         assert np.max(labels) >= 0
-
-    def test_dbscan_no_unused_variables(self):
-        """Code quality regression: DBSCAN runs cleanly (unused seed was removed)."""
-        df = self._make_two_clusters_df()
-        settings = make_clustering_settings(
-            "dbscan", seed=42,
-            dbscan={"epsilon": 2.0, "min_samples": 3},
-        )
-        # This should complete without any errors — the previously unused
-        # ``seed`` variable has been removed from the dbscan() function.
-        labels = cluster_features(df, settings)
-        assert labels is not None
-
 
 # =============================================================================
 # Tests for label_ops edge cases

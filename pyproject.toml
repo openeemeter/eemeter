@@ -112,8 +112,8 @@ core = "sysmon"
 # uncovered even when exercised.
 omit = [
   ".tox/*",
-  # work-in-progress scratch, excluded from coverage rather than tested
-  "*/comparison_groups/savings/dev/*",
+  # presentational code: figure assembly for notebooks, not measured
+  "*/eemeter/models/*/plot.py",
 ]
 
 [tool.coverage.report]

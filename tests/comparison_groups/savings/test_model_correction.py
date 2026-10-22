@@ -12,9 +12,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import os
-import pathlib
-
 import numpy as np
 import pytest
 
@@ -28,7 +25,6 @@ from opendsm.comparison_groups.savings.model_correction import (
     _model_magnitude_weights,
     _water_fill_weights,
 )
-from .generate_correction_fixtures import build_fixtures
 from opendsm.comparison_groups.savings.settings import (
     CGCorrectionSettings,
     CorrectionAlgorithm,
@@ -207,9 +203,8 @@ def test_model_correction_contiguous_labels_runs():
     ids=["noncontiguous_int", "float_labels"],
 )
 def test_model_correction_label_indexed_by_position(cg_label):
-    """Regression: cluster outputs and T_weight must be indexed by enumeration
-    position, not label value. Non-contiguous or float labels previously raised
-    IndexError (T_weight[2]) or could not index at all (float)."""
+    """Cluster outputs and T_weight are indexed by enumeration position, not label
+    value, so non-contiguous integer labels and float-valued labels both index correctly."""
     mTrc, _, _ = model_correction(
         OTR, MTR, OCGR, MCGR,
         None, None, None, None, None,
@@ -547,35 +542,13 @@ def test_cluster_unc_is_nan_with_single_finite_meter():
     assert np.isnan(cluster_unc)
 
 
-# ── Fixture generation (run once, manually, JIT-on) ──────────────────────────
-
-@pytest.mark.skipif(
-    not os.environ.get("GENERATE_FIXTURES"),
-    reason="regenerates committed model_correction fixtures; run manually",
-)
-def test_generate_correction_fixtures(
-    _comstock_hourly_all, _comstock_daily_all, _comstock_monthly_all
-):
-    """Regenerate the real-data .npz fixtures from ComStock meters.
-
-    GENERATE_FIXTURES=1 [GENERATE_FIXTURES_N=99] pytest -k generate_correction_fixtures
-    """
-    n_pool = int(os.environ.get("GENERATE_FIXTURES_N", "99"))
-    min_cluster_size = int(os.environ.get("GENERATE_FIXTURES_MIN", "5"))
-    build_fixtures(
-        _comstock_hourly_all, _comstock_daily_all, _comstock_monthly_all,
-        n_pool=n_pool, min_cluster_size=min_cluster_size,
-    )
-
-
 # ── Real-data snapshot across model frequencies x correction algorithms ──────────
 
-_FIXTURE_DIR = pathlib.Path(__file__).parent / "fixtures"
 
 # Pinned corrected reporting-period usage (mTrc) and its uncertainty, produced
 # by model_correction on the committed real-ComStock fixtures. Regenerate the
-# fixtures with generate_correction_fixtures (GENERATE_FIXTURES=1) if the
-# upstream models change; update these alongside.
+# fixtures by running generate_correction_fixtures.py if the upstream models
+# change; update these alongside.
 _EXPECTED = {
     ("hourly", CorrectionAlgorithm.ODID): (725413.0, 701720.3),
     ("hourly", CorrectionAlgorithm.PCTDID): (775788.8, 95833.3),
@@ -584,13 +557,6 @@ _EXPECTED = {
     ("billing", CorrectionAlgorithm.ODID): (723322.1, 702686.8),
     ("billing", CorrectionAlgorithm.PCTDID): (774280.6, 108783.8),
 }
-
-
-def _load_fixture(model_frequency):
-    """Load committed real-data model_correction inputs for a model frequency."""
-    data = np.load(_FIXTURE_DIR / f"model_correction_{model_frequency}.npz")
-
-    return data
 
 
 def _run_correction(data, algorithm, weight_cluster_aggregation=None, weight_cap=0.5):
@@ -622,9 +588,9 @@ class TestModelCorrectionRealData:
 
     @pytest.mark.parametrize("model_frequency", MODEL_FREQUENCIES)
     @pytest.mark.parametrize("algorithm", [CorrectionAlgorithm.ODID, CorrectionAlgorithm.PCTDID])
-    def test_corrected_value_matches_snapshot(self, model_frequency, algorithm):
+    def test_corrected_value_matches_snapshot(self, model_frequency, algorithm, model_correction_inputs):
         """Corrected usage and uncertainty match the pinned real-data snapshot."""
-        data = _load_fixture(model_frequency)
+        data = model_correction_inputs[model_frequency]
         mTrc, mTrc_unc, _ = _run_correction(data, algorithm)
 
         expected_mTrc, expected_unc = _EXPECTED[(model_frequency, algorithm)]
@@ -632,20 +598,20 @@ class TestModelCorrectionRealData:
         assert mTrc_unc == pytest.approx(expected_unc, rel=1e-4)
 
     @pytest.mark.parametrize("model_frequency", MODEL_FREQUENCIES)
-    def test_correction_pulls_inflated_estimate_toward_observed(self, model_frequency):
+    def test_correction_pulls_inflated_estimate_toward_observed(self, model_frequency, model_correction_inputs):
         """The DID correction moves the (over-predicting) model estimate toward
         observed: oTr < mTrc < mTr when the comparison group shares the gap."""
-        data = _load_fixture(model_frequency)
+        data = model_correction_inputs[model_frequency]
         oTr, mTr = float(data["oTr"]), float(data["mTr"])
         mTrc, _, _ = _run_correction(data, CorrectionAlgorithm.PCTDID)
 
         assert mTr > mTrc > oTr
 
     @pytest.mark.parametrize("model_frequency", MODEL_FREQUENCIES)
-    def test_abspct_equals_pct_for_positive_magnitudes(self, model_frequency):
+    def test_abspct_equals_pct_for_positive_magnitudes(self, model_frequency, model_correction_inputs):
         """With positive model magnitudes the absolute-percent scale equals the
         percent scale (the |.| is a no-op)."""
-        data = _load_fixture(model_frequency)
+        data = model_correction_inputs[model_frequency]
         pct, pct_unc, _ = _run_correction(data, CorrectionAlgorithm.PCTDID)
         abspct, abspct_unc, _ = _run_correction(data, CorrectionAlgorithm.ABSPCTDID)
 
@@ -679,12 +645,12 @@ class TestModelCorrectionRealDataModelWeightedUncapped:
 
     @pytest.mark.parametrize("model_frequency", MODEL_FREQUENCIES)
     @pytest.mark.parametrize("algorithm", [CorrectionAlgorithm.ODID, CorrectionAlgorithm.PCTDID])
-    def test_corrected_value_matches_snapshot(self, model_frequency, algorithm):
+    def test_corrected_value_matches_snapshot(self, model_frequency, algorithm, model_correction_inputs):
         """Corrected usage and uncertainty match the pinned real-data snapshot.
         One cluster's model-magnitude weighting drops its effective sample size
         below 2, so its uncertainty takes the uniform-weight fallback and the
         total uncertainty is finite and positive rather than NaN."""
-        data = _load_fixture(model_frequency)
+        data = model_correction_inputs[model_frequency]
         mTrc, mTrc_unc, _ = _run_correction(
             data,
             algorithm,
@@ -722,12 +688,12 @@ class TestModelCorrectionRealDataModelWeighted:
 
     @pytest.mark.parametrize("model_frequency", MODEL_FREQUENCIES)
     @pytest.mark.parametrize("algorithm", [CorrectionAlgorithm.ODID, CorrectionAlgorithm.PCTDID])
-    def test_corrected_value_matches_snapshot(self, model_frequency, algorithm):
+    def test_corrected_value_matches_snapshot(self, model_frequency, algorithm, model_correction_inputs):
         """Corrected usage and uncertainty match the pinned real-data snapshot.
         The weight cap keeps every cluster's effective sample size at or above
         2, so the point correction and uncertainty both stay on the weighted
         path (finite and positive)."""
-        data = _load_fixture(model_frequency)
+        data = model_correction_inputs[model_frequency]
         mTrc, mTrc_unc, _ = _run_correction(
             data, algorithm, weight_cluster_aggregation=WeightClusterAggChoice.MODEL
         )

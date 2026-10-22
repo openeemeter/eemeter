@@ -14,19 +14,23 @@
 
 """Generate real model_correction snapshot inputs from ComStock meters.
 
-Run once (JIT-on) via the guarded ``test_generate_correction_fixtures`` test to
-produce committed ``.npz`` fixtures consumed by ``test_model_correction.py``;
-NOT part of the normal test run.  ``build_fixtures`` is driven through pytest so
-it shares the suite's ComStock data loading.  The comparison-group clustering is
+Run directly, with the JIT on, when the upstream models change:
+
+    python tests/comparison_groups/savings/generate_correction_fixtures.py [--n-pool N] [--min-cluster-size M]
+
+It writes the committed ``.npz`` fixtures that ``test_model_correction.py`` reads and is
+not part of the test run.  The comparison-group clustering is
 derived once from hourly load shapes (a property of the meters' profiles) and
 reused across model frequencies; only the observed/modelled reporting-period totals
 differ per model.
 """
 
+import argparse
 import pathlib
 
 import numpy as np
 
+from opendsm.common.test_data import load_test_data
 from opendsm.comparison_groups.common import Data, Data_Settings
 from opendsm.comparison_groups.common import const as _const
 from opendsm.comparison_groups.cg_clustering.create_comparison_groups import CG_Clustering
@@ -168,3 +172,22 @@ def build_fixtures(hourly_data, daily_data, monthly_data, n_pool=99, min_cluster
         )
         print(f"{gran}: saved {out.name}  n_cg={len(oCGr)} clusters={len(kept_clusters)} "
               f"oTr={oTr:.1f} mTr={mTr:.1f}")
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Regenerate the model_correction fixtures.")
+    parser.add_argument("--n-pool", type=int, default=99)
+    parser.add_argument("--min-cluster-size", type=int, default=5)
+    args = parser.parse_args(argv)
+
+    build_fixtures(
+        load_test_data("hourly_treatment_data"),
+        load_test_data("daily_treatment_data"),
+        load_test_data("monthly_treatment_data"),
+        n_pool=args.n_pool,
+        min_cluster_size=args.min_cluster_size,
+    )
+
+
+if __name__ == "__main__":
+    main()

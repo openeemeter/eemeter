@@ -171,14 +171,20 @@ def test_fit_model(meter_data, get_settings):
     fit_input = [T, obs, weights, get_settings, _get_opt_settings(get_settings)]
     res = fit_model("hdd_tidd_cdd_smooth", fit_input, None, None)
     assert isinstance(res, OptimizedResult)
+    assert np.isfinite(res.loss)
+    assert np.all(np.isfinite(res.x))
 
     # Test case 2: Test for model_key = "hdd_tidd_cdd"
     res = fit_model("hdd_tidd_cdd", fit_input, None, None)
     assert isinstance(res, OptimizedResult)
+    assert np.isfinite(res.loss)
+    assert np.all(np.isfinite(res.x))
 
     # Test case 3: Test for model_key = "c_hdd_tidd_smooth"
     res = fit_model("c_hdd_tidd_smooth", fit_input, None, None)
     assert isinstance(res, OptimizedResult)
+    assert np.isfinite(res.loss)
+    assert np.all(np.isfinite(res.x))
 
     # Test case 4: Test for model_key = "c_hdd_tidd"
     x0 = ModelCoefficients(
@@ -193,10 +199,14 @@ def test_fit_model(meter_data, get_settings):
     )
     res = fit_model("c_hdd_tidd", fit_input, x0, None)
     assert isinstance(res, OptimizedResult)
+    assert np.isfinite(res.loss)
+    assert np.all(np.isfinite(res.x))
 
     # Test case 5: Test for model_key = "tidd"
     res = fit_model("tidd", fit_input, None, None)
     assert isinstance(res, OptimizedResult)
+    assert np.isfinite(res.loss)
+    assert np.all(np.isfinite(res.x))
 
     # TODO: add more data specific cases
 
@@ -207,6 +217,8 @@ def test_fit_final_model(meter_data, get_settings, get_optimized_result):
 
     res = fit_final_model(meter_data, HoF, get_settings)
     assert isinstance(res, OptimizedResult)
+    assert np.isfinite(res.loss)
+    assert np.all(np.isfinite(res.x))
 
     # Test case 2: Test if the function raises a TypeError when the input arguments are of the wrong type
     with pytest.raises(TypeError):

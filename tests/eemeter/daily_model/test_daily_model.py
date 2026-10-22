@@ -138,20 +138,15 @@ def test_daily_predict_before_fit_raises(daily_series):
         DailyModel().predict(data)
 
 
-def test_json_daily(comstock_daily):
-    df_b, df_r = comstock_daily
-    baseline_data = DailyBaselineData(df=df_b.reset_index(), is_electricity_data=True)
-    baseline_model = DailyModel().fit(baseline_data, ignore_disqualification=True)
-
-    reporting_data = DailyReportingData(df=df_r.reset_index(), is_electricity_data=True)
-    metered_savings_dataframe = baseline_model.predict(reporting_data)
+def test_json_daily(baseline_model_daily, reporting_data_daily):
+    metered_savings_dataframe = baseline_model_daily.predict(reporting_data_daily)
     total_metered_savings = (
         metered_savings_dataframe["observed"] - metered_savings_dataframe["predicted"]
     ).sum()
 
-    json_str = baseline_model.to_json()
+    json_str = baseline_model_daily.to_json()
     loaded_model = DailyModel.from_json(json_str)
-    prediction_json = loaded_model.predict(reporting_data)
+    prediction_json = loaded_model.predict(reporting_data_daily)
     total_metered_savings_loaded = (
         prediction_json["observed"] - prediction_json["predicted"]
     ).sum()

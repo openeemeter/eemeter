@@ -12,9 +12,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+import matplotlib
 import pytest
 
 from opendsm.common.test_data import load_test_data
+
+matplotlib.use("Agg")
 
 from syrupy_extensions import TolerantJSONSnapshotExtension
 
