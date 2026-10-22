@@ -42,6 +42,7 @@ from opendsm.eemeter.models.billing.data import (
 )
 
 from regression_metrics import regression_block
+from syrupy_extensions import TolerantJSONSnapshotExtension
 
 
 
@@ -210,6 +211,21 @@ def baseline_model_billing_single_record_baseline_data(comstock_monthly, comstoc
     return model
 
 
+# regression_block keys whose values are in load units
+_LOAD_KEYS = frozenset({"predicted", "residuals", "time_bins", "temp_bins", "ghi_bins"})
+
+
+def _short_baseline_snapshot(snapshot, results):
+    # A billing fit on a few records determines its predictions to about 1e-3: a last-bit
+    # change in its inputs moves them by that much
+    atol = 1e-3 * float(results["predicted"].mean())
+    extension = TolerantJSONSnapshotExtension.with_tolerance(
+        atol=atol, rtol=1e-3, atol_keys=_LOAD_KEYS
+    )
+
+    return snapshot.use_extension(extension)
+
+
 @pytest.mark.regression
 def test_metered_savings_cdd_hdd_billing_single_record_baseline_data(
     baseline_model_billing_single_record_baseline_data,
@@ -238,7 +254,9 @@ def test_metered_savings_cdd_hdd_billing_single_record_baseline_data(
         "model_split",
         "model_type",
     ]
-    assert regression_block(results, freq="daily") == snapshot(name="regression")
+    assert regression_block(results, freq="daily") == _short_baseline_snapshot(snapshot, results)(
+        name="regression"
+    )
 
 
 @pytest.fixture
@@ -522,7 +540,9 @@ def test_metered_savings_model_single_record(
         "model_type",
     ]
 
-    assert regression_block(results, freq="daily") == snapshot(name="regression")
+    assert regression_block(results, freq="daily") == _short_baseline_snapshot(snapshot, results)(
+        name="regression"
+    )
 
 
 @pytest.fixture(scope="session")
