@@ -28,13 +28,43 @@ class TolerantJSONSnapshotExtension(JSONSnapshotExtension):
     """JSON snapshot extension that compares floats with math.isclose tolerance.
 
     Default behavior on numeric leaves: ``math.isclose(actual, expected,
-    abs_tol={atol}, rel_tol={rtol})``. NaN compares equal to NaN. Lists,
-    dicts, and other structures compare element-wise; structural mismatch is
-    a hard fail.
+    abs_tol={atol}, rel_tol={rtol})``, with integers compared exactly. NaN
+    compares equal to NaN. Lists, dicts, and other structures compare
+    element-wise; structural mismatch is a hard fail.
 
     On failure, replaces syrupy's per-line unified diff with a compact summary
     of the largest numeric divergences so long arrays produce short output.
     """
+
+    atol = FLOAT_ATOL
+    rtol = FLOAT_RTOL
+    atol_keys: frozenset[str] | None = None
+
+    @classmethod
+    def with_tolerance(
+        cls, *, atol: float, rtol: float, atol_keys: frozenset[str] | None = None
+    ) -> type["TolerantJSONSnapshotExtension"]:
+        """Return a subclass comparing numeric leaves at ``rtol`` and ``atol``; when ``atol_keys``
+        is given, ``atol`` applies only under those top-level keys and ``FLOAT_ATOL`` under the
+        rest."""
+        # syrupy finds an extension by module and name, and type() alone would set the module to abc
+        attrs = {"atol": atol, "rtol": rtol, "atol_keys": atol_keys, "__module__": cls.__module__}
+
+        return type(cls.__name__, (cls,), attrs)
+
+    def _atol_for(self, key: str) -> float:
+        if self.atol_keys is None or key in self.atol_keys:
+            return self.atol
+
+        return FLOAT_ATOL
+
+    def _tolerance_text(self) -> str:
+        if self.atol_keys is None:
+            return f"atol={self.atol:g}, rtol={self.rtol:g}"
+
+        keys = ", ".join(sorted(self.atol_keys))
+
+        return f"atol={self.atol:g} under {keys}, {FLOAT_ATOL:g} elsewhere; rtol={self.rtol:g}"
 
     def matches(self, *, serialized_data, snapshot_data) -> bool:
         if serialized_data == snapshot_data:
@@ -45,7 +75,16 @@ class TolerantJSONSnapshotExtension(JSONSnapshotExtension):
         except (json.JSONDecodeError, TypeError):
             return False
 
-        return _deep_close(actual, expected, atol=FLOAT_ATOL, rtol=FLOAT_RTOL)
+        if isinstance(actual, dict) and isinstance(expected, dict):
+            if actual.keys() != expected.keys():
+                return False
+
+            return all(
+                _deep_close(actual[k], expected[k], atol=self._atol_for(k), rtol=self.rtol)
+                for k in actual
+            )
+
+        return _deep_close(actual, expected, atol=self.atol, rtol=self.rtol)
 
     def diff_lines(self, serialized_data, snapshot_data) -> Iterator[str]:
         try:
@@ -56,13 +95,19 @@ class TolerantJSONSnapshotExtension(JSONSnapshotExtension):
             return
 
         diffs: list[tuple[str, float, float]] = []
-        _collect_diffs(actual, expected, "", diffs, atol=FLOAT_ATOL, rtol=FLOAT_RTOL)
+        if isinstance(actual, dict) and isinstance(expected, dict):
+            for k in actual.keys() | expected.keys():
+                _collect_diffs(
+                    actual.get(k), expected.get(k), k, diffs, atol=self._atol_for(k), rtol=self.rtol
+                )
+        else:
+            _collect_diffs(actual, expected, "", diffs, atol=self.atol, rtol=self.rtol)
         if not diffs:
             yield from super().diff_lines(serialized_data, snapshot_data)
             return
 
         diffs.sort(key=lambda d: -_score(d[1], d[2]))
-        yield f"{len(diffs)} value(s) outside tolerance (atol={FLOAT_ATOL}, rtol={FLOAT_RTOL})"
+        yield f"{len(diffs)} value(s) outside tolerance ({self._tolerance_text()})"
         for path, a, e in diffs[:10]:
             yield f"  {path}: received {a!r}, snapshot {e!r}  (abs={abs(a - e):.3g}, rel={_rel(a, e):.3g})"
         if len(diffs) > 10:
@@ -81,6 +126,9 @@ def _deep_close(a: Any, b: Any, *, atol: float, rtol: float) -> bool:
             return False
 
         return all(_deep_close(a[i], b[i], atol=atol, rtol=rtol) for i in range(len(a)))
+
+    if isinstance(a, int) and isinstance(b, int):
+        return a == b
 
     if isinstance(a, (int, float)) and isinstance(b, (int, float)):
         a_nan = isinstance(a, float) and math.isnan(a)
@@ -115,6 +163,11 @@ def _collect_diffs(
             ai = a[i] if i < len(a) else None
             bi = b[i] if i < len(b) else None
             _collect_diffs(ai, bi, f"{path}[{i}]", diffs, atol=atol, rtol=rtol)
+        return
+
+    if isinstance(a, int) and isinstance(b, int):
+        if a != b:
+            diffs.append((path, a, b))
         return
 
     if isinstance(a, (int, float)) and isinstance(b, (int, float)):
